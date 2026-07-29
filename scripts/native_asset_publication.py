@@ -114,7 +114,11 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
 def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str, Any]]:
     """Recover exact planned objects from current R2 inventory and verified receipts."""
     with connect_owner(repo_root) as conn:
-        rows = _upload_bridge_rows(conn, asset_ids=[asset_id])
+        rows = _upload_bridge_rows(
+            conn,
+            asset_ids=[asset_id],
+            fixture_authorized_asset_ids=[asset_id],
+        )
         row = next((item for item in rows if str(item["asset_id"]) == asset_id), None)
         if row is None:
             return []
@@ -189,13 +193,19 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
         return status
 
     retry_sqlite_lock(
-        lambda: queue_upload_bridge(repo_root, asset_ids=asset_ids, limit=len(asset_ids))
+        lambda: queue_upload_bridge(
+            repo_root,
+            asset_ids=asset_ids,
+            limit=len(asset_ids),
+            fixture_authorized_asset_ids=asset_ids,
+        )
     )
     bridge = retry_sqlite_lock(
         lambda: prepare_upload_bridge_execute_batch(
             repo_root,
             limit=len(asset_ids),
             asset_ids=asset_ids,
+            fixture_authorized_asset_ids=asset_ids,
         )
     )
     bridge_items = {

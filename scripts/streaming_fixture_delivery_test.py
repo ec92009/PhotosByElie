@@ -6,7 +6,12 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fixture_pipeline import create_fixture, editorial_version_hash
+from fixture_pipeline import (
+    apply_fixture_review_action,
+    create_fixture,
+    editorial_version_hash,
+    set_fixture_asset_state,
+)
 from sidecar_state_db import (
     connect,
     prepare_upload_bridge_execute_batch,
@@ -203,6 +208,141 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertIn("PBE:Approved", adapter.values["asset-1"]["keywords"])
         self.assertIn("PBE:Approved", adapter.values["asset-2"]["keywords"])
         self.assertIn("Keep me", adapter.values["asset-1"]["keywords"])
+
+
+class FixtureAuthorizedUploadBridgeTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        upsert_assets(
+            self.root,
+            [
+                {
+                    "localIdentifier": "native-asset",
+                    "filename": "terrace.jpg",
+                    "mediaType": "photo",
+                },
+                {
+                    "localIdentifier": "generic-asset",
+                    "filename": "generic.jpg",
+                    "mediaType": "photo",
+                },
+                {
+                    "localIdentifier": "ai-asset",
+                    "filename": "ai.jpg",
+                    "mediaType": "photo",
+                },
+            ],
+        )
+        self.fixture = create_fixture(self.root, "Expo")
+        set_fixture_asset_state(
+            self.root,
+            self.fixture["fixtureId"],
+            ["native-asset", "generic-asset", "ai-asset"],
+            "picked",
+        )
+        apply_fixture_review_action(
+            self.root,
+            self.fixture["fixtureId"],
+            ["native-asset"],
+            "approve",
+            title="Palm Framed Hillside View From Terrace",
+            keywords=["Terrace", "Palm"],
+        )
+        apply_fixture_review_action(
+            self.root,
+            self.fixture["fixtureId"],
+            ["generic-asset"],
+            "approve",
+            title="Photo",
+            keywords=[],
+        )
+        apply_fixture_review_action(
+            self.root,
+            self.fixture["fixtureId"],
+            ["ai-asset"],
+            "approve",
+            title="Paris Glass Garden",
+            keywords=["Paris", "AI generated illustration"],
+        )
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_native_fixture_authorization_replaces_only_obsolete_legacy_gates(self):
+        with connect(self.root) as conn:
+            state = conn.execute(
+                """
+                SELECT pick_state, metadata_state
+                FROM sidecar_decisions
+                WHERE asset_id = 'native-asset'
+                """
+            ).fetchone()
+            self.assertEqual(state["pick_state"], "undecided")
+            self.assertEqual(state["metadata_state"], "approved")
+
+        legacy = queue_upload_bridge(
+            self.root,
+            asset_ids=["native-asset"],
+            limit=1,
+        )
+        self.assertEqual(legacy["bridgeQueuedCount"], 0)
+
+        authorized = queue_upload_bridge(
+            self.root,
+            asset_ids=["native-asset"],
+            limit=1,
+            fixture_authorized_asset_ids=["native-asset"],
+        )
+        self.assertEqual(authorized["bridgeQueuedCount"], 1)
+        self.assertEqual(authorized["items"][0]["assetId"], "native-asset")
+
+        batch = prepare_upload_bridge_execute_batch(
+            self.root,
+            limit=1,
+            asset_ids=["native-asset"],
+            fixture_authorized_asset_ids=["native-asset"],
+        )
+        self.assertEqual(batch["count"], 1)
+        self.assertEqual(batch["items"][0]["assetId"], "native-asset")
+
+    def test_native_fixture_authorization_does_not_bypass_generic_title(self):
+        queued = queue_upload_bridge(
+            self.root,
+            asset_ids=["generic-asset"],
+            limit=1,
+            fixture_authorized_asset_ids=["generic-asset"],
+        )
+        self.assertEqual(queued["bridgeQueuedCount"], 0)
+        self.assertEqual(queued["metadataBlockedCount"], 1)
+        self.assertEqual(queued["metadataBlocked"][0]["reason"], "generic-title")
+
+    def test_unverified_explicit_id_cannot_enter_fixture_authorized_bridge(self):
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                UPDATE asset_editorial_state
+                SET editorial_state = 'unreviewed'
+                WHERE asset_id = 'native-asset'
+                """
+            )
+            conn.commit()
+        queued = queue_upload_bridge(
+            self.root,
+            asset_ids=["native-asset"],
+            limit=1,
+            fixture_authorized_asset_ids=["native-asset"],
+        )
+        self.assertEqual(queued["bridgeQueuedCount"], 0)
+
+    def test_fixture_authorization_does_not_bypass_ai_exclusion(self):
+        queued = queue_upload_bridge(
+            self.root,
+            asset_ids=["ai-asset"],
+            limit=1,
+            fixture_authorized_asset_ids=["ai-asset"],
+        )
+        self.assertEqual(queued["bridgeQueuedCount"], 0)
 
 
 if __name__ == "__main__":

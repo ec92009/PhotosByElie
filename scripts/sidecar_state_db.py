@@ -1773,14 +1773,73 @@ def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
     return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
 
 
+def _fixture_authorized_upload_asset_ids(
+    conn: sqlite3.Connection,
+    asset_ids: Iterable[str] | None,
+) -> set[str]:
+    """Verify explicit native-publication assets against fixture/editorial truth."""
+    requested = {
+        str(asset_id).strip()
+        for asset_id in (asset_ids or ())
+        if str(asset_id).strip()
+    }
+    conn.execute(
+        """
+        CREATE TEMP TABLE IF NOT EXISTS sidecar_fixture_authorized_upload_assets (
+          asset_id TEXT PRIMARY KEY
+        ) WITHOUT ROWID
+        """
+    )
+    conn.execute("DELETE FROM sidecar_fixture_authorized_upload_assets")
+    if not requested:
+        return set()
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO sidecar_fixture_authorized_upload_assets (asset_id)
+        VALUES (?)
+        """,
+        ((asset_id,) for asset_id in requested),
+    )
+    rows = conn.execute(
+        """
+        SELECT DISTINCT requested.asset_id
+        FROM sidecar_fixture_authorized_upload_assets AS requested
+        JOIN sidecar_assets AS asset ON asset.asset_id = requested.asset_id
+        JOIN asset_editorial_state AS editorial
+          ON editorial.asset_id = requested.asset_id
+         AND editorial.editorial_state = 'approved'
+        JOIN fixture_asset_decisions AS decision
+          ON decision.asset_id = requested.asset_id
+         AND decision.placement_state = 'picked'
+         AND decision.eligibility_state = 'active'
+        JOIN fixtures AS fixture
+          ON fixture.fixture_id = decision.fixture_id
+         AND fixture.archived_at IS NULL
+        WHERE (asset.missing_at IS NULL OR asset.missing_at = '')
+          AND NOT EXISTS (
+            SELECT 1
+            FROM sidecar_tombstones AS tombstone
+            WHERE tombstone.asset_id = requested.asset_id
+              AND tombstone.tombstone_state = 'active'
+          )
+        """
+    ).fetchall()
+    return {str(row["asset_id"]) for row in rows}
+
+
 def _upload_bridge_rows(
     conn: sqlite3.Connection,
     limit: int | None = None,
     *,
     include_blocked: bool = False,
     asset_ids: Iterable[str] | None = None,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> list[sqlite3.Row]:
     scoped_ids = None if asset_ids is None else {str(asset_id) for asset_id in asset_ids if str(asset_id)}
+    fixture_authorized_ids = _fixture_authorized_upload_asset_ids(
+        conn,
+        fixture_authorized_asset_ids,
+    )
     limit_sql = ""
     params: tuple[Any, ...] = ()
     if limit is not None and scoped_ids is None:
@@ -1831,8 +1890,14 @@ def _upload_bridge_rows(
           JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
           JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
           WHERE m.mock_state = 'active'
-            AND d.pick_state = 'picked'
-            AND d.metadata_state = 'approved'
+            AND (
+              (d.pick_state = 'picked' AND d.metadata_state = 'approved')
+              OR EXISTS (
+                SELECT 1
+                FROM sidecar_fixture_authorized_upload_assets AS authorized
+                WHERE authorized.asset_id = m.asset_id
+              )
+            )
             AND NOT EXISTS (
               SELECT 1 FROM json_each(d.keywords_json) AS keyword
               WHERE lower(trim(keyword.value)) LIKE 'ai generated%'
@@ -1855,7 +1920,14 @@ def _upload_bridge_rows(
     if scoped_ids is not None:
         rows = [row for row in rows if str(row["asset_id"]) in scoped_ids]
     if not include_blocked:
-        rows = [row for row in rows if _upload_bridge_metadata_ready(row)]
+        rows = [
+            row
+            for row in rows
+            if _upload_bridge_metadata_ready(
+                row,
+                allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+            )
+        ]
     return rows[:limit] if limit is not None else rows
 
 
@@ -1958,22 +2030,52 @@ def _upload_bridge_metadata_block_reason(row: sqlite3.Row) -> str:
     title = str(row["title"] or "").strip()
     normalized_title = re.sub(r"\s+", " ", title).casefold()
     gallery_slug = _upload_bridge_gallery_slug(row)
-    if not gallery_slug:
-        return "missing-gallery-signal"
     if normalized_title in GENERIC_UPLOAD_TITLES:
         return "generic-title"
+    if not gallery_slug:
+        return "missing-gallery-signal"
     return ""
 
 
-def _upload_bridge_metadata_ready(row: sqlite3.Row) -> bool:
-    return _upload_bridge_metadata_block_reason(row) == ""
+def _upload_bridge_metadata_ready(
+    row: sqlite3.Row,
+    *,
+    allow_missing_gallery: bool = False,
+) -> bool:
+    reason = _upload_bridge_metadata_block_reason(row)
+    return reason == "" or (allow_missing_gallery and reason == "missing-gallery-signal")
 
 
-def _mock_upload_summary(conn: sqlite3.Connection, asset_ids: Iterable[str] | None = None) -> dict[str, Any]:
+def _mock_upload_summary(
+    conn: sqlite3.Connection,
+    asset_ids: Iterable[str] | None = None,
+    *,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     """Summarize rows queued across the Sidecar upload bridge."""
-    rows = _upload_bridge_rows(conn, asset_ids=asset_ids)
-    all_rows = _upload_bridge_rows(conn, include_blocked=True, asset_ids=asset_ids)
-    metadata_blocked_rows = [row for row in all_rows if not _upload_bridge_metadata_ready(row)]
+    fixture_authorized_ids = _fixture_authorized_upload_asset_ids(
+        conn,
+        fixture_authorized_asset_ids,
+    )
+    rows = _upload_bridge_rows(
+        conn,
+        asset_ids=asset_ids,
+        fixture_authorized_asset_ids=fixture_authorized_ids,
+    )
+    all_rows = _upload_bridge_rows(
+        conn,
+        include_blocked=True,
+        asset_ids=asset_ids,
+        fixture_authorized_asset_ids=fixture_authorized_ids,
+    )
+    metadata_blocked_rows = [
+        row
+        for row in all_rows
+        if not _upload_bridge_metadata_ready(
+            row,
+            allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+        )
+    ]
     block_summary = _upload_bridge_block_summary(conn, asset_ids=asset_ids)
     planned_key_sets: dict[str, list[dict[str, str]]] = {}
     all_planned_keys: list[dict[str, str]] = []
@@ -2029,11 +2131,18 @@ def upload_bridge_plan(
     repo_root: Path,
     limit: int = 500,
     asset_ids: Iterable[str] | None = None,
+    *,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Return the dry-run plan for rows already queued across the upload bridge."""
     safe_limit = max(1, min(int(limit or 500), 5000))
     with connect(repo_root) as conn:
-        rows = _upload_bridge_rows(conn, safe_limit, asset_ids=asset_ids)
+        rows = _upload_bridge_rows(
+            conn,
+            safe_limit,
+            asset_ids=asset_ids,
+            fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+        )
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
@@ -2044,8 +2153,16 @@ def upload_bridge_plan(
             planned_key_sets[asset_id] = keys
             all_planned_keys.extend(keys)
         current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
-        total_queued = len(_upload_bridge_rows(conn, asset_ids=asset_ids))
-        mock_upload_summary = _mock_upload_summary(conn, asset_ids=asset_ids)
+        total_queued = len(_upload_bridge_rows(
+            conn,
+            asset_ids=asset_ids,
+            fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+        ))
+        mock_upload_summary = _mock_upload_summary(
+            conn,
+            asset_ids=asset_ids,
+            fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+        )
     items = []
     collision_count = 0
     covered_key_count = 0
@@ -2431,6 +2548,7 @@ def prepare_upload_bridge_execute_batch(
     allow_r2_overwrite: bool = False,
     asset_ids: Iterable[str] | None = None,
     exclude_asset_ids: Iterable[str] | None = None,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
     requested_limit = max(1, min(int(limit or 1), 5000))
@@ -2452,7 +2570,11 @@ def prepare_upload_bridge_execute_batch(
     excluded_asset_ids = {str(asset_id) for asset_id in (exclude_asset_ids or []) if str(asset_id)}
 
     with connect(repo_root) as conn:
-        rows = _upload_bridge_rows(conn, scan_limit)
+        rows = _upload_bridge_rows(
+            conn,
+            scan_limit,
+            fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+        )
         if included_asset_ids is not None:
             rows = [row for row in rows if str(row["asset_id"]) in included_asset_ids]
         if excluded_asset_ids:
@@ -3307,6 +3429,8 @@ def upload_plan(
     repo_root: Path,
     limit: int = 500,
     asset_ids: Iterable[str] | None = None,
+    *,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit or 500), 5000))
     requested_ids = list(dict.fromkeys(str(asset_id) for asset_id in (asset_ids or ()) if str(asset_id)))
@@ -3320,6 +3444,30 @@ def upload_plan(
         else:
             scope_sql = "AND 0"
     with connect(repo_root) as conn:
+        fixture_authorized_ids = _fixture_authorized_upload_asset_ids(
+            conn,
+            fixture_authorized_asset_ids,
+        )
+        picked_predicate = """
+          (
+            d.pick_state = 'picked'
+            OR EXISTS (
+              SELECT 1
+              FROM sidecar_fixture_authorized_upload_assets AS authorized
+              WHERE authorized.asset_id = d.asset_id
+            )
+          )
+        """
+        approved_predicate = """
+          (
+            (d.pick_state = 'picked' AND d.metadata_state = 'approved')
+            OR EXISTS (
+              SELECT 1
+              FROM sidecar_fixture_authorized_upload_assets AS authorized
+              WHERE authorized.asset_id = d.asset_id
+            )
+          )
+        """
         readiness = conn.execute(
             f"""
             SELECT
@@ -3334,7 +3482,7 @@ def upload_plan(
             FROM sidecar_decisions AS d
             LEFT JOIN sidecar_mock_uploads AS m ON m.asset_id = d.asset_id AND m.mock_state = 'active'
             LEFT JOIN sidecar_tombstones AS t ON t.asset_id = d.asset_id AND t.tombstone_state = 'active'
-            WHERE d.pick_state = 'picked' AND t.asset_id IS NULL
+            WHERE {picked_predicate} AND t.asset_id IS NULL
               {scope_sql}
             """,
             scope_params,
@@ -3344,7 +3492,7 @@ def upload_plan(
             SELECT a.*, d.rating, d.color, d.pick_state, d.metadata_state, d.title, d.keywords_json
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
-            WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
+            WHERE {approved_predicate}
               {scope_sql}
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
@@ -3358,9 +3506,27 @@ def upload_plan(
             """,
             scope_params,
         ).fetchall()
-        metadata_blocked_rows = [row for row in raw_rows if not _upload_bridge_metadata_ready(row)]
-        rows = [row for row in raw_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
-        mock_upload_summary = _mock_upload_summary(conn, asset_ids=requested_ids if scoped else None)
+        metadata_blocked_rows = [
+            row
+            for row in raw_rows
+            if not _upload_bridge_metadata_ready(
+                row,
+                allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+            )
+        ]
+        rows = [
+            row
+            for row in raw_rows
+            if _upload_bridge_metadata_ready(
+                row,
+                allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+            )
+        ][:safe_limit]
+        mock_upload_summary = _mock_upload_summary(
+            conn,
+            asset_ids=requested_ids if scoped else None,
+            fixture_authorized_asset_ids=fixture_authorized_ids,
+        )
     items = []
     for row in rows:
         items.append({
@@ -4184,12 +4350,22 @@ def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[di
     return current
 
 
-def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:
+def mock_upload(
+    repo_root: Path,
+    asset_ids: Iterable[str] | None = None,
+    limit: int = 500,
+    *,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit or 500), 5000))
     requested_ids = [str(asset_id or "").strip() for asset_id in (asset_ids or []) if str(asset_id or "").strip()]
     now = now_iso()
     run_id = uuid.uuid4().hex
     with connect(repo_root) as conn:
+        fixture_authorized_ids = _fixture_authorized_upload_asset_ids(
+            conn,
+            fixture_authorized_asset_ids,
+        )
         params: list[Any] = []
         asset_filter = ""
         if requested_ids:
@@ -4204,7 +4380,14 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
                    a.location_label, a.location_keywords_json, d.title, d.keywords_json
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
-            WHERE d.pick_state = 'picked' AND d.metadata_state = 'approved'
+            WHERE (
+                (d.pick_state = 'picked' AND d.metadata_state = 'approved')
+                OR EXISTS (
+                  SELECT 1
+                  FROM sidecar_fixture_authorized_upload_assets AS authorized
+                  WHERE authorized.asset_id = d.asset_id
+                )
+              )
               {asset_filter}
               AND NOT EXISTS (
                 SELECT 1 FROM sidecar_tombstones AS t
@@ -4246,8 +4429,22 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
             key=lambda row: (str(row["captured_at"] or ""), str(row["asset_id"])),
             reverse=True,
         )
-        metadata_blocked_rows = [row for row in physical_rows if not _upload_bridge_metadata_ready(row)]
-        rows = [row for row in physical_rows if _upload_bridge_metadata_ready(row)][:safe_limit]
+        metadata_blocked_rows = [
+            row
+            for row in physical_rows
+            if not _upload_bridge_metadata_ready(
+                row,
+                allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+            )
+        ]
+        rows = [
+            row
+            for row in physical_rows
+            if _upload_bridge_metadata_ready(
+                row,
+                allow_missing_gallery=str(row["asset_id"]) in fixture_authorized_ids,
+            )
+        ][:safe_limit]
         for row in rows:
             conn.execute(
                 """
@@ -4261,7 +4458,11 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
                 """,
                 (row["asset_id"], run_id, now, now),
             )
-        rows = _upload_bridge_rows(conn, asset_ids=[str(row["asset_id"]) for row in rows])
+        rows = _upload_bridge_rows(
+            conn,
+            asset_ids=[str(row["asset_id"]) for row in rows],
+            fixture_authorized_asset_ids=fixture_authorized_ids,
+        )
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
@@ -4322,14 +4523,31 @@ def mock_upload(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: 
             repo_root,
             limit=safe_limit,
             asset_ids=requested_ids if asset_ids is not None else None,
+            fixture_authorized_asset_ids=fixture_authorized_ids,
         ),
     }
 
 
-def queue_upload_bridge(repo_root: Path, asset_ids: Iterable[str] | None = None, limit: int = 500) -> dict[str, Any]:
+def queue_upload_bridge(
+    repo_root: Path,
+    asset_ids: Iterable[str] | None = None,
+    limit: int = 500,
+    *,
+    fixture_authorized_asset_ids: Iterable[str] | None = None,
+) -> dict[str, Any]:
     """Queue upload-ready Sidecar items for the bridge using the legacy mock table."""
-    result = mock_upload(repo_root, asset_ids=asset_ids, limit=limit)
-    result["uploadBridgePlan"] = upload_bridge_plan(repo_root, limit=limit, asset_ids=asset_ids)
+    result = mock_upload(
+        repo_root,
+        asset_ids=asset_ids,
+        limit=limit,
+        fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+    )
+    result["uploadBridgePlan"] = upload_bridge_plan(
+        repo_root,
+        limit=limit,
+        asset_ids=asset_ids,
+        fixture_authorized_asset_ids=fixture_authorized_asset_ids,
+    )
     return result
 
 

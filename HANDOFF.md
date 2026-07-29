@@ -1,5 +1,27 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Native publication can recover the infamous 31 safely
+
+- The 31 repeatedly failed Uploads items were not an R2 outage. Twenty-nine
+  were approved in the fixture-aware editorial state while retaining obsolete
+  legacy `sidecar_decisions.pick_state = 'undecided'`; two more were blocked
+  only by the retired `missing-gallery-signal` bridge gate.
+- Native publication now passes its exact, already selected asset IDs into the
+  legacy Upload Bridge as an explicit fixture-authorized scope. The bridge
+  independently revalidates each ID against an active picked fixture, approved
+  global editorial state, a live source asset, a non-archived fixture, and no
+  active tombstone before it can queue anything.
+- That narrow native path may bypass only the obsolete missing-gallery gate.
+  Generic titles, AI/stained exclusions, tombstones, archived fixtures, missing
+  assets, and unapproved items remain blocked. Unscoped legacy bridge behavior
+  is unchanged.
+- A SQLite `.backup` dry run against the latest 31-failure run planned all
+  31 exact source asset IDs, with zero metadata blocks and no production R2 or
+  Apple Photos mutation. The real retry has deliberately not been started.
+- Verification: 103 targeted fixture, connector, publication, and Upload
+  Bridge tests pass. A separate pre-existing Apple Photos tombstone-keyword
+  assertion still fails in its own test and is outside this repair.
+
 ## 2026-07-28 — Deleted R2 coverage requeues instead of blocking publication
 
 - Upload planning now accepts coverage only from `r2_objects` rows whose

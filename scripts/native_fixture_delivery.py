@@ -65,11 +65,17 @@ def deliver_fixture_assets(
         selected_ids,
         ["r2", "apple_photos"],
     )
-    queue_upload_bridge(repo_root, asset_ids=selected_ids, limit=len(selected_ids))
+    queue_upload_bridge(
+        repo_root,
+        asset_ids=selected_ids,
+        limit=len(selected_ids),
+        fixture_authorized_asset_ids=selected_ids,
+    )
     batch = prepare_upload_bridge_execute_batch(
         repo_root,
         limit=len(selected_ids),
         asset_ids=selected_ids,
+        fixture_authorized_asset_ids=selected_ids,
     )
     if not batch.get("items"):
         return {

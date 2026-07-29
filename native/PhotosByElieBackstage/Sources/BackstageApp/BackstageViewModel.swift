@@ -260,6 +260,16 @@ final class BackstageViewModel: ObservableObject {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
     }
 
+    var canRunAIProposalPass: Bool {
+        guard !isRunningAIPass else { return false }
+        if (fixtureAIStatus?.requested ?? 0) > 0 {
+            return true
+        }
+        return !selectedReviewAssetIDs.isEmpty
+            && (!reviewAIReasons.isEmpty
+                || !reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
     var selectedFixturePath: [FixtureNode] {
         fixtures.path(to: selectedFixtureID)
     }
@@ -1650,9 +1660,15 @@ final class BackstageViewModel: ObservableObject {
             reviewAIRequestAutosaveTask = nil
         }
         if action != .editMetadata {
+            let hasExplicitPendingMetadataEdit = reviewMetadataAutosaveTask != nil
             reviewMetadataAutosaveTask?.cancel()
             reviewMetadataAutosaveTask = nil
-            await saveReviewMetadataIfNeeded()
+            // A loaded proposal is an editable preview, not an implicit
+            // metadata edit. Only an explicit field edit or Approve may move
+            // the displayed draft into canonical Current metadata.
+            if hasExplicitPendingMetadataEdit || action == .approve {
+                await saveReviewMetadataIfNeeded()
+            }
         }
         let ids = selectedReviewAssetIDs
         guard !ids.isEmpty, let anchor = reviewSelection.focusedID ?? ids.first else {
@@ -1912,10 +1928,16 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func propagateReviewTitle() async {
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
         await applyReviewAction(.propagateTitle, propagate: true)
     }
 
     func propagateReviewKeywords() async {
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
         await applyReviewAction(.propagateKeywords, propagate: true)
     }
 
@@ -1958,6 +1980,16 @@ final class BackstageViewModel: ObservableObject {
     func runAIProposalPass() async {
         if isRunningAIPass {
             await refreshAIStatus()
+            return
+        }
+        if reviewAIRequestAutosaveTask != nil {
+            reviewAIRequestAutosaveTask?.cancel()
+            reviewAIRequestAutosaveTask = nil
+            await applyReviewAction(.requestAI)
+        }
+        await refreshAIStatus()
+        guard (fixtureAIStatus?.requested ?? 0) > 0 else {
+            aiProposalStatus = "No requested AI work is waiting."
             return
         }
         isRunningAIPass = true

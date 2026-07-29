@@ -692,8 +692,9 @@ Clock state: running
 | 2026-07-29 | 12:51 CEST | 12:52 CEST | 0:01 | Reported that a multi-selected AI-review draft had no visibly actionable submit control; background diagnosis, implementation, tests, build, and installation time excluded. |
 | 2026-07-29 | 13:03 CEST | 13:04 CEST | 0:01 | Clarified that changing any AI-review reason or note is itself the durable request and that the separate submit button must disappear; background implementation, tests, build, and installation time excluded. |
 | 2026-07-29 | 13:32 CEST | 13:33 CEST | 0:01 | Reported self-cancelling AI-note autosave requests and chose a two-second inactivity save for free-form notes; background implementation, tests, build, and installation time excluded. |
+| 2026-07-29 | 17:57 CEST | 18:03 CEST | 0:02 | Reported unintended proposal-to-Current promotion during a second AI request, clarified the multi-item re-proposal workflow, and requested H to hide and advance within Upload Quick View; background diagnosis, implementation, tests, build, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:46
+Active collaboration time used: 33:48
 Remaining budget: not set

@@ -483,6 +483,11 @@ private struct UploadWorkflowView: View {
                     moveUploadQuickView(in: plan, by: 1)
                     return .handled
                 }
+                .onKeyPress("h") {
+                    guard !model.isRunningDelivery else { return .handled }
+                    hideCurrentUploadQuickView(in: plan)
+                    return .handled
+                }
             }
         }
         .task {
@@ -588,6 +593,39 @@ private struct UploadWorkflowView: View {
         model.selectedDeliveryIDs = [next.id]
         Task { await model.loadNativeUploadPreview(for: next) }
     }
+
+    private func hideCurrentUploadQuickView(in plan: NativeUploadPlan) {
+        let items = sortedItems(plan)
+        guard let current = uploadQuickViewItem,
+              let currentIndex = items.firstIndex(where: { $0.id == current.id }) else {
+            return
+        }
+        let preferredNextID = items.indices.contains(currentIndex + 1)
+            ? items[currentIndex + 1].id
+            : items.indices.contains(currentIndex - 1)
+                ? items[currentIndex - 1].id
+                : nil
+        model.selectedDeliveryIDs = [current.id]
+        Task {
+            await model.hideSelectedUploads()
+            guard let updatedPlan = model.nativeUploadPlan else {
+                closeUploadQuickView()
+                return
+            }
+            let remaining = sortedItems(updatedPlan)
+            let next = preferredNextID.flatMap { preferredID in
+                remaining.first(where: { $0.id == preferredID })
+            } ?? remaining.first
+            guard let next else {
+                closeUploadQuickView()
+                return
+            }
+            uploadQuickViewItem = next
+            model.selectedDeliveryIDs = [next.id]
+            isUploadQuickViewFocused = true
+            await model.loadNativeUploadPreview(for: next)
+        }
+    }
 }
 
 private struct UploadQuickView: View {
@@ -635,7 +673,7 @@ private struct UploadQuickView: View {
                     LabeledContent("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
                     LabeledContent("File", value: item.filename)
                     Spacer()
-                    Text("Use ↑/↓ to navigate • Press Space to close")
+                    Text("Use ↑/↓ to navigate • H hides and advances • Space closes")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -2304,7 +2342,7 @@ private struct FixtureReviewView: View {
                     Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now") {
                         Task { await model.runAIProposalPass() }
                     }
-                    .disabled(model.isRunningAIPass || (model.fixtureAIStatus?.requested ?? 0) == 0)
+                    .disabled(!model.canRunAIProposalPass)
                     if model.fixtureAIStatus?.active == true {
                         Button("Cancel") {
                             Task { await model.cancelAIProposalPass() }

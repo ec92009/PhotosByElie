@@ -551,7 +551,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("scheduleReviewAIRequestAutosave(after: .seconds(2))", model)
         self.assertIn("self.reviewAIRequestAutosaveTask = nil", model)
         self.assertIn("await self.applyReviewAction(.requestAI)", model)
+        self.assertIn(
+            "let hasExplicitPendingMetadataEdit = reviewMetadataAutosaveTask != nil",
+            model,
+        )
+        self.assertIn(
+            "if hasExplicitPendingMetadataEdit || action == .approve",
+            model,
+        )
         self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
+        self.assertIn(".disabled(!model.canRunAIProposalPass)", ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)
         self.assertIn('Button("Propagate")', actions)
@@ -580,6 +589,24 @@ class NativeCullingParityTest(unittest.TestCase):
             "await applyReviewAction(reviewLastAction, propagate: true)",
             propagate,
         )
+
+    def test_upload_preview_hides_current_item_and_advances(self):
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        upload = ui.split("private struct UploadWorkflowView", 1)[1].split(
+            "private struct DeliverablesView",
+            1,
+        )[0]
+        self.assertIn('.onKeyPress("h")', upload)
+        self.assertIn("hideCurrentUploadQuickView(in: plan)", upload)
+        self.assertIn("await model.hideSelectedUploads()", upload)
+        self.assertIn("uploadQuickViewItem = next", upload)
+        self.assertIn("await model.loadNativeUploadPreview(for: next)", upload)
+        self.assertIn("H hides and advances", upload)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

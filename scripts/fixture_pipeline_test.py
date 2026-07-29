@@ -1121,6 +1121,117 @@ class FixturePipelineTest(unittest.TestCase):
             {"requested": 1, "captured": 1, "failed": 0},
         )
 
+    def test_second_ai_request_keeps_current_metadata_and_supersedes_only_the_proposal(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        for asset_id in ("asset-1", "asset-2"):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                [asset_id],
+                "edit-metadata",
+                title=f"Original clue {asset_id}",
+                keywords=["Museum", "Paris"],
+            )
+
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "request-ai",
+            ai_reasons=["add details"],
+        )
+        for asset_id in ("asset-1", "asset-2"):
+            preview = self.root / f"{asset_id}-second-pass.jpg"
+            preview.write_bytes(f"preview-{asset_id}".encode())
+            record_ai_preview(self.root, asset_id, preview)
+        run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=lambda item: {
+                "title": f"First proposal for {item['assetId']}",
+                "keywords": ["First", "Proposal"],
+                "confidence": "high",
+                "reason": "First pass.",
+                "needs_owner_context": False,
+            },
+        )
+        first_proposals = ready_ai_proposals(self.root)["items"]
+        mark_ai_proposals_loaded(
+            self.root,
+            [proposal["proposalId"] for proposal in first_proposals],
+        )
+
+        second_request = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "request-ai",
+            ai_reasons=["incorrect title"],
+            ai_note=(
+                "Do not ignore the original title; it identifies the "
+                "Musee National des Arts Asiatiques, Paris."
+            ),
+        )
+        self.assertEqual(
+            {
+                item["after"]["title"]
+                for item in second_request["items"]
+            },
+            {"Original clue asset-1", "Original clue asset-2"},
+        )
+        self.assertEqual(
+            {
+                tuple(item["after"]["keywords"])
+                for item in second_request["items"]
+            },
+            {("Museum", "Paris")},
+        )
+        self.assertEqual(
+            {
+                tuple(item["after"]["aiReasons"])
+                for item in second_request["items"]
+            },
+            {("incorrect title",)},
+        )
+        with connect(self.root) as conn:
+            proposal_states = {
+                row["status"]
+                for row in conn.execute(
+                    """
+                    SELECT status
+                    FROM asset_ai_proposals
+                    WHERE asset_id IN ('asset-1', 'asset-2')
+                    """
+                ).fetchall()
+            }
+            canonical = {
+                row["asset_id"]: (
+                    row["title"],
+                    json.loads(row["keywords_json"]),
+                )
+                for row in conn.execute(
+                    """
+                    SELECT asset_id, title, keywords_json
+                    FROM sidecar_decisions
+                    WHERE asset_id IN ('asset-1', 'asset-2')
+                    """
+                ).fetchall()
+            }
+        self.assertEqual(proposal_states, {"superseded"})
+        self.assertEqual(
+            canonical,
+            {
+                "asset-1": ("Original clue asset-1", ["Museum", "Paris"]),
+                "asset-2": ("Original clue asset-2", ["Museum", "Paris"]),
+            },
+        )
+
     def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):
         upsert_assets(self.root, [
             {

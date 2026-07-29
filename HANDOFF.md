@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Upload Quick View hides and advances
+
+- Backstage `0.4.38` build `49` gives Upload Quick View an explicit **H**
+  shortcut. It hides only the current approved item through the existing
+  audited action, removes that item from the fixed Upload tray, advances to
+  the next remaining item, and keeps Quick View open.
+- A loaded Review proposal is now read-only until the owner edits metadata or
+  explicitly approves it. Requesting another AI pass no longer promotes the
+  displayed proposal into canonical Current title and keywords.
+- **Run AI pass now** flushes a pending reason or note request before starting
+  the pass, so a shared note on a multi-selection can supersede the prior
+  proposal while preserving each item's original Current metadata.
+- Verification is state-safe: 39 fixture-pipeline tests, 18 native UI parity
+  tests, and 47 Swift tests pass without hiding, reviewing, or uploading a
+  real asset.
+
 ## 2026-07-29 — AI note autosave no longer cancels its own request
 
 - Backstage `0.4.37` build `48` saves reason toggles after the short interaction

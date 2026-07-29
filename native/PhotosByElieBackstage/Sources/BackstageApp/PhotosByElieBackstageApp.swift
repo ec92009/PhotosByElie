@@ -2663,7 +2663,14 @@ private struct ReviewAssetRow: View {
                         Text("• \(item.aiReasons.count) reason\(item.aiReasons.count == 1 ? "" : "s")")
                     }
                     if hasProposalDraft {
-                        Label("Proposal draft", systemImage: "sparkles")
+                        Label(
+                            proposalDraft?.isHistoricalProposal == true
+                                ? "Previous proposal"
+                                : "Proposal draft",
+                            systemImage: proposalDraft?.isHistoricalProposal == true
+                                ? "clock.arrow.circlepath"
+                                : "sparkles"
+                        )
                     }
                     if hasProposalConflict {
                         Label("Manual draft kept", systemImage: "exclamationmark.triangle.fill")
@@ -2835,10 +2842,16 @@ private struct ReviewInspector: View {
                     }
                     if let proposal = model.reviewProposalDrafts[item.id], proposal.isProposal {
                         Label(
-                            proposal.proposalReason.isEmpty
-                                ? "AI proposal loaded as an editable draft"
-                                : proposal.proposalReason,
-                            systemImage: "sparkles"
+                            proposal.isHistoricalProposal
+                                ? "Previous proposal kept while AI revises it"
+                                : (
+                                    proposal.proposalReason.isEmpty
+                                        ? "AI proposal loaded as an editable draft"
+                                        : proposal.proposalReason
+                                ),
+                            systemImage: proposal.isHistoricalProposal
+                                ? "clock.arrow.circlepath"
+                                : "sparkles"
                         )
                         .font(.caption)
                         .foregroundStyle(.orange)

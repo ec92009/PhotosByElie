@@ -26,8 +26,10 @@ struct ReviewMetadataDraft: Sendable, Equatable {
     var keywords: [String]
     var proposalID: String = ""
     var proposalReason: String = ""
+    var proposalStatus: String = ""
 
     var isProposal: Bool { !proposalID.isEmpty }
+    var isHistoricalProposal: Bool { proposalStatus == "superseded" }
 }
 
 struct ReviewHistoryEntry: Identifiable, Sendable {
@@ -1723,6 +1725,14 @@ final class BackstageViewModel: ObservableObject {
                     reviewProposalDrafts.removeValue(forKey: $0)
                     reviewProposalConflictIDs.remove($0)
                 }
+            } else if action == .requestAI {
+                ids.forEach {
+                    guard var draft = reviewProposalDrafts[$0], draft.isProposal else {
+                        return
+                    }
+                    draft.proposalStatus = "superseded"
+                    reviewProposalDrafts[$0] = draft
+                }
             }
             if !result.operationID.isEmpty {
                 reviewHistory.append(
@@ -1823,6 +1833,7 @@ final class BackstageViewModel: ObservableObject {
             case .requestAI:
                 item.deliveryState = "not-ready"
                 item.proposalReady = false
+                item.proposalStatus = "superseded"
             case .returnToReview:
                 item.editorialState = "unreviewed"
                 item.deliveryState = "not-ready"
@@ -2034,7 +2045,8 @@ final class BackstageViewModel: ObservableObject {
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
-                    proposalReason: proposal.reason
+                    proposalReason: proposal.reason,
+                    proposalStatus: proposal.status
                 )
                 loadedProposalIDs.append(proposal.id)
             }
@@ -2065,7 +2077,8 @@ final class BackstageViewModel: ObservableObject {
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
-                    proposalReason: proposal.reason
+                    proposalReason: proposal.reason,
+                    proposalStatus: proposal.status
                 )
                 restored += 1
             }
@@ -2162,9 +2175,16 @@ final class BackstageViewModel: ObservableObject {
     /// the proposal's audit status. Explicit "Load proposals" remains the
     /// transition that marks a ready proposal as loaded.
     private func hydrateReviewProposalDrafts(from items: [FixtureReviewItem]) {
-        for item in items where item.proposalReady && !item.proposalID.isEmpty {
+        for item in items
+        where item.proposalContextAvailable && !item.proposalID.isEmpty {
             if let existing = reviewProposalDrafts[item.id] {
-                if !existing.isProposal || existing.proposalID == item.proposalID {
+                if existing.proposalID == item.proposalID {
+                    var refreshed = existing
+                    refreshed.proposalStatus = item.proposalStatus
+                    reviewProposalDrafts[item.id] = refreshed
+                    continue
+                }
+                if !existing.isProposal {
                     continue
                 }
             }
@@ -2172,7 +2192,8 @@ final class BackstageViewModel: ObservableObject {
                 title: item.proposedTitle,
                 keywords: item.proposedKeywords,
                 proposalID: item.proposalID,
-                proposalReason: item.proposalReason
+                proposalReason: item.proposalReason,
+                proposalStatus: item.proposalStatus
             )
         }
     }
@@ -2193,7 +2214,8 @@ final class BackstageViewModel: ObservableObject {
                 title: title,
                 keywords: keywords,
                 proposalID: existing.proposalID,
-                proposalReason: existing.proposalReason
+                proposalReason: existing.proposalReason,
+                proposalStatus: existing.proposalStatus
             )
         } else if title != item.title || keywords != item.keywords {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(

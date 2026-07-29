@@ -1199,6 +1199,35 @@ class FixturePipelineTest(unittest.TestCase):
             },
             {("incorrect title",)},
         )
+        requesting_window = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+        )
+        requesting_items = {
+            item["assetId"]: item
+            for item in requesting_window["items"]
+        }
+        for asset_id in ("asset-1", "asset-2"):
+            item = requesting_items[asset_id]
+            self.assertFalse(item["proposalReady"])
+            self.assertTrue(item["proposalContextAvailable"])
+            self.assertEqual(item["proposalStatus"], "superseded")
+            self.assertEqual(
+                item["proposedTitle"],
+                f"First proposal for {asset_id}",
+            )
+            self.assertEqual(
+                item["proposedKeywords"],
+                ["First", "Proposal"],
+            )
+        self.assertEqual(
+            fixture_review_window(
+                self.root,
+                root["fixtureId"],
+                proposal_available_only=True,
+            )["items"],
+            [],
+        )
         with connect(self.root) as conn:
             proposal_states = {
                 row["status"]

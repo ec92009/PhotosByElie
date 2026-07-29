@@ -453,6 +453,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var aiAttemptCount: Int
     public var aiLastError: String
     public var proposalReady: Bool
+    public var proposalContextAvailable: Bool
     public var proposalID: String
     public var proposedTitle: String
     public var proposedKeywords: [String]
@@ -478,6 +479,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         aiAttemptCount = json["aiAttemptCount"]?.intValue ?? 0
         aiLastError = json["aiLastError"]?.stringValue ?? ""
         proposalReady = json["proposalReady"]?.boolValue ?? false
+        proposalContextAvailable = json["proposalContextAvailable"]?.boolValue
+            ?? proposalReady
         proposalID = json["proposalId"]?.stringValue ?? ""
         proposedTitle = json["proposedTitle"]?.stringValue ?? ""
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []

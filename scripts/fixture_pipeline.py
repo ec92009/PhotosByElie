@@ -1665,7 +1665,8 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "aiAttemptCount": int(row["ai_attempt_count"] or 0),
         "aiLastError": str(row["ai_last_error"] or ""),
         "aiPreviewReady": bool(str(row["ai_preview_path"] or "")),
-        "proposalReady": bool(str(row["proposal_id"] or "")),
+        "proposalReady": str(row["proposal_status"] or "") in {"ready", "loaded"},
+        "proposalContextAvailable": bool(str(row["proposal_id"] or "")),
         "proposalId": str(row["proposal_id"] or ""),
         "proposedTitle": str(row["proposal_title"] or ""),
         "proposedKeywords": _read_json(row["proposal_keywords_json"], []),
@@ -1739,10 +1740,22 @@ def fixture_review_window(
                 SELECT latest_proposal.proposal_id
                 FROM asset_ai_proposals AS latest_proposal
                 WHERE latest_proposal.asset_id = a.asset_id
-                  AND latest_proposal.status IN ('ready', 'loaded')
-                ORDER BY latest_proposal.attempt DESC,
-                         latest_proposal.created_at DESC,
-                         latest_proposal.proposal_id DESC
+                  AND (
+                    latest_proposal.status IN ('ready', 'loaded')
+                    OR (
+                      editorial.editorial_state = 'requesting-ai'
+                      AND latest_proposal.status = 'superseded'
+                      AND latest_proposal.decided_at = editorial.requested_at
+                    )
+                  )
+                ORDER BY
+                  CASE
+                    WHEN latest_proposal.status IN ('ready', 'loaded') THEN 0
+                    ELSE 1
+                  END,
+                  latest_proposal.attempt DESC,
+                  latest_proposal.created_at DESC,
+                  latest_proposal.proposal_id DESC
                 LIMIT 1
               )
         """

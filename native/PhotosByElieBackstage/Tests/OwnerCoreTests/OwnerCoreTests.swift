@@ -1122,6 +1122,7 @@ struct OwnerCoreTests {
                         "aiAttemptCount": 1,
                         "aiLastError": "",
                         "proposalReady": true,
+                        "proposalContextAvailable": true,
                         "proposalId": "proposal-oldest",
                         "proposedTitle": "A better title",
                         "proposedKeywords": ["Paris", "France"],
@@ -1194,6 +1195,7 @@ struct OwnerCoreTests {
         #expect(window.items.first?.placementState == "picked")
         #expect(window.items.first?.aiReasons == ["weak title"])
         #expect(window.items.first?.proposalReady == true)
+        #expect(window.items.first?.proposalContextAvailable == true)
         #expect(window.items.first?.proposalID == "proposal-oldest")
         #expect(window.items.first?.proposedTitle == "A better title")
         #expect(window.items.first?.proposedKeywords == ["Paris", "France"])

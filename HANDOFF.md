@@ -1,5 +1,19 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — A requested revision keeps the previous proposal visible
+
+- Backstage `0.4.41` build `52` keeps the exact superseded proposal visible
+  as **Previous proposal** from the moment the orange AI-review question mark
+  appears until a replacement proposal is ready.
+- Historical context remains display-only: it does not become canonical
+  Current metadata and does not qualify an item for the **Proposal Available**
+  filter. A new ready or loaded proposal still replaces it immediately.
+- The Review response now distinguishes an actionable ready proposal from
+  available historical proposal context, so app restarts and queue reloads
+  preserve the same evidence as the immediate in-memory transition.
+- Verification was state-safe: 58 Python tests and 47 Swift tests pass. No
+  real Review or AI action was submitted.
+
 ## 2026-07-29 — Second AI passes retain the prior draft as evidence
 
 - Backstage `0.4.40` build `51` keeps canonical Current title and keywords

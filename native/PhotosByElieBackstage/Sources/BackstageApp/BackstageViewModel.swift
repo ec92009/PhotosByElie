@@ -1656,7 +1656,6 @@ final class BackstageViewModel: ObservableObject {
                 anchorID: orderedIDs.contains(anchor) ? anchor : replacementID,
                 focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
-            reviewScrollTargetID = orderedIDs.contains(anchor) ? anchor : replacementID
             syncReviewDraft()
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
             await refreshAIStatus()
@@ -2581,6 +2580,7 @@ final class BackstageViewModel: ObservableObject {
                 localIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 1_600
             )
+            guard nativeUploadPreviewItemID == item.id else { return }
             nativeUploadPreviewImage = NSImage(data: preview.jpegData)
         } catch {
             nativeUploadStatus = "The preview could not be prepared. The approved upload item is unchanged."

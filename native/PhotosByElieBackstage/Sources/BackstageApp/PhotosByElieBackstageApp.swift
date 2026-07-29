@@ -260,7 +260,7 @@ private struct UploadWorkflowView: View {
                     Button("Load next 200") { Task { await model.loadNativeUploadPlan() } }
                         .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                 }
-                Button("Publish selected…") { confirmingSelectedPublication = true }
+                Button("Upload selection…") { confirmingSelectedPublication = true }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
             }
             Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
@@ -336,7 +336,10 @@ private struct UploadWorkflowView: View {
                                 await model.loadNativeUploadThumbnail(for: item)
                             }
                         }
-                        TableColumn("File", value: \.filename)
+                        TableColumn("Keywords", value: \.keywordsText) { item in
+                            Text(item.keywordsText.isEmpty ? "No keywords" : item.keywordsText)
+                                .lineLimit(2)
+                        }
                         TableColumn("Captured", value: \.capturedAt)
                         TableColumn("State", value: \.deliveryState)
                         TableColumn("Error", value: \.errorText)
@@ -452,7 +455,8 @@ private struct UploadWorkflowView: View {
         }
         .padding()
         .overlay {
-            if let item = uploadQuickViewItem {
+            if let item = uploadQuickViewItem,
+               let plan = model.nativeUploadPlan {
                 UploadQuickView(
                     item: item,
                     image: model.nativeUploadPreviewItemID == item.id
@@ -465,6 +469,16 @@ private struct UploadWorkflowView: View {
                 .onKeyPress(.space) {
                     closeUploadQuickView()
                     return .handled
+                }
+                .onMoveCommand { direction in
+                    switch direction {
+                    case .up:
+                        moveUploadQuickView(in: plan, by: -1)
+                    case .down:
+                        moveUploadQuickView(in: plan, by: 1)
+                    default:
+                        return
+                    }
                 }
             }
         }
@@ -514,10 +528,10 @@ private struct UploadWorkflowView: View {
             Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
         .confirmationDialog(
-            "Publish the selected eligible assets now?",
+            "Upload the selected eligible assets now?",
             isPresented: $confirmingSelectedPublication
         ) {
-            Button("Publish selected assets") {
+            Button("Upload selection") {
                 Task { await model.publishSelectedNatively() }
             }
             Button("Cancel", role: .cancel) {}
@@ -554,6 +568,20 @@ private struct UploadWorkflowView: View {
     private func closeUploadQuickView() {
         uploadQuickViewItem = nil
         model.clearNativeUploadPreview()
+    }
+
+    private func moveUploadQuickView(in plan: NativeUploadPlan, by delta: Int) {
+        let items = sortedItems(plan)
+        guard let current = uploadQuickViewItem,
+              let index = items.firstIndex(where: { $0.id == current.id }) else {
+            return
+        }
+        let nextIndex = index + delta
+        guard items.indices.contains(nextIndex) else { return }
+        let next = items[nextIndex]
+        uploadQuickViewItem = next
+        model.selectedDeliveryIDs = [next.id]
+        Task { await model.loadNativeUploadPreview(for: next) }
     }
 }
 
@@ -602,7 +630,7 @@ private struct UploadQuickView: View {
                     LabeledContent("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
                     LabeledContent("File", value: item.filename)
                     Spacer()
-                    Text("Press Space to close")
+                    Text("Use ↑/↓ to navigate • Press Space to close")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

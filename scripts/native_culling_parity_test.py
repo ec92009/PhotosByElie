@@ -99,9 +99,14 @@ class NativeCullingParityTest(unittest.TestCase):
             "oldest eligible by upload-readiness time",
             'Button("Publish these \\(plan.items.count.formatted())…")',
             "confirmingVisiblePublication",
+            'Button("Upload selection…")',
             'onKeyPress("r")',
             'onKeyPress("h")',
             "onKeyPress(.space)",
+            ".onMoveCommand",
+            "moveUploadQuickView(in: plan, by: -1)",
+            "moveUploadQuickView(in: plan, by: 1)",
+            "Use ↑/↓ to navigate",
             "UploadQuickView",
             "item.keywords.joined",
             'Button("Hide…")',
@@ -109,8 +114,9 @@ class NativeCullingParityTest(unittest.TestCase):
             "Batch complete",
         ):
             self.assertIn(marker, upload)
-        for column in ("Title", "File", "Captured", "State", "Error"):
+        for column in ("Title", "Keywords", "Captured", "State", "Error"):
             self.assertIn(f'TableColumn("{column}", value:', upload)
+        self.assertNotIn('TableColumn("File", value:', upload)
         self.assertIn("func returnSelectedUploadsToReview()", model)
         self.assertIn("func hideSelectedUploads()", model)
         self.assertIn("func loadNativeUploadPreview(", model)
@@ -167,6 +173,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('item.editorialState = "approved"', apply_action)
         self.assertIn('item.placementState = "hidden"', apply_action)
         self.assertNotIn("fixtureService.reviewWindow(", apply_action)
+        self.assertNotIn("reviewScrollTargetID =", apply_action)
         self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', row)
         self.assertIn('item.editorialState == "approved"', row)
         self.assertIn('systemName: "checkmark.circle.fill"', row)

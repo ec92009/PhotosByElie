@@ -115,6 +115,7 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
 
 public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var id: String { assetID }
+    public var keywordsText: String { keywords.joined(separator: ", ") }
     public var assetID: String
     public var photoLibraryIdentifier: String
     public var title: String

@@ -1,5 +1,24 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Upload selection and review navigation are explicit
+
+- Backstage `0.4.27` build `38` keeps the native Uploads table's Command-click
+  and Shift-click selection and exposes the selected-scope action directly as
+  **Upload selection…**. The guarded confirmation targets only the current
+  selected asset IDs; the fixed visible tray and separate **Publish these N**
+  action remain unchanged.
+- The Uploads table replaces the redundant filename column with sortable
+  keywords. Quick View stays open while Up/Down moves through the currently
+  sorted tray, updates the selected row, and discards stale asynchronous
+  previews if the owner navigates quickly.
+- Approve and Hide no longer force the retained Review row back to the center
+  of the scroll area. The current local row ordering and viewport remain under
+  the owner's control; explicit keyboard navigation and initial loading still
+  scroll intentionally.
+- Acceptance remains read-only: selection, Quick View navigation, and visible
+  controls may be exercised, but no real upload, approval, or hide action is
+  required.
+
 ## 2026-07-29 — Native publication can recover the infamous 31 safely
 
 - The 31 repeatedly failed Uploads items were not an R2 outage. Twenty-nine

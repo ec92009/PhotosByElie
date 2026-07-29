@@ -49,7 +49,7 @@ from fixture_pipeline import (
     set_fixture_asset_state,
     editorial_version_hash,
 )
-from requested_ai_proposal_pass import run_requested_ai_pass
+from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
 from sidecar_state_db import connect, record_decision, upsert_assets
 
 
@@ -1230,6 +1230,71 @@ class FixturePipelineTest(unittest.TestCase):
                 "asset-1": ("Original clue asset-1", ["Museum", "Paris"]),
                 "asset-2": ("Original clue asset-2", ["Museum", "Paris"]),
             },
+        )
+        second_pass_inputs = []
+
+        def second_proposer(item):
+            second_pass_inputs.append(item)
+            return {
+                "title": f"Revised proposal for {item['assetId']}",
+                "keywords": ["Revised", "Proposal"],
+                "confidence": "high",
+                "reason": "Second pass retained the prior draft as context.",
+                "needs_owner_context": False,
+            }
+
+        second_result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=second_proposer,
+        )
+        self.assertEqual(second_result["proposed"], 2)
+        self.assertEqual(
+            {
+                item["assetId"]: (
+                    item["currentTitle"],
+                    item["currentKeywords"],
+                    item["priorProposalTitle"],
+                    item["priorProposalKeywords"],
+                    item["requestReasons"],
+                    item["requestNote"],
+                )
+                for item in second_pass_inputs
+            },
+            {
+                "asset-1": (
+                    "Original clue asset-1",
+                    ["Museum", "Paris"],
+                    "First proposal for asset-1",
+                    ["First", "Proposal"],
+                    ["incorrect title"],
+                    (
+                        "Do not ignore the original title; it identifies the "
+                        "Musee National des Arts Asiatiques, Paris."
+                    ),
+                ),
+                "asset-2": (
+                    "Original clue asset-2",
+                    ["Museum", "Paris"],
+                    "First proposal for asset-2",
+                    ["First", "Proposal"],
+                    ["incorrect title"],
+                    (
+                        "Do not ignore the original title; it identifies the "
+                        "Musee National des Arts Asiatiques, Paris."
+                    ),
+                ),
+            },
+        )
+        prompt = _prompt(second_pass_inputs[0])
+        self.assertIn('"current_title": "Original clue asset-1"', prompt)
+        self.assertIn(
+            '"prior_proposal_title": "First proposal for asset-1"',
+            prompt,
+        )
+        self.assertIn(
+            "previous AI draft under review",
+            prompt,
         )
 
     def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):

@@ -213,6 +213,16 @@ class NativeCullingParityTest(unittest.TestCase):
             "reviewAIReasons = hasActiveAIRequest ? Set(item.aiReasons) : []",
             model,
         )
+        self.assertNotIn("hasExplicitPendingMetadataEdit", apply_action)
+        self.assertIn("if action == .approve", apply_action)
+        request_ai_guard = apply_action.split(
+            "let ids = selectedReviewAssetIDs",
+            1,
+        )[0]
+        self.assertNotIn(
+            "await saveReviewMetadataIfNeeded()",
+            request_ai_guard.split("if action == .approve", 1)[0],
+        )
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (
@@ -551,14 +561,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("scheduleReviewAIRequestAutosave(after: .seconds(2))", model)
         self.assertIn("self.reviewAIRequestAutosaveTask = nil", model)
         self.assertIn("await self.applyReviewAction(.requestAI)", model)
-        self.assertIn(
-            "let hasExplicitPendingMetadataEdit = reviewMetadataAutosaveTask != nil",
-            model,
-        )
-        self.assertIn(
-            "if hasExplicitPendingMetadataEdit || action == .approve",
-            model,
-        )
+        self.assertNotIn("hasExplicitPendingMetadataEdit", model)
+        self.assertIn("if action == .approve", model)
         self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
         self.assertIn(".disabled(!model.canRunAIProposalPass)", ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]

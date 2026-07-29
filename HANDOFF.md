@@ -1,5 +1,24 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Second AI passes retain the prior draft as evidence
+
+- Backstage `0.4.40` build `51` keeps canonical Current title and keywords
+  separate from the proposal being reconsidered. Requesting AI, hiding, or
+  changing AI reasons can no longer promote the displayed proposal into
+  canonical metadata; only explicit approval or metadata propagation may do
+  that.
+- A repeated AI pass now receives the exact proposal superseded by that
+  request as `prior_proposal_*` context, together with canonical Current
+  metadata and the owner's new reasons and note. Useful title clues therefore
+  remain available to AI even when Current was originally empty.
+- The Owner audit showed the reported prior proposals were preserved in
+  `asset_ai_proposals`; they were not destroyed. The visible disappearance was
+  a superseded-draft transition, and those assets had empty canonical titles
+  before the pass.
+- Verification was state-safe: 58 Python tests and 47 Swift tests pass, and
+  the installed app is signed by the stable Apple Development identity. No
+  real Review or AI action was submitted.
+
 ## 2026-07-29 — Upload Quick View actions advance in place
 
 - Backstage `0.4.39` build `50` gives Upload Quick View explicit **H** and

@@ -93,6 +93,9 @@ def _prompt(item: dict[str, Any]) -> str:
         "location": item["locationLabel"],
         "current_title": item["currentTitle"],
         "current_keywords": item["currentKeywords"],
+        "prior_proposal_title": item["priorProposalTitle"],
+        "prior_proposal_keywords": item["priorProposalKeywords"],
+        "prior_proposal_reason": item["priorProposalReason"],
         "request_reasons": item["requestReasons"],
         "owner_note": item["requestNote"],
     }
@@ -101,6 +104,8 @@ def _prompt(item: dict[str, Any]) -> str:
         "Return JSON only and follow the supplied schema.",
         "Do not approve, publish, upload, edit Apple Photos, or modify canonical metadata.",
         "Use the pixels as primary evidence and the context only as supporting evidence.",
+        "Treat current_title and current_keywords as canonical owner metadata.",
+        "Treat prior_proposal_* only as the previous AI draft under review; preserve useful clues from it but correct it according to the owner's reasons and note.",
         "Write a concise human-readable title and useful searchable keywords.",
         "Do not include workflow keywords beginning with PBE:.",
         "Honor the owner's request reasons and note.",
@@ -181,10 +186,23 @@ def _candidate_rows(
                editorial.ai_attempt_count, editorial.ai_preview_path,
                editorial.ai_preview_sha256,
                COALESCE(decision.title, '') current_title,
-               COALESCE(decision.keywords_json, '[]') current_keywords_json
+               COALESCE(decision.keywords_json, '[]') current_keywords_json,
+               COALESCE(prior.proposed_title, '') prior_proposal_title,
+               COALESCE(prior.proposed_keywords_json, '[]') prior_proposal_keywords_json,
+               COALESCE(prior.reason, '') prior_proposal_reason
         FROM asset_editorial_state AS editorial
         JOIN sidecar_assets AS asset ON asset.asset_id = editorial.asset_id
         LEFT JOIN sidecar_decisions AS decision ON decision.asset_id = asset.asset_id
+        LEFT JOIN asset_ai_proposals AS prior
+          ON prior.proposal_id = (
+            SELECT proposal.proposal_id
+            FROM asset_ai_proposals AS proposal
+            WHERE proposal.asset_id = editorial.asset_id
+              AND proposal.status = 'superseded'
+              AND proposal.decided_at = editorial.requested_at
+            ORDER BY proposal.attempt DESC, proposal.created_at DESC
+            LIMIT 1
+          )
         WHERE editorial.editorial_state = 'requesting-ai'
         ORDER BY COALESCE(editorial.requested_at, editorial.updated_at), asset.asset_id
     """
@@ -206,6 +224,12 @@ def _candidate_rows(
         "previewSha256": str(row["ai_preview_sha256"] or ""),
         "currentTitle": str(row["current_title"] or ""),
         "currentKeywords": _read_json(row["current_keywords_json"], []),
+        "priorProposalTitle": str(row["prior_proposal_title"] or ""),
+        "priorProposalKeywords": _read_json(
+            row["prior_proposal_keywords_json"],
+            [],
+        ),
+        "priorProposalReason": str(row["prior_proposal_reason"] or ""),
     } for row in rows]
 
 

@@ -693,8 +693,9 @@ Clock state: running
 | 2026-07-29 | 13:03 CEST | 13:04 CEST | 0:01 | Clarified that changing any AI-review reason or note is itself the durable request and that the separate submit button must disappear; background implementation, tests, build, and installation time excluded. |
 | 2026-07-29 | 13:32 CEST | 13:33 CEST | 0:01 | Reported self-cancelling AI-note autosave requests and chose a two-second inactivity save for free-form notes; background implementation, tests, build, and installation time excluded. |
 | 2026-07-29 | 17:57 CEST | 18:09 CEST | 0:03 | Reported unintended proposal-to-Current promotion during a second AI request, clarified the multi-item re-proposal workflow, and requested H/R to hide or return and advance within Upload Quick View; background diagnosis, implementation, tests, build, and installation time excluded. |
+| 2026-07-29 | 18:20 CEST | 18:31 CEST | 0:02 | Clarified that superseding a proposal must not deprive the next AI pass of useful title clues; background SQLite audit, implementation, tests, signing, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:49
+Active collaboration time used: 33:51
 Remaining budget: not set

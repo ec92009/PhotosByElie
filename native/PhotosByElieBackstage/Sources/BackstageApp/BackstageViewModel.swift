@@ -1660,13 +1660,13 @@ final class BackstageViewModel: ObservableObject {
             reviewAIRequestAutosaveTask = nil
         }
         if action != .editMetadata {
-            let hasExplicitPendingMetadataEdit = reviewMetadataAutosaveTask != nil
             reviewMetadataAutosaveTask?.cancel()
             reviewMetadataAutosaveTask = nil
             // A loaded proposal is an editable preview, not an implicit
-            // metadata edit. Only an explicit field edit or Approve may move
-            // the displayed draft into canonical Current metadata.
-            if hasExplicitPendingMetadataEdit || action == .approve {
+            // metadata edit. Request AI and Hide must never promote it into
+            // canonical Current metadata; only Approve or the explicit
+            // metadata/propagation paths may do that.
+            if action == .approve {
                 await saveReviewMetadataIfNeeded()
             }
         }

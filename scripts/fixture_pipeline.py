@@ -2189,28 +2189,52 @@ def apply_fixture_review_action(
             raise ValueError("review action has no eligible targets")
 
         decisions: dict[str, sqlite3.Row] = {}
+        assets: dict[str, sqlite3.Row] = {}
         for asset_id in clean_ids:
-            if not conn.execute(
-                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+            asset = conn.execute(
+                """
+                SELECT photos_title, photos_keywords_json
+                FROM sidecar_assets
+                WHERE asset_id = ?
+                """,
                 (asset_id,),
-            ).fetchone():
+            ).fetchone()
+            if not asset:
                 raise ValueError(f"asset is not indexed: {asset_id}")
+            assets[asset_id] = asset
             if not conn.execute(
                 "SELECT 1 FROM asset_editorial_state WHERE asset_id = ?",
                 (asset_id,),
             ).fetchone():
                 raise ValueError(f"editorial state is missing: {asset_id}")
             decisions[asset_id] = _ensure_global_decision(conn, asset_id, timestamp)
+
+        def effective_metadata(
+            decision: sqlite3.Row,
+            asset: sqlite3.Row,
+        ) -> tuple[str, list[str]]:
+            decision_title = str(decision["title"] or "").strip()
+            decision_keywords = _read_json(decision["keywords_json"], [])
+            return (
+                decision_title or str(asset["photos_title"] or "").strip(),
+                decision_keywords
+                or _read_json(asset["photos_keywords_json"], []),
+            )
+
         source_decision = decisions[clean_anchor]
+        source_effective_title, source_effective_keywords = effective_metadata(
+            source_decision,
+            assets[clean_anchor],
+        )
         source_title = (
             str(title).strip()
             if title is not None
-            else str(source_decision["title"] or "")
+            else source_effective_title
         )
         source_keywords = (
             _unique(keywords or [])
             if keywords is not None
-            else _read_json(source_decision["keywords_json"], [])
+            else source_effective_keywords
         )
         reasons = _unique(ai_reasons or [])
         note = str(ai_note or "").strip()
@@ -2225,12 +2249,16 @@ def apply_fixture_review_action(
                 (asset_id,),
             ).fetchone()
             decision = decisions[asset_id]
+            before_title, before_keywords = effective_metadata(
+                decision,
+                assets[asset_id],
+            )
             before = {
                 "editorialState": str(before_editorial["editorial_state"]),
                 "aiReasons": _read_json(before_editorial["ai_reasons_json"], []),
                 "aiNote": str(before_editorial["ai_note"] or ""),
-                "title": str(decision["title"] or ""),
-                "keywords": _read_json(decision["keywords_json"], []),
+                "title": before_title,
+                "keywords": before_keywords,
             }
             after_state = before["editorialState"]
             after_reasons = before["aiReasons"]
@@ -2394,12 +2422,16 @@ def apply_fixture_review_action(
                 "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
                 (asset_id,),
             ).fetchone()
+            after_title, after_keywords = effective_metadata(
+                updated_decision,
+                assets[asset_id],
+            )
             after = {
                 "editorialState": after_state,
                 "aiReasons": after_reasons,
                 "aiNote": after_note,
-                "title": str(updated_decision["title"] or ""),
-                "keywords": _read_json(updated_decision["keywords_json"], []),
+                "title": after_title,
+                "keywords": after_keywords,
             }
             conn.execute(
                 """

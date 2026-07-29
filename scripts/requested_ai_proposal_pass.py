@@ -185,8 +185,17 @@ def _candidate_rows(
                editorial.ai_reasons_json, editorial.ai_note,
                editorial.ai_attempt_count, editorial.ai_preview_path,
                editorial.ai_preview_sha256,
-               COALESCE(decision.title, '') current_title,
-               COALESCE(decision.keywords_json, '[]') current_keywords_json,
+               COALESCE(
+                 NULLIF(decision.title, ''),
+                 NULLIF(asset.photos_title, ''),
+                 ''
+               ) current_title,
+               CASE
+                 WHEN decision.keywords_json IS NOT NULL
+                  AND decision.keywords_json != '[]'
+                 THEN decision.keywords_json
+                 ELSE COALESCE(asset.photos_keywords_json, '[]')
+               END current_keywords_json,
                COALESCE(prior.proposed_title, '') prior_proposal_title,
                COALESCE(prior.proposed_keywords_json, '[]') prior_proposal_keywords_json,
                COALESCE(prior.reason, '') prior_proposal_reason

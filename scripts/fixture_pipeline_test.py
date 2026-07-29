@@ -1326,6 +1326,116 @@ class FixturePipelineTest(unittest.TestCase):
             prompt,
         )
 
+    def test_request_ai_preserves_photos_only_current_metadata(self):
+        upsert_assets(self.root, [
+            {
+                "localIdentifier": "asset-photos-current",
+                "filename": "CURRENT.JPG",
+                "mediaType": "photo",
+                "creationDate": "2026-07-15T12:00:00Z",
+                "applePhotosTitle": "Paris, Musee Carnavalet",
+                "applePhotosKeywords": ["Paris", "Musee Carnavalet"],
+            },
+        ])
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-photos-current"],
+            "picked",
+        )
+
+        marked = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-photos-current"],
+            "request-ai",
+            ai_reasons=["add details"],
+        )
+        self.assertEqual(
+            marked["items"][0]["after"]["title"],
+            "Paris, Musee Carnavalet",
+        )
+        self.assertEqual(
+            marked["items"][0]["after"]["keywords"],
+            ["Paris", "Musee Carnavalet"],
+        )
+
+        cleared = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-photos-current"],
+            "request-ai",
+            ai_reasons=[],
+            ai_note="",
+        )
+        self.assertEqual(
+            cleared["items"][0]["after"]["title"],
+            "Paris, Musee Carnavalet",
+        )
+        self.assertEqual(
+            cleared["items"][0]["after"]["keywords"],
+            ["Paris", "Musee Carnavalet"],
+        )
+
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-photos-current"],
+            "request-ai",
+            ai_reasons=["add details"],
+        )
+        preview = self.root / "asset-photos-current.jpg"
+        preview.write_bytes(b"bounded-preview")
+        record_ai_preview(
+            self.root,
+            "asset-photos-current",
+            preview,
+        )
+        inputs = []
+
+        result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=lambda item: (
+                inputs.append(item)
+                or {
+                    "title": "Detailed proposal",
+                    "keywords": ["Detailed", "Proposal"],
+                    "confidence": "high",
+                    "reason": "The current Photos metadata remained available.",
+                    "needs_owner_context": False,
+                }
+            ),
+        )
+
+        self.assertEqual(result["proposed"], 1)
+        self.assertEqual(
+            inputs[0]["currentTitle"],
+            "Paris, Musee Carnavalet",
+        )
+        self.assertEqual(
+            inputs[0]["currentKeywords"],
+            ["Paris", "Musee Carnavalet"],
+        )
+        self.assertIn(
+            '"current_title": "Paris, Musee Carnavalet"',
+            _prompt(inputs[0]),
+        )
+        with connect(self.root) as conn:
+            decision = conn.execute(
+                """
+                SELECT title, keywords_json
+                FROM sidecar_decisions
+                WHERE asset_id = 'asset-photos-current'
+                """
+            ).fetchone()
+        self.assertFalse(decision["title"])
+        self.assertEqual(
+            json.loads(decision["keywords_json"] or "[]"),
+            [],
+        )
+
     def test_review_propagation_crosses_visible_page_with_two_hour_boundary(self):
         upsert_assets(self.root, [
             {

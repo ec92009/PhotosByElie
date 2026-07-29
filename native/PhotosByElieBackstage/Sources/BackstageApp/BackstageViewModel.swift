@@ -1800,13 +1800,19 @@ final class BackstageViewModel: ObservableObject {
         let changesByID = Dictionary(
             uniqueKeysWithValues: result.changes.map { ($0.assetID, $0.after) }
         )
+        let updatesTitle = action == .approve
+            || action == .editMetadata
+            || action == .propagateTitle
+        let updatesKeywords = action == .approve
+            || action == .editMetadata
+            || action == .propagateKeywords
         window.items = window.items.map { current in
             guard let after = changesByID[current.id] else { return current }
             var item = current
-            if let title = after["title"]?.stringValue {
+            if updatesTitle, let title = after["title"]?.stringValue {
                 item.title = title
             }
-            if let keywords = after["keywords"]?.arrayValue {
+            if updatesKeywords, let keywords = after["keywords"]?.arrayValue {
                 item.keywords = keywords.compactMap(\.stringValue)
             }
             if let editorialState = after["editorialState"]?.stringValue {

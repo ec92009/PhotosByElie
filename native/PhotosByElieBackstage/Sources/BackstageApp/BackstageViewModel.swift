@@ -909,7 +909,8 @@ final class BackstageViewModel: ObservableObject {
         let timed = visibleCullingAssets.map { asset in
             CullingTimedItem(
                 id: asset.id,
-                capturedAt: libraryByID[photoLibraryIdentifier(for: asset.id)]?.creationDate
+                capturedAt: CullingWorkspace.captureDate(asset.capturedAt)
+                    ?? libraryByID[photoLibraryIdentifier(for: asset.id)]?.creationDate
             )
         }
         let ids = CullingWorkspace.burst(containing: focusedID, in: timed)

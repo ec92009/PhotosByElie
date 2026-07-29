@@ -269,6 +269,15 @@ struct OwnerCoreTests {
         #expect(CullingWorkspace.burst(containing: "missing", in: items).isEmpty)
     }
 
+    @Test("Burst capture dates parse durable Owner timestamps")
+    func burstCaptureDateParsing() throws {
+        let standard = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38Z"))
+        let fractional = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38.125Z"))
+
+        #expect(abs(fractional.timeIntervalSince(standard) - 0.125) < 0.001)
+        #expect(CullingWorkspace.captureDate("") == nil)
+    }
+
     @Test("Creates canonical v1 requests with actor token and idempotency")
     func createsCanonicalRequest() async throws {
         let transport = RecordingTransport(response: """

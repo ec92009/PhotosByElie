@@ -187,6 +187,21 @@ public struct CullingTimedItem: Identifiable, Sendable, Equatable {
 }
 
 public enum CullingWorkspace {
+    public static func captureDate(_ value: String) -> Date? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: trimmed) {
+            return date
+        }
+
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: trimmed)
+    }
+
     public static func evaluate(
         _ candidates: [CullingCandidate],
         query: CullingQuery,

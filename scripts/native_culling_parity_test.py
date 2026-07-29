@@ -14,15 +14,23 @@ class NativeCullingParityTest(unittest.TestCase):
         source = (
             NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"
         ).read_text(encoding="utf-8")
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
         for marker in (
             "CullingQuery",
             "CullingWorkspaceResult",
             "boundedLimit",
             "visibleRange",
+            "func captureDate(",
             "func burst(",
             "func path(to fixtureID:",
         ):
             self.assertIn(marker, source)
+        self.assertIn(
+            "CullingWorkspace.captureDate(asset.capturedAt)",
+            model,
+        )
 
     def test_native_ui_exposes_sidecar_parity_without_a_browser_route(self):
         source = (

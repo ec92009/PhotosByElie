@@ -697,8 +697,9 @@ Clock state: running
 | 2026-07-29 | 18:35 CEST | 18:43 CEST | 0:02 | Reported that the visible proposal vanished at the orange AI-review question-mark transition and required the prior draft to remain visible during revision; background diagnosis, implementation, tests, signing, and installation time excluded. |
 | 2026-07-29 | 19:03 CEST | 19:04 CEST | 0:01 | Resumed the PhotoKit Current-metadata repair long enough to package and verify a signed Backstage release; background tests, build, signing, installation, and checkpoint time excluded. |
 | 2026-07-29 | 23:17 CEST | 23:25 CEST | 0:08 | Diagnosed the final seven publication failures as legitimate stained-glass photographs caught by the legacy `Stained*` retirement filter; background SQLite comparison, regression repair, tests, connector restart, and checkpoint time excluded. |
+| 2026-07-29 | 23:29 CEST | 23:39 CEST | 0:03 | Reported that Culling's Select burst left only the focused older Carnavalet frame selected and reviewed the exact two-frame acceptance check; background diagnosis, implementation, tests, build, signing, installation, and control-bridge retry time excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:02
+Active collaboration time used: 34:05
 Remaining budget: not set

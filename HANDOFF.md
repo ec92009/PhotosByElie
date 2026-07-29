@@ -1,5 +1,20 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — AI-review marks preserve PhotoKit Current metadata
+
+- Backstage `0.4.42` build `53` no longer replaces the visible Current title
+  or keywords when an audited **Mark for AI review** receipt is retained in
+  the current Review window. Requesting or clearing AI work changes only the
+  editorial request state.
+- Review action receipts now report effective Current metadata: an explicit
+  Owner edit when present, otherwise the title and keywords indexed from Apple
+  Photos. This keeps PhotoKit-only clues such as a museum name intact without
+  copying them into `sidecar_decisions`.
+- The requested-AI proposal pass uses the same effective metadata fallback, so
+  the preserved Apple Photos title and keywords are included in the AI prompt.
+- Verification was state-safe: 59 Python tests, 47 Swift tests, and 19 native
+  parity tests pass. No real Review or AI action was submitted.
+
 ## 2026-07-29 — A requested revision keeps the previous proposal visible
 
 - Backstage `0.4.41` build `52` keeps the exact superseded proposal visible

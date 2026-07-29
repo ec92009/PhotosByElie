@@ -725,6 +725,30 @@ final class BackstageViewModel: ObservableObject {
         reviewItems.map(\.id).filter(reviewSelection.selectedIDs.contains)
     }
 
+    var reviewAIRequestTargetCount: Int {
+        selectedReviewAssetIDs.count
+    }
+
+    var selectedReviewHasActiveAIRequest: Bool {
+        let selectedIDs = Set(selectedReviewAssetIDs)
+        return reviewItems.contains {
+            selectedIDs.contains($0.id) && $0.editorialState == "requesting-ai"
+        }
+    }
+
+    var canUpdateReviewAIRequest: Bool {
+        guard !isRunningReview, reviewAIRequestTargetCount > 0 else { return false }
+        return !reviewAIReasons.isEmpty || selectedReviewHasActiveAIRequest
+    }
+
+    var reviewAIRequestButtonLabel: String {
+        let count = reviewAIRequestTargetCount
+        if reviewAIReasons.isEmpty {
+            return count == 1 ? "Clear AI review mark" : "Clear AI review marks for \(count)"
+        }
+        return count == 1 ? "Mark for AI review" : "Mark \(count) for AI review"
+    }
+
     var focusedReviewItem: FixtureReviewItem? {
         let id = reviewSelection.focusedID ?? selectedReviewAssetIDs.first
         return reviewItems.first(where: { $0.id == id })
@@ -1631,7 +1655,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyReviewAction(_ action: FixtureReviewAction, propagate: Bool = false) async {
-        guard !isRunningReview else { return }
+        guard !isRunningReview else {
+            reviewStatus = "Finish the current Review action first."
+            return
+        }
         if action != .editMetadata {
             reviewMetadataAutosaveTask?.cancel()
             reviewMetadataAutosaveTask = nil

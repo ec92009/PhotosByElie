@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Multi-item AI review requests are explicit and actionable
+
+- Backstage `0.4.35` build `46` gives the AI review submit action an explicit
+  selected-item count, for example **Mark 17 for AI review**.
+- The orange primary action is enabled when one or more selected Review items
+  have draft reasons. With no draft reasons, it offers a clear action only
+  when the selection contains an active AI request.
+- The existing audited batch contract is unchanged: one explicit submission
+  records the selected reasons and optional note for every selected item, and
+  AI inference still waits for the scheduled pass or **Run AI pass now**.
+
 ## 2026-07-29 — Proposal Available rows carry their proposal metadata
 
 - Backstage `0.4.34` build `45` returns the latest durable ready or loaded AI

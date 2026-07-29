@@ -2814,9 +2814,13 @@ private struct ReviewInspector: View {
                     TextField("Optional AI note", text: $model.reviewAINote, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Button("Update AI review mark") {
+                    Button(model.reviewAIRequestButtonLabel) {
                         Task { await model.applyReviewAction(.requestAI) }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .disabled(!model.canUpdateReviewAIRequest)
+                    .help("Apply these AI review reasons to every selected Review item.")
                     Divider()
                     Button("Quick Look") {
                         Task {

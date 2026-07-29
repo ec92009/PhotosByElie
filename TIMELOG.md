@@ -689,8 +689,9 @@ Clock state: running
 | 2026-07-28 | 22:55 CEST | 23:06 CEST | 0:03 | Reported extremely slow Review propagation; isolated synchronous per-photo AI preview rendering and moved it to the later batched AI pass; background diagnosis, implementation, tests, and connector restart time excluded. |
 | 2026-07-28 | 23:09 CEST | 23:25 CEST | 0:05 | Authorized publication of the single stranded Uploads item and confirmed that the next stable tray should become available; background R2 diagnosis, regression repair, publication monitoring, receipt verification, tests, and checkpoint work excluded. |
 | 2026-07-29 | 12:15 CEST | 12:24 CEST | 0:01 | Reported Proposal Available rows showing No proposal and confirmed the Review filter/card contradiction; background diagnosis, implementation, tests, build, and installation time excluded. |
+| 2026-07-29 | 12:51 CEST | 12:52 CEST | 0:01 | Reported that a multi-selected AI-review draft had no visibly actionable submit control; background diagnosis, implementation, tests, build, and installation time excluded. |
 
 ## Totals
 
-Active collaboration time used: 33:43
+Active collaboration time used: 33:44
 Remaining budget: not set

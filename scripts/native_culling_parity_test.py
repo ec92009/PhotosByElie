@@ -545,7 +545,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.toggleReviewAIReason(reason)", inspector)
         self.assertNotIn("await model.toggleReviewAIReason(reason)", inspector)
         self.assertIn('Text("Mark for AI review")', inspector)
-        self.assertIn('Button("Update AI review mark")', inspector)
+        self.assertIn("Button(model.reviewAIRequestButtonLabel)", inspector)
+        self.assertIn(".disabled(!model.canUpdateReviewAIRequest)", inspector)
+        self.assertIn("var reviewAIRequestTargetCount: Int", model)
+        self.assertIn("var selectedReviewHasActiveAIRequest: Bool", model)
+        self.assertIn("var canUpdateReviewAIRequest: Bool", model)
+        self.assertIn('return count == 1 ? "Mark for AI review" : "Mark \\(count) for AI review"', model)
         self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)

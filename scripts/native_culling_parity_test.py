@@ -286,6 +286,12 @@ class NativeCullingParityTest(unittest.TestCase):
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
         )
+        self.assertIn("GeometryReader { viewport in", culling)
+        self.assertIn(".padding(.top, viewport.safeAreaInsets.top)", culling)
+        self.assertIn(
+            "height: max(0, viewport.size.height - viewport.safeAreaInsets.top)",
+            culling,
+        )
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
 
     def test_culling_filters_are_visible_immediate_and_stale_safe(self):

@@ -1,5 +1,13 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Culling stays below the unified titlebar
+
+- Backstage `0.4.30` build `41` measures the live macOS safe-area inset and
+  keeps the complete Culling header below the unified window toolbar.
+- The split view subtracts that inset from its own height, so the bottom
+  actions remain in bounds instead of the content merely growing taller.
+- The behavior applies with the preview panel both expanded and collapsed.
+
 ## 2026-07-29 — Authenticated toolbar no longer preserves stale timeout pills
 
 - Backstage `0.4.29` build `40` treats the authenticated Keychain-backed

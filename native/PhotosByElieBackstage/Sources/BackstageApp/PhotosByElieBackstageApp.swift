@@ -909,8 +909,9 @@ private struct MediaLibraryView: View {
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
-        HSplitView {
-            VStack(alignment: .leading, spacing: 12) {
+        GeometryReader { viewport in
+            HSplitView {
+                VStack(alignment: .leading, spacing: 12) {
                 let workspace = model.cullingWorkspace
                 VStack(alignment: .leading, spacing: 12) {
                     ViewThatFits(in: .horizontal) {
@@ -1301,33 +1302,40 @@ private struct MediaLibraryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
 
-            if model.isPreviewPanelVisible {
-                Group {
-                    if model.isLoadingPreview {
-                        ProgressView("Loading preview…")
-                    } else if let preview = model.photoPreview,
-                              let image = NSImage(data: preview.jpegData),
-                              let asset = model.focusedCullingAsset {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Image(nsImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                cullingMetadataInspector(asset)
+                if model.isPreviewPanelVisible {
+                    Group {
+                        if model.isLoadingPreview {
+                            ProgressView("Loading preview…")
+                        } else if let preview = model.photoPreview,
+                                  let image = NSImage(data: preview.jpegData),
+                                  let asset = model.focusedCullingAsset {
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .scaledToFit()
+                                    cullingMetadataInspector(asset)
+                                }
+                                .padding()
                             }
-                            .padding()
+                        } else {
+                            ContentUnavailableView(
+                                "No preview",
+                                systemImage: "photo",
+                                description: Text("Select a photo, or press Space for Quick Look.")
+                            )
                         }
-                    } else {
-                        ContentUnavailableView(
-                            "No preview",
-                            systemImage: "photo",
-                            description: Text("Select a photo, or press Space for Quick Look.")
-                        )
                     }
+                    .frame(minWidth: 220, idealWidth: 300, maxWidth: 360)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
-                .frame(minWidth: 220, idealWidth: 300, maxWidth: 360)
-                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+            .padding(.top, viewport.safeAreaInsets.top)
+            .frame(
+                width: viewport.size.width,
+                height: max(0, viewport.size.height - viewport.safeAreaInsets.top),
+                alignment: .top
+            )
         }
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

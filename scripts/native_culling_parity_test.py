@@ -103,7 +103,9 @@ class NativeCullingParityTest(unittest.TestCase):
             'onKeyPress("r")',
             'onKeyPress("h")',
             "onKeyPress(.space)",
-            ".onMoveCommand",
+            ".focused($isUploadQuickViewFocused)",
+            "onKeyPress(.upArrow)",
+            "onKeyPress(.downArrow)",
             "moveUploadQuickView(in: plan, by: -1)",
             "moveUploadQuickView(in: plan, by: 1)",
             "Use ↑/↓ to navigate",
@@ -188,6 +190,17 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("CullingMediaFilter.selectableCases", app)
         self.assertIn("reviewMediaFilters.contains", app)
         self.assertIn("toggleReviewMediaFilter", model)
+        self.assertIn("FixtureReviewStateFilter.allCases", app)
+        self.assertIn("reviewStateFilters.contains", app)
+        self.assertIn("toggleReviewStateFilter", model)
+        self.assertIn(
+            'let hasActiveAIRequest = item.editorialState == "requesting-ai"',
+            model,
+        )
+        self.assertIn(
+            "reviewAIReasons = hasActiveAIRequest ? Set(item.aiReasons) : []",
+            model,
+        )
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

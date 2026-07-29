@@ -427,6 +427,7 @@ def run_requested_ai_pass(
                         """
                         UPDATE asset_editorial_state
                         SET editorial_state = 'proposed', proposed_at = ?,
+                            ai_reasons_json = '[]', ai_note = '',
                             ai_last_error = '', updated_at = ?
                         WHERE asset_id = ?
                         """,

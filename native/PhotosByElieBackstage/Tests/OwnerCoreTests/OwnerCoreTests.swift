@@ -1176,6 +1176,7 @@ struct OwnerCoreTests {
         let window = try await service.reviewWindow(
             fixtureID: "fixture-expo",
             mode: .full,
+            stateFilters: ["approved", "hidden", "picked"],
             proposalAvailableOnly: true,
             mediaFilters: ["photos"],
             limit: 200
@@ -1209,6 +1210,10 @@ struct OwnerCoreTests {
         let reviewManifest = requests[0].payload["manifest"]?.objectValue
         #expect(reviewManifest?["mode"]?.stringValue == "fixture-review-window")
         #expect(reviewManifest?["reviewMode"]?.stringValue == "full")
+        #expect(
+            reviewManifest?["reviewStateFilters"]?.arrayValue?.compactMap(\.stringValue)
+                == ["approved", "hidden", "picked"]
+        )
         #expect(reviewManifest?["proposalAvailableOnly"]?.boolValue == true)
         #expect(
             reviewManifest?["mediaFilters"]?.arrayValue?.compactMap(\.stringValue)

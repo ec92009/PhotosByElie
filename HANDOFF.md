@@ -1,5 +1,19 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Review state filters, reusable AI reasons, and Upload navigation
+
+- Backstage `0.4.32` build `43` adds independent **Picked**, **Approved**, and
+  **Hidden** filters to Review. They compose server-side with Proposal
+  Available, Photos/Videos, pagination, and search across the complete fixture
+  queue.
+- Once an AI proposal is created, the active AI-request reasons and note reset
+  for a fresh editorial pass. The proposal audit row retains the exact reasons
+  and note that produced it, so an owner may request another proposal using
+  the same reason without losing provenance.
+- Upload Quick View now explicitly owns keyboard focus while open. Up/Down
+  moves through the currently sorted fixed tray, Space closes the preview, and
+  no upload or Review state changes are implied.
+
 ## 2026-07-29 — Review filters proposals and media across the complete queue
 
 - Backstage `0.4.31` build `42` adds a **Proposal Available** checkbox to

@@ -1541,6 +1541,7 @@ def _fixture_review_predicates(
     search: str = "",
     *,
     include_approved: bool = False,
+    state_filters: list[str] | None = None,
     proposal_available_only: bool = False,
     media_filters: list[str] | None = None,
 ) -> tuple[list[str], list[Any]]:
@@ -1556,6 +1557,39 @@ def _fixture_review_predicates(
     ]
     if not include_approved:
         predicates.append("editorial.editorial_state != 'approved'")
+    if state_filters is not None:
+        selected_states = {
+            str(value or "").strip().casefold()
+            for value in state_filters
+        } & {"picked", "approved", "hidden"}
+        state_predicates: list[str] = []
+        if "picked" in selected_states:
+            state_predicates.append(
+                """
+                (
+                  current_decision.placement_state = 'picked'
+                  AND editorial.editorial_state != 'approved'
+                )
+                """
+            )
+        if "approved" in selected_states:
+            state_predicates.append(
+                """
+                (
+                  current_decision.placement_state = 'picked'
+                  AND editorial.editorial_state = 'approved'
+                )
+                """
+            )
+        if "hidden" in selected_states:
+            state_predicates.append(
+                "current_decision.placement_state = 'hidden'"
+            )
+        predicates.append(
+            "(" + " OR ".join(state_predicates) + ")"
+            if state_predicates
+            else "0 = 1"
+        )
     if proposal_available_only:
         predicates.append(
             """
@@ -1641,6 +1675,7 @@ def fixture_review_window(
     fixture_id: str,
     *,
     mode: str = "backfill",
+    state_filters: list[str] | None = None,
     proposal_available_only: bool = False,
     media_filters: list[str] | None = None,
     offset: int = 0,
@@ -1664,13 +1699,24 @@ def fixture_review_window(
         ).fetchone()
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
+        selected_states = {
+            str(value or "").strip().casefold()
+            for value in (state_filters or [])
+        } & {"picked", "approved", "hidden"}
         from_sql, base_params = _fixture_review_from_sql(
             fixture,
-            include_hidden=clean_mode == "full",
+            include_hidden=(
+                "hidden" in selected_states
+                if state_filters is not None
+                else clean_mode == "full"
+            ),
         )
         predicates, search_params = _fixture_review_predicates(
             search,
-            include_approved=clean_mode == "full",
+            include_approved=(
+                True if state_filters is not None else clean_mode == "full"
+            ),
+            state_filters=state_filters,
             proposal_available_only=bool(proposal_available_only),
             media_filters=media_filters,
         )
@@ -1733,6 +1779,15 @@ def fixture_review_window(
         "readOnly": True,
         "fixtureId": fixture_id,
         "mode": clean_mode,
+        "reviewStateFilters": list(
+            state_filters
+            if state_filters is not None
+            else (
+                ["picked", "approved", "hidden"]
+                if clean_mode == "full"
+                else ["picked"]
+            )
+        ),
         "proposalAvailableOnly": bool(proposal_available_only),
         "mediaFilters": list(
             media_filters if media_filters is not None else ["photos", "videos"]

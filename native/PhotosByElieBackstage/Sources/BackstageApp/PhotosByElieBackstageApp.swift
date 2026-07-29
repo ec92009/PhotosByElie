@@ -245,6 +245,7 @@ private struct UploadWorkflowView: View {
     @State private var confirmingReturnToReview = false
     @State private var confirmingUploadHide = false
     @State private var uploadQuickViewItem: NativeUploadPlanItem?
+    @FocusState private var isUploadQuickViewFocused: Bool
 
     private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
         plan.items.sorted(using: uploadSortOrder)
@@ -466,19 +467,21 @@ private struct UploadWorkflowView: View {
                     closeUploadQuickView()
                 }
                 .focusable()
+                .focused($isUploadQuickViewFocused)
+                .onAppear {
+                    isUploadQuickViewFocused = true
+                }
                 .onKeyPress(.space) {
                     closeUploadQuickView()
                     return .handled
                 }
-                .onMoveCommand { direction in
-                    switch direction {
-                    case .up:
-                        moveUploadQuickView(in: plan, by: -1)
-                    case .down:
-                        moveUploadQuickView(in: plan, by: 1)
-                    default:
-                        return
-                    }
+                .onKeyPress(.upArrow) {
+                    moveUploadQuickView(in: plan, by: -1)
+                    return .handled
+                }
+                .onKeyPress(.downArrow) {
+                    moveUploadQuickView(in: plan, by: 1)
+                    return .handled
                 }
             }
         }
@@ -562,10 +565,12 @@ private struct UploadWorkflowView: View {
             return
         }
         uploadQuickViewItem = item
+        isUploadQuickViewFocused = true
         Task { await model.loadNativeUploadPreview(for: item) }
     }
 
     private func closeUploadQuickView() {
+        isUploadQuickViewFocused = false
         uploadQuickViewItem = nil
         model.clearNativeUploadPreview()
     }
@@ -2266,7 +2271,7 @@ private struct FixtureReviewView: View {
                 }
                 if let summary = model.fixtureReviewWindow?.summary {
                     FlowLayout(spacing: 10) {
-                        Text("\(summary.total.formatted()) unresolved")
+                        Text("\(summary.total.formatted()) matching")
                         Text("\(summary.unreviewed.formatted()) unreviewed")
                         Text("\(summary.requestingAI.formatted()) requesting AI")
                         Text("\(summary.proposed.formatted()) proposed")
@@ -2476,19 +2481,18 @@ private struct FixtureReviewView: View {
                 }
             }
             .frame(width: 180)
-            Picker(
-                "Queue",
-                selection: Binding(
-                    get: { model.reviewMode },
-                    set: { model.selectReviewMode($0) }
+            Text("State")
+                .font(.callout.weight(.semibold))
+            ForEach(FixtureReviewStateFilter.allCases) { filter in
+                Toggle(
+                    filter.label,
+                    isOn: Binding(
+                        get: { model.reviewStateFilters.contains(filter) },
+                        set: { _ in model.toggleReviewStateFilter(filter) }
+                    )
                 )
-            ) {
-                ForEach(FixtureReviewMode.allCases) { mode in
-                    Text(mode.label).tag(mode)
-                }
+                .toggleStyle(.checkbox)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 170)
             Toggle(
                 "Proposal Available",
                 isOn: Binding(
@@ -2651,7 +2655,7 @@ private struct ReviewAssetRow: View {
 
     @ViewBuilder
     private var reviewStateBadge: some View {
-        if hasDraftAIReason || !item.aiReasons.isEmpty || item.editorialState == "requesting-ai" {
+        if hasDraftAIReason || item.editorialState == "requesting-ai" {
             Image(systemName: "questionmark.circle.fill")
                 .font(.system(size: 30, weight: .bold))
                 .symbolRenderingMode(.palette)
@@ -2698,7 +2702,6 @@ private struct ReviewInspector: View {
                             .clipShape(RoundedRectangle(cornerRadius: 9))
                             .overlay(alignment: .topTrailing) {
                                 if !model.reviewAIReasons.isEmpty
-                                    || !item.aiReasons.isEmpty
                                     || item.editorialState == "requesting-ai" {
                                     Image(systemName: "questionmark.circle.fill")
                                         .font(.system(size: 30, weight: .bold))

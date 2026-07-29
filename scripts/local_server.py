@@ -2116,6 +2116,11 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 str(manifest.get("fixtureId") or ""),
                 mode=str(manifest.get("reviewMode") or "backfill"),
+                state_filters=(
+                    manifest.get("reviewStateFilters")
+                    if "reviewStateFilters" in manifest
+                    else None
+                ),
                 proposal_available_only=bool(
                     manifest.get("proposalAvailableOnly") or False
                 ),

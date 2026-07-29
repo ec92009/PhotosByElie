@@ -463,6 +463,67 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(empty["summary"]["total"], 0)
         self.assertEqual(empty["items"], [])
 
+    def test_review_state_filters_are_independent_and_server_backed(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-3"],
+            "picked",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+        )
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-3"],
+            "hidden",
+        )
+
+        picked = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+            state_filters=["picked"],
+        )
+        self.assertEqual(picked["reviewStateFilters"], ["picked"])
+        self.assertEqual(
+            [item["assetId"] for item in picked["items"]],
+            ["asset-2"],
+        )
+        approved_and_hidden = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+            state_filters=["approved", "hidden"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in approved_and_hidden["items"]],
+            ["asset-1", "asset-3"],
+        )
+        all_states = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+            state_filters=["picked", "approved", "hidden"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in all_states["items"]],
+            ["asset-1", "asset-2", "asset-3"],
+        )
+        none = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            mode="full",
+            state_filters=[],
+        )
+        self.assertEqual(none["summary"]["total"], 0)
+        self.assertEqual(none["items"], [])
+
     def test_approved_asset_can_return_to_review_without_losing_pick_or_metadata(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(
@@ -903,24 +964,33 @@ class FixturePipelineTest(unittest.TestCase):
         durable_drafts = ready_ai_proposals(self.root, include_loaded=True)
         self.assertEqual(durable_drafts["count"], 1)
         self.assertEqual(durable_drafts["items"][0]["status"], "loaded")
+        self.assertEqual(
+            durable_drafts["items"][0]["requestReasons"],
+            ["weak title"],
+        )
         with connect(self.root) as conn:
             states = {
                 row["asset_id"]: (
                     row["editorial_state"],
                     row["ai_attempt_count"],
                     row["ai_last_error"],
+                    json.loads(row["ai_reasons_json"]),
+                    row["ai_note"],
                 )
                 for row in conn.execute(
                     """
-                    SELECT asset_id, editorial_state, ai_attempt_count, ai_last_error
+                    SELECT asset_id, editorial_state, ai_attempt_count, ai_last_error,
+                           ai_reasons_json, ai_note
                     FROM asset_editorial_state
                     WHERE asset_id IN ('asset-1', 'asset-2')
                     """
                 ).fetchall()
             }
         self.assertEqual(states["asset-1"][:2], ("proposed", 1))
+        self.assertEqual(states["asset-1"][3:], ([], ""))
         self.assertEqual(states["asset-2"][:2], ("requesting-ai", 1))
         self.assertIn("temporary model failure", states["asset-2"][2])
+        self.assertEqual(states["asset-2"][3:], (["weak title"], "Use the visible subject."))
         status = ai_run_status(self.root)
         self.assertFalse(status["active"])
         self.assertEqual(status["ready"], 0)

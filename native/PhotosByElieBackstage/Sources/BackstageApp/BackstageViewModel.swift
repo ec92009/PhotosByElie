@@ -36,6 +36,7 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var label: String
     var fixtureID: String
     var mode: FixtureReviewMode
+    var stateFilters: Set<FixtureReviewStateFilter>
     var proposalAvailableOnly: Bool
     var mediaFilters: Set<CullingMediaFilter>
     var search: String
@@ -162,7 +163,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingCancellationRequested = false
     @Published var reviewFixtureID = ""
     @Published var fixtureReviewWindow: FixtureReviewWindow?
-    @Published var reviewMode: FixtureReviewMode = .backfill
+    @Published var reviewMode: FixtureReviewMode = .full
+    @Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]
     @Published var reviewProposalAvailableOnly = false
     @Published var reviewMediaFilters = Set(CullingMediaFilter.selectableCases)
     @Published var reviewSearch = ""
@@ -1485,6 +1487,19 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
+    func toggleReviewStateFilter(_ filter: FixtureReviewStateFilter) {
+        preserveCurrentReviewDraft()
+        if reviewStateFilters.contains(filter) {
+            reviewStateFilters.remove(filter)
+        } else {
+            reviewStateFilters.insert(filter)
+        }
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        clearReviewDraft()
+        Task { await loadFixtureReviewWindow() }
+    }
+
     func toggleReviewMediaFilter(_ filter: CullingMediaFilter) {
         preserveCurrentReviewDraft()
         if reviewMediaFilters.contains(filter) {
@@ -1524,6 +1539,7 @@ final class BackstageViewModel: ObservableObject {
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
                 mode: reviewMode,
+                stateFilters: reviewStateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: reviewProposalAvailableOnly,
                 mediaFilters: reviewMediaFilters.map(\.rawValue).sorted(),
                 offset: reviewWindowOffset,
@@ -1542,10 +1558,13 @@ final class BackstageViewModel: ObservableObject {
             )
             reviewScrollTargetID = replacementID
             syncReviewDraft()
-            let queueScope = reviewMode == .backfill ? "unresolved picked" : "picked"
+            let queueScope = reviewStateFilters
+                .sorted { $0.rawValue < $1.rawValue }
+                .map(\.label)
+                .joined(separator: " + ")
             let scope = reviewProposalAvailableOnly
-                ? "\(queueScope) with proposals available"
-                : queueScope
+                ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
+                : (queueScope.isEmpty ? "No states" : queueScope)
             let mediaScope: String
             switch reviewMediaFilters {
             case let filters where filters == Set(CullingMediaFilter.selectableCases):
@@ -1629,6 +1648,7 @@ final class BackstageViewModel: ObservableObject {
             label: reviewActionLabel(action),
             fixtureID: reviewFixtureID,
             mode: reviewMode,
+            stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
             mediaFilters: reviewMediaFilters,
             search: reviewSearch,
@@ -1676,6 +1696,7 @@ final class BackstageViewModel: ObservableObject {
                         label: historyEntry.label,
                         fixtureID: historyEntry.fixtureID,
                         mode: historyEntry.mode,
+                        stateFilters: historyEntry.stateFilters,
                         proposalAvailableOnly: historyEntry.proposalAvailableOnly,
                         mediaFilters: historyEntry.mediaFilters,
                         search: historyEntry.search,
@@ -1782,6 +1803,7 @@ final class BackstageViewModel: ObservableObject {
             reviewHistory.removeLast()
             reviewFixtureID = entry.fixtureID
             reviewMode = entry.mode
+            reviewStateFilters = entry.stateFilters
             reviewProposalAvailableOnly = entry.proposalAvailableOnly
             reviewMediaFilters = entry.mediaFilters
             reviewSearch = entry.search
@@ -1789,6 +1811,7 @@ final class BackstageViewModel: ObservableObject {
             let window = try await fixtureService.reviewWindow(
                 fixtureID: entry.fixtureID,
                 mode: entry.mode,
+                stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: entry.proposalAvailableOnly,
                 mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
                 offset: entry.offset,
@@ -2032,9 +2055,10 @@ final class BackstageViewModel: ObservableObject {
         let draft = reviewProposalDrafts[item.id]
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
-        reviewAIReasons = Set(item.aiReasons)
-        reviewAINote = item.aiNote
-        if !item.aiReasons.isEmpty || item.editorialState == "requesting-ai" {
+        let hasActiveAIRequest = item.editorialState == "requesting-ai"
+        reviewAIReasons = hasActiveAIRequest ? Set(item.aiReasons) : []
+        reviewAINote = hasActiveAIRequest ? item.aiNote : ""
+        if hasActiveAIRequest {
             reviewLastAction = .requestAI
         } else if item.placementState == "hidden" {
             reviewLastAction = .hide

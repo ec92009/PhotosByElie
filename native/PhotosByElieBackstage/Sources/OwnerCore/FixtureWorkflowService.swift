@@ -419,6 +419,22 @@ public enum FixtureReviewMode: String, Codable, Sendable, CaseIterable, Identifi
     }
 }
 
+public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case picked
+    case approved
+    case hidden
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .picked: "Picked"
+        case .approved: "Approved"
+        case .hidden: "Hidden"
+        }
+    }
+}
+
 public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var id: String
     public var photoLibraryIdentifier: String
@@ -876,6 +892,7 @@ public actor FixtureWorkflowService {
     public func reviewWindow(
         fixtureID: String,
         mode: FixtureReviewMode = .backfill,
+        stateFilters: [String] = ["picked"],
         proposalAvailableOnly: Bool = false,
         mediaFilters: [String] = ["photos", "videos"],
         offset: Int = 0,
@@ -885,6 +902,7 @@ public actor FixtureWorkflowService {
         let result = try await run("fixture-review-window", extra: [
             "fixtureId": .string(fixtureID),
             "reviewMode": .string(mode.rawValue),
+            "reviewStateFilters": .array(stateFilters.map(JSONValue.string)),
             "proposalAvailableOnly": .bool(proposalAvailableOnly),
             "mediaFilters": .array(mediaFilters.map(JSONValue.string)),
             "offset": .number(Double(max(0, offset))),

@@ -32,7 +32,7 @@ struct PhotosByElieBackstageApp: App {
                                     .font(.caption.monospacedDigit())
                                     .foregroundStyle(.secondary)
                                     .help("Installed PhotosByElie Backstage version")
-                                if model.status == "Connected" {
+                                if model.authentication.phase == .authenticated {
                                     if model.selection == .culling || model.selection == .review {
                                         Button {
                                             withAnimation(.snappy(duration: 0.24)) {
@@ -47,7 +47,7 @@ struct PhotosByElieBackstageApp: App {
                                                 : "Expand preview panel"
                                         )
                                     }
-                                } else {
+                                } else if model.status != "Connected" {
                                     HStack(spacing: 8) {
                                         Circle()
                                             .fill(.orange)

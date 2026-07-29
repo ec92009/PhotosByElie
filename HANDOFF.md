@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Authenticated toolbar no longer preserves stale timeout pills
+
+- Backstage `0.4.29` build `40` treats the authenticated Keychain-backed
+  session as the toolbar connection authority instead of the last global
+  request result.
+- A transient request timeout remains available in the screen-specific status
+  that produced it, but it no longer occupies the global top-right toolbar
+  after authentication has succeeded.
+- Culling and Review keep the top-right preview collapse/expand control
+  available throughout an authenticated session.
+
 ## 2026-07-29 — Review cards compare current and proposed metadata
 
 - Backstage `0.4.28` build `39` shows title and keywords in explicit

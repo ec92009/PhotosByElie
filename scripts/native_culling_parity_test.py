@@ -458,7 +458,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn('"Collapse preview panel"', root)
         self.assertIn('"Expand preview panel"', root)
-        self.assertIn('if model.status == "Connected"', root)
+        self.assertIn("if model.authentication.phase == .authenticated", root)
+        self.assertIn('else if model.status != "Connected"', root)
+        self.assertLess(
+            root.index("if model.authentication.phase == .authenticated"),
+            root.index('Image(systemName: "sidebar.right")'),
+        )
         self.assertNotIn("@State private var isCullingPreviewVisible", culling)
         self.assertIn("if model.isPreviewPanelVisible", culling)
         self.assertIn(".frame(minWidth: 220, idealWidth: 300, maxWidth: 360)", culling)

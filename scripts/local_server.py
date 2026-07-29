@@ -2116,6 +2116,14 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 str(manifest.get("fixtureId") or ""),
                 mode=str(manifest.get("reviewMode") or "backfill"),
+                proposal_available_only=bool(
+                    manifest.get("proposalAvailableOnly") or False
+                ),
+                media_filters=(
+                    manifest.get("mediaFilters")
+                    if "mediaFilters" in manifest
+                    else ["photos", "videos"]
+                ),
                 offset=int(manifest.get("offset") or 0),
                 limit=int(manifest.get("limit") or 200),
                 search=str(manifest.get("search") or ""),

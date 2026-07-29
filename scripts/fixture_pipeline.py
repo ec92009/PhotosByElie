@@ -1541,6 +1541,8 @@ def _fixture_review_predicates(
     search: str = "",
     *,
     include_approved: bool = False,
+    proposal_available_only: bool = False,
+    media_filters: list[str] | None = None,
 ) -> tuple[list[str], list[Any]]:
     predicates = [
         "(a.missing_at IS NULL OR a.missing_at = '')",
@@ -1554,6 +1556,27 @@ def _fixture_review_predicates(
     ]
     if not include_approved:
         predicates.append("editorial.editorial_state != 'approved'")
+    if proposal_available_only:
+        predicates.append(
+            """
+            EXISTS (
+              SELECT 1 FROM asset_ai_proposals AS available_proposal
+              WHERE available_proposal.asset_id = a.asset_id
+                AND available_proposal.status IN ('ready', 'loaded')
+            )
+            """
+        )
+    selected_media = {
+        str(value or "").strip().casefold()
+        for value in (media_filters if media_filters is not None else ["photos", "videos"])
+    } & {"photos", "videos"}
+    if selected_media != {"photos", "videos"}:
+        if not selected_media:
+            predicates.append("0 = 1")
+        elif selected_media == {"videos"}:
+            predicates.append("lower(COALESCE(a.media_type, 'photo')) = 'video'")
+        else:
+            predicates.append("lower(COALESCE(a.media_type, 'photo')) != 'video'")
     params: list[Any] = []
     columns = (
         "a.asset_id",
@@ -1618,6 +1641,8 @@ def fixture_review_window(
     fixture_id: str,
     *,
     mode: str = "backfill",
+    proposal_available_only: bool = False,
+    media_filters: list[str] | None = None,
     offset: int = 0,
     limit: int = 200,
     search: str = "",
@@ -1646,6 +1671,8 @@ def fixture_review_window(
         predicates, search_params = _fixture_review_predicates(
             search,
             include_approved=clean_mode == "full",
+            proposal_available_only=bool(proposal_available_only),
+            media_filters=media_filters,
         )
         joins = """
             LEFT JOIN sidecar_decisions AS decision
@@ -1689,7 +1716,7 @@ def fixture_review_window(
                    EXISTS (
                      SELECT 1 FROM asset_ai_proposals AS proposal
                      WHERE proposal.asset_id = a.asset_id
-                       AND proposal.status = 'ready'
+                       AND proposal.status IN ('ready', 'loaded')
                    ) proposal_ready,
                    delivery.delivery_state
             FROM {from_sql}
@@ -1706,6 +1733,10 @@ def fixture_review_window(
         "readOnly": True,
         "fixtureId": fixture_id,
         "mode": clean_mode,
+        "proposalAvailableOnly": bool(proposal_available_only),
+        "mediaFilters": list(
+            media_filters if media_filters is not None else ["photos", "videos"]
+        ),
         "offset": safe_offset,
         "limit": safe_limit,
         "count": len(rows),

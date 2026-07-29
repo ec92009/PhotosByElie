@@ -400,6 +400,69 @@ class FixturePipelineTest(unittest.TestCase):
                 mode="everything",
             )
 
+    def test_review_filters_proposal_availability_and_media_across_the_complete_queue(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-3"],
+            "picked",
+        )
+        with connect(self.root) as conn:
+            conn.executemany(
+                """
+                INSERT INTO asset_ai_proposals (
+                  proposal_id, asset_id, run_id, attempt, status,
+                  proposed_title, created_at
+                ) VALUES (?, ?, 'run-1', 1, ?, ?, '2026-07-29T10:00:00Z')
+                """,
+                [
+                    ("proposal-photo", "asset-1", "ready", "Photo proposal"),
+                    ("proposal-video", "asset-2", "loaded", "Video proposal"),
+                    ("proposal-old", "asset-3", "superseded", "Old proposal"),
+                ],
+            )
+            conn.commit()
+
+        available = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            proposal_available_only=True,
+        )
+        self.assertTrue(available["proposalAvailableOnly"])
+        self.assertEqual(
+            [item["assetId"] for item in available["items"]],
+            ["asset-1", "asset-2"],
+        )
+        photos = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            proposal_available_only=True,
+            media_filters=["photos"],
+        )
+        self.assertEqual(photos["mediaFilters"], ["photos"])
+        self.assertEqual(
+            [item["assetId"] for item in photos["items"]],
+            ["asset-1"],
+        )
+        videos = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            proposal_available_only=True,
+            media_filters=["videos"],
+        )
+        self.assertEqual(
+            [item["assetId"] for item in videos["items"]],
+            ["asset-2"],
+        )
+        empty = fixture_review_window(
+            self.root,
+            root["fixtureId"],
+            media_filters=[],
+        )
+        self.assertEqual(empty["summary"]["total"], 0)
+        self.assertEqual(empty["items"], [])
+
     def test_approved_asset_can_return_to_review_without_losing_pick_or_metadata(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(

@@ -36,6 +36,8 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var label: String
     var fixtureID: String
     var mode: FixtureReviewMode
+    var proposalAvailableOnly: Bool
+    var mediaFilters: Set<CullingMediaFilter>
     var search: String
     var offset: Int
     var selectedIDs: Set<String>
@@ -161,6 +163,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewFixtureID = ""
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .backfill
+    @Published var reviewProposalAvailableOnly = false
+    @Published var reviewMediaFilters = Set(CullingMediaFilter.selectableCases)
     @Published var reviewSearch = ""
     @Published var reviewWindowOffset = 0
     @Published var reviewWindowLimit = 200
@@ -1472,6 +1476,28 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
+    func setReviewProposalAvailableOnly(_ enabled: Bool) {
+        preserveCurrentReviewDraft()
+        reviewProposalAvailableOnly = enabled
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        clearReviewDraft()
+        Task { await loadFixtureReviewWindow() }
+    }
+
+    func toggleReviewMediaFilter(_ filter: CullingMediaFilter) {
+        preserveCurrentReviewDraft()
+        if reviewMediaFilters.contains(filter) {
+            reviewMediaFilters.remove(filter)
+        } else {
+            reviewMediaFilters.insert(filter)
+        }
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        clearReviewDraft()
+        Task { await loadFixtureReviewWindow() }
+    }
+
     func moveReviewWindow(forward: Bool) {
         guard let window = fixtureReviewWindow else { return }
         if forward, window.hasNext {
@@ -1498,6 +1524,8 @@ final class BackstageViewModel: ObservableObject {
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
                 mode: reviewMode,
+                proposalAvailableOnly: reviewProposalAvailableOnly,
+                mediaFilters: reviewMediaFilters.map(\.rawValue).sorted(),
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
                 search: reviewSearch
@@ -1514,8 +1542,22 @@ final class BackstageViewModel: ObservableObject {
             )
             reviewScrollTargetID = replacementID
             syncReviewDraft()
-            let scope = reviewMode == .backfill ? "unresolved picked" : "picked"
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) photo\(window.summary.total == 1 ? "" : "s") • oldest first."
+            let queueScope = reviewMode == .backfill ? "unresolved picked" : "picked"
+            let scope = reviewProposalAvailableOnly
+                ? "\(queueScope) with proposals available"
+                : queueScope
+            let mediaScope: String
+            switch reviewMediaFilters {
+            case let filters where filters == Set(CullingMediaFilter.selectableCases):
+                mediaScope = "items"
+            case let filters where filters == [.photos]:
+                mediaScope = "photos"
+            case let filters where filters == [.videos]:
+                mediaScope = "videos"
+            default:
+                mediaScope = "items"
+            }
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
             await refreshAIStatus()
         } catch {
             reviewStatus = userFacingMessage(for: error)
@@ -1587,6 +1629,8 @@ final class BackstageViewModel: ObservableObject {
             label: reviewActionLabel(action),
             fixtureID: reviewFixtureID,
             mode: reviewMode,
+            proposalAvailableOnly: reviewProposalAvailableOnly,
+            mediaFilters: reviewMediaFilters,
             search: reviewSearch,
             offset: reviewWindowOffset,
             selectedIDs: reviewSelection.selectedIDs,
@@ -1632,6 +1676,8 @@ final class BackstageViewModel: ObservableObject {
                         label: historyEntry.label,
                         fixtureID: historyEntry.fixtureID,
                         mode: historyEntry.mode,
+                        proposalAvailableOnly: historyEntry.proposalAvailableOnly,
+                        mediaFilters: historyEntry.mediaFilters,
                         search: historyEntry.search,
                         offset: historyEntry.offset,
                         selectedIDs: historyEntry.selectedIDs,
@@ -1736,11 +1782,15 @@ final class BackstageViewModel: ObservableObject {
             reviewHistory.removeLast()
             reviewFixtureID = entry.fixtureID
             reviewMode = entry.mode
+            reviewProposalAvailableOnly = entry.proposalAvailableOnly
+            reviewMediaFilters = entry.mediaFilters
             reviewSearch = entry.search
             reviewWindowOffset = entry.offset
             let window = try await fixtureService.reviewWindow(
                 fixtureID: entry.fixtureID,
                 mode: entry.mode,
+                proposalAvailableOnly: entry.proposalAvailableOnly,
+                mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
                 offset: entry.offset,
                 limit: reviewWindowLimit,
                 search: entry.search

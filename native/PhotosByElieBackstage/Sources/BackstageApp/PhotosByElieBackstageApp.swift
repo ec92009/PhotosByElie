@@ -2461,7 +2461,7 @@ private struct FixtureReviewView: View {
     }
 
     private var reviewScopeControls: some View {
-        HStack {
+        FlowLayout(spacing: 10) {
             Picker(
                 "Fixture",
                 selection: Binding(
@@ -2489,6 +2489,26 @@ private struct FixtureReviewView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 170)
+            Toggle(
+                "Proposal Available",
+                isOn: Binding(
+                    get: { model.reviewProposalAvailableOnly },
+                    set: { model.setReviewProposalAvailableOnly($0) }
+                )
+            )
+            .toggleStyle(.checkbox)
+            Text("Media")
+                .font(.callout.weight(.semibold))
+            ForEach(CullingMediaFilter.selectableCases, id: \.rawValue) { filter in
+                Toggle(
+                    filter.label,
+                    isOn: Binding(
+                        get: { model.reviewMediaFilters.contains(filter) },
+                        set: { _ in model.toggleReviewMediaFilter(filter) }
+                    )
+                )
+                .toggleStyle(.checkbox)
+            }
         }
     }
 }

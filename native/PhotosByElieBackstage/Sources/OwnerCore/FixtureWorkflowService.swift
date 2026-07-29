@@ -876,6 +876,8 @@ public actor FixtureWorkflowService {
     public func reviewWindow(
         fixtureID: String,
         mode: FixtureReviewMode = .backfill,
+        proposalAvailableOnly: Bool = false,
+        mediaFilters: [String] = ["photos", "videos"],
         offset: Int = 0,
         limit: Int = 200,
         search: String = ""
@@ -883,6 +885,8 @@ public actor FixtureWorkflowService {
         let result = try await run("fixture-review-window", extra: [
             "fixtureId": .string(fixtureID),
             "reviewMode": .string(mode.rawValue),
+            "proposalAvailableOnly": .bool(proposalAvailableOnly),
+            "mediaFilters": .array(mediaFilters.map(JSONValue.string)),
             "offset": .number(Double(max(0, offset))),
             "limit": .number(Double(max(1, min(500, limit)))),
             "search": .string(search),

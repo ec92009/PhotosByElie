@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-07-29 — Review filters proposals and media across the complete queue
+
+- Backstage `0.4.31` build `42` adds a **Proposal Available** checkbox to
+  Review. It includes durable AI proposals in either ready or loaded state and
+  composes with Backfill, Full queue, pagination, and text search.
+- Review also adds independent **Photos** and **Videos** checkboxes. Selecting
+  either, both, or neither filters the complete fixture queue server-side
+  instead of only hiding rows from the visible 200-item window.
+- Filter changes reset pagination and selection, preserve any current metadata
+  draft, and leave Review decisions unchanged.
+
 ## 2026-07-29 — Culling stays below the unified titlebar
 
 - Backstage `0.4.30` build `41` measures the live macOS safe-area inset and

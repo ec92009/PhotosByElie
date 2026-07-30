@@ -253,8 +253,6 @@ final class BackstageViewModel: ObservableObject {
     let photosBridgeHealthService: PhotosBridgeHealthService
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
-    private var reviewAIRequestAutosaveTask: Task<Void, Never>?
-    private var reviewAIInputRevision = 0
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingWindowRequestSerial = 0
 
@@ -264,12 +262,16 @@ final class BackstageViewModel: ObservableObject {
 
     var canRunAIProposalPass: Bool {
         guard !isRunningAIPass else { return false }
-        if (fixtureAIStatus?.requested ?? 0) > 0 {
-            return true
-        }
-        return !selectedReviewAssetIDs.isEmpty
-            && (!reviewAIReasons.isEmpty
-                || !reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        return (fixtureAIStatus?.requested ?? 0) > 0
+    }
+
+    var hasReviewAIDraft: Bool {
+        !reviewAIReasons.isEmpty
+            || !reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var canMarkReviewSelectionNeedsAI: Bool {
+        !isRunningReview && !selectedReviewAssetIDs.isEmpty && hasReviewAIDraft
     }
 
     var selectedFixturePath: [FixtureNode] {
@@ -913,7 +915,10 @@ final class BackstageViewModel: ObservableObject {
                     ?? libraryByID[photoLibraryIdentifier(for: asset.id)]?.creationDate
             )
         }
-        let ids = CullingWorkspace.burst(containing: focusedID, in: timed)
+        let ids = CullingWorkspace.burstRejectCandidates(
+            containing: focusedID,
+            in: timed
+        )
         cullingSelection = OwnerSelectionModel(
             orderedIDs: visibleCullingAssets.map(\.id),
             selectedIDs: Set(ids),
@@ -921,9 +926,9 @@ final class BackstageViewModel: ObservableObject {
             focusedID: focusedID
         )
         selectedPhotoIDs = Set(ids)
-        cullingStatus = ids.count > 1
-            ? "Selected a contiguous \(ids.count)-item burst."
-            : "No neighboring frames within two seconds; selected the focused item."
+        cullingStatus = ids.isEmpty
+            ? "No likely duplicate burst is visible."
+            : "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") to hide; the second frame remains as the likely keeper."
     }
 
     func cancelCullingOperation() {
@@ -1633,14 +1638,18 @@ final class BackstageViewModel: ObservableObject {
         } else {
             reviewAIReasons.insert(reason)
         }
-        reviewAIInputRevision += 1
-        scheduleReviewAIRequestAutosave(after: .milliseconds(400))
     }
 
     func updateReviewAINote(_ value: String) {
         reviewAINote = value
-        reviewAIInputRevision += 1
-        scheduleReviewAIRequestAutosave(after: .seconds(2))
+    }
+
+    func markReviewSelectionNeedsAI() async {
+        guard hasReviewAIDraft else {
+            reviewStatus = "Choose at least one AI reason or add a note."
+            return
+        }
+        await applyReviewAction(.requestAI)
     }
 
     func updateReviewTitle(_ value: String) {
@@ -1657,10 +1666,6 @@ final class BackstageViewModel: ObservableObject {
         guard !isRunningReview else {
             reviewStatus = "Finish the current Review action first."
             return
-        }
-        if action != .requestAI {
-            reviewAIRequestAutosaveTask?.cancel()
-            reviewAIRequestAutosaveTask = nil
         }
         if action != .editMetadata {
             reviewMetadataAutosaveTask?.cancel()
@@ -1697,7 +1702,6 @@ final class BackstageViewModel: ObservableObject {
         if [.approve, .hide, .requestAI].contains(action) {
             reviewLastAction = action
         }
-        let aiInputRevisionAtStart = reviewAIInputRevision
         isRunningReview = true
         reviewStatus = propagate
             ? "Propagating \(reviewActionLabel(action).lowercased()) through the two-hour shoot window…"
@@ -1769,15 +1773,7 @@ final class BackstageViewModel: ObservableObject {
                 anchorID: orderedIDs.contains(anchor) ? anchor : replacementID,
                 focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
-            let hasNewerAIInput = action == .requestAI
-                && reviewAIInputRevision != aiInputRevisionAtStart
-            let newerAIReasons = reviewAIReasons
-            let newerAINote = reviewAINote
             syncReviewDraft()
-            if hasNewerAIInput {
-                reviewAIReasons = newerAIReasons
-                reviewAINote = newerAINote
-            }
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
             await refreshAIStatus()
         } catch {
@@ -1960,12 +1956,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func propagateLastReviewAction() async {
-        // Selected AI reasons are the current Review intent even if Approve
-        // or Hide was the last completed action. Propagation must copy that
-        // reason mark, not inherit a stale approval action.
-        let action = reviewAIReasons.isEmpty ? reviewLastAction : .requestAI
+        // A local AI draft is the current Review intent even if Approve or
+        // Hide was the last completed action. Propagation commits that draft
+        // directly to the two-hour cohort without first changing the anchor.
+        let action = hasReviewAIDraft ? .requestAI : reviewLastAction
         guard [.approve, .hide, .requestAI].contains(action) else {
-            reviewStatus = "Choose Approve, Hide, or Request AI before using main Propagate."
+            reviewStatus = "Choose Approve or Hide, or prepare an AI draft, before using Propagate."
             return
         }
         await applyReviewAction(action, propagate: true)
@@ -1999,11 +1995,6 @@ final class BackstageViewModel: ObservableObject {
         if isRunningAIPass {
             await refreshAIStatus()
             return
-        }
-        if reviewAIRequestAutosaveTask != nil {
-            reviewAIRequestAutosaveTask?.cancel()
-            reviewAIRequestAutosaveTask = nil
-            await applyReviewAction(.requestAI)
         }
         await refreshAIStatus()
         guard (fixtureAIStatus?.requested ?? 0) > 0 else {
@@ -2247,29 +2238,6 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             await self.saveReviewMetadataIfNeeded()
-        }
-    }
-
-    private func scheduleReviewAIRequestAutosave(after delay: Duration) {
-        reviewAIRequestAutosaveTask?.cancel()
-        let selectedIDs = Set(selectedReviewAssetIDs)
-        guard !selectedIDs.isEmpty else {
-            reviewStatus = "Select one or more Review items."
-            return
-        }
-        reviewAIRequestAutosaveTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled, let self else { return }
-            guard Set(self.selectedReviewAssetIDs) == selectedIDs else { return }
-            // From this point onward the task owns a live audited request.
-            // Clear the debounce handle before awaiting so later typing queues
-            // another save instead of cancelling URLSession in flight.
-            self.reviewAIRequestAutosaveTask = nil
-            if self.isRunningReview {
-                self.scheduleReviewAIRequestAutosave(after: .milliseconds(400))
-                return
-            }
-            await self.applyReviewAction(.requestAI)
         }
     }
 

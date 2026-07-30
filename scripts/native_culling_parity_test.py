@@ -547,7 +547,7 @@ class NativeCullingParityTest(unittest.TestCase):
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
         reason_toggle = model.split("func toggleReviewAIReason", 1)[1].split(
-            "func updateReviewTitle", 1
+            "func updateReviewAINote", 1
         )[0]
 
         self.assertNotIn('Button("Save T/K")', inspector)
@@ -565,24 +565,26 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('Text("Mark for AI review")', inspector)
         self.assertNotIn("reviewAIRequestButtonLabel", inspector)
         self.assertIn("model.updateReviewAINote($0)", inspector)
-        self.assertIn("scheduleReviewAIRequestAutosave(after: .milliseconds(400))", model)
-        self.assertIn("scheduleReviewAIRequestAutosave(after: .seconds(2))", model)
-        self.assertIn("self.reviewAIRequestAutosaveTask = nil", model)
-        self.assertIn("await self.applyReviewAction(.requestAI)", model)
+        self.assertNotIn("scheduleReviewAIRequestAutosave", model)
+        self.assertNotIn("reviewAIRequestAutosaveTask", model)
+        self.assertIn('Button("Needs AI")', inspector)
+        self.assertIn("await model.markReviewSelectionNeedsAI()", inspector)
+        self.assertIn(".disabled(!model.canMarkReviewSelectionNeedsAI)", inspector)
+        self.assertIn(
+            "Prepare the reasons and optional note, then press Needs AI",
+            inspector,
+        )
         self.assertNotIn("hasExplicitPendingMetadataEdit", model)
         self.assertIn("if action == .approve", model)
         self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
         self.assertIn(".disabled(!model.canRunAIProposalPass)", ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)
+        self.assertIn('Button("Needs AI")', actions)
         self.assertIn('Button("Propagate")', actions)
-        self.assertNotIn(".disabled(", actions)
         self.assertIn('Image(systemName: "checkmark.circle.fill")', ui)
         self.assertIn('Image(systemName: "questionmark.circle.fill")', ui)
-        self.assertIn(
-            "hasDraftAIReason: model.reviewSelection.selectedIDs.contains(item.id)",
-            ui,
-        )
+        self.assertIn("hasDraftAIReason: false", ui)
         self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', ui)
         self.assertIn(".font(.system(size: 30, weight: .bold))", ui)
         self.assertIn(
@@ -593,7 +595,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "func refreshAIStatus", 1
         )[0]
         self.assertIn(
-            "let action = reviewAIReasons.isEmpty ? reviewLastAction : .requestAI",
+            "let action = hasReviewAIDraft ? .requestAI : reviewLastAction",
             propagate,
         )
         self.assertIn("await applyReviewAction(action, propagate: true)", propagate)

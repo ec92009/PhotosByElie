@@ -295,6 +295,40 @@ public enum CullingWorkspace {
         }
         return orderedItems[lower...upper].map(\.id)
     }
+
+    /// Suggests visible burst frames that are safe candidates for a bulk hide.
+    ///
+    /// The selection is deliberately inclusive: the operator can Command-click
+    /// any false positives away before pressing H. The second displayed frame
+    /// remains unselected as the likely keeper, matching the normal two-frame
+    /// capture cadence while making longer visible bursts quick to reduce.
+    public static func burstRejectCandidates(
+        containing focusedID: String,
+        in orderedItems: [CullingTimedItem],
+        maximumSpan: TimeInterval = 60
+    ) -> [String] {
+        guard let focusedIndex = orderedItems.firstIndex(where: { $0.id == focusedID }),
+              let focusedDate = orderedItems[focusedIndex].capturedAt else {
+            return []
+        }
+        var lower = focusedIndex
+        while lower > 0,
+              let previous = orderedItems[lower - 1].capturedAt,
+              abs(previous.timeIntervalSince(focusedDate)) <= maximumSpan {
+            lower -= 1
+        }
+        var upper = focusedIndex
+        while upper + 1 < orderedItems.count,
+              let next = orderedItems[upper + 1].capturedAt,
+              abs(next.timeIntervalSince(focusedDate)) <= maximumSpan {
+            upper += 1
+        }
+        let burstIDs = orderedItems[lower...upper].map(\.id)
+        guard burstIDs.count > 1 else { return [] }
+        return burstIDs.enumerated().compactMap { index, id in
+            index == 1 ? nil : id
+        }
+    }
 }
 
 public extension FixtureNode {

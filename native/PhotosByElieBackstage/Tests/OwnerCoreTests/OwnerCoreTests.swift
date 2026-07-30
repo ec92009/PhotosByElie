@@ -269,6 +269,31 @@ struct OwnerCoreTests {
         #expect(CullingWorkspace.burst(containing: "missing", in: items).isEmpty)
     }
 
+    @Test("Burst hide candidates keep the second visible frame")
+    func burstRejectCandidatesKeepSecondFrame() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let items = [
+            CullingTimedItem(id: "first", capturedAt: base),
+            CullingTimedItem(id: "keeper", capturedAt: base.addingTimeInterval(1)),
+            CullingTimedItem(id: "third", capturedAt: base.addingTimeInterval(20)),
+            CullingTimedItem(id: "bridge", capturedAt: base.addingTimeInterval(75)),
+            CullingTimedItem(id: "outside", capturedAt: base.addingTimeInterval(150)),
+        ]
+
+        #expect(
+            CullingWorkspace.burstRejectCandidates(
+                containing: "first",
+                in: items
+            ) == ["first", "third"]
+        )
+        #expect(
+            CullingWorkspace.burstRejectCandidates(
+                containing: "outside",
+                in: items
+            ).isEmpty
+        )
+    }
+
     @Test("Burst capture dates parse durable Owner timestamps")
     func burstCaptureDateParsing() throws {
         let standard = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38Z"))

@@ -2427,8 +2427,7 @@ private struct FixtureReviewView: View {
                                     thumbnail: model.reviewThumbnails[item.id],
                                     isSelected: model.reviewSelection.selectedIDs.contains(item.id),
                                     isFocused: model.reviewSelection.focusedID == item.id,
-                                    hasDraftAIReason: model.reviewSelection.selectedIDs.contains(item.id)
-                                        && !model.reviewAIReasons.isEmpty,
+                                    hasDraftAIReason: false,
                                     hasProposalDraft: model.hasProposalDraft(for: item.id),
                                     hasProposalConflict: model.reviewProposalConflictIDs.contains(item.id)
                                 )
@@ -2866,6 +2865,10 @@ private struct ReviewInspector: View {
                             Task { await model.applyReviewAction(.hide) }
                         }
                         .keyboardShortcut("h", modifiers: [])
+                        Button("Needs AI") {
+                            Task { await model.markReviewSelectionNeedsAI() }
+                        }
+                        .disabled(!model.canMarkReviewSelectionNeedsAI)
                         Button("Propagate") {
                             Task { await model.propagateLastReviewAction() }
                         }
@@ -2910,7 +2913,7 @@ private struct ReviewInspector: View {
                     )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Text("Reasons save promptly. Notes save after two seconds without typing.")
+                    Text("Prepare the reasons and optional note, then press Needs AI for the selection or Propagate for the two-hour shoot.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Divider()

@@ -698,8 +698,10 @@ Clock state: running
 | 2026-07-29 | 19:03 CEST | 19:04 CEST | 0:01 | Resumed the PhotoKit Current-metadata repair long enough to package and verify a signed Backstage release; background tests, build, signing, installation, and checkpoint time excluded. |
 | 2026-07-29 | 23:17 CEST | 23:25 CEST | 0:08 | Diagnosed the final seven publication failures as legitimate stained-glass photographs caught by the legacy `Stained*` retirement filter; background SQLite comparison, regression repair, tests, connector restart, and checkpoint time excluded. |
 | 2026-07-29 | 23:29 CEST | 23:39 CEST | 0:03 | Reported that Culling's Select burst left only the focused older Carnavalet frame selected and reviewed the exact two-frame acceptance check; background diagnosis, implementation, tests, build, signing, installation, and control-bridge retry time excluded. |
+| 2026-07-30 | 04:01 CEST | 04:02 CEST | 0:01 | Ran the scheduled requested-AI proposal pass, confirmed 4 queued Requesting AI items, and completed 4 proposals with no skips or failures. |
+| 2026-07-30 | 08:01 CEST | 08:06 CEST | 0:02 | Restored explicit Needs AI commit semantics, defined direct two-hour AI-draft propagation, and refined Select burst to propose the first, third, and later visible duplicate candidates while keeping the second frame; background implementation, tests, signing, and installation excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:05
+Active collaboration time used: 34:08
 Remaining budget: not set

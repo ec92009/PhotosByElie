@@ -102,7 +102,7 @@ public struct BackstageApplication: App {
         case .culling:
             CullingView(model: model)
         case .review:
-            FixtureReviewView(model: model)
+            ReviewView(model: model)
         case .metadata:
             MetadataGiveBackView(model: model)
         case .wasteBasket:
@@ -1160,9 +1160,9 @@ struct MediaLibraryView: View {
                                         model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                                         Task { await model.loadPreview() }
                                     }
-                                    .task {
+                                    .onAppear {
                                         guard !isPreviewMode else { return }
-                                        await model.loadThumbnail(for: asset.id)
+                                        model.requestThumbnail(for: asset.id)
                                     }
                                 }
                             }
@@ -1265,7 +1265,13 @@ struct MediaLibraryView: View {
                     }
                     .overlay {
                         if model.isLoadingFixtureCulling {
-                            ProgressView("Applying filters…")
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                    .controlSize(.large)
+                                Text("Applying filters…")
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if model.visibleCullingAssets.isEmpty {
                             ContentUnavailableView(
                                 model.cullingAssets.isEmpty ? "No culling items" : "No matching items",
@@ -2319,8 +2325,9 @@ private struct AccessControlView: View {
     }
 }
 
-private struct FixtureReviewView: View {
+struct FixtureReviewView: View {
     @ObservedObject var model: BackstageViewModel
+    var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
@@ -2413,8 +2420,11 @@ private struct FixtureReviewView: View {
                         Text("\(first.formatted())–\(last.formatted()) of \(window.summary.total.formatted())")
                             .font(.callout.weight(.semibold))
                             .monospacedDigit()
-                    } else {
+                    } else if model.isRunningReview {
                         Text("Loading Review queue…")
+                            .font(.callout.weight(.semibold))
+                    } else {
+                        Text("Review queue unavailable")
                             .font(.callout.weight(.semibold))
                     }
                     Spacer()
@@ -2446,7 +2456,7 @@ private struct FixtureReviewView: View {
                                 .onTapGesture {
                                     model.clickReviewItem(item.id, modifiers: NSEvent.modifierFlags)
                                 }
-                                .task { await model.loadReviewThumbnail(for: item) }
+                                .onAppear { model.requestReviewThumbnail(for: item) }
                             }
                         }
                         .padding(6)
@@ -2487,7 +2497,17 @@ private struct FixtureReviewView: View {
                         return .handled
                     }
                     .overlay {
-                        if model.reviewItems.isEmpty {
+                        if model.isRunningReview, model.fixtureReviewWindow == nil {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                    .controlSize(.large)
+                                Text("Loading Review queue…")
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if !model.isRunningReview,
+                                  model.fixtureReviewWindow != nil,
+                                  model.reviewItems.isEmpty {
                             ContentUnavailableView(
                                 "Review queue is clear",
                                 systemImage: "checkmark.circle",
@@ -2523,6 +2543,7 @@ private struct FixtureReviewView: View {
         }
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .task {
+            guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
             }

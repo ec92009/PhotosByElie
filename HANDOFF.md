@@ -1,5 +1,22 @@
 # PhotosByElie Handoff
 
+## 2026-07-30 — Review is Canvas-ready and resilient to transient UI cancellation
+
+- Backstage `0.4.46` build `57` routes the production Review workspace through
+  a dedicated `ReviewView` adapter with Xcode Canvas fixtures for loaded,
+  last-good refreshing, initial-loading, and empty states. Preview fixtures
+  never connect to Owner or PhotoKit.
+- Culling and Review thumbnails are now requested by model-owned retry tasks
+  rather than card-lifetime SwiftUI tasks, so scrolling or view replacement
+  cannot strand a card with a permanent blank thumbnail after transient
+  cancellation.
+- Review keeps its last complete window during refresh, ignores benign
+  `NSURLErrorCancelled` status checks, and renders initial loading separately
+  from a genuinely empty loaded queue. The Culling filter progress label also
+  retains a readable full-width layout.
+- Verification was state-safe: 50 Swift tests and 22 native UI parity tests
+  pass. No real Culling or Review action was submitted.
+
 ## 2026-07-30 — Culling filter results are atomic
 
 - Backstage `0.4.45` build `56` invalidates the previous fixture window as

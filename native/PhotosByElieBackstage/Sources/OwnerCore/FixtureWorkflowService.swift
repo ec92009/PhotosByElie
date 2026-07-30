@@ -513,6 +513,58 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var proposalStatus: String
     public var deliveryState: String
 
+    public init(
+        id: String,
+        photoLibraryIdentifier: String,
+        title: String,
+        caption: String = "",
+        keywords: [String],
+        filename: String,
+        mediaType: String = "photo",
+        capturedAt: String,
+        rating: Int = 0,
+        color: String = "",
+        placementState: String = "picked",
+        editorialState: String = "unreviewed",
+        aiReasons: [String] = [],
+        aiNote: String = "",
+        aiAttemptCount: Int = 0,
+        aiLastError: String = "",
+        proposalReady: Bool = false,
+        proposalContextAvailable: Bool = false,
+        proposalID: String = "",
+        proposedTitle: String = "",
+        proposedKeywords: [String] = [],
+        proposalReason: String = "",
+        proposalStatus: String = "",
+        deliveryState: String = "not-ready"
+    ) {
+        self.id = id
+        self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.title = title
+        self.caption = caption
+        self.keywords = keywords
+        self.filename = filename
+        self.mediaType = mediaType
+        self.capturedAt = capturedAt
+        self.rating = rating
+        self.color = color
+        self.placementState = placementState
+        self.editorialState = editorialState
+        self.aiReasons = aiReasons
+        self.aiNote = aiNote
+        self.aiAttemptCount = aiAttemptCount
+        self.aiLastError = aiLastError
+        self.proposalReady = proposalReady
+        self.proposalContextAvailable = proposalContextAvailable
+        self.proposalID = proposalID
+        self.proposedTitle = proposedTitle
+        self.proposedKeywords = proposedKeywords
+        self.proposalReason = proposalReason
+        self.proposalStatus = proposalStatus
+        self.deliveryState = deliveryState
+    }
+
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? ""
         photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? id
@@ -549,6 +601,20 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var proposed: Int
     public var approved: Int
 
+    public init(
+        total: Int,
+        unreviewed: Int,
+        requestingAI: Int,
+        proposed: Int,
+        approved: Int
+    ) {
+        self.total = total
+        self.unreviewed = unreviewed
+        self.requestingAI = requestingAI
+        self.proposed = proposed
+        self.approved = approved
+    }
+
     init(json: [String: JSONValue]) {
         total = json["total"]?.intValue ?? 0
         unreviewed = json["unreviewed"]?.intValue ?? 0
@@ -567,6 +633,26 @@ public struct FixtureReviewWindow: Sendable, Equatable {
     public var hasNext: Bool
     public var summary: FixtureReviewSummary
     public var items: [FixtureReviewItem]
+
+    public init(
+        fixtureID: String,
+        mode: FixtureReviewMode,
+        offset: Int,
+        limit: Int,
+        nextOffset: Int,
+        hasNext: Bool,
+        summary: FixtureReviewSummary,
+        items: [FixtureReviewItem]
+    ) {
+        self.fixtureID = fixtureID
+        self.mode = mode
+        self.offset = offset
+        self.limit = limit
+        self.nextOffset = nextOffset
+        self.hasNext = hasNext
+        self.summary = summary
+        self.items = items
+    }
 
     init(json: [String: JSONValue]) {
         fixtureID = json["fixtureId"]?.stringValue ?? ""

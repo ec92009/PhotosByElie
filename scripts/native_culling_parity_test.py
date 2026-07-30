@@ -89,7 +89,64 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("fixtureCullingWindow = nil", model)
         self.assertIn('cullingStatus = "Applying culling filters…"', model)
         self.assertIn("if !model.isLoadingFixtureCulling", ui)
-        self.assertIn('ProgressView("Applying filters…")', ui)
+        self.assertIn('Text("Applying filters…")', ui)
+        self.assertIn(".fixedSize(horizontal: true, vertical: false)", ui)
+        self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", ui)
+
+    def test_thumbnail_requests_outlive_transient_card_task_cancellation(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("private var cullingThumbnailTasks:", model)
+        self.assertIn("func requestThumbnail(for assetID:", model)
+        self.assertIn("for attempt in 0..<3", model)
+        self.assertIn("model.requestThumbnail(for: asset.id)", ui)
+        self.assertIn("model.requestReviewThumbnail(for: item)", ui)
+
+    def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        canvas = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
+        ).read_text(encoding="utf-8")
+        review_loader = model.split(
+            "func loadFixtureReviewWindow", 1
+        )[1].split("func clickReviewItem", 1)[0]
+        self.assertIn("reviewWindowRequestSerial", review_loader)
+        self.assertIn("isTransientCancellation(error)", review_loader)
+        self.assertNotIn("fixtureReviewWindow = nil", review_loader)
+        self.assertIn(
+            "model.isRunningReview, model.fixtureReviewWindow == nil",
+            ui,
+        )
+        self.assertIn("model.fixtureReviewWindow != nil", ui)
+        for marker in (
+            'struct ReviewView: View',
+            '#Preview("Review — Loaded")',
+            '#Preview("Review — Refreshing Last Good Window")',
+            '#Preview("Review — Initial Loading")',
+            '#Preview("Review — Empty")',
+        ):
+            self.assertIn(marker, canvas)
 
     def test_cancelled_fixture_reload_does_not_replace_loaded_state_with_an_error(self):
         source = (
@@ -303,7 +360,7 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
-        review = source.split("private struct FixtureReviewView", 1)[1].split(
+        review = source.split("struct FixtureReviewView", 1)[1].split(
             "private struct ReviewAssetRow", 1
         )[0]
 
@@ -525,7 +582,7 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
-        review = source.split("private struct FixtureReviewView", 1)[1].split(
+        review = source.split("struct FixtureReviewView", 1)[1].split(
             "private struct ReviewInspector", 1
         )[0]
         root = source.split("private struct OverviewView", 1)[0]

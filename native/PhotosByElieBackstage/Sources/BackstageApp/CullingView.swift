@@ -21,7 +21,8 @@ struct CullingView: View {
 private enum CullingPreviewFixtures {
     static func model(
         previewPanelVisible: Bool = true,
-        loading: Bool = false
+        loading: Bool = false,
+        missingThumbnail: Bool = false
     ) -> BackstageViewModel {
         let model = BackstageViewModel()
         let assets = sampleAssets
@@ -75,6 +76,9 @@ private enum CullingPreviewFixtures {
                 (asset.id, placeholderImage(index: index))
             }
         )
+        if missingThumbnail {
+            model.cullingThumbnails["expo-1"] = nil
+        }
         model.cullingSelection = OwnerSelectionModel(
             orderedIDs: assets.map(\.id),
             selectedIDs: ["expo-3"],
@@ -226,6 +230,14 @@ private enum CullingPreviewFixtures {
 #Preview("Culling — Applying Filters") {
     CullingView(
         model: CullingPreviewFixtures.model(loading: true),
+        isPreviewMode: true
+    )
+    .frame(width: 1_200, height: 760)
+}
+
+#Preview("Culling — Thumbnail Pending") {
+    CullingView(
+        model: CullingPreviewFixtures.model(missingThumbnail: true),
         isPreviewMode: true
     )
     .frame(width: 1_200, height: 760)

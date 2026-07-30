@@ -254,7 +254,10 @@ final class BackstageViewModel: ObservableObject {
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
+    private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
+    private var reviewWindowRequestSerial = 0
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -495,21 +498,44 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func requestThumbnail(for assetID: String) {
+        guard cullingThumbnails[assetID] == nil,
+              cullingThumbnailTasks[assetID] == nil
+        else { return }
+        cullingThumbnailTasks[assetID] = Task { [weak self] in
+            guard let self else { return }
+            await self.loadThumbnail(for: assetID)
+            self.cullingThumbnailTasks[assetID] = nil
+        }
+    }
+
     func loadThumbnail(for assetID: String) async {
         guard cullingThumbnails[assetID] == nil else { return }
-        do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: photoLibraryIdentifier(for: assetID),
-                maxPixelSize: 180
-            )
-            guard let image = NSImage(data: preview.jpegData) else { return }
-            if cullingThumbnails.count >= 300,
-               let oldest = cullingThumbnails.keys.first {
-                cullingThumbnails.removeValue(forKey: oldest)
+        let localIdentifier = photoLibraryIdentifier(for: assetID)
+        for attempt in 0..<3 {
+            guard !Task.isCancelled else { return }
+            do {
+                let preview = try await photoLibrary.preview(
+                    localIdentifier: localIdentifier,
+                    maxPixelSize: 180
+                )
+                guard let image = NSImage(data: preview.jpegData) else {
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180))
+                        continue
+                    }
+                    return
+                }
+                if cullingThumbnails.count >= 300,
+                   let oldest = cullingThumbnails.keys.first {
+                    cullingThumbnails.removeValue(forKey: oldest)
+                }
+                cullingThumbnails[assetID] = image
+                return
+            } catch {
+                guard !Task.isCancelled, attempt < 2 else { return }
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
             }
-            cullingThumbnails[assetID] = image
-        } catch {
-            // A missing thumbnail must not block culling or the larger preview.
         }
     }
 
@@ -1562,18 +1588,27 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
-    func loadFixtureReviewWindow(preferredAssetID: String? = nil) async {
+    func loadFixtureReviewWindow(
+        preferredAssetID: String? = nil,
+        retryOnCancellation: Bool = true
+    ) async {
         guard !reviewFixtureID.isEmpty else {
             reviewStatus = "Choose a fixture to load its Review queue."
             return
         }
+        reviewWindowRequestSerial += 1
+        let requestSerial = reviewWindowRequestSerial
         let currentID = preferredAssetID
             ?? reviewSelection.focusedID
             ?? selectedReviewAssetIDs.first
         preserveCurrentReviewDraft()
         isRunningReview = true
         reviewStatus = "Loading the oldest unresolved picked photos…"
-        defer { isRunningReview = false }
+        defer {
+            if requestSerial == reviewWindowRequestSerial {
+                isRunningReview = false
+            }
+        }
         do {
             let window = try await fixtureService.reviewWindow(
                 fixtureID: reviewFixtureID,
@@ -1585,6 +1620,7 @@ final class BackstageViewModel: ObservableObject {
                 limit: reviewWindowLimit,
                 search: reviewSearch
             )
+            guard requestSerial == reviewWindowRequestSerial, !Task.isCancelled else { return }
             hydrateReviewProposalDrafts(from: window.items)
             fixtureReviewWindow = window
             let orderedIDs = window.items.map(\.id)
@@ -1619,6 +1655,17 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
             await refreshAIStatus()
         } catch {
+            guard requestSerial == reviewWindowRequestSerial else { return }
+            if isTransientCancellation(error) {
+                guard retryOnCancellation, !Task.isCancelled else { return }
+                try? await Task.sleep(for: .milliseconds(180))
+                guard !Task.isCancelled else { return }
+                await loadFixtureReviewWindow(
+                    preferredAssetID: currentID,
+                    retryOnCancellation: false
+                )
+                return
+            }
             reviewStatus = userFacingMessage(for: error)
         }
     }
@@ -2006,6 +2053,7 @@ final class BackstageViewModel: ObservableObject {
                 aiProposalStatus = "No requested AI work is waiting."
             }
         } catch {
+            guard !isTransientCancellation(error) else { return }
             aiProposalStatus = "AI status unavailable: \(error)"
         }
     }
@@ -2108,20 +2156,42 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func requestReviewThumbnail(for item: FixtureReviewItem) {
+        guard reviewThumbnails[item.id] == nil,
+              reviewThumbnailTasks[item.id] == nil
+        else { return }
+        reviewThumbnailTasks[item.id] = Task { [weak self] in
+            guard let self else { return }
+            await self.loadReviewThumbnail(for: item)
+            self.reviewThumbnailTasks[item.id] = nil
+        }
+    }
+
     func loadReviewThumbnail(for item: FixtureReviewItem) async {
         guard reviewThumbnails[item.id] == nil else { return }
-        do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: item.photoLibraryIdentifier,
-                maxPixelSize: 420
-            )
-            guard let image = NSImage(data: preview.jpegData) else { return }
-            if reviewThumbnails.count >= 300, let oldest = reviewThumbnails.keys.first {
-                reviewThumbnails.removeValue(forKey: oldest)
+        for attempt in 0..<3 {
+            guard !Task.isCancelled else { return }
+            do {
+                let preview = try await photoLibrary.preview(
+                    localIdentifier: item.photoLibraryIdentifier,
+                    maxPixelSize: 420
+                )
+                guard let image = NSImage(data: preview.jpegData) else {
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180))
+                        continue
+                    }
+                    return
+                }
+                if reviewThumbnails.count >= 300, let oldest = reviewThumbnails.keys.first {
+                    reviewThumbnails.removeValue(forKey: oldest)
+                }
+                reviewThumbnails[item.id] = image
+                return
+            } catch {
+                guard !Task.isCancelled, attempt < 2 else { return }
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
             }
-            reviewThumbnails[item.id] = image
-        } catch {
-            // A missing thumbnail must not block metadata review.
         }
     }
 
@@ -3354,6 +3424,15 @@ final class BackstageViewModel: ObservableObject {
         authentication = await authenticationService.currentSnapshot()
         authenticationStatus = "This Mac's Backstage session could not be renewed automatically."
         status = "Sign in again"
+    }
+
+    private func isTransientCancellation(_ error: Error) -> Bool {
+        if error is CancellationError || Task.isCancelled {
+            return true
+        }
+        let cocoaError = error as NSError
+        return cocoaError.domain == NSURLErrorDomain
+            && cocoaError.code == NSURLErrorCancelled
     }
 
     private func userFacingMessage(for error: Error) -> String {

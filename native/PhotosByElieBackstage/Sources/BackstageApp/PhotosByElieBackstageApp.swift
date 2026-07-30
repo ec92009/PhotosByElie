@@ -2,12 +2,13 @@ import OwnerCore
 import AppKit
 import SwiftUI
 
-@main
-struct PhotosByElieBackstageApp: App {
+public struct BackstageApplication: App {
     @StateObject private var model = BackstageViewModel()
     @Environment(\.scenePhase) private var scenePhase
 
-    var body: some Scene {
+    public init() {}
+
+    public var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {
             NavigationSplitView {
                 List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
@@ -99,7 +100,7 @@ struct PhotosByElieBackstageApp: App {
         case .access:
             AccessControlView(model: model)
         case .culling:
-            MediaLibraryView(model: model)
+            CullingView(model: model)
         case .review:
             FixtureReviewView(model: model)
         case .metadata:
@@ -985,8 +986,9 @@ private struct ActivityView: View {
     }
 }
 
-private struct MediaLibraryView: View {
+struct MediaLibraryView: View {
     @ObservedObject var model: BackstageViewModel
+    var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
@@ -1158,7 +1160,10 @@ private struct MediaLibraryView: View {
                                         model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                                         Task { await model.loadPreview() }
                                     }
-                                    .task { await model.loadThumbnail(for: asset.id) }
+                                    .task {
+                                        guard !isPreviewMode else { return }
+                                        await model.loadThumbnail(for: asset.id)
+                                    }
                                 }
                             }
                             .padding(.horizontal, 6)
@@ -1422,8 +1427,10 @@ private struct MediaLibraryView: View {
             )
         }
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
+        .allowsHitTesting(!isPreviewMode)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
+            guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
             }
@@ -2940,7 +2947,7 @@ private struct ReviewInspector: View {
     }
 }
 
-private struct FlowLayout: Layout {
+struct FlowLayout: Layout {
     var spacing: CGFloat
 
     func sizeThatFits(

@@ -7,6 +7,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "OwnerCore", targets: ["OwnerCore"]),
+        .library(name: "BackstageUI", targets: ["BackstageUI"]),
         .executable(name: "PhotosByElieBackstage", targets: ["BackstageApp"]),
     ],
     targets: [
@@ -18,10 +19,16 @@ let package = Package(
                 .linkedLibrary("sqlite3"),
             ]
         ),
+        .target(
+            name: "BackstageUI",
+            dependencies: ["OwnerCore"],
+            path: "Sources/BackstageApp",
+            linkerSettings: [.linkedFramework("Quartz")]
+        ),
         .executableTarget(
             name: "BackstageApp",
-            dependencies: ["OwnerCore"],
-            linkerSettings: [.linkedFramework("Quartz")]
+            dependencies: ["BackstageUI"],
+            path: "Sources/BackstageLauncher"
         ),
         .testTarget(
             name: "OwnerCoreTests",

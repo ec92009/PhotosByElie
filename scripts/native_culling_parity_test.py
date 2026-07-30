@@ -300,7 +300,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
         review = source.split("private struct FixtureReviewView", 1)[1].split(
@@ -333,7 +333,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -381,7 +381,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        culling = app.split("private struct MediaLibraryView", 1)[1].split(
+        culling = app.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
         card = app.split("private struct CullingAssetCard", 1)[1].split(
@@ -450,7 +450,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -485,7 +485,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -522,7 +522,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("private struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct MediaLibraryView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
         review = source.split("private struct FixtureReviewView", 1)[1].split(

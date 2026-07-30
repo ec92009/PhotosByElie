@@ -20,6 +20,18 @@ public struct PhotoPreview: Sendable, Equatable {
     public var jpegData: Data
     public var pixelWidth: Int
     public var pixelHeight: Int
+
+    public init(
+        assetID: String,
+        jpegData: Data,
+        pixelWidth: Int,
+        pixelHeight: Int
+    ) {
+        self.assetID = assetID
+        self.jpegData = jpegData
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+    }
 }
 
 public struct PhotoExportReceipt: Sendable, Equatable {

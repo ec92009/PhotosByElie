@@ -11,6 +11,22 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
     public var isArchived: Bool { state == "archived" }
     public var outlineChildren: [FixtureNode]? { children.isEmpty ? nil : children }
 
+    public init(
+        id: String,
+        name: String,
+        parentID: String? = nil,
+        state: String = "active",
+        templateKey: String = "",
+        children: [FixtureNode] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.parentID = parentID
+        self.state = state
+        self.templateKey = templateKey
+        self.children = children
+    }
+
     init(json: [String: JSONValue]) {
         id = json["fixtureId"]?.stringValue ?? json["id"]?.stringValue ?? ""
         name = json["name"]?.stringValue ?? id
@@ -116,6 +132,26 @@ public struct FixturePoolAsset: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
 
+    public init(
+        id: String,
+        sourceIdentity: String = "",
+        photoLibraryIdentifier: String = "",
+        sourceKind: String = "photos-library",
+        position: Int,
+        title: String,
+        filename: String,
+        mediaType: String
+    ) {
+        self.id = id
+        self.sourceIdentity = sourceIdentity
+        self.photoLibraryIdentifier = photoLibraryIdentifier.isEmpty ? id : photoLibraryIdentifier
+        self.sourceKind = sourceKind
+        self.position = position
+        self.title = title
+        self.filename = filename
+        self.mediaType = mediaType
+    }
+
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? ""
         sourceIdentity = json["sourceIdentity"]?.stringValue ?? ""
@@ -135,6 +171,22 @@ public struct FixturePool: Sendable, Equatable {
     public var assetCount: Int
     public var snapshotHash: String
     public var assets: [FixturePoolAsset]
+
+    public init(
+        id: String,
+        name: String,
+        fixtureID: String,
+        assetCount: Int,
+        snapshotHash: String,
+        assets: [FixturePoolAsset]
+    ) {
+        self.id = id
+        self.name = name
+        self.fixtureID = fixtureID
+        self.assetCount = assetCount
+        self.snapshotHash = snapshotHash
+        self.assets = assets
+    }
 }
 
 public struct FixturePoolSummary: Identifiable, Sendable, Equatable {

@@ -566,8 +566,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var cullingAssets: [FixtureAsset] {
-        if let fixtureCullingWindow, cullingPool == nil {
-            return fixtureCullingWindow.items
+        if cullingPool == nil, hasCurrentCullingFixture {
+            return fixtureCullingWindow?.items ?? []
         }
         if let cullingPool {
             return cullingPool.assets.map {
@@ -653,7 +653,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var cullingWorkspace: CullingWorkspaceResult {
-        if let window = fixtureCullingWindow, cullingPool == nil {
+        if cullingPool == nil, hasCurrentCullingFixture, let window = fixtureCullingWindow {
             return CullingWorkspaceResult(
                 items: window.items.map { asset in
                     CullingCandidate(
@@ -677,6 +677,22 @@ final class BackstageViewModel: ObservableObject {
                 limit: window.limit
             )
         }
+        if cullingPool == nil, hasCurrentCullingFixture {
+            return CullingWorkspaceResult(
+                items: [],
+                summary: CullingSummary(
+                    total: 0,
+                    filtered: 0,
+                    undecided: 0,
+                    picked: 0,
+                    rejected: 0,
+                    photos: 0,
+                    videos: 0
+                ),
+                offset: 0,
+                limit: cullingWindowLimit
+            )
+        }
         return CullingWorkspace.evaluate(
             cullingAssets.map { asset in
                 CullingCandidate(
@@ -694,7 +710,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var visibleCullingAssets: [FixtureAsset] {
-        if fixtureCullingWindow != nil, cullingPool == nil {
+        if cullingPool == nil, hasCurrentCullingFixture {
+            guard fixtureCullingWindow != nil else { return [] }
             let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
             let exactWindow = CullingWorkspace.evaluate(
                 cullingAssets.map { asset in
@@ -775,6 +792,15 @@ final class BackstageViewModel: ObservableObject {
         cullingWindowOffset = 0
         cullingFilterTask?.cancel()
         if !cullingFixtureID.isEmpty, cullingPool == nil {
+            // Invalidate the old response immediately. Until the audited
+            // fixture query completes, the grid must not fall back to the
+            // unrelated recent-Photos preview cache or show stale results.
+            cullingWindowRequestSerial += 1
+            fixtureCullingWindow = nil
+            isLoadingFixtureCulling = true
+            clearCullingSelection()
+            photoPreview = nil
+            cullingStatus = "Applying culling filters…"
             cullingFilterTask = Task { [weak self] in
                 if debounceNanoseconds > 0 {
                     try? await Task.sleep(nanoseconds: debounceNanoseconds)
@@ -902,33 +928,23 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
     }
 
-    func selectFocusedBurst() {
-        guard let focusedID = focusedCullingAssetID else {
-            cullingStatus = "Focus one item before selecting its burst."
+    func selectVisibleBurstCandidates() {
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        guard !visibleIDs.isEmpty else {
+            cullingStatus = isLoadingFixtureCulling
+                ? "Wait for the filtered culling window to finish loading."
+                : "No filtered items are visible."
             return
         }
-        let libraryByID = Dictionary(uniqueKeysWithValues: libraryItems.map { ($0.id, $0) })
-        let timed = visibleCullingAssets.map { asset in
-            CullingTimedItem(
-                id: asset.id,
-                capturedAt: CullingWorkspace.captureDate(asset.capturedAt)
-                    ?? libraryByID[photoLibraryIdentifier(for: asset.id)]?.creationDate
-            )
-        }
-        let ids = CullingWorkspace.burstRejectCandidates(
-            containing: focusedID,
-            in: timed
-        )
+        let ids = CullingWorkspace.burstRejectCandidates(in: visibleIDs)
         cullingSelection = OwnerSelectionModel(
-            orderedIDs: visibleCullingAssets.map(\.id),
+            orderedIDs: visibleIDs,
             selectedIDs: Set(ids),
             anchorID: ids.first,
-            focusedID: focusedID
+            focusedID: ids.first
         )
         selectedPhotoIDs = Set(ids)
-        cullingStatus = ids.isEmpty
-            ? "No likely duplicate burst is visible."
-            : "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") to hide; the second frame remains as the likely keeper."
+        cullingStatus = "Selected \(ids.count) visible candidate\(ids.count == 1 ? "" : "s") to hide; the second frame remains as the likely keeper."
     }
 
     func cancelCullingOperation() {
@@ -979,7 +995,10 @@ final class BackstageViewModel: ObservableObject {
         }
         cullingWindowRequestSerial += 1
         let requestSerial = cullingWindowRequestSerial
+        fixtureCullingWindow = nil
         isLoadingFixtureCulling = true
+        clearCullingSelection()
+        photoPreview = nil
         cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
         defer {
             if requestSerial == cullingWindowRequestSerial {

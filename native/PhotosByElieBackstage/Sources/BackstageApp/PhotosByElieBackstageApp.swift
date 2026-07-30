@@ -1031,8 +1031,7 @@ private struct MediaLibraryView: View {
                             .frame(width: 240)
                             .onSubmit { model.applyCullingFilters() }
                         Button("Review picked") { model.showPickedReview() }
-                        Button("Select burst") { model.selectFocusedBurst() }
-                            .disabled(model.focusedCullingAssetID == nil)
+                        Button("Select burst") { model.selectVisibleBurstCandidates() }
                     }
                     FlowLayout(spacing: 8) {
                         Text("Media").font(.caption.weight(.semibold))
@@ -1136,36 +1135,38 @@ private struct MediaLibraryView: View {
                 .layoutPriority(3)
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVGrid(
-                            columns: Array(
-                                repeating: GridItem(.flexible(minimum: 0), spacing: 8),
-                                count: model.cullingGridDensity
-                            ),
-                            spacing: 8
-                        ) {
-                            ForEach(model.visibleCullingAssets) { asset in
-                                CullingAssetCard(
-                                    asset: asset,
-                                    state: model.cullingStates[asset.id],
-                                    thumbnail: model.cullingThumbnails[asset.id],
-                                    isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
-                                    isFocused: model.cullingSelection.focusedID == asset.id,
-                                    usesFill: model.cullingUsesFill
-                                )
-                                .id(asset.id)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
-                                    Task { await model.loadPreview() }
+                        if !model.isLoadingFixtureCulling {
+                            LazyVGrid(
+                                columns: Array(
+                                    repeating: GridItem(.flexible(minimum: 0), spacing: 8),
+                                    count: model.cullingGridDensity
+                                ),
+                                spacing: 8
+                            ) {
+                                ForEach(model.visibleCullingAssets) { asset in
+                                    CullingAssetCard(
+                                        asset: asset,
+                                        state: model.cullingStates[asset.id],
+                                        thumbnail: model.cullingThumbnails[asset.id],
+                                        isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
+                                        isFocused: model.cullingSelection.focusedID == asset.id,
+                                        usesFill: model.cullingUsesFill
+                                    )
+                                    .id(asset.id)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
+                                        Task { await model.loadPreview() }
+                                    }
+                                    .task { await model.loadThumbnail(for: asset.id) }
                                 }
-                                .task { await model.loadThumbnail(for: asset.id) }
                             }
+                            .padding(.horizontal, 6)
+                            .padding(.top, 12)
+                            .padding(.bottom, 6)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.top, 12)
-                        .padding(.bottom, 6)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
                     }
                     .id(cullingViewportIdentity)
                     .background {
@@ -1229,7 +1230,7 @@ private struct MediaLibraryView: View {
                         return .handled
                     }
                     .onKeyPress("b") {
-                        model.selectFocusedBurst()
+                        model.selectVisibleBurstCandidates()
                         return .handled
                     }
                     .onKeyPress("+") {
@@ -1258,7 +1259,9 @@ private struct MediaLibraryView: View {
                         return .handled
                     }
                     .overlay {
-                        if model.visibleCullingAssets.isEmpty {
+                        if model.isLoadingFixtureCulling {
+                            ProgressView("Applying filters…")
+                        } else if model.visibleCullingAssets.isEmpty {
                             ContentUnavailableView(
                                 model.cullingAssets.isEmpty ? "No culling items" : "No matching items",
                                 systemImage: "photo.stack",

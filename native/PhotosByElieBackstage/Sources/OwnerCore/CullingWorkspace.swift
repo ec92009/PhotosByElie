@@ -329,6 +329,18 @@ public enum CullingWorkspace {
             index == 1 ? nil : id
         }
     }
+
+    /// Selects every visible candidate except the second displayed frame.
+    ///
+    /// Culling already applies the operator's fixture and metadata filters
+    /// before this action runs, so the complete visible window is the intended
+    /// burst scope. The second item remains as the likely keeper and the
+    /// operator can Command-click to refine the proposed hide selection.
+    public static func burstRejectCandidates(in orderedIDs: [String]) -> [String] {
+        orderedIDs.enumerated().compactMap { index, id in
+            index == 1 ? nil : id
+        }
+    }
 }
 
 public extension FixtureNode {

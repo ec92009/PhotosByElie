@@ -1,5 +1,19 @@
 # PhotosByElie Handoff
 
+## 2026-07-30 — Culling filter results are atomic
+
+- Backstage `0.4.45` build `56` invalidates the previous fixture window as
+  soon as Culling filters change. The grid stays empty behind an **Applying
+  filters…** progress state until the matching Owner query completes; it never
+  falls back to the unrelated 2,000 recent Photos cache or stale rows.
+- **Select burst** is always available and scopes itself to the complete
+  visible filtered window without requiring a focused item. It proposes the
+  first, third, fourth, and later frames for hiding while preserving the
+  second frame as the likely keeper; Command-click remains available for
+  manual refinement before any action.
+- Verification was state-safe: 50 Swift tests and 20 native Culling parity
+  tests pass. No real Culling decision was submitted.
+
 ## 2026-07-29 — AI-review marks preserve PhotoKit Current metadata
 
 - Backstage `0.4.42` build `53` no longer replaces the visible Current title

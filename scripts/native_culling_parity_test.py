@@ -28,7 +28,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
         self.assertIn(
-            "CullingWorkspace.captureDate(asset.capturedAt)",
+            "CullingWorkspace.burstRejectCandidates(in: visibleIDs)",
             model,
         )
 
@@ -64,6 +64,32 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
         self.assertNotIn("127.0.0.1:8011", source)
+        self.assertIn(
+            'Button("Select burst") { model.selectVisibleBurstCandidates() }',
+            source,
+        )
+        self.assertNotIn(
+            ".disabled(model.focusedCullingAssetID == nil)",
+            source,
+        )
+
+    def test_fixture_filters_hide_stale_or_recent_photo_fallback_rows(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("fixtureCullingWindow = nil", model)
+        self.assertIn('cullingStatus = "Applying culling filters…"', model)
+        self.assertIn("if !model.isLoadingFixtureCulling", ui)
+        self.assertIn('ProgressView("Applying filters…")', ui)
 
     def test_cancelled_fixture_reload_does_not_replace_loaded_state_with_an_error(self):
         source = (

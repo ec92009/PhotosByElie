@@ -294,6 +294,17 @@ struct OwnerCoreTests {
         )
     }
 
+    @Test("Visible burst candidates target every frame except the second")
+    func visibleBurstRejectCandidatesKeepSecondFrame() {
+        #expect(
+            CullingWorkspace.burstRejectCandidates(
+                in: ["first", "keeper", "third", "fourth"]
+            ) == ["first", "third", "fourth"]
+        )
+        #expect(CullingWorkspace.burstRejectCandidates(in: ["first"]) == ["first"])
+        #expect(CullingWorkspace.burstRejectCandidates(in: []).isEmpty)
+    }
+
     @Test("Burst capture dates parse durable Owner timestamps")
     func burstCaptureDateParsing() throws {
         let standard = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38Z"))

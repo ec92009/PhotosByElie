@@ -28,9 +28,10 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
         self.assertIn(
-            "CullingWorkspace.burstRejectCandidates(in: visibleIDs)",
+            "CullingWorkspace.burstRejectCandidates(in: timedItems)",
             model,
         )
+        self.assertIn("abs(capturedAt.timeIntervalSince(previous)) > maximumGap", source)
 
     def test_native_ui_exposes_sidecar_parity_without_a_browser_route(self):
         source = (
@@ -72,6 +73,37 @@ class NativeCullingParityTest(unittest.TestCase):
             ".disabled(model.focusedCullingAssetID == nil)",
             source,
         )
+
+    def test_window_and_preview_layout_persist_between_launches(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        persistence = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageWindowState.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn('WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow")', app)
+        self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit")', app)
+        self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit")', app)
+        self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit")', app)
+        self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit")', app)
+        self.assertIn("previewPanelVisibilityPreferenceKey", model)
+        self.assertIn("setFrameAutosaveName", persistence)
+        self.assertIn("splitView.autosaveName", persistence)
+
+    def test_culling_inspector_shows_capture_time_to_seconds(self):
+        source = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("MMM d, yyyy 'at' HH:mm:ss", source)
 
     def test_fixture_filters_hide_stale_or_recent_photo_fallback_rows(self):
         model = (
@@ -643,7 +675,8 @@ class NativeCullingParityTest(unittest.TestCase):
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("@Published var isPreviewPanelVisible = true", model)
+        self.assertIn("@Published var isPreviewPanelVisible: Bool", model)
+        self.assertIn("previewPanelVisibilityPreferenceKey", model)
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn('"Collapse preview panel"', root)

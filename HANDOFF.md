@@ -1,5 +1,20 @@
 # PhotosByElie Handoff
 
+## 2026-07-30 — Backstage restores its workspace geometry
+
+- Backstage `0.4.48` build `59` remembers the main window's size and screen
+  position, the independent Fixtures, People & Access, Culling, and Review
+  divider positions, and whether the shared preview panel was collapsed or
+  expanded when the app last quit.
+- The Culling inspector now displays capture time through seconds (and
+  fractional seconds when the source contains them).
+- **Select burst** now respects actual adjacent capture-time groups instead of
+  treating the whole visible result as one burst. A gap greater than two
+  seconds or a missing capture time ends the group; standalone photos are not
+  selected, and the second frame of each real group remains the likely keeper.
+- Verification was state-safe: 50 Swift tests and 25 native UI parity tests
+  pass. No real Culling or Review action was submitted.
+
 ## 2026-07-30 — Review can return fixture picks to Culling
 
 - Backstage `0.4.47` build `58` adds fixture-local **Unpick** to Review. Press

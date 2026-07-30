@@ -330,16 +330,45 @@ public enum CullingWorkspace {
         }
     }
 
-    /// Selects every visible candidate except the second displayed frame.
+    /// Selects likely duplicate frames inside each capture-time burst.
     ///
-    /// Culling already applies the operator's fixture and metadata filters
-    /// before this action runs, so the complete visible window is the intended
-    /// burst scope. The second item remains as the likely keeper and the
-    /// operator can Command-click to refine the proposed hide selection.
-    public static func burstRejectCandidates(in orderedIDs: [String]) -> [String] {
-        orderedIDs.enumerated().compactMap { index, id in
-            index == 1 ? nil : id
+    /// A missing timestamp or a gap larger than `maximumGap` ends the current
+    /// burst. Standalone frames are never selected. Within every real burst,
+    /// the second frame remains unselected as the likely keeper while the
+    /// first, third, and later frames become reversible hide candidates.
+    public static func burstRejectCandidates(
+        in orderedItems: [CullingTimedItem],
+        maximumGap: TimeInterval = 2
+    ) -> [String] {
+        var candidates: [String] = []
+        var group: [CullingTimedItem] = []
+
+        func appendCandidates() {
+            guard group.count > 1 else {
+                group.removeAll(keepingCapacity: true)
+                return
+            }
+            candidates.append(
+                contentsOf: group.enumerated().compactMap { index, item in
+                    index == 1 ? nil : item.id
+                }
+            )
+            group.removeAll(keepingCapacity: true)
         }
+
+        for item in orderedItems {
+            guard let capturedAt = item.capturedAt else {
+                appendCandidates()
+                continue
+            }
+            if let previous = group.last?.capturedAt,
+               abs(capturedAt.timeIntervalSince(previous)) > maximumGap {
+                appendCandidates()
+            }
+            group.append(item)
+        }
+        appendCandidates()
+        return candidates
     }
 }
 

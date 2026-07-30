@@ -60,6 +60,7 @@ public struct BackstageApplication: App {
                         }
                     }
             }
+            .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
             .frame(minWidth: 1_120, minHeight: 720)
             .task { await model.bootstrapAuthentication() }
             .task { await model.runPhotosSyncLoop() }
@@ -1425,6 +1426,7 @@ struct MediaLibraryView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
             .padding(.top, viewport.safeAreaInsets.top)
             .frame(
                 width: viewport.size.width,
@@ -1551,9 +1553,15 @@ struct MediaLibraryView: View {
 
     private func formattedCaptureDate(_ value: String) -> String {
         guard !value.isEmpty,
-              let date = ISO8601DateFormatter().date(from: value)
+              let date = CullingWorkspace.captureDate(value)
         else { return "Unavailable" }
-        return date.formatted(date: .abbreviated, time: .shortened)
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.timeZone = .current
+        formatter.dateFormat = value.contains(".")
+            ? "MMM d, yyyy 'at' HH:mm:ss.SSS"
+            : "MMM d, yyyy 'at' HH:mm:ss"
+        return formatter.string(from: date)
     }
 
     private func formattedDimensions(_ asset: FixtureAsset) -> String {
@@ -2218,6 +2226,7 @@ private struct FixtureWorkflowView: View {
                 }
                 .padding()
             }
+            .background(SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit"))
         }
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
@@ -2318,6 +2327,7 @@ private struct AccessControlView: View {
                 }
                 .padding()
             }
+            .background(SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit"))
         }
         .task {
             if model.accessState.allPeople.isEmpty { await model.loadAccess() }
@@ -2552,6 +2562,7 @@ struct FixtureReviewView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
+        .background(SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit"))
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .task {
             guard !isPreviewMode else { return }

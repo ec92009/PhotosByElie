@@ -294,14 +294,29 @@ struct OwnerCoreTests {
         )
     }
 
-    @Test("Visible burst candidates target every frame except the second")
-    func visibleBurstRejectCandidatesKeepSecondFrame() {
+    @Test("Visible burst candidates respect capture-time boundaries")
+    func visibleBurstRejectCandidatesRespectCaptureTime() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let items = [
+            CullingTimedItem(id: "a-first", capturedAt: base),
+            CullingTimedItem(id: "a-keeper", capturedAt: base.addingTimeInterval(1)),
+            CullingTimedItem(id: "a-third", capturedAt: base.addingTimeInterval(2)),
+            CullingTimedItem(id: "standalone", capturedAt: base.addingTimeInterval(30)),
+            CullingTimedItem(id: "b-first", capturedAt: base.addingTimeInterval(90)),
+            CullingTimedItem(id: "b-keeper", capturedAt: base.addingTimeInterval(91)),
+            CullingTimedItem(id: "missing-time", capturedAt: nil),
+        ]
+
         #expect(
             CullingWorkspace.burstRejectCandidates(
-                in: ["first", "keeper", "third", "fourth"]
-            ) == ["first", "third", "fourth"]
+                in: items
+            ) == ["a-first", "a-third", "b-first"]
         )
-        #expect(CullingWorkspace.burstRejectCandidates(in: ["first"]) == ["first"])
+        #expect(
+            CullingWorkspace.burstRejectCandidates(
+                in: [CullingTimedItem(id: "only", capturedAt: base)]
+            ).isEmpty
+        )
         #expect(CullingWorkspace.burstRejectCandidates(in: []).isEmpty)
     }
 

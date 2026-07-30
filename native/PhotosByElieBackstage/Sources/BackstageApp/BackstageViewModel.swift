@@ -69,7 +69,14 @@ final class BackstageViewModel: ObservableObject {
     @Published var selection: Section? = .overview
     @Published var actions: [OwnerAction] = []
     @Published var status = "Not connected"
-    @Published var isPreviewPanelVisible = true
+    @Published var isPreviewPanelVisible: Bool {
+        didSet {
+            preferences.set(
+                isPreviewPanelVisible,
+                forKey: Self.previewPanelVisibilityPreferenceKey
+            )
+        }
+    }
     @Published var isRefreshing = false
     @Published var authentication = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
     @Published var enrollmentCode = ""
@@ -259,6 +266,9 @@ final class BackstageViewModel: ObservableObject {
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
+    private let preferences: UserDefaults
+    private static let previewPanelVisibilityPreferenceKey =
+        "PhotosByElieBackstage.previewPanelVisible"
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -300,8 +310,14 @@ final class BackstageViewModel: ObservableObject {
 
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
-        photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService()
+        photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
+        preferences: UserDefaults = .standard
     ) {
+        self.preferences = preferences
+        self.isPreviewPanelVisible =
+            preferences.object(forKey: Self.previewPanelVisibilityPreferenceKey) == nil
+                ? true
+                : preferences.bool(forKey: Self.previewPanelVisibilityPreferenceKey)
         self.api = api
         self.authenticationService = OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
@@ -956,14 +972,21 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func selectVisibleBurstCandidates() {
-        let visibleIDs = visibleCullingAssets.map(\.id)
-        guard !visibleIDs.isEmpty else {
+        let visibleAssets = visibleCullingAssets
+        let visibleIDs = visibleAssets.map(\.id)
+        guard !visibleAssets.isEmpty else {
             cullingStatus = isLoadingFixtureCulling
                 ? "Wait for the filtered culling window to finish loading."
                 : "No filtered items are visible."
             return
         }
-        let ids = CullingWorkspace.burstRejectCandidates(in: visibleIDs)
+        let timedItems = visibleAssets.map {
+            CullingTimedItem(
+                id: $0.id,
+                capturedAt: CullingWorkspace.captureDate($0.capturedAt)
+            )
+        }
+        let ids = CullingWorkspace.burstRejectCandidates(in: timedItems)
         cullingSelection = OwnerSelectionModel(
             orderedIDs: visibleIDs,
             selectedIDs: Set(ids),
@@ -971,7 +994,9 @@ final class BackstageViewModel: ObservableObject {
             focusedID: ids.first
         )
         selectedPhotoIDs = Set(ids)
-        cullingStatus = "Selected \(ids.count) visible candidate\(ids.count == 1 ? "" : "s") to hide; the second frame remains as the likely keeper."
+        cullingStatus = ids.isEmpty
+            ? "No adjacent capture-time bursts found in the visible items."
+            : "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across adjacent capture-time bursts; each second frame remains as the likely keeper."
     }
 
     func cancelCullingOperation() {

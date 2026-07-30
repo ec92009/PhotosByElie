@@ -270,7 +270,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("!reviewProposalAvailableOnly || item.proposalReady", apply_action)
         self.assertIn("reviewMediaFilters.contains(mediaFilter)", apply_action)
         self.assertNotIn("fixtureService.reviewWindow(", apply_action)
-        self.assertNotIn("reviewScrollTargetID =", apply_action)
+        review_action_and_retention = apply_action.split(
+            "private func removeUnpickedReviewItems",
+            1,
+        )[0]
+        self.assertNotIn("reviewScrollTargetID =", review_action_and_retention)
         self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', row)
         self.assertIn('item.editorialState == "approved"', row)
         self.assertIn('systemName: "checkmark.circle.fill"', row)
@@ -314,6 +318,55 @@ class NativeCullingParityTest(unittest.TestCase):
             "await saveReviewMetadataIfNeeded()",
             request_ai_guard.split("if action == .approve", 1)[0],
         )
+
+    def test_review_unpick_clears_fixture_pick_from_list_inspector_and_quick_look(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        adapter = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+        review = app.split("struct FixtureReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+        unpick = model.split("func unpickReviewSelection()", 1)[1].split(
+            "func updateReviewTitle(", 1
+        )[0]
+        undo = model.split("func undoLastReviewAction()", 1)[1].split(
+            "func saveReviewMetadata()", 1
+        )[0]
+
+        self.assertIn('onKeyPress("u")', review)
+        self.assertIn('Button("Unpick")', app)
+        self.assertIn('.keyboardShortcut("u", modifiers: [])', app)
+        self.assertGreaterEqual(
+            app.count("await model.unpickReviewSelection()"),
+            3,
+        )
+        self.assertIn("onUnpick:", review)
+        self.assertIn("fixtureService.applyState(", unpick)
+        self.assertIn(".undecided", unpick)
+        self.assertIn('reason: "Native Review unpick"', unpick)
+        self.assertIn("removeUnpickedReviewItems", unpick)
+        self.assertIn("fixtureChanges: changes", unpick)
+        self.assertNotIn("applyReviewAction(.hide)", unpick)
+        self.assertIn("if !entry.fixtureChanges.isEmpty", undo)
+        self.assertIn("by: \\.beforePlacementState", undo)
+        self.assertIn("fixtureService.applyState(", undo)
+        self.assertIn("event.charactersIgnoringModifiers?.lowercased() == \"u\"", adapter)
+        self.assertIn("QLPreviewPanel.shared()?.isVisible == true", adapter)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

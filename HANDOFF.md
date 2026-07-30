@@ -1,5 +1,18 @@
 # PhotosByElie Handoff
 
+## 2026-07-30 — Review can return fixture picks to Culling
+
+- Backstage `0.4.47` build `58` adds fixture-local **Unpick** to Review. Press
+  **U** from the Review list or while Review Quick Look is open, or use the
+  inspector button, to clear the active fixture pick without hiding or
+  globally rejecting the asset.
+- Unpicked rows leave the current Review window and return to Culling as
+  **Undecided**. The action uses the audited fixture workflow, preserves title,
+  keywords, proposals, ratings, colors, and other fixture memberships, and is
+  reversible with Review **Undo**.
+- Verification was state-safe: 50 Swift tests and 23 native UI parity tests
+  pass. No real Review or Culling action was submitted.
+
 ## 2026-07-30 — Review is Canvas-ready and resilient to transient UI cancellation
 
 - Backstage `0.4.46` build `57` routes the production Review workspace through

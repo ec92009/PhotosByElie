@@ -33,8 +33,9 @@ struct ReviewMetadataDraft: Sendable, Equatable {
 }
 
 struct ReviewHistoryEntry: Identifiable, Sendable {
-    var id: String { operationID }
-    var operationID: String
+    var id = UUID()
+    var operationID: String = ""
+    var fixtureChanges: [FixtureAssetState] = []
     var label: String
     var fixtureID: String
     var mode: FixtureReviewMode
@@ -1718,6 +1719,74 @@ final class BackstageViewModel: ObservableObject {
         await applyReviewAction(.requestAI)
     }
 
+    func unpickReviewSelection() async {
+        guard !isRunningReview else {
+            reviewStatus = "Finish the current Review action first."
+            return
+        }
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        let ids = selectedReviewAssetIDs
+        guard !reviewFixtureID.isEmpty, !ids.isEmpty else {
+            reviewStatus = "Choose a fixture and select one or more Review items."
+            return
+        }
+        let oldItems = reviewItems
+        let focusedID = reviewSelection.focusedID ?? ids.first
+        let oldIndex = focusedID.flatMap { focusedID in
+            oldItems.firstIndex(where: { $0.id == focusedID })
+        } ?? oldItems.firstIndex(where: { ids.contains($0.id) }) ?? 0
+        let fixtureLabel = flatFixtures.first(where: { $0.id == reviewFixtureID })?.name
+            ?? reviewFixtureID
+        let historyEntry = ReviewHistoryEntry(
+            label: "Unpick",
+            fixtureID: reviewFixtureID,
+            mode: reviewMode,
+            stateFilters: reviewStateFilters,
+            proposalAvailableOnly: reviewProposalAvailableOnly,
+            mediaFilters: reviewMediaFilters,
+            search: reviewSearch,
+            offset: reviewWindowOffset,
+            selectedIDs: reviewSelection.selectedIDs,
+            anchorID: reviewSelection.anchorID,
+            focusedID: reviewSelection.focusedID
+        )
+        isRunningReview = true
+        reviewStatus = "Unpicking \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s")…"
+        defer { isRunningReview = false }
+        do {
+            let changes = try await fixtureService.applyState(
+                .undecided,
+                assetIDs: ids,
+                fixtureID: reviewFixtureID,
+                reason: "Native Review unpick"
+            )
+            reviewHistory.append(
+                ReviewHistoryEntry(
+                    fixtureChanges: changes,
+                    label: historyEntry.label,
+                    fixtureID: historyEntry.fixtureID,
+                    mode: historyEntry.mode,
+                    stateFilters: historyEntry.stateFilters,
+                    proposalAvailableOnly: historyEntry.proposalAvailableOnly,
+                    mediaFilters: historyEntry.mediaFilters,
+                    search: historyEntry.search,
+                    offset: historyEntry.offset,
+                    selectedIDs: historyEntry.selectedIDs,
+                    anchorID: historyEntry.anchorID,
+                    focusedID: historyEntry.focusedID
+                )
+            )
+            if reviewHistory.count > 100 {
+                reviewHistory.removeFirst(reviewHistory.count - 100)
+            }
+            removeUnpickedReviewItems(Set(ids), preferredIndex: oldIndex)
+            reviewStatus = "Unpicked \(changes.count.formatted()) item\(changes.count == 1 ? "" : "s") from \(fixtureLabel)."
+        } catch {
+            reviewStatus = "Unpick failed: \(userFacingMessage(for: error))"
+        }
+    }
+
     func updateReviewTitle(_ value: String) {
         reviewTitle = value
         scheduleReviewMetadataAutosave()
@@ -1942,6 +2011,54 @@ final class BackstageViewModel: ObservableObject {
         return searchable.localizedCaseInsensitiveContains(query)
     }
 
+    private func removeUnpickedReviewItems(
+        _ ids: Set<String>,
+        preferredIndex: Int
+    ) {
+        guard var window = fixtureReviewWindow else { return }
+        let removed = window.items.filter { ids.contains($0.id) }
+        window.items.removeAll { ids.contains($0.id) }
+        window.summary.total = max(0, window.summary.total - removed.count)
+        window.summary.unreviewed = max(
+            0,
+            window.summary.unreviewed
+                - removed.filter { $0.editorialState == "unreviewed" }.count
+        )
+        window.summary.requestingAI = max(
+            0,
+            window.summary.requestingAI
+                - removed.filter { $0.editorialState == "requesting-ai" }.count
+        )
+        window.summary.proposed = max(
+            0,
+            window.summary.proposed
+                - removed.filter { $0.editorialState == "proposed" }.count
+        )
+        window.summary.approved = max(
+            0,
+            window.summary.approved
+                - removed.filter { $0.editorialState == "approved" }.count
+        )
+        fixtureReviewWindow = window
+        let orderedIDs = window.items.map(\.id)
+        let replacementID = orderedIDs.indices.contains(preferredIndex)
+            ? orderedIDs[preferredIndex]
+            : orderedIDs.last
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(replacementID.map { [$0] } ?? []),
+            anchorID: replacementID,
+            focusedID: replacementID
+        )
+        reviewScrollTargetID = replacementID
+        ids.forEach {
+            reviewProposalDrafts.removeValue(forKey: $0)
+            reviewProposalConflictIDs.remove($0)
+            reviewThumbnails.removeValue(forKey: $0)
+        }
+        syncReviewDraft()
+    }
+
     func undoLastReviewAction() async {
         guard let entry = reviewHistory.last else {
             reviewStatus = "Nothing to undo in this Backstage session."
@@ -1951,6 +2068,33 @@ final class BackstageViewModel: ObservableObject {
         reviewStatus = "Undoing \(entry.label.lowercased())…"
         defer { isRunningReview = false }
         do {
+            if !entry.fixtureChanges.isEmpty {
+                let grouped = Dictionary(
+                    grouping: entry.fixtureChanges,
+                    by: \.beforePlacementState
+                )
+                for (state, changes) in grouped {
+                    _ = try await fixtureService.applyState(
+                        state,
+                        assetIDs: changes.map(\.assetID),
+                        fixtureID: entry.fixtureID,
+                        reason: "Undo \(entry.label)"
+                    )
+                }
+                reviewHistory.removeLast()
+                reviewFixtureID = entry.fixtureID
+                reviewMode = entry.mode
+                reviewStateFilters = entry.stateFilters
+                reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                reviewMediaFilters = entry.mediaFilters
+                reviewSearch = entry.search
+                reviewWindowOffset = entry.offset
+                await loadFixtureReviewWindow(
+                    preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
+                )
+                reviewStatus = "Undid \(entry.label.lowercased()) for \(entry.fixtureChanges.count.formatted()) item\(entry.fixtureChanges.count == 1 ? "" : "s")."
+                return
+            }
             let result = try await fixtureService.undoReview(
                 operationID: entry.operationID
             )

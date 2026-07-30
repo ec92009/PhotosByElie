@@ -34,19 +34,26 @@ final class BackstageSelectionController: ObservableObject {
 @MainActor
 final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcurrency QLPreviewPanelDataSource {
     private var items: [NSURL] = []
+    private var shortcutMonitor: Any?
 
-    func present(urls: [URL], startingAt index: Int = 0) {
+    func present(
+        urls: [URL],
+        startingAt index: Int = 0,
+        onUnpick: (() -> Void)? = nil
+    ) {
         items = urls.map { $0 as NSURL }
         guard let panel = QLPreviewPanel.shared() else { return }
         panel.dataSource = self
         panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
         panel.reloadData()
         panel.makeKeyAndOrderFront(nil)
+        installShortcutMonitor(onUnpick: onUnpick)
     }
 
     func dismiss() {
         QLPreviewPanel.shared()?.orderOut(nil)
         items = []
+        removeShortcutMonitor()
     }
 
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
@@ -56,6 +63,30 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
         items[index]
     }
+
+    private func installShortcutMonitor(onUnpick: (() -> Void)?) {
+        removeShortcutMonitor()
+        guard let onUnpick else { return }
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard QLPreviewPanel.shared()?.isVisible == true,
+                  event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+                  event.charactersIgnoringModifiers?.lowercased() == "u"
+            else {
+                return event
+            }
+            onUnpick()
+            QLPreviewPanel.shared()?.orderOut(nil)
+            return nil
+        }
+    }
+
+    private func removeShortcutMonitor() {
+        if let shortcutMonitor {
+            NSEvent.removeMonitor(shortcutMonitor)
+            self.shortcutMonitor = nil
+        }
+    }
+
 }
 
 @MainActor

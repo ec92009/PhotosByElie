@@ -2489,10 +2489,21 @@ struct FixtureReviewView: View {
                         Task { await model.applyReviewAction(.hide) }
                         return .handled
                     }
+                    .onKeyPress("u") {
+                        Task { await model.unpickReviewSelection() }
+                        return .handled
+                    }
                     .onKeyPress(.space) {
                         Task {
                             let urls = await model.prepareReviewQuickLookURLs()
-                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                            if !urls.isEmpty {
+                                quickLook.present(
+                                    urls: urls,
+                                    onUnpick: {
+                                        Task { await model.unpickReviewSelection() }
+                                    }
+                                )
+                            }
                         }
                         return .handled
                     }
@@ -2896,6 +2907,11 @@ private struct ReviewInspector: View {
                             Task { await model.applyReviewAction(.hide) }
                         }
                         .keyboardShortcut("h", modifiers: [])
+                        Button("Unpick") {
+                            Task { await model.unpickReviewSelection() }
+                        }
+                        .keyboardShortcut("u", modifiers: [])
+                        .help("Clear the fixture pick and return the item to Culling")
                         Button("Needs AI") {
                             Task { await model.markReviewSelectionNeedsAI() }
                         }
@@ -2951,7 +2967,14 @@ private struct ReviewInspector: View {
                     Button("Quick Look") {
                         Task {
                             let urls = await model.prepareReviewQuickLookURLs()
-                            if !urls.isEmpty { quickLook.present(urls: urls) }
+                            if !urls.isEmpty {
+                                quickLook.present(
+                                    urls: urls,
+                                    onUnpick: {
+                                        Task { await model.unpickReviewSelection() }
+                                    }
+                                )
+                            }
                         }
                     }
                     .keyboardShortcut(.space, modifiers: [])

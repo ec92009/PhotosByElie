@@ -107,6 +107,29 @@ struct OwnerCoreTests {
         #expect(selection.anchorID == "asset-6")
     }
 
+    @Test("Filtered decisions select the next surviving card")
+    func filteredDecisionSelectsSuccessor() {
+        var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d"])
+        selection.click("b", extending: false, toggling: false)
+
+        let successor = selection.replaceItems(
+            ["a", "c", "d"],
+            selectingSuccessorAfterRemoving: "b"
+        )
+        #expect(successor == "c")
+        #expect(selection.selectedIDs == ["c"])
+        #expect(selection.anchorID == "c")
+        #expect(selection.focusedID == "c")
+
+        selection.click("d", extending: false, toggling: false)
+        let predecessor = selection.replaceItems(
+            ["a", "c"],
+            selectingSuccessorAfterRemoving: "d"
+        )
+        #expect(predecessor == "c")
+        #expect(selection.selectedIDs == ["c"])
+    }
+
     @Test("Culling grid keeps 84-point cards and adapts column count")
     func cullingGridLayout() {
         #expect(CullingGridLayout.maximumColumnsThatFit(width: 83) == 1)

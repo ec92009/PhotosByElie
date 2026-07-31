@@ -30,6 +30,35 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
         if let focusedID, !ids.contains(focusedID) { self.focusedID = nil }
     }
 
+    @discardableResult
+    public mutating func replaceItems(
+        _ ids: [ID],
+        selectingSuccessorAfterRemoving removedID: ID
+    ) -> ID? {
+        let previousIDs = orderedIDs
+        let removedIndex = previousIDs.firstIndex(of: removedID)
+        replaceItems(ids)
+
+        guard !ids.contains(removedID), selectedIDs.isEmpty, let removedIndex else {
+            return focusedID
+        }
+
+        let remainingIDs = Set(ids)
+        let successor = previousIDs
+            .dropFirst(removedIndex + 1)
+            .first(where: remainingIDs.contains)
+        let predecessor = previousIDs[..<removedIndex]
+            .reversed()
+            .first(where: remainingIDs.contains)
+        guard let replacement = successor ?? predecessor else {
+            return nil
+        }
+        selectedIDs = [replacement]
+        anchorID = replacement
+        focusedID = replacement
+        return replacement
+    }
+
     public mutating func click(_ id: ID, extending: Bool, toggling: Bool) {
         guard orderedIDs.contains(id) else { return }
         if extending, let anchorID {

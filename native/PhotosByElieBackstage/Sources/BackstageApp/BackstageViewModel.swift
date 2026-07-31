@@ -2760,15 +2760,29 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let selectedBefore = cullingSelection.selectedIDs
+        let focusedBefore = cullingSelection.focusedID ?? ids.last
         let previousStates = ids.map { ($0, cullingStates[$0]) }
         for id in ids {
             var decision = cullingStates[id] ?? SidecarDecisionState(assetId: id)
             decision.pickState = state.rawValue
             cullingStates[id] = decision
         }
-        replaceCullingItems()
-        if selectedCullingAssetIDs.isEmpty {
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        if let focusedBefore {
+            _ = cullingSelection.replaceItems(
+                visibleIDs,
+                selectingSuccessorAfterRemoving: focusedBefore
+            )
+        } else {
+            cullingSelection.replaceItems(visibleIDs)
+        }
+        selectedPhotoIDs = cullingSelection.selectedIDs
+        if focusedCullingAssetID == nil {
             photoPreview = nil
+        } else if focusedCullingAssetID != focusedBefore {
+            Task { [weak self] in
+                await self?.loadPreview()
+            }
         }
         isApplyingCullingDecision = true
         cullingStatus = "Applying \(label.lowercased()) to \(ids.count.formatted()) items…"
@@ -2815,6 +2829,11 @@ final class BackstageViewModel: ObservableObject {
                 focusedID: restoredSelection.first
             )
             selectedPhotoIDs = restoredSelection
+            if focusedCullingAssetID != focusedBefore {
+                Task { [weak self] in
+                    await self?.loadPreview()
+                }
+            }
             cullingStatus = userFacingMessage(for: error)
         }
     }

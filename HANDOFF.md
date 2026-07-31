@@ -1,5 +1,18 @@
 # PhotosByElie Handoff
 
+## 2026-07-31 — Filtered Culling actions advance to the next card
+
+- Backstage `0.4.50` build `61` keeps sequential fixture-local Culling fast:
+  when **P** or **H** removes the focused card from the active filter, the next
+  surviving card is selected immediately. At the end of the window, selection
+  falls back to the preceding survivor.
+- The replacement becomes the new selection anchor and focus, and its preview
+  loads without blocking the audited decision or the low-priority Owner
+  backfill. If the acted card remains visible under the active filters, the
+  existing selection is preserved.
+- Verification was state-safe: 51 Swift tests and 26 native UI parity tests
+  pass. No real Culling decision was submitted.
+
 ## 2026-07-31 — Culling decisions no longer blank the grid
 
 - Backstage `0.4.49` build `60` applies fixture-local **P**, **H**, and **U**

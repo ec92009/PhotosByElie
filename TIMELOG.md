@@ -703,8 +703,9 @@ Clock state: running
 | 2026-07-30 | 08:09 CEST | 08:19 CEST | 0:02 | Required Culling to keep the grid empty until filtered fixture results are ready and made Select burst operate on the whole visible window without prior focus; background implementation, tests, signing, and installation excluded. |
 | 2026-07-30 | 08:59 CEST | 09:00 CEST | 0:01 | Chose an Xcode Canvas workflow for communicating Culling UI issues and approved inert wide, compact, and loading previews; background refactoring, builds, tests, and Canvas setup excluded. |
 | 2026-07-31 | 08:55 CEST | 08:56 CEST | 0:01 | Prioritized Culling screen stability over post-decision backfill and required P/H filtering to reconcile quietly in the background; background diagnosis, implementation, tests, build, and installation excluded. |
+| 2026-07-31 | 09:09 CEST | 09:10 CEST | 0:01 | Required sequential P/H Culling to select the next surviving filtered card, with a previous-card fallback at the end; background implementation, tests, build, and installation excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:12
+Active collaboration time used: 34:13
 Remaining budget: not set

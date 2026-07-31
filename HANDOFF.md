@@ -1,5 +1,18 @@
 # PhotosByElie Handoff
 
+## 2026-07-31 — Culling decisions no longer blank the grid
+
+- Backstage `0.4.49` build `60` applies fixture-local **P**, **H**, and **U**
+  decisions optimistically in the current Culling window. The affected cards
+  leave the active filter immediately, while the rest of the grid, scroll
+  position, and pinned controls remain stable.
+- Owner backfill is now a coalesced utility-priority refresh. It preserves the
+  visible window while loading and swaps in the completed replacement window
+  atomically. Only an actual fixture, search, or filter change uses the
+  blocking **Applying filters…** state.
+- Verification was state-safe: 50 Swift tests and 26 native UI parity tests
+  pass. No real Culling decision was submitted.
+
 ## 2026-07-30 — Backstage restores its workspace geometry
 
 - Backstage `0.4.48` build `59` remembers the main window's size and screen

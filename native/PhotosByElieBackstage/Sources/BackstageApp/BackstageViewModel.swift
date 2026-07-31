@@ -262,6 +262,7 @@ final class BackstageViewModel: ObservableObject {
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
+    private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
@@ -784,6 +785,10 @@ final class BackstageViewModel: ObservableObject {
         !cullingFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    var isBlockingFixtureCullingLoad: Bool {
+        isLoadingFixtureCulling && fixtureCullingWindow == nil
+    }
+
     var focusedCullingAssetID: String? {
         cullingSelection.focusedID ?? selectedCullingAssetIDs.first
     }
@@ -833,6 +838,7 @@ final class BackstageViewModel: ObservableObject {
 
     func applyCullingFilters(debounceNanoseconds: UInt64 = 0) {
         cullingWindowOffset = 0
+        cullingBackfillTask?.cancel()
         cullingFilterTask?.cancel()
         if !cullingFixtureID.isEmpty, cullingPool == nil {
             // Invalidate the old response immediately. Until the audited
@@ -1040,18 +1046,23 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureCullingWindow() }
     }
 
-    func loadFixtureCullingWindow() async {
+    func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false) async {
         guard !cullingFixtureID.isEmpty else {
             cullingStatus = "Choose a fixture to begin culling."
             return
         }
+        if !preservingVisibleWindow {
+            cullingBackfillTask?.cancel()
+        }
         cullingWindowRequestSerial += 1
         let requestSerial = cullingWindowRequestSerial
-        fixtureCullingWindow = nil
         isLoadingFixtureCulling = true
-        clearCullingSelection()
-        photoPreview = nil
-        cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
+        if !preservingVisibleWindow {
+            fixtureCullingWindow = nil
+            clearCullingSelection()
+            photoPreview = nil
+            cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
+        }
         defer {
             if requestSerial == cullingWindowRequestSerial {
                 isLoadingFixtureCulling = false
@@ -1091,12 +1102,27 @@ final class BackstageViewModel: ObservableObject {
                 )
             })
             replaceCullingItems()
-            photoPreview = nil
-            cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+            if !preservingVisibleWindow {
+                photoPreview = nil
+                cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+            }
         } catch {
             guard requestSerial == cullingWindowRequestSerial else { return }
             guard !(error is CancellationError), !Task.isCancelled else { return }
-            cullingStatus = userFacingMessage(for: error)
+            if preservingVisibleWindow {
+                cullingStatus = "Saved. Background backfill delayed: \(userFacingMessage(for: error))"
+            } else {
+                cullingStatus = userFacingMessage(for: error)
+            }
+        }
+    }
+
+    private func scheduleFixtureCullingBackfill() {
+        cullingBackfillTask?.cancel()
+        cullingBackfillTask = Task(priority: .utility) { [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.loadFixtureCullingWindow(preservingVisibleWindow: true)
         }
     }
 
@@ -2740,6 +2766,10 @@ final class BackstageViewModel: ObservableObject {
             decision.pickState = state.rawValue
             cullingStates[id] = decision
         }
+        replaceCullingItems()
+        if selectedCullingAssetIDs.isEmpty {
+            photoPreview = nil
+        }
         isApplyingCullingDecision = true
         cullingStatus = "Applying \(label.lowercased()) to \(ids.count.formatted()) items…"
         defer { isApplyingCullingDecision = false }
@@ -2762,7 +2792,7 @@ final class BackstageViewModel: ObservableObject {
                 selectedIDs: selectedBefore
             ))
             if cullingPool == nil {
-                await loadFixtureCullingWindow()
+                scheduleFixtureCullingBackfill()
             } else {
                 replaceCullingItems()
             }
@@ -2775,6 +2805,16 @@ final class BackstageViewModel: ObservableObject {
                     cullingStates.removeValue(forKey: id)
                 }
             }
+            replaceCullingItems()
+            let visibleIDs = visibleCullingAssets.map(\.id)
+            let restoredSelection = selectedBefore.intersection(Set(visibleIDs))
+            cullingSelection = OwnerSelectionModel(
+                orderedIDs: visibleIDs,
+                selectedIDs: restoredSelection,
+                anchorID: restoredSelection.first,
+                focusedID: restoredSelection.first
+            )
+            selectedPhotoIDs = restoredSelection
             cullingStatus = userFacingMessage(for: error)
         }
     }

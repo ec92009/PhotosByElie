@@ -120,10 +120,38 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("fixtureCullingWindow = nil", model)
         self.assertIn('cullingStatus = "Applying culling filters…"', model)
-        self.assertIn("if !model.isLoadingFixtureCulling", ui)
+        self.assertIn("if !model.isBlockingFixtureCullingLoad", ui)
         self.assertIn('Text("Applying filters…")', ui)
         self.assertIn(".fixedSize(horizontal: true, vertical: false)", ui)
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", ui)
+
+    def test_fixture_decisions_keep_the_visible_grid_during_low_priority_backfill(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        ui = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false)",
+            model,
+        )
+        self.assertIn("Task(priority: .utility)", model)
+        self.assertIn(
+            "loadFixtureCullingWindow(preservingVisibleWindow: true)",
+            model,
+        )
+        self.assertIn(
+            "isLoadingFixtureCulling && fixtureCullingWindow == nil",
+            model,
+        )
+        self.assertIn("if model.isBlockingFixtureCullingLoad", ui)
 
     def test_thumbnail_requests_outlive_transient_card_task_cancellation(self):
         model = (

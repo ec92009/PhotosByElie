@@ -702,8 +702,9 @@ Clock state: running
 | 2026-07-30 | 08:01 CEST | 08:06 CEST | 0:02 | Restored explicit Needs AI commit semantics, defined direct two-hour AI-draft propagation, and refined Select burst to propose the first, third, and later visible duplicate candidates while keeping the second frame; background implementation, tests, signing, and installation excluded. |
 | 2026-07-30 | 08:09 CEST | 08:19 CEST | 0:02 | Required Culling to keep the grid empty until filtered fixture results are ready and made Select burst operate on the whole visible window without prior focus; background implementation, tests, signing, and installation excluded. |
 | 2026-07-30 | 08:59 CEST | 09:00 CEST | 0:01 | Chose an Xcode Canvas workflow for communicating Culling UI issues and approved inert wide, compact, and loading previews; background refactoring, builds, tests, and Canvas setup excluded. |
+| 2026-07-31 | 08:55 CEST | 08:56 CEST | 0:01 | Prioritized Culling screen stability over post-decision backfill and required P/H filtering to reconcile quietly in the background; background diagnosis, implementation, tests, build, and installation excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:11
+Active collaboration time used: 34:12
 Remaining budget: not set

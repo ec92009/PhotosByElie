@@ -1138,7 +1138,7 @@ struct MediaLibraryView: View {
                 .layoutPriority(3)
                 ScrollViewReader { proxy in
                     ScrollView {
-                        if !model.isLoadingFixtureCulling {
+                        if !model.isBlockingFixtureCullingLoad {
                             LazyVGrid(
                                 columns: Array(
                                     repeating: GridItem(.flexible(minimum: 0), spacing: 8),
@@ -1265,7 +1265,7 @@ struct MediaLibraryView: View {
                         return .handled
                     }
                     .overlay {
-                        if model.isLoadingFixtureCulling {
+                        if model.isBlockingFixtureCullingLoad {
                             VStack(spacing: 12) {
                                 ProgressView()
                                     .controlSize(.large)

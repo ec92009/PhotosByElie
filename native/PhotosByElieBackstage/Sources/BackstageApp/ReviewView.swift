@@ -647,43 +647,7 @@ private struct ReviewInspector: View {
                     Text(item.filename)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    HStack(alignment: .top, spacing: 8) {
-                        TextField(
-                            "Title",
-                            text: Binding(
-                                get: { model.reviewTitle },
-                                set: { model.updateReviewTitle($0) }
-                            ),
-                            axis: .vertical
-                        )
-                        .textFieldStyle(.roundedBorder)
-                        Button {
-                            Task { await model.propagateReviewTitle() }
-                        } label: {
-                            Image(systemName: "arrow.down")
-                        }
-                        .help("Propagate title")
-                        .disabled(model.isRunningReview)
-                    }
-                    HStack(alignment: .top, spacing: 8) {
-                        TextField(
-                            "Keywords, comma separated",
-                            text: Binding(
-                                get: { model.reviewKeywords },
-                                set: { model.updateReviewKeywords($0) }
-                            ),
-                            axis: .vertical
-                        )
-                        .textFieldStyle(.roundedBorder)
-                        .lineLimit(3...7)
-                        Button {
-                            Task { await model.propagateReviewKeywords() }
-                        } label: {
-                            Image(systemName: "arrow.down")
-                        }
-                        .help("Propagate keywords")
-                        .disabled(model.isRunningReview)
-                    }
+                    ReviewTitleKeywordEditor(model: model)
                     if let proposal = model.reviewProposalDrafts[item.id], proposal.isProposal {
                         Label(
                             proposal.isHistoricalProposal

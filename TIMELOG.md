@@ -711,8 +711,9 @@ Clock state: running
 | 2026-08-01 | 10:34 CEST | 10:35 CEST | 0:01 | Requested that Backstage restore window sizes and panel state between runs; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:35 CEST | 10:36 CEST | 0:01 | Required Quick Look metadata to avoid the preview entirely, below landscape items and beside portrait items; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 12:22 CEST | 12:23 CEST | 0:01 | Requested source-selectable Xcode Canvas previews for Culling, title/keyword Review, and Upload; background refactoring, builds, tests, and Xcode verification excluded. |
+| 2026-08-01 | 14:10 CEST | 14:11 CEST | 0:01 | Reported that Canvas still remained at No Selection and that Xcode crashed during host diagnosis; background implementation and verification excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:21
+Active collaboration time used: 34:22
 Remaining budget: not set

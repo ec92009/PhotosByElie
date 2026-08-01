@@ -15,10 +15,14 @@ def backstage_ui_source() -> str:
         (source_dir / filename).read_text(encoding="utf-8")
         for filename in (
             "CullingView.swift",
+            "CullingCanvasControls.swift",
             "CullingPreview.swift",
             "ReviewView.swift",
+            "ReviewCanvasInspector.swift",
             "ReviewPreview.swift",
             "UploadView.swift",
+            "UploadHeaderView.swift",
+            "UploadQuickView.swift",
             "UploadPreview.swift",
             "PhotosByElieBackstageApp.swift",
         )
@@ -723,7 +727,6 @@ class NativeCullingParityTest(unittest.TestCase):
         preview_boundary = culling.index("if model.isPreviewPanelVisible")
         for persistent_control in (
             'Button("Clear filters")',
-            'Button("Review picked")',
             'Button("Previous \\(workspace.limit)")',
             'Button("Next \\(workspace.limit)")',
             'Button("−")',
@@ -731,6 +734,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'Button(model.cullingUsesFill ? "Fill" : "Fit")',
         ):
             self.assertIn(persistent_control, culling)
+        self.assertIn('Button("Review picked")', source)
         self.assertIn("if model.isPreviewPanelVisible", review)
         self.assertIn(".frame(minWidth: 300, idealWidth: 380, maxWidth: 480)", review)
 
@@ -757,9 +761,51 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("FixtureReviewView", app)
         self.assertNotIn("UploadWorkflowView", app)
 
+    def test_native_xcode_host_enables_canvas_source_selection(self):
+        project_definition = (NATIVE / "project.yml").read_text(encoding="utf-8")
+        project_file = (
+            NATIVE / "PhotosByElieBackstage.xcodeproj" / "project.pbxproj"
+        ).read_text(encoding="utf-8")
+        package = (NATIVE / "Package.swift").read_text(encoding="utf-8")
+
+        self.assertIn("ENABLE_DEBUG_DYLIB: YES", project_definition)
+        self.assertIn("ENABLE_DEBUG_DYLIB = YES;", project_file)
+        self.assertIn("path = CullingView.swift;", project_file)
+        self.assertIn("path = ReviewView.swift;", project_file)
+        self.assertIn("path = UploadView.swift;", project_file)
+        self.assertIn("BACKSTAGE_XCODE_HOST", project_definition)
+        self.assertIn("path: Sources/BackstageApp", project_definition)
+        self.assertNotIn("path: Sources/BackstageLauncher", project_definition)
+        self.assertIn("target: OwnerCore", project_definition)
+        self.assertNotIn("target: BackstageUI", project_definition)
+        self.assertNotIn("BackstageUI.framework", project_file)
+        for filename in ("CullingView.swift", "ReviewView.swift", "UploadView.swift"):
+            source = (NATIVE / "Sources" / "BackstageApp" / filename).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("import OwnerCore", source)
+            self.assertNotIn("#if !BACKSTAGE_XCODE_HOST", source)
+        app_source = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageXcodeApp.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("#if BACKSTAGE_XCODE_HOST", app_source)
+        self.assertIn("@main", app_source)
+        self.assertIn("BackstageApplication().body", app_source)
+        self.assertIn(
+            '.library(name: "BackstageUI", targets: ["BackstageUI"])',
+            package,
+        )
+        self.assertNotIn(
+            '.library(name: "BackstageUI", type: .dynamic',
+            package,
+        )
+
     def test_review_edits_autosave_and_propagation_controls_stay_compact(self):
         ui = backstage_ui_source()
         inspector = ui.split("private struct ReviewInspector", 1)[1]
+        editor = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewCanvasInspector.swift"
+        ).read_text(encoding="utf-8")
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
@@ -767,12 +813,12 @@ class NativeCullingParityTest(unittest.TestCase):
             "func updateReviewAINote", 1
         )[0]
 
-        self.assertNotIn('Button("Save T/K")', inspector)
-        self.assertIn("model.updateReviewTitle($0)", inspector)
-        self.assertIn("model.updateReviewKeywords($0)", inspector)
-        self.assertGreaterEqual(inspector.count('Image(systemName: "arrow.down")'), 2)
-        self.assertIn('.help("Propagate title")', inspector)
-        self.assertIn('.help("Propagate keywords")', inspector)
+        self.assertNotIn('Button("Save T/K")', editor)
+        self.assertIn("model.updateReviewTitle($0)", editor)
+        self.assertIn("model.updateReviewKeywords($0)", editor)
+        self.assertGreaterEqual(editor.count('Image(systemName: "arrow.down")'), 2)
+        self.assertIn('.help("Propagate title")', editor)
+        self.assertIn('.help("Propagate keywords")', editor)
         self.assertIn("scheduleReviewMetadataAutosave()", model)
         self.assertIn("Task.sleep(for: .milliseconds(600))", model)
         self.assertNotIn("applyReviewAction", reason_toggle)
@@ -784,6 +830,33 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.updateReviewAINote($0)", inspector)
         self.assertNotIn("scheduleReviewAIRequestAutosave", model)
         self.assertNotIn("reviewAIRequestAutosaveTask", model)
+
+    def test_canvas_components_are_production_reused_and_source_selectable(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        ui = backstage_ui_source()
+        inspector = ui.split("private struct ReviewInspector", 1)[1]
+        model = (source_dir / "BackstageViewModel.swift").read_text(
+            encoding="utf-8"
+        )
+        culling = (source_dir / "CullingCanvasControls.swift").read_text(
+            encoding="utf-8"
+        )
+        review = (source_dir / "ReviewCanvasInspector.swift").read_text(
+            encoding="utf-8"
+        )
+        upload = (source_dir / "UploadHeaderView.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('#Preview("Culling — Controls")', culling)
+        self.assertIn('#Preview("T/K — Inspector")', review)
+        self.assertIn('#Preview("Uploads — Header")', upload)
+        self.assertIn("CullingSearchControls(model: model)", backstage_ui_source())
+        self.assertIn("ReviewTitleKeywordEditor(model: model)", backstage_ui_source())
+        self.assertIn("UploadHeaderView(", backstage_ui_source())
+        self.assertIn(
+            "confirmingSelectedPublication: $confirmingSelectedPublication",
+            backstage_ui_source(),
+        )
         self.assertIn('Button("Needs AI")', inspector)
         self.assertIn("await model.markReviewSelectionNeedsAI()", inspector)
         self.assertIn(".disabled(!model.canMarkReviewSelectionNeedsAI)", inspector)

@@ -1,0 +1,81 @@
+name: PhotosByElieBackstage
+
+# SwiftPM remains the release and command-line test build. This Xcode project
+# supplies the native app host that Xcode 26 needs for source-selectable Canvas
+# previews. Regenerate PhotosByElieBackstage.xcodeproj with `xcodegen generate`.
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "26.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+
+targets:
+  OwnerCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Sources/OwnerCore
+    dependencies:
+      - sdk: Security.framework
+      - sdk: Photos.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage.OwnerCore
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+
+  PhotosByElieBackstage:
+    type: application
+    platform: macOS
+    sources:
+      # Canvas source selection stops at framework boundaries in Xcode 26.6.
+      # Compile the production UI sources directly into this developer-only
+      # app host while SwiftPM keeps the release targets modular.
+      - path: Sources/BackstageApp
+    dependencies:
+      - target: OwnerCore
+      - sdk: Security.framework
+      - sdk: Photos.framework
+      - sdk: Quartz.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage
+        PRODUCT_NAME: PhotosByElieBackstage
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: PhotosByElie Backstage
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Backstage reads Photos for private culling, preview, and export workflows.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Verified metadata give-back is performed through the signed PhotosByElie bridge.
+        MARKETING_VERSION: 0.4.55
+        CURRENT_PROJECT_VERSION: 66
+        ENABLE_DEBUG_DYLIB: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) BACKSTAGE_XCODE_HOST"
+
+  OwnerCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/OwnerCoreTests
+    dependencies:
+      - target: OwnerCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage.OwnerCoreTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  PhotosByElieBackstage:
+    build:
+      targets:
+        PhotosByElieBackstage: all
+        OwnerCoreTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OwnerCoreTests

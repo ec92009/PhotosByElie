@@ -25,23 +25,11 @@ struct UploadView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Upload & publish").font(.largeTitle.bold())
-                Spacer()
-                FixturePicker(model: model, isPreviewMode: isPreviewMode)
-                if model.nativeUploadPlan?.items.isEmpty == true {
-                    Button("Load next 200") { Task { await model.loadNativeUploadPlan() } }
-                        .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
-                }
-                Button("Upload selection…") { confirmingSelectedPublication = true }
-                    .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
-            }
-            Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
-                .foregroundStyle(.secondary)
-            if model.isRunningDelivery, model.nativeUploadPlan == nil {
-                ProgressView("Loading approved publication eligibility…")
-            }
-            Text(model.nativeUploadStatus).font(.callout).foregroundStyle(.secondary)
+            UploadHeaderView(
+                model: model,
+                isPreviewMode: isPreviewMode,
+                confirmingSelectedPublication: $confirmingSelectedPublication
+            )
             if let plan = model.nativeUploadPlan {
                 HStack {
                     LabeledContent("Picked", value: "\(plan.pickedCount)")
@@ -440,69 +428,6 @@ struct UploadView: View {
     }
 }
 
-private struct UploadQuickView: View {
-    var item: NativeUploadPlanItem
-    var image: NSImage?
-    var onClose: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.78)
-                .ignoresSafeArea()
-                .onTapGesture(perform: onClose)
-            HStack(alignment: .top, spacing: 24) {
-                Group {
-                    if let image {
-                        Image(nsImage: image)
-                            .resizable()
-                            .scaledToFit()
-                    } else {
-                        ProgressView("Preparing preview…")
-                    }
-                }
-                .frame(maxWidth: 900, maxHeight: 720)
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("Upload preview")
-                            .font(.title2.bold())
-                        Spacer()
-                        Button(action: onClose) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Close preview")
-                    }
-                    Divider()
-                    LabeledContent("Title", value: item.title.isEmpty ? "Untitled" : item.title)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Keywords")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(item.keywords.isEmpty ? "No keywords" : item.keywords.joined(separator: ", "))
-                            .textSelection(.enabled)
-                    }
-                    LabeledContent("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
-                    LabeledContent("File", value: item.filename)
-                    Spacer()
-                    Text("Use ↑/↓ to navigate • H hides • R returns to Review • Space closes")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 320)
-                .frame(maxHeight: 720, alignment: .top)
-            }
-            .padding(24)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .padding(36)
-        }
-        .transition(.opacity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Upload preview for \(item.title)")
-    }
-}
-
 #if DEBUG
 #Preview("Uploads — Ready") {
     UploadView(
@@ -511,4 +436,5 @@ private struct UploadQuickView: View {
     )
     .frame(width: 1_440, height: 900)
 }
+
 #endif

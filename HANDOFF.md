@@ -1,20 +1,30 @@
 # PhotosByElie Handoff
 
-## 2026-08-01 — Backstage Canvas selections open production view code
+## 2026-08-01 — Backstage Canvas uses a native Xcode preview host
 
-- The primary Culling, Review title/keyword, and Upload Canvas previews now
-  live beside their production `CullingView`, `ReviewView`, and `UploadView`
-  implementations. In Xcode Selectable mode, double-clicking a preview control
-  moves the editor into the production view body instead of selecting the
-  preview fixture's `model` argument.
-- Heavy synthetic fixtures and secondary visual states remain in separate
-  preview-support files so the primary Canvases compile within Xcode's type
-  checking limit. Automatic Owner, PhotoKit, and thumbnail work is guarded in
-  preview mode; production behavior is unchanged, so this internal developer
-  workflow refactor does not bump the app version.
-- Verification was state-safe: 51 Swift tests and 28 native UI parity tests
-  pass, and all three primary Canvases rendered and source-mapped in Xcode
-  26.6. No Culling, Review, Upload, or publication action was submitted.
+- Open `native/PhotosByElieBackstage/PhotosByElieBackstage.xcodeproj`, not the
+  Swift package folder, when using Canvas. Xcode 26.6 renders Swift-package
+  previews but does not publish selectable source elements; even a two-line
+  `Text`/`Button` probe remained at **No Selection**.
+- The native project compiles the production Backstage UI sources directly into
+  its developer-only app target and enables `ENABLE_DEBUG_DYLIB`. OwnerCore
+  remains a dependency framework; the source-selectable UI itself does not sit
+  behind a framework boundary. A separate `BackstageUI` framework target is
+  deliberately not used by this host.
+  `Package.swift` remains the modular release and command-line test build.
+- Primary Culling, Review title/keyword, and Upload previews remain beside the
+  production view bodies. Heavy fixtures stay in preview-support files, and
+  automatic Owner, PhotoKit, and thumbnail work remains guarded in preview
+  mode. No production version or photo workflow state changed.
+- Source editing uses focused production components because Xcode 26.6 treats
+  the large full-workspace bodies as opaque: `CullingCanvasControls.swift`
+  (**Culling — Controls**), `ReviewCanvasInspector.swift`
+  (**T/K — Inspector**), and `UploadHeaderView.swift`
+  (**Uploads — Header**). Each component is reused by the live workspace.
+- Verification was state-safe: 51 Swift tests, 30 native UI parity tests, and
+  the native Xcode Debug build pass. Live Canvas inspection exposed five
+  source elements for Culling, nine for T/K, and nine for Upload; selecting the
+  Upload title moved Xcode to `UploadHeaderView.body`. No workflow action ran.
 
 ## 2026-08-01 — Backstage restores its layout and Quick Look never overlaps
 

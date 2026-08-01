@@ -124,6 +124,26 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var capturedAt: String
     public var deliveryState: String
     public var errorText: String
+
+    public init(
+        assetID: String,
+        photoLibraryIdentifier: String,
+        title: String,
+        keywords: [String],
+        filename: String,
+        capturedAt: String,
+        deliveryState: String,
+        errorText: String
+    ) {
+        self.assetID = assetID
+        self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.title = title
+        self.keywords = keywords
+        self.filename = filename
+        self.capturedAt = capturedAt
+        self.deliveryState = deliveryState
+        self.errorText = errorText
+    }
 }
 
 public struct NativeUploadPlan: Sendable, Equatable {

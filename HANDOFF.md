@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Backstage Canvas selections open production view code
+
+- The primary Culling, Review title/keyword, and Upload Canvas previews now
+  live beside their production `CullingView`, `ReviewView`, and `UploadView`
+  implementations. In Xcode Selectable mode, double-clicking a preview control
+  moves the editor into the production view body instead of selecting the
+  preview fixture's `model` argument.
+- Heavy synthetic fixtures and secondary visual states remain in separate
+  preview-support files so the primary Canvases compile within Xcode's type
+  checking limit. Automatic Owner, PhotoKit, and thumbnail work is guarded in
+  preview mode; production behavior is unchanged, so this internal developer
+  workflow refactor does not bump the app version.
+- Verification was state-safe: 51 Swift tests and 28 native UI parity tests
+  pass, and all three primary Canvases rendered and source-mapped in Xcode
+  26.6. No Culling, Review, Upload, or publication action was submitted.
+
 ## 2026-08-01 — Backstage restores its layout and Quick Look never overlaps
 
 - Backstage `0.4.55` build `66` restores the main and Quick Look window

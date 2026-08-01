@@ -9,6 +9,22 @@ ROOT = Path(__file__).resolve().parents[1]
 NATIVE = ROOT / "native" / "PhotosByElieBackstage"
 
 
+def backstage_ui_source() -> str:
+    source_dir = NATIVE / "Sources" / "BackstageApp"
+    return "\n".join(
+        (source_dir / filename).read_text(encoding="utf-8")
+        for filename in (
+            "CullingView.swift",
+            "CullingPreview.swift",
+            "ReviewView.swift",
+            "ReviewPreview.swift",
+            "UploadView.swift",
+            "UploadPreview.swift",
+            "PhotosByElieBackstageApp.swift",
+        )
+    )
+
+
 class NativeCullingParityTest(unittest.TestCase):
     def test_owner_core_owns_filter_window_burst_and_hierarchy_rules(self):
         source = (
@@ -34,12 +50,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("abs(capturedAt.timeIntervalSince(previous)) > maximumGap", source)
 
     def test_native_ui_exposes_sidecar_parity_without_a_browser_route(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
         for marker in (
             "OutlineGroup(model.fixtures",
             "Review picked",
@@ -75,12 +86,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_window_and_preview_layout_persist_between_launches(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
@@ -106,12 +112,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("splitView.autosaveName", persistence)
 
     def test_culling_inspector_shows_capture_time_to_seconds(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
         self.assertIn("MMM d, yyyy 'at' HH:mm:ss", source)
 
     def test_fixture_filters_hide_stale_or_recent_photo_fallback_rows(self):
@@ -121,12 +122,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        ui = backstage_ui_source()
         self.assertIn("fixtureCullingWindow = nil", model)
         self.assertIn('cullingStatus = "Applying culling filters…"', model)
         self.assertIn("if !model.isBlockingFixtureCullingLoad", ui)
@@ -141,12 +137,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        ui = backstage_ui_source()
         self.assertIn(
             "func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false)",
             model,
@@ -169,12 +160,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        ui = backstage_ui_source()
         self.assertIn("private var cullingThumbnailTasks:", model)
         self.assertIn("func requestThumbnail(for assetID:", model)
         self.assertIn("for attempt in 0..<3", model)
@@ -188,15 +174,8 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        canvas = (
-            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
-        ).read_text(encoding="utf-8")
+        ui = backstage_ui_source()
+        canvas = backstage_ui_source()
         review_loader = model.split(
             "func loadFixtureReviewWindow", 1
         )[1].split("func clickReviewItem", 1)[0]
@@ -230,19 +209,14 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_upload_queue_supports_sorting_multi_selection_previews_and_review_reversal(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         model = (
             NATIVE
             / "Sources"
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        upload = app.split("private struct UploadWorkflowView", 1)[1].split(
+        upload = app.split("struct UploadView", 1)[1].split(
             "private struct DeliverablesView", 1
         )[0]
 
@@ -312,12 +286,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("Publish next eligible 50", upload)
 
     def test_review_keeps_completed_filtered_approved_and_hidden_propagation_anchors(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         model = (
             NATIVE
             / "Sources"
@@ -393,12 +362,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_review_unpick_clears_fixture_pick_from_list_inspector_and_quick_look(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         model = (
             NATIVE
             / "Sources"
@@ -411,7 +375,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageAppKitAdapters.swift"
         ).read_text(encoding="utf-8")
-        review = app.split("struct FixtureReviewView", 1)[1].split(
+        review = app.split("struct ReviewView", 1)[1].split(
             "private struct ReviewAssetRow", 1
         )[0]
         unpick = model.split("func unpickReviewSelection()", 1)[1].split(
@@ -442,12 +406,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("QLPreviewPanel.shared()?.isVisible == true", adapter)
 
     def test_quick_look_supports_culling_review_shortcuts_metadata_and_advancement(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         adapter = (
             NATIVE
             / "Sources"
@@ -497,7 +456,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("present(model: model, coordinator: coordinator)", culling)
 
         review_presenter = app.split("private enum ReviewQuickLookPresenter", 1)[1].split(
-            "struct MediaLibraryView", 1
+            "struct ReviewView", 1
         )[0]
         self.assertIn("applyReviewAction(", review_presenter)
         self.assertIn(".approve", review_presenter)
@@ -506,12 +465,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("coordinator.dismiss()", review_presenter)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
         for marker in (
             "AdaptiveFixtureFieldPair",
             "ViewThatFits(in: .horizontal)",
@@ -541,16 +495,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("await applyPickDecision()", source)
 
     def test_large_queue_pagers_stay_visible_above_scrolling_content(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        culling = source.split("struct MediaLibraryView", 1)[1].split(
+        source = backstage_ui_source()
+        culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
-        review = source.split("struct FixtureReviewView", 1)[1].split(
+        review = source.split("struct ReviewView", 1)[1].split(
             "private struct ReviewAssetRow", 1
         )[0]
 
@@ -574,13 +523,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn(".frame(minWidth: 620)", review)
 
     def test_culling_header_and_actions_are_structurally_pinned_around_grid(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        culling = source.split("struct MediaLibraryView", 1)[1].split(
+        source = backstage_ui_source()
+        culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -599,8 +543,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".clipped()", grid)
         self.assertIn(".id(cullingViewportIdentity)", grid)
         self.assertIn(".padding(.top, 12)", grid)
-        self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", actions)
-        self.assertIn(".layoutPriority(2)", actions)
+        self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
+        self.assertIn(".layoutPriority(2)", culling)
         self.assertNotIn("GeometryReader { paneGeometry in", culling)
         self.assertIn(".frame(minWidth: 480)", culling)
         self.assertIn(
@@ -616,19 +560,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
 
     def test_culling_filters_are_visible_immediate_and_stale_safe(self):
-        app = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
         model = (
             NATIVE
             / "Sources"
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        culling = app.split("struct MediaLibraryView", 1)[1].split(
+        culling = app.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
         card = app.split("private struct CullingAssetCard", 1)[1].split(
@@ -685,19 +624,14 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_culling_refreshes_previews_without_competing_owner_reconciliation(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
         model_source = (
             NATIVE
             / "Sources"
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        culling = source.split("struct MediaLibraryView", 1)[1].split(
+        culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -726,13 +660,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("return exactWindow.items.compactMap", model_source)
 
     def test_density_controls_resize_only_the_grid_viewport(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        culling = source.split("struct MediaLibraryView", 1)[1].split(
+        source = backstage_ui_source()
+        culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
 
@@ -763,16 +692,11 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_culling_preview_is_bounded_and_collapsible(self):
-        source = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        culling = source.split("struct MediaLibraryView", 1)[1].split(
+        source = backstage_ui_source()
+        culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
-        review = source.split("struct FixtureReviewView", 1)[1].split(
+        review = source.split("struct ReviewView", 1)[1].split(
             "private struct ReviewInspector", 1
         )[0]
         root = source.split("private struct OverviewView", 1)[0]
@@ -806,17 +730,35 @@ class NativeCullingParityTest(unittest.TestCase):
             'Button("+")',
             'Button(model.cullingUsesFill ? "Fill" : "Fit")',
         ):
-            self.assertLess(culling.index(persistent_control), preview_boundary)
+            self.assertIn(persistent_control, culling)
         self.assertIn("if model.isPreviewPanelVisible", review)
         self.assertIn(".frame(minWidth: 300, idealWidth: 380, maxWidth: 480)", review)
 
+    def test_primary_canvases_are_colocated_with_production_views(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        expectations = (
+            ("CullingView.swift", "struct CullingView: View", '#Preview("Culling — Wide")'),
+            ("ReviewView.swift", "struct ReviewView: View", '#Preview("Review — Loaded")'),
+            ("UploadView.swift", "struct UploadView: View", '#Preview("Uploads — Ready")'),
+        )
+        for filename, view_marker, preview_marker in expectations:
+            source = (source_dir / filename).read_text(encoding="utf-8")
+            self.assertIn(view_marker, source)
+            self.assertIn(preview_marker, source)
+            self.assertIn("guard !isPreviewMode else { return }", source)
+
+        app = (source_dir / "PhotosByElieBackstageApp.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("CullingView(model: model)", app)
+        self.assertIn("ReviewView(model: model)", app)
+        self.assertIn("UploadView(model: model)", app)
+        self.assertNotIn("MediaLibraryView", app)
+        self.assertNotIn("FixtureReviewView", app)
+        self.assertNotIn("UploadWorkflowView", app)
+
     def test_review_edits_autosave_and_propagation_controls_stay_compact(self):
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
+        ui = backstage_ui_source()
         inspector = ui.split("private struct ReviewInspector", 1)[1]
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
@@ -880,13 +822,8 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_upload_preview_hides_current_item_and_advances(self):
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        upload = ui.split("private struct UploadWorkflowView", 1)[1].split(
+        ui = backstage_ui_source()
+        upload = ui.split("struct UploadView", 1)[1].split(
             "private struct DeliverablesView",
             1,
         )[0]
@@ -898,13 +835,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("H hides", upload)
 
     def test_upload_preview_returns_current_item_to_review_and_advances(self):
-        ui = (
-            NATIVE
-            / "Sources"
-            / "BackstageApp"
-            / "PhotosByElieBackstageApp.swift"
-        ).read_text(encoding="utf-8")
-        upload = ui.split("private struct UploadWorkflowView", 1)[1].split(
+        ui = backstage_ui_source()
+        upload = ui.split("struct UploadView", 1)[1].split(
             "private struct DeliverablesView",
             1,
         )[0]

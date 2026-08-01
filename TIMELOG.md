@@ -710,8 +710,9 @@ Clock state: running
 | 2026-08-01 | 10:26 CEST | 10:27 CEST | 0:01 | Reported that Approve removed a card despite Approved and Proposal Available being selected; background diagnosis, implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:34 CEST | 10:35 CEST | 0:01 | Requested that Backstage restore window sizes and panel state between runs; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:35 CEST | 10:36 CEST | 0:01 | Required Quick Look metadata to avoid the preview entirely, below landscape items and beside portrait items; background implementation, tests, build, and installation excluded. |
+| 2026-08-01 | 12:22 CEST | 12:23 CEST | 0:01 | Requested source-selectable Xcode Canvas previews for Culling, title/keyword Review, and Upload; background refactoring, builds, tests, and Xcode verification excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:20
+Active collaboration time used: 34:21
 Remaining budget: not set

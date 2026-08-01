@@ -712,8 +712,9 @@ Clock state: running
 | 2026-08-01 | 10:35 CEST | 10:36 CEST | 0:01 | Required Quick Look metadata to avoid the preview entirely, below landscape items and beside portrait items; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 12:22 CEST | 12:23 CEST | 0:01 | Requested source-selectable Xcode Canvas previews for Culling, title/keyword Review, and Upload; background refactoring, builds, tests, and Xcode verification excluded. |
 | 2026-08-01 | 14:10 CEST | 14:11 CEST | 0:01 | Reported that Canvas still remained at No Selection and that Xcode crashed during host diagnosis; background implementation and verification excluded. |
+| 2026-08-01 | 15:23 CEST | 15:25 CEST | 0:02 | Reported repeated Canvas Keychain prompts and directed an inert preview-host repair; background implementation, builds, and live Xcode verification excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:22
+Active collaboration time used: 34:24
 Remaining budget: not set

@@ -44,7 +44,7 @@ targets:
       - sdk: libsqlite3.tbd
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage
+        PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage.canvas
         PRODUCT_NAME: PhotosByElieBackstage
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: PhotosByElie Backstage

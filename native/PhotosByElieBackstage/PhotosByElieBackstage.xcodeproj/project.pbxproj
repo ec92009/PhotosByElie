@@ -685,7 +685,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.4.55;
-				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage;
+				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BACKSTAGE_XCODE_HOST";
@@ -708,7 +708,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.4.55;
-				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage;
+				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) BACKSTAGE_XCODE_HOST";

@@ -15,6 +15,12 @@ Selectable mode. It compiles the production Backstage UI sources directly into
 that app because Xcode 26.6 stops source selection at framework boundaries;
 OwnerCore remains a dependency framework.
 
+The Canvas executable has its own `com.photosbyelie.backstage.canvas` bundle
+identity and an inert one-pixel scene. It never constructs the production app,
+so Canvas refreshes cannot check the production Keychain session, start Photos
+synchronization, or run a workspace task. Xcode injects only the selected
+`#Preview` into that process.
+
 Use the focused production-component previews when editing in Canvas:
 
 - `CullingCanvasControls.swift` — **Culling — Controls**

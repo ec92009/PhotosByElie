@@ -790,7 +790,14 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("#if BACKSTAGE_XCODE_HOST", app_source)
         self.assertIn("@main", app_source)
-        self.assertIn("BackstageApplication().body", app_source)
+        self.assertIn('WindowGroup("Backstage Canvas Host")', app_source)
+        self.assertIn("Color.clear", app_source)
+        self.assertNotIn("BackstageApplication().body", app_source)
+        self.assertNotIn("BackstageViewModel", app_source)
+        self.assertIn(
+            "PRODUCT_BUNDLE_IDENTIFIER: com.photosbyelie.backstage.canvas",
+            project_definition,
+        )
         self.assertIn(
             '.library(name: "BackstageUI", targets: ["BackstageUI"])',
             package,

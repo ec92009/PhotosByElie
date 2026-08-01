@@ -2,6 +2,12 @@
 
 ## 2026-08-01 — Backstage Canvas uses a native Xcode preview host
 
+- The native Canvas executable is intentionally inert and uses the separate
+  `com.photosbyelie.backstage.canvas` bundle identity. Its `@main` renders only
+  a one-pixel clear scene; it never constructs `BackstageApplication`, checks
+  the production Keychain session, starts Photos synchronization, or runs a
+  workspace task. This prevents repeated password prompts as Xcode restarts
+  preview processes.
 - Open `native/PhotosByElieBackstage/PhotosByElieBackstage.xcodeproj`, not the
   Swift package folder, when using Canvas. Xcode 26.6 renders Swift-package
   previews but does not publish selectable source elements; even a two-line

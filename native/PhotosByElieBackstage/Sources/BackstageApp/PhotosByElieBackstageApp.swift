@@ -44,10 +44,10 @@ public struct BackstageApplication: App {
                                         } label: {
                                             Image(systemName: "sidebar.right")
                                         }
-                                        .help(
+                                        .backstageHelp(
                                             model.isPreviewPanelVisible
-                                                ? "Collapse preview panel"
-                                                : "Expand preview panel"
+                                                ? "Collapse the Culling or Review preview inspector to give the main workspace more room."
+                                                : "Expand the Culling or Review preview inspector beside the main workspace."
                                         )
                                     }
                                 } else if model.status != "Connected" {
@@ -78,6 +78,7 @@ public struct BackstageApplication: App {
                     Task { await model.refreshActions() }
                 }
                 .keyboardShortcut("r")
+                .backstageHelp("Reload the latest audited Owner activity records and their progress states.")
             }
         }
     }
@@ -175,10 +176,12 @@ private struct OverviewView: View {
                                 Task { await model.enroll() }
                             }
                             .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
+                            .backstageHelp("Exchange the one-time Owner enrollment code and store this Mac's revocable device credential in Keychain.")
                             Button("Check Keychain again") {
                                 Task { await model.bootstrapAuthentication() }
                             }
                             .disabled(model.isAuthenticating)
+                            .backstageHelp("Recheck the saved Keychain credential and renew this Mac's Owner session if possible.")
                         }
                         Text("Create the code from Owner in a currently authenticated browser. It is exchanged immediately and stored only in this Mac's Keychain.")
                             .font(.caption)
@@ -189,10 +192,12 @@ private struct OverviewView: View {
                                 Task { await model.bootstrapAuthentication() }
                             }
                             .disabled(model.isAuthenticating)
+                            .backstageHelp("Renew the current Owner session using this Mac's saved device credential.")
                             Button("Sign out", role: .destructive) {
                                 Task { await model.signOut() }
                             }
                             .disabled(model.isAuthenticating)
+                            .backstageHelp("Revoke the current Owner session and remove its local tokens from this Mac's Keychain.")
                         }
                     }
                     }
@@ -215,6 +220,7 @@ private struct OverviewView: View {
                     Button("Check helper") {
                         Task { await model.refreshPhotosBridgeHealth() }
                     }
+                    .backstageHelp("Recheck the installed signed Photos helper, its version, background mode, and Photos permission.")
                     }
                     .padding(6)
                 }
@@ -240,6 +246,7 @@ private struct DeliverablesView: View {
                 Spacer()
                 FixturePicker(model: model)
                 Button("Load") { Task { await model.loadDeliverables() } }
+                    .backstageHelp("Load the selected fixture's existing PDF, video, originals, and share-link delivery records.")
             }
             Text("Attach completed PDF, video, or originals products to their fixture. Recording a link never messages a client.")
                 .foregroundStyle(.secondary)
@@ -259,6 +266,7 @@ private struct DeliverablesView: View {
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
                                 .hasPrefix("https://")
                     )
+                    .backstageHelp("Record the authenticated HTTPS link as the ready delivery for the chosen product and fixture without messaging a client.")
             }
             Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
             Table(model.deliverables) {
@@ -301,8 +309,10 @@ private struct PublicationView: View {
                     Task { await model.previewR2Reconciliation() }
                 }
                 .disabled(model.isRunningDelivery)
+                .backstageHelp("Scan R2 references and sales protection, then preview quarantine, restore, and deletion eligibility without changing objects.")
                 Button("Apply guarded reconciliation…") { confirming = true }
                     .disabled(model.isRunningDelivery || model.r2Reconciliation == nil)
+                    .backstageHelp("Review the confirmation for applying exactly the currently previewed guarded R2 reconciliation.")
             }
             Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
@@ -343,7 +353,9 @@ private struct PublicationView: View {
             Button("Apply reconciliation", role: .destructive) {
                 Task { await model.commitR2Reconciliation() }
             }
+            .backstageHelp("Confirm the previewed R2 reconciliation while preserving sold and referenced objects and enforcing quarantine rules.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without changing any R2 object state.")
         } message: {
             Text("Referenced or sold objects cannot be removed here. Unreferenced objects first enter quarantine; only a later second pass after 30 days may delete them.")
         }
@@ -365,8 +377,10 @@ private struct LifecycleView: View {
                 Spacer()
                 Button("Refresh") { Task { await model.loadLifecycle() } }
                     .disabled(model.isRunningLifecycle)
+                    .backstageHelp("Reload the private lifecycle ledger and current Waste Basket contents.")
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
                     .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
+                    .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
             }
             Text(model.lifecycleStatus)
                 .font(.callout)
@@ -385,6 +399,7 @@ private struct LifecycleView: View {
                 TableColumn("") { item in
                     if item.state == "hidden" {
                         Button("Discard", role: .destructive) { pendingDiscard = item }
+                            .backstageHelp("Open the one-item confirmation for permanently discarding this recoverable asset.")
                     }
                 }
                 .width(90)
@@ -415,7 +430,9 @@ private struct LifecycleView: View {
                 pendingDiscard = nil
                 Task { await model.discardLifecycleItem(item.id) }
             }
+            .backstageHelp("Permanently discard this single item after the explicit Waste Basket confirmation.")
             Button("Cancel", role: .cancel) { pendingDiscard = nil }
+                .backstageHelp("Close this confirmation and keep the item recoverable in the Waste Basket.")
         } message: { item in
             Text(item.title.isEmpty ? item.mediaID : item.title)
         }
@@ -432,6 +449,7 @@ private struct ActivityView: View {
                 Spacer()
                 Button("Refresh") { Task { await model.refreshActions() } }
                     .disabled(model.isRefreshing)
+                    .backstageHelp("Reload the latest audited Owner actions, progress, completion states, and failures.")
             }
             .padding()
             Table(model.actions) {
@@ -497,6 +515,7 @@ private struct FixtureWorkflowView: View {
                 Spacer()
                 Button("Reload tree") { Task { await model.loadFixtures() } }
                     .disabled(model.isLoadingFixtureTree)
+                    .backstageHelp("Reload the complete fixture hierarchy and its current archived states from Owner.")
             }
             HStack {
                 if model.isLoadingFixtureTree {
@@ -536,10 +555,15 @@ private struct FixtureWorkflowView: View {
                             Task { await model.createFixture() }
                         }
                         .disabled(model.fixtureName.isEmpty || model.isRunningFixture)
+                        .backstageHelp(model.selectedFixtureID.isEmpty
+                            ? "Create a new top-level fixture using the entered name and optional template."
+                            : "Create a child fixture beneath the selected fixture using the entered name and optional template.")
                         Button("Rename") { Task { await model.renameFixture() } }
                             .disabled(model.selectedFixtureID.isEmpty || model.fixtureName.isEmpty)
+                            .backstageHelp("Rename the selected fixture to the value entered in the name field.")
                         Button("Archive / reopen") { Task { await model.toggleFixtureArchive() } }
                             .disabled(model.selectedFixtureID.isEmpty)
+                            .backstageHelp("Toggle the selected fixture between archived and active without deleting its history.")
                     }
                 }
                 .padding()
@@ -550,6 +574,7 @@ private struct FixtureWorkflowView: View {
                         TextField("Title, keyword, file, camera…", text: $model.fixtureSearch)
                         Button("Search") { Task { await model.searchFixtureAssets() } }
                             .disabled(model.selectedFixtureID.isEmpty || model.isRunningFixture)
+                            .backstageHelp("Search Owner for assets matching the entered title, keyword, filename, camera, or other indexed detail.")
                     }
                     Table(model.fixtureAssets, selection: $model.selectedFixtureAssetIDs) {
                         TableColumn("Title", value: \.title)
@@ -575,6 +600,7 @@ private struct FixtureWorkflowView: View {
                             Task { await model.snapshotFixtureAssets() }
                         }
                         .disabled(model.selectedFixtureAssetIDs.isEmpty || model.selectedFixtureID.isEmpty)
+                        .backstageHelp("Create an immutable, ordered Culling snapshot from the currently selected candidate assets.")
                     }
                     ScrollView(.vertical) {
                         VStack(alignment: .leading, spacing: 10) {
@@ -692,6 +718,7 @@ private struct FixtureWorkflowView: View {
                                                 Task { await model.saveFixtureConfiguration() }
                                             }
                                             .disabled(model.isLoadingFixturePolicy)
+                                            .backstageHelp("Save this fixture's population source and configured policy overrides, preserving inherited values where selected.")
                                             if model.isLoadingFixturePolicy {
                                                 ProgressView().controlSize(.small)
                                             }
@@ -727,10 +754,12 @@ private struct FixtureWorkflowView: View {
                                             model.selectedFixtureAssetIDs.isEmpty
                                                 || model.placementTargetFixtureIDs.isEmpty
                                         )
+                                        .backstageHelp("Add the selected assets to every selected target fixture using reversible placement records.")
                                         Button("Review placements") {
                                             Task { await model.loadFixturePlacements() }
                                         }
                                         .disabled(model.selectedFixtureAssetIDs.isEmpty)
+                                        .backstageHelp("Load the active and removed fixture relationships for the selected assets.")
                                     }
                                 }
                                 Table(model.fixturePlacements) {
@@ -743,6 +772,7 @@ private struct FixtureWorkflowView: View {
                                                 Button(fixture.name) {
                                                     Task { await model.movePlacement(placement.id, to: fixture.id) }
                                                 }
+                                                .backstageHelp("Move this asset's placement from \(placement.breadcrumbLabel) to \(fixture.name).")
                                             }
                                         }
                                     }
@@ -750,6 +780,9 @@ private struct FixtureWorkflowView: View {
                                         Button(placement.isActive ? "Remove" : "Restore") {
                                             Task { await model.togglePlacement(placement) }
                                         }
+                                        .backstageHelp(placement.isActive
+                                            ? "Remove this reversible fixture placement without deleting the asset or its other relationships."
+                                            : "Restore this previously removed fixture placement.")
                                     }
                                 }
                                 .frame(minHeight: 140)
@@ -782,6 +815,7 @@ private struct FixtureWorkflowView: View {
                                                 Task { await model.loadFixturePools() }
                                             }
                                             .disabled(model.isRunningFixtureSnapshotOperation)
+                                            .backstageHelp("Reload the selected fixture's saved immutable Culling snapshots.")
                                             Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
                                                 Task { await model.openSelectedFixturePool() }
                                             }
@@ -789,6 +823,7 @@ private struct FixtureWorkflowView: View {
                                                 model.selectedFixturePoolID.isEmpty
                                                     || model.isRunningFixtureSnapshotOperation
                                             )
+                                            .backstageHelp("Open the selected saved snapshot as the active immutable Culling pool.")
                                             if model.isRunningFixtureSnapshotOperation {
                                                 ProgressView()
                                                     .controlSize(.small)
@@ -815,6 +850,7 @@ private struct FixtureWorkflowView: View {
                                             Task { await model.openSelectedFixturePool() }
                                         }
                                         .disabled(model.isRunningFixtureSnapshotOperation)
+                                        .backstageHelp("Open this selected snapshot as the active immutable Culling pool.")
                                         if model.isOpeningFixturePool {
                                             ProgressView()
                                                 .controlSize(.small)
@@ -852,6 +888,7 @@ private struct AccessControlView: View {
                 Spacer()
                 Button("Reload") { Task { await model.loadAccess() } }
                     .disabled(model.isRunningAccess)
+                    .backstageHelp("Reload people, groups, and inherited access grants from Owner.")
             }
             Text(model.accessStatus).foregroundStyle(.secondary)
             HSplitView {
@@ -860,6 +897,7 @@ private struct AccessControlView: View {
                         Text("People").font(.title2.bold())
                         Spacer()
                         Button("New") { model.newPerson() }
+                            .backstageHelp("Clear the person editor so you can enter a new person and their group access.")
                     }
                     List(model.accessState.allPeople, selection: $model.selectedPersonID) { person in
                         VStack(alignment: .leading) {
@@ -890,8 +928,10 @@ private struct AccessControlView: View {
                     }
                     HStack {
                         Button("Save person & access") { Task { await model.savePerson() } }
+                            .backstageHelp("Save the person's normalized identity and replace their direct group memberships with the selected set.")
                         Button("Disable", role: .destructive) { Task { await model.disablePerson() } }
                             .disabled(model.selectedPersonID.isEmpty)
+                            .backstageHelp("Disable the selected person's access without deleting their audit history.")
                     }
                 }
                 .padding()
@@ -910,6 +950,9 @@ private struct AccessControlView: View {
                                 Task { await model.archiveGroup(group.id) }
                             }
                                 .disabled(group.isArchived)
+                                .backstageHelp(group.isArchived
+                                    ? "This group is already archived and cannot receive new direct membership changes."
+                                    : "Archive this group while preserving its identity and access history.")
                         }
                         .width(min: 78, ideal: 90)
                     }
@@ -923,6 +966,7 @@ private struct AccessControlView: View {
                     }
                     Button("Save group") { Task { await model.saveGroup() } }
                         .disabled(model.groupID.isEmpty || model.groupName.isEmpty)
+                        .backstageHelp("Create or update the stable group ID, display label, and group kind entered above.")
                     Text("Usernames and emails are normalized by the Worker. Passwords remain case-sensitive and are never returned to this app.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1003,6 +1047,7 @@ private struct MetadataGiveBackView: View {
                         Task { await model.syncPhotosIncrementally() }
                     }
                     .disabled(model.isSyncingPhotos)
+                    .backstageHelp("Run one bounded incremental Photos synchronization now and classify metadata, appearance, missing, and returned changes.")
                     if model.isSyncingPhotos {
                         ProgressView().controlSize(.small)
                     }
@@ -1026,6 +1071,7 @@ private struct MetadataGiveBackView: View {
                     TextField("Asset ID", text: $model.metadataAssetID)
                     Button("Use selected Photos item") { model.useSelectedPhotoForMetadata() }
                         .disabled(model.selectedPhotoIDs.isEmpty)
+                        .backstageHelp("Copy the currently selected Photos asset ID into this Metadata editing form.")
                 }
                 TextField("Title", text: $model.metadataTitle)
                 TextField("Caption", text: $model.metadataCaption)
@@ -1034,14 +1080,17 @@ private struct MetadataGiveBackView: View {
                     Button("Save title, caption & keywords") {
                         Task { await model.updatePhotoMetadata() }
                     }
+                    .backstageHelp("Save the entered title, caption, and keywords as an audited, reversible Owner metadata edit.")
                     Button("Queue selected for review") {
                         Task { await model.queueMetadataReview() }
                     }
+                    .backstageHelp("Add the entered asset to the title and keyword Review queue without approving metadata.")
                     Button("Undo last change") {
                         Task { await model.undoLastMetadataChange() }
                     }
                     .keyboardShortcut("z", modifiers: .command)
                     .disabled(model.metadataHistory.isEmpty)
+                    .backstageHelp("Reverse the most recent metadata edit or blacklist replacement made during this session.")
                     if !model.metadataHistory.isEmpty {
                         Text("\(model.metadataHistory.count) reversible change\(model.metadataHistory.count == 1 ? "" : "s")")
                             .font(.caption)
@@ -1053,6 +1102,7 @@ private struct MetadataGiveBackView: View {
                     Button("Replace blacklist") {
                         Task { await model.saveMetadataBlacklist() }
                     }
+                    .backstageHelp("Replace the canonical metadata keyword blacklist with the normalized terms entered here.")
                 }
                 Text(model.metadataReviewStatus)
                     .foregroundStyle(.secondary)
@@ -1062,6 +1112,7 @@ private struct MetadataGiveBackView: View {
                     Button("Load proposals") {
                         Task { await model.loadMetadataProposals() }
                     }
+                    .backstageHelp("Load pending AI metadata proposals from the local read-only Owner helper for human review.")
                     Text(model.metadataProposalStatus)
                         .foregroundStyle(.secondary)
                 }
@@ -1090,12 +1141,15 @@ private struct MetadataGiveBackView: View {
                             Button("Approve") {
                                 Task { await model.decideProposal(proposal, disposition: .approve) }
                             }
+                            .backstageHelp("Approve this AI proposal as the canonical title and keywords for the asset.")
                             Button("Reject") {
                                 Task { await model.decideProposal(proposal, disposition: .reject) }
                             }
+                            .backstageHelp("Reject this AI proposal while leaving the asset eligible for a future revised proposal.")
                             Button("Block", role: .destructive) {
                                 Task { await model.decideProposal(proposal, disposition: .block) }
                             }
+                            .backstageHelp("Block this AI proposal and prevent the same unsuitable proposal from being reused.")
                         }
                     }
                 }
@@ -1113,14 +1167,17 @@ private struct MetadataGiveBackView: View {
                         Task { await model.planMetadataGiveBack() }
                     }
                     .disabled(model.isRunningMetadata)
+                    .backstageHelp("Build a read-only plan of eligible Apple Photos metadata changes without writing anything.")
                     Button("Commit & verify") {
                         showingCommitConfirmation = true
                     }
                     .disabled(model.isRunningMetadata)
+                    .backstageHelp("Review the separate confirmation for writing the currently planned approved metadata to Apple Photos.")
                     Button("Retry failed only") {
                         Task { await model.retryMetadataFailures() }
                     }
                     .disabled(model.isRunningMetadata || (model.metadataReport?.failed.isEmpty ?? true))
+                    .backstageHelp("Retry only the independently failed assets from the most recent metadata give-back receipt.")
                     if model.isRunningMetadata {
                         ProgressView().controlSize(.small)
                     }
@@ -1150,7 +1207,9 @@ private struct MetadataGiveBackView: View {
             Button("Commit and verify", role: .destructive) {
                 Task { await model.commitMetadataGiveBack() }
             }
+            .backstageHelp("Confirm the signed metadata write, then re-read every eligible Photos item before recording verified receipts.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without writing any metadata to Apple Photos.")
         } message: {
             Text("The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
         }

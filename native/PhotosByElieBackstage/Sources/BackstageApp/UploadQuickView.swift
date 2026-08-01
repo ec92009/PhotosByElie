@@ -34,6 +34,7 @@ struct UploadQuickView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Close preview")
+                        .backstageHelp("Close the Upload preview and return to the upload tray.")
                     }
                     Divider()
                     LabeledContent("Title", value: item.title.isEmpty ? "Untitled" : item.title)

@@ -21,8 +21,8 @@ struct ReviewTitleKeywordEditor: View {
                 } label: {
                     Image(systemName: "arrow.down")
                 }
-                .help("Propagate title")
                 .disabled(model.isRunningReview)
+                .backstageHelp("Copy the current title to the other selected Review items using the active propagation scope.")
             }
             HStack(alignment: .top, spacing: 8) {
                 TextField(
@@ -40,8 +40,8 @@ struct ReviewTitleKeywordEditor: View {
                 } label: {
                     Image(systemName: "arrow.down")
                 }
-                .help("Propagate keywords")
                 .disabled(model.isRunningReview)
+                .backstageHelp("Copy the current keywords to the other selected Review items using the active propagation scope.")
             }
         }
     }

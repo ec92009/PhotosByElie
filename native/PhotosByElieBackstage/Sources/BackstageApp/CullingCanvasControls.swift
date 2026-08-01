@@ -27,7 +27,9 @@ struct CullingSearchControls: View {
                 .frame(width: 240)
                 .onSubmit { model.applyCullingFilters() }
             Button("Review picked") { model.showPickedReview() }
+                .backstageHelp("Open Review with the assets currently picked in this fixture.")
             Button("Select burst") { model.selectVisibleBurstCandidates() }
+                .backstageHelp("Select likely duplicate frames in each visible capture burst while keeping the probable best frame unselected.")
         }
     }
 }

@@ -18,11 +18,13 @@ struct UploadHeaderView: View {
                         Task { await model.loadNativeUploadPlan() }
                     }
                     .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .backstageHelp("Load the next eligible batch of up to 200 approved assets after the current upload tray is complete.")
                 }
                 Button("Upload selection…") {
                     confirmingSelectedPublication = true
                 }
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                    .backstageHelp("Review the confirmation for publishing only the selected eligible assets.")
             }
             Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
                 .foregroundStyle(.secondary)
@@ -37,9 +39,18 @@ struct UploadHeaderView: View {
 }
 
 #if DEBUG
+@MainActor
+private func uploadHeaderPreviewModel() -> BackstageViewModel {
+    let model = UploadPreviewFixtures.ready()
+    if let firstItemID = model.nativeUploadPlan?.items.first?.id {
+        model.selectedDeliveryIDs = [firstItemID]
+    }
+    return model
+}
+
 #Preview("Uploads — Header") {
     UploadHeaderView(
-        model: UploadPreviewFixtures.ready(),
+        model: uploadHeaderPreviewModel(),
         isPreviewMode: true,
         confirmingSelectedPublication: .constant(false)
     )

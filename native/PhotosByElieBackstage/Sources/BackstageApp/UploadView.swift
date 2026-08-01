@@ -53,6 +53,7 @@ struct UploadView: View {
                             confirmingVisiblePublication = true
                         }
                         .disabled(model.isRunningDelivery || plan.items.isEmpty)
+                        .backstageHelp("Review the confirmation for publishing every eligible asset currently shown in this fixed upload tray.")
                     }
                 }
                 if plan.items.isEmpty {
@@ -128,14 +129,17 @@ struct UploadView: View {
                             confirmingReturnToReview = true
                         }
                         .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                        .backstageHelp("Review the confirmation for reversing approval and returning the selected assets to Review.")
                         Button("Hide…") {
                             confirmingUploadHide = true
                         }
                         .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                        .backstageHelp("Review the confirmation for hiding the selected assets from this fixture's upload queue.")
                         Button("Clear selection") {
                             model.selectedDeliveryIDs.removeAll()
                         }
                         .disabled(model.selectedDeliveryIDs.isEmpty)
+                        .backstageHelp("Deselect every Upload row without changing approval, visibility, or publication state.")
                         Spacer()
                         Text("Use Command-click or Shift-click to select multiple rows.")
                             .font(.caption)
@@ -173,9 +177,12 @@ struct UploadView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Button("Load receipt audit") { Task { await model.loadDeliveryPlan() } }
+                            .backstageHelp("Load legacy fixture delivery receipts for inspection and recovery planning.")
                         Button("Queue health") { Task { await model.loadUploadHealth() } }
+                            .backstageHelp("Inspect legacy upload coverage, queue eligibility, and partial delivery health.")
                         Button("Retry legacy failures") { Task { await model.retryDeliveryFailures() } }
                             .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
+                            .backstageHelp("Retry only the failed items identified by the loaded legacy delivery audit.")
                     }
                     if let health = model.uploadHealth {
                         HStack {
@@ -191,11 +198,13 @@ struct UploadView: View {
                         Button("Preview adoption") {
                             Task { await model.previewUploadRunAdoption() }
                         }
+                        .backstageHelp("Verify the entered legacy Upload Bridge run and preview exactly which items could be adopted.")
                         Button("Adopt verified run…") { confirmingAdoption = true }
                             .disabled(
                                 model.isRunningDelivery
                                 || (model.uploadAdoptionPlan?.eligibleIDs.isEmpty ?? true)
                             )
+                            .backstageHelp("Review the confirmation for reconstructing fixture receipts from the verified legacy upload run.")
                     }
                     Text(model.uploadRecoveryStatus)
                         .font(.callout)
@@ -276,7 +285,9 @@ struct UploadView: View {
             Button("Return \(model.selectedDeliveryIDs.count) to Review") {
                 Task { await model.returnSelectedUploadsToReview() }
             }
+            .backstageHelp("Confirm reversal of approval and upload readiness for the selected assets while preserving their metadata and picks.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without returning any assets to Review.")
         } message: {
             Text("This reverses approval and upload readiness for the selected items. Fixture picks and metadata are preserved, and the audited action can be undone.")
         }
@@ -287,7 +298,9 @@ struct UploadView: View {
             Button("Hide \(model.selectedDeliveryIDs.count) assets", role: .destructive) {
                 Task { await model.hideSelectedUploads() }
             }
+            .backstageHelp("Confirm hiding the selected assets from this fixture's upload queue without deleting their files.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without hiding any Upload assets.")
         } message: {
             Text("Hidden assets leave this fixture's upload queue. Their files are not deleted.")
         }
@@ -298,7 +311,9 @@ struct UploadView: View {
             Button("Adopt exact eligible items", role: .destructive) {
                 Task { await model.commitUploadRunAdoption() }
             }
+            .backstageHelp("Confirm checksum-verified receipt reconstruction for exactly the eligible items in this legacy run.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without adopting the legacy upload run.")
         } message: {
             Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
@@ -309,7 +324,9 @@ struct UploadView: View {
             Button("Upload selection") {
                 Task { await model.publishSelectedNatively() }
             }
+            .backstageHelp("Confirm upload and immediate publication of the selected eligible assets.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without uploading or publishing the selection.")
         } message: {
             Text("Upload equals publication. Verified assets become live immediately in their effective picked fixtures.")
         }
@@ -320,7 +337,9 @@ struct UploadView: View {
             Button("Publish these \(model.nativeUploadPlan?.items.count ?? 0) assets") {
                 Task { await model.publishVisibleNativeWindow() }
             }
+            .backstageHelp("Confirm sequential upload and immediate publication of every asset remaining in the visible tray.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without publishing the visible upload tray.")
         } message: {
             Text("Backstage will publish exactly the assets remaining in this tray, in sequential batches of up to 50. Successful rows leave the tray; failures remain for retry. Load the next 200 only after this batch is complete.")
         }

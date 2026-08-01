@@ -276,6 +276,7 @@ struct CullingView: View {
                 }
             }
             Button("Clear filters") { model.clearCullingFilters() }
+                .backstageHelp("Restore the default Culling media, status, rating, color, and search filters.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
@@ -315,21 +316,26 @@ struct CullingView: View {
                 model.moveCullingWindow(forward: false)
             }
             .disabled(!workspace.hasPrevious)
+            .backstageHelp("Load the previous \(workspace.limit) matching assets in the current Culling scope.")
             Button("Next \(workspace.limit)") {
                 model.moveCullingWindow(forward: true)
             }
             .disabled(!workspace.hasNext)
+            .backstageHelp("Load the next \(workspace.limit) matching assets in the current Culling scope.")
             Spacer()
             HStack(spacing: 0) {
                 Button("−") { decreaseCullingThumbnailSize() }
-                    .help("Show more, smaller thumbnails")
                     .disabled(!model.canDecreaseCullingThumbnailSize)
+                    .backstageHelp("Show more assets at once by making each Culling thumbnail smaller.")
                 Divider().frame(height: 18)
                 Button("+") { increaseCullingThumbnailSize() }
-                    .help("Show fewer, larger thumbnails")
                     .disabled(!model.canIncreaseCullingThumbnailSize)
+                    .backstageHelp("Make each Culling thumbnail larger, showing fewer assets at once.")
             }
             .buttonStyle(.bordered)
+            .backstageHelp(model.cullingUsesFill
+                ? "Switch thumbnails to Fit so each complete image remains visible inside its card."
+                : "Switch thumbnails to Fill so images crop to cover their cards edge to edge.")
             Button(model.cullingUsesFill ? "Fill" : "Fit") {
                 model.toggleCullingFitFill()
             }
@@ -482,10 +488,13 @@ struct CullingView: View {
         HStack {
             Button("Open in Review") { model.sendCullingSelection(to: .review) }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Open Review and carry the current Culling selection into that workspace.")
             Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Open Metadata and carry the current Culling selection into its editing workflow.")
             Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Open Uploads and carry the current Culling selection into the publication tray.")
             Spacer()
         }
     }
@@ -502,26 +511,31 @@ struct CullingView: View {
                     || model.isApplyingCullingDecision
                     || !model.hasCurrentCullingFixture
             )
+            .backstageHelp("Apply the selected Include, Exclude, or Undecided fixture decision to every selected asset.")
             cullingRatingPicker
             Button("Apply rating") {
                 Task { await model.applyRating() }
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .backstageHelp("Apply the chosen star rating to every selected asset.")
             cullingColorPicker
             Button("Apply color") {
                 Task { await model.applyColor() }
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .backstageHelp("Apply the chosen color label to every selected asset.")
             Button("Quick Look") {
                 CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
             }
             .keyboardShortcut(.space, modifiers: [])
             .disabled(model.cullingSelection.selectedIDs.isEmpty)
+            .backstageHelp("Open the focused selected asset in Quick Look without changing its Culling decision.")
             Button("Export originals…") {
                 guard let directory = chooseExportDirectory() else { return }
                 Task { await model.exportSelected(to: directory) }
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty)
+            .backstageHelp("Choose a folder and export the original files for all selected assets.")
         }
         .labelsHidden()
     }
@@ -559,13 +573,16 @@ struct CullingView: View {
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(model.cullingHistory.isEmpty)
+                .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()
             Button("Reload decisions") {
                 Task { await model.refreshCullingDecisions() }
             }
+            .backstageHelp("Reload the latest persisted ratings, colors, and fixture decisions for the visible assets.")
             Button("Clear selection") { model.clearCullingSelection() }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
         }
     }
 
@@ -590,6 +607,7 @@ struct CullingView: View {
                 )
                 Button("Stop") { model.cancelCullingOperation() }
                     .disabled(model.cullingCancellationRequested)
+                    .backstageHelp("Request cancellation of the Culling operation currently in progress.")
             }
         }
     }
@@ -663,10 +681,12 @@ struct CullingView: View {
                 Button("All Photos") {
                     model.showAllPhotosInCulling()
                 }
+                .backstageHelp("Leave the current fixture pool and show the complete indexed Photos library in Culling.")
             }
             Button("Allow Photos") {
                 Task { await model.authorizeAndLoadPhotos() }
             }
+            .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
             Button("Refresh previews") {
                 Task {
                     await model.refreshPhotos()
@@ -676,6 +696,7 @@ struct CullingView: View {
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .backstageHelp("Refresh local Photos previews and then reload the active fixture Culling window.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {
@@ -688,7 +709,7 @@ struct CullingView: View {
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
-            .help("Stream the complete Photos library through the signed helper and reconcile Owner without changing existing decisions.")
+            .backstageHelp("Stream the complete Photos library through the signed helper and reconcile Owner without changing existing decisions.")
         }
     }
 
@@ -993,7 +1014,9 @@ private struct LightroomRatingFilterButton: View {
             )
         }
         .buttonStyle(.plain)
-        .help(rating == 0 ? "Include unrated photos" : "Include \(rating)-star photos")
+        .backstageHelp(rating == 0
+            ? "Toggle whether unrated assets are included in the current Culling results."
+            : "Toggle whether \(rating)-star assets are included in the current Culling results.")
         .accessibilityLabel(rating == 0 ? "Unrated" : "\(rating) stars")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -1025,7 +1048,7 @@ private struct LightroomColorFilterButton: View {
             )
         }
         .buttonStyle(.plain)
-        .help("Include \(color.label.lowercased())")
+        .backstageHelp("Toggle whether assets labeled \(color.label.lowercased()) are included in the current Culling results.")
         .accessibilityLabel(color.label)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -1086,6 +1109,7 @@ struct FixturePickerField: View {
                             Text(option.label)
                         }
                     }
+                    .backstageHelp("Select \(option.label) for \(title.lowercased()).")
                 }
             } label: {
                 HStack {

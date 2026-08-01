@@ -160,10 +160,12 @@ struct ReviewView: View {
                             model.reviewWindowOffset = 0
                             Task { await model.loadFixtureReviewWindow() }
                         }
+                        .backstageHelp("Run the current search across the complete Review queue and return to its first page.")
                         Button("Refresh") {
                             Task { await model.loadFixtureReviewWindow() }
                         }
                         .disabled(model.isRunningReview)
+                        .backstageHelp("Reload the current Review page, filters, proposals, and persisted states from Owner.")
                     }
                 }
                 if let summary = model.fixtureReviewWindow?.summary {
@@ -190,22 +192,26 @@ struct ReviewView: View {
                         Button("Load proposals") {
                             Task { await model.loadAIProposals() }
                         }
+                        .backstageHelp("Load newly completed AI title and keyword proposals as editable Review drafts.")
                     }
                     if !model.reviewProposalConflictIDs.isEmpty {
                         Button("Replace \(model.reviewProposalConflictIDs.count) conflicting draft\(model.reviewProposalConflictIDs.count == 1 ? "" : "s")") {
                             Task { await model.loadAIProposals(replacingConflicts: true) }
                         }
                         .tint(.orange)
+                        .backstageHelp("Replace the listed local conflicting drafts with the latest completed AI proposals.")
                     }
                     Spacer()
                     Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now") {
                         Task { await model.runAIProposalPass() }
                     }
                     .disabled(!model.canRunAIProposalPass)
+                    .backstageHelp("Start the prepared AI proposal pass for assets currently requesting AI review.")
                     if model.fixtureAIStatus?.active == true {
                         Button("Cancel") {
                             Task { await model.cancelAIProposalPass() }
                         }
+                        .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
                     }
                 }
                 Text(model.aiProposalStatus)
@@ -236,10 +242,12 @@ struct ReviewView: View {
                         model.moveReviewWindow(forward: false)
                     }
                     .disabled((model.fixtureReviewWindow?.offset ?? 0) == 0)
+                    .backstageHelp("Load the previous \(model.reviewWindowLimit) matching items in the Review queue.")
                     Button("Next \(model.reviewWindowLimit)") {
                         model.moveReviewWindow(forward: true)
                     }
                     .disabled(!(model.fixtureReviewWindow?.hasNext ?? false))
+                    .backstageHelp("Load the next \(model.reviewWindowLimit) matching items in the Review queue.")
                 }
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -333,8 +341,10 @@ struct ReviewView: View {
                     }
                     .keyboardShortcut("z", modifiers: .command)
                     .disabled(model.reviewHistory.isEmpty || model.isRunningReview)
+                    .backstageHelp("Reverse the most recent Review action made during this Backstage session.")
                     Button("Clear selection") { model.clearReviewSelection() }
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
+                        .backstageHelp("Deselect every Review item without changing titles, keywords, or workflow states.")
                 }
                 Text(model.reviewStatus)
                     .font(.caption)
@@ -670,22 +680,26 @@ private struct ReviewInspector: View {
                             Task { await model.applyReviewAction(.approve) }
                         }
                         .keyboardShortcut("a", modifiers: [])
+                        .backstageHelp("Approve the selected title and keywords and make the assets eligible for Uploads.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }
                         .keyboardShortcut("h", modifiers: [])
+                        .backstageHelp("Hide the selected assets from this fixture without deleting their files.")
                         Button("Unpick") {
                             Task { await model.unpickReviewSelection() }
                         }
                         .keyboardShortcut("u", modifiers: [])
-                        .help("Clear the fixture pick and return the item to Culling")
+                        .backstageHelp("Clear the fixture pick and return the selected assets to Culling as Undecided.")
                         Button("Needs AI") {
                             Task { await model.markReviewSelectionNeedsAI() }
                         }
                         .disabled(!model.canMarkReviewSelectionNeedsAI)
+                        .backstageHelp("Submit the selected AI-review reasons and optional note for the selected assets.")
                         Button("Propagate") {
                             Task { await model.propagateLastReviewAction() }
                         }
+                        .backstageHelp("Apply the prepared Review change to the matching assets in the active two-hour shoot scope.")
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
@@ -715,6 +729,7 @@ private struct ReviewInspector: View {
                             }
                             .buttonStyle(.bordered)
                             .tint(model.reviewAIReasons.contains(reason) ? .orange : nil)
+                            .backstageHelp("Toggle the \(reason) reason for the next Needs AI request.")
                         }
                     }
                     TextField(
@@ -735,6 +750,7 @@ private struct ReviewInspector: View {
                         openQuickLook()
                     }
                     .keyboardShortcut(.space, modifiers: [])
+                    .backstageHelp("Open the focused Review item in Quick Look without applying a Review action.")
                 } else {
                     ContentUnavailableView(
                         "No photo selected",

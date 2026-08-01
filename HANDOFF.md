@@ -1,5 +1,21 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Every Backstage button explains its action on hover
+
+- Backstage `0.4.56` build `67` gives all 123 SwiftUI button declarations an
+  action-specific explanation after a fixed 0.5-second hover. The text states
+  the affected scope and distinguishes navigation, preview, confirmation,
+  commit, reversal, publication, and destructive actions.
+- `BackstageHoverHelp.swift` owns the delay, transient popover, cancellation,
+  and accessibility hint behavior. A native parity contract compares Button
+  and `backstageHelp` counts in every Backstage Swift file so a future button
+  cannot ship without an explanation.
+- Verification was state-safe: 51 Swift tests, 31 native UI parity tests, and
+  the native Xcode Debug build pass. The stable Apple Development-signed build
+  is installed on Max at version `0.4.56` build `67`; the prior `0.4.55` app is
+  recoverable from Trash. No Owner, Photos, Review, Culling, Upload,
+  publication, delivery, or metadata action was submitted.
+
 ## 2026-08-01 — Backstage Canvas uses a native Xcode preview host
 
 - The native Canvas executable is intentionally inert and uses the separate

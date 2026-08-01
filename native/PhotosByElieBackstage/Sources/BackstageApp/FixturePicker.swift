@@ -14,5 +14,6 @@ struct FixturePicker: View {
         .frame(minWidth: 240)
         Button("Refresh fixtures") { Task { await model.loadFixtures() } }
             .disabled(model.isRunningFixture || isPreviewMode)
+            .backstageHelp("Reload the current fixture tree so this picker reflects the latest available fixtures.")
     }
 }

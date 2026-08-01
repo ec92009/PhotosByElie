@@ -8,10 +8,16 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.55 (build 66)**.
+The current native workflow is included in version **0.4.56 (build 67)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
+
+Every Backstage button explains its action after the pointer rests on it for
+half a second. The explanation describes the affected scope and whether the
+button previews, confirms, commits, reverses, publishes, or merely navigates;
+disabled buttons retain the same explanation. VoiceOver receives that text as
+the button's accessibility hint.
 
 ## The five-minute safe start
 

@@ -713,8 +713,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
-        self.assertIn('"Collapse preview panel"', root)
-        self.assertIn('"Expand preview panel"', root)
+        self.assertIn("Collapse the Culling or Review preview inspector", root)
+        self.assertIn("Expand the Culling or Review preview inspector", root)
         self.assertIn("if model.authentication.phase == .authenticated", root)
         self.assertIn('else if model.status != "Connected"', root)
         self.assertLess(
@@ -824,8 +824,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.updateReviewTitle($0)", editor)
         self.assertIn("model.updateReviewKeywords($0)", editor)
         self.assertGreaterEqual(editor.count('Image(systemName: "arrow.down")'), 2)
-        self.assertIn('.help("Propagate title")', editor)
-        self.assertIn('.help("Propagate keywords")', editor)
+        self.assertIn("Copy the current title to the other selected Review items", editor)
+        self.assertIn("Copy the current keywords to the other selected Review items", editor)
         self.assertIn("scheduleReviewMetadataAutosave()", model)
         self.assertIn("Task.sleep(for: .milliseconds(600))", model)
         self.assertNotIn("applyReviewAction", reason_toggle)
@@ -900,6 +900,30 @@ class NativeCullingParityTest(unittest.TestCase):
             "await applyReviewAction(reviewLastAction, propagate: true)",
             propagate,
         )
+
+    def test_every_backstage_button_has_half_second_hover_help(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        total_buttons = 0
+        for path in sorted(source_dir.glob("*.swift")):
+            source = path.read_text(encoding="utf-8")
+            button_count = len(re.findall(r"\bButton\s*(?:\(|\{)", source))
+            if button_count == 0:
+                continue
+            help_count = source.count(".backstageHelp(")
+            self.assertEqual(
+                button_count,
+                help_count,
+                f"{path.name} must attach one backstageHelp explanation to every Button",
+            )
+            total_buttons += button_count
+
+        self.assertGreaterEqual(total_buttons, 123)
+        hover_help = (source_dir / "BackstageHoverHelp.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Task.sleep(for: .milliseconds(500))", hover_help)
+        self.assertIn(".popover(", hover_help)
+        self.assertIn(".accessibilityHint(explanation)", hover_help)
 
     def test_upload_preview_hides_current_item_and_advances(self):
         ui = backstage_ui_source()

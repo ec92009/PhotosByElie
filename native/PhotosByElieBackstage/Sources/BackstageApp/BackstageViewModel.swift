@@ -66,15 +66,39 @@ final class BackstageViewModel: ObservableObject {
         var id: String { rawValue }
     }
 
-    @Published var selection: Section? = .overview
+    @Published var selection: Section? {
+        didSet {
+            if let selection {
+                preferences.set(selection.rawValue, forKey: Self.selectedSectionPreferenceKey)
+            }
+        }
+    }
     @Published var actions: [OwnerAction] = []
     @Published var status = "Not connected"
-    @Published var isPreviewPanelVisible: Bool {
+    @Published private var cullingPreviewPanelVisible: Bool {
         didSet {
             preferences.set(
-                isPreviewPanelVisible,
-                forKey: Self.previewPanelVisibilityPreferenceKey
+                cullingPreviewPanelVisible,
+                forKey: Self.cullingPreviewPanelVisibilityPreferenceKey
             )
+        }
+    }
+    @Published private var reviewPreviewPanelVisible: Bool {
+        didSet {
+            preferences.set(
+                reviewPreviewPanelVisible,
+                forKey: Self.reviewPreviewPanelVisibilityPreferenceKey
+            )
+        }
+    }
+    var isPreviewPanelVisible: Bool {
+        get { selection == .review ? reviewPreviewPanelVisible : cullingPreviewPanelVisible }
+        set {
+            if selection == .review {
+                reviewPreviewPanelVisible = newValue
+            } else {
+                cullingPreviewPanelVisible = newValue
+            }
         }
     }
     @Published var isRefreshing = false
@@ -268,8 +292,14 @@ final class BackstageViewModel: ObservableObject {
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
     private let preferences: UserDefaults
-    private static let previewPanelVisibilityPreferenceKey =
+    private static let selectedSectionPreferenceKey =
+        "PhotosByElieBackstage.selectedSection"
+    private static let legacyPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.previewPanelVisible"
+    private static let cullingPreviewPanelVisibilityPreferenceKey =
+        "PhotosByElieBackstage.cullingPreviewPanelVisible"
+    private static let reviewPreviewPanelVisibilityPreferenceKey =
+        "PhotosByElieBackstage.reviewPreviewPanelVisible"
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -315,10 +345,20 @@ final class BackstageViewModel: ObservableObject {
         preferences: UserDefaults = .standard
     ) {
         self.preferences = preferences
-        self.isPreviewPanelVisible =
-            preferences.object(forKey: Self.previewPanelVisibilityPreferenceKey) == nil
+        self.selection = preferences.string(forKey: Self.selectedSectionPreferenceKey)
+            .flatMap(Section.init(rawValue:)) ?? .overview
+        let legacyPreviewVisibility =
+            preferences.object(forKey: Self.legacyPreviewPanelVisibilityPreferenceKey) == nil
                 ? true
-                : preferences.bool(forKey: Self.previewPanelVisibilityPreferenceKey)
+                : preferences.bool(forKey: Self.legacyPreviewPanelVisibilityPreferenceKey)
+        self.cullingPreviewPanelVisible =
+            preferences.object(forKey: Self.cullingPreviewPanelVisibilityPreferenceKey) == nil
+                ? legacyPreviewVisibility
+                : preferences.bool(forKey: Self.cullingPreviewPanelVisibilityPreferenceKey)
+        self.reviewPreviewPanelVisible =
+            preferences.object(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey) == nil
+                ? legacyPreviewVisibility
+                : preferences.bool(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey)
         self.api = api
         self.authenticationService = OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary

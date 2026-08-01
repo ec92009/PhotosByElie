@@ -5,12 +5,14 @@ import SwiftUI
 public struct BackstageApplication: App {
     @StateObject private var model = BackstageViewModel()
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
+    private var navigationSidebarVisible = true
 
     public init() {}
 
     public var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: navigationColumnVisibility) {
                 List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
                     Label(section.rawValue, systemImage: icon(for: section))
                         .tag(section)
@@ -60,6 +62,7 @@ public struct BackstageApplication: App {
                         }
                     }
             }
+            .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
             .frame(minWidth: 1_120, minHeight: 720)
             .task { await model.bootstrapAuthentication() }
@@ -77,6 +80,13 @@ public struct BackstageApplication: App {
                 .keyboardShortcut("r")
             }
         }
+    }
+
+    private var navigationColumnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { navigationSidebarVisible ? .all : .detailOnly },
+            set: { navigationSidebarVisible = $0 != .detailOnly }
+        )
     }
 
     private var backstageVersionLabel: String {

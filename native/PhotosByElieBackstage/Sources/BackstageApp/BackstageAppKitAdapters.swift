@@ -60,9 +60,34 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     private var metadata: [BackstageQuickLookMetadata] = []
     private var shortcutMonitor: Any?
     private var previewIndexObservation: NSKeyValueObservation?
+    private var previewPanelObservers: [NSObjectProtocol] = []
+    private weak var configuredPreviewPanel: QLPreviewPanel?
     private let metadataPanel = NSVisualEffectView()
     private let metadataStack = NSStackView()
+    private lazy var metadataWindow: NSPanel = {
+        let window = NSPanel(
+            contentRect: .zero,
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
+        window.hidesOnDeactivate = false
+        window.ignoresMouseEvents = true
+        window.isReleasedWhenClosed = false
+        window.collectionBehavior = [.fullScreenAuxiliary]
+        return window
+    }()
     private var isMetadataPanelConfigured = false
+    private static let quickLookFrameAutosaveName =
+        "PhotosByElieBackstage.QuickLookWindow"
+
+    private enum MetadataPlacement {
+        case beside
+        case below
+    }
 
     var isVisible: Bool {
         QLPreviewPanel.shared()?.isVisible == true
@@ -87,11 +112,13 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     }
 
     func dismiss() {
+        metadataWindow.parent?.removeChildWindow(metadataWindow)
+        metadataWindow.orderOut(nil)
         QLPreviewPanel.shared()?.orderOut(nil)
         items = []
         metadata = []
         previewIndexObservation = nil
-        metadataPanel.removeFromSuperview()
+        removePreviewPanelObservers()
         removeShortcutMonitor()
     }
 
@@ -170,47 +197,47 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     }
 
     private func installMetadataPanel(in panel: QLPreviewPanel) {
-        guard let contentView = panel.contentView else { return }
-        metadataPanel.removeFromSuperview()
+        configureQuickLookFrame(panel)
+        configureMetadataPanel()
+        if metadataWindow.parent !== panel {
+            metadataWindow.parent?.removeChildWindow(metadataWindow)
+            panel.addChildWindow(metadataWindow, ordered: .above)
+        }
+        observePreviewPanelGeometry(panel)
+        metadataWindow.orderFront(nil)
+        updateMetadataPanel()
+    }
+
+    private func configureQuickLookFrame(_ panel: QLPreviewPanel) {
+        guard configuredPreviewPanel !== panel else { return }
+        panel.setFrameAutosaveName(Self.quickLookFrameAutosaveName)
+        _ = panel.setFrameUsingName(Self.quickLookFrameAutosaveName)
+        configuredPreviewPanel = panel
+    }
+
+    private func configureMetadataPanel() {
+        guard !isMetadataPanelConfigured else { return }
         metadataPanel.material = .hudWindow
-        metadataPanel.blendingMode = .withinWindow
+        metadataPanel.blendingMode = .behindWindow
         metadataPanel.state = .active
         metadataPanel.wantsLayer = true
         metadataPanel.layer?.cornerRadius = 12
         metadataPanel.layer?.masksToBounds = true
-        metadataPanel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(metadataPanel)
+        metadataWindow.contentView = metadataPanel
 
-        if !isMetadataPanelConfigured {
-            metadataStack.orientation = .vertical
-            metadataStack.alignment = .width
-            metadataStack.spacing = 5
-            metadataStack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-            metadataStack.translatesAutoresizingMaskIntoConstraints = false
-            metadataPanel.addSubview(metadataStack)
-            NSLayoutConstraint.activate([
-                metadataPanel.widthAnchor.constraint(lessThanOrEqualToConstant: 560),
-                metadataStack.topAnchor.constraint(equalTo: metadataPanel.topAnchor),
-                metadataStack.leadingAnchor.constraint(equalTo: metadataPanel.leadingAnchor),
-                metadataStack.trailingAnchor.constraint(equalTo: metadataPanel.trailingAnchor),
-                metadataStack.bottomAnchor.constraint(equalTo: metadataPanel.bottomAnchor),
-            ])
-            isMetadataPanelConfigured = true
-        }
-
-        let adaptiveWidth = metadataPanel.widthAnchor.constraint(
-            equalTo: contentView.widthAnchor,
-            constant: -24
-        )
-        adaptiveWidth.priority = .defaultHigh
+        metadataStack.orientation = .vertical
+        metadataStack.alignment = .width
+        metadataStack.spacing = 5
+        metadataStack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        metadataStack.translatesAutoresizingMaskIntoConstraints = false
+        metadataPanel.addSubview(metadataStack)
         NSLayoutConstraint.activate([
-            adaptiveWidth,
-            metadataPanel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            metadataPanel.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 12),
-            metadataPanel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -12),
-            metadataPanel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            metadataStack.topAnchor.constraint(equalTo: metadataPanel.topAnchor),
+            metadataStack.leadingAnchor.constraint(equalTo: metadataPanel.leadingAnchor),
+            metadataStack.trailingAnchor.constraint(equalTo: metadataPanel.trailingAnchor),
+            metadataStack.bottomAnchor.constraint(equalTo: metadataPanel.bottomAnchor),
         ])
-        updateMetadataPanel()
+        isMetadataPanelConfigured = true
     }
 
     private func updateMetadataPanel() {
@@ -219,10 +246,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
             $0.removeFromSuperview()
         }
         guard let item = currentMetadata else {
-            metadataPanel.isHidden = true
+            metadataWindow.orderOut(nil)
             return
         }
-        metadataPanel.isHidden = false
+        metadataWindow.orderFront(nil)
         let heading = NSTextField(labelWithString: "Preview metadata")
         heading.font = .systemFont(ofSize: 15, weight: .semibold)
         metadataStack.addArrangedSubview(heading)
@@ -242,6 +269,106 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         shortcuts.font = .systemFont(ofSize: 11)
         shortcuts.textColor = .secondaryLabelColor
         metadataStack.addArrangedSubview(shortcuts)
+        if let panel = configuredPreviewPanel {
+            positionMetadataWindow(relativeTo: panel)
+        }
+    }
+
+    private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
+        let placement = currentMetadataPlacement
+        let gap: CGFloat = 8
+        let metadataHeight: CGFloat = 250
+        let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
+        var panelFrame = panel.frame
+
+        if let visibleFrame = panel.screen?.visibleFrame {
+            switch placement {
+            case .beside:
+                panelFrame.size.width = min(
+                    panelFrame.width,
+                    max(420, visibleFrame.width - metadataWidth - gap)
+                )
+                panelFrame.origin.x = min(
+                    max(panelFrame.minX, visibleFrame.minX),
+                    visibleFrame.maxX - panelFrame.width - metadataWidth - gap
+                )
+                panelFrame.origin.y = min(
+                    max(panelFrame.minY, visibleFrame.minY),
+                    visibleFrame.maxY - panelFrame.height
+                )
+            case .below:
+                panelFrame.size.height = min(
+                    panelFrame.height,
+                    max(360, visibleFrame.height - metadataHeight - gap)
+                )
+                panelFrame.origin.x = min(
+                    max(panelFrame.minX, visibleFrame.minX),
+                    visibleFrame.maxX - panelFrame.width
+                )
+                panelFrame.origin.y = min(
+                    max(panelFrame.minY, visibleFrame.minY + metadataHeight + gap),
+                    visibleFrame.maxY - panelFrame.height
+                )
+            }
+        }
+        if panel.frame != panelFrame {
+            panel.setFrame(panelFrame, display: true)
+        }
+
+        let metadataFrame: NSRect
+        switch placement {
+        case .beside:
+            metadataFrame = NSRect(
+                x: panelFrame.maxX + gap,
+                y: panelFrame.maxY - metadataHeight,
+                width: metadataWidth,
+                height: metadataHeight
+            )
+        case .below:
+            metadataFrame = NSRect(
+                x: panelFrame.minX,
+                y: panelFrame.minY - metadataHeight - gap,
+                width: panelFrame.width,
+                height: metadataHeight
+            )
+        }
+        metadataWindow.setFrame(metadataFrame, display: true)
+    }
+
+    private var currentMetadataPlacement: MetadataPlacement {
+        guard let panel = configuredPreviewPanel else { return .below }
+        let index = panel.currentPreviewItemIndex
+        guard items.indices.contains(index),
+              let image = NSImage(contentsOf: items[index] as URL),
+              image.size.width > 0,
+              image.size.height > image.size.width
+        else {
+            return .below
+        }
+        return .beside
+    }
+
+    private func observePreviewPanelGeometry(_ panel: QLPreviewPanel) {
+        removePreviewPanelObservers()
+        for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
+            previewPanelObservers.append(
+                NotificationCenter.default.addObserver(
+                    forName: name,
+                    object: panel,
+                    queue: .main
+                ) { [weak self, weak panel] _ in
+                    Task { @MainActor [weak self, weak panel] in
+                        guard let self, let panel else { return }
+                        self.positionMetadataWindow(relativeTo: panel)
+                    }
+                }
+            )
+        }
+    }
+
+    private func removePreviewPanelObservers() {
+        previewPanelObservers.forEach(NotificationCenter.default.removeObserver)
+        previewPanelObservers = []
     }
 
     private func addMetadataRow(_ label: String, value: String) {

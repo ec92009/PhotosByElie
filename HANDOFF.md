@@ -1,5 +1,17 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Backstage restores its layout and Quick Look never overlaps
+
+- Backstage `0.4.55` build `66` restores the main and Quick Look window
+  frames, last selected workspace, navigation sidebar visibility and width,
+  Fixtures and People & Access dividers, and independent Culling and Review
+  inspector visibility and width between launches.
+- Quick Look metadata is now an attached, non-overlapping panel. It stacks
+  below landscape previews and beside portrait previews, and follows the
+  preview as its window moves, resizes, or navigates to another item.
+- Verification was state-safe: 51 Swift tests and 27 native UI parity tests
+  pass. No Culling or Review action was submitted.
+
 ## 2026-08-01 — Approved proposal cards remain in Review
 
 - Backstage `0.4.54` build `65` keeps a just-approved card in the current

@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.54 (build 65)**.
+The current native workflow is included in version **0.4.55 (build 66)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -30,6 +30,13 @@ directory.
 
 Those checks are read-only. They do not change a photo, upload a file, publish
 anything, or contact a client.
+
+Backstage restores its working layout between launches: the main and Quick
+Look window frames, the last selected workspace, the navigation sidebar's
+visibility and width, the Fixtures and People & Access dividers, and the
+independent Culling and Review inspector visibility and width. Quick Look does
+not reopen stale media automatically; its saved frame is used the next time a
+preview is opened.
 
 ## First-time enrollment
 
@@ -233,9 +240,10 @@ audited Owner action path.
    0 through 5 apply the corresponding value.
 8. Use **Color** and **Apply color** for the five labels or to clear a label.
 9. Choose **Quick Look** or press Space to inspect photos, videos, and
-   panoramas without leaving Backstage. Its compact bottom metadata HUD keeps
-   portrait previews at their full width while showing the current filename,
-   title, keywords, capture time, rating, color, and state. While
+   panoramas without leaving Backstage. The read-only metadata panel never
+   covers the item: it stacks below landscape previews and beside portrait
+   previews while showing the current filename, title, keywords, capture time,
+   rating, color, and state. While
    Quick Look is open, Left/Right moves to the previous/next visible item, P and
    H apply fixture Include/Exclude, 1–5 set rating, and 6–9 set
    red/yellow/green/blue. When P or H removes the current item from

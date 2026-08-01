@@ -87,12 +87,21 @@ class NativeCullingParityTest(unittest.TestCase):
         persistence = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageWindowState.swift"
         ).read_text(encoding="utf-8")
+        adapter = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
         self.assertIn('WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow")', app)
+        self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit")', app)
-        self.assertIn("previewPanelVisibilityPreferenceKey", model)
+        self.assertIn("navigationSidebarVisible", app)
+        self.assertIn("selectedSectionPreferenceKey", model)
+        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("quickLookFrameAutosaveName", adapter)
+        self.assertIn("setFrameUsingName", adapter)
         self.assertIn("setFrameAutosaveName", persistence)
         self.assertIn("splitView.autosaveName", persistence)
 
@@ -470,10 +479,12 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(metadata_label, adapter)
         self.assertIn("currentPreviewItemIndex", adapter)
         self.assertIn("NSVisualEffectView", adapter)
-        self.assertIn("widthAnchor.constraint(lessThanOrEqualToConstant: 560)", adapter)
-        self.assertIn("metadataPanel.centerXAnchor.constraint", adapter)
-        self.assertIn("metadataPanel.bottomAnchor.constraint", adapter)
-        self.assertNotIn("metadataPanel.widthAnchor.constraint(equalToConstant: 300)", adapter)
+        self.assertIn("NSPanel(", adapter)
+        self.assertIn("panel.addChildWindow(metadataWindow, ordered: .above)", adapter)
+        self.assertIn("case .beside:", adapter)
+        self.assertIn("case .below:", adapter)
+        self.assertIn("image.size.height > image.size.width", adapter)
+        self.assertNotIn("contentView.addSubview(metadataPanel)", adapter)
 
         culling = app.split("private enum CullingQuickLookPresenter", 1)[1].split(
             "private enum ReviewQuickLookPresenter", 1
@@ -769,8 +780,9 @@ class NativeCullingParityTest(unittest.TestCase):
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("@Published var isPreviewPanelVisible: Bool", model)
-        self.assertIn("previewPanelVisibilityPreferenceKey", model)
+        self.assertIn("var isPreviewPanelVisible: Bool", model)
+        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn('"Collapse preview panel"', root)

@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.51 (build 62)**.
+The current native workflow is included in version **0.4.52 (build 63)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -235,8 +235,9 @@ audited Owner action path.
 9. Choose **Quick Look** or press Space to inspect photos, videos, and
    panoramas without leaving Backstage. Its metadata panel shows the current
    filename, title, keywords, capture time, rating, color, and state. While
-   Quick Look is open, P and H apply fixture Include/Exclude, 1–5 set rating,
-   and 6–9 set red/yellow/green/blue. When P or H removes the current item from
+   Quick Look is open, Left/Right moves to the previous/next visible item, P and
+   H apply fixture Include/Exclude, 1–5 set rating, and 6–9 set
+   red/yellow/green/blue. When P or H removes the current item from
    the active filters, Quick Look stays open on the next surviving item (or
    the preceding survivor at the end). Temporary preview files stay in the
    app cache and are replaced on the next preview. Long preparation and
@@ -277,8 +278,9 @@ green check, while Hide turns the thumbnail black and white.
    Approved thumbnails carry a 30-point green check. Fixture-hidden
    thumbnails are black and white. An AI-review mark carries a 30-point
    question mark.
-   Quick Look shows the same basic metadata context; A approves, H hides, and
-   U returns the current item to Culling.
+   Quick Look shows the same basic metadata context; Left/Right moves to the
+   previous/next visible item, A approves, H hides, and U returns the current
+   item to Culling.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
    through the same bounded shoot window. It does not run AI.
 4. AI reasons and the optional note are only a local form until **Update AI

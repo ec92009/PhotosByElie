@@ -1010,6 +1010,20 @@ private enum CullingQuickLookPresenter {
                           !model.isApplyingCullingDecision
                     else { return false }
                     switch shortcut {
+                    case .previous:
+                        navigate(
+                            by: -1,
+                            from: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case .next:
+                        navigate(
+                            by: 1,
+                            from: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
                     case .pick:
                         applyPlacement(
                             .pick,
@@ -1045,6 +1059,18 @@ private enum CullingQuickLookPresenter {
                 }
             )
         }
+    }
+
+    private static func navigate(
+        by delta: Int,
+        from assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        model.clickCullingAsset(assetID, modifiers: [])
+        model.moveCullingSelection(by: delta, extending: false)
+        guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
+        present(model: model, coordinator: coordinator)
     }
 
     private static func applyPlacement(
@@ -1099,7 +1125,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: H exclude • P include • 1–5 rating • 6–9 color"
+            shortcutHint: "Shortcuts: ←/→ navigate • H exclude • P include • 1–5 rating • 6–9 color"
         )
     }
 }
@@ -1127,6 +1153,20 @@ private enum ReviewQuickLookPresenter {
                         return false
                     }
                     switch shortcut {
+                    case .previous:
+                        navigate(
+                            by: -1,
+                            from: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case .next:
+                        navigate(
+                            by: 1,
+                            from: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
                     case .approve:
                         applyReviewAction(
                             .approve,
@@ -1152,6 +1192,18 @@ private enum ReviewQuickLookPresenter {
                 }
             )
         }
+    }
+
+    private static func navigate(
+        by delta: Int,
+        from assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        model.clickReviewItem(assetID, modifiers: [])
+        model.moveReviewSelection(by: delta, extending: false)
+        guard model.focusedReviewItem?.id != assetID, coordinator.isVisible else { return }
+        present(model: model, coordinator: coordinator)
     }
 
     private static func applyReviewAction(
@@ -1197,7 +1249,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: state,
-            shortcutHint: "Shortcuts: A approve • H hide • U unpick"
+            shortcutHint: "Shortcuts: ←/→ navigate • A approve • H hide • U unpick"
         )
     }
 }

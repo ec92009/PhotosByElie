@@ -443,6 +443,8 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         for shortcut in (
+            "case 123: return .previous",
+            "case 124: return .next",
             'case "p": .pick',
             'case "h": .hide',
             'case "a": .approve',
@@ -471,6 +473,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.applyPickShortcut(action)", culling)
         self.assertIn("await model.applyRatingShortcut(value)", culling)
         self.assertIn("await model.applyColorShortcut(value)", culling)
+        self.assertIn("model.moveCullingSelection(by: delta, extending: false)", culling)
         self.assertIn("if wasVisible && !remainsVisible", culling)
         self.assertIn("present(model: model, coordinator: coordinator)", culling)
 
@@ -480,6 +483,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("applyReviewAction(", review_presenter)
         self.assertIn(".approve", review_presenter)
         self.assertIn(".hide", review_presenter)
+        self.assertIn("model.moveReviewSelection(by: delta, extending: false)", review_presenter)
         self.assertIn("coordinator.dismiss()", review_presenter)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):

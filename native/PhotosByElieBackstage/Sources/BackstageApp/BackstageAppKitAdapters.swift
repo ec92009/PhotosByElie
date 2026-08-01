@@ -15,6 +15,8 @@ struct BackstageQuickLookMetadata: Equatable {
 }
 
 enum BackstageQuickLookShortcut: Equatable {
+    case previous
+    case next
     case pick
     case hide
     case approve
@@ -128,7 +130,12 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     }
 
     private func shortcut(for event: NSEvent) -> BackstageQuickLookShortcut? {
-        switch event.charactersIgnoringModifiers?.lowercased() {
+        switch event.keyCode {
+        case 123: return .previous
+        case 124: return .next
+        default: break
+        }
+        return switch event.charactersIgnoringModifiers?.lowercased() {
         case "p": .pick
         case "h": .hide
         case "a": .approve

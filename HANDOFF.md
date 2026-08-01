@@ -1,5 +1,15 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Quick Look navigates with Left and Right
+
+- Backstage `0.4.52` build `63` lets **Left** and **Right** move to the
+  previous or next visible Culling or Review item while Quick Look remains
+  open. Arrow navigation only changes focus; it does not apply a decision.
+- The existing contextual metadata and Culling/Review shortcuts follow the
+  newly focused item. Verification was state-safe: 51 Swift tests and 27
+  native UI parity tests pass. No real Culling or Review decision was
+  submitted.
+
 ## 2026-08-01 — Quick Look carries culling and Review context
 
 - Backstage `0.4.51` build `62` adds contextual Quick Look shortcuts. Culling

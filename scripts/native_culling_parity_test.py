@@ -302,7 +302,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn('Button("Refresh queue")', upload)
         self.assertNotIn("Publish next eligible 50", upload)
 
-    def test_review_keeps_only_filtered_approved_and_hidden_propagation_anchors(self):
+    def test_review_keeps_completed_filtered_approved_and_hidden_propagation_anchors(self):
         app = (
             NATIVE
             / "Sources"
@@ -325,9 +325,13 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("retainReviewResultInCurrentWindow(result, action: action)", apply_action)
         self.assertIn('item.editorialState = "approved"', apply_action)
         self.assertIn('item.placementState = "hidden"', apply_action)
-        self.assertIn(".filter(reviewItemMatchesActiveFilters)", apply_action)
+        self.assertIn("let retainsCompletedAction = changesByID[item.id] != nil", apply_action)
+        self.assertIn("retainingConsumedProposal: retainsCompletedAction", apply_action)
         self.assertIn("reviewStateFilters.contains(state)", apply_action)
-        self.assertIn("!reviewProposalAvailableOnly || item.proposalReady", apply_action)
+        self.assertIn(
+            "retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady",
+            apply_action,
+        )
         self.assertIn("reviewMediaFilters.contains(mediaFilter)", apply_action)
         self.assertNotIn("fixtureService.reviewWindow(", apply_action)
         review_action_and_retention = apply_action.split(

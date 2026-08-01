@@ -707,8 +707,9 @@ Clock state: running
 | 2026-08-01 | 09:56 CEST | 09:58 CEST | 0:02 | Requested contextual Quick Look shortcuts, filtered-item continuation, and a basic Review-style metadata panel; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:16 CEST | 10:17 CEST | 0:01 | Added Left/Right navigation to the Quick Look request; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:19 CEST | 10:20 CEST | 0:01 | Reported that the full-height Quick Look metadata sidebar consumed too much portrait preview width; background implementation, tests, build, and installation excluded. |
+| 2026-08-01 | 10:26 CEST | 10:27 CEST | 0:01 | Reported that Approve removed a card despite Approved and Proposal Available being selected; background diagnosis, implementation, tests, build, and installation excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:17
+Active collaboration time used: 34:18
 Remaining budget: not set

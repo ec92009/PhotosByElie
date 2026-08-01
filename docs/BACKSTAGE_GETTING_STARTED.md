@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.53 (build 64)**.
+The current native workflow is included in version **0.4.54 (build 65)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -270,7 +270,10 @@ fixture. **Backfill** starts with unresolved picked photos; **Full queue** also
 loads approved and fixture-hidden photos. During either Review session, a card
 you approve or hide remains in the current window until you leave or explicitly
 reload Review. That retained card is the propagation anchor: approval adds the
-green check, while Hide turns the thumbnail black and white.
+green check, while Hide turns the thumbnail black and white. When **Proposal
+Available** is active, completing the proposal does not remove that card if its
+new **Approved** or **Hidden** state is also selected; the next explicit reload
+reapplies the proposal filter.
 
 1. Edit the title or keywords directly. Changes autosave after a short pause.
    The down arrow beside either field propagates only that field through the

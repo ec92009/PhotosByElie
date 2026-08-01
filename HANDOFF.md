@@ -1,5 +1,16 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Approved proposal cards remain in Review
+
+- Backstage `0.4.54` build `65` keeps a just-approved card in the current
+  Review window when **Approved** and **Proposal Available** are both selected.
+  Approve still consumes the proposal, but the completed card remains as the
+  session-local propagation anchor until an explicit reload or scope change.
+- The exception is narrow: the resulting state must be selected, and media and
+  search filters still apply. Hide receives the same behavior when **Hidden**
+  is selected. Verification was state-safe: 51 Swift tests and 27 native UI
+  parity tests pass. No real Review action was submitted.
+
 ## 2026-08-01 — Quick Look preserves portrait preview width
 
 - Backstage `0.4.53` build `64` replaces the fixed 300-point, full-height

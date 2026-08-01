@@ -2033,14 +2033,25 @@ final class BackstageViewModel: ObservableObject {
             }
             return item
         }
-        .filter(reviewItemMatchesActiveFilters)
+        .filter { item in
+            let retainsCompletedAction = changesByID[item.id] != nil
+                && (action == .approve || action == .hide)
+            return reviewItemMatchesActiveFilters(
+                item,
+                retainingConsumedProposal: retainsCompletedAction
+            )
+        }
         fixtureReviewWindow = window
     }
 
     /// Local action retention must honor the same filters as a fresh Owner
-    /// Review query. This preserves an acted-on propagation anchor only when
-    /// its resulting state is still explicitly visible.
-    private func reviewItemMatchesActiveFilters(_ item: FixtureReviewItem) -> Bool {
+    /// Review query. A completed Approve or Hide consumes its proposal, but
+    /// remains a session-local propagation anchor when its resulting state is
+    /// explicitly visible; the next reload reapplies Proposal Available.
+    private func reviewItemMatchesActiveFilters(
+        _ item: FixtureReviewItem,
+        retainingConsumedProposal: Bool = false
+    ) -> Bool {
         let state: FixtureReviewStateFilter
         if item.placementState == "hidden" {
             state = .hidden
@@ -2050,7 +2061,9 @@ final class BackstageViewModel: ObservableObject {
             state = .picked
         }
         guard reviewStateFilters.contains(state) else { return false }
-        guard !reviewProposalAvailableOnly || item.proposalReady else { return false }
+        guard retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady else {
+            return false
+        }
 
         let mediaFilter: CullingMediaFilter = item.mediaType == "video" ? .videos : .photos
         guard reviewMediaFilters.contains(mediaFilter) else { return false }

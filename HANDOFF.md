@@ -1,5 +1,20 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Quick Look carries culling and Review context
+
+- Backstage `0.4.51` build `62` adds contextual Quick Look shortcuts. Culling
+  accepts **P**, **H**, and **1–9** for fixture include/exclude, rating, and
+  color. Review accepts **A** and **H** for Approve/Hide and retains **U** for
+  fixture-local Unpick.
+- When a Culling **P** or **H** action no longer matches the active filters,
+  Quick Look remains open on the next surviving item, with the same preceding
+  fallback used by the grid at the end of the window. Review Approve/Hide uses
+  the same in-place continuation when its filters remove the acted item.
+- The Quick Look window now has a read-only metadata panel for filename,
+  title, keywords, capture time, rating, color, state, and its contextual key
+  legend. Verification was state-safe: 51 Swift tests and 27 native UI parity
+  tests pass. No real Culling or Review decision was submitted.
+
 ## 2026-07-31 — Filtered Culling actions advance to the next card
 
 - Backstage `0.4.50` build `61` keeps sequential fixture-local Culling fast:

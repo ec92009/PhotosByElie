@@ -2,6 +2,27 @@ import AppKit
 import OwnerCore
 import Quartz
 
+struct BackstageQuickLookMetadata: Equatable {
+    var assetID: String
+    var filename: String
+    var title: String
+    var keywords: [String]
+    var capturedAt: String
+    var rating: Int
+    var color: String
+    var state: String
+    var shortcutHint: String
+}
+
+enum BackstageQuickLookShortcut: Equatable {
+    case pick
+    case hide
+    case approve
+    case unpick
+    case rating(Int)
+    case color(SidecarColor)
+}
+
 @MainActor
 final class BackstageSelectionController: ObservableObject {
     @Published private(set) var selection = OwnerSelectionModel<String>()
@@ -34,25 +55,41 @@ final class BackstageSelectionController: ObservableObject {
 @MainActor
 final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcurrency QLPreviewPanelDataSource {
     private var items: [NSURL] = []
+    private var metadata: [BackstageQuickLookMetadata] = []
     private var shortcutMonitor: Any?
+    private var previewIndexObservation: NSKeyValueObservation?
+    private let metadataPanel = NSVisualEffectView()
+    private let metadataStack = NSStackView()
+    private var isMetadataPanelConfigured = false
+
+    var isVisible: Bool {
+        QLPreviewPanel.shared()?.isVisible == true
+    }
 
     func present(
         urls: [URL],
         startingAt index: Int = 0,
-        onUnpick: (() -> Void)? = nil
+        metadata: [BackstageQuickLookMetadata] = [],
+        onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil
     ) {
         items = urls.map { $0 as NSURL }
+        self.metadata = metadata
         guard let panel = QLPreviewPanel.shared() else { return }
         panel.dataSource = self
         panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
         panel.reloadData()
         panel.makeKeyAndOrderFront(nil)
-        installShortcutMonitor(onUnpick: onUnpick)
+        installMetadataPanel(in: panel)
+        observePreviewIndex(in: panel)
+        installShortcutMonitor(onShortcut: onShortcut)
     }
 
     func dismiss() {
         QLPreviewPanel.shared()?.orderOut(nil)
         items = []
+        metadata = []
+        previewIndexObservation = nil
+        metadataPanel.removeFromSuperview()
         removeShortcutMonitor()
     }
 
@@ -64,20 +101,141 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         items[index]
     }
 
-    private func installShortcutMonitor(onUnpick: (() -> Void)?) {
+    func updateMetadata(_ item: BackstageQuickLookMetadata) {
+        guard let index = metadata.firstIndex(where: { $0.assetID == item.assetID }) else {
+            return
+        }
+        metadata[index] = item
+        updateMetadataPanel()
+    }
+
+    private func installShortcutMonitor(
+        onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)?
+    ) {
         removeShortcutMonitor()
-        guard let onUnpick else { return }
+        guard let onShortcut else { return }
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard QLPreviewPanel.shared()?.isVisible == true,
                   event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
-                  event.charactersIgnoringModifiers?.lowercased() == "u"
+                  let shortcut = self.shortcut(for: event),
+                  let item = self.currentMetadata,
+                  onShortcut(shortcut, item.assetID)
             else {
                 return event
             }
-            onUnpick()
-            QLPreviewPanel.shared()?.orderOut(nil)
             return nil
         }
+    }
+
+    private func shortcut(for event: NSEvent) -> BackstageQuickLookShortcut? {
+        switch event.charactersIgnoringModifiers?.lowercased() {
+        case "p": .pick
+        case "h": .hide
+        case "a": .approve
+        case "u": .unpick
+        case "1": .rating(1)
+        case "2": .rating(2)
+        case "3": .rating(3)
+        case "4": .rating(4)
+        case "5": .rating(5)
+        case "6": .color(.red)
+        case "7": .color(.yellow)
+        case "8": .color(.green)
+        case "9": .color(.blue)
+        default: nil
+        }
+    }
+
+    private var currentMetadata: BackstageQuickLookMetadata? {
+        guard let panel = QLPreviewPanel.shared() else { return nil }
+        let index = panel.currentPreviewItemIndex
+        guard metadata.indices.contains(index) else { return nil }
+        return metadata[index]
+    }
+
+    private func observePreviewIndex(in panel: QLPreviewPanel) {
+        previewIndexObservation = panel.observe(\.currentPreviewItemIndex, options: [.initial, .new]) {
+            [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.updateMetadataPanel()
+            }
+        }
+    }
+
+    private func installMetadataPanel(in panel: QLPreviewPanel) {
+        guard let contentView = panel.contentView else { return }
+        metadataPanel.removeFromSuperview()
+        metadataPanel.material = .hudWindow
+        metadataPanel.blendingMode = .withinWindow
+        metadataPanel.state = .active
+        metadataPanel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(metadataPanel)
+
+        if !isMetadataPanelConfigured {
+            metadataStack.orientation = .vertical
+            metadataStack.alignment = .leading
+            metadataStack.spacing = 8
+            metadataStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+            metadataStack.translatesAutoresizingMaskIntoConstraints = false
+            metadataPanel.addSubview(metadataStack)
+            NSLayoutConstraint.activate([
+                metadataPanel.widthAnchor.constraint(equalToConstant: 300),
+                metadataStack.topAnchor.constraint(equalTo: metadataPanel.topAnchor),
+                metadataStack.leadingAnchor.constraint(equalTo: metadataPanel.leadingAnchor),
+                metadataStack.trailingAnchor.constraint(equalTo: metadataPanel.trailingAnchor),
+                metadataStack.bottomAnchor.constraint(lessThanOrEqualTo: metadataPanel.bottomAnchor),
+            ])
+            isMetadataPanelConfigured = true
+        }
+
+        NSLayoutConstraint.activate([
+            metadataPanel.topAnchor.constraint(equalTo: contentView.topAnchor),
+            metadataPanel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            metadataPanel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+        updateMetadataPanel()
+    }
+
+    private func updateMetadataPanel() {
+        metadataStack.arrangedSubviews.forEach {
+            metadataStack.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        guard let item = currentMetadata else {
+            metadataPanel.isHidden = true
+            return
+        }
+        metadataPanel.isHidden = false
+        let heading = NSTextField(labelWithString: "Preview metadata")
+        heading.font = .systemFont(ofSize: 15, weight: .semibold)
+        metadataStack.addArrangedSubview(heading)
+        addMetadataRow("File", value: item.filename)
+        addMetadataRow("Title", value: item.title.isEmpty ? "Untitled" : item.title)
+        addMetadataRow(
+            "Keywords",
+            value: item.keywords.isEmpty ? "None" : item.keywords.joined(separator: ", ")
+        )
+        addMetadataRow("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
+        addMetadataRow("Rating", value: item.rating == 0 ? "Unrated" : String(repeating: "★", count: item.rating))
+        addMetadataRow("Color", value: item.color.isEmpty ? "None" : item.color.capitalized)
+        addMetadataRow("State", value: item.state.capitalized)
+        let shortcuts = NSTextField(
+            wrappingLabelWithString: item.shortcutHint
+        )
+        shortcuts.font = .systemFont(ofSize: 11)
+        shortcuts.textColor = .secondaryLabelColor
+        metadataStack.addArrangedSubview(shortcuts)
+    }
+
+    private func addMetadataRow(_ label: String, value: String) {
+        let heading = NSTextField(labelWithString: label.uppercased())
+        heading.font = .systemFont(ofSize: 10, weight: .semibold)
+        heading.textColor = .secondaryLabelColor
+        let detail = NSTextField(wrappingLabelWithString: value)
+        detail.font = .systemFont(ofSize: 12)
+        detail.maximumNumberOfLines = 4
+        metadataStack.addArrangedSubview(heading)
+        metadataStack.addArrangedSubview(detail)
     }
 
     private func removeShortcutMonitor() {

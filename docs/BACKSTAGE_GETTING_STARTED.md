@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.41 (build 52)**.
+The current native workflow is included in version **0.4.51 (build 62)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -226,13 +226,19 @@ audited Owner action path.
 5. **Review picked** narrows the current scope to picked items. **Select
    burst** selects contiguous frames captured within two seconds of the
    focused item.
-6. Use **Pick state** and **Apply pick state** for Pick, Reject, or Clear.
-   P, X, and U are the matching keyboard shortcuts.
+6. Use **Fixture decision** for Include, Exclude, or Undecided. P, H, and U are
+   the matching fixture-local shortcuts; X remains the separate global
+   tombstone action.
 7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
    0 through 5 apply the corresponding value.
 8. Use **Color** and **Apply color** for the five labels or to clear a label.
 9. Choose **Quick Look** or press Space to inspect photos, videos, and
-   panoramas without leaving Backstage. Temporary preview files stay in the
+   panoramas without leaving Backstage. Its metadata panel shows the current
+   filename, title, keywords, capture time, rating, color, and state. While
+   Quick Look is open, P and H apply fixture Include/Exclude, 1–5 set rating,
+   and 6–9 set red/yellow/green/blue. When P or H removes the current item from
+   the active filters, Quick Look stays open on the next surviving item (or
+   the preceding survivor at the end). Temporary preview files stay in the
    app cache and are replaced on the next preview. Long preparation and
    decision operations show progress and can stop after the current audited
    batch. The Culling inspector shows the Owner title and keywords, capture
@@ -271,6 +277,8 @@ green check, while Hide turns the thumbnail black and white.
    Approved thumbnails carry a 30-point green check. Fixture-hidden
    thumbnails are black and white. An AI-review mark carries a 30-point
    question mark.
+   Quick Look shows the same basic metadata context; A approves, H hides, and
+   U returns the current item to Culling.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
    through the same bounded shoot window. It does not run AI.
 4. AI reasons and the optional note are only a local form until **Update AI

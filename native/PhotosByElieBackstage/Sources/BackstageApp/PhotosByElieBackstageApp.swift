@@ -987,6 +987,221 @@ private struct ActivityView: View {
     }
 }
 
+@MainActor
+private enum CullingQuickLookPresenter {
+    static func present(
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        let ids = model.selectedCullingAssetIDs
+        guard !ids.isEmpty else { return }
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            let urls = await model.prepareQuickLookURLs()
+            let prepared = zip(ids, urls).compactMap { assetID, url in
+                metadata(for: assetID, model: model).map { (url, $0) }
+            }
+            guard !prepared.isEmpty else { return }
+            coordinator.present(
+                urls: prepared.map(\.0),
+                metadata: prepared.map(\.1),
+                onShortcut: { [weak model, weak coordinator] shortcut, assetID in
+                    guard let model, let coordinator,
+                          !model.isApplyingCullingDecision
+                    else { return false }
+                    switch shortcut {
+                    case .pick:
+                        applyPlacement(
+                            .pick,
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case .hide:
+                        applyPlacement(
+                            .reject,
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case let .rating(value):
+                        model.clickCullingAsset(assetID, modifiers: [])
+                        Task { [weak model, weak coordinator] in
+                            guard let model, let coordinator else { return }
+                            await model.applyRatingShortcut(value)
+                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                        }
+                    case let .color(value):
+                        model.clickCullingAsset(assetID, modifiers: [])
+                        Task { [weak model, weak coordinator] in
+                            guard let model, let coordinator else { return }
+                            await model.applyColorShortcut(value)
+                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                        }
+                    case .approve, .unpick:
+                        return false
+                    }
+                    return true
+                }
+            )
+        }
+    }
+
+    private static func applyPlacement(
+        _ action: SidecarPickAction,
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        let wasVisible = model.visibleCullingAssets.contains { $0.id == assetID }
+        model.clickCullingAsset(assetID, modifiers: [])
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            await model.applyPickShortcut(action)
+            guard coordinator.isVisible else { return }
+            let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
+            if wasVisible && !remainsVisible {
+                if model.focusedCullingAssetID == nil {
+                    coordinator.dismiss()
+                } else {
+                    present(model: model, coordinator: coordinator)
+                }
+            } else {
+                refreshMetadata(assetID, model: model, coordinator: coordinator)
+            }
+        }
+    }
+
+    private static func refreshMetadata(
+        _ assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        if let item = metadata(for: assetID, model: model) {
+            coordinator.updateMetadata(item)
+        }
+    }
+
+    private static func metadata(
+        for assetID: String,
+        model: BackstageViewModel
+    ) -> BackstageQuickLookMetadata? {
+        guard let asset = model.cullingAssets.first(where: { $0.id == assetID }) else {
+            return nil
+        }
+        let decision = model.cullingStates[assetID]
+        return BackstageQuickLookMetadata(
+            assetID: assetID,
+            filename: asset.filename,
+            title: asset.title,
+            keywords: asset.keywords,
+            capturedAt: asset.capturedAt,
+            rating: decision?.rating ?? asset.rating,
+            color: decision?.color ?? asset.color,
+            state: decision?.pickState ?? asset.placementState.rawValue,
+            shortcutHint: "Shortcuts: H exclude • P include • 1–5 rating • 6–9 color"
+        )
+    }
+}
+
+@MainActor
+private enum ReviewQuickLookPresenter {
+    static func present(
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        let ids = model.selectedReviewAssetIDs
+        guard !ids.isEmpty else { return }
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            let urls = await model.prepareReviewQuickLookURLs()
+            let prepared = zip(ids, urls).compactMap { assetID, url in
+                metadata(for: assetID, model: model).map { (url, $0) }
+            }
+            guard !prepared.isEmpty else { return }
+            coordinator.present(
+                urls: prepared.map(\.0),
+                metadata: prepared.map(\.1),
+                onShortcut: { [weak model, weak coordinator] shortcut, assetID in
+                    guard let model, let coordinator, !model.isRunningReview else {
+                        return false
+                    }
+                    switch shortcut {
+                    case .approve:
+                        applyReviewAction(
+                            .approve,
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case .hide:
+                        applyReviewAction(
+                            .hide,
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator
+                        )
+                    case .unpick:
+                        model.clickReviewItem(assetID, modifiers: [])
+                        coordinator.dismiss()
+                        Task { [weak model] in await model?.unpickReviewSelection() }
+                    case .pick, .rating, .color:
+                        return false
+                    }
+                    return true
+                }
+            )
+        }
+    }
+
+    private static func applyReviewAction(
+        _ action: FixtureReviewAction,
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator
+    ) {
+        let wasVisible = model.reviewItems.contains { $0.id == assetID }
+        model.clickReviewItem(assetID, modifiers: [])
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            await model.applyReviewAction(action)
+            guard coordinator.isVisible else { return }
+            let remainsVisible = model.reviewItems.contains { $0.id == assetID }
+            if wasVisible && !remainsVisible {
+                if model.focusedReviewItem == nil {
+                    coordinator.dismiss()
+                } else {
+                    present(model: model, coordinator: coordinator)
+                }
+            } else if let item = metadata(for: assetID, model: model) {
+                coordinator.updateMetadata(item)
+            }
+        }
+    }
+
+    private static func metadata(
+        for assetID: String,
+        model: BackstageViewModel
+    ) -> BackstageQuickLookMetadata? {
+        guard let item = model.reviewItems.first(where: { $0.id == assetID }) else {
+            return nil
+        }
+        let draft = model.reviewProposalDrafts[assetID]
+        let state = item.placementState == "hidden" ? item.placementState : item.editorialState
+        return BackstageQuickLookMetadata(
+            assetID: assetID,
+            filename: item.filename,
+            title: draft?.title ?? item.title,
+            keywords: draft?.keywords ?? item.keywords,
+            capturedAt: item.capturedAt,
+            rating: item.rating,
+            color: item.color,
+            state: state,
+            shortcutHint: "Shortcuts: A approve • H hide • U unpick"
+        )
+    }
+}
+
 struct MediaLibraryView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
@@ -1213,10 +1428,7 @@ struct MediaLibraryView: View {
                         return .handled
                     }
                     .onKeyPress(.space) {
-                        Task {
-                            let urls = await model.prepareQuickLookURLs()
-                            if !urls.isEmpty { quickLook.present(urls: urls) }
-                        }
+                        CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
                         return .handled
                     }
                     .onKeyPress("p") {
@@ -1340,10 +1552,7 @@ struct MediaLibraryView: View {
                         }
                         .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
                         Button("Quick Look") {
-                            Task {
-                                let urls = await model.prepareQuickLookURLs()
-                                if !urls.isEmpty { quickLook.present(urls: urls) }
-                            }
+                            CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
                         }
                         .keyboardShortcut(.space, modifiers: [])
                         .disabled(model.cullingSelection.selectedIDs.isEmpty)
@@ -2504,17 +2713,7 @@ struct FixtureReviewView: View {
                         return .handled
                     }
                     .onKeyPress(.space) {
-                        Task {
-                            let urls = await model.prepareReviewQuickLookURLs()
-                            if !urls.isEmpty {
-                                quickLook.present(
-                                    urls: urls,
-                                    onUnpick: {
-                                        Task { await model.unpickReviewSelection() }
-                                    }
-                                )
-                            }
-                        }
+                        ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
                         return .handled
                     }
                     .overlay {
@@ -2557,7 +2756,12 @@ struct FixtureReviewView: View {
             .frame(minWidth: 480)
 
             if model.isPreviewPanelVisible {
-                ReviewInspector(model: model, quickLook: quickLook)
+                ReviewInspector(
+                    model: model,
+                    openQuickLook: {
+                        ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
+                    }
+                )
                     .frame(minWidth: 300, idealWidth: 380, maxWidth: 480)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -2818,7 +3022,7 @@ private struct ReviewAssetRow: View {
 
 private struct ReviewInspector: View {
     @ObservedObject var model: BackstageViewModel
-    @ObservedObject var quickLook: BackstageQuickLookCoordinator
+    let openQuickLook: () -> Void
 
     var body: some View {
         ScrollView {
@@ -2976,17 +3180,7 @@ private struct ReviewInspector: View {
                         .foregroundStyle(.secondary)
                     Divider()
                     Button("Quick Look") {
-                        Task {
-                            let urls = await model.prepareReviewQuickLookURLs()
-                            if !urls.isEmpty {
-                                quickLook.present(
-                                    urls: urls,
-                                    onUnpick: {
-                                        Task { await model.unpickReviewSelection() }
-                                    }
-                                )
-                            }
-                        }
+                        openQuickLook()
                     }
                     .keyboardShortcut(.space, modifiers: [])
                 } else {

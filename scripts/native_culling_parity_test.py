@@ -412,10 +412,10 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('Button("Unpick")', app)
         self.assertIn('.keyboardShortcut("u", modifiers: [])', app)
         self.assertGreaterEqual(
-            app.count("await model.unpickReviewSelection()"),
+            app.count("unpickReviewSelection()"),
             3,
         )
-        self.assertIn("onUnpick:", review)
+        self.assertIn("ReviewQuickLookPresenter.present", review)
         self.assertIn("fixtureService.applyState(", unpick)
         self.assertIn(".undecided", unpick)
         self.assertIn('reason: "Native Review unpick"', unpick)
@@ -425,8 +425,62 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("if !entry.fixtureChanges.isEmpty", undo)
         self.assertIn("by: \\.beforePlacementState", undo)
         self.assertIn("fixtureService.applyState(", undo)
-        self.assertIn("event.charactersIgnoringModifiers?.lowercased() == \"u\"", adapter)
+        self.assertIn('case "u": .unpick', adapter)
         self.assertIn("QLPreviewPanel.shared()?.isVisible == true", adapter)
+
+    def test_quick_look_supports_culling_review_shortcuts_metadata_and_advancement(self):
+        app = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        adapter = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+
+        for shortcut in (
+            'case "p": .pick',
+            'case "h": .hide',
+            'case "a": .approve',
+            'case "1": .rating(1)',
+            'case "5": .rating(5)',
+            'case "6": .color(.red)',
+            'case "9": .color(.blue)',
+        ):
+            self.assertIn(shortcut, adapter)
+        for metadata_label in (
+            'addMetadataRow("File"',
+            'addMetadataRow("Title"',
+            '"Keywords"',
+            'addMetadataRow("Captured"',
+            'addMetadataRow("Rating"',
+            'addMetadataRow("Color"',
+            'addMetadataRow("State"',
+        ):
+            self.assertIn(metadata_label, adapter)
+        self.assertIn("currentPreviewItemIndex", adapter)
+        self.assertIn("NSVisualEffectView", adapter)
+
+        culling = app.split("private enum CullingQuickLookPresenter", 1)[1].split(
+            "private enum ReviewQuickLookPresenter", 1
+        )[0]
+        self.assertIn("await model.applyPickShortcut(action)", culling)
+        self.assertIn("await model.applyRatingShortcut(value)", culling)
+        self.assertIn("await model.applyColorShortcut(value)", culling)
+        self.assertIn("if wasVisible && !remainsVisible", culling)
+        self.assertIn("present(model: model, coordinator: coordinator)", culling)
+
+        review_presenter = app.split("private enum ReviewQuickLookPresenter", 1)[1].split(
+            "struct MediaLibraryView", 1
+        )[0]
+        self.assertIn("applyReviewAction(", review_presenter)
+        self.assertIn(".approve", review_presenter)
+        self.assertIn(".hide", review_presenter)
+        self.assertIn("coordinator.dismiss()", review_presenter)
 
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = (

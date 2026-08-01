@@ -706,8 +706,9 @@ Clock state: running
 | 2026-07-31 | 09:09 CEST | 09:10 CEST | 0:01 | Required sequential P/H Culling to select the next surviving filtered card, with a previous-card fallback at the end; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 09:56 CEST | 09:58 CEST | 0:02 | Requested contextual Quick Look shortcuts, filtered-item continuation, and a basic Review-style metadata panel; background implementation, tests, build, and installation excluded. |
 | 2026-08-01 | 10:16 CEST | 10:17 CEST | 0:01 | Added Left/Right navigation to the Quick Look request; background implementation, tests, build, and installation excluded. |
+| 2026-08-01 | 10:19 CEST | 10:20 CEST | 0:01 | Reported that the full-height Quick Look metadata sidebar consumed too much portrait preview width; background implementation, tests, build, and installation excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:16
+Active collaboration time used: 34:17
 Remaining budget: not set

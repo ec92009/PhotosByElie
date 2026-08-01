@@ -175,30 +175,40 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         metadataPanel.material = .hudWindow
         metadataPanel.blendingMode = .withinWindow
         metadataPanel.state = .active
+        metadataPanel.wantsLayer = true
+        metadataPanel.layer?.cornerRadius = 12
+        metadataPanel.layer?.masksToBounds = true
         metadataPanel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(metadataPanel)
 
         if !isMetadataPanelConfigured {
             metadataStack.orientation = .vertical
-            metadataStack.alignment = .leading
-            metadataStack.spacing = 8
-            metadataStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+            metadataStack.alignment = .width
+            metadataStack.spacing = 5
+            metadataStack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
             metadataStack.translatesAutoresizingMaskIntoConstraints = false
             metadataPanel.addSubview(metadataStack)
             NSLayoutConstraint.activate([
-                metadataPanel.widthAnchor.constraint(equalToConstant: 300),
+                metadataPanel.widthAnchor.constraint(lessThanOrEqualToConstant: 560),
                 metadataStack.topAnchor.constraint(equalTo: metadataPanel.topAnchor),
                 metadataStack.leadingAnchor.constraint(equalTo: metadataPanel.leadingAnchor),
                 metadataStack.trailingAnchor.constraint(equalTo: metadataPanel.trailingAnchor),
-                metadataStack.bottomAnchor.constraint(lessThanOrEqualTo: metadataPanel.bottomAnchor),
+                metadataStack.bottomAnchor.constraint(equalTo: metadataPanel.bottomAnchor),
             ])
             isMetadataPanelConfigured = true
         }
 
+        let adaptiveWidth = metadataPanel.widthAnchor.constraint(
+            equalTo: contentView.widthAnchor,
+            constant: -24
+        )
+        adaptiveWidth.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            metadataPanel.topAnchor.constraint(equalTo: contentView.topAnchor),
-            metadataPanel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            metadataPanel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            adaptiveWidth,
+            metadataPanel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            metadataPanel.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 12),
+            metadataPanel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -12),
+            metadataPanel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
         ])
         updateMetadataPanel()
     }
@@ -235,14 +245,22 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     }
 
     private func addMetadataRow(_ label: String, value: String) {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.alignment = .firstBaseline
+        row.spacing = 8
         let heading = NSTextField(labelWithString: label.uppercased())
         heading.font = .systemFont(ofSize: 10, weight: .semibold)
         heading.textColor = .secondaryLabelColor
+        heading.alignment = .right
+        heading.widthAnchor.constraint(equalToConstant: 64).isActive = true
         let detail = NSTextField(wrappingLabelWithString: value)
         detail.font = .systemFont(ofSize: 12)
-        detail.maximumNumberOfLines = 4
-        metadataStack.addArrangedSubview(heading)
-        metadataStack.addArrangedSubview(detail)
+        detail.maximumNumberOfLines = 2
+        detail.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        row.addArrangedSubview(heading)
+        row.addArrangedSubview(detail)
+        metadataStack.addArrangedSubview(row)
     }
 
     private func removeShortcutMonitor() {

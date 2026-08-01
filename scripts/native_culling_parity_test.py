@@ -466,6 +466,10 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(metadata_label, adapter)
         self.assertIn("currentPreviewItemIndex", adapter)
         self.assertIn("NSVisualEffectView", adapter)
+        self.assertIn("widthAnchor.constraint(lessThanOrEqualToConstant: 560)", adapter)
+        self.assertIn("metadataPanel.centerXAnchor.constraint", adapter)
+        self.assertIn("metadataPanel.bottomAnchor.constraint", adapter)
+        self.assertNotIn("metadataPanel.widthAnchor.constraint(equalToConstant: 300)", adapter)
 
         culling = app.split("private enum CullingQuickLookPresenter", 1)[1].split(
             "private enum ReviewQuickLookPresenter", 1

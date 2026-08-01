@@ -1,5 +1,15 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Quick Look preserves portrait preview width
+
+- Backstage `0.4.53` build `64` replaces the fixed 300-point, full-height
+  Quick Look metadata sidebar with a compact bottom HUD. The HUD keeps 12-point
+  window margins, caps its width at 560 points, and uses compact label/value
+  rows so portrait photos retain their full preview width.
+- All metadata fields and contextual shortcuts remain available. Verification
+  was state-safe: 51 Swift tests and 27 native UI parity tests pass. No real
+  Culling or Review decision was submitted.
+
 ## 2026-08-01 — Quick Look navigates with Left and Right
 
 - Backstage `0.4.52` build `63` lets **Left** and **Right** move to the

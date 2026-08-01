@@ -2190,6 +2190,7 @@ def apply_fixture_review_action(
 
         decisions: dict[str, sqlite3.Row] = {}
         assets: dict[str, sqlite3.Row] = {}
+        active_proposals: dict[str, sqlite3.Row | None] = {}
         for asset_id in clean_ids:
             asset = conn.execute(
                 """
@@ -2208,6 +2209,16 @@ def apply_fixture_review_action(
             ).fetchone():
                 raise ValueError(f"editorial state is missing: {asset_id}")
             decisions[asset_id] = _ensure_global_decision(conn, asset_id, timestamp)
+            active_proposals[asset_id] = conn.execute(
+                """
+                SELECT proposal_id, proposed_title, proposed_keywords_json
+                FROM asset_ai_proposals
+                WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                ORDER BY attempt DESC, created_at DESC, proposal_id DESC
+                LIMIT 1
+                """,
+                (asset_id,),
+            ).fetchone()
 
         def effective_metadata(
             decision: sqlite3.Row,
@@ -2221,19 +2232,21 @@ def apply_fixture_review_action(
                 or _read_json(asset["photos_keywords_json"], []),
             )
 
+        explicit_title = str(title).strip() if title is not None else None
+        explicit_keywords = _unique(keywords or []) if keywords is not None else None
         source_decision = decisions[clean_anchor]
         source_effective_title, source_effective_keywords = effective_metadata(
             source_decision,
             assets[clean_anchor],
         )
         source_title = (
-            str(title).strip()
-            if title is not None
+            explicit_title
+            if explicit_title is not None
             else source_effective_title
         )
         source_keywords = (
-            _unique(keywords or [])
-            if keywords is not None
+            explicit_keywords
+            if explicit_keywords is not None
             else source_effective_keywords
         )
         reasons = _unique(ai_reasons or [])
@@ -2281,6 +2294,22 @@ def apply_fixture_review_action(
                 after_state = "approved"
                 after_reasons = []
                 after_note = ""
+                active_proposal = active_proposals[asset_id]
+                use_explicit_anchor_metadata = asset_id == clean_anchor
+                approved_title = (
+                    explicit_title
+                    if use_explicit_anchor_metadata and explicit_title is not None
+                    else str(active_proposal["proposed_title"] or "").strip()
+                    if active_proposal
+                    else str(decision["title"] or "")
+                )
+                approved_keywords = (
+                    explicit_keywords
+                    if use_explicit_anchor_metadata and explicit_keywords is not None
+                    else _read_json(active_proposal["proposed_keywords_json"], [])
+                    if active_proposal
+                    else _read_json(decision["keywords_json"], [])
+                )
                 conn.execute(
                     """
                     UPDATE sidecar_decisions
@@ -2290,8 +2319,8 @@ def apply_fixture_review_action(
                     WHERE asset_id = ?
                     """,
                     (
-                        str(title).strip() if title is not None else str(decision["title"] or ""),
-                        _json(_unique(keywords or [])) if keywords is not None else str(decision["keywords_json"] or "[]"),
+                        approved_title,
+                        _json(approved_keywords),
                         timestamp,
                         asset_id,
                     ),
@@ -2392,7 +2421,26 @@ def apply_fixture_review_action(
                 else before_editorial["approved_at"]
             )
             requested_at = timestamp if after_state == "requesting-ai" else None
-            if clean_action in {"approve", "hide"}:
+            if clean_action == "approve" and active_proposals[asset_id]:
+                accepted_proposal_id = str(active_proposals[asset_id]["proposal_id"])
+                conn.execute(
+                    """
+                    UPDATE asset_ai_proposals
+                    SET status = 'accepted', decided_at = ?
+                    WHERE proposal_id = ?
+                    """,
+                    (timestamp, accepted_proposal_id),
+                )
+                conn.execute(
+                    """
+                    UPDATE asset_ai_proposals
+                    SET status = 'superseded', decided_at = ?
+                    WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                      AND proposal_id != ?
+                    """,
+                    (timestamp, asset_id, accepted_proposal_id),
+                )
+            elif clean_action == "hide":
                 conn.execute(
                     """
                     UPDATE asset_ai_proposals

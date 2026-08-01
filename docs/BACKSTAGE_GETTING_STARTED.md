@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.56 (build 67)**.
+The current native workflow is included in version **0.4.57 (build 68)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -293,6 +293,9 @@ reapplies the proposal filter.
    The down arrow beside either field propagates only that field through the
    intended two-hour shoot window.
 2. **Approve**, **Hide**, and **Propagate** remain independent actions.
+   Approve commits the title and keywords visible for the focused photo in the
+   same audited operation. Other selected or propagated photos use their own
+   proposals; one photo's metadata is never copied implicitly to another.
    Approved thumbnails carry a 30-point green check. Fixture-hidden
    thumbnails are black and white. An AI-review mark carries a 30-point
    question mark.

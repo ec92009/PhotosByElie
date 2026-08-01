@@ -355,15 +355,17 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
         self.assertNotIn("hasExplicitPendingMetadataEdit", apply_action)
-        self.assertIn("if action == .approve", apply_action)
-        request_ai_guard = apply_action.split(
+        preflight = apply_action.split(
             "let ids = selectedReviewAssetIDs",
             1,
         )[0]
-        self.assertNotIn(
-            "await saveReviewMetadataIfNeeded()",
-            request_ai_guard.split("if action == .approve", 1)[0],
+        self.assertNotIn("await saveReviewMetadataIfNeeded()", preflight)
+        self.assertIn(
+            "let approvalDraft = action == .approve ? reviewProposalDrafts[anchor] : nil",
+            apply_action,
         )
+        self.assertIn("title: approvalTitle", apply_action)
+        self.assertIn("keywords: approvalKeywords", apply_action)
 
     def test_review_unpick_clears_fixture_pick_from_list_inspector_and_quick_look(self):
         app = backstage_ui_source()

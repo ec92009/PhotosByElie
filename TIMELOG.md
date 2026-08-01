@@ -714,8 +714,10 @@ Clock state: running
 | 2026-08-01 | 14:10 CEST | 14:11 CEST | 0:01 | Reported that Canvas still remained at No Selection and that Xcode crashed during host diagnosis; background implementation and verification excluded. |
 | 2026-08-01 | 15:23 CEST | 15:25 CEST | 0:02 | Reported repeated Canvas Keychain prompts and directed an inert preview-host repair; background implementation, builds, and live Xcode verification excluded. |
 | 2026-08-01 | 15:35 CEST | 15:36 CEST | 0:01 | Requested an action-specific explanation for every Backstage button after a half-second hover; background inventory, implementation, tests, build, and Canvas verification excluded. |
+| 2026-08-01 | 21:51 CEST | 21:52 CEST | 0:01 | Reported that approving a correct Review title/keyword proposal left the item approved but discarded its proposed metadata; background SQLite audit and source diagnosis excluded. |
+| 2026-08-01 | 22:00 CEST | 22:01 CEST | 0:01 | Authorized restoring 03318 and making Review approval atomic; background implementation, database repair, tests, signing, installation, and UI verification excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:25
+Active collaboration time used: 34:27
 Remaining budget: not set

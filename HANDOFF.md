@@ -1,5 +1,24 @@
 # PhotosByElie Handoff
 
+## 2026-08-01 — Review approval atomically accepts title and keywords
+
+- Backstage `0.4.57` build `68` sends the focused Review title/keyword draft in
+  the same audited Approve request. Owner also promotes each other selected or
+  propagated photo's own active proposal when a client omits metadata, so a
+  proposal cannot be consumed while stale Current values are approved.
+- Approved proposals are recorded as `accepted`; Hide, replacement, and new AI
+  requests continue to record unused proposals as `superseded`. The existing
+  Review undo snapshot restores proposal, editorial, delivery, placement, and
+  metadata state exactly.
+- The owner-authorized repair for `20221210 125901 03318.jpg` used the supported
+  audited Undo and corrected Approve path. Its proposal title and all 20
+  keywords are restored, the item remains Approved and Needs Upload, and the
+  faulty approval operation is retained as `undone`.
+- Verification passed 51 Swift tests and 72 focused Owner/native parity tests,
+  plus the native Debug build and signed release build. The Apple
+  Development-signed `0.4.57` build `68` is installed on Max; its live Review
+  screen shows 03318 Approved with the restored title and all 20 keywords.
+
 ## 2026-08-01 — Every Backstage button explains its action on hover
 
 - Backstage `0.4.56` build `67` gives all 123 SwiftUI button declarations an

@@ -1896,19 +1896,27 @@ final class BackstageViewModel: ObservableObject {
         if action != .editMetadata {
             reviewMetadataAutosaveTask?.cancel()
             reviewMetadataAutosaveTask = nil
-            // A loaded proposal is an editable preview, not an implicit
-            // metadata edit. Request AI and Hide must never promote it into
-            // canonical Current metadata; only Approve or the explicit
-            // metadata/propagation paths may do that.
-            if action == .approve {
-                await saveReviewMetadataIfNeeded()
-            }
         }
         let ids = selectedReviewAssetIDs
         guard !ids.isEmpty, let anchor = reviewSelection.focusedID ?? ids.first else {
             reviewStatus = "Select one or more Review items."
             return
         }
+        // Approve submits the visible anchor draft in the same audited request.
+        // The Owner pipeline resolves every other selected or propagated item
+        // from its own active proposal, so one photo's metadata cannot leak
+        // across a multi-selection or two-hour propagation scope.
+        let approvalDraft = action == .approve ? reviewProposalDrafts[anchor] : nil
+        let approvalTitle = action == .approve
+            ? (approvalDraft?.title ?? reviewTitle)
+            : action == .editMetadata || action == .propagateTitle
+                ? reviewTitle
+                : nil
+        let approvalKeywords = action == .approve
+            ? (approvalDraft?.keywords ?? parsedReviewKeywords())
+            : action == .editMetadata || action == .propagateKeywords
+                ? parsedReviewKeywords()
+                : nil
         let oldItems = reviewItems
         let oldIndex = oldItems.firstIndex(where: { $0.id == anchor }) ?? 0
         let historyEntry = ReviewHistoryEntry(
@@ -1940,10 +1948,8 @@ final class BackstageViewModel: ObservableObject {
                 assetIDs: ids,
                 anchorAssetID: anchor,
                 propagate: propagate,
-                title: action == .editMetadata || action == .propagateTitle ? reviewTitle : nil,
-                keywords: action == .editMetadata || action == .propagateKeywords
-                    ? parsedReviewKeywords()
-                    : nil,
+                title: approvalTitle,
+                keywords: approvalKeywords,
                 aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
                 aiNote: action == .requestAI ? reviewAINote : ""
             )

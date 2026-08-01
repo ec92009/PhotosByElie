@@ -355,6 +355,133 @@ class FixturePipelineTest(unittest.TestCase):
                 "needs-upload",
             )
 
+    def test_review_approval_atomically_promotes_active_proposals(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "picked",
+        )
+        with connect(self.root) as conn:
+            conn.executemany(
+                """
+                INSERT INTO asset_ai_proposals (
+                  proposal_id, asset_id, run_id, attempt, status,
+                  proposed_title, proposed_keywords_json, created_at
+                ) VALUES (?, ?, 'run-approval', 1, ?, ?, ?, '2026-08-01T10:00:00Z')
+                """,
+                [
+                    (
+                        "proposal-1",
+                        "asset-1",
+                        "ready",
+                        "First proposal",
+                        '["First", "Proposal"]',
+                    ),
+                    (
+                        "proposal-2",
+                        "asset-2",
+                        "loaded",
+                        "Second proposal",
+                        '["Second", "Proposal"]',
+                    ),
+                ],
+            )
+            conn.execute(
+                """
+                UPDATE asset_editorial_state
+                SET editorial_state = 'proposed'
+                WHERE asset_id IN ('asset-1', 'asset-2')
+                """
+            )
+            conn.commit()
+
+        approved = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2"],
+            "approve",
+            anchor_asset_id="asset-1",
+        )
+        self.assertEqual(
+            [
+                (
+                    item["assetId"],
+                    item["after"]["title"],
+                    item["after"]["keywords"],
+                )
+                for item in approved["items"]
+            ],
+            [
+                ("asset-1", "First proposal", ["First", "Proposal"]),
+                ("asset-2", "Second proposal", ["Second", "Proposal"]),
+            ],
+        )
+        with connect(self.root) as conn:
+            decisions = conn.execute(
+                """
+                SELECT asset_id, title, keywords_json
+                FROM sidecar_decisions
+                WHERE asset_id IN ('asset-1', 'asset-2')
+                ORDER BY asset_id
+                """
+            ).fetchall()
+            proposal_statuses = conn.execute(
+                """
+                SELECT proposal_id, status
+                FROM asset_ai_proposals
+                ORDER BY proposal_id
+                """
+            ).fetchall()
+        self.assertEqual(
+            [
+                (row["asset_id"], row["title"], json.loads(row["keywords_json"]))
+                for row in decisions
+            ],
+            [
+                ("asset-1", "First proposal", ["First", "Proposal"]),
+                ("asset-2", "Second proposal", ["Second", "Proposal"]),
+            ],
+        )
+        self.assertEqual(
+            [(row["proposal_id"], row["status"]) for row in proposal_statuses],
+            [("proposal-1", "accepted"), ("proposal-2", "accepted")],
+        )
+
+        undone = undo_fixture_review_action(self.root, approved["operationId"])
+        self.assertEqual(undone["count"], 2)
+        with connect(self.root) as conn:
+            restored_statuses = conn.execute(
+                """
+                SELECT proposal_id, status
+                FROM asset_ai_proposals
+                ORDER BY proposal_id
+                """
+            ).fetchall()
+        self.assertEqual(
+            [(row["proposal_id"], row["status"]) for row in restored_statuses],
+            [("proposal-1", "ready"), ("proposal-2", "loaded")],
+        )
+
+        explicitly_edited = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            anchor_asset_id="asset-1",
+            title="Owner-edited proposal",
+            keywords=["Owner", "Edited"],
+        )
+        self.assertEqual(
+            explicitly_edited["items"][0]["after"]["title"],
+            "Owner-edited proposal",
+        )
+        self.assertEqual(
+            explicitly_edited["items"][0]["after"]["keywords"],
+            ["Owner", "Edited"],
+        )
+
     def test_review_modes_separate_unresolved_backfill_from_full_queue(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(
@@ -1683,7 +1810,7 @@ class FixturePipelineTest(unittest.TestCase):
                 conn.execute(
                     "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'"
                 ).fetchone()[0],
-                "superseded",
+                "accepted",
             )
             self.assertEqual(
                 conn.execute(

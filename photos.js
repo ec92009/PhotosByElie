@@ -2947,8 +2947,30 @@ window.photosByElieVideoDurationLabel = (photo) => (
     const stage = modal.querySelector("[data-finder-preview-stage]");
     const infoPanel = modal.querySelector("[data-finder-preview-info]");
     const panoToggle = modal.querySelector("[data-finder-preview-pano-toggle]");
-    const contextUrl = window.photosByElieMediaUrl(targetPhoto, "detail") || window.photosByElieMediaUrl(targetPhoto, "gallery") || "";
-    const contextPoster = isVideo ? (window.photosByElieVideoPosterUrl?.(targetPhoto) || window.photosByElieMediaUrl(targetPhoto, "gallery") || "") : "";
+    const contextDetailUrl = window.photosByElieMediaUrl(targetPhoto, "detail") || "";
+    const contextGalleryUrl = window.photosByElieMediaUrl(targetPhoto, "gallery") || "";
+    const contextUrl = contextDetailUrl || contextGalleryUrl;
+    const contextPoster = isVideo ? (window.photosByElieVideoPosterUrl?.(targetPhoto) || contextGalleryUrl || "") : "";
+    const contextCandidates = [
+      {
+        url: contextDetailUrl,
+        mediaType: isVideo ? "video" : "photo",
+        sourceType: isVideo ? "public short MP4" : "public _1800",
+        poster: isVideo ? contextPoster : "",
+      },
+      {
+        url: contextGalleryUrl,
+        mediaType: "photo",
+        sourceType: isVideo ? "public poster" : "public _900",
+      },
+      {
+        url: isVideo ? contextPoster : "",
+        mediaType: "photo",
+        sourceType: "public poster",
+      },
+    ].filter((candidate, index, candidates) => (
+      candidate.url && candidates.findIndex((item) => item.url === candidate.url) === index
+    ));
     document.body.classList.add("detail-fullscreen-active");
     document.body.append(modal);
     const panoPan = isPanoramaPreview
@@ -3104,33 +3126,60 @@ window.photosByElieVideoDurationLabel = (photo) => (
       stage.classList.toggle("is-context-preview", Boolean(context));
       video.src = src;
     };
-    const showContextPreview = (note = "") => {
-      if (!contextUrl) {
-        showEmptyPreview("No lower-resolution context preview is available");
+    const showContextPreview = (note = "", candidateIndex = 0) => {
+      const candidate = contextCandidates[candidateIndex];
+      if (!candidate) {
+        showOwnerFailure({ reason: "No safe public context preview could be loaded." });
         return;
       }
-      const label = note || (owner ? "Source preview unavailable; this is a lower-resolution context preview." : "");
-      if (isVideo) appendVideo(contextUrl, contextPoster, { sourceType: "public short MP4", attemptedSourceLabel: contextUrl, context: true });
-      else appendPhoto(contextUrl, { sourceType: "public _1800", attemptedSourceLabel: contextUrl, context: true });
-      if (label && stage) {
+      const label = note || "Original source preview unavailable; showing a public context preview.";
+      const handleContextLoadError = () => showContextPreview(label, candidateIndex + 1);
+      renderInfo({ eyebrow: "Public preview", state: "warning", note: label });
+      if (candidate.mediaType === "video") {
+        appendVideo(candidate.url, candidate.poster || "", {
+          sourceType: candidate.sourceType,
+          context: true,
+          onError: handleContextLoadError,
+        });
+      } else {
+        appendPhoto(candidate.url, {
+          sourceType: candidate.sourceType,
+          context: true,
+          onError: handleContextLoadError,
+        });
+      }
+      if (stage) {
         const badge = document.createElement("p");
         badge.className = "finder-preview-context-label";
         badge.textContent = label;
         stage.append(badge);
       }
     };
-    const showOwnerFailure = ({ reason, attemptedSourceType = "", attemptedSourceLabel = sourceLabel } = {}) => {
-      showEmptyPreview("Original source preview unavailable");
+    const safeOwnerFailureReason = (reason = "") => {
+      const normalized = String(reason || "").toLowerCase();
+      if (normalized.includes("no safe public") || normalized.includes("context preview")) {
+        return "No safe public/context preview is available.";
+      }
+      if (normalized.includes("localhost")) return "The original source is only available from localhost.";
+      if (normalized.includes("load") || normalized.includes("decode") || normalized.includes("play")) {
+        return "The original source preview could not be loaded.";
+      }
+      if (normalized.includes("endpoint") || normalized.includes("contact") || normalized.includes("fetch")) {
+        return "The local original preview service was unavailable.";
+      }
+      return "The original source preview is unavailable.";
+    };
+    const showOwnerFailure = ({ reason } = {}) => {
+      showEmptyPreview("No safe public context preview is available");
       stage?.classList?.remove("is-context-preview");
       renderInfo({
-        eyebrow: "Owner original preview failed",
+        eyebrow: "Owner preview unavailable",
         state: "error",
         rows: [
-          ["Attempted source", attemptedSourceType || "original/source"],
-          ["Path label", attemptedSourceLabel || "unknown"],
-          ["Reason", reason || "The browser could not load this preview."],
+          ["Attempted source", "Owner original/source"],
+          ["Reason", safeOwnerFailureReason(reason)],
         ],
-        note: "Owner mode does not substitute public or lower-resolution previews.",
+        note: "No safe public or context derivative could be loaded. Local source details remain private.",
       });
     };
 
@@ -3166,45 +3215,38 @@ window.photosByElieVideoDurationLabel = (photo) => (
       const infoUrl = window.photosByElieSourcePreviewUrl(targetPhoto, "info");
       renderInfo();
       if (!infoUrl) {
-        showOwnerFailure({ reason: "Owner source previews are only available from localhost." });
+        showContextPreview("Original source preview unavailable; showing a public context preview.");
         return true;
       }
       try {
         const response = await fetch(infoUrl, { cache: "no-store", credentials: "same-origin" });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.ok) {
-          showOwnerFailure({
-            attemptedSourceType: payload?.sourceType || "original/source",
-            attemptedSourceLabel: payload?.sourceLabel || sourceLabel,
-            reason: payload?.error || `Source preview endpoint returned ${response.status}.`,
-          });
+          showContextPreview("Original source preview unavailable; showing a public context preview.");
           return true;
         }
         const previewUrl = payload.previewUrl || window.photosByElieSourcePreviewUrl(targetPhoto);
-        const isPublicFallback = payload.isOriginal === false;
-        renderInfo({ eyebrow: isPublicFallback ? "Public preview" : "Owner original preview" });
-        const handleSourceLoadError = ({ sourceType, attemptedSourceLabel, reason }) => {
-          showOwnerFailure({
-            attemptedSourceType: sourceType,
-            attemptedSourceLabel,
-            reason,
-          });
-        };
+        if (!previewUrl) {
+          showContextPreview("Original source preview unavailable; showing a public context preview.");
+          return true;
+        }
+        renderInfo({ eyebrow: "Owner original preview" });
+        const handleSourceLoadError = () => (
+          showContextPreview("Original source preview could not be loaded; showing a public context preview.")
+        );
         if (payload.mediaType === "video") {
           appendVideo(previewUrl, "", {
             sourceType: payload.sourceType,
-            attemptedSourceLabel: payload.sourceLabel,
             onError: handleSourceLoadError,
           });
         } else {
           appendPhoto(previewUrl, {
             sourceType: payload.sourceType,
-            attemptedSourceLabel: payload.sourceLabel,
             onError: handleSourceLoadError,
           });
         }
-      } catch (error) {
-        showOwnerFailure({ reason: error?.message || "Could not contact the owner source preview endpoint." });
+      } catch {
+        showContextPreview("Original source preview unavailable; showing a public context preview.");
       }
       return true;
     }

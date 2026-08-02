@@ -52,6 +52,31 @@ test("photo detail and preview omit debugging-only metadata", () => {
   assert.doesNotMatch(photos, /\["Source", isVideo/);
 });
 
+test("Owner Finder preview falls back to truthful public context media", () => {
+  const photos = read("photos.js");
+
+  assert.match(photos, /const contextCandidates = \[/);
+  assert.match(photos, /contextDetailUrl/);
+  assert.match(photos, /contextGalleryUrl/);
+  assert.match(photos, /const showContextPreview = \(note = "", candidateIndex = 0\)/);
+  assert.match(photos, /Original source preview unavailable; showing a public context preview\./);
+  assert.match(photos, /Original source preview could not be loaded; showing a public context preview\./);
+  assert.match(photos, /renderInfo\(\{ eyebrow: "Public preview", state: "warning", note: label \}\)/);
+  assert.match(photos, /if \(!infoUrl\) \{\s*showContextPreview\(/);
+  assert.match(photos, /if \(!response\.ok \|\| !payload\?\.ok\) \{\s*showContextPreview\(/);
+  assert.match(photos, /if \(!previewUrl\) \{\s*showContextPreview\(/);
+  assert.match(photos, /renderInfo\(\{ eyebrow: "Owner original preview" \}\)/);
+  assert.match(photos, /const safeOwnerFailureReason =/);
+  assert.match(photos, /No safe public context preview is available/);
+  assert.match(photos, /Local source details remain private\./);
+  assert.doesNotMatch(photos, /Path label/);
+  assert.doesNotMatch(photos, /Owner mode does not substitute public or lower-resolution previews/);
+  assert.match(
+    photos,
+    /photosByElieSourcePreviewUrl = \(photo, mode = "media"\) => \{\s*if \(!isLocalhostMediaPage \|\| !photo\?\.id\) return "";/,
+  );
+});
+
 test("panorama full-height mode stays escapable and yields autoplay to the visitor", () => {
   const detail = read("photo-detail.js");
   const photos = read("photos.js");

@@ -6,10 +6,14 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v147.6`
+- Current visible version: `v155.0`
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v155.0` restores truthful Owner Quick Look previews in cloud sessions by
+  falling back to safe public detail/gallery derivatives when a localhost-only
+  original source is unavailable, without exposing local paths or private
+  masters.
 - `v147.6` completes the native-only operator cutover. Backstage is the sole
   visible operator app, Photos Bridge remains a signed headless helper, and
   the obsolete Sidecar listener plus visible Owner/Sidecar launchers are

@@ -126,37 +126,58 @@ export const createAnalyticsStore = ({
   prefix = "pbe",
   ttlSeconds = DEFAULT_TTL_SECONDS,
   now = () => new Date(),
+  persistEvents = true,
 } = {}) => {
   if (!namespace) return null;
   const key = (...parts) => [prefix, "analytics", ...parts].join(":");
   const options = putOptions(ttlSeconds);
 
-  const putEvent = async (event) => {
-    const receivedAt = now().toISOString();
-    const sanitized = sanitizeAnalyticsEvent(event, { receivedAt });
-    if (!sanitized) return null;
-    const day = analyticsDate(sanitized.receivedAt);
-    const id = `${sanitized.receivedAt.replace(/[-:.TZ]/g, "")}-${randomId().replace(/-/g, "").slice(0, 12)}`;
-    await jsonPut(namespace, key("events", day, id), sanitized, options);
-
-    const countKey = key("counts", day, sanitized.event);
-    const existing = await jsonGet(namespace, countKey) || { day, event: sanitized.event, count: 0 };
-    await jsonPut(namespace, countKey, {
-      ...existing,
-      count: Number(existing.count || 0) + 1,
-      lastAt: sanitized.receivedAt,
-    }, options);
-    return sanitized;
-  };
-
   const putEvents = async (events = []) => {
     const batch = (Array.isArray(events) ? events : [events]).slice(0, MAX_BATCH_EVENTS);
-    const results = [];
-    for (const event of batch) {
-      const saved = await putEvent(event);
-      if (saved) results.push(saved);
+    const results = batch
+      .map((event) => sanitizeAnalyticsEvent(event, { receivedAt: now().toISOString() }))
+      .filter(Boolean);
+
+    if (persistEvents) {
+      await Promise.all(results.map(async (sanitized) => {
+        const day = analyticsDate(sanitized.receivedAt);
+        const id = `${sanitized.receivedAt.replace(/[-:.TZ]/g, "")}-${randomId().replace(/-/g, "").slice(0, 12)}`;
+        await jsonPut(namespace, key("events", day, id), sanitized, options);
+      }));
+    }
+
+    const groupedCounts = new Map();
+    for (const sanitized of results) {
+      const day = analyticsDate(sanitized.receivedAt);
+      const groupKey = `${day}:${sanitized.event}`;
+      const existing = groupedCounts.get(groupKey) || {
+        day,
+        event: sanitized.event,
+        count: 0,
+        lastAt: sanitized.receivedAt,
+      };
+      existing.count += 1;
+      if (sanitized.receivedAt > existing.lastAt) existing.lastAt = sanitized.receivedAt;
+      groupedCounts.set(groupKey, existing);
+    }
+
+    for (const group of groupedCounts.values()) {
+      const countKey = key("counts", group.day, group.event);
+      const existing = await jsonGet(namespace, countKey);
+      await jsonPut(namespace, countKey, {
+        ...existing,
+        day: existing?.day || group.day,
+        event: existing?.event || group.event,
+        count: Number(existing?.count || 0) + group.count,
+        lastAt: existing?.lastAt > group.lastAt ? existing.lastAt : group.lastAt,
+      }, options);
     }
     return results;
+  };
+
+  const putEvent = async (event) => {
+    const [saved] = await putEvents([event]);
+    return saved || null;
   };
 
   return {

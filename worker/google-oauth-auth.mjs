@@ -228,14 +228,16 @@ export const createGoogleOAuthAuth = ({
     return state;
   };
 
-  const loginUrlFor = async (request, { returnTo = "", intent = "", prompt = "select_account" } = {}) => {
+  const loginUrlFor = async (request, { returnTo = "", intent = "" } = {}) => {
     const url = new URL(authUrl);
     url.searchParams.set("client_id", cleanClientId);
     url.searchParams.set("redirect_uri", redirectUriFor(request));
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", DEFAULT_SCOPE);
     url.searchParams.set("state", await buildState(request, { returnTo, intent }));
-    url.searchParams.set("prompt", prompt || "select_account");
+    // This Worker is the account-picker entrypoint. Do not let a caller
+    // downgrade the flow to prompt=none or silently reuse another account.
+    url.searchParams.set("prompt", "select_account");
     url.searchParams.set("access_type", "online");
     return url.href;
   };

@@ -891,7 +891,6 @@ const publicOrder = (order) => ({
     subtotal: item.subtotal,
   })),
   delivery: order.delivery ? {
-    zipKey: order.delivery.zipKey,
     downloadUrl: order.delivery.downloadUrl,
     readyAt: order.delivery.readyAt,
     files: (order.delivery.files || []).map((file) => ({
@@ -926,10 +925,6 @@ const publicOrder = (order) => ({
       message: order.deliveryEmail.error.message || "Delivery email could not be sent.",
     } : null,
   } : null,
-  stripe: {
-    checkoutSessionId: order.checkoutSessionId,
-    paymentIntentId: order.paymentIntentId || null,
-  },
   createdAt: order.createdAt,
   paidAt: order.paidAt || null,
   updatedAt: order.updatedAt,
@@ -1940,11 +1935,9 @@ export const createPhotosByElieWorker = ({
       response = json({
         download: {
           orderId: downloadRecord.orderId,
-          zipKey: downloadRecord.zipKey,
-          localZipPath: String(downloadRecord.zipKey || "").startsWith("/") ? downloadRecord.zipKey : null,
           expiresAt: downloadRecord.expiresAt || null,
           expiresInSeconds: 900,
-          mockSignedUrl: `mock-r2://${downloadRecord.zipKey}?token=${encodeURIComponent(token)}`,
+          mockSignedUrl: `mock-r2://download/${encodeURIComponent(token)}`,
         },
       });
     }

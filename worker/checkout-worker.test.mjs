@@ -1164,6 +1164,36 @@ test("sidecar cloud decisions are stored behind Owner or connector auth", async 
   assert.equal(connectorApply.state.rating, 4);
   assert.equal(connectorApply.state.pickState, "picked");
 
+  const reworkResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply", {
+    assetId: "apple-cloud-id-1",
+    action: "metadata-rework",
+    reworkCategory: "generic",
+    reworkComment: "Use a more specific public-place title.",
+  }, connectorHeaders));
+  assert.equal(reworkResponse.status, 200);
+  const rework = await reworkResponse.json();
+  assert.equal(rework.state.pickState, "picked");
+  assert.equal(rework.state.metadataState, "rework");
+  assert.equal(rework.state.reworkCategory, "generic");
+  assert.equal(rework.state.metadataAiAttemptCount, 0);
+
+  const auditedRetryResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/upsert", {
+    decisions: [{
+      assetId: "apple-cloud-id-1",
+      state: {
+        ...rework.state,
+        metadataAiAttemptCount: 2,
+        metadataAiLastError: "missing preview manifest",
+        metadataAiLastAttemptAt: "2026-07-11T10:01:00.000Z",
+      },
+    }],
+  }, connectorHeaders));
+  assert.equal(auditedRetryResponse.status, 200);
+  const auditedRetry = await auditedRetryResponse.json();
+  assert.equal(auditedRetry.items[0].metadataAiAttemptCount, 2);
+  assert.equal(auditedRetry.items[0].metadataAiLastError, "missing preview manifest");
+  assert.equal(auditedRetry.items[0].metadataState, "rework");
+
   const queryResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/query", {
     assetIds: ["apple-cloud-id-1", "missing-asset"],
   }, connectorHeaders));
@@ -2668,9 +2698,9 @@ test("real Stripe client verifies raw webhook signatures", async () => {
   assert.equal(event.data.object.metadata.order_id, "PBE-TEST");
 });
 
-test("mock Stripe payment moves the order to ready and records a delivery ZIP", async () => {
+test("public paid order exposes capability links but not internal delivery or Stripe state", async () => {
   const catalog = loadCatalog();
-  const { worker } = testWorker();
+  const { worker, store } = testWorker();
   const photoId = firstDeliverablePhotoId(catalog);
 
   const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
@@ -2686,8 +2716,17 @@ test("mock Stripe payment moves the order to ready and records a delivery ZIP", 
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
   assert.equal(paid.order.amountPaid, checkout.order.amountExpected);
-  assert.match(paid.order.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
+  assert.equal(paid.order.delivery.zipKey, undefined);
+  assert.equal(paid.order.stripe, undefined);
   assert.match(paid.order.delivery.downloadUrl, /^\/download\/dl_/);
+
+  const internalOrder = await store.getOrder(paid.order.id);
+  assert.match(internalOrder.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
+  assert.ok(internalOrder.checkoutSessionId);
+  assert.ok(internalOrder.paymentIntentId);
+
+  const wrongEmailResponse = await worker.fetch(new Request(`https://worker.test/orders/${paid.order.id}?email=attacker@example.com`));
+  assert.equal(wrongEmailResponse.status, 403);
 
   const lookupResponse = await worker.fetch(new Request(`https://worker.test/orders/${paid.order.id}?email=buyer@example.com`));
   assert.equal(lookupResponse.status, 200);
@@ -2858,7 +2897,9 @@ test("download endpoint returns a mock signed R2 URL and allows repeat downloads
   const downloadResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
   assert.equal(downloadResponse.status, 200);
   const download = await downloadResponse.json();
-  assert.match(download.download.mockSignedUrl, /^mock-r2:\/\/deliveries\//);
+  assert.match(download.download.mockSignedUrl, /^mock-r2:\/\/download\/dl_/);
+  assert.equal(download.download.zipKey, undefined);
+  assert.equal(download.download.localZipPath, undefined);
 
   const repeatedResponse = await worker.fetch(new Request(`https://worker.test/download/${token}`));
   assert.equal(repeatedResponse.status, 200);
@@ -2936,8 +2977,10 @@ test("local ZIP delivery creates a real ZIP from a developed source", async () =
     width: 24,
     height: 24,
   }, 90).data);
+  const store = createMemoryStore();
   const worker = createPhotosByElieWorker({
     catalog,
+    store,
     stripe,
     now,
     randomUUID,
@@ -2960,8 +3003,10 @@ test("local ZIP delivery creates a real ZIP from a developed source", async () =
   assert.equal(payResponse.status, 200);
   const paid = await payResponse.json();
   assert.equal(paid.order.status, "ready");
-  assert.match(paid.order.delivery.zipKey, /photosbyelie-order-PBE-20260507-.*\.zip$/);
-  const zip = fs.readFileSync(paid.order.delivery.zipKey);
+  assert.equal(paid.order.delivery.zipKey, undefined);
+  const internalOrder = await store.getOrder(paid.order.id);
+  assert.match(internalOrder.delivery.zipKey, /photosbyelie-order-PBE-20260507-.*\.zip$/);
+  const zip = fs.readFileSync(internalOrder.delivery.zipKey);
   assert.equal(zip.subarray(0, 4).toString("hex"), "504b0304");
   assert.ok(zip.includes(Buffer.from("ORDER.txt")));
   assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-1mp.jpg`)));

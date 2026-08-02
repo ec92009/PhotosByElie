@@ -325,6 +325,7 @@ export default {
         namespace: env.ANALYTICS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
         ttlSeconds: daysToSeconds(env.ANALYTICS_RETENTION_DAYS, 400),
+        persistEvents: enabledFlag(env.ANALYTICS_PERSIST_EVENTS, false),
       })
       : null;
     const privateBucket = requiredBinding(env, "PRIVATE_MEDIA");

@@ -102,6 +102,7 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `DOWNLOAD_TOKEN_MAX_DOWNLOADS`: optional successful-download limit per token; default is 100.
 - `ANALYTICS_ENABLED`: optional first-party analytics flag; default is enabled. Set `false` to no-op `/analytics/events` and server-side analytics writes.
 - `ANALYTICS_RETENTION_DAYS`: optional analytics KV retention; default is 400.
+- `ANALYTICS_PERSIST_EVENTS`: optional detailed-event retention flag; the deployed config defaults to `false`, so analytics batches write aggregated count rows without retaining one KV event row per visit. Set `true` only when event-level detail is needed; local `createAnalyticsStore` tests default to persistence for inspection.
 - `STRIPE_STATEMENT_DESCRIPTOR_SUFFIX`: optional card statement descriptor suffix for Checkout PaymentIntents; default is `DOWNLOAD`, producing `PHOTOSELIE* DOWNLOAD` with the current shortened descriptor prefix. The Stripe Dashboard still owns the business descriptor prefix, logo, color, support details, and public receipt branding.
 - `WORKER_PUBLIC_URL`: absolute public Worker base used when composing direct download links in buyer delivery emails if direct links are enabled.
 - `REAL_ESTATE_GALLERIES_JSON`: JSON array/object of Real Estate galleries with `key`, `username`/`email`, private prefixes, and either Worker-held `accessCode` or `accessCodeHash` plus `accessCodeSalt`.
@@ -117,6 +118,19 @@ Real Stripe is selected automatically when `STRIPE_SECRET_KEY` is present. Requi
 - `RESEND_API_KEY`: Cloudflare secret enabling Resend delivery emails after paid fulfillment. Install with `npx wrangler secret put RESEND_API_KEY` after the sending domain is authenticated in Resend.
 
 Without `STRIPE_SECRET_KEY`, the Worker stays in mock mode and `/mock-stripe/pay` remains available. With real Stripe enabled, `/mock-stripe/pay` is disabled.
+
+### KV write budget
+
+The deployed Worker uses the shared `ORDERS_KV` binding unless a dedicated analytics or owner-action binding is supplied. The main write sources are:
+
+- orders and Checkout Session indexes during checkout and fulfillment;
+- download-token creation and successful-download counters;
+- account profiles and the KV fallback for access-user records;
+- owner action/device records and their listing indexes;
+- Real Estate deliverable metadata and download-token records; and
+- analytics count rows.
+
+Analytics is the highest-volume request-driven source. With `ANALYTICS_PERSIST_EVENTS=false`, a client batch is sanitized, grouped by day and event, and writes one count row per distinct day/event instead of one event row plus one count update for every event. This reduces local write pressure without changing the accepted-event response or the aggregate counters. It does not establish a Cloudflare account-level quota measurement; verify usage separately before changing billing or bindings.
 
 Live payment proof checklist completed on 2026-05-22:
 

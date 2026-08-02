@@ -317,7 +317,7 @@ def writeback_plan(
         rows = conn.execute(
             f"""
             SELECT a.asset_id,
-                   editorial.editorial_state,
+                   COALESCE(editorial.editorial_state, 'unreviewed') editorial_state,
                    CASE WHEN EXISTS (
                      SELECT 1 FROM sidecar_tombstones AS tombstone
                      WHERE tombstone.asset_id = a.asset_id
@@ -328,7 +328,7 @@ def writeback_plan(
                    COALESCE(d.rating, 0) rating, COALESCE(d.color, '') color,
                    COALESCE(a.raw_json, '{{}}') raw_json
             FROM sidecar_assets AS a
-            JOIN asset_editorial_state AS editorial
+            LEFT JOIN asset_editorial_state AS editorial
               ON editorial.asset_id = a.asset_id
             LEFT JOIN sidecar_decisions d ON d.asset_id = a.asset_id
             WHERE {' AND '.join(where)}
@@ -353,7 +353,14 @@ def writeback_plan(
                 """,
                 (row["asset_id"],),
             ).fetchall()
-            approved = str(row["editorial_state"]) == "approved"
+            # Tombstoning is a global lifecycle decision and takes precedence
+            # over an older approved editorial state.  Photos must not retain
+            # approval/rating markers after an asset enters the tombstone
+            # workflow; only unrelated keywords and PBE:Tombstone survive.
+            approved = (
+                str(row["editorial_state"]) == "approved"
+                and not bool(row["tombstoned"])
+            )
             item = grouped.setdefault(row["asset_id"], {
                 "assetId": row["asset_id"], "versionHash": current_version,
                 "photosAssetId": str(json.loads(row["raw_json"] or "{}").get("localIdentifier") or row["asset_id"]),

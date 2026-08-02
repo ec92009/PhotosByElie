@@ -2145,6 +2145,48 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertNotEqual(changed["versionHash"], first_version)
         self.assertFalse(changed["complete"])
 
+    def test_delivery_prefers_fixture_local_pick_state_over_legacy_global_pick(self):
+        fixture = create_fixture(
+            self.root,
+            "Fixture-local delivery",
+            template_key="real-estate",
+        )
+        place_assets(self.root, fixture["fixtureId"], ["asset-1"])
+        configure_asset_destinations(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            ["r2"],
+        )
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "approve",
+                "title": "Fixture title",
+            },
+        )
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            "picked",
+        )
+        picked = delivery_plan(self.root, fixture["fixtureId"])["items"][0]
+        self.assertEqual(picked["pickState"], "picked")
+        self.assertTrue(picked["approved"])
+
+        record_decision(self.root, {"assetId": "asset-1", "action": "pick"})
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            "hidden",
+        )
+        hidden = delivery_plan(self.root, fixture["fixtureId"])["items"][0]
+        self.assertEqual(hidden["pickState"], "hidden")
+        self.assertFalse(hidden["approved"])
+
     def test_la_concha_migration_builds_target_tree_idempotently(self):
         first = migrate_la_concha_tree(self.root)
         second = migrate_la_concha_tree(self.root)

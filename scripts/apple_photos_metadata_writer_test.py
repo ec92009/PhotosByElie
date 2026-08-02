@@ -139,12 +139,40 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
             "caption": "Keep Photos caption",
             "keywords": ["Personal", "PBE:Approved", "PBE:Rating:5"],
         }
+        plan = writeback_plan(self.root, asset_ids=["asset-2"], adapter=adapter)
+        self.assertFalse(plan["items"][0]["approved"])
+        self.assertEqual(plan["items"][0]["managedKeywords"], ["PBE:Tombstone"])
         result = commit_writeback(self.root, asset_ids=["asset-2"], adapter=adapter)
         self.assertTrue(result["ok"])
         self.assertEqual(adapter.values["asset-2"]["title"], "Keep Photos title")
         self.assertEqual(adapter.values["asset-2"]["caption"], "Keep Photos caption")
         self.assertEqual(
             adapter.values["asset-2"]["keywords"],
+            ["Personal", "PBE:Tombstone"],
+        )
+
+    def test_tombstone_precedes_stale_approved_editorial_state(self):
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-1",
+                "action": "tombstone",
+                "reason": "superseded after approval",
+            },
+        )
+        adapter = FastFakePhotos()
+        adapter.values["asset-1"] = {
+            "title": "Keep Photos title",
+            "caption": "Keep Photos caption",
+            "keywords": ["Personal", "PBE:Approved", "PBE:Rating:5"],
+        }
+        plan = writeback_plan(self.root, asset_ids=["asset-1"], adapter=adapter)
+        self.assertFalse(plan["items"][0]["approved"])
+        self.assertEqual(plan["items"][0]["managedKeywords"], ["PBE:Tombstone"])
+        result = commit_writeback(self.root, asset_ids=["asset-1"], adapter=adapter)
+        self.assertTrue(result["ok"])
+        self.assertEqual(
+            adapter.values["asset-1"]["keywords"],
             ["Personal", "PBE:Tombstone"],
         )
 

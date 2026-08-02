@@ -118,6 +118,10 @@ def _read_json(value: str | None, fallback: Any) -> Any:
 
 
 def _decision_state(row: sqlite3.Row, cloud_asset_id: str) -> dict[str, Any]:
+    columns = set(row.keys())
+    attempt_count = row["metadata_ai_attempt_count"] if "metadata_ai_attempt_count" in columns else 0
+    last_error = row["metadata_ai_last_error"] if "metadata_ai_last_error" in columns else ""
+    last_attempt_at = row["metadata_ai_last_attempt_at"] if "metadata_ai_last_attempt_at" in columns else ""
     return {
         "assetId": cloud_asset_id,
         "rating": int(row["rating"] or 0),
@@ -131,6 +135,9 @@ def _decision_state(row: sqlite3.Row, cloud_asset_id: str) -> dict[str, Any]:
         "metadataAiRung": row["metadata_ai_rung"] or "",
         "metadataAiEvidence": _read_json(row["metadata_ai_evidence_json"], []),
         "metadataAiNote": row["metadata_ai_note"] or "",
+        "metadataAiAttemptCount": int(attempt_count or 0),
+        "metadataAiLastError": last_error or "",
+        "metadataAiLastAttemptAt": last_attempt_at or "",
         "lastAction": row["last_action"] or "",
         "updatedAt": row["updated_at"] or "",
         "tombstoneState": row["tombstone_state"] or "",

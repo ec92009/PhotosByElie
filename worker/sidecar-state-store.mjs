@@ -73,6 +73,9 @@ const defaultDecision = (assetId = "") => ({
   metadataAiRung: "",
   metadataAiEvidence: [],
   metadataAiNote: "",
+  metadataAiAttemptCount: 0,
+  metadataAiLastError: "",
+  metadataAiLastAttemptAt: "",
   tombstoneState: "",
   tombstoneReason: "",
   tombstonedAt: "",
@@ -106,6 +109,9 @@ const normalizeDecision = (payload = {}, current = null, timestamp = "") => {
     metadataAiRung: cleanText(source.metadataAiRung ?? source.metadata_ai_rung ?? fallback.metadataAiRung, 120),
     metadataAiEvidence: cleanKeywords(source.metadataAiEvidence ?? source.metadata_ai_evidence ?? fallback.metadataAiEvidence),
     metadataAiNote: cleanText(source.metadataAiNote ?? source.metadata_ai_note ?? fallback.metadataAiNote, 2000),
+    metadataAiAttemptCount: Math.max(0, Math.floor(Number(source.metadataAiAttemptCount ?? source.metadata_ai_attempt_count ?? fallback.metadataAiAttemptCount) || 0)),
+    metadataAiLastError: cleanText(source.metadataAiLastError ?? source.metadata_ai_last_error ?? fallback.metadataAiLastError, 2000),
+    metadataAiLastAttemptAt: cleanTimestamp(source.metadataAiLastAttemptAt ?? source.metadata_ai_last_attempt_at ?? fallback.metadataAiLastAttemptAt),
     tombstoneState: cleanText(source.tombstoneState ?? source.tombstone_state ?? fallback.tombstoneState, 32).toLowerCase(),
     tombstoneReason: cleanText(source.tombstoneReason ?? source.tombstone_reason ?? fallback.tombstoneReason, 500),
     tombstonedAt: cleanTimestamp(source.tombstonedAt ?? source.tombstoned_at ?? fallback.tombstonedAt),
@@ -169,6 +175,9 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
     after.metadataAiRung = "";
     after.metadataAiEvidence = [];
     after.metadataAiNote = "";
+    after.metadataAiAttemptCount = 0;
+    after.metadataAiLastError = "";
+    after.metadataAiLastAttemptAt = "";
     after.tombstoneState = "active";
     after.tombstoneReason = cleanText(payload.reason, 500);
     after.tombstonedAt = timestamp;
@@ -186,6 +195,9 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
     after.metadataAiRung = cleanText(payload.metadataAiRung ?? payload.metadata_ai_rung ?? after.metadataAiRung, 120);
     after.metadataAiEvidence = cleanKeywords(payload.metadataAiEvidence ?? payload.metadata_ai_evidence ?? after.metadataAiEvidence);
     after.metadataAiNote = cleanText(payload.metadataAiNote ?? payload.metadata_ai_note ?? after.metadataAiNote, 2000);
+    after.metadataAiAttemptCount = 0;
+    after.metadataAiLastError = "";
+    after.metadataAiLastAttemptAt = "";
     changedFamilies.add("metadata");
     changedFamilies.add("pick_state");
   } else if (action === "metadata") {
@@ -207,6 +219,9 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
       after.reworkCategory = "";
       after.reworkComment = "";
     }
+    after.metadataAiAttemptCount = 0;
+    after.metadataAiLastError = "";
+    after.metadataAiLastAttemptAt = "";
     changedFamilies.add("metadata");
   } else if (action === "metadata-rework") {
     const metadata = metadataValuesFromPayload(payload, after);
@@ -219,6 +234,9 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
     after.metadataAiRung = "";
     after.metadataAiEvidence = [];
     after.metadataAiNote = "";
+    after.metadataAiAttemptCount = 0;
+    after.metadataAiLastError = "";
+    after.metadataAiLastAttemptAt = "";
     changedFamilies.add("metadata");
   } else {
     throw Object.assign(new Error("Unsupported Sidecar action."), { status: 400, code: "unsupported_sidecar_action" });
@@ -247,6 +265,9 @@ const rowToDecision = (row = {}) => normalizeDecision({
   metadataAiRung: row.metadata_ai_rung,
   metadataAiEvidence: parseJsonArray(row.metadata_ai_evidence_json),
   metadataAiNote: row.metadata_ai_note,
+  metadataAiAttemptCount: row.metadata_ai_attempt_count,
+  metadataAiLastError: row.metadata_ai_last_error,
+  metadataAiLastAttemptAt: row.metadata_ai_last_attempt_at,
   tombstoneState: row.tombstone_state,
   tombstoneReason: row.tombstone_reason,
   tombstonedAt: row.tombstoned_at,
@@ -259,9 +280,10 @@ const DECISION_UPSERT_SQL = `
   INSERT INTO pbe_sidecar_decisions (
     asset_id, rating, color, pick_state, metadata_state, title, keywords_json,
     rework_category, rework_comment, metadata_ai_rung, metadata_ai_evidence_json, metadata_ai_note,
+    metadata_ai_attempt_count, metadata_ai_last_error, metadata_ai_last_attempt_at,
     tombstone_state, tombstone_reason, tombstoned_at, pending_sync_count,
     last_action, created_at, updated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(asset_id) DO UPDATE SET
     rating = excluded.rating,
     color = excluded.color,
@@ -274,6 +296,9 @@ const DECISION_UPSERT_SQL = `
     metadata_ai_rung = excluded.metadata_ai_rung,
     metadata_ai_evidence_json = excluded.metadata_ai_evidence_json,
     metadata_ai_note = excluded.metadata_ai_note,
+    metadata_ai_attempt_count = excluded.metadata_ai_attempt_count,
+    metadata_ai_last_error = excluded.metadata_ai_last_error,
+    metadata_ai_last_attempt_at = excluded.metadata_ai_last_attempt_at,
     tombstone_state = excluded.tombstone_state,
     tombstone_reason = excluded.tombstone_reason,
     tombstoned_at = excluded.tombstoned_at,
@@ -295,6 +320,9 @@ const bindDecision = (statement, decision, createdAt = "") => statement.bind(
   decision.metadataAiRung,
   JSON.stringify(decision.metadataAiEvidence || []),
   decision.metadataAiNote,
+  decision.metadataAiAttemptCount,
+  decision.metadataAiLastError,
+  decision.metadataAiLastAttemptAt,
   decision.tombstoneState,
   decision.tombstoneReason,
   decision.tombstonedAt,

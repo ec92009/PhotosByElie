@@ -860,6 +860,8 @@
       const reworkLabel = sidecar.metadataState === "rework" ? reworkCategoryLabel(sidecar.reworkCategory) : "";
       badges.push(reworkLabel ? `rework: ${reworkLabel}` : sidecar.metadataState);
     }
+    const aiError = String(sidecar.metadataAiLastError || "").trim();
+    if (aiError) badges.push(`AI error: ${aiError.slice(0, 120)}`);
     if (item.tombstoneState === "active") badges.push("tombstoned");
     if (item.pendingSyncCount) badges.push(`${item.pendingSyncCount} pending`);
     return badges.map((badge) => `<span class="sidecar-badge">${escapeHtml(badge)}</span>`).join("");
@@ -888,6 +890,7 @@
     const metadataBase = sidecar.metadataState || "unreviewed";
     const reworkLabel = metadataBase === "rework" ? reworkCategoryLabel(sidecar.reworkCategory) : "";
     const metadata = reworkLabel ? `rework: ${reworkLabel}` : metadataBase;
+    const aiError = String(sidecar.metadataAiLastError || "").trim();
     const pending = Number(item.pendingSyncCount || 0);
     return `
       <div class="sidecar-quick-look-status" aria-label="Sidecar item status">
@@ -895,6 +898,7 @@
         ${quickLookStatusPill("Color", color || "none", { color, className: color ? "has-color" : "is-empty" })}
         ${quickLookStatusPill("Decision", decision, { className: decision === "undecided" ? "is-empty" : "" })}
         ${quickLookStatusPill("Metadata", metadata, { className: metadataBase === "unreviewed" ? "is-empty" : "" })}
+        ${aiError ? quickLookStatusPill("AI", "error", { className: "has-error" }) : ""}
         ${quickLookStatusPill("Pending", String(pending), { className: pending ? "" : "is-empty" })}
       </div>
     `;

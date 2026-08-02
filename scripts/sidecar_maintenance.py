@@ -574,7 +574,7 @@ def picked_ai_plan(args: argparse.Namespace) -> int:
         "ok": True,
         "task": "sidecar-picked-ai-metadata-plan",
         "generatedAt": now_iso(),
-        "plan": ai_metadata_plan(repo_root, limit=args.limit),
+        "plan": ai_metadata_plan(repo_root, limit=args.limit, rework_only=True),
     }
     if args.output:
         _write_json(repo_root, args.output, payload)
@@ -625,7 +625,7 @@ def _write_contact_sheet(previews: list[dict], target: Path) -> str:
 
 def picked_ai_preview_export(args: argparse.Namespace) -> int:
     repo_root = args.repo_root.resolve()
-    plan = ai_metadata_plan(repo_root, limit=args.limit)
+    plan = ai_metadata_plan(repo_root, limit=args.limit, rework_only=True)
     preview_root = args.preview_root if args.preview_root.is_absolute() else repo_root / args.preview_root
     preview_root.mkdir(parents=True, exist_ok=True)
     _ensure_apple_photos_bridge_app(repo_root)
@@ -719,7 +719,12 @@ def picked_ai_propose(args: argparse.Namespace) -> int:
         "ok": True,
         "task": "sidecar-picked-ai-metadata-propose",
         "generatedAt": now_iso(),
-        "result": apply_ai_metadata_proposals(repo_root, limit=args.limit, max_rung=args.max_rung),
+        "result": apply_ai_metadata_proposals(
+            repo_root,
+            limit=args.limit,
+            max_rung=args.max_rung,
+            rework_only=True,
+        ),
     }
     if args.output:
         _write_json(repo_root, args.output, payload)
@@ -741,6 +746,7 @@ def picked_ai_vision_propose(args: argparse.Namespace) -> int:
         proposal_payload,
         preview_manifest=preview_payload,
         dry_run=args.dry_run,
+        rework_only=True,
     )
     payload = {
         "ok": True,
@@ -807,12 +813,12 @@ def build_parser() -> argparse.ArgumentParser:
     photos.add_argument("--output", type=Path, default=DEFAULT_SYNC_STATUS_PATH, help="JSON artifact path for the scheduler result.")
     photos.set_defaults(func=photos_index_sync)
 
-    ai = subparsers.add_parser("picked-ai-plan", help="Write the picked-only AI metadata planning queue.")
+    ai = subparsers.add_parser("picked-ai-plan", help="Write the explicitly picked AI-rework metadata planning queue.")
     ai.add_argument("--limit", type=int, default=500, help="Maximum picked rows to include in the planning artifact.")
     ai.add_argument("--output", type=Path, default=DEFAULT_AI_PLAN_PATH, help="JSON artifact path for the scheduler result.")
     ai.set_defaults(func=picked_ai_plan)
 
-    preview = subparsers.add_parser("picked-ai-preview-export", help="Export picked/not-approved AI review previews through the Photos Bridge app.")
+    preview = subparsers.add_parser("picked-ai-preview-export", help="Export explicitly picked AI-rework previews through the Photos Bridge app.")
     preview.add_argument("--limit", type=int, default=80, help="Maximum picked rows to include from the planning queue.")
     preview.add_argument("--max-pixel", type=int, default=900, help="Maximum preview pixel size passed to PhotoKit.")
     preview.add_argument("--timeout", type=int, default=90, help="Per-preview app launch timeout in seconds.")
@@ -820,7 +826,7 @@ def build_parser() -> argparse.ArgumentParser:
     preview.add_argument("--output", type=Path, default=DEFAULT_AI_PREVIEW_PATH, help="JSON artifact path for the preview-export result.")
     preview.set_defaults(func=picked_ai_preview_export)
 
-    propose = subparsers.add_parser("picked-ai-propose", help="Write bounded picked-only metadata proposals into Sidecar Review.")
+    propose = subparsers.add_parser("picked-ai-propose", help="Write bounded picked-only rework proposals into Sidecar Review.")
     propose.add_argument("--limit", type=int, default=20, help="Maximum picked rows to convert from safe plan seeds into Review proposals.")
     propose.add_argument(
         "--max-rung",
@@ -831,7 +837,7 @@ def build_parser() -> argparse.ArgumentParser:
     propose.add_argument("--output", type=Path, help="Optional JSON artifact path for the proposal result.")
     propose.set_defaults(func=picked_ai_propose)
 
-    vision = subparsers.add_parser("picked-ai-vision-propose", help="Write reviewed preview/vision metadata proposals into Sidecar Review.")
+    vision = subparsers.add_parser("picked-ai-vision-propose", help="Write reviewed picked-only rework proposals into Sidecar Review.")
     vision.add_argument("--input", type=Path, default=DEFAULT_AI_VISION_PROPOSAL_INPUT_PATH, help="JSON file containing proposals/updates with assetId, title, and keywords.")
     vision.add_argument("--preview-manifest", type=Path, default=DEFAULT_AI_PREVIEW_PATH, help="Preview export manifest used to require preview-backed proposals.")
     vision.add_argument("--dry-run", action="store_true", help="Validate and report proposals without writing Sidecar Review state.")

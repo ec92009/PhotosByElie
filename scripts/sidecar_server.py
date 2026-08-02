@@ -770,6 +770,48 @@ def _cloud_state_item(result: dict) -> dict:
     }
 
 
+def _sync_ai_proposal_states_to_cloud(repo_root: Path, result: dict) -> dict:
+    """Keep cloud-canonical Sidecar state aligned with local AI proposal audit."""
+    if not _sidecar_cloud_enabled():
+        return {"ok": False, "configured": False}
+    asset_ids = []
+    for key in ("proposed", "skipped"):
+        for item in result.get(key) or []:
+            asset_id = str(item.get("assetId") or "").strip() if isinstance(item, dict) else ""
+            if asset_id and asset_id not in asset_ids:
+                asset_ids.append(asset_id)
+    if not asset_ids:
+        return {"ok": True, "configured": True, "count": 0}
+    local_rows = merge_state(repo_root, [{"assetId": asset_id} for asset_id in asset_ids])
+    decisions = [
+        {"assetId": str(row.get("assetId") or ""), "state": row.get("sidecarState") or {}}
+        for row in local_rows
+        if str(row.get("assetId") or "").strip()
+    ]
+    if not decisions:
+        return {"ok": True, "configured": True, "count": 0}
+    try:
+        body = _sidecar_cloud_request(
+            "POST",
+            "/api/v1/sidecar/decisions/upsert",
+            {"decisions": decisions},
+            timeout=60,
+        )
+    except Exception as error:  # noqa: BLE001 - preserve local audit while surfacing cloud drift.
+        return {"ok": False, "configured": True, "error": str(error)}
+    mirrored_items = body.get("items") if isinstance(body.get("items"), list) else []
+    if mirrored_items:
+        mirror_cloud_decisions(
+            repo_root,
+            [
+                {"assetId": item.get("assetId"), "state": item.get("state") or item}
+                for item in mirrored_items
+                if isinstance(item, dict) and item.get("assetId")
+            ],
+        )
+    return {"ok": True, "configured": True, "count": len(decisions)}
+
+
 def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
     items = payload.get("items") if isinstance(payload.get("items"), list) else []
     if not items or not _sidecar_cloud_enabled():
@@ -1294,6 +1336,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             limit = int(payload.get("limit") or len(asset_ids) or 20)
             max_rung = str(payload.get("maxRung") or payload.get("max_rung") or "filename-gps").strip()
             result = apply_ai_metadata_proposals(Path.cwd(), limit=limit, max_rung=max_rung, asset_ids=asset_ids)
+            result["cloudSidecar"] = _sync_ai_proposal_states_to_cloud(Path.cwd(), result)
             result["version"] = sidecar_version(Path.cwd())
             _invalidate_summary_cache()
             if self._include_summary(payload):

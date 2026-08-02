@@ -312,6 +312,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           metadata_ai_rung TEXT,
           metadata_ai_evidence_json TEXT NOT NULL DEFAULT '[]',
           metadata_ai_note TEXT,
+          metadata_ai_attempt_count INTEGER NOT NULL DEFAULT 0,
+          metadata_ai_last_error TEXT NOT NULL DEFAULT '',
+          metadata_ai_last_attempt_at TEXT NOT NULL DEFAULT '',
           last_action    TEXT,
           created_at     TEXT,
           updated_at     TEXT,
@@ -482,6 +485,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_evidence_json TEXT NOT NULL DEFAULT '[]'")
     if "metadata_ai_note" not in decision_columns:
         conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_note TEXT")
+    if "metadata_ai_attempt_count" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_attempt_count INTEGER NOT NULL DEFAULT 0")
+    if "metadata_ai_last_error" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_last_error TEXT NOT NULL DEFAULT ''")
+    if "metadata_ai_last_attempt_at" not in decision_columns:
+        conn.execute("ALTER TABLE sidecar_decisions ADD COLUMN metadata_ai_last_attempt_at TEXT NOT NULL DEFAULT ''")
     asset_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(sidecar_assets)").fetchall()
@@ -1016,6 +1025,9 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
             "metadataAiRung": "",
             "metadataAiEvidence": [],
             "metadataAiNote": "",
+            "metadataAiAttemptCount": 0,
+            "metadataAiLastError": "",
+            "metadataAiLastAttemptAt": "",
             "lastAction": "",
             "updatedAt": "",
         }
@@ -1032,6 +1044,9 @@ def _decision_payload(row: sqlite3.Row | None) -> dict[str, Any]:
         "metadataAiRung": row["metadata_ai_rung"] or "",
         "metadataAiEvidence": _read_json_text(row["metadata_ai_evidence_json"], []),
         "metadataAiNote": row["metadata_ai_note"] or "",
+        "metadataAiAttemptCount": max(0, int(row["metadata_ai_attempt_count"] or 0)),
+        "metadataAiLastError": row["metadata_ai_last_error"] or "",
+        "metadataAiLastAttemptAt": row["metadata_ai_last_attempt_at"] or "",
         "lastAction": row["last_action"] or "",
         "updatedAt": row["updated_at"] or "",
     }
@@ -1139,6 +1154,9 @@ def _cloud_decision_state(payload: dict[str, Any]) -> dict[str, Any]:
             set(),
         ),
         "metadataAiNote": str(state.get("metadataAiNote") or state.get("metadata_ai_note") or "").strip(),
+        "metadataAiAttemptCount": max(0, int(state.get("metadataAiAttemptCount") or state.get("metadata_ai_attempt_count") or 0)),
+        "metadataAiLastError": str(state.get("metadataAiLastError") or state.get("metadata_ai_last_error") or "").strip(),
+        "metadataAiLastAttemptAt": str(state.get("metadataAiLastAttemptAt") or state.get("metadata_ai_last_attempt_at") or "").strip(),
         "lastAction": str(state.get("lastAction") or state.get("last_action") or "").strip(),
         "updatedAt": str(state.get("updatedAt") or state.get("updated_at") or now_iso()).strip(),
         "tombstoneState": str(state.get("tombstoneState") or state.get("tombstone_state") or "").strip().casefold(),
@@ -1188,8 +1206,9 @@ def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]])
                   asset_id, rating, color, pick_state, metadata_state,
                   title, keywords_json, rework_category, rework_comment,
                   metadata_ai_rung, metadata_ai_evidence_json, metadata_ai_note,
+                  metadata_ai_attempt_count, metadata_ai_last_error, metadata_ai_last_attempt_at,
                   last_action, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(asset_id) DO UPDATE SET
                   rating = excluded.rating,
                   color = excluded.color,
@@ -1202,6 +1221,9 @@ def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]])
                   metadata_ai_rung = excluded.metadata_ai_rung,
                   metadata_ai_evidence_json = excluded.metadata_ai_evidence_json,
                   metadata_ai_note = excluded.metadata_ai_note,
+                  metadata_ai_attempt_count = excluded.metadata_ai_attempt_count,
+                  metadata_ai_last_error = excluded.metadata_ai_last_error,
+                  metadata_ai_last_attempt_at = excluded.metadata_ai_last_attempt_at,
                   last_action = excluded.last_action,
                   updated_at = excluded.updated_at
                 """,
@@ -1218,6 +1240,9 @@ def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]])
                     state["metadataAiRung"],
                     _json_text(state["metadataAiEvidence"]),
                     state["metadataAiNote"],
+                    state["metadataAiAttemptCount"],
+                    state["metadataAiLastError"],
+                    state["metadataAiLastAttemptAt"],
                     state["lastAction"],
                     updated_at,
                     updated_at,
@@ -1530,6 +1555,9 @@ def record_decision(
         metadata_ai_rung = before["metadataAiRung"]
         metadata_ai_evidence = before["metadataAiEvidence"]
         metadata_ai_note = before["metadataAiNote"]
+        metadata_ai_attempt_count = before["metadataAiAttemptCount"]
+        metadata_ai_last_error = before["metadataAiLastError"]
+        metadata_ai_last_attempt_at = before["metadataAiLastAttemptAt"]
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         changed_families: set[str] = set()
 
@@ -1571,6 +1599,9 @@ def record_decision(
             metadata_ai_rung = ""
             metadata_ai_evidence = []
             metadata_ai_note = ""
+            metadata_ai_attempt_count = 0
+            metadata_ai_last_error = ""
+            metadata_ai_last_attempt_at = ""
             changed_families.update({"metadata", "pick_state", "tombstone"})
         elif action == "approve":
             pick_state = "picked"
@@ -1584,6 +1615,9 @@ def record_decision(
                 set(),
             )
             metadata_ai_note = str(payload.get("metadataAiNote") or payload.get("metadata_ai_note") or metadata_ai_note or "").strip()
+            metadata_ai_attempt_count = 0
+            metadata_ai_last_error = ""
+            metadata_ai_last_attempt_at = ""
             changed_families.update({"pick_state", "metadata"})
         elif action == "metadata":
             title, caption, keywords = _metadata_values_from_payload(payload, title, caption, keywords, keyword_blacklist)
@@ -1605,6 +1639,9 @@ def record_decision(
             elif metadata_state != "blocked":
                 rework_category = ""
                 rework_comment = ""
+            metadata_ai_attempt_count = 0
+            metadata_ai_last_error = ""
+            metadata_ai_last_attempt_at = ""
             changed_families.add("metadata")
         elif action == "metadata-rework":
             metadata_state = "rework"
@@ -1616,6 +1653,9 @@ def record_decision(
             metadata_ai_rung = ""
             metadata_ai_evidence = []
             metadata_ai_note = ""
+            metadata_ai_attempt_count = 0
+            metadata_ai_last_error = ""
+            metadata_ai_last_attempt_at = ""
             changed_families.add("metadata")
         else:
             raise ValueError("Unsupported Sidecar action")
@@ -1628,6 +1668,7 @@ def record_decision(
             SET rating = ?, color = ?, pick_state = ?, metadata_state = ?,
                 title = ?, caption = ?, keywords_json = ?, rework_category = ?, rework_comment = ?,
                 metadata_ai_rung = ?, metadata_ai_evidence_json = ?, metadata_ai_note = ?,
+                metadata_ai_attempt_count = ?, metadata_ai_last_error = ?, metadata_ai_last_attempt_at = ?,
                 last_action = ?, updated_at = ?
             WHERE asset_id = ?
             """,
@@ -1644,6 +1685,9 @@ def record_decision(
                 metadata_ai_rung,
                 _json_text(metadata_ai_evidence),
                 metadata_ai_note,
+                metadata_ai_attempt_count,
+                metadata_ai_last_error,
+                metadata_ai_last_attempt_at,
                 action,
                 now,
                 asset_id,
@@ -3720,8 +3764,39 @@ def _normalize_asset_id_scope(asset_ids: Iterable[Any] | None = None) -> list[st
     return values[:500]
 
 
-def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any] | None = None) -> dict[str, Any]:
-    """Plan picked-only Sidecar rows for a future local AI metadata pass."""
+def _ai_queue_active_predicate(*, rework_only: bool) -> str:
+    metadata_scope = "AND d.metadata_state = 'rework'" if rework_only else ""
+    return f"""
+      d.pick_state = 'picked'
+      AND (a.missing_at IS NULL OR a.missing_at = '')
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_tombstones AS t
+        WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_mock_uploads AS m
+        WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_upload_bridge_run_items AS bridge
+        WHERE bridge.asset_id = d.asset_id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS block
+        WHERE block.asset_id = d.asset_id AND block.block_state = 'active'
+      )
+      {metadata_scope}
+    """
+
+
+def ai_metadata_plan(
+    repo_root: Path,
+    limit: int = 200,
+    asset_ids: Iterable[Any] | None = None,
+    *,
+    rework_only: bool = False,
+) -> dict[str, Any]:
+    """Plan picked Sidecar rows, optionally restricting the queue to rework."""
     safe_limit = max(1, min(int(limit or 200), 5000))
     scoped_asset_ids = _normalize_asset_id_scope(asset_ids)
     asset_scope_sql = ""
@@ -3729,15 +3804,8 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
     if scoped_asset_ids:
         asset_scope_sql = f" AND d.asset_id IN ({','.join('?' for _ in scoped_asset_ids)})"
         asset_scope_params = scoped_asset_ids
-    active_item_predicate = """
-      d.pick_state = 'picked'
-      AND (a.missing_at IS NULL OR a.missing_at = '')
-      AND NOT EXISTS (
-        SELECT 1 FROM sidecar_tombstones AS t
-        WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
-      )
-    """
-    actionable_ai_predicate = """
+    active_item_predicate = _ai_queue_active_predicate(rework_only=rework_only)
+    actionable_ai_predicate = """d.metadata_state = 'rework'""" if rework_only else """
       d.metadata_state != 'approved'
       AND NOT (
         d.metadata_state = 'proposed'
@@ -3757,12 +3825,7 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
               COUNT(CASE WHEN d.metadata_state = 'proposed' THEN 1 END) AS proposed_count,
               COUNT(CASE WHEN d.metadata_state = 'approved' THEN 1 END) AS approved_count,
               COUNT(CASE WHEN d.metadata_state = 'blocked' THEN 1 END) AS blocked_count,
-              COUNT(CASE WHEN {actionable_ai_predicate}
-                AND NOT EXISTS (
-                  SELECT 1 FROM sidecar_mock_uploads AS m
-                  WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
-                )
-              THEN 1 END) AS candidate_count,
+              COUNT(CASE WHEN {actionable_ai_predicate} THEN 1 END) AS candidate_count,
               COUNT(CASE WHEN d.metadata_state = 'proposed'
                 AND d.last_action = 'ai-metadata-proposal'
               THEN 1 END) AS ai_proposed_count,
@@ -3785,16 +3848,13 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
               a.photos_keywords_json, a.location_label, a.location_keywords_json,
               a.metadata_seed_title, a.metadata_seed_keywords_json, a.raw_json,
               d.rating, d.color, d.metadata_state, d.title, d.keywords_json,
-              d.rework_category, d.rework_comment
+              d.rework_category, d.rework_comment,
+              d.metadata_ai_attempt_count, d.metadata_ai_last_error, d.metadata_ai_last_attempt_at
             FROM sidecar_decisions AS d
             JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
             WHERE {active_item_predicate}
               {asset_scope_sql}
               AND {actionable_ai_predicate}
-              AND NOT EXISTS (
-                SELECT 1 FROM sidecar_mock_uploads AS m
-                WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
-              )
             ORDER BY
               CASE
                 WHEN d.metadata_state = 'rework' THEN 0
@@ -3871,6 +3931,9 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
             "keywordSeedCount": len(seed_keywords),
             "reworkCategory": row["rework_category"] or "",
             "reworkComment": row["rework_comment"] or "",
+            "metadataAiAttemptCount": max(0, int(row["metadata_ai_attempt_count"] or 0)),
+            "metadataAiLastError": row["metadata_ai_last_error"] or "",
+            "metadataAiLastAttemptAt": row["metadata_ai_last_attempt_at"] or "",
             "reason": _ai_metadata_reason(row, seed_keywords),
             "aiEvidence": ai_context["evidence"],
             "aiLimitations": ai_context["limitations"],
@@ -3882,7 +3945,8 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
         })
     return {
         "ok": True,
-        "mode": "picked-only-ai-metadata-plan",
+        "mode": "picked-only-ai-metadata-rework-plan" if rework_only else "picked-only-ai-metadata-plan",
+        "reworkOnly": bool(rework_only),
         "scopedCount": len(scoped_asset_ids),
         "aiLadder": _metadata_ai_ladder_payload(),
         "visionClassificationGuidance": _vision_classification_guidance_payload(),
@@ -3898,7 +3962,11 @@ def ai_metadata_plan(repo_root: Path, limit: int = 200, asset_ids: Iterable[Any]
         "aiProposedCount": int(counts["ai_proposed_count"] or 0),
         "mockUploadedPickedCount": int(counts["mock_uploaded_count"] or 0),
         "items": items,
-        "message": "Only picked, not-approved Sidecar items are eligible for this AI metadata planning lane.",
+        "message": (
+            "Only explicitly picked Sidecar rework items are eligible for this nightly AI metadata lane."
+            if rework_only
+            else "Only picked, not-approved Sidecar items are eligible for this AI metadata planning lane."
+        ),
     }
 
 
@@ -3911,11 +3979,78 @@ def _useful_proposal_title(title: str, keywords: Iterable[Any] = ()) -> bool:
     )
 
 
+def _begin_ai_metadata_attempt(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    now: str,
+    *,
+    rework_only: bool,
+) -> bool:
+    metadata_scope = "AND metadata_state = 'rework'" if rework_only else ""
+    result = conn.execute(
+        f"""
+        UPDATE sidecar_decisions
+        SET metadata_ai_attempt_count = COALESCE(metadata_ai_attempt_count, 0) + 1,
+            metadata_ai_last_error = '',
+            metadata_ai_last_attempt_at = ?,
+            updated_at = ?
+        WHERE asset_id = ?
+          AND pick_state = 'picked'
+          AND metadata_state != 'approved'
+          {metadata_scope}
+          AND EXISTS (
+            SELECT 1 FROM sidecar_assets AS a
+            WHERE a.asset_id = sidecar_decisions.asset_id
+              AND (a.missing_at IS NULL OR a.missing_at = '')
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_tombstones AS t
+            WHERE t.asset_id = sidecar_decisions.asset_id AND t.tombstone_state = 'active'
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_mock_uploads AS m
+            WHERE m.asset_id = sidecar_decisions.asset_id AND m.mock_state = 'active'
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_upload_bridge_run_items AS bridge
+            WHERE bridge.asset_id = sidecar_decisions.asset_id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS block
+            WHERE block.asset_id = sidecar_decisions.asset_id AND block.block_state = 'active'
+          )
+        """,
+        (now, now, asset_id),
+    )
+    return bool(result.rowcount)
+
+
+def _record_ai_metadata_failure(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    error: Any,
+    now: str,
+) -> None:
+    message = str(error or "AI metadata attempt failed").strip()[:2000]
+    conn.execute(
+        """
+        UPDATE sidecar_decisions
+        SET metadata_ai_last_error = ?,
+            metadata_ai_last_attempt_at = COALESCE(NULLIF(metadata_ai_last_attempt_at, ''), ?),
+            updated_at = ?
+        WHERE asset_id = ?
+        """,
+        (message, now, now, asset_id),
+    )
+
+
 def apply_ai_metadata_proposals(
     repo_root: Path,
     limit: int = 20,
     max_rung: str = "filename-gps",
     asset_ids: Iterable[Any] | None = None,
+    *,
+    rework_only: bool = False,
 ) -> dict[str, Any]:
     """Promote safe picked-item plan seeds into Sidecar Review proposals.
 
@@ -3927,16 +4062,40 @@ def apply_ai_metadata_proposals(
     safe_max_rung = str(max_rung or "filename-gps").strip()
     if safe_max_rung not in AI_METADATA_RUNG_ORDER:
         raise ValueError("max_rung is invalid")
-    plan = ai_metadata_plan(repo_root, limit=safe_limit, asset_ids=scoped_asset_ids)
+    plan = ai_metadata_plan(
+        repo_root,
+        limit=safe_limit,
+        asset_ids=scoped_asset_ids,
+        rework_only=rework_only,
+    )
     now = now_iso()
     proposed: list[dict[str, Any]] = []
-    skipped: list[dict[str, str]] = []
+    skipped: list[dict[str, Any]] = []
     with connect(repo_root) as conn:
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         for item in plan["items"]:
             asset_id = str(item.get("assetId") or "").strip()
             if not asset_id:
                 continue
+            if not _begin_ai_metadata_attempt(conn, asset_id, now, rework_only=rework_only):
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "reason": "no_longer_eligible",
+                })
+                continue
+            attempt_count = int(item.get("metadataAiAttemptCount") or 0) + 1
+
+            def skip(reason: str, **details: Any) -> None:
+                _record_ai_metadata_failure(conn, asset_id, reason, now)
+                skipped.append({
+                    "assetId": asset_id,
+                    "filename": str(item.get("filename") or ""),
+                    "reason": reason,
+                    "metadataAiAttemptCount": attempt_count,
+                    **details,
+                })
+
             rework_categories = set(_rework_category_values(item.get("reworkCategory")))
             if "generic" in rework_categories:
                 title = _seedable_title(item.get("seedTitle")) or _seedable_title(item.get("decisionTitle"))
@@ -3970,31 +4129,16 @@ def apply_ai_metadata_proposals(
             ])
             recommended_rung = str(item.get("recommendedAiRung") or "human-review")
             if _metadata_ai_rung_rank(recommended_rung) > _metadata_ai_rung_rank(safe_max_rung):
-                skipped.append({
-                    "assetId": asset_id,
-                    "filename": str(item.get("filename") or ""),
-                    "reason": "requires_stronger_ai_rung",
-                    "recommendedAiRung": recommended_rung,
-                })
+                skip("requires_stronger_ai_rung", recommendedAiRung=recommended_rung)
                 continue
             if not _useful_proposal_title(title, keywords):
-                skipped.append({
-                    "assetId": asset_id,
-                    "filename": str(item.get("filename") or ""),
-                    "reason": "missing_useful_title_seed",
-                    "recommendedAiRung": recommended_rung,
-                })
+                skip("missing_useful_title_seed", recommendedAiRung=recommended_rung)
                 continue
             if not keywords:
-                skipped.append({
-                    "assetId": asset_id,
-                    "filename": str(item.get("filename") or ""),
-                    "reason": "missing_keyword_seed",
-                    "recommendedAiRung": recommended_rung,
-                })
+                skip("missing_keyword_seed", recommendedAiRung=recommended_rung)
                 continue
             result = conn.execute(
-                """
+                f"""
                 UPDATE sidecar_decisions
                 SET metadata_state = 'proposed',
                     title = ?,
@@ -4004,11 +4148,29 @@ def apply_ai_metadata_proposals(
                     metadata_ai_rung = ?,
                     metadata_ai_evidence_json = ?,
                     metadata_ai_note = ?,
+                    metadata_ai_last_error = '',
                     last_action = 'ai-metadata-proposal',
                     updated_at = ?
                 WHERE asset_id = ?
                   AND pick_state = 'picked'
                   AND metadata_state != 'approved'
+                  {"AND metadata_state = 'rework'" if rework_only else ""}
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_tombstones AS t
+                    WHERE t.asset_id = sidecar_decisions.asset_id AND t.tombstone_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_mock_uploads AS m
+                    WHERE m.asset_id = sidecar_decisions.asset_id AND m.mock_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_upload_bridge_run_items AS bridge
+                    WHERE bridge.asset_id = sidecar_decisions.asset_id
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS block
+                    WHERE block.asset_id = sidecar_decisions.asset_id AND block.block_state = 'active'
+                  )
                 """,
                 (
                     title,
@@ -4030,10 +4192,15 @@ def apply_ai_metadata_proposals(
                     "metadataAiRung": recommended_rung,
                     "metadataAiEvidence": metadata_ai_evidence,
                     "metadataAiNote": str(item.get("aiRungNote") or ""),
+                    "metadataState": "proposed",
+                    "pickState": "picked",
+                    "metadataAiAttemptCount": attempt_count,
+                    "metadataAiLastError": "",
                 })
     return {
         "ok": True,
-        "mode": "picked-only-ai-metadata-proposals",
+        "mode": "picked-only-ai-metadata-rework-proposals" if rework_only else "picked-only-ai-metadata-proposals",
+        "reworkOnly": bool(rework_only),
         "scopedCount": len(scoped_asset_ids),
         "maxRung": safe_max_rung,
         "aiLadder": _metadata_ai_ladder_payload(),
@@ -4062,6 +4229,8 @@ def apply_ai_metadata_vision_proposals(
     payload: Any,
     preview_manifest: Any | None = None,
     dry_run: bool = False,
+    *,
+    rework_only: bool = False,
 ) -> dict[str, Any]:
     """Apply reviewed preview/vision proposals to picked Sidecar Review rows.
 
@@ -4077,8 +4246,9 @@ def apply_ai_metadata_vision_proposals(
     }
     now = now_iso()
     proposed: list[dict[str, Any]] = []
-    skipped: list[dict[str, str]] = []
+    skipped: list[dict[str, Any]] = []
     seen_asset_ids: set[str] = set()
+    attempted_asset_ids: set[str] = set()
     with connect(repo_root) as conn:
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         for item in items:
@@ -4092,13 +4262,32 @@ def apply_ai_metadata_vision_proposals(
             seen_asset_ids.add(asset_id)
 
             row = conn.execute(
-                """
+                f"""
                 SELECT
                   a.filename, a.media_type, a.location_label, a.location_keywords_json,
-                  a.metadata_seed_keywords_json, d.metadata_state, d.pick_state
+                  a.metadata_seed_keywords_json, a.missing_at,
+                  d.metadata_state, d.pick_state, d.metadata_ai_attempt_count
                 FROM sidecar_decisions AS d
                 JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
                 WHERE d.asset_id = ?
+                  AND (a.missing_at IS NULL OR a.missing_at = '')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_tombstones AS t
+                    WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_mock_uploads AS m
+                    WHERE m.asset_id = d.asset_id AND m.mock_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_upload_bridge_run_items AS bridge
+                    WHERE bridge.asset_id = d.asset_id
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS block
+                    WHERE block.asset_id = d.asset_id AND block.block_state = 'active'
+                  )
+                  {"AND d.metadata_state = 'rework'" if rework_only else ""}
                 """,
                 (asset_id,),
             ).fetchone()
@@ -4119,6 +4308,18 @@ def apply_ai_metadata_vision_proposals(
                     "reason": "already_approved",
                 })
                 continue
+
+            attempt_count = int(row["metadata_ai_attempt_count"] or 0)
+            if not dry_run:
+                if not _begin_ai_metadata_attempt(conn, asset_id, now, rework_only=rework_only):
+                    skipped.append({
+                        "assetId": asset_id,
+                        "filename": str(row["filename"] or ""),
+                        "reason": "no_longer_eligible",
+                    })
+                    continue
+                attempted_asset_ids.add(asset_id)
+                attempt_count += 1
 
             preview = preview_by_asset_id.get(asset_id)
             if preview_manifest is not None and not preview:
@@ -4174,7 +4375,7 @@ def apply_ai_metadata_vision_proposals(
 
             if not dry_run:
                 result = conn.execute(
-                    """
+                    f"""
                     UPDATE sidecar_decisions
                     SET metadata_state = 'proposed',
                         title = ?,
@@ -4184,11 +4385,29 @@ def apply_ai_metadata_vision_proposals(
                         metadata_ai_rung = 'vision-description',
                         metadata_ai_evidence_json = ?,
                         metadata_ai_note = ?,
+                        metadata_ai_last_error = '',
                         last_action = 'ai-metadata-proposal',
                         updated_at = ?
                     WHERE asset_id = ?
                       AND pick_state = 'picked'
                       AND metadata_state != 'approved'
+                      {"AND metadata_state = 'rework'" if rework_only else ""}
+                      AND NOT EXISTS (
+                        SELECT 1 FROM sidecar_tombstones AS t
+                        WHERE t.asset_id = sidecar_decisions.asset_id AND t.tombstone_state = 'active'
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM sidecar_mock_uploads AS m
+                        WHERE m.asset_id = sidecar_decisions.asset_id AND m.mock_state = 'active'
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM sidecar_upload_bridge_run_items AS bridge
+                        WHERE bridge.asset_id = sidecar_decisions.asset_id
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS block
+                        WHERE block.asset_id = sidecar_decisions.asset_id AND block.block_state = 'active'
+                      )
                     """,
                     (
                         title,
@@ -4216,12 +4435,22 @@ def apply_ai_metadata_vision_proposals(
                 "metadataAiRung": "vision-description",
                 "metadataAiEvidence": evidence,
                 "metadataAiNote": note,
+                "metadataState": "proposed",
+                "pickState": "picked",
+                "metadataAiAttemptCount": attempt_count,
+                "metadataAiLastError": "",
                 "dryRun": dry_run,
             })
+        if not dry_run:
+            for skipped_item in skipped:
+                skipped_asset_id = str(skipped_item.get("assetId") or "").strip()
+                if skipped_asset_id and skipped_asset_id in attempted_asset_ids:
+                    _record_ai_metadata_failure(conn, skipped_asset_id, skipped_item.get("reason"), now)
     return {
         "ok": True,
-        "mode": "picked-only-ai-metadata-vision-proposals",
+        "mode": "picked-only-ai-metadata-rework-vision-proposals" if rework_only else "picked-only-ai-metadata-vision-proposals",
         "dryRun": dry_run,
+        "reworkOnly": bool(rework_only),
         "inputCount": len(items),
         "proposedCount": len(proposed),
         "skippedCount": len(skipped),
@@ -4235,7 +4464,7 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
     """Summarize the planned nightly Photos index, AI metadata, and write-back lanes."""
     safe_limit = max(1, min(int(limit or 80), 500))
     sidecar_summary = summary(repo_root)
-    ai_plan = ai_metadata_plan(repo_root, limit=safe_limit)
+    ai_plan = ai_metadata_plan(repo_root, limit=safe_limit, rework_only=True)
     upload = upload_plan(repo_root, limit=safe_limit)
     write_back = commit_plan(repo_root, limit=safe_limit)
     return {
@@ -4248,6 +4477,7 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
         },
         "ai": {
             "pickedOnly": True,
+            "reworkOnly": True,
             "candidateCount": ai_plan["candidateCount"],
             "visibleCount": ai_plan["count"],
             "unreviewedCount": ai_plan["unreviewedCount"],
@@ -4274,7 +4504,7 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
         },
         "nightly": {
             "photosIndexRefresh": "planned-metadata-only",
-            "aiMetadata": "planned-picked-only",
+            "aiMetadata": "planned-picked-rework-only",
             "photosWriteBack": "explicit-commit-only",
         },
     }

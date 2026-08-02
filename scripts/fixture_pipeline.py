@@ -4101,15 +4101,22 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
         delivery_allowed = policy_allows_delivery(policy)
         download_allowed = policy_allows_download(policy)
         rows = conn.execute("""
-          SELECT p.asset_id, COALESCE(d.pick_state, 'undecided') pick_state,
-                 COALESCE(d.metadata_state, 'unreviewed') metadata_state, x.destinations_json,
-                 x.version_hash
+            SELECT p.asset_id,
+                   COALESCE(scoped.placement_state, d.pick_state, 'undecided') pick_state,
+                   COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+                   x.destinations_json,
+                   x.version_hash
           FROM fixture_asset_placements p
+          LEFT JOIN fixture_asset_decisions scoped
+            ON scoped.fixture_id = p.fixture_id AND scoped.asset_id = p.asset_id
           LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
           LEFT JOIN fixture_asset_destinations x ON x.fixture_id = p.fixture_id AND x.asset_id = p.asset_id
           WHERE p.fixture_id = ? AND p.state = 'active'
           ORDER BY p.placed_at, p.asset_id
         """, (fixture_id,)).fetchall()
+        # Native fixture culling is authoritative for pick state.  The global
+        # Sidecar pick is retained only as a compatibility fallback for older
+        # migrated rows that predate fixture_asset_decisions.
         items = []
         for row in rows:
             destinations = _read_json(row["destinations_json"], defaults)

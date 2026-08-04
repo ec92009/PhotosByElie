@@ -1884,19 +1884,24 @@ struct OwnerCoreTests {
         let selected = [
             MetadataModelLadderRung.catalog[2],
             MetadataModelLadderRung.catalog[0],
+            MetadataModelLadderRung(model: "gpt-custom-one", effort: "medium"),
+            MetadataModelLadderRung(model: "gpt-custom-two", effort: "xhigh"),
         ]
 
         let change = try await service.replaceModelLadderDetailed(selected)
 
-        #expect(change.before == ["codex-gpt-5.4-mini"])
-        #expect(change.after == ["codex-gpt-5.6-sol-high-vision", "codex-gpt-5.4-mini"])
+        #expect(change.before == [MetadataModelLadderRung(model: "gpt-5.4-mini", effort: "low")])
+        #expect(change.after == [
+            MetadataModelLadderRung(model: "gpt-5.6-sol", effort: "high"),
+            MetadataModelLadderRung(model: "gpt-5.4-mini", effort: "low"),
+        ])
         let request = try #require(await api.requests().first)
         #expect(request.payload["operation"]?.stringValue == "save-title-keyword-model-ladder")
         #expect(request.payload["target"] == nil)
-        #expect(request.payload["model_ladder"]?.arrayValue?.compactMap(\.stringValue) == [
-            "codex-gpt-5.6-sol-high-vision",
-            "codex-gpt-5.4-mini",
-        ])
+        let payloadRungs = request.payload["model_ladder"]?.arrayValue?.compactMap(\.objectValue) ?? []
+        #expect(payloadRungs.map { $0["model"]?.stringValue } == ["gpt-5.6-sol", "gpt-5.4-mini", "gpt-custom-one", "gpt-custom-two"])
+        #expect(payloadRungs.map { $0["effort"]?.stringValue } == ["high", "low", "medium", "xhigh"])
+        #expect(payloadRungs.allSatisfy { $0["vision"]?.boolValue == true })
     }
 
     @Test("Native lifecycle loads private titles and restores through moderation")

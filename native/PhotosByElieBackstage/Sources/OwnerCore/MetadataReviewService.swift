@@ -1,14 +1,20 @@
 import Foundation
 
 public struct MetadataModelLadderRung: Codable, Identifiable, Sendable, Equatable {
-    public var alias: String
-    public var label: String
-    public var resolvedModel: String
-    public var reasoningEffort: String
-    public var vision: Bool
-    public var estimatedCost: String
+    public var model: String
+    public var effort: String
+    public var vision: Bool { true }
+    public var id: String { model }
+    public var alias: String { model }
+    public var label: String { "\(model) \(effort)" }
+    public var resolvedModel: String { model }
+    public var reasoningEffort: String { effort }
+    public var estimatedCost: String { "Depends on model and effort" }
 
-    public var id: String { alias }
+    public init(model: String, effort: String) {
+        self.model = model
+        self.effort = effort
+    }
 
     public init(
         alias: String,
@@ -18,25 +24,21 @@ public struct MetadataModelLadderRung: Codable, Identifiable, Sendable, Equatabl
         vision: Bool,
         estimatedCost: String
     ) {
-        self.alias = alias
-        self.label = label
-        self.resolvedModel = resolvedModel
-        self.reasoningEffort = reasoningEffort
-        self.vision = vision
-        self.estimatedCost = estimatedCost
+        self.model = resolvedModel
+        self.effort = reasoningEffort
     }
 
     public static let catalog: [MetadataModelLadderRung] = [
         MetadataModelLadderRung(
-            alias: "codex-gpt-5.4-mini",
-            label: "Free",
+            alias: "gpt-5.4-mini",
+            label: "GPT-5.4 mini low",
             resolvedModel: "gpt-5.4-mini",
             reasoningEffort: "low",
-            vision: false,
-            estimatedCost: "Lowest-cost OpenAI rung"
+            vision: true,
+            estimatedCost: "Lowest-cost default vision rung"
         ),
         MetadataModelLadderRung(
-            alias: "codex-gpt-5.6-luna-max-vision",
+            alias: "gpt-5.6-luna",
             label: "Luna Max vision",
             resolvedModel: "gpt-5.6-luna",
             reasoningEffort: "max",
@@ -56,11 +58,40 @@ public struct MetadataModelLadderRung: Codable, Identifiable, Sendable, Equatabl
     public static let defaultLadder: [MetadataModelLadderRung] = catalog
 
     enum CodingKeys: String, CodingKey {
-        case alias, label
+        case model, effort, vision
+        case alias
         case resolvedModel = "resolved_model"
         case reasoningEffort = "reasoning_effort"
-        case vision
-        case estimatedCost = "estimated_cost"
+    }
+
+    public init(from decoder: Decoder) throws {
+        if let legacy = try? decoder.singleValueContainer().decode(String.self) {
+            let mappings: [String: (String, String)] = [
+                "codex-gpt-5.4-mini": ("gpt-5.4-mini", "low"),
+                "codex-gpt-5.6-luna-max-vision": ("gpt-5.6-luna", "max"),
+                "codex-gpt-5.6-luna-xhigh-vision": ("gpt-5.6-luna", "xhigh"),
+                "codex-gpt-5.6-sol-high-vision": ("gpt-5.6-sol", "high"),
+            ]
+            let mapped = mappings[legacy] ?? (legacy, "medium")
+            model = mapped.0
+            effort = mapped.1
+            return
+        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        model = try container.decodeIfPresent(String.self, forKey: .model)
+            ?? container.decodeIfPresent(String.self, forKey: .resolvedModel)
+            ?? container.decodeIfPresent(String.self, forKey: .alias)
+            ?? ""
+        effort = try container.decodeIfPresent(String.self, forKey: .effort)
+            ?? container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+            ?? ""
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(model, forKey: .model)
+        try container.encode(effort, forKey: .effort)
+        try container.encode(true, forKey: .vision)
     }
 }
 
@@ -144,7 +175,7 @@ public struct MetadataProposalState: Codable, Sendable, Equatable {
 public struct MetadataProposalQueue: Codable, Sendable, Equatable {
     public var batchId: String
     public var photos: [MetadataProposal]
-    public var modelLadder: [String]?
+    public var modelLadder: [MetadataModelLadderRung]?
     public var modelCatalog: [MetadataModelLadderRung]?
 
     enum CodingKeys: String, CodingKey {
@@ -258,8 +289,8 @@ public struct MetadataBlacklistChange: Sendable, Equatable {
 
 public struct MetadataModelLadderChange: Sendable, Equatable {
     public var actionID: String
-    public var before: [String]
-    public var after: [String]
+    public var before: [MetadataModelLadderRung]
+    public var after: [MetadataModelLadderRung]
 }
 
 public actor MetadataReviewService {
@@ -418,20 +449,28 @@ public actor MetadataReviewService {
     }
 
     public func replaceModelLadder(_ rungs: [MetadataModelLadderRung]) async throws -> OwnerAction {
-        let aliases = try normalizeModelLadder(rungs)
+        let normalized = try normalizeModelLadder(rungs)
         return try await submit(operation: "save-title-keyword-model-ladder", payload: [
-            "model_ladder": .array(aliases.map(JSONValue.string)),
+            "model_ladder": .array(normalized.map { rung in
+                .object([
+                    "model": .string(rung.model),
+                    "effort": .string(rung.effort),
+                    "vision": .bool(true),
+                ])
+            }),
         ])
     }
 
     public func replaceModelLadderDetailed(_ rungs: [MetadataModelLadderRung]) async throws -> MetadataModelLadderChange {
-        let aliases = try normalizeModelLadder(rungs)
+        let normalized = try normalizeModelLadder(rungs)
         let action = try await replaceModelLadder(rungs)
         let result = action.result?["result"]?.objectValue ?? action.result ?? [:]
         return MetadataModelLadderChange(
             actionID: action.id,
-            before: result["previous_model_ladder"]?.arrayValue?.compactMap(\.stringValue) ?? [],
-            after: result["model_ladder"]?.arrayValue?.compactMap(\.stringValue) ?? aliases
+            before: decodeModelLadder(result["previous_model_ladder"]),
+            after: decodeModelLadder(result["model_ladder"]).isEmpty
+                ? normalized
+                : decodeModelLadder(result["model_ladder"])
         )
     }
 
@@ -466,34 +505,67 @@ public actor MetadataReviewService {
             }
     }
 
-    private func normalizeModelLadder(_ rungs: [MetadataModelLadderRung]) throws -> [String] {
-        let aliases = rungs.map(\.alias)
-        let supported = Set(MetadataModelLadderRung.catalog.map(\.alias))
-        guard !aliases.isEmpty else {
+    public nonisolated func validateModelLadder(_ rungs: [MetadataModelLadderRung]) -> String? {
+        do {
+            _ = try normalizeModelLadder(rungs)
+            return nil
+        } catch let error as APIErrorEnvelope {
+            return error.error.message
+        } catch {
+            return String(describing: error)
+        }
+    }
+
+    private nonisolated func normalizeModelLadder(_ rungs: [MetadataModelLadderRung]) throws -> [MetadataModelLadderRung] {
+        guard !rungs.isEmpty else {
             throw APIErrorEnvelope(error: .init(
                 code: "empty_model_ladder",
-                message: "Choose at least one OpenAI model rung for the title/keyword ladder."
+                message: "Add at least one vision model rung for the title/keyword ladder."
             ))
         }
-        guard aliases.count <= MetadataModelLadderRung.catalog.count else {
-            throw APIErrorEnvelope(error: .init(
-                code: "model_ladder_too_large",
-                message: "The title/keyword ladder can contain at most three OpenAI rungs."
-            ))
+        let efforts = Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
+        let modelPattern = try! NSRegularExpression(pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
+        var seen = Set<String>()
+        var normalized: [MetadataModelLadderRung] = []
+        for (offset, rung) in rungs.enumerated() {
+            let model = rung.model.trimmingCharacters(in: .whitespacesAndNewlines)
+            let effort = rung.effort.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let range = NSRange(model.startIndex..<model.endIndex, in: model)
+            guard modelPattern.firstMatch(in: model, range: range) != nil else {
+                throw APIErrorEnvelope(error: .init(code: "invalid_model", message: "Rung \(offset + 1) needs a valid model identifier."))
+            }
+            guard !["local-", "ollama", "lmstudio"].contains(where: { model.lowercased().hasPrefix($0) }) else {
+                throw APIErrorEnvelope(error: .init(code: "local_model_not_allowed", message: "Rung \(offset + 1) must use a Codex-accessible OpenAI model."))
+            }
+            guard efforts.contains(effort) else {
+                throw APIErrorEnvelope(error: .init(code: "invalid_effort", message: "Rung \(offset + 1) has an unsupported effort."))
+            }
+            let knownEfforts: Set<String>? = model.lowercased().hasPrefix("gpt-5.6")
+                ? Set(["none", "low", "medium", "high", "xhigh", "max"])
+                : model.lowercased().hasPrefix("gpt-5.4")
+                    ? Set(["none", "low", "medium", "high", "xhigh"])
+                    : nil
+            guard knownEfforts?.contains(effort) != false else {
+                throw APIErrorEnvelope(error: .init(code: "invalid_model_effort", message: "Rung \(offset + 1): \(model) does not support effort \(effort)."))
+            }
+            guard seen.insert(model.lowercased()).inserted else {
+                throw APIErrorEnvelope(error: .init(code: "duplicate_model_ladder_rung", message: "Each model can appear only once."))
+            }
+            normalized.append(MetadataModelLadderRung(model: model, effort: effort))
         }
-        guard aliases.allSatisfy(supported.contains) else {
-            throw APIErrorEnvelope(error: .init(
-                code: "unsupported_model_ladder_rung",
-                message: "Only the supported OpenAI Free, Luna, and Sol rungs can be saved."
-            ))
-        }
-        guard Set(aliases).count == aliases.count else {
-            throw APIErrorEnvelope(error: .init(
-                code: "duplicate_model_ladder_rung",
-                message: "Each title/keyword model rung can appear only once."
-            ))
-        }
-        return aliases
+        return normalized
+    }
+
+    private func decodeModelLadder(_ value: JSONValue?) -> [MetadataModelLadderRung] {
+        value?.arrayValue?.compactMap { item in
+            if let legacy = item.stringValue {
+                return try? JSONDecoder().decode(MetadataModelLadderRung.self, from: Data("\"\(legacy)\"".utf8))
+            }
+            guard let object = item.objectValue else { return nil }
+            let model = object["model"]?.stringValue ?? object["resolved_model"]?.stringValue ?? ""
+            let effort = object["effort"]?.stringValue ?? object["reasoning_effort"]?.stringValue ?? ""
+            return MetadataModelLadderRung(model: model, effort: effort)
+        } ?? []
     }
 
     private func values(from object: [String: JSONValue]) -> MetadataValues {

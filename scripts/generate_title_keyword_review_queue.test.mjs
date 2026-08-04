@@ -138,7 +138,7 @@ test("rework rows with missing provenance start at the first AI ladder level", (
     previousGeneratorModelLevel: null,
     previousGeneratorModelMaxed: false,
   });
-  assert.equal(selected.model, "codex-gpt-5.4-mini");
+  assert.equal(selected.model, "gpt-5.4-mini");
   assert.equal(selected.model_level, 0);
   assert.equal(selected.model_maxed, false);
 });
@@ -149,7 +149,7 @@ test("legacy local provenance restarts on the first supported OpenAI rung", () =
     previousGeneratorModelLevel: 0,
     previousGeneratorModelMaxed: false,
   });
-  assert.equal(selected.model, "codex-gpt-5.4-mini");
+  assert.equal(selected.model, "gpt-5.4-mini");
   assert.equal(selected.model_level, 0);
 });
 
@@ -160,7 +160,7 @@ test("maxed rejected rows are marked exhausted instead of cycling the same model
     previousGeneratorModelLevel: 2,
     previousGeneratorModelMaxed: true,
   });
-  assert.equal(selected.model, "codex-gpt-5.6-sol-high-vision");
+  assert.equal(selected.model, "gpt-5.6-sol");
   assert.equal(selected.model_maxed, true);
   assert.equal(selected.exhausted, true);
 });
@@ -168,11 +168,11 @@ test("maxed rejected rows are marked exhausted instead of cycling the same model
 test("new proposals use the exact default Free to Luna to Sol ladder", () => {
   const selected = selectedGeneratorForRow({ reworkPriority: false });
   assert.deepEqual(selected.model_ladder, [
-    "codex-gpt-5.4-mini",
-    "codex-gpt-5.6-luna-max-vision",
-    "codex-gpt-5.6-sol-high-vision",
+    { model: "gpt-5.4-mini", effort: "low", vision: true },
+    { model: "gpt-5.6-luna", effort: "max", vision: true },
+    { model: "gpt-5.6-sol", effort: "high", vision: true },
   ]);
-  assert.equal(selected.label, "Free");
+  assert.equal(selected.label, "GPT-5.4 mini low");
 });
 
 test("Codex ladder aliases map to real Codex CLI model settings", () => {
@@ -189,15 +189,26 @@ test("Codex ladder aliases map to real Codex CLI model settings", () => {
 });
 
 test("model ladder validation excludes local and Ollama choices", () => {
-  assert.throws(() => normalizeModelLadder(["local-metadata-rules-v1"]), /out of scope/);
-  assert.throws(() => normalizeModelLadder(["ollama-llama"]), /out of scope/);
+  assert.throws(() => normalizeModelLadder([{ model: "local-metadata-rules-v1", effort: "low" }]), /Codex-accessible/);
+  assert.throws(() => normalizeModelLadder([{ model: "ollama-llama", effort: "low" }]), /Codex-accessible/);
   assert.deepEqual(normalizeModelLadder([
     "codex-gpt-5.6-sol-high-vision",
     "codex-gpt-5.4-mini",
   ]), [
-    "codex-gpt-5.6-sol-high-vision",
-    "codex-gpt-5.4-mini",
+    { model: "gpt-5.6-sol", effort: "high", vision: true },
+    { model: "gpt-5.4-mini", effort: "low", vision: true },
   ]);
+  const arbitrary = normalizeModelLadder(new Array(5).fill(null).map((_, index) => ({
+    model: `gpt-custom-${index}`,
+    effort: "medium",
+    vision: false,
+  })));
+  assert.equal(arbitrary.length, 5);
+  assert.ok(arbitrary.every((rung) => rung.vision === true));
+  assert.throws(
+    () => normalizeModelLadder([{ model: "gpt-5.4-mini", effort: "max" }]),
+    /does not support effort max/,
+  );
 });
 
 test("model proposal text parser accepts fenced JSON", () => {
@@ -256,6 +267,8 @@ test("Apple Photos album context can title imported filename photos", () => {
 test("Codex model invocation uses the configured CLI and output file", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-title-keyword-test-"));
   const fakeCodex = path.join(tempDir, "codex");
+  const fakeImage = path.join(tempDir, "preview.jpg");
+  fs.writeFileSync(fakeImage, "jpeg");
   fs.writeFileSync(fakeCodex, `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
@@ -280,6 +293,7 @@ fs.writeFileSync(outputPath, JSON.stringify({
     const payload = invokeCodexProposalModel({
       modelInfo: { model: "codex-gpt-5.4-mini" },
       prompt: "Owner reject comment: use the hints in the keywords to provide a decent title",
+      imagePath: fakeImage,
     });
     assert.equal(payload.title, "Leaning Tower of Pisa");
     assert.equal(payload.keywords.length, 10);

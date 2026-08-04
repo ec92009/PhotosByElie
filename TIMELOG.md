@@ -724,8 +724,9 @@ Clock state: running
 | 2026-08-04 | 20:38 CEST | 20:39 CEST | 0:01 | Checked whether installed Backstage v0.4.57 build 68 contains the new title/keyword model-effort ladder; compared native source and ladder branch without mutating app or Owner state. |
 | 2026-08-04 | 21:03 CEST | 21:04 CEST | 0:01 | Authorized clean-worktree integration of the Free → Luna Max vision → Sol High vision title/keyword ladder and its audit trail; implementation, tests, and commit runtime excluded. |
 | 2026-08-04 | 21:20 CEST | 21:21 CEST | 0:01 | Authorized preserving the dirty OG checkout and promoting the verified clean integration branch into the canonical repo folder; archive, worktree operations, and test runtime excluded. |
+| 2026-08-04 | 21:36 CEST | 21:56 CEST | 0:03 | Defined an arbitrary-length vision-only title/keyword model-effort ladder, corrected the Luna Max runtime distinction, and authorized replacing the stale global npm Codex CLI with Homebrew Codex 0.146.0; implementation, tests, build, installation, and package-manager runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:37
+Active collaboration time used: 34:40
 Remaining budget: not set

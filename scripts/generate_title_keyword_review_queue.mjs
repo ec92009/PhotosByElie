@@ -41,22 +41,26 @@ const OWNER_STATE_DB_MAX_BUFFER = Math.max(
   Number(process.env.PBE_OWNER_STATE_DB_MAX_BUFFER || 0),
 );
 const DEFAULT_MODEL_LADDER = [
-  "codex-gpt-5.4-mini",
-  "codex-gpt-5.6-luna-max-vision",
-  "codex-gpt-5.6-sol-high-vision",
+  { model: "gpt-5.4-mini", effort: "low", vision: true },
+  { model: "gpt-5.6-luna", effort: "max", vision: true },
+  { model: "gpt-5.6-sol", effort: "high", vision: true },
 ];
 const MODEL_CATALOG = [
   {
     alias: "codex-gpt-5.4-mini",
-    label: "Free",
+    label: "GPT-5.4 mini low",
+    model: "gpt-5.4-mini",
+    effort: "low",
     resolvedModel: "gpt-5.4-mini",
     reasoningEffort: "low",
-    vision: false,
-    estimatedCost: "Lowest-cost OpenAI rung",
+    vision: true,
+    estimatedCost: "Lowest-cost default vision rung",
   },
   {
     alias: "codex-gpt-5.6-luna-max-vision",
     label: "Luna Max vision",
+    model: "gpt-5.6-luna",
+    effort: "max",
     resolvedModel: "gpt-5.6-luna",
     reasoningEffort: "max",
     vision: true,
@@ -65,13 +69,24 @@ const MODEL_CATALOG = [
   {
     alias: "codex-gpt-5.6-sol-high-vision",
     label: "Sol High vision",
+    model: "gpt-5.6-sol",
+    effort: "high",
     resolvedModel: "gpt-5.6-sol",
     reasoningEffort: "high",
     vision: true,
     estimatedCost: "High: high + image",
   },
 ];
-const SUPPORTED_MODEL_ALIASES = new Set(MODEL_CATALOG.map((item) => item.alias));
+const LEGACY_MODEL_RUNGS = new Map([
+  ["codex-gpt-5.4-mini", { model: "gpt-5.4-mini", effort: "low", vision: true }],
+  ["codex-gpt-5.6-luna-max-vision", { model: "gpt-5.6-luna", effort: "max", vision: true }],
+  ["codex-gpt-5.6-luna-xhigh-vision", { model: "gpt-5.6-luna", effort: "xhigh", vision: true }],
+  ["codex-gpt-5.6-sol-high-vision", { model: "gpt-5.6-sol", effort: "high", vision: true }],
+]);
+const CODEX_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
+const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
+const legacyRung = (value) => LEGACY_MODEL_RUNGS.get(String(value || "").trim().toLowerCase());
+const canonicalGeneratorModel = (value) => legacyRung(value)?.model || String(value || "").trim();
 const normalizeModelLadder = (value) => {
   let candidate = value;
   if (typeof candidate === "string") {
@@ -81,27 +96,41 @@ const normalizeModelLadder = (value) => {
     else candidate = raw.split(",");
   }
   if (!Array.isArray(candidate) || candidate.length === 0) {
-    throw new Error("title/keyword model ladder must contain at least one supported OpenAI rung");
+    throw new Error("title/keyword model ladder must contain at least one vision rung");
   }
-  if (candidate.length > MODEL_CATALOG.length) {
-    throw new Error(`title/keyword model ladder may contain at most ${MODEL_CATALOG.length} supported OpenAI rungs`);
-  }
-  const aliasesByKey = new Map(MODEL_CATALOG.map((item) => [item.alias.toLowerCase(), item.alias]));
   const normalized = [];
-  for (const item of candidate) {
-    const raw = typeof item === "object" && item !== null ? item.alias || item.model : item;
-    const alias = aliasesByKey.get(String(raw || "").trim().toLowerCase());
-    if (!alias) {
-      throw new Error(`unsupported title/keyword model ladder rung ${String(raw || "<empty>")}; Ollama and local-inference models are out of scope`);
+  const seen = new Set();
+  for (let index = 0; index < candidate.length; index += 1) {
+    let item = candidate[index];
+    if (typeof item === "string") item = LEGACY_MODEL_RUNGS.get(item.trim().toLowerCase());
+    if (!item || typeof item !== "object") {
+      throw new Error(`title/keyword model ladder rung ${index + 1} must provide model and effort strings`);
     }
-    if (normalized.includes(alias)) throw new Error(`title/keyword model ladder contains duplicate rung ${alias}`);
-    normalized.push(alias);
+    const model = String(item.model || item.resolved_model || item.resolvedModel || "").trim();
+    const effort = String(item.effort || item.reasoning_effort || item.reasoningEffort || "").trim().toLowerCase();
+    if (!MODEL_ID_PATTERN.test(model)) throw new Error(`title/keyword model ladder rung ${index + 1} has an invalid model identifier`);
+    if (/^(?:local-|ollama|lmstudio)/i.test(model)) throw new Error(`title/keyword model ladder rung ${index + 1} must use a Codex-accessible OpenAI model`);
+    if (!CODEX_REASONING_EFFORTS.has(effort)) {
+      throw new Error(`title/keyword model ladder rung ${index + 1} has unsupported effort ${effort || "<empty>"}`);
+    }
+    const knownEfforts = /^gpt-5\.6/i.test(model)
+      ? new Set(["none", "low", "medium", "high", "xhigh", "max"])
+      : /^gpt-5\.4/i.test(model)
+        ? new Set(["none", "low", "medium", "high", "xhigh"])
+        : null;
+    if (knownEfforts && !knownEfforts.has(effort)) {
+      throw new Error(`title/keyword model ladder rung ${index + 1}: ${model} does not support effort ${effort}`);
+    }
+    const key = model.toLowerCase();
+    if (seen.has(key)) throw new Error(`title/keyword model ladder contains duplicate model ${model}`);
+    seen.add(key);
+    normalized.push({ model, effort, vision: true });
   }
   return normalized;
 };
 const envModelLadder = process.env.PBE_TITLE_KEYWORD_MODEL_LADDER;
 let MODEL_LADDER = normalizeModelLadder(envModelLadder || DEFAULT_MODEL_LADDER);
-let GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0]).trim();
+let GENERATOR_MODEL = String(process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0].model).trim();
 const MODEL_RETRIES = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_RETRIES || DEFAULT_MODEL_RETRIES));
 const MODEL_TIMEOUT_MS = Math.max(30_000, Number(process.env.PBE_TITLE_KEYWORD_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS));
 const MODEL_CONCURRENCY = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_CONCURRENCY || DEFAULT_MODEL_CONCURRENCY));
@@ -355,41 +384,41 @@ const runOwnerStateDb = (args, options = {}) => {
 const isLocalGeneratorModel = (model) => String(model || "").trim() === LOCAL_GENERATOR_MODEL;
 
 const isAiGeneratorModel = (model) => {
-  const value = String(model || "").trim();
-  return Boolean(value && !isLocalGeneratorModel(value) && SUPPORTED_MODEL_ALIASES.has(value));
+  const value = canonicalGeneratorModel(model);
+  return Boolean(value && !isLocalGeneratorModel(value) && MODEL_LADDER.some((item) => item.model === value));
 };
 
 const modelLevel = (model) => {
-  const value = String(model || "").trim();
-  const index = MODEL_LADDER.findIndex((item) => item === value);
+  const value = canonicalGeneratorModel(model);
+  const index = MODEL_LADDER.findIndex((item) => item.model === value);
   return index >= 0 ? index : 0;
 };
 
 const generatorModelInfo = (model = GENERATOR_MODEL) => {
-  const candidate = String(model || GENERATOR_MODEL || DEFAULT_MODEL_LADDER[0]).trim();
-  const selected = SUPPORTED_MODEL_ALIASES.has(candidate) ? candidate : MODEL_LADDER[0];
-  const level = modelLevel(selected);
-  const catalog = MODEL_CATALOG.find((item) => item.alias === selected) || MODEL_CATALOG[0];
+  const candidate = canonicalGeneratorModel(model || GENERATOR_MODEL || DEFAULT_MODEL_LADDER[0].model);
+  const rung = MODEL_LADDER.find((item) => item.model === candidate) || MODEL_LADDER[0];
+  const level = modelLevel(rung.model);
+  const catalog = MODEL_CATALOG.find((item) => item.model === rung.model && item.effort === rung.effort);
   return {
-    model: selected,
+    model: rung.model,
     model_level: level,
     model_maxed: level >= MODEL_LADDER.length - 1,
-    model_ladder: MODEL_LADDER,
-    label: catalog.label,
-    resolved_model: catalog.resolvedModel,
-    reasoning_effort: catalog.reasoningEffort,
-    vision: catalog.vision,
-    estimated_cost: catalog.estimatedCost,
+    model_ladder: MODEL_LADDER.map((item) => ({ ...item })),
+    label: catalog?.label || `${rung.model} ${rung.effort}`,
+    resolved_model: rung.model,
+    reasoning_effort: rung.effort,
+    vision: true,
+    estimated_cost: catalog?.estimatedCost || "Depends on selected model and effort",
   };
 };
 
 const generatorModelInfoAtLevel = (level) => {
   const normalized = Math.min(Math.max(0, Number(level) || 0), MODEL_LADDER.length - 1);
-  return generatorModelInfo(MODEL_LADDER[normalized] || GENERATOR_MODEL);
+  return generatorModelInfo(MODEL_LADDER[normalized]?.model || GENERATOR_MODEL);
 };
 
 const firstAiGeneratorInfo = () => {
-  const index = MODEL_LADDER.findIndex((model) => isAiGeneratorModel(model));
+  const index = MODEL_LADDER.findIndex((rung) => isAiGeneratorModel(rung.model));
   return generatorModelInfoAtLevel(index >= 0 ? index : 0);
 };
 
@@ -402,8 +431,8 @@ const nextModelAfterLevel = (level) => {
 
 const selectedGeneratorForRow = (row) => {
   if (!row?.reworkPriority) return generatorModelInfo();
-  const previousModel = String(row.previousGeneratorModel || "").trim();
-  const previousIndex = MODEL_LADDER.findIndex((item) => item === previousModel);
+  const previousModel = canonicalGeneratorModel(row.previousGeneratorModel);
+  const previousIndex = MODEL_LADDER.findIndex((item) => item.model === previousModel);
   if (previousIndex >= 0 && previousIndex >= MODEL_LADDER.length - 1) {
     return { ...generatorModelInfoAtLevel(MODEL_LADDER.length - 1), exhausted: true };
   }
@@ -1045,22 +1074,23 @@ const batchModelOutputSchema = () => ({
   },
 });
 
-const codexBinary = () => String(process.env.PBE_TITLE_KEYWORD_CODEX_BIN || "codex").trim() || "codex";
+const DESKTOP_CODEX_BINARY = "/Applications/ChatGPT.app/Contents/Resources/codex";
+const codexBinary = () => {
+  const configured = String(process.env.PBE_TITLE_KEYWORD_CODEX_BIN || "").trim();
+  if (configured) return configured;
+  if (fs.existsSync(DESKTOP_CODEX_BINARY)) return DESKTOP_CODEX_BINARY;
+  return "codex";
+};
 
 const codexModelConfig = (modelInfo) => {
-  const rawModel = String(modelInfo?.model || "").trim();
-  if (!isAiGeneratorModel(rawModel)) return null;
-  const withoutPrefix = rawModel.replace(/^codex-/i, "");
-  const vision = /(?:^|-)vision$/i.test(withoutPrefix) || /-vision-/i.test(withoutPrefix);
-  const effortMatch = withoutPrefix.match(/-(max|xhigh|high|medium|low)(?:-vision)?$/i);
-  const model = withoutPrefix
-    .replace(/-(max|xhigh|high|medium|low)(?:-vision)?$/i, "")
-    .replace(/-vision$/i, "");
-  const reasoningEffort = effortMatch?.[1]?.toLowerCase() || (/mini$/i.test(model) ? "low" : "medium");
+  const legacy = legacyRung(modelInfo?.model);
+  const model = String(modelInfo?.resolved_model || legacy?.model || modelInfo?.model || "").trim();
+  const reasoningEffort = String(modelInfo?.reasoning_effort || modelInfo?.effort || legacy?.effort || "").trim().toLowerCase();
+  if (!model || !isAiGeneratorModel(model)) return null;
   return {
     model,
     reasoningEffort,
-    vision,
+    vision: true,
   };
 };
 
@@ -1253,9 +1283,8 @@ const codexInvocation = ({ modelInfo, imagePath = "", imagePaths = [], batch = f
   if (codexConfig.reasoningEffort) {
     args.push("-c", `model_reasoning_effort="${codexConfig.reasoningEffort}"`);
   }
-  if (codexConfig.vision) {
-    for (const attachedImage of attachedImages) args.push("--image", attachedImage);
-  }
+  if (attachedImages.length === 0) throw new Error("Vision is required, but no bounded JPEG preview was supplied.");
+  for (const attachedImage of attachedImages) args.push("--image", attachedImage);
   args.push("-");
   return { args, outputPath };
 };
@@ -1824,14 +1853,14 @@ const main = async () => {
   MODEL_LADDER = normalizeModelLadder(
     envModelLadder || ownerGeneratorState.modelLadder || MODEL_LADDER,
   );
-  const envGenerator = String(process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || "").trim();
-  if (envGenerator && !MODEL_LADDER.includes(envGenerator)) {
+  const envGenerator = canonicalGeneratorModel(process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL);
+  if (envGenerator && !MODEL_LADDER.some((rung) => rung.model === envGenerator)) {
     throw new Error(`PBE_TITLE_KEYWORD_GENERATOR_MODEL ${envGenerator} is not selected in the saved model ladder`);
   }
-  GENERATOR_MODEL = envGenerator || MODEL_LADDER[0];
+  GENERATOR_MODEL = envGenerator || MODEL_LADDER[0].model;
   progress(
     `Starting batch ${batchId}: limit=${args.limit} generator=${GENERATOR_MODEL} ` +
-    `ladder=${MODEL_LADDER.join(" > ")}`,
+    `ladder=${MODEL_LADDER.map((rung) => `${rung.model}/${rung.effort}/vision`).join(" > ")}`,
   );
   const proposedState = ownerGeneratorState.state;
 

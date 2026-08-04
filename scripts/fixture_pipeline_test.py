@@ -1135,17 +1135,17 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(proposals["items"][0]["canonicalTitle"], "")
         self.assertEqual(
             proposals["items"][0]["requestedGeneratorModel"],
-            "codex-gpt-5.6-luna-max-vision",
+            "gpt-5.4-mini",
         )
-        self.assertEqual(proposals["items"][0]["resolvedModel"], "gpt-5.6-luna")
-        self.assertEqual(proposals["items"][0]["reasoningEffort"], "max")
+        self.assertEqual(proposals["items"][0]["resolvedModel"], "gpt-5.4-mini")
+        self.assertEqual(proposals["items"][0]["reasoningEffort"], "low")
         self.assertTrue(proposals["items"][0]["vision"])
         self.assertEqual(
             proposals["items"][0]["modelLadder"],
             [
-                "codex-gpt-5.4-mini",
-                "codex-gpt-5.6-luna-max-vision",
-                "codex-gpt-5.6-sol-high-vision",
+                {"model": "gpt-5.4-mini", "effort": "low", "vision": True},
+                {"model": "gpt-5.6-luna", "effort": "max", "vision": True},
+                {"model": "gpt-5.6-sol", "effort": "high", "vision": True},
             ],
         )
         proposal_id = proposals["items"][0]["proposalId"]
@@ -1203,15 +1203,15 @@ class FixturePipelineTest(unittest.TestCase):
                 (proposal_id,),
             ).fetchone()
         self.assertEqual(proposal_audit[0:4], (
-            "codex-gpt-5.6-luna-max-vision",
-            "gpt-5.6-luna",
-            "max",
+            "gpt-5.4-mini",
+            "gpt-5.4-mini",
+            "low",
             1,
         ))
         self.assertEqual(json.loads(proposal_audit[4]), [
-            "codex-gpt-5.4-mini",
-            "codex-gpt-5.6-luna-max-vision",
-            "codex-gpt-5.6-sol-high-vision",
+            {"model": "gpt-5.4-mini", "effort": "low", "vision": True},
+            {"model": "gpt-5.6-luna", "effort": "max", "vision": True},
+            {"model": "gpt-5.6-sol", "effort": "high", "vision": True},
         ])
         self.assertEqual(run_item_audit[0:4], proposal_audit[0:4])
         self.assertEqual(json.loads(run_item_audit[4]), json.loads(proposal_audit[4]))
@@ -1247,6 +1247,16 @@ class FixturePipelineTest(unittest.TestCase):
                 ).fetchone()[0],
                 2,
             )
+            retry_generator = conn.execute(
+                """
+                SELECT requested_generator_model, reasoning_effort, vision
+                FROM asset_ai_proposals
+                WHERE asset_id = 'asset-2'
+                ORDER BY attempt DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            self.assertEqual(tuple(retry_generator), ("gpt-5.6-luna", "max", 1))
             accepted = conn.execute(
                 "SELECT status FROM asset_ai_proposals WHERE proposal_id = ?",
                 (proposal_id,),

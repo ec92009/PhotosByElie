@@ -1108,50 +1108,61 @@ private struct MetadataGiveBackView: View {
                     .foregroundStyle(.secondary)
             }
             Section("OpenAI title & keyword proposal ladder") {
-                Text("New and rework attempts use this saved order. The default is Free → Luna Max vision → Sol High vision.")
+                Text("Add as many ordered rungs as needed. Each attempt advances through the saved order; every rung always receives a bounded JPEG preview.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                ForEach(model.metadataModelCatalog) { rung in
-                    let selectedIndex = model.metadataModelLadder.firstIndex(where: { $0.alias == rung.alias })
+                ForEach(Array(model.metadataModelLadder.indices), id: \.self) { index in
                     HStack {
-                        Text(selectedIndex.map { "\($0 + 1)." } ?? "—")
+                        Text("\(index + 1).")
                             .frame(width: 24, alignment: .leading)
                             .foregroundStyle(.secondary)
-                        Toggle(rung.label, isOn: Binding(
-                            get: { model.metadataModelLadder.contains(where: { $0.alias == rung.alias }) },
-                            set: { _ in model.toggleMetadataModelRung(rung) }
-                        ))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(rung.resolvedModel) · \(rung.reasoningEffort) · \(rung.vision ? "vision" : "text")")
-                                .font(.caption)
-                            Text(rung.estimatedCost)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        TextField("Model", text: $model.metadataModelLadder[index].model)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Effort", text: $model.metadataModelLadder[index].effort)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Label("Vision", systemImage: "eye.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Button("↑") {
-                            model.moveMetadataModelRung(rung, offset: -1)
+                            model.moveMetadataModelRung(at: index, offset: -1)
                         }
-                        .disabled(selectedIndex == nil || selectedIndex == 0)
+                        .disabled(index == 0)
                         .backstageHelp("Move this model rung earlier in the saved title and keyword proposal order.")
                         Button("↓") {
-                            model.moveMetadataModelRung(rung, offset: 1)
+                            model.moveMetadataModelRung(at: index, offset: 1)
                         }
-                        .disabled(selectedIndex == nil || selectedIndex == model.metadataModelLadder.count - 1)
+                        .disabled(index == model.metadataModelLadder.count - 1)
                         .backstageHelp("Move this model rung later in the saved title and keyword proposal order.")
+                        Button(role: .destructive) {
+                            model.removeMetadataModelRung(at: index)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .backstageHelp("Remove this rung from the title and keyword proposal ladder.")
                     }
                 }
                 HStack {
+                    Button("Add rung") {
+                        model.addMetadataModelRung()
+                    }
+                    .backstageHelp("Append another editable model and effort rung to the proposal ladder.")
                     Button("Save ladder") {
                         Task { await model.saveMetadataModelLadder() }
                     }
-                    .disabled(model.metadataModelLadder.isEmpty || model.isSavingMetadataModelLadder)
+                    .disabled(model.metadataModelLadderValidation != nil || model.isSavingMetadataModelLadder)
                     .backstageHelp("Save the selected OpenAI title and keyword proposal ladder through the audited Owner action.")
                     Text(model.metadataModelLadderStatus)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text("Each rung records its OpenAI alias, resolved model, reasoning effort, vision mode, and relative cost estimate. Approval remains a separate human decision.")
+                if let validation = model.metadataModelLadderValidation {
+                    Text(validation)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                Text("Supported effort strings: none, minimal, low, medium, high, xhigh, max. Known GPT-5.4/5.6 combinations are checked before save; unfamiliar model strings are checked by Codex Desktop at execution. Approval remains a separate human decision.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

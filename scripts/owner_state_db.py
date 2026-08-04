@@ -41,15 +41,19 @@ TITLE_KEYWORD_MODEL_LADDER_SETTING = "title_keyword_model_ladder_json"
 TITLE_KEYWORD_MODEL_CATALOG = (
     {
         "alias": "codex-gpt-5.4-mini",
-        "label": "Free",
+        "label": "GPT-5.4 mini low",
+        "model": "gpt-5.4-mini",
+        "effort": "low",
         "resolved_model": "gpt-5.4-mini",
         "reasoning_effort": "low",
-        "vision": False,
-        "estimated_cost": "Lowest-cost OpenAI rung",
+        "vision": True,
+        "estimated_cost": "Lowest-cost default vision rung",
     },
     {
         "alias": "codex-gpt-5.6-luna-max-vision",
         "label": "Luna Max vision",
+        "model": "gpt-5.6-luna",
+        "effort": "max",
         "resolved_model": "gpt-5.6-luna",
         "reasoning_effort": "max",
         "vision": True,
@@ -58,14 +62,26 @@ TITLE_KEYWORD_MODEL_CATALOG = (
     {
         "alias": "codex-gpt-5.6-sol-high-vision",
         "label": "Sol High vision",
+        "model": "gpt-5.6-sol",
+        "effort": "high",
         "resolved_model": "gpt-5.6-sol",
         "reasoning_effort": "high",
         "vision": True,
         "estimated_cost": "High: high + image",
     },
 )
-TITLE_KEYWORD_MODEL_ALIASES = frozenset(item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG)
-DEFAULT_TITLE_KEYWORD_MODEL_LADDER = [item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG]
+LEGACY_TITLE_KEYWORD_MODEL_RUNGS = {
+    "codex-gpt-5.4-mini": {"model": "gpt-5.4-mini", "effort": "low", "vision": True},
+    "codex-gpt-5.6-luna-max-vision": {"model": "gpt-5.6-luna", "effort": "max", "vision": True},
+    "codex-gpt-5.6-luna-xhigh-vision": {"model": "gpt-5.6-luna", "effort": "xhigh", "vision": True},
+    "codex-gpt-5.6-sol-high-vision": {"model": "gpt-5.6-sol", "effort": "high", "vision": True},
+}
+DEFAULT_TITLE_KEYWORD_MODEL_LADDER = [
+    {"model": item["model"], "effort": item["effort"], "vision": True}
+    for item in TITLE_KEYWORD_MODEL_CATALOG
+]
+CODEX_REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"})
+MODEL_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 
 
 def now_iso() -> str:
@@ -94,10 +110,10 @@ def title_keyword_model_catalog() -> list[dict[str, Any]]:
     return [dict(item) for item in TITLE_KEYWORD_MODEL_CATALOG]
 
 
-def normalize_title_keyword_model_ladder(value: object) -> list[str]:
-    """Validate the owner-selectable OpenAI ladder and return canonical aliases."""
+def normalize_title_keyword_model_ladder(value: object) -> list[dict[str, Any]]:
+    """Return an arbitrary-length, vision-only Codex model/effort ladder."""
     if isinstance(value, dict):
-        value = value.get("model_ladder") or value.get("aliases")
+        value = value.get("model_ladder") or value.get("rungs") or value.get("aliases")
     if isinstance(value, str):
         raw = value.strip()
         if not raw:
@@ -106,50 +122,64 @@ def normalize_title_keyword_model_ladder(value: object) -> list[str]:
             try:
                 value = json.loads(raw)
             except json.JSONDecodeError as error:
-                raise ValueError("model_ladder must be a JSON list or comma-separated aliases") from error
+                raise ValueError("model_ladder must be a JSON list") from error
         else:
             value = raw.split(",")
     if not isinstance(value, (list, tuple)):
-        raise ValueError("model_ladder must be a list of supported OpenAI aliases")
+        raise ValueError("model_ladder must be a list of model/effort rungs")
     if not value:
-        raise ValueError("model_ladder must include at least one supported OpenAI rung")
-    if len(value) > len(TITLE_KEYWORD_MODEL_CATALOG):
-        raise ValueError(f"model_ladder may contain at most {len(TITLE_KEYWORD_MODEL_CATALOG)} supported OpenAI rungs")
+        raise ValueError("model_ladder must include at least one vision rung")
 
-    aliases_by_key = {alias.casefold(): alias for alias in TITLE_KEYWORD_MODEL_ALIASES}
-    normalized: list[str] = []
-    for item in value:
-        if isinstance(item, dict):
-            item = item.get("alias") or item.get("model")
-        alias = str(item or "").strip()
-        canonical = aliases_by_key.get(alias.casefold())
-        if not canonical:
-            raise ValueError(
-                f"unsupported title/keyword model ladder rung {alias or '<empty>'}; "
-                "Ollama and local-inference models are out of scope"
-            )
-        if canonical in normalized:
-            raise ValueError(f"model_ladder contains duplicate rung {canonical}")
-        normalized.append(canonical)
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(value, start=1):
+        if isinstance(item, str):
+            legacy = LEGACY_TITLE_KEYWORD_MODEL_RUNGS.get(item.strip().casefold())
+            if not legacy:
+                raise ValueError(f"rung {index} must provide both model and effort strings")
+            item = legacy
+        if not isinstance(item, dict):
+            raise ValueError(f"rung {index} must be an object with model and effort strings")
+        model = str(item.get("model") or item.get("resolved_model") or "").strip()
+        effort = str(item.get("effort") or item.get("reasoning_effort") or "").strip().lower()
+        if not MODEL_ID_PATTERN.fullmatch(model):
+            raise ValueError(f"rung {index} has an invalid model identifier")
+        if model.casefold().startswith(("local-", "ollama", "lmstudio")):
+            raise ValueError(f"rung {index} must use a Codex-accessible OpenAI model")
+        if effort not in CODEX_REASONING_EFFORTS:
+            allowed = ", ".join(sorted(CODEX_REASONING_EFFORTS))
+            raise ValueError(f"rung {index} has unsupported effort {effort or '<empty>'}; choose {allowed}")
+        known_efforts: frozenset[str] | None = None
+        if model.casefold().startswith("gpt-5.6"):
+            known_efforts = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+        elif model.casefold().startswith("gpt-5.4"):
+            known_efforts = frozenset({"none", "low", "medium", "high", "xhigh"})
+        if known_efforts is not None and effort not in known_efforts:
+            raise ValueError(f"rung {index}: {model} does not support effort {effort}")
+        key = model.casefold()
+        if key in seen:
+            raise ValueError(f"model_ladder contains duplicate model {model}")
+        seen.add(key)
+        normalized.append({"model": model, "effort": effort, "vision": True})
     return normalized
 
 
-def title_keyword_model_ladder_for_connection(conn: sqlite3.Connection) -> list[str]:
+def title_keyword_model_ladder_for_connection(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     row = conn.execute(
         "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
         (TITLE_KEYWORD_MODEL_LADDER_SETTING,),
     ).fetchone()
     if not row:
-        return list(DEFAULT_TITLE_KEYWORD_MODEL_LADDER)
+        return [dict(item) for item in DEFAULT_TITLE_KEYWORD_MODEL_LADDER]
     try:
         return normalize_title_keyword_model_ladder(_read_json_text(str(row["setting_value"] or ""), []))
     except ValueError:
         # A pre-selector or manually edited setting must not make proposal reads
         # or resumptions fail; the compiled default remains the safe fallback.
-        return list(DEFAULT_TITLE_KEYWORD_MODEL_LADDER)
+        return [dict(item) for item in DEFAULT_TITLE_KEYWORD_MODEL_LADDER]
 
 
-def title_keyword_model_ladder(repo_root: Path, db_path: Path | None = None) -> list[str]:
+def title_keyword_model_ladder(repo_root: Path, db_path: Path | None = None) -> list[dict[str, Any]]:
     conn = connect(repo_root, db_path)
     try:
         return title_keyword_model_ladder_for_connection(conn)

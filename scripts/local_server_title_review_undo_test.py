@@ -359,21 +359,21 @@ class TitleReviewUndoTests(unittest.TestCase):
             repo_root = Path(temp_dir)
             default_ladder = owner_state_db.title_keyword_model_ladder(repo_root)
             self.assertEqual(default_ladder, [
-                "codex-gpt-5.4-mini",
-                "codex-gpt-5.6-luna-max-vision",
-                "codex-gpt-5.6-sol-high-vision",
+                {"model": "gpt-5.4-mini", "effort": "low", "vision": True},
+                {"model": "gpt-5.6-luna", "effort": "max", "vision": True},
+                {"model": "gpt-5.6-sol", "effort": "high", "vision": True},
             ])
 
             saved = local_server.apply_public_photo_moderation(repo_root, {
                 "operation": "save-title-keyword-model-ladder",
                 "model_ladder": [
-                    "codex-gpt-5.6-sol-high-vision",
-                    "codex-gpt-5.4-mini",
+                    {"model": "gpt-5.6-sol", "effort": "high"},
+                    {"model": "gpt-5.4-mini", "effort": "low"},
                 ],
             })
             self.assertEqual(saved["model_ladder"], [
-                "codex-gpt-5.6-sol-high-vision",
-                "codex-gpt-5.4-mini",
+                {"model": "gpt-5.6-sol", "effort": "high", "vision": True},
+                {"model": "gpt-5.4-mini", "effort": "low", "vision": True},
             ])
             self.assertFalse(saved["catalog_publish_pending"])
 
@@ -384,13 +384,24 @@ class TitleReviewUndoTests(unittest.TestCase):
             )
             self.assertEqual(queue["model_ladder"], saved["model_ladder"])
             self.assertEqual(
-                [item["alias"] for item in queue["model_catalog"]],
-                default_ladder,
+                [(item["model"], item["effort"]) for item in queue["model_catalog"]],
+                [(item["model"], item["effort"]) for item in default_ladder],
             )
             generator_state = owner_state_db.title_keyword_generator_state(repo_root)
             self.assertEqual(generator_state["model_ladder"], saved["model_ladder"])
 
-            with self.assertRaisesRegex(ValueError, "out of scope"):
+            arbitrary = owner_state_db.normalize_title_keyword_model_ladder([
+                {"model": f"gpt-custom-{index}", "effort": "medium", "vision": False}
+                for index in range(5)
+            ])
+            self.assertEqual(len(arbitrary), 5)
+            self.assertTrue(all(rung["vision"] is True for rung in arbitrary))
+            with self.assertRaisesRegex(ValueError, "does not support effort max"):
+                owner_state_db.normalize_title_keyword_model_ladder([
+                    {"model": "gpt-5.4-mini", "effort": "max"},
+                ])
+
+            with self.assertRaisesRegex(ValueError, "model and effort"):
                 local_server.apply_public_photo_moderation(repo_root, {
                     "operation": "save-title-keyword-model-ladder",
                     "model_ladder": ["local-metadata-rules-v1"],

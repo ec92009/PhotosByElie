@@ -17,31 +17,29 @@ import uuid
 from typing import Any
 
 from fixture_pipeline import OWNER_DB, ai_run_status, connect as ensure_owner_schema, now_iso
-from owner_state_db import TITLE_KEYWORD_MODEL_CATALOG
+from owner_state_db import DEFAULT_TITLE_KEYWORD_MODEL_LADDER, title_keyword_model_ladder
 from requested_ai_previews import capture_requested_ai_previews
 
 
-REQUESTED_AI_MODEL_INFO = next(
-    item for item in TITLE_KEYWORD_MODEL_CATALOG
-    if item["alias"] == "codex-gpt-5.6-luna-max-vision"
-)
-REQUESTED_AI_MODEL_ALIAS = REQUESTED_AI_MODEL_INFO["alias"]
-DEFAULT_MODEL = REQUESTED_AI_MODEL_INFO["resolved_model"]
-DEFAULT_MODEL_REASONING_EFFORT = REQUESTED_AI_MODEL_INFO["reasoning_effort"]
-DEFAULT_MODEL_VISION = bool(REQUESTED_AI_MODEL_INFO["vision"])
-DEFAULT_MODEL_LADDER = [item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG]
-_requested_model = os.environ.get("PBE_REQUESTED_AI_MODEL", "").strip()
-if _requested_model and _requested_model not in {DEFAULT_MODEL, REQUESTED_AI_MODEL_ALIAS}:
-    raise ValueError(
-        "PBE_REQUESTED_AI_MODEL must resolve to the Luna Max vision rung; "
-        f"expected {DEFAULT_MODEL} or {REQUESTED_AI_MODEL_ALIAS}"
-    )
+DEFAULT_MODEL = DEFAULT_TITLE_KEYWORD_MODEL_LADDER[0]["model"]
+DEFAULT_MODEL_REASONING_EFFORT = DEFAULT_TITLE_KEYWORD_MODEL_LADDER[0]["effort"]
+DEFAULT_MODEL_VISION = True
+DESKTOP_CODEX_BINARY = Path("/Applications/ChatGPT.app/Contents/Resources/codex")
 DEFAULT_TIMEOUT_SECONDS = max(
     30,
     int(os.environ.get("PBE_REQUESTED_AI_TIMEOUT_SECONDS", "300")),
 )
 ProposalFunction = Callable[[dict[str, Any]], dict[str, Any]]
 PreviewPreparer = Callable[[Path, list[str]], dict[str, Any]]
+
+
+def _codex_binary() -> str:
+    configured = os.environ.get("PBE_REQUESTED_AI_CODEX_BIN", "").strip()
+    if configured:
+        return configured
+    if DESKTOP_CODEX_BINARY.is_file():
+        return str(DESKTOP_CODEX_BINARY)
+    return "codex"
 
 
 @contextmanager
@@ -138,7 +136,7 @@ def codex_proposer(item: dict[str, Any]) -> dict[str, Any]:
         output_path = Path(temp_dir) / "proposal.json"
         schema_path.write_text(json.dumps(_schema(), indent=2) + "\n", encoding="utf-8")
         command = [
-            os.environ.get("PBE_REQUESTED_AI_CODEX_BIN", "codex"),
+            _codex_binary(),
             "-a",
             "never",
             "exec",
@@ -153,9 +151,9 @@ def codex_proposer(item: dict[str, Any]) -> dict[str, Any]:
             "--output-last-message",
             str(output_path),
             "-m",
-            DEFAULT_MODEL,
+            str(item.get("requestedModel") or DEFAULT_MODEL),
             "-c",
-            f'model_reasoning_effort="{DEFAULT_MODEL_REASONING_EFFORT}"',
+            f'model_reasoning_effort="{item.get("requestedEffort") or DEFAULT_MODEL_REASONING_EFFORT}"',
             "--image",
             str(preview),
             "-",
@@ -346,6 +344,7 @@ def run_requested_ai_pass(
                 "status": str(active["status"]),
             }
         candidates = _candidate_rows(conn, repo_root, limit)
+    model_ladder = title_keyword_model_ladder(repo_root)
     preview_receipt = {
         "requested": 0,
         "captured": 0,
@@ -360,6 +359,10 @@ def run_requested_ai_pass(
         preview_receipt = preview_preparer(repo_root, missing_preview_ids)
         with _runtime_connection(repo_root) as conn:
             candidates = _candidate_rows(conn, repo_root, limit)
+    for item in candidates:
+        rung = model_ladder[min(max(0, int(item["attempt"]) - 1), len(model_ladder) - 1)]
+        item["requestedModel"] = rung["model"]
+        item["requestedEffort"] = rung["effort"]
     with _runtime_connection(repo_root) as conn:
         run_id = f"airun-{uuid.uuid4().hex[:16]}"
         timestamp = now_iso()
@@ -393,11 +396,11 @@ def run_requested_ai_pass(
                 run_id,
                 item["assetId"],
                 item["attempt"],
-                REQUESTED_AI_MODEL_ALIAS,
-                DEFAULT_MODEL,
-                DEFAULT_MODEL_REASONING_EFFORT,
-                int(DEFAULT_MODEL_VISION),
-                _json(DEFAULT_MODEL_LADDER),
+                item["requestedModel"],
+                item["requestedModel"],
+                item["requestedEffort"],
+                1,
+                _json(model_ladder),
             ) for item in candidates],
         )
         conn.commit()
@@ -484,12 +487,12 @@ def run_requested_ai_pass(
                             _json(item["requestReasons"]),
                             item["requestNote"],
                             item["previewSha256"],
-                            DEFAULT_MODEL,
-                            REQUESTED_AI_MODEL_ALIAS,
-                            DEFAULT_MODEL,
-                            DEFAULT_MODEL_REASONING_EFFORT,
-                            int(DEFAULT_MODEL_VISION),
-                            _json(DEFAULT_MODEL_LADDER),
+                            item["requestedModel"],
+                            item["requestedModel"],
+                            item["requestedModel"],
+                            item["requestedEffort"],
+                            1,
+                            _json(model_ladder),
                             timestamp,
                         ),
                     )

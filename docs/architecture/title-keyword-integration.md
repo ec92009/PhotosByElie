@@ -13,15 +13,20 @@ publication, and date-picker work is not part of this integration.
 
 ## Canonical ladder
 
-| Label | Project alias | Resolved model | Effort | Vision |
-| --- | --- | --- | --- | --- |
-| Free | `codex-gpt-5.4-mini` | `gpt-5.4-mini` | `low` | no |
-| Luna Max vision | `codex-gpt-5.6-luna-max-vision` | `gpt-5.6-luna` | `max` | yes |
-| Sol High vision | `codex-gpt-5.6-sol-high-vision` | `gpt-5.6-sol` | `high` | yes |
+| Default label | Model | Effort | Vision |
+| --- | --- | --- | --- |
+| GPT-5.4 mini low | `gpt-5.4-mini` | `low` | yes |
+| Luna Max vision | `gpt-5.6-luna` | `max` | yes |
+| Sol High vision | `gpt-5.6-sol` | `high` | yes |
 
-The aliases are project labels. The provider-facing model and effort are
-stored separately so an audit can answer both “which model?” and “which
-effort?” without treating `vision` as a fictional model suffix.
+The provider-facing model and effort are stored separately so an audit can
+answer both “which model?” and “which
+effort?” without treating `vision` as a fictional model suffix. Owner may add,
+remove, edit, and reorder any number of `{model, effort, vision: true}` rungs.
+Known GPT-5.4/5.6 effort combinations are validated before save; unfamiliar
+model identifiers are validated by Codex at execution. Backstage prefers Codex
+Desktop's bundled executable, which supports Luna `max`, over an older CLI on
+`PATH`.
 
 ## Source branches
 

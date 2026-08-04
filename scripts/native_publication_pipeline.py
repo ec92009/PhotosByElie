@@ -636,6 +636,8 @@ def publish_verified_asset(
     repo_root: Path,
     asset_id: str,
     upload_results: Iterable[dict[str, Any]],
+    *,
+    collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Atomically make one verified object set live in every effective fixture."""
     results = _verified_results(upload_results)
@@ -839,7 +841,14 @@ def publish_verified_asset(
             """,
             (version_hash, timestamp, asset_id),
         )
-        catalog_plan = catalog_candidate(repo_root, conn, asset_id, results)
+        catalog_plan = catalog_candidate(
+            repo_root,
+            conn,
+            asset_id,
+            results,
+            source_version_hash=version_hash,
+            collection_resolver=collection_resolver,
+        )
         if catalog_plan.get("eligible"):
             record_catalog_pending(
                 conn,
@@ -860,6 +869,7 @@ def publish_verified_asset(
             asset_id,
             version_hash,
             results,
+            collection_resolver=collection_resolver,
         )
     return {
         "ok": True,

@@ -358,6 +358,23 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_public_catalog_publications_state
           ON public_catalog_publications(state, updated_at, asset_id);
 
+        CREATE TABLE IF NOT EXISTS catalog_collection_resolutions (
+          asset_id TEXT NOT NULL,
+          source_version_hash TEXT NOT NULL,
+          collection_slug TEXT NOT NULL DEFAULT 'unknown',
+          city TEXT NOT NULL DEFAULT '',
+          country_code TEXT NOT NULL DEFAULT '',
+          provider TEXT NOT NULL,
+          query_text TEXT NOT NULL DEFAULT '',
+          confidence REAL NOT NULL DEFAULT 0,
+          response_json TEXT NOT NULL DEFAULT '{}',
+          resolved_at TEXT NOT NULL,
+          PRIMARY KEY (asset_id, source_version_hash),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_catalog_collection_resolutions_collection
+          ON catalog_collection_resolutions(collection_slug, resolved_at, asset_id);
+
         CREATE TABLE IF NOT EXISTS asset_sale_references (
           order_id TEXT NOT NULL,
           asset_id TEXT NOT NULL,

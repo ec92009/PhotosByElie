@@ -11,13 +11,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
 import subprocess
 import tempfile
 import threading
+import time
 from typing import Any, Callable, Iterable
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from fixture_pipeline import connect, now_iso
@@ -28,7 +31,27 @@ from import_source_anchor import photo_id_for_source_path
 PUBLIC_CATALOG_PATH = Path("assets/catalog/photosbyelie.sqlite")
 PRODUCT_PRICING_PATH = Path("assets/catalog/product-pricing.json")
 PUBLIC_CATALOG_URL = "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite"
+NOMINATIM_SEARCH_URL = os.environ.get(
+    "PBE_NOMINATIM_SEARCH_URL",
+    "https://nominatim.openstreetmap.org/search",
+)
+NOMINATIM_USER_AGENT = os.environ.get(
+    "PBE_NOMINATIM_USER_AGENT",
+    "PhotosByElie Backstage catalog resolver (https://photos-by-elie.com/)",
+)
+COLLECTION_COUNTRY_CODES = {
+    "fr": "france",
+    "it": "italy",
+    "mx": "mexico",
+    "pt": "portugal",
+    "sk": "slovakia",
+    "es": "spain",
+    "us": "usa",
+}
 _CATALOG_LOCK = threading.RLock()
+_NOMINATIM_LOCK = threading.Lock()
+_NOMINATIM_LAST_REQUEST_AT = 0.0
+_NOMINATIM_RESULTS_CACHE: dict[str, dict[str, Any]] = {}
 
 
 class CatalogPromotionError(RuntimeError):
@@ -128,15 +151,25 @@ def _extension(value: Any, fallback: str = "jpg") -> str:
     return suffix if suffix in {"jpg", "tif", "png", "heic", "mp4", "mov"} else fallback
 
 
-def _gallery_slug(row: sqlite3.Row) -> str:
+def _metadata_search_text(row: sqlite3.Row) -> str:
     text = " ".join(
         str(row[key] or "")
         for key in ("location_label", "location_keywords_json", "keywords_json", "title", "filename")
     ).casefold()
+    return text
+
+
+def _static_collection_resolution(row: sqlite3.Row) -> dict[str, Any]:
+    """Resolve well-known collection aliases from the approved asset metadata."""
+    text = _metadata_search_text(row)
     terms = {
         "italy": ("italy", "florence", "tuscany"),
         "france": ("france", "paris", "versailles", "rueil", "malmaison"),
-        "spain": ("spain", "malaga", "málaga", "andalusia", "andalucía", "benalmadena", "fuengirola", "nerja", "ronda", "mijas", "marbella", "cordoba", "granada"),
+        "spain": (
+            "spain", "barcelona", "malaga", "málaga", "andalusia", "andalucía",
+            "benalmadena", "fuengirola", "nerja", "ronda", "mijas", "marbella",
+            "cordoba", "córdoba", "granada", "valencia", "valència", "seville", "sevilla",
+        ),
         "portugal": ("portugal", "lisbon", "lisboa"),
         "usa": ("usa", "united states", "san diego"),
         "mexico": ("mexico",),
@@ -144,9 +177,331 @@ def _gallery_slug(row: sqlite3.Row) -> str:
         "ai": ("ai generated", "generative ai", "stained glass"),
     }
     for slug, values in terms.items():
-        if any(value in text for value in values):
-            return slug
-    return "unknown"
+        match = next((value for value in values if value in text), "")
+        if match:
+            return {
+                "collection": slug,
+                "city": match if slug != "ai" else "",
+                "countryCode": next(
+                    (code for code, candidate in COLLECTION_COUNTRY_CODES.items() if candidate == slug),
+                    "",
+                ),
+                "provider": "static-alias",
+                "query": match,
+                "confidence": 1.0,
+                "response": {},
+            }
+    return {
+        "collection": "unknown",
+        "city": "",
+        "countryCode": "",
+        "provider": "static-alias",
+        "query": "",
+        "confidence": 0.0,
+        "response": {"reason": "no static collection alias matched"},
+    }
+
+
+def _gallery_slug(row: sqlite3.Row) -> str:
+    """Return the collection selected by the local alias map, if any."""
+    return str(_static_collection_resolution(row).get("collection") or "unknown")
+
+
+def _resolution_queries(row: sqlite3.Row) -> list[str]:
+    """Build bounded geocoder queries from approved metadata, in priority order."""
+    values: list[Any] = [row["location_label"]]
+    location_keywords = _read_json(row["location_keywords_json"], [])
+    keywords = _read_json(row["keywords_json"], [])
+    if isinstance(location_keywords, list):
+        values.extend(location_keywords)
+    values.append(row["title"])
+    if isinstance(keywords, list):
+        values.extend(keywords)
+    queries: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        query = re.sub(r"\s+", " ", str(value or "").strip())[:160]
+        key = query.casefold()
+        if len(query) < 2 or key in seen:
+            continue
+        seen.add(key)
+        queries.append(query)
+    return queries[:8]
+
+
+def _compact_nominatim_results(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep only stable, non-sensitive geocoder evidence in the Owner audit."""
+    compact: list[dict[str, Any]] = []
+    for result in results[:5]:
+        address = result.get("address") if isinstance(result.get("address"), dict) else {}
+        compact.append({
+            "displayName": str(result.get("display_name") or "")[:320],
+            "city": str(
+                address.get("city")
+                or address.get("town")
+                or address.get("village")
+                or address.get("municipality")
+                or ""
+            )[:120],
+            "countryCode": str(address.get("country_code") or "").casefold(),
+            "importance": result.get("importance"),
+            "placeRank": result.get("place_rank"),
+        })
+    return compact
+
+
+def _resolution_from_nominatim(query: str, payload: Any) -> dict[str, Any]:
+    """Turn Nominatim results into a conservative supported collection result."""
+    results = payload if isinstance(payload, list) else []
+    valid: list[tuple[str, dict[str, Any]]] = []
+    for result in results[:5]:
+        if not isinstance(result, dict):
+            continue
+        address = result.get("address") if isinstance(result.get("address"), dict) else {}
+        collection = COLLECTION_COUNTRY_CODES.get(str(address.get("country_code") or "").casefold())
+        if collection:
+            valid.append((collection, result))
+    collections = sorted({collection for collection, _result in valid})
+    response = {"results": _compact_nominatim_results([result for _collection, result in valid])}
+    if not valid:
+        response["reason"] = "no supported country result"
+        return {
+            "collection": "unknown",
+            "city": "",
+            "countryCode": "",
+            "provider": "nominatim",
+            "query": query,
+            "confidence": 0.0,
+            "response": response,
+        }
+    if len(collections) != 1:
+        response["reason"] = f"ambiguous supported countries: {', '.join(collections)}"
+        return {
+            "collection": "unknown",
+            "city": "",
+            "countryCode": "",
+            "provider": "nominatim",
+            "query": query,
+            "confidence": 0.0,
+            "response": response,
+        }
+    collection, top = valid[0]
+    address = top.get("address") if isinstance(top.get("address"), dict) else {}
+    return {
+        "collection": collection,
+        "city": str(
+            address.get("city")
+            or address.get("town")
+            or address.get("village")
+            or address.get("municipality")
+            or ""
+        ).strip(),
+        "countryCode": next(
+            (code for code, candidate in COLLECTION_COUNTRY_CODES.items() if candidate == collection),
+            "",
+        ),
+        "provider": "nominatim",
+        "query": query,
+        "confidence": 0.9 if len(valid) > 1 else 0.8,
+        "response": response,
+    }
+
+
+def nominatim_collection_lookup(query: str) -> dict[str, Any]:
+    """Resolve one approved metadata clue through the rate-limited Nominatim API."""
+    global _NOMINATIM_LAST_REQUEST_AT
+    clean_query = re.sub(r"\s+", " ", str(query or "").strip())[:160]
+    if not clean_query:
+        return {
+            "collection": "unknown",
+            "provider": "nominatim",
+            "query": "",
+            "confidence": 0.0,
+            "response": {"reason": "empty query"},
+        }
+    cache_key = clean_query.casefold()
+    with _NOMINATIM_LOCK:
+        cached = _NOMINATIM_RESULTS_CACHE.get(cache_key)
+        if cached is not None:
+            return dict(cached)
+        wait_for = max(0.0, 1.0 - (time.monotonic() - _NOMINATIM_LAST_REQUEST_AT))
+        if wait_for:
+            time.sleep(wait_for)
+        request_url = f"{NOMINATIM_SEARCH_URL}?{urlencode({
+            'q': clean_query,
+            'format': 'jsonv2',
+            'addressdetails': '1',
+            'limit': '5',
+        })}"
+        request = Request(request_url, headers={"User-Agent": NOMINATIM_USER_AGENT})
+        _NOMINATIM_LAST_REQUEST_AT = time.monotonic()
+        try:
+            with urlopen(request, timeout=15) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            result = _resolution_from_nominatim(clean_query, payload)
+        except Exception as error:  # noqa: BLE001 - an unresolved location remains retryable.
+            result = {
+                "collection": "unknown",
+                "city": "",
+                "countryCode": "",
+                "provider": "nominatim",
+                "query": clean_query,
+                "confidence": 0.0,
+                "response": {"reason": "lookup failed", "error": str(error)[:320]},
+            }
+        _NOMINATIM_RESULTS_CACHE[cache_key] = dict(result)
+        return result
+
+
+def _record_collection_resolution(
+    conn: sqlite3.Connection,
+    *,
+    asset_id: str,
+    source_version_hash: str,
+    resolution: dict[str, Any],
+) -> None:
+    """Persist the collection decision and its provider evidence in Owner.sqlite."""
+    conn.execute(
+        """
+        INSERT INTO catalog_collection_resolutions (
+          asset_id, source_version_hash, collection_slug, city, country_code,
+          provider, query_text, confidence, response_json, resolved_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(asset_id, source_version_hash) DO UPDATE SET
+          collection_slug = excluded.collection_slug,
+          city = excluded.city,
+          country_code = excluded.country_code,
+          provider = excluded.provider,
+          query_text = excluded.query_text,
+          confidence = excluded.confidence,
+          response_json = excluded.response_json,
+          resolved_at = excluded.resolved_at
+        """,
+        (
+            asset_id,
+            source_version_hash,
+            str(resolution.get("collection") or "unknown"),
+            str(resolution.get("city") or ""),
+            str(resolution.get("countryCode") or ""),
+            str(resolution.get("provider") or "unknown"),
+            str(resolution.get("query") or ""),
+            float(resolution.get("confidence") or 0),
+            _json(resolution.get("response") or {}),
+            now_iso(),
+        ),
+    )
+
+
+def _cached_collection_resolution(
+    conn: sqlite3.Connection,
+    *,
+    asset_id: str,
+    source_version_hash: str,
+) -> dict[str, Any] | None:
+    row = conn.execute(
+        """
+        SELECT collection_slug, city, country_code, provider, query_text,
+               confidence, response_json, resolved_at
+        FROM catalog_collection_resolutions
+        WHERE asset_id = ? AND source_version_hash = ?
+        """,
+        (asset_id, source_version_hash),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "collection": str(row["collection_slug"] or "unknown"),
+        "city": str(row["city"] or ""),
+        "countryCode": str(row["country_code"] or ""),
+        "provider": str(row["provider"] or "unknown"),
+        "query": str(row["query_text"] or ""),
+        "confidence": float(row["confidence"] or 0),
+        "response": _read_json(row["response_json"], {}),
+        "resolvedAt": str(row["resolved_at"] or ""),
+    }
+
+
+def _resolve_collection(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    source_version_hash: str,
+    collection_resolver: Callable[[str], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Resolve approved metadata locally first, then through the configured geocoder."""
+    static = _static_collection_resolution(row)
+    asset_id = str(row["asset_id"] or "")
+    if static["collection"] != "unknown":
+        _record_collection_resolution(
+            conn,
+            asset_id=asset_id,
+            source_version_hash=source_version_hash,
+            resolution=static,
+        )
+        return static
+    cached = _cached_collection_resolution(
+        conn,
+        asset_id=asset_id,
+        source_version_hash=source_version_hash,
+    )
+    if cached and cached["collection"] != "unknown":
+        return cached
+    resolver = collection_resolver or nominatim_collection_lookup
+    attempts: list[dict[str, Any]] = []
+    for query in _resolution_queries(row):
+        try:
+            raw = resolver(query)
+            resolution = dict(raw) if isinstance(raw, dict) else {}
+        except Exception as error:  # noqa: BLE001 - retain an auditable retryable failure.
+            resolution = {
+                "collection": "unknown",
+                "provider": getattr(resolver, "__name__", "resolver"),
+                "query": query,
+                "confidence": 0.0,
+                "response": {"reason": "resolver raised", "error": str(error)[:320]},
+            }
+        collection = str(resolution.get("collection") or "unknown").casefold()
+        if collection not in set(COLLECTION_COUNTRY_CODES.values()) | {"ai", "unknown"}:
+            collection = "unknown"
+        resolution["collection"] = collection
+        resolution["query"] = str(resolution.get("query") or query)
+        resolution.setdefault("provider", getattr(resolver, "__name__", "resolver"))
+        resolution.setdefault("confidence", 0.0)
+        resolution.setdefault("response", {})
+        attempts.append({
+            "query": query,
+            "collection": collection,
+            "provider": resolution["provider"],
+            "confidence": resolution["confidence"],
+        })
+        if collection != "unknown":
+            resolution["response"] = {
+                "attempts": attempts,
+                "providerResponse": resolution.get("response") or {},
+            }
+            _record_collection_resolution(
+                conn,
+                asset_id=asset_id,
+                source_version_hash=source_version_hash,
+                resolution=resolution,
+            )
+            return resolution
+    unresolved = {
+        "collection": "unknown",
+        "city": "",
+        "countryCode": "",
+        "provider": getattr(resolver, "__name__", "resolver"),
+        "query": attempts[-1]["query"] if attempts else "",
+        "confidence": 0.0,
+        "response": {"attempts": attempts, "reason": "no confident supported country result"},
+    }
+    _record_collection_resolution(
+        conn,
+        asset_id=asset_id,
+        source_version_hash=source_version_hash,
+        resolution=unresolved,
+    )
+    return unresolved
 
 
 def _media_id_from_key(key: str) -> str:
@@ -209,6 +564,9 @@ def catalog_candidate(
     conn: sqlite3.Connection,
     asset_id: str,
     upload_results: Iterable[dict[str, Any]],
+    *,
+    source_version_hash: str = "",
+    collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Validate owner policy and verified derivatives before touching SQLite."""
     row = _asset_row(conn, asset_id)
@@ -249,6 +607,12 @@ def catalog_candidate(
         objects = _object_set(upload_results, media_type)
     except CatalogPromotionError as error:
         return {"eligible": False, "reason": "missing_verified_derivatives", "error": str(error)}
+    resolution = _resolve_collection(
+        conn,
+        row,
+        source_version_hash=source_version_hash,
+        collection_resolver=collection_resolver,
+    )
     return {
         "eligible": True,
         "asset": row,
@@ -256,7 +620,8 @@ def catalog_candidate(
         "mediaId": str(objects["mediaId"]["value"]),
         "objects": objects,
         "fixtureIds": public_fixture_ids,
-        "collection": _gallery_slug(row),
+        "collection": str(resolution.get("collection") or "unknown"),
+        "collectionResolution": resolution,
     }
 
 
@@ -429,6 +794,15 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
         catalog.execute("PRAGMA foreign_keys = ON")
         try:
             catalog.execute("BEGIN IMMEDIATE")
+            if str(candidate.get("collection") or "unknown") == "unknown":
+                resolution = candidate.get("collectionResolution") or {}
+                reason = str(
+                    (resolution.get("response") or {}).get("reason")
+                    or "no confident supported country result"
+                )
+                raise CatalogPromotionError(
+                    "collection unresolved after approved metadata: " + reason
+                )
             collection = catalog.execute(
                 "SELECT collection_id, title FROM collections WHERE slug = ?",
                 (candidate["collection"],),
@@ -514,11 +888,20 @@ def promote_verified_asset(
     asset_id: str,
     source_version_hash: str,
     upload_results: Iterable[dict[str, Any]],
+    *,
+    collection_resolver: Callable[[str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Write one verified asset to the local catalog and audit the handoff."""
     results = [dict(item) for item in upload_results]
     with connect(repo_root) as conn:
-        candidate = catalog_candidate(repo_root, conn, asset_id, results)
+        candidate = catalog_candidate(
+            repo_root,
+            conn,
+            asset_id,
+            results,
+            source_version_hash=source_version_hash,
+            collection_resolver=collection_resolver,
+        )
     if not candidate.get("eligible"):
         return {"state": "not-applicable", "reason": candidate.get("reason", "not-eligible"), "error": candidate.get("error", "")}
     media_id = str(candidate["mediaId"])
@@ -534,7 +917,26 @@ def promote_verified_asset(
             catalog_sha256=checksum,
             verified_at=now_iso(),
         )
-        return {"state": "local", "mediaId": media_id, "fixtureIds": candidate["fixtureIds"], **registration, "catalogSha256": checksum}
+        with connect(repo_root) as conn:
+            conn.execute(
+                """
+                UPDATE asset_delivery_state
+                SET delivery_state = 'live', source_version_hash = ?,
+                    last_error = '', updated_at = ?
+                WHERE asset_id = ?
+                """,
+                (source_version_hash, now_iso(), asset_id),
+            )
+            conn.commit()
+        return {
+            "state": "local",
+            "mediaId": media_id,
+            "fixtureIds": candidate["fixtureIds"],
+            "collection": candidate["collection"],
+            "collectionResolution": candidate.get("collectionResolution") or {},
+            **registration,
+            "catalogSha256": checksum,
+        }
     except Exception as error:
         _update_catalog_audit(
             repo_root,

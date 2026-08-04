@@ -189,6 +189,96 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 "live",
             )
 
+    def test_approved_city_alias_is_recorded_before_catalog_promotion(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Sagrada Familia Spires",
+                "keywords": ["Barcelona", "architecture"],
+                "renderedFingerprint": "render-barcelona",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, location_label = 'Barcelona Sagrada Familia' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = ?, keywords_json = ? WHERE asset_id = ?",
+                ("Sagrada Familia Spires", '["Barcelona", "architecture"]', "asset-1"),
+            )
+            conn.commit()
+
+        result = publish_verified_asset(self.root, "asset-1", verified_public_set("barcelona-asset"))
+
+        self.assertEqual(result["catalogState"], "local")
+        self.assertEqual(result["publicCatalog"]["collection"], "spain")
+        self.assertEqual(result["publicCatalog"]["collectionResolution"]["provider"], "static-alias")
+        with connect(self.root) as conn:
+            resolution = conn.execute(
+                "SELECT collection_slug, provider, query_text FROM catalog_collection_resolutions WHERE asset_id = 'asset-1'"
+            ).fetchone()
+            self.assertEqual(dict(resolution), {
+                "collection_slug": "spain",
+                "provider": "static-alias",
+                "query_text": "barcelona",
+            })
+
+    def test_unknown_collection_uses_approved_metadata_resolver_and_caches_evidence(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Unmapped city view",
+                "keywords": ["Hidden place"],
+                "renderedFingerprint": "render-resolved-city",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, location_label = 'Mystery waterfront' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = ?, keywords_json = ? WHERE asset_id = ?",
+                ("Unmapped city view", '["Hidden place"]', "asset-1"),
+            )
+            conn.commit()
+        queries = []
+
+        def resolver(query):
+            queries.append(query)
+            return {
+                "collection": "spain",
+                "city": "Valencia",
+                "countryCode": "es",
+                "provider": "test-geocoder",
+                "query": query,
+                "confidence": 0.88,
+                "response": {"displayName": "Valencia, Spain"},
+            }
+
+        result = publish_verified_asset(
+            self.root,
+            "asset-1",
+            verified_public_set("resolved-city-asset"),
+            collection_resolver=resolver,
+        )
+
+        self.assertEqual(result["catalogState"], "local")
+        self.assertEqual(result["publicCatalog"]["collection"], "spain")
+        self.assertEqual(result["publicCatalog"]["collectionResolution"]["provider"], "test-geocoder")
+        self.assertEqual(queries, ["Mystery waterfront"])
+        with connect(self.root) as conn:
+            resolution = conn.execute(
+                "SELECT collection_slug, city, country_code, provider, confidence, response_json FROM catalog_collection_resolutions WHERE asset_id = 'asset-1'"
+            ).fetchone()
+            self.assertEqual(resolution["collection_slug"], "spain")
+            self.assertEqual(resolution["city"], "Valencia")
+            self.assertEqual(resolution["country_code"], "es")
+            self.assertEqual(resolution["provider"], "test-geocoder")
+            self.assertAlmostEqual(resolution["confidence"], 0.88)
+            self.assertIn("Valencia, Spain", resolution["response_json"])
+
     def test_upload_run_is_bounded_and_isolates_failure(self):
         record_photos_sync_snapshot(
             self.root,

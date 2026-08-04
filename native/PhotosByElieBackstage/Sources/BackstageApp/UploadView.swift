@@ -44,7 +44,7 @@ struct UploadView: View {
                         Text(
                             "\(plan.items.count.formatted()) shown of \(plan.needsUploadCount.formatted()) needing upload"
                             + " • \(outsideWindow.formatted()) not shown"
-                            + " • oldest eligible by upload-readiness time"
+                            + " • \(plan.order.label)"
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)

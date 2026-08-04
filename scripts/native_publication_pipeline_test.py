@@ -345,6 +345,16 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 "UPDATE sidecar_decisions SET keywords_json = ? WHERE asset_id = ?",
                 ('["Spain", "Sea"]', "asset-1"),
             )
+            conn.execute(
+                """
+                UPDATE asset_delivery_state
+                SET updated_at = CASE asset_id
+                    WHEN 'asset-1' THEN '2026-08-04T20:00:00Z'
+                    WHEN 'asset-2' THEN '2026-08-04T21:00:00Z'
+                END
+                WHERE asset_id IN ('asset-1', 'asset-2')
+                """
+            )
             conn.commit()
 
         root_plan = upload_eligibility_plan(
@@ -361,8 +371,16 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(root_plan["approvedCount"], 2)
         self.assertEqual(root_plan["needsUploadCount"], 2)
         self.assertEqual([item["assetId"] for item in root_plan["items"]], ["asset-1", "asset-2"])
+        self.assertEqual(root_plan["order"], "oldest")
         self.assertEqual(root_plan["items"][0]["photoLibraryIdentifier"], "asset-1")
         self.assertEqual(root_plan["items"][0]["keywords"], ["Spain", "Sea"])
+        recent_plan = upload_eligibility_plan(
+            self.root,
+            fixture_id=self.fixture["fixtureId"],
+            order="recent",
+        )
+        self.assertEqual(recent_plan["order"], "recent")
+        self.assertEqual([item["assetId"] for item in recent_plan["items"]], ["asset-2", "asset-1"])
         self.assertEqual(child_plan["pickedCount"], 1)
         self.assertEqual(child_plan["needsUploadCount"], 1)
         self.assertEqual([item["assetId"] for item in child_plan["items"]], ["asset-1"])

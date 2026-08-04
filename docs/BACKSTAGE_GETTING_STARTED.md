@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **0.4.57 (build 68)**.
+The current native workflow is included in version **0.5.1 (build 70)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.

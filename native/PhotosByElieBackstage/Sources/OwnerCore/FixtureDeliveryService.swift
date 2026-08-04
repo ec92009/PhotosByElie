@@ -147,6 +147,25 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     }
 }
 
+public enum NativeUploadPlanOrder: String, Sendable, CaseIterable, Equatable {
+    case oldest
+    case recent
+
+    public var label: String {
+        switch self {
+        case .oldest: "oldest eligible"
+        case .recent: "recent approvals"
+        }
+    }
+
+    public var alternateLabel: String {
+        switch self {
+        case .oldest: "Show recent approvals"
+        case .recent: "Show oldest queue"
+        }
+    }
+}
+
 public struct NativeUploadPlan: Sendable, Equatable {
     public var fixtureID: String
     public var fixtureName: String
@@ -156,6 +175,7 @@ public struct NativeUploadPlan: Sendable, Equatable {
     public var needsReviewCount: Int
     public var needsUploadCount: Int
     public var liveCount: Int
+    public var order: NativeUploadPlanOrder
     public var offset: Int
     public var limit: Int
     public var hasNext: Bool
@@ -170,6 +190,7 @@ public struct NativeUploadPlan: Sendable, Equatable {
         needsReviewCount: Int,
         needsUploadCount: Int,
         liveCount: Int,
+        order: NativeUploadPlanOrder = .oldest,
         offset: Int,
         limit: Int,
         hasNext: Bool,
@@ -183,6 +204,7 @@ public struct NativeUploadPlan: Sendable, Equatable {
         self.needsReviewCount = needsReviewCount
         self.needsUploadCount = needsUploadCount
         self.liveCount = liveCount
+        self.order = order
         self.offset = offset
         self.limit = limit
         self.hasNext = hasNext
@@ -317,7 +339,8 @@ public actor FixtureDeliveryService {
     public func nativeUploadPlan(
         fixtureID: String,
         offset: Int = 0,
-        limit: Int = 200
+        limit: Int = 200,
+        order: NativeUploadPlanOrder = .oldest
     ) async throws -> NativeUploadPlan {
         let action = try await fixtureAction(
             mode: "asset-upload-plan",
@@ -325,6 +348,7 @@ public actor FixtureDeliveryService {
             extra: [
                 "offset": .number(Double(max(0, offset))),
                 "limit": .number(Double(max(1, min(500, limit)))),
+                "order": .string(order.rawValue),
             ]
         )
         guard let plan = action.result?["uploadPlan"]?.objectValue else {
@@ -354,6 +378,9 @@ public actor FixtureDeliveryService {
             needsReviewCount: plan["needsReviewCount"]?.intValue ?? 0,
             needsUploadCount: plan["needsUploadCount"]?.intValue ?? 0,
             liveCount: plan["liveCount"]?.intValue ?? 0,
+            order: NativeUploadPlanOrder(
+                rawValue: plan["order"]?.stringValue ?? NativeUploadPlanOrder.oldest.rawValue
+            ) ?? .oldest,
             offset: plan["offset"]?.intValue ?? 0,
             limit: plan["limit"]?.intValue ?? max(1, min(500, limit)),
             hasNext: plan["hasNext"]?.boolValue ?? false,

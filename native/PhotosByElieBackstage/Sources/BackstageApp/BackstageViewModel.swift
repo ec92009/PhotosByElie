@@ -162,7 +162,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingPool: FixturePool?
     @Published var cullingFixtureID = ""
     @Published var fixtureCullingWindow: FixtureCullingWindow?
-    @Published var cullingViews: Set<FixtureCullingView> = [.undecided]
+    @Published var cullingViews: Set<FixtureCullingView> = Set(FixtureCullingView.selectableCases)
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
     @Published private(set) var cullingGridAvailableWidth = 0.0
@@ -921,10 +921,11 @@ final class BackstageViewModel: ObservableObject {
         cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
         cullingRatingFilters = Set(0...5)
         cullingColorFilters = Set(CullingColorFilter.selectableCases)
-        if cullingViews == [.undecided] {
+        let allViews = Set(FixtureCullingView.selectableCases)
+        let viewsChanged = cullingViews != allViews
+        cullingViews = allViews
+        if !viewsChanged {
             applyCullingFilters()
-        } else {
-            cullingViews = [.undecided]
         }
     }
 
@@ -1085,7 +1086,7 @@ final class BackstageViewModel: ObservableObject {
     func selectCullingFixture(_ fixtureID: String) {
         cullingFixtureID = fixtureID
         cullingPool = nil
-        cullingViews = [.undecided]
+        cullingViews = Set(FixtureCullingView.selectableCases)
         cullingWindowOffset = 0
         cullingSearch = ""
         clearCullingSelection()
@@ -2815,7 +2816,9 @@ final class BackstageViewModel: ObservableObject {
                     Array(decisions[start..<end]),
                     idempotencyKey: "native-culling-\(UUID().uuidString)"
                 )
-                for change in batch { cullingStates[change.assetID] = change.state }
+                for change in batch {
+                    cullingStates[change.assetID] = mergedCullingState(for: change)
+                }
                 changes.append(contentsOf: batch)
                 cullingDecisionProgress = end
                 cullingStatus = "Applied \(label.lowercased()) \(end.formatted()) / \(decisions.count.formatted())…"
@@ -2835,6 +2838,39 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             cullingStatus = userFacingMessage(for: error)
         }
+    }
+
+    private func mergedCullingState(for change: SidecarDecisionChange) -> SidecarDecisionState {
+        guard cullingPool == nil,
+              fixtureCullingWindow != nil,
+              var current = cullingStates[change.assetID]
+        else {
+            return change.state
+        }
+
+        // Fixture placement is local to the active fixture. Rating/color and
+        // metadata updates come from the global Sidecar ledger, whose
+        // pickState must not replace the fixture's placement state.
+        let families = Set(change.changedFamilies)
+        if families.contains("rating") {
+            current.rating = change.state.rating
+        }
+        if families.contains("color") {
+            current.color = change.state.color
+        }
+        if families.contains("metadata") {
+            current.metadataState = change.state.metadataState
+            current.title = change.state.title
+            current.keywords = change.state.keywords
+        }
+        if families.contains("pick_state") {
+            current.pickState = change.state.pickState
+        }
+        if families.contains("tombstone") {
+            current.tombstoneState = change.state.tombstoneState
+        }
+        current.updatedAt = change.state.updatedAt
+        return current
     }
 
     private func applyFixturePlacement(
@@ -3174,19 +3210,21 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadNativeUploadPlan() async {
+    func loadNativeUploadPlan(order requestedOrder: NativeUploadPlanOrder? = nil) async {
         guard !selectedFixtureID.isEmpty else {
             nativeUploadPlan = nil
             nativeUploadStatus = "Choose a fixture to load its approved publication queue."
             return
         }
+        let order = requestedOrder ?? nativeUploadPlan?.order ?? .oldest
         isRunningDelivery = true
         nativeUploadStatus = "Loading approved publication eligibility…"
         defer { isRunningDelivery = false }
         do {
             let plan = try await deliveryService.nativeUploadPlan(
                 fixtureID: selectedFixtureID,
-                limit: 200
+                limit: 200,
+                order: order
             )
             nativeUploadPlan = plan
             selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
@@ -3195,7 +3233,7 @@ final class BackstageViewModel: ObservableObject {
             } else if plan.needsUploadCount == 0 {
                 nativeUploadStatus = "\(plan.approvedCount) approved • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review • nothing needs upload."
             } else {
-                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) oldest eligible."
+                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) \(plan.order.label)."
             }
         } catch {
             nativeUploadPlan = nil
@@ -3277,6 +3315,7 @@ final class BackstageViewModel: ObservableObject {
                     needsReviewCount: current.needsReviewCount + returnedIDs.count,
                     needsUploadCount: max(0, current.needsUploadCount - returnedIDs.count),
                     liveCount: current.liveCount,
+                    order: current.order,
                     offset: current.offset,
                     limit: current.limit,
                     hasNext: current.hasNext,
@@ -3325,6 +3364,7 @@ final class BackstageViewModel: ObservableObject {
                     needsReviewCount: current.needsReviewCount,
                     needsUploadCount: max(0, current.needsUploadCount - hiddenIDs.count),
                     liveCount: current.liveCount,
+                    order: current.order,
                     offset: current.offset,
                     limit: current.limit,
                     hasNext: current.hasNext,
@@ -3563,7 +3603,8 @@ final class BackstageViewModel: ObservableObject {
         do {
             let summary = try await deliveryService.nativeUploadPlan(
                 fixtureID: selectedFixtureID,
-                limit: 200
+                limit: 200,
+                order: current.order
             )
             nativeUploadPlan = NativeUploadPlan(
                 fixtureID: summary.fixtureID,
@@ -3574,6 +3615,7 @@ final class BackstageViewModel: ObservableObject {
                 needsReviewCount: summary.needsReviewCount,
                 needsUploadCount: summary.needsUploadCount,
                 liveCount: summary.liveCount,
+                order: summary.order,
                 offset: current.offset,
                 limit: current.limit,
                 hasNext: summary.hasNext,
@@ -3590,6 +3632,7 @@ final class BackstageViewModel: ObservableObject {
                 needsReviewCount: current.needsReviewCount,
                 needsUploadCount: max(0, current.needsUploadCount - removedCount),
                 liveCount: current.liveCount + successfulIDs.count,
+                order: current.order,
                 offset: current.offset,
                 limit: current.limit,
                 hasNext: current.hasNext,

@@ -2225,6 +2225,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 fixture_id=str(manifest.get("fixtureId") or ""),
                 offset=int(manifest.get("offset") or 0),
                 limit=int(manifest.get("limit") or 200),
+                order=str(manifest.get("order") or "oldest"),
             ),
         })
     elif mode == "asset-upload-run-start":

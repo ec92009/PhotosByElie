@@ -142,6 +142,7 @@ def upload_eligibility_plan(
     fixture_id: str,
     offset: int = 0,
     limit: int = 200,
+    order: str = "oldest",
 ) -> dict[str, Any]:
     """Return a read-only fixture-scoped view of approved assets awaiting publication."""
     clean_fixture_id = str(fixture_id or "").strip()
@@ -149,6 +150,12 @@ def upload_eligibility_plan(
         raise ValueError("fixture ID is required")
     safe_offset = max(0, int(offset or 0))
     safe_limit = max(1, min(500, int(limit or 200)))
+    clean_order = "recent" if str(order or "").strip().casefold() == "recent" else "oldest"
+    order_sql = (
+        "ORDER BY delivery.updated_at DESC, decision.asset_id DESC"
+        if clean_order == "recent"
+        else "ORDER BY delivery.updated_at, decision.asset_id"
+    )
     with connect(repo_root) as conn:
         retired_media_types = retired_storefront_media_types(repo_root)
         retired_media_filter = ""
@@ -254,7 +261,7 @@ def upload_eligibility_plan(
                       AND source.source_exists = 0
                   )
                   {retired_media_filter}
-                ORDER BY delivery.updated_at, decision.asset_id
+                  {order_sql}
                 LIMIT :limit OFFSET :offset
                 """,
                 {
@@ -295,6 +302,7 @@ def upload_eligibility_plan(
         "liveCount": int(summary["live_count"] or 0),
         "offset": safe_offset,
         "limit": safe_limit,
+        "order": clean_order,
         "count": len(items),
         "hasNext": safe_offset + len(items) < needs_upload_count,
         "items": items,

@@ -5,7 +5,8 @@ import SwiftUI
 /// SwiftUI's native `help` modifier follows the user's system tooltip delay,
 /// which cannot express Backstage's fixed 0.5-second interaction contract.
 /// This modifier keeps the explanation accessible while presenting it in a
-/// transient popover that does not change the button's action or enabled state.
+/// non-interactive overlay. A popover is deliberately avoided: SwiftUI can
+/// route the next click to dismiss a visible popover instead of the button.
 private struct BackstageHoverHelpModifier: ViewModifier {
     let explanation: String
 
@@ -31,19 +32,26 @@ private struct BackstageHoverHelpModifier: ViewModifier {
                     hoverTask = nil
                 }
             }
-            .popover(
-                isPresented: $isPresented,
-                attachmentAnchor: .rect(.bounds),
-                arrowEdge: .bottom
-            ) {
-                Text(explanation)
-                    .font(.callout)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: 320, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .accessibilityAddTraits(.isStaticText)
+            .overlay(alignment: .bottom) {
+                if isPresented {
+                    Text(explanation)
+                        .font(.callout)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 320, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(.secondary.opacity(0.25))
+                        }
+                        .shadow(radius: 8, y: 3)
+                        .offset(y: 8)
+                        .allowsHitTesting(false)
+                        .zIndex(1000)
+                        .accessibilityAddTraits(.isStaticText)
+                }
             }
             .accessibilityHint(explanation)
             .onDisappear {

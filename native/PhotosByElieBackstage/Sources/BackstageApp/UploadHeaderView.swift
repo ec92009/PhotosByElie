@@ -13,6 +13,19 @@ struct UploadHeaderView: View {
                 Text("Upload & publish").font(.largeTitle.bold())
                 Spacer()
                 FixturePicker(model: model, isPreviewMode: isPreviewMode)
+                if let plan = model.nativeUploadPlan,
+                   plan.needsUploadCount > plan.items.count {
+                    Button(plan.order.alternateLabel) {
+                        Task {
+                            let nextOrder: NativeUploadPlanOrder = plan.order == .recent ? .oldest : .recent
+                            await model.loadNativeUploadPlan(order: nextOrder)
+                        }
+                    }
+                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .backstageHelp(plan.order == .recent
+                        ? "Return to the oldest-first publication queue. Recent approvals remain eligible and are not changed by this view switch."
+                        : "Load the newest approved items first so recent Review approvals can be found without changing the oldest-first publication queue.")
+                }
                 if model.nativeUploadPlan?.items.isEmpty == true {
                     Button("Load next 200") {
                         Task { await model.loadNativeUploadPlan() }

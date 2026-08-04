@@ -234,7 +234,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "confirmingReturnToReview",
             "shown of",
             "not shown",
-            "oldest eligible by upload-readiness time",
+            "plan.order.label",
             'Button("Publish these \\(plan.items.count.formatted())…")',
             "confirmingVisiblePublication",
             'Button("Upload selection…")',
@@ -924,7 +924,8 @@ class NativeCullingParityTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("Task.sleep(for: .milliseconds(500))", hover_help)
-        self.assertIn(".popover(", hover_help)
+        self.assertIn(".overlay(alignment: .bottom)", hover_help)
+        self.assertNotIn(".popover(", hover_help)
         self.assertIn(".accessibilityHint(explanation)", hover_help)
 
     def test_upload_preview_hides_current_item_and_advances(self):

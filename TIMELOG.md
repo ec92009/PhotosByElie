@@ -716,8 +716,15 @@ Clock state: running
 | 2026-08-01 | 15:35 CEST | 15:36 CEST | 0:01 | Requested an action-specific explanation for every Backstage button after a half-second hover; background inventory, implementation, tests, build, and Canvas verification excluded. |
 | 2026-08-01 | 21:51 CEST | 21:52 CEST | 0:01 | Reported that approving a correct Review title/keyword proposal left the item approved but discarded its proposed metadata; background SQLite audit and source diagnosis excluded. |
 | 2026-08-01 | 22:00 CEST | 22:01 CEST | 0:01 | Authorized restoring 03318 and making Review approval atomic; background implementation, database repair, tests, signing, installation, and UI verification excluded. |
+| 2026-08-02 | 11:21 CEST | 11:22 CEST | 0:01 | Asked to return the latest 39-item Malaga Expo batch to Review; verified the supported action is blocked while all 39 remain live and requested withdrawal direction. |
+| 2026-08-02 | 11:35 CEST | 11:43 CEST | 0:03 | Audited universal fixture and Sidecar delivery parity, fixed tombstone precedence and fixture-local pick routing, and verified focused and full test suites; background implementation and test execution excluded. |
+| 2026-08-03 | 13:41 CEST | 13:42 CEST | 0:01 | Requested a faster multi-year gallery date range picker; verified editable endpoint years and inclusive filtering locally. |
+| 2026-08-04 | 19:25 CEST | 19:26 CEST | 0:01 | Reported missing French and Spanish accents in the language picker; verified the local labels and identified stale unaccented copy on the live homepage. |
+| 2026-08-04 | 20:32 CEST | 20:33 CEST | 0:01 | Audited title/keyword AI proposal model and reasoning-effort persistence; background code and SQLite inspection excluded. |
+| 2026-08-04 | 20:38 CEST | 20:39 CEST | 0:01 | Checked whether installed Backstage v0.4.57 build 68 contains the new title/keyword model-effort ladder; compared native source and ladder branch without mutating app or Owner state. |
+| 2026-08-04 | 21:03 CEST | 21:04 CEST | 0:01 | Authorized clean-worktree integration of the Free → Luna Max vision → Sol High vision title/keyword ladder and its audit trail; implementation, tests, and commit runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 34:27
+Active collaboration time used: 34:36
 Remaining budget: not set

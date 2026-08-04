@@ -173,9 +173,9 @@ class TitleReviewUndoTests(unittest.TestCase):
                 "chunk_id": "batch-bounded-test-chunk-1",
                 "status": "running",
                 "shoot_key": "spain|shoot-1",
-                "requested_generator_model": "codex-gpt-5.6-luna-xhigh-vision",
+                "requested_generator_model": "codex-gpt-5.6-luna-max-vision",
                 "generator_model_level": 1,
-                "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+                "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-max-vision"],
                 "photo_ids": ["photo-a"],
                 "image_count": 1,
                 "input_bytes": 1200,
@@ -191,11 +191,11 @@ class TitleReviewUndoTests(unittest.TestCase):
                     "preview_bytes": 900,
                     "input_bytes": 1200,
                     "input_tokens": 300,
-                    "requested_generator_model": "codex-gpt-5.6-luna-xhigh-vision",
+                    "requested_generator_model": "codex-gpt-5.6-luna-max-vision",
                     "resolved_model": "gpt-5.6-luna",
-                    "reasoning_effort": "xhigh",
+                    "reasoning_effort": "max",
                     "vision": True,
-                    "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+                    "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-max-vision"],
                     "provenance": {"batch_id": "batch-bounded-test", "chunk_id": "batch-bounded-test-chunk-1"},
                 }],
             }
@@ -360,7 +360,7 @@ class TitleReviewUndoTests(unittest.TestCase):
             default_ladder = owner_state_db.title_keyword_model_ladder(repo_root)
             self.assertEqual(default_ladder, [
                 "codex-gpt-5.4-mini",
-                "codex-gpt-5.6-luna-xhigh-vision",
+                "codex-gpt-5.6-luna-max-vision",
                 "codex-gpt-5.6-sol-high-vision",
             ])
 
@@ -395,6 +395,81 @@ class TitleReviewUndoTests(unittest.TestCase):
                     "operation": "save-title-keyword-model-ladder",
                     "model_ladder": ["local-metadata-rules-v1"],
                 })
+
+    def test_imported_title_keyword_proposal_keeps_model_effort_and_vision_audit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            conn = owner_state_db.connect(repo_root)
+            try:
+                owner_state_db._import_batch(
+                    conn,
+                    {
+                        "batch_id": "batch-audit-test",
+                        "generated_at": "2026-08-04T19:00:00Z",
+                        "photos": [{
+                            "photo_id": "photo-audit",
+                            "state": {"proposal_attempt": 1},
+                            "current": {"title": "Old title", "keywords": ["Old"]},
+                            "proposed": {
+                                "title": "A better title",
+                                "keywords": ["Spain", "Evening"],
+                                "status": "model_rework",
+                                "confidence": "high",
+                                "reason": "Visible landmark and light.",
+                                "generator": {
+                                    "model": "codex-gpt-5.6-luna-max-vision",
+                                    "requested_generator_model": "codex-gpt-5.6-luna-max-vision",
+                                    "resolved_model": "gpt-5.6-luna",
+                                    "reasoning_effort": "max",
+                                    "vision": True,
+                                    "model_level": 1,
+                                    "model_maxed": False,
+                                    "model_ladder": [
+                                        "codex-gpt-5.4-mini",
+                                        "codex-gpt-5.6-luna-max-vision",
+                                        "codex-gpt-5.6-sol-high-vision",
+                                    ],
+                                },
+                            },
+                        }],
+                    },
+                    "unit-test",
+                )
+                conn.commit()
+                row = conn.execute(
+                    """
+                    SELECT requested_generator_model, resolved_model, reasoning_effort,
+                           vision, model_ladder
+                    FROM title_keyword_proposals
+                    WHERE media_id = 'photo-audit'
+                    """
+                ).fetchone()
+                pending_rows = local_server._pending_title_keyword_rows(conn, "batch-audit-test")
+            finally:
+                conn.close()
+
+            self.assertEqual(row[0:4], (
+                "codex-gpt-5.6-luna-max-vision",
+                "gpt-5.6-luna",
+                "max",
+                1,
+            ))
+            self.assertEqual(json.loads(row[4]), [
+                "codex-gpt-5.4-mini",
+                "codex-gpt-5.6-luna-max-vision",
+                "codex-gpt-5.6-sol-high-vision",
+            ])
+            payload = local_server._title_keyword_payload_from_sqlite(
+                repo_root,
+                "batch-audit-test",
+                pending_rows,
+                [{"batch_id": "batch-audit-test", "pending_count": 1}],
+            )
+            generator = payload["photos"][0]["proposed"]["generator"]
+            self.assertEqual(generator["requested_generator_model"], "codex-gpt-5.6-luna-max-vision")
+            self.assertEqual(generator["resolved_model"], "gpt-5.6-luna")
+            self.assertEqual(generator["reasoning_effort"], "max")
+            self.assertTrue(generator["vision"])
 
     def test_review_queue_excludes_manifest_only_backlog_without_site_writeback_target(self):
         with tempfile.TemporaryDirectory() as temp_dir:

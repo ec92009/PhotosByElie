@@ -16,11 +16,26 @@ import tempfile
 import uuid
 from typing import Any
 
-from fixture_pipeline import OWNER_DB, ai_run_status, now_iso
+from fixture_pipeline import OWNER_DB, ai_run_status, connect as ensure_owner_schema, now_iso
+from owner_state_db import TITLE_KEYWORD_MODEL_CATALOG
 from requested_ai_previews import capture_requested_ai_previews
 
 
-DEFAULT_MODEL = os.environ.get("PBE_REQUESTED_AI_MODEL", "gpt-5.4-mini")
+REQUESTED_AI_MODEL_INFO = next(
+    item for item in TITLE_KEYWORD_MODEL_CATALOG
+    if item["alias"] == "codex-gpt-5.6-luna-max-vision"
+)
+REQUESTED_AI_MODEL_ALIAS = REQUESTED_AI_MODEL_INFO["alias"]
+DEFAULT_MODEL = REQUESTED_AI_MODEL_INFO["resolved_model"]
+DEFAULT_MODEL_REASONING_EFFORT = REQUESTED_AI_MODEL_INFO["reasoning_effort"]
+DEFAULT_MODEL_VISION = bool(REQUESTED_AI_MODEL_INFO["vision"])
+DEFAULT_MODEL_LADDER = [item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG]
+_requested_model = os.environ.get("PBE_REQUESTED_AI_MODEL", "").strip()
+if _requested_model and _requested_model not in {DEFAULT_MODEL, REQUESTED_AI_MODEL_ALIAS}:
+    raise ValueError(
+        "PBE_REQUESTED_AI_MODEL must resolve to the Luna Max vision rung; "
+        f"expected {DEFAULT_MODEL} or {REQUESTED_AI_MODEL_ALIAS}"
+    )
 DEFAULT_TIMEOUT_SECONDS = max(
     30,
     int(os.environ.get("PBE_REQUESTED_AI_TIMEOUT_SECONDS", "300")),
@@ -140,7 +155,7 @@ def codex_proposer(item: dict[str, Any]) -> dict[str, Any]:
             "-m",
             DEFAULT_MODEL,
             "-c",
-            'model_reasoning_effort="low"',
+            f'model_reasoning_effort="{DEFAULT_MODEL_REASONING_EFFORT}"',
             "--image",
             str(preview),
             "-",
@@ -317,6 +332,10 @@ def run_requested_ai_pass(
     repo_root = repo_root.resolve()
     if trigger not in {"scheduled", "manual", "test"}:
         raise ValueError("AI pass trigger is invalid")
+    # Migrate the shared Owner tables before the raw checkpoint connections
+    # below write the per-proposal model/effort audit fields.
+    schema_conn = ensure_owner_schema(repo_root)
+    schema_conn.close()
     with _runtime_connection(repo_root) as conn:
         active = _active_run(conn)
         if active:
@@ -365,10 +384,21 @@ def run_requested_ai_pass(
         conn.executemany(
             """
             INSERT INTO asset_ai_run_items (
-              run_id, asset_id, status, attempt
-            ) VALUES (?, ?, 'queued', ?)
+              run_id, asset_id, status, attempt,
+              requested_generator_model, resolved_model, reasoning_effort,
+              vision, model_ladder
+            ) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?, ?)
             """,
-            [(run_id, item["assetId"], item["attempt"]) for item in candidates],
+            [(
+                run_id,
+                item["assetId"],
+                item["attempt"],
+                REQUESTED_AI_MODEL_ALIAS,
+                DEFAULT_MODEL,
+                DEFAULT_MODEL_REASONING_EFFORT,
+                int(DEFAULT_MODEL_VISION),
+                _json(DEFAULT_MODEL_LADDER),
+            ) for item in candidates],
         )
         conn.commit()
 
@@ -434,8 +464,10 @@ def run_requested_ai_pass(
                           proposed_title, proposed_keywords_json,
                           confidence, reason, needs_owner_context,
                           request_reasons_json, request_note, preview_sha256,
-                          generator, generator_model, created_at
-                        ) VALUES (?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?)
+                          generator, generator_model, requested_generator_model,
+                          resolved_model, reasoning_effort, vision, model_ladder,
+                          created_at
+                        ) VALUES (?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             proposal_id,
@@ -453,6 +485,11 @@ def run_requested_ai_pass(
                             item["requestNote"],
                             item["previewSha256"],
                             DEFAULT_MODEL,
+                            REQUESTED_AI_MODEL_ALIAS,
+                            DEFAULT_MODEL,
+                            DEFAULT_MODEL_REASONING_EFFORT,
+                            int(DEFAULT_MODEL_VISION),
+                            _json(DEFAULT_MODEL_LADDER),
                             timestamp,
                         ),
                     )

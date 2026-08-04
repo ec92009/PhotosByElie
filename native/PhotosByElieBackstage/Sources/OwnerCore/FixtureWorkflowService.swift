@@ -511,6 +511,11 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var proposedKeywords: [String]
     public var proposalReason: String
     public var proposalStatus: String
+    public var requestedGeneratorModel: String
+    public var resolvedModel: String
+    public var reasoningEffort: String
+    public var vision: Bool
+    public var modelLadder: [String]
     public var deliveryState: String
 
     public init(
@@ -537,6 +542,11 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposedKeywords: [String] = [],
         proposalReason: String = "",
         proposalStatus: String = "",
+        requestedGeneratorModel: String = "",
+        resolvedModel: String = "",
+        reasoningEffort: String = "",
+        vision: Bool = false,
+        modelLadder: [String] = [],
         deliveryState: String = "not-ready"
     ) {
         self.id = id
@@ -562,6 +572,11 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.proposedKeywords = proposedKeywords
         self.proposalReason = proposalReason
         self.proposalStatus = proposalStatus
+        self.requestedGeneratorModel = requestedGeneratorModel
+        self.resolvedModel = resolvedModel
+        self.reasoningEffort = reasoningEffort
+        self.vision = vision
+        self.modelLadder = modelLadder
         self.deliveryState = deliveryState
     }
 
@@ -590,6 +605,11 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         proposalReason = json["proposalReason"]?.stringValue ?? ""
         proposalStatus = json["proposalStatus"]?.stringValue ?? ""
+        requestedGeneratorModel = json["requestedGeneratorModel"]?.stringValue ?? ""
+        resolvedModel = json["resolvedModel"]?.stringValue ?? ""
+        reasoningEffort = json["reasoningEffort"]?.stringValue ?? ""
+        vision = json["vision"]?.boolValue ?? false
+        modelLadder = json["modelLadder"]?.arrayValue?.compactMap(\.stringValue) ?? []
         deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
     }
 }
@@ -742,6 +762,11 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
     public var needsOwnerContext: Bool
     public var requestReasons: [String]
     public var requestNote: String
+    public var requestedGeneratorModel: String
+    public var resolvedModel: String
+    public var reasoningEffort: String
+    public var vision: Bool
+    public var modelLadder: [String]
     public var createdAt: String
 
     init(json: [String: JSONValue]) {
@@ -761,6 +786,11 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
         needsOwnerContext = json["needsOwnerContext"]?.boolValue ?? false
         requestReasons = json["requestReasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
         requestNote = json["requestNote"]?.stringValue ?? ""
+        requestedGeneratorModel = json["requestedGeneratorModel"]?.stringValue ?? ""
+        resolvedModel = json["resolvedModel"]?.stringValue ?? ""
+        reasoningEffort = json["reasoningEffort"]?.stringValue ?? ""
+        vision = json["vision"]?.boolValue ?? false
+        modelLadder = json["modelLadder"]?.arrayValue?.compactMap(\.stringValue) ?? []
         createdAt = json["createdAt"]?.stringValue ?? ""
     }
 }

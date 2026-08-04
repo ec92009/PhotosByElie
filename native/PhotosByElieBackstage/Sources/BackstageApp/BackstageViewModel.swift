@@ -27,6 +27,10 @@ struct ReviewMetadataDraft: Sendable, Equatable {
     var proposalID: String = ""
     var proposalReason: String = ""
     var proposalStatus: String = ""
+    var requestedGeneratorModel: String = ""
+    var resolvedModel: String = ""
+    var reasoningEffort: String = ""
+    var vision: Bool = false
 
     var isProposal: Bool { !proposalID.isEmpty }
     var isHistoricalProposal: Bool { proposalStatus == "superseded" }
@@ -231,7 +235,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
     @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
     @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
-    @Published var metadataModelLadderStatus = "Default OpenAI ladder: Free → Luna XHigh vision → Sol High vision."
+    @Published var metadataModelLadderStatus = "Default OpenAI ladder: Free → Luna Max vision → Sol High vision."
     @Published var isSavingMetadataModelLadder = false
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
@@ -2369,7 +2373,11 @@ final class BackstageViewModel: ObservableObject {
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
                     proposalReason: proposal.reason,
-                    proposalStatus: proposal.status
+                    proposalStatus: proposal.status,
+                    requestedGeneratorModel: proposal.requestedGeneratorModel,
+                    resolvedModel: proposal.resolvedModel,
+                    reasoningEffort: proposal.reasoningEffort,
+                    vision: proposal.vision
                 )
                 loadedProposalIDs.append(proposal.id)
             }
@@ -2401,7 +2409,11 @@ final class BackstageViewModel: ObservableObject {
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
                     proposalReason: proposal.reason,
-                    proposalStatus: proposal.status
+                    proposalStatus: proposal.status,
+                    requestedGeneratorModel: proposal.requestedGeneratorModel,
+                    resolvedModel: proposal.resolvedModel,
+                    reasoningEffort: proposal.reasoningEffort,
+                    vision: proposal.vision
                 )
                 restored += 1
             }
@@ -2526,6 +2538,10 @@ final class BackstageViewModel: ObservableObject {
                 if existing.proposalID == item.proposalID {
                     var refreshed = existing
                     refreshed.proposalStatus = item.proposalStatus
+                    refreshed.requestedGeneratorModel = item.requestedGeneratorModel
+                    refreshed.resolvedModel = item.resolvedModel
+                    refreshed.reasoningEffort = item.reasoningEffort
+                    refreshed.vision = item.vision
                     reviewProposalDrafts[item.id] = refreshed
                     continue
                 }
@@ -2538,7 +2554,11 @@ final class BackstageViewModel: ObservableObject {
                 keywords: item.proposedKeywords,
                 proposalID: item.proposalID,
                 proposalReason: item.proposalReason,
-                proposalStatus: item.proposalStatus
+                proposalStatus: item.proposalStatus,
+                requestedGeneratorModel: item.requestedGeneratorModel,
+                resolvedModel: item.resolvedModel,
+                reasoningEffort: item.reasoningEffort,
+                vision: item.vision
             )
         }
     }
@@ -2560,7 +2580,11 @@ final class BackstageViewModel: ObservableObject {
                 keywords: keywords,
                 proposalID: existing.proposalID,
                 proposalReason: existing.proposalReason,
-                proposalStatus: existing.proposalStatus
+                proposalStatus: existing.proposalStatus,
+                requestedGeneratorModel: existing.requestedGeneratorModel,
+                resolvedModel: existing.resolvedModel,
+                reasoningEffort: existing.reasoningEffort,
+                vision: existing.vision
             )
         } else if title != item.title || keywords != item.keywords {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(

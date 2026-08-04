@@ -1211,6 +1211,15 @@ struct OwnerCoreTests {
                         "proposedKeywords": ["Paris", "France"],
                         "proposalReason": "Improve title",
                         "proposalStatus": "ready",
+                        "requestedGeneratorModel": "codex-gpt-5.6-luna-max-vision",
+                        "resolvedModel": "gpt-5.6-luna",
+                        "reasoningEffort": "max",
+                        "vision": true,
+                        "modelLadder": [
+                            "codex-gpt-5.4-mini",
+                            "codex-gpt-5.6-luna-max-vision",
+                            "codex-gpt-5.6-sol-high-vision",
+                        ],
                         "deliveryState": "not-ready",
                     ])]),
                 ]),
@@ -1283,6 +1292,15 @@ struct OwnerCoreTests {
         #expect(window.items.first?.proposedTitle == "A better title")
         #expect(window.items.first?.proposedKeywords == ["Paris", "France"])
         #expect(window.items.first?.proposalStatus == "ready")
+        #expect(window.items.first?.requestedGeneratorModel == "codex-gpt-5.6-luna-max-vision")
+        #expect(window.items.first?.resolvedModel == "gpt-5.6-luna")
+        #expect(window.items.first?.reasoningEffort == "max")
+        #expect(window.items.first?.vision == true)
+        #expect(window.items.first?.modelLadder == [
+            "codex-gpt-5.4-mini",
+            "codex-gpt-5.6-luna-max-vision",
+            "codex-gpt-5.6-sol-high-vision",
+        ])
 
         let result = try await service.applyReview(
             .requestAI,
@@ -1379,6 +1397,15 @@ struct OwnerCoreTests {
                         "needsOwnerContext": false,
                         "requestReasons": ["weak title"],
                         "requestNote": "Name the landmark.",
+                        "requestedGeneratorModel": "codex-gpt-5.6-luna-max-vision",
+                        "resolvedModel": "gpt-5.6-luna",
+                        "reasoningEffort": "max",
+                        "vision": true,
+                        "modelLadder": [
+                            "codex-gpt-5.4-mini",
+                            "codex-gpt-5.6-luna-max-vision",
+                            "codex-gpt-5.6-sol-high-vision",
+                        ],
                     ])]),
                 ]),
             ]
@@ -1415,6 +1442,15 @@ struct OwnerCoreTests {
         #expect(proposals.count == 1)
         #expect(proposals[0].canonicalTitle == "Manual title")
         #expect(proposals[0].proposedTitle == "Evening in Paris")
+        #expect(proposals[0].requestedGeneratorModel == "codex-gpt-5.6-luna-max-vision")
+        #expect(proposals[0].resolvedModel == "gpt-5.6-luna")
+        #expect(proposals[0].reasoningEffort == "max")
+        #expect(proposals[0].vision == true)
+        #expect(proposals[0].modelLadder == [
+            "codex-gpt-5.4-mini",
+            "codex-gpt-5.6-luna-max-vision",
+            "codex-gpt-5.6-sol-high-vision",
+        ])
         #expect(try await service.markAIProposalsLoaded(["aip-1"]) == 1)
 
         let requests = await api.requests()

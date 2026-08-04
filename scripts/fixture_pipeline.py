@@ -483,6 +483,11 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           preview_sha256 TEXT NOT NULL DEFAULT '',
           generator TEXT NOT NULL DEFAULT 'codex',
           generator_model TEXT NOT NULL DEFAULT '',
+          requested_generator_model TEXT NOT NULL DEFAULT '',
+          resolved_model TEXT NOT NULL DEFAULT '',
+          reasoning_effort TEXT NOT NULL DEFAULT '',
+          vision INTEGER NOT NULL DEFAULT 0 CHECK (vision IN (0, 1)),
+          model_ladder TEXT NOT NULL DEFAULT '[]',
           created_at TEXT NOT NULL,
           loaded_at TEXT,
           decided_at TEXT,
@@ -521,6 +526,11 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           status TEXT NOT NULL
             CHECK (status IN ('queued', 'running', 'proposed', 'skipped', 'failed')),
           attempt INTEGER NOT NULL DEFAULT 0,
+          requested_generator_model TEXT NOT NULL DEFAULT '',
+          resolved_model TEXT NOT NULL DEFAULT '',
+          reasoning_effort TEXT NOT NULL DEFAULT '',
+          vision INTEGER NOT NULL DEFAULT 0 CHECK (vision IN (0, 1)),
+          model_ladder TEXT NOT NULL DEFAULT '[]',
           error_text TEXT NOT NULL DEFAULT '',
           started_at TEXT,
           completed_at TEXT,
@@ -624,6 +634,32 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_sha256 TEXT NOT NULL DEFAULT ''"
         )
+    proposal_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(asset_ai_proposals)").fetchall()
+    }
+    for column, ddl in {
+        "requested_generator_model": "ALTER TABLE asset_ai_proposals ADD COLUMN requested_generator_model TEXT NOT NULL DEFAULT ''",
+        "resolved_model": "ALTER TABLE asset_ai_proposals ADD COLUMN resolved_model TEXT NOT NULL DEFAULT ''",
+        "reasoning_effort": "ALTER TABLE asset_ai_proposals ADD COLUMN reasoning_effort TEXT NOT NULL DEFAULT ''",
+        "vision": "ALTER TABLE asset_ai_proposals ADD COLUMN vision INTEGER NOT NULL DEFAULT 0",
+        "model_ladder": "ALTER TABLE asset_ai_proposals ADD COLUMN model_ladder TEXT NOT NULL DEFAULT '[]'",
+    }.items():
+        if column not in proposal_columns:
+            conn.execute(ddl)
+    run_item_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(asset_ai_run_items)").fetchall()
+    }
+    for column, ddl in {
+        "requested_generator_model": "ALTER TABLE asset_ai_run_items ADD COLUMN requested_generator_model TEXT NOT NULL DEFAULT ''",
+        "resolved_model": "ALTER TABLE asset_ai_run_items ADD COLUMN resolved_model TEXT NOT NULL DEFAULT ''",
+        "reasoning_effort": "ALTER TABLE asset_ai_run_items ADD COLUMN reasoning_effort TEXT NOT NULL DEFAULT ''",
+        "vision": "ALTER TABLE asset_ai_run_items ADD COLUMN vision INTEGER NOT NULL DEFAULT 0",
+        "model_ladder": "ALTER TABLE asset_ai_run_items ADD COLUMN model_ladder TEXT NOT NULL DEFAULT '[]'",
+    }.items():
+        if column not in run_item_columns:
+            conn.execute(ddl)
     conn.execute(
         "UPDATE fixtures SET candidate_mode = CASE WHEN parent_fixture_id IS NULL THEN 'photos-library' ELSE 'inherited' END"
     )
@@ -1672,6 +1708,11 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "proposedKeywords": _read_json(row["proposal_keywords_json"], []),
         "proposalReason": str(row["proposal_reason"] or ""),
         "proposalStatus": str(row["proposal_status"] or ""),
+        "requestedGeneratorModel": str(row["proposal_requested_generator_model"] or ""),
+        "resolvedModel": str(row["proposal_resolved_model"] or ""),
+        "reasoningEffort": str(row["proposal_reasoning_effort"] or ""),
+        "vision": bool(row["proposal_vision"]),
+        "modelLadder": _read_json(row["proposal_model_ladder"], []),
         "deliveryState": str(row["delivery_state"] or "not-ready"),
     }
 
@@ -1795,6 +1836,11 @@ def fixture_review_window(
                    available_proposal.proposed_keywords_json proposal_keywords_json,
                    available_proposal.reason proposal_reason,
                    available_proposal.status proposal_status,
+                   available_proposal.requested_generator_model proposal_requested_generator_model,
+                   available_proposal.resolved_model proposal_resolved_model,
+                   available_proposal.reasoning_effort proposal_reasoning_effort,
+                   available_proposal.vision proposal_vision,
+                   available_proposal.model_ladder proposal_model_ladder,
                    delivery.delivery_state
             FROM {from_sql}
             {joins}
@@ -2806,6 +2852,11 @@ def ready_ai_proposals(
         "needsOwnerContext": bool(row["needs_owner_context"]),
         "requestReasons": _read_json(row["request_reasons_json"], []),
         "requestNote": str(row["request_note"] or ""),
+        "requestedGeneratorModel": str(row["requested_generator_model"] or ""),
+        "resolvedModel": str(row["resolved_model"] or row["generator_model"] or ""),
+        "reasoningEffort": str(row["reasoning_effort"] or ""),
+        "vision": bool(row["vision"]),
+        "modelLadder": _read_json(row["model_ladder"], []),
         "createdAt": str(row["created_at"]),
     } for row in rows]
     return {"ok": True, "count": len(items), "items": items}

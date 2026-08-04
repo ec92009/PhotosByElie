@@ -673,6 +673,11 @@ private struct ReviewInspector: View {
                         )
                         .font(.caption)
                         .foregroundStyle(.orange)
+                        if !proposal.resolvedModel.isEmpty || !proposal.reasoningEffort.isEmpty {
+                            Text("Used \(proposal.resolvedModel.isEmpty ? proposal.requestedGeneratorModel : proposal.resolvedModel) · \(proposal.reasoningEffort.isEmpty ? "effort unknown" : proposal.reasoningEffort) · \(proposal.vision ? "vision" : "text")")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Divider()
                     HStack {

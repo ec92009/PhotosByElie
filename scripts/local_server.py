@@ -4092,7 +4092,8 @@ def _pending_title_keyword_rows(conn, batch_id: str) -> list[dict]:
                p.proposed_title, p.proposed_keywords, p.proposal_status,
                p.confidence, p.needs_owner_context, p.proposal_reason,
                p.removed_blacklisted, p.keyword_target, p.keyword_target_met,
-               p.generator_model, p.generator_model_level, p.generator_model_maxed,
+               p.generator_model, p.requested_generator_model, p.resolved_model,
+               p.reasoning_effort, p.vision, p.generator_model_level, p.generator_model_maxed,
                p.model_ladder
         FROM title_keyword_queue AS q
         JOIN title_keyword_proposals AS p
@@ -4722,6 +4723,10 @@ def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_r
                 "proposal_attempt": int(row.get("latest_attempt") or 1),
                 "requested_generator": {
                     "model": row.get("generator_model") or "",
+                    "requested_generator_model": row.get("requested_generator_model") or row.get("generator_model") or "",
+                    "resolved_model": row.get("resolved_model") or "",
+                    "reasoning_effort": row.get("reasoning_effort") or "",
+                    "vision": bool(row.get("vision")),
                     "model_level": row.get("generator_model_level"),
                     "model_maxed": bool(row.get("generator_model_maxed")),
                     "model_ladder": model_ladder,
@@ -4740,6 +4745,10 @@ def _title_keyword_payload_from_sqlite(repo_root: Path, batch_id: str, pending_r
                 "reason": str(row.get("proposal_reason") or ""),
                 "generator": {
                     "model": row.get("generator_model") or "",
+                    "requested_generator_model": row.get("requested_generator_model") or row.get("generator_model") or "",
+                    "resolved_model": row.get("resolved_model") or "",
+                    "reasoning_effort": row.get("reasoning_effort") or "",
+                    "vision": bool(row.get("vision")),
                     "model_level": row.get("generator_model_level"),
                     "model_maxed": bool(row.get("generator_model_maxed")),
                     "model_ladder": model_ladder,

@@ -48,12 +48,12 @@ TITLE_KEYWORD_MODEL_CATALOG = (
         "estimated_cost": "Lowest-cost OpenAI rung",
     },
     {
-        "alias": "codex-gpt-5.6-luna-xhigh-vision",
-        "label": "Luna XHigh vision",
+        "alias": "codex-gpt-5.6-luna-max-vision",
+        "label": "Luna Max vision",
         "resolved_model": "gpt-5.6-luna",
-        "reasoning_effort": "xhigh",
+        "reasoning_effort": "max",
         "vision": True,
-        "estimated_cost": "Higher: xhigh + image",
+        "estimated_cost": "Higher: max + image",
     },
     {
         "alias": "codex-gpt-5.6-sol-high-vision",
@@ -293,6 +293,10 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           keyword_target       INTEGER CHECK (keyword_target IS NULL OR keyword_target >= 0),
           keyword_target_met   INTEGER CHECK (keyword_target_met IS NULL OR keyword_target_met IN (0, 1)),
           generator_model      TEXT,
+          requested_generator_model TEXT,
+          resolved_model       TEXT,
+          reasoning_effort     TEXT,
+          vision               INTEGER NOT NULL DEFAULT 0 CHECK (vision IN (0, 1)),
           generator_model_level INTEGER,
           generator_model_maxed INTEGER NOT NULL DEFAULT 0,
           model_ladder         TEXT,
@@ -476,6 +480,10 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     )
     for column, ddl in {
         "generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model TEXT",
+        "requested_generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN requested_generator_model TEXT",
+        "resolved_model": "ALTER TABLE title_keyword_proposals ADD COLUMN resolved_model TEXT",
+        "reasoning_effort": "ALTER TABLE title_keyword_proposals ADD COLUMN reasoning_effort TEXT",
+        "vision": "ALTER TABLE title_keyword_proposals ADD COLUMN vision INTEGER NOT NULL DEFAULT 0",
         "generator_model_level": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model_level INTEGER",
         "generator_model_maxed": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model_maxed INTEGER NOT NULL DEFAULT 0",
         "model_ladder": "ALTER TABLE title_keyword_proposals ADD COLUMN model_ladder TEXT",
@@ -2378,6 +2386,23 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
         if not generator and isinstance(state.get("generator"), dict):
             generator = state.get("generator")
         generator_model = str(generator.get("model") or proposed.get("generator_model") or "").strip()
+        requested_generator_model = str(
+            generator.get("requested_generator_model")
+            or generator.get("model")
+            or proposed.get("requested_generator_model")
+            or generator_model
+        ).strip()
+        resolved_model = str(
+            generator.get("resolved_model")
+            or proposed.get("resolved_model")
+            or ""
+        ).strip()
+        reasoning_effort = str(
+            generator.get("reasoning_effort")
+            or proposed.get("reasoning_effort")
+            or ""
+        ).strip()
+        vision = _truthy(generator.get("vision") if generator.get("vision") is not None else proposed.get("vision"))
         generator_model_level = _optional_int(
             generator.get("model_level")
             if generator.get("model_level") is not None
@@ -2407,9 +2432,10 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
               media_id, attempt, batch_id, previous_title, previous_keywords,
               proposed_title, proposed_keywords, proposal_status, confidence,
               needs_owner_context, proposal_reason, removed_blacklisted,
-              keyword_target, keyword_target_met, generator_model, generator_model_level,
-              generator_model_maxed, model_ladder, proposed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              keyword_target, keyword_target_met, generator_model,
+              requested_generator_model, resolved_model, reasoning_effort, vision,
+              generator_model_level, generator_model_maxed, model_ladder, proposed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(media_id, attempt) DO UPDATE SET
               batch_id = excluded.batch_id,
               previous_title = excluded.previous_title,
@@ -2424,6 +2450,10 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
               keyword_target = excluded.keyword_target,
               keyword_target_met = excluded.keyword_target_met,
               generator_model = excluded.generator_model,
+              requested_generator_model = excluded.requested_generator_model,
+              resolved_model = excluded.resolved_model,
+              reasoning_effort = excluded.reasoning_effort,
+              vision = excluded.vision,
               generator_model_level = excluded.generator_model_level,
               generator_model_maxed = excluded.generator_model_maxed,
               model_ladder = excluded.model_ladder,
@@ -2445,6 +2475,10 @@ def _import_batch(conn: sqlite3.Connection, payload: dict[str, Any], relative_pa
                 keyword_target,
                 keyword_target_met,
                 generator_model or None,
+                requested_generator_model or None,
+                resolved_model or None,
+                reasoning_effort or None,
+                vision,
                 generator_model_level,
                 generator_model_maxed,
                 json.dumps(model_ladder, ensure_ascii=False) if isinstance(model_ladder, list) else str(model_ladder or ""),
@@ -3356,6 +3390,10 @@ def title_keyword_generator_state(
             """
             SELECT q.*,
                    p.generator_model AS latest_generator_model,
+                   p.requested_generator_model AS latest_requested_generator_model,
+                   p.resolved_model AS latest_resolved_model,
+                   p.reasoning_effort AS latest_reasoning_effort,
+                   p.vision AS latest_vision,
                    p.generator_model_level AS latest_generator_model_level,
                    p.generator_model_maxed AS latest_generator_model_maxed,
                    p.model_ladder AS latest_model_ladder,
@@ -3382,6 +3420,10 @@ def title_keyword_generator_state(
                 "latest_proposed_batch_id": row["latest_proposed_batch_id"] or "",
                 "latest_proposed_at": row["latest_proposed_at"] or "",
                 "latest_generator_model": row["latest_generator_model"] or "",
+                "latest_requested_generator_model": row["latest_requested_generator_model"] or "",
+                "latest_resolved_model": row["latest_resolved_model"] or "",
+                "latest_reasoning_effort": row["latest_reasoning_effort"] or "",
+                "latest_vision": bool(row["latest_vision"]),
                 "latest_generator_model_level": row["latest_generator_model_level"],
                 "latest_generator_model_maxed": bool(row["latest_generator_model_maxed"]),
                 "latest_model_ladder": _read_json_text(row["latest_model_ladder"] or "", []),

@@ -1133,6 +1133,21 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(proposals["count"], 1)
         self.assertEqual(proposals["items"][0]["proposedTitle"], "Visible family scene")
         self.assertEqual(proposals["items"][0]["canonicalTitle"], "")
+        self.assertEqual(
+            proposals["items"][0]["requestedGeneratorModel"],
+            "codex-gpt-5.6-luna-max-vision",
+        )
+        self.assertEqual(proposals["items"][0]["resolvedModel"], "gpt-5.6-luna")
+        self.assertEqual(proposals["items"][0]["reasoningEffort"], "max")
+        self.assertTrue(proposals["items"][0]["vision"])
+        self.assertEqual(
+            proposals["items"][0]["modelLadder"],
+            [
+                "codex-gpt-5.4-mini",
+                "codex-gpt-5.6-luna-max-vision",
+                "codex-gpt-5.6-sol-high-vision",
+            ],
+        )
         proposal_id = proposals["items"][0]["proposalId"]
         loaded = mark_ai_proposals_loaded(self.root, [proposal_id])
         self.assertEqual(loaded["count"], 1)
@@ -1167,6 +1182,39 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(states["asset-2"][:2], ("requesting-ai", 1))
         self.assertIn("temporary model failure", states["asset-2"][2])
         self.assertEqual(states["asset-2"][3:], (["weak title"], "Use the visible subject."))
+        with connect(self.root) as conn:
+            proposal_audit = conn.execute(
+                """
+                SELECT requested_generator_model, resolved_model, reasoning_effort,
+                       vision, model_ladder
+                FROM asset_ai_proposals
+                WHERE proposal_id = ?
+                """,
+                (proposal_id,),
+            ).fetchone()
+            run_item_audit = conn.execute(
+                """
+                SELECT requested_generator_model, resolved_model, reasoning_effort,
+                       vision, model_ladder
+                FROM asset_ai_run_items
+                WHERE run_id = (SELECT run_id FROM asset_ai_proposals WHERE proposal_id = ?)
+                  AND asset_id = 'asset-1'
+                """,
+                (proposal_id,),
+            ).fetchone()
+        self.assertEqual(proposal_audit[0:4], (
+            "codex-gpt-5.6-luna-max-vision",
+            "gpt-5.6-luna",
+            "max",
+            1,
+        ))
+        self.assertEqual(json.loads(proposal_audit[4]), [
+            "codex-gpt-5.4-mini",
+            "codex-gpt-5.6-luna-max-vision",
+            "codex-gpt-5.6-sol-high-vision",
+        ])
+        self.assertEqual(run_item_audit[0:4], proposal_audit[0:4])
+        self.assertEqual(json.loads(run_item_audit[4]), json.loads(proposal_audit[4]))
         status = ai_run_status(self.root)
         self.assertFalse(status["active"])
         self.assertEqual(status["ready"], 0)

@@ -36,12 +36,12 @@ public struct MetadataModelLadderRung: Codable, Identifiable, Sendable, Equatabl
             estimatedCost: "Lowest-cost OpenAI rung"
         ),
         MetadataModelLadderRung(
-            alias: "codex-gpt-5.6-luna-xhigh-vision",
-            label: "Luna XHigh vision",
+            alias: "codex-gpt-5.6-luna-max-vision",
+            label: "Luna Max vision",
             resolvedModel: "gpt-5.6-luna",
-            reasoningEffort: "xhigh",
+            reasoningEffort: "max",
             vision: true,
-            estimatedCost: "Higher: xhigh + image"
+            estimatedCost: "Higher: max + image"
         ),
         MetadataModelLadderRung(
             alias: "codex-gpt-5.6-sol-high-vision",

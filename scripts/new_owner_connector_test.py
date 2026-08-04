@@ -580,7 +580,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 "payload": {
                     "operation": "save-title-keyword-model-ladder",
                     "model_ladder": [
-                        "codex-gpt-5.6-luna-xhigh-vision",
+                        "codex-gpt-5.6-luna-max-vision",
                         "codex-gpt-5.4-mini",
                     ],
                 },
@@ -590,7 +590,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "operation": "save-title-keyword-model-ladder",
             "photo_ids": [],
             "model_ladder": [
-                "codex-gpt-5.6-luna-xhigh-vision",
+                "codex-gpt-5.6-luna-max-vision",
                 "codex-gpt-5.4-mini",
             ],
         }])

@@ -39,11 +39,11 @@ const batchTestInput = (photoId, capture = "2026-06-14T10:00:00") => ({
   meta: { original_file: photoId + ".jpg" },
   previewPath: "",
   requestedGenerator: {
-    model: "codex-gpt-5.6-luna-xhigh-vision",
+    model: "codex-gpt-5.6-luna-max-vision",
     model_level: 1,
-    model_ladder: ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+    model_ladder: ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-max-vision"],
     resolved_model: "gpt-5.6-luna",
-    reasoning_effort: "xhigh",
+    reasoning_effort: "max",
     vision: true,
   },
 });
@@ -169,16 +169,16 @@ test("new proposals use the exact default Free to Luna to Sol ladder", () => {
   const selected = selectedGeneratorForRow({ reworkPriority: false });
   assert.deepEqual(selected.model_ladder, [
     "codex-gpt-5.4-mini",
-    "codex-gpt-5.6-luna-xhigh-vision",
+    "codex-gpt-5.6-luna-max-vision",
     "codex-gpt-5.6-sol-high-vision",
   ]);
   assert.equal(selected.label, "Free");
 });
 
 test("Codex ladder aliases map to real Codex CLI model settings", () => {
-  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.6-luna-xhigh-vision" }), {
+  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.6-luna-max-vision" }), {
     model: "gpt-5.6-luna",
-    reasoningEffort: "xhigh",
+    reasoningEffort: "max",
     vision: true,
   });
   assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.6-sol-high-vision" }), {

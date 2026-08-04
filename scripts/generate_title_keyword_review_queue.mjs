@@ -42,7 +42,7 @@ const OWNER_STATE_DB_MAX_BUFFER = Math.max(
 );
 const DEFAULT_MODEL_LADDER = [
   "codex-gpt-5.4-mini",
-  "codex-gpt-5.6-luna-xhigh-vision",
+  "codex-gpt-5.6-luna-max-vision",
   "codex-gpt-5.6-sol-high-vision",
 ];
 const MODEL_CATALOG = [
@@ -55,12 +55,12 @@ const MODEL_CATALOG = [
     estimatedCost: "Lowest-cost OpenAI rung",
   },
   {
-    alias: "codex-gpt-5.6-luna-xhigh-vision",
-    label: "Luna XHigh vision",
+    alias: "codex-gpt-5.6-luna-max-vision",
+    label: "Luna Max vision",
     resolvedModel: "gpt-5.6-luna",
-    reasoningEffort: "xhigh",
+    reasoningEffort: "max",
     vision: true,
-    estimatedCost: "Higher: xhigh + image",
+    estimatedCost: "Higher: max + image",
   },
   {
     alias: "codex-gpt-5.6-sol-high-vision",
@@ -1052,9 +1052,9 @@ const codexModelConfig = (modelInfo) => {
   if (!isAiGeneratorModel(rawModel)) return null;
   const withoutPrefix = rawModel.replace(/^codex-/i, "");
   const vision = /(?:^|-)vision$/i.test(withoutPrefix) || /-vision-/i.test(withoutPrefix);
-  const effortMatch = withoutPrefix.match(/-(xhigh|high|medium|low)(?:-vision)?$/i);
+  const effortMatch = withoutPrefix.match(/-(max|xhigh|high|medium|low)(?:-vision)?$/i);
   const model = withoutPrefix
-    .replace(/-(xhigh|high|medium|low)(?:-vision)?$/i, "")
+    .replace(/-(max|xhigh|high|medium|low)(?:-vision)?$/i, "")
     .replace(/-vision$/i, "");
   const reasoningEffort = effortMatch?.[1]?.toLowerCase() || (/mini$/i.test(model) ? "low" : "medium");
   return {

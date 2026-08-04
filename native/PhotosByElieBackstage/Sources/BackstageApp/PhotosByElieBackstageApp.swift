@@ -1108,7 +1108,7 @@ private struct MetadataGiveBackView: View {
                     .foregroundStyle(.secondary)
             }
             Section("OpenAI title & keyword proposal ladder") {
-                Text("New and rework attempts use this saved order. The default is Free → Luna XHigh vision → Sol High vision.")
+                Text("New and rework attempts use this saved order. The default is Free → Luna Max vision → Sol High vision.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 ForEach(model.metadataModelCatalog) { rung in
@@ -1133,10 +1133,12 @@ private struct MetadataGiveBackView: View {
                             model.moveMetadataModelRung(rung, offset: -1)
                         }
                         .disabled(selectedIndex == nil || selectedIndex == 0)
+                        .backstageHelp("Move this model rung earlier in the saved title and keyword proposal order.")
                         Button("↓") {
                             model.moveMetadataModelRung(rung, offset: 1)
                         }
                         .disabled(selectedIndex == nil || selectedIndex == model.metadataModelLadder.count - 1)
+                        .backstageHelp("Move this model rung later in the saved title and keyword proposal order.")
                     }
                 }
                 HStack {
@@ -1144,6 +1146,7 @@ private struct MetadataGiveBackView: View {
                         Task { await model.saveMetadataModelLadder() }
                     }
                     .disabled(model.metadataModelLadder.isEmpty || model.isSavingMetadataModelLadder)
+                    .backstageHelp("Save the selected OpenAI title and keyword proposal ladder through the audited Owner action.")
                     Text(model.metadataModelLadderStatus)
                         .font(.caption)
                         .foregroundStyle(.secondary)

@@ -108,21 +108,18 @@ const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const diversityBucketMinutes = 10;
 const photoFilter = window.photosByEliePhotoFilter;
+const galleryDatePicker = window.photosByElieGalleryDatePicker || {};
 const defaultFilterState = {
   query: "",
   orientation: "all",
-  minSize: "all",
-  mood: "all",
-  subject: "all",
   sort: "newest",
   mediaType: "all",
   dateFrom: "",
   dateTo: ""
 };
-const persistedFilterKeys = ["orientation", "minSize", "mood", "subject", "mediaType", "dateFrom", "dateTo"];
+const persistedFilterKeys = ["orientation", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
 let filterToggle = null;
-let reviewVisibleButton = null;
 let ownerSuperSearchIndex = new Map();
 let ownerSuperSearchPromise = null;
 
@@ -220,6 +217,161 @@ const formatGalleryDate = (value) => {
   }, {});
   return [parts.day, parts.month, parts.year].filter(Boolean).join(" ");
 };
+
+const datePickerYears = () => galleryDatePicker.yearsFromPhotos?.(gallery?.photos || []) || [];
+const validDateFilterValue = (value) => {
+  const normalized = String(value || "").trim();
+  const parts = galleryDatePicker.partsFromDateValue?.(normalized);
+  if (parts?.year) return `${parts.year}-${parts.month}-${parts.day}`;
+  return photoFilter.dateFilterValue(normalized);
+};
+const normalizeDateFilterState = (state = {}) => {
+  const normalized = galleryDatePicker.normalizeRange?.({
+    dateFrom: validDateFilterValue(state.dateFrom),
+    dateTo: validDateFilterValue(state.dateTo),
+  });
+  if (!normalized) {
+    return {
+      ...state,
+      dateFrom: validDateFilterValue(state.dateFrom),
+      dateTo: validDateFilterValue(state.dateTo),
+    };
+  }
+  return { ...state, dateFrom: normalized.dateFrom, dateTo: normalized.dateTo };
+};
+const syncDatePickerControls = () => {
+  if (!filterBar) return;
+  for (const key of ["dateFrom", "dateTo"]) {
+    const parts = inlineDatePickerPartsFor(key);
+    const titleKey = key === "dateTo" ? "gallery.date_to_title" : "gallery.date_from_title";
+    for (const part of ["day", "month", "year"]) {
+      const control = filterBar.querySelector(`[data-gallery-date-part="${part}"][data-gallery-date-endpoint="${key}"]`);
+      setInlineDatePickerOptions(control, inlineDatePickerOptions(part, parts), parts[part]);
+      control?.setAttribute("aria-label", `${t(titleKey)} ${t(`gallery.date_${part}`)}`);
+      if (part === "day" && control) control.disabled = !parts.year || !parts.month;
+    }
+    const hidden = filterBar.querySelector(`[data-gallery-filter="${key}"]`);
+    if (hidden) hidden.value = filterState[key] || "";
+  }
+};
+const syncDateFilterUrl = (state) => {
+  if (!window.history?.replaceState || !window.location?.href) return;
+  const url = new URL(window.location.href);
+  ["dateFrom", "date_from", "from", "dateTo", "date_to", "to"].forEach((key) => url.searchParams.delete(key));
+  if (state.dateFrom) url.searchParams.set("dateFrom", state.dateFrom);
+  if (state.dateTo) url.searchParams.set("dateTo", state.dateTo);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+};
+
+const inlineEmptyDatePickerParts = () => ({ year: "", month: "", day: "" });
+const inlineDatePickerSelections = {
+  dateFrom: inlineEmptyDatePickerParts(),
+  dateTo: inlineEmptyDatePickerParts(),
+};
+const inlineCleanDatePickerParts = (parts = {}) => {
+  const year = /^\d{4}$/.test(String(parts.year || "")) ? String(parts.year) : "";
+  const month = /^(0[1-9]|1[0-2])$/.test(String(parts.month || "")) ? String(parts.month) : "";
+  const maximumDay = year && month
+    ? galleryDatePicker.daysInMonth?.(year, Number(month)) || 0
+    : 31;
+  const day = /^\d{2}$/.test(String(parts.day || ""))
+    && Number(parts.day) >= 1
+    && Number(parts.day) <= maximumDay
+    ? String(parts.day)
+    : "";
+  return { year, month, day };
+};
+const seedInlineDatePickerSelections = () => {
+  for (const endpoint of ["dateFrom", "dateTo"]) {
+    inlineDatePickerSelections[endpoint] = inlineCleanDatePickerParts(
+      galleryDatePicker.partsFromDateValue?.(filterState[endpoint]),
+    );
+  }
+};
+const inlineDatePickerPartsFor = (endpoint) => inlineDatePickerSelections[endpoint] || inlineEmptyDatePickerParts();
+const inlineDatePickerYears = () => {
+  const selectedYears = Object.values(inlineDatePickerSelections)
+    .map((parts) => parts.year)
+    .filter(Boolean);
+  return [...new Set([...datePickerYears(), ...selectedYears])]
+    .sort((left, right) => Number(right) - Number(left));
+};
+const inlineDatePickerPartOrder = () => dateLocale().startsWith("en")
+  ? ["year", "month", "day"]
+  : ["day", "month", "year"];
+const inlineDatePickerMonthLabel = (month) => new Intl.DateTimeFormat("en-US", { month: "short" })
+  .format(new Date(Date.UTC(2020, month - 1, 1)))
+  .toUpperCase();
+const inlineDatePickerOptions = (part, parts = {}) => {
+  if (part === "day") {
+    const count = parts.year && parts.month
+      ? galleryDatePicker.daysInMonth?.(parts.year, Number(parts.month)) || 0
+      : 31;
+    return [
+      { value: "", label: "DD" },
+      ...Array.from({ length: count }, (_, index) => {
+        const day = String(index + 1).padStart(2, "0");
+        return { value: day, label: day };
+      }),
+    ];
+  }
+  if (part === "month") {
+    return [
+      { value: "", label: "MMM" },
+      ...Array.from({ length: 12 }, (_, index) => {
+        const month = String(index + 1).padStart(2, "0");
+        return { value: month, label: inlineDatePickerMonthLabel(index + 1) };
+      }),
+    ];
+  }
+  return [
+    { value: "", label: "YYYY" },
+    ...inlineDatePickerYears().map((year) => ({ value: year, label: year })),
+  ];
+};
+const setInlineDatePickerOptions = (select, options, value) => {
+  if (!select) return;
+  select.innerHTML = options.map((option) => (
+    `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`
+  )).join("");
+  select.value = options.some((option) => option.value === value) ? value : "";
+};
+const inlineDatePickerValue = (endpoint, edge) => (
+  galleryDatePicker.dateValueFromParts?.(inlineDatePickerPartsFor(endpoint), edge) || ""
+);
+const commitInlineDatePickerControl = (control) => {
+  const endpoint = control.dataset.galleryDateEndpoint;
+  const part = control.dataset.galleryDatePart;
+  if (!endpoint || !part || !["dateFrom", "dateTo"].includes(endpoint)) return;
+  inlineDatePickerSelections[endpoint] = inlineCleanDatePickerParts({
+    ...inlineDatePickerPartsFor(endpoint),
+    [part]: control.value,
+  });
+  const values = {
+    dateFrom: inlineDatePickerValue("dateFrom", "start"),
+    dateTo: inlineDatePickerValue("dateTo", "end"),
+  };
+  const normalized = galleryDatePicker.normalizeRange?.(values)
+    || { ...values, swapped: false };
+  if (normalized.swapped) {
+    [inlineDatePickerSelections.dateFrom, inlineDatePickerSelections.dateTo] = [
+      inlineDatePickerSelections.dateTo,
+      inlineDatePickerSelections.dateFrom,
+    ];
+  }
+  filterState = {
+    ...filterState,
+    dateFrom: normalized.dateFrom,
+    dateTo: normalized.dateTo,
+  };
+  writeFilterState();
+  syncDateFilterUrl(filterState);
+  syncFilterControls();
+  visibleLimit = pageSize;
+  selectedIndex = 0;
+  renderGallery({ scrollSelection: false });
+  if (normalized.swapped) setGalleryStatus(t("gallery.date_range_swapped"));
+};
 const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
 const seeMoreLabel = (count) => t("home.see_more_count", { count });
@@ -266,15 +418,33 @@ window.addEventListener("photosbyelie:inputmodechange", () => {
 const readFilterState = () => {
   const params = new URLSearchParams(window.location.search);
   const urlQuery = params.get("q") || params.get("search") || "";
-  if (isSelectionGallery) return { ...defaultFilterState, query: urlQuery };
+  const queryDate = (keys) => {
+    const key = keys.find((candidate) => params.has(candidate));
+    return key ? { present: true, value: validDateFilterValue(params.get(key)) } : { present: false, value: "" };
+  };
+  const urlDateFrom = queryDate(["dateFrom", "date_from", "from"]);
+  const urlDateTo = queryDate(["dateTo", "date_to", "to"]);
+  const urlState = {
+    ...defaultFilterState,
+    query: urlQuery,
+    dateFrom: urlDateFrom.value,
+    dateTo: urlDateTo.value,
+  };
+  if (isSelectionGallery) return normalizeDateFilterState(urlState);
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
       persistedFilterKeys.map((key) => [key, savedState[key] || defaultFilterState[key]])
     );
-    return { ...defaultFilterState, ...persistedState, query: urlQuery };
+    return normalizeDateFilterState({
+      ...defaultFilterState,
+      ...persistedState,
+      query: urlQuery,
+      dateFrom: urlDateFrom.present ? urlDateFrom.value : persistedState.dateFrom,
+      dateTo: urlDateTo.present ? urlDateTo.value : persistedState.dateTo,
+    });
   } catch {
-    return { ...defaultFilterState, query: urlQuery };
+    return normalizeDateFilterState(urlState);
   }
 };
 
@@ -292,12 +462,14 @@ try {
   ) {
     pendingGalleryReturnState = payload;
     if (payload.filterState && typeof payload.filterState === "object") {
-      filterState = { ...defaultFilterState, ...payload.filterState };
+      filterState = normalizeDateFilterState({ ...defaultFilterState, ...payload.filterState });
     }
   }
 } catch {
   pendingGalleryReturnState = null;
 }
+
+seedInlineDatePickerSelections();
 
 const writeFilterState = () => {
   if (isSelectionGallery) return;
@@ -376,17 +548,8 @@ const setMetadataValue = (photo, label, value) => {
   photo.metadata.unshift({ label, value });
 };
 
-const showNativePicker = (control) => {
-  if (!(control instanceof HTMLInputElement) || typeof control.showPicker !== "function") return;
-  try {
-    control.showPicker();
-  } catch {
-    // Some browsers only allow showPicker during direct user activation.
-  }
-};
-
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
-const galleryFilterKeys = ["query", "orientation", "mediaType", "minSize", "mood", "subject", "dateFrom", "dateTo"];
+const galleryFilterKeys = ["query", "orientation", "mediaType", "dateFrom", "dateTo"];
 const ownerSuperSearchText = (photo) => {
   if (!localModerationEnabled) return "";
   return ownerSuperSearchIndex.get(photo?.id)?.text || "";
@@ -414,18 +577,6 @@ const ownerReviewFilterContext = (visibleItems = renderedGalleryPhotos, filtered
   url: window.location.pathname + window.location.search,
 });
 
-const uniquePhotoIds = (photos = []) => {
-  const seen = new Set();
-  const ids = [];
-  for (const photo of photos) {
-    const photoId = String(photo?.id || "").trim();
-    if (!photoId || seen.has(photoId)) continue;
-    seen.add(photoId);
-    ids.push(photoId);
-  }
-  return ids;
-};
-
 const reviewQueueResultText = (result, requestedCount) => {
   const queued = Number(result?.queued_count ?? (result?.queued ? 1 : 0)) || 0;
   const already = Number(result?.already_pending_count ?? (result?.already_pending ? 1 : 0)) || 0;
@@ -451,47 +602,6 @@ const queuePhotoForTitleKeywordReview = async (photo, source = "owner-gallery-r"
       photo_id: photo.id,
     },
   });
-};
-
-const queueVisiblePhotosForTitleKeywordReview = async () => {
-  const visibleItems = [...renderedGalleryPhotos];
-  const ids = uniquePhotoIds(visibleItems);
-  if (!ids.length) {
-    setGalleryStatus("No visible photos to send to title/keyword review.");
-    return;
-  }
-  if (!hiddenActions?.queueTitleKeywordReviewMany) {
-    throw new Error("Refresh Owner mode to load batch title/keyword review queueing.");
-  }
-  const filteredItems = filteredVisiblePhotos();
-  const message = [
-    `Send ${ids.length.toLocaleString()} visible media ${ids.length === 1 ? "item" : "items"} to title/keyword review?`,
-    "",
-    `Current filtered result set: ${filteredItems.length.toLocaleString()} ${filteredItems.length === 1 ? "item" : "items"}.`,
-  ].join("\n");
-  if (!window.confirm(message)) {
-    setGalleryStatus("Review all visible canceled.");
-    return;
-  }
-  const result = await hiddenActions.queueTitleKeywordReviewMany(ids, {
-    source: "owner-gallery-review-all-visible",
-    requestedBy: "owner",
-    context: ownerReviewFilterContext(visibleItems, filteredItems),
-  });
-  setGalleryStatus(reviewQueueResultText(result, ids.length));
-};
-
-const syncReviewVisibleButton = (visibleItems = renderedGalleryPhotos, filteredTotal = null) => {
-  if (!reviewVisibleButton) return;
-  const count = uniquePhotoIds(visibleItems).length;
-  reviewVisibleButton.disabled = count <= 0;
-  reviewVisibleButton.textContent = count > 0
-    ? `Review all visible (${count.toLocaleString()})`
-    : "Review all visible";
-  const total = Number(filteredTotal ?? count) || 0;
-  reviewVisibleButton.title = count > 0
-    ? `Send ${count.toLocaleString()} visible of ${total.toLocaleString()} filtered media items to title/keyword review`
-    : "No visible media items to review";
 };
 
 const loadOwnerSuperSearchIndex = () => {
@@ -546,6 +656,7 @@ const syncFilterControls = () => {
   filterBar.querySelectorAll("[data-gallery-date-display]").forEach((display) => {
     display.textContent = formatGalleryDate(filterState[display.dataset.galleryDateDisplay]);
   });
+  syncDatePickerControls();
   photoFilter.syncAdaptiveControls({
     root: filterBar,
     state: filterState,
@@ -556,6 +667,21 @@ const syncFilterControls = () => {
   if (searchInput) searchInput.value = filterState.query || "";
   syncFilterToggle();
 };
+
+const datePickerControlMarkup = (key, labelKey) => `
+  <label class="gallery-date-label">
+    <span data-i18n="${labelKey}">${escapeHtml(t(labelKey))}</span>
+    <span class="gallery-date-control" data-gallery-date-control="${key}">
+      ${inlineDatePickerPartOrder().map((part, index) => {
+        const parts = inlineDatePickerPartsFor(key);
+        const titleKey = key === "dateTo" ? "gallery.date_to_title" : "gallery.date_from_title";
+        const options = inlineDatePickerOptions(part, parts);
+        const separator = index ? `<span class="gallery-date-separator" aria-hidden="true">/</span>` : "";
+        return `${separator}<select class="gallery-date-select gallery-date-${part}" data-gallery-date-part="${part}" data-gallery-date-endpoint="${key}" aria-label="${escapeHtml(`${t(titleKey)} ${t(`gallery.date_${part}`)}`)}">${options.map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join("")}</select>`;
+      }).join("")}
+      <input type="hidden" data-gallery-filter="${key}" value="" />
+    </span>
+  </label>`;
 
 const ensureGalleryFilterControls = () => {
   if (filterBar || !gallery) return;
@@ -575,8 +701,8 @@ const ensureGalleryFilterControls = () => {
   filterBar.setAttribute("aria-label", t("a11y.gallery_filters"));
   filterBar.innerHTML = `
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
-    <label class="gallery-date-label"><span data-i18n="gallery.date_from">Date from</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateFrom" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateFrom" aria-label="${escapeHtml(t("gallery.date_from"))}"/></span></label>
-    <label class="gallery-date-label"><span data-i18n="gallery.date_to">Date to</span><span class="gallery-date-control"><span class="gallery-date-display" data-gallery-date-display="dateTo" aria-hidden="true"></span><input class="gallery-date-native" type="date" data-gallery-filter="dateTo" aria-label="${escapeHtml(t("gallery.date_to"))}"/></span></label>
+    ${datePickerControlMarkup("dateFrom", "gallery.date_from")}
+    ${datePickerControlMarkup("dateTo", "gallery.date_to")}
     <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
       <option value="all" data-i18n="gallery.all_media">All media</option>
       <option value="photo" data-i18n="gallery.photos">Photos</option>
@@ -589,30 +715,6 @@ const ensureGalleryFilterControls = () => {
       <option value="portrait" data-i18n="gallery.portrait">Portrait</option>
       <option value="square" data-i18n="gallery.square">Square</option>
     </select></label>
-    <label><span data-i18n="gallery.min_size">Min size</span><select data-gallery-filter="minSize">
-      <option value="all" data-i18n="gallery.any_size">Any size</option>
-      <option value="1" data-i18n="gallery.size_1mp">1 MP+</option>
-      <option value="3" data-i18n="gallery.size_3mp">3 MP+</option>
-      <option value="6" data-i18n="gallery.size_6mp">6 MP+</option>
-      <option value="10" data-i18n="gallery.size_10mp">10 MP+</option>
-      <option value="20" data-i18n="gallery.size_20mp">20 MP+</option>
-    </select></label>
-    <label><span data-i18n="gallery.color_mood">Color mood</span><select data-gallery-filter="mood">
-      <option value="all" data-i18n="gallery.all">All</option>
-      <option value="warm" data-i18n="gallery.warm">Warm</option>
-      <option value="cool" data-i18n="gallery.cool">Cool</option>
-      <option value="neutral" data-i18n="gallery.neutral">Neutral</option>
-      <option value="vivid" data-i18n="gallery.vivid">Vivid</option>
-    </select></label>
-    <label><span data-i18n="gallery.subject">Subject</span><select data-gallery-filter="subject">
-      <option value="all" data-i18n="gallery.all">All</option>
-      <option value="architecture" data-i18n="gallery.architecture">Architecture</option>
-      <option value="water" data-i18n="gallery.water">Water/coast</option>
-      <option value="art" data-i18n="gallery.art">Art/museum</option>
-      <option value="people" data-i18n="gallery.people">People</option>
-      <option value="nature" data-i18n="gallery.nature">Nature</option>
-      <option value="city" data-i18n="gallery.city">City/travel</option>
-    </select></label>
     <label class="gallery-sort-label"><span data-i18n="gallery.sort">Sort</span><select data-gallery-filter="sort">
       <option value="newest" data-i18n="gallery.newest">Newest first</option>
       <option value="oldest" data-i18n="gallery.oldest">Oldest first</option>
@@ -624,7 +726,6 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
-    ${localModerationEnabled ? `<button class="btn secondary gallery-filter-review-visible" type="button" data-owner-review-visible disabled>Review all visible</button>` : ""}
   `;
   if (galleryActions && isSelectionGallery) {
     galleryActions.after(filterBar);
@@ -646,16 +747,12 @@ const ensureGalleryFilterControls = () => {
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
   });
-  filterBar.querySelectorAll("input[type='date'][data-gallery-filter]").forEach((control) => {
-    control.addEventListener("pointerdown", () => showNativePicker(control));
-    control.addEventListener("click", () => showNativePicker(control));
-    control.addEventListener("keydown", (event) => {
-      if (!["Enter", " "].includes(event.key)) return;
-      showNativePicker(control);
-    });
-  });
   filterBar.addEventListener("change", (event) => {
     const control = event.target;
+    if (control instanceof HTMLSelectElement && control.dataset.galleryDatePart && control.dataset.galleryDateEndpoint) {
+      commitInlineDatePickerControl(control);
+      return;
+    }
     if (!(control instanceof HTMLSelectElement || control instanceof HTMLInputElement) || !control.dataset.galleryFilter) return;
     const value = control instanceof HTMLInputElement && control.type === "checkbox"
       ? control.checked
@@ -678,19 +775,13 @@ const ensureGalleryFilterControls = () => {
   });
   filterBar.querySelector("[data-clear-gallery-filters]")?.addEventListener("click", () => {
     filterState = { ...defaultFilterState };
+    seedInlineDatePickerSelections();
     writeFilterState();
+    syncDateFilterUrl(filterState);
     syncFilterControls();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
-  });
-  reviewVisibleButton = filterBar.querySelector("[data-owner-review-visible]");
-  reviewVisibleButton?.addEventListener("click", async () => {
-    try {
-      await queueVisiblePhotosForTitleKeywordReview();
-    } catch (error) {
-      setGalleryStatus(error?.message || "Could not send visible photos to title/keyword review.");
-    }
   });
 };
 
@@ -1237,7 +1328,6 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
-    syncReviewVisibleButton([], 0);
     setGalleryStatus("");
     return;
   }
@@ -1275,6 +1365,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     `;
     galleryRoot.querySelector("[data-clear-gallery-empty]")?.addEventListener("click", () => {
       filterState = { ...defaultFilterState };
+      seedInlineDatePickerSelections();
       writeFilterState();
       syncFilterControls();
       visibleLimit = pageSize;
@@ -1284,7 +1375,6 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
-    syncReviewVisibleButton([], photos.length);
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
@@ -1408,7 +1498,6 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     showAllButton.hidden = remaining <= 0;
     showAllButton.textContent = seeAllLabel(remaining);
   }
-  syncReviewVisibleButton(visibleSubset, photos.length);
   syncOwnerCullToolbar();
   const paginated = photos.length > visibleSubset.length;
   const mediaNoun = photoFilter.statusNoun(filterState, t);
@@ -1432,7 +1521,7 @@ if (galleryRoot && gallery) {
   }));
   const seoImage = seoPhotos.find((item) => item.image)?.image || window.photosByElieSeo?.defaultImage;
   const seoDescription = isSelectionGallery
-    ? "Search the Photos By Elie public archive by title, place, subject, mood, size, orientation, and media type."
+    ? "Search the Photos By Elie public archive by title, place, date, orientation, and media type."
     : gallery.description || `Browse ${localizedCollectionTitle()} travel photography and digital wall-art downloads by Photos By Elie.`;
   window.photosByElieSeo?.applyPageMeta({
     title: `Photos By Elie | ${localizedCollectionTitle()} Gallery`,

@@ -693,6 +693,19 @@ missing `media_items`/`media_assets` rows into
 `worker/photos-catalog.generated.mjs`. Until registration runs, files can exist
 in R2 without appearing in the public catalog.
 
+Native Backstage publication uses the same boundary automatically: after every
+checksum-verified public derivative set, the native publication pipeline records
+a `public_catalog_publications` audit row and promotes the media into the local
+SQLite catalog. The audit remains `local` until the deployed URL is verified.
+To repair a completed native run whose R2 objects predate this handoff, use the
+idempotent recovery command, then review and deploy the generated projections:
+
+```bash
+python3 scripts/native_catalog_promotion.py promote-verified --run-id <upload-run-id>
+python3 scripts/native_catalog_promotion.py verify-public-catalog \
+  --asset-id <asset-id> --source-version-hash <source-version-hash>
+```
+
 Bridge plans intentionally omit private JPG render triplets. Existing private
 render cache cleanup should also begin as a dry run until sold-media protection
 is loaded from the Worker order ledger:

@@ -5536,7 +5536,7 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   align-items:end;
   color:inherit;
 }
-.gallery-filter-bar label:has(input[type="date"]){
+.gallery-filter-bar label:has(.gallery-date-control){
   flex:0 1 146px;
 }
 .gallery-date-control{
@@ -5545,23 +5545,268 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   width:100%;
   height:var(--control-block-size);
 }
-.gallery-date-display{
+.gallery-date-trigger{
   display:flex;
   width:100%;
   height:100%;
   align-items:center;
   border:1px solid var(--line);
+  border-radius:0;
   background:var(--bg);
   color:var(--text);
-  padding:0 9px;
+  padding:0 28px 0 9px;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:700;
+  line-height:1.15;
+  text-align:left;
+  text-transform:none;
+  cursor:pointer;
+}
+.gallery-date-trigger::after{
+  position:absolute;
+  top:50%;
+  right:10px;
+  content:"⌄";
+  pointer-events:none;
+  transform:translateY(-55%);
+}
+.gallery-date-trigger:focus-visible{
+  outline:2px solid currentColor;
+  outline-offset:2px;
+}
+.gallery-date-display{
+  display:block;
+  width:auto;
+  height:auto;
+  align-items:center;
+  color:inherit;
+  padding:0;
   font-size:.78rem;
   font-weight:700;
   line-height:1.15;
   text-transform:none;
 }
-.gallery-date-control:focus-within .gallery-date-display{
+.gallery-date-popover{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:30;
+  display:grid;
+  box-sizing:border-box;
+  width:min(448px,calc(100vw - 32px));
+  gap:12px;
+  padding:14px;
+  border:1px solid var(--line);
+  background:var(--glass-card-bg);
+  color:var(--text);
+  box-shadow:0 18px 46px rgba(0,0,0,.24);
+  text-transform:none;
+}
+.gallery-date-control[data-gallery-date-control="dateTo"] .gallery-date-popover{
+  right:0;
+  left:auto;
+}
+.gallery-date-popover[hidden]{
+  display:none;
+}
+.gallery-date-popover.is-above{
+  top:auto;
+  bottom:calc(100% + 8px);
+}
+.gallery-date-popover.is-viewport-pinned{
+  position:fixed;
+  z-index:100;
+  max-height:calc(100dvh - var(--gallery-date-popover-safe-top, 8px) - 8px);
+  overflow:auto;
+}
+.gallery-date-popover-head,
+.gallery-date-popover-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.gallery-date-popover-head strong{
+  font-size:.78rem;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.gallery-date-close{
+  display:grid;
+  width:28px;
+  height:28px;
+  place-items:center;
+  border:1px solid var(--line);
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-size:1.15rem;
+  line-height:1;
+  cursor:pointer;
+}
+.gallery-date-range-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.gallery-date-endpoint{
+  display:grid;
+  gap:8px;
+  min-width:0;
+  padding:10px;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--bg) 86%,var(--text) 14%);
+}
+.gallery-date-endpoint-head,
+.gallery-date-year-field-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.gallery-date-endpoint-head .gallery-date-field-label{
+  font-size:.66rem;
+}
+.gallery-date-year-input{
+  width:5.2rem;
+  height:34px;
+  min-height:34px;
+  box-sizing:border-box;
+  border:1px solid var(--line);
+  background:var(--bg);
+  color:inherit;
+  padding:0 6px;
+  font:inherit;
+  font-size:.82rem;
+  font-weight:800;
+  line-height:1;
+  text-align:center;
+}
+.gallery-date-year-input:focus-visible{
   outline:2px solid currentColor;
-  outline-offset:2px;
+  outline-offset:1px;
+}
+.gallery-date-endpoint-details{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.gallery-date-field{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.gallery-date-years{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+  max-height:132px;
+  overflow:auto;
+}
+.gallery-date-year-field{
+  display:grid;
+  gap:5px;
+}
+.gallery-date-target-switch{
+  display:flex;
+  gap:4px;
+}
+.gallery-date-target{
+  min-height:28px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:inherit;
+  padding:3px 8px;
+  font:inherit;
+  font-size:.62rem;
+  font-weight:800;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.gallery-date-target:hover,
+.gallery-date-target:focus-visible,
+.gallery-date-target.is-selected{
+  border-color:currentColor;
+  background:var(--text);
+  color:var(--bg);
+  outline:0;
+}
+.gallery-date-field-label{
+  color:inherit;
+  font-size:.58rem;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.gallery-date-year-option{
+  min-height:36px;
+  border:1px solid var(--line);
+  background:var(--bg);
+  color:inherit;
+  font:inherit;
+  font-size:.76rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.gallery-date-year-option:hover,
+.gallery-date-year-option:focus-visible,
+.gallery-date-year-option.is-selected{
+  border-color:currentColor;
+  background:var(--text);
+  color:var(--bg);
+  outline:0;
+}
+.gallery-date-endpoint-details select{
+  width:100%;
+  height:34px;
+  min-height:34px;
+  min-width:0;
+  padding-right:22px;
+}
+.gallery-date-endpoint-details select:disabled{
+  cursor:not-allowed;
+  opacity:.55;
+}
+.gallery-date-popover-actions{
+  align-items:stretch;
+}
+.gallery-date-popover-actions .btn{
+  flex:1 1 0;
+  min-height:36px;
+  padding-inline:8px;
+}
+.gallery-filter-bar label:has(.gallery-date-control){
+  flex:1 1 270px;
+  max-width:330px;
+}
+.gallery-date-control{
+  position:static;
+  display:flex;
+  align-items:center;
+  width:100%;
+  height:var(--control-block-size);
+  gap:4px;
+}
+.gallery-date-control > .gallery-date-select{
+  flex:1 1 0;
+  width:100%;
+  min-width:0;
+  padding:0 18px 0 6px;
+  font-size:.72rem;
+}
+.gallery-date-separator{
+  flex:0 0 auto;
+  color:var(--text);
+  font-size:.72rem;
+  font-weight:800;
+}
+.gallery-date-control > input[type="hidden"]{
+  display:none;
+}
+.gallery-date-select:disabled{
+  cursor:not-allowed;
+  opacity:.55;
 }
 .gallery-filter-bar label.is-disabled{
   opacity:.56;
@@ -5585,13 +5830,16 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
 .gallery-filter-bar input{
   padding:0 9px;
 }
-.gallery-filter-bar .gallery-date-native{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  opacity:0;
-  cursor:pointer;
+.gallery-filter-bar .gallery-date-year-input{
+  width:5.2rem;
+  height:34px;
+  min-height:34px;
+  padding:0 6px;
+}
+.gallery-filter-bar .gallery-date-endpoint-details select{
+  height:34px;
+  min-height:34px;
+  padding-right:22px;
 }
 .gallery-search-label{
   flex:2 1 280px;
@@ -8043,15 +8291,21 @@ html[data-theme="light"] .detail-preview.has-image::after{
     display:flex;
   }
   .gallery-filter-bar label,
-  .gallery-filter-bar label:has(input[type="date"]){
+  .gallery-filter-bar label:has(.gallery-date-control){
     flex:1 1 calc(50% - 6px);
     max-width:none;
   }
-  .gallery-filter-bar label:has(input[type="date"]){
+  .gallery-filter-bar label:has(.gallery-date-control){
     flex-basis:100%;
   }
-  body[data-gallery="selection"] .gallery-filter-bar label:has(input[type="date"]){
+  body[data-gallery="selection"] .gallery-filter-bar label:has(.gallery-date-control){
     flex-basis:100%;
+  }
+  .gallery-date-popover{
+    width:min(448px,calc(100vw - 24px));
+  }
+  .gallery-date-range-fields{
+    grid-template-columns:1fr;
   }
   .gallery-filter-bar .gallery-search-label,
   .gallery-filter-bar .gallery-sort-label{
@@ -8626,6 +8880,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
 }
 .gallery-filter-bar select,
 .gallery-filter-bar input,
+.gallery-date-trigger,
 .gallery-density-control,
 .gallery-fit-control,
 .gallery-top-button,
@@ -8697,6 +8952,7 @@ html[data-theme="light"] .detail-preview.has-image::after{
 }
 .gallery-filter-bar select,
 .gallery-filter-bar input,
+.gallery-date-trigger,
 .real-estate-filter-form input,
 .real-estate-filter-form select,
 .real-estate-pdf-setting select,

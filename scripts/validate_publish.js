@@ -183,6 +183,36 @@ const loadAppliedTitleKeywordIds = () => {
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   sidecarOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((id) => ids.add(id));
+  const nativeCatalogTableOutput = childProcess.execFileSync(
+    "sqlite3",
+    [
+      "-cmd", ".timeout 10000", ownerDb,
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'public_catalog_publications' LIMIT 1;",
+    ],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  if (nativeCatalogTableOutput.trim() === "1") {
+    const nativeCatalogSql = `
+      SELECT DISTINCT catalog.media_id
+      FROM public_catalog_publications AS catalog
+      JOIN asset_editorial_state AS editorial
+        ON editorial.asset_id = catalog.asset_id
+       AND editorial.editorial_state = 'approved'
+      WHERE catalog.state IN ('local', 'live')
+        AND COALESCE(catalog.media_id, '') <> ''
+        AND NOT EXISTS (
+          SELECT 1 FROM sidecar_tombstones AS tombstone
+          WHERE tombstone.asset_id = catalog.asset_id
+            AND tombstone.tombstone_state = 'active'
+        );
+    `;
+    const nativeCatalogOutput = childProcess.execFileSync(
+      "sqlite3",
+      ["-cmd", ".timeout 10000", ownerDb, nativeCatalogSql],
+      { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    );
+    nativeCatalogOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((id) => ids.add(id));
+  }
   try {
     const baseline = JSON.parse(childProcess.execFileSync(
       "git",

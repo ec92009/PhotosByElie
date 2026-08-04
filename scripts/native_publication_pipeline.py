@@ -17,6 +17,11 @@ from fixture_policy import (
     policy_allows_cloud,
     policy_allows_r2_result,
 )
+from native_catalog_promotion import (
+    catalog_candidate,
+    promote_verified_asset,
+    record_catalog_pending,
+)
 
 
 MANAGED_PREFIXES = (
@@ -766,7 +771,28 @@ def publish_verified_asset(
             """,
             (version_hash, timestamp, asset_id),
         )
+        catalog_plan = catalog_candidate(repo_root, conn, asset_id, results)
+        if catalog_plan.get("eligible"):
+            record_catalog_pending(
+                conn,
+                asset_id=asset_id,
+                source_version_hash=version_hash,
+                media_id=str(catalog_plan["mediaId"]),
+                timestamp=timestamp,
+            )
         conn.commit()
+    catalog_result = {
+        "state": "not-applicable",
+        "reason": catalog_plan.get("reason", "not-eligible"),
+        "error": catalog_plan.get("error", ""),
+    }
+    if catalog_plan.get("eligible"):
+        catalog_result = promote_verified_asset(
+            repo_root,
+            asset_id,
+            version_hash,
+            results,
+        )
     return {
         "ok": True,
         "assetId": asset_id,
@@ -779,6 +805,8 @@ def publish_verified_asset(
             {"bucket": str(item["bucket"]), "key": str(item["key"])}
             for item in results
         ],
+        "catalogState": str(catalog_result.get("state") or "not-applicable"),
+        "publicCatalog": catalog_result,
         "publishedAt": timestamp,
     }
 
@@ -1014,8 +1042,14 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
             raise ValueError("upload run does not exist")
         items = conn.execute(
             """
-            SELECT asset_id, source_version_hash, status, error_text, updated_at
-            FROM asset_upload_run_items WHERE run_id = ? ORDER BY asset_id
+            SELECT item.asset_id, item.source_version_hash, item.status, item.error_text,
+                   item.updated_at,
+                   COALESCE(catalog.state, 'not-applicable') AS catalog_state
+            FROM asset_upload_run_items AS item
+            LEFT JOIN public_catalog_publications AS catalog
+              ON catalog.asset_id = item.asset_id
+             AND catalog.source_version_hash = item.source_version_hash
+            WHERE item.run_id = ? ORDER BY item.asset_id
             """,
             (run_id,),
         ).fetchall()

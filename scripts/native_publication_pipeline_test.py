@@ -1,5 +1,7 @@
 import tempfile
 import unittest
+import shutil
+import sqlite3
 from pathlib import Path
 import sys
 
@@ -20,6 +22,7 @@ from native_publication_pipeline import (
     run_upload_batch,
     upload_eligibility_plan,
 )
+from native_catalog_promotion import verify_public_catalog
 from sidecar_state_db import upsert_assets
 
 
@@ -37,10 +40,36 @@ def verified(key, bucket="photosbyelie-public"):
     }
 
 
+def verified_public_set(media_id="asset-1"):
+    return [
+        {
+            **verified(f"masters/{media_id}.jpg", "photosbyelie-private"),
+            "objectKind": "private-master",
+            "kind": "private-master",
+        },
+        {
+            **verified(f"expo/{media_id}_900.jpg"),
+            "objectKind": "public-preview",
+            "kind": "public-preview",
+        },
+        {
+            **verified(f"expo/{media_id}_1800.jpg"),
+            "objectKind": "public-preview",
+            "kind": "public-preview",
+        },
+    ]
+
+
 class NativePublicationPipelineTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        catalog_path = self.root / "assets/catalog/photosbyelie.sqlite"
+        catalog_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(
+            Path(__file__).resolve().parents[1] / "assets/catalog/photosbyelie.sqlite",
+            catalog_path,
+        )
         upsert_assets(
             self.root,
             [
@@ -105,6 +134,59 @@ class NativePublicationPipelineTest(unittest.TestCase):
             ).fetchone()
             self.assertEqual(publications["total"], 2)
             self.assertEqual(objects["total"], 2)
+
+    def test_verified_public_upload_promotes_catalog_and_is_idempotent(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Catalog title",
+                "keywords": ["Spain", "Sea"],
+                "renderedFingerprint": "render-catalog",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, captured_at = '2022-12-10T12:00:00Z', location_label = 'Spain' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = 'Catalog title', keywords_json = '[\"Spain\",\"Sea\"]' WHERE asset_id = 'asset-1'"
+            )
+            conn.commit()
+        result = publish_verified_asset(self.root, "asset-1", verified_public_set("catalog-asset"))
+        self.assertEqual(result["catalogState"], "local")
+        self.assertEqual(result["publicCatalog"]["mediaId"], "catalog-asset")
+        catalog = self.root / "assets/catalog/photosbyelie.sqlite"
+        with connect(self.root) as conn:
+            audit = conn.execute(
+                "SELECT state, media_id FROM public_catalog_publications WHERE asset_id = 'asset-1'"
+            ).fetchone()
+            self.assertEqual(dict(audit), {"state": "local", "media_id": "catalog-asset"})
+        with sqlite3.connect(catalog) as conn:
+            media = conn.execute("SELECT title, captured_at FROM media_items WHERE media_id = 'catalog-asset'").fetchone()
+            assets = conn.execute("SELECT count(*) FROM media_assets WHERE media_id = 'catalog-asset'").fetchone()[0]
+            self.assertEqual(media, ("Catalog title", "2022-12-10T12:00:00Z"))
+            self.assertEqual(assets, 6)
+
+        second = publish_verified_asset(self.root, "asset-1", verified_public_set("catalog-asset"))
+        self.assertEqual(second["catalogState"], "local")
+        self.assertFalse(second["publicCatalog"]["registered"])
+        with sqlite3.connect(catalog) as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM media_items WHERE media_id = 'catalog-asset'").fetchone()[0], 1)
+
+        payload = catalog.read_bytes()
+        verified = verify_public_catalog(
+            self.root,
+            "asset-1",
+            second["sourceVersionHash"],
+            fetch=lambda _url: (200, payload, '"catalog-test"'),
+        )
+        self.assertEqual(verified["state"], "live")
+        with connect(self.root) as conn:
+            self.assertEqual(
+                conn.execute("SELECT state FROM public_catalog_publications WHERE asset_id = 'asset-1'").fetchone()["state"],
+                "live",
+            )
 
     def test_upload_run_is_bounded_and_isolates_failure(self):
         run = create_upload_run(self.root, ["asset-1", "asset-2"], limit=50, concurrency=2)

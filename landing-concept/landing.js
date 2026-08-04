@@ -27,6 +27,9 @@
 
   const translations = {
     en: {
+      productionPageTitle: "Photos By Elie | Travel Photography and Wall Art",
+      conceptPageTitle: "Photos By Elie — Landing concept",
+      pageDescription: "Explore travel, architecture, coastlines, and fine-art photography by Elie Cohen, with secure digital downloads from Photos By Elie.",
       photos: "Photos", signUp: "Sign up", signIn: "Sign in",
       eyebrow: "Places, light, and the moment between", explore: "Explore the collection",
       discover: "Discover", selectedWork: "Selected work",
@@ -48,55 +51,178 @@
       password: "Password", showPassword: "Show", hidePassword: "Hide", continueVisitor: "Continue as visitor",
       signedIn: "Signed in", signOut: "Sign out", sharedWithMe: "Shared with me", checkingSession: "Checking account…", signingIn: "Signing in…",
       redirecting: "Opening Google sign-in…", signingOut: "Signing out…", loginFailed: "Username/email or password is incorrect.",
-      sessionFailed: "Account status is temporarily unavailable. You can continue as a visitor."
+      sessionFailed: "Account status is temporarily unavailable. You can continue as a visitor.",
+      skipCollection: "Skip to the collection", primaryNavigation: "Primary navigation", home: "Photos By Elie home",
+      mainNavigation: "Main", openAccount: "Open account", openDisplaySettings: "Open display settings",
+      featuredPhotography: "Featured photography", exploreByCountry: "Explore by country",
+      featuredControls: "Featured image controls", previousImage: "Previous image", nextImage: "Next image",
+      pauseSlideshow: "Pause automatic slideshow", resumeSlideshow: "Resume automatic slideshow",
+      scrollExplore: "Scroll to explore", explorePhotographyCountry: "Explore photography by country",
+      latestSocialCollections: "Latest social collections", legalSupport: "Legal and support",
+      closeAccount: "Close account", closeSettings: "Close settings", siteVersion: "Site version", reviewConcept: "Review concept",
+      exploreSpain: "Explore Spain", exploreSpainPlaces: "Explore Spain by place",
+      exploreFrance: "Explore France", exploreFrancePlaces: "Explore France by place",
+      exploreItaly: "Explore Italy", exploreItalyPlaces: "Explore Italy by place",
+      exploreUsa: "Explore USA", exploreUsaPlaces: "Explore USA by place",
+      exploreMexico: "Explore Mexico", exploreMexicoPlaces: "Explore Mexico by place",
+      explorePortugal: "Explore Portugal", explorePortugalPlaces: "Explore Portugal by place",
+      exploreSlovakia: "Explore Slovakia",
+      heroParisTitle: "Paris after the crowds", heroParisLocation: "The Louvre, Paris",
+      heroRondaTitle: "Ronda, between worlds", heroRondaLocation: "Andalusia, Spain",
+      heroNerjaTitle: "A cove in full light", heroNerjaLocation: "Nerja, Andalusia",
+      heroSolanaTitle: "Where the day meets the Pacific", heroSolanaLocation: "Solana Beach, California",
+      heroPuertoTitle: "The bay holds the evening", heroPuertoLocation: "Puerto Vallarta, Mexico",
+      heroCascaisTitle: "Cascais meets the Atlantic", heroCascaisLocation: "Cascais, Portugal",
+      placeSpain: "Plaza de España, Seville", placeFrance: "The Louvre, Paris", placeItaly: "Florence",
+      placeUsa: "Solana Beach", placeMexico: "Puerto Vallarta", placePortugal: "Cascais", placeSlovakia: "Bratislava",
+      andalusia: "Andalusia", louvre: "The Louvre", florence: "Florence", lisbon: "Lisbon",
+      socialDelMar: "Del Mar Dog Beach Sunset",
+      socialFuengirola: "Fuengirola Moon Over the Mediterranean",
+      socialSanDiego: "San Diego Zoo Wildlife Portraits",
+      altLouvre: "A panoramic night view of the Louvre courtyard and glass pyramid",
+      altRonda: "A panoramic view across the Ronda gorge and green Andalusian mountains",
+      altNerja: "A panoramic view across a sunny Mediterranean cove in Nerja",
+      altSolana: "A panoramic sunset over Solana Beach in California",
+      altPuerto: "A coastal panorama of Puerto Vallarta",
+      altCascais: "A panoramic waterfront view across Cascais Bay",
+      altSpain: "A sweeping panorama of Plaza de España in Seville",
+      altItaly: "The Arno river in Florence",
+      altSlovakia: "Hviezdoslav Square and its fountains in Bratislava",
+      altWallArt: "A framed Notre-Dame photograph displayed above a sofa",
+      altLicensing: "One beach photograph shown as a print, editorial spread, and commercial display",
+      altProvenance: "A photography catalog card showing country, region, city, year, and a private location marker"
     },
     fr: {
-      photos: "Photos", signUp: "S'inscrire", signIn: "Se connecter",
-      eyebrow: "Les lieux, la lumiere et l'instant entre les deux", explore: "Explorer la collection",
-      discover: "Decouvrir", selectedWork: "Selection",
+      productionPageTitle: "Photos By Elie | Photographie de voyage et art mural",
+      conceptPageTitle: "Photos By Elie — Concept de page d’accueil",
+      pageDescription: "Découvrez les photographies de voyage, d’architecture, de littoral et d’art d’Elie Cohen, avec des téléchargements numériques sécurisés.",
+      photos: "Photos", signUp: "S’inscrire", signIn: "Se connecter",
+      eyebrow: "Les lieux, la lumière et l’instant entre les deux", explore: "Explorer la collection",
+      discover: "Découvrir", selectedWork: "Sélection",
       introTitle: "Des photographies qui laissent respirer les lieux.",
-      introBody: "Voyages, architecture, littoral et espaces habites — observes patiemment, sans jamais s'interposer entre vous et l'image.",
-      usageEyebrow: "De la decouverte a l'usage", usageTitle: "Trouvez l'image. Sachez ce que vous pouvez en faire.",
-      usageIntro: "Pays, region, ville, annee et note du photographe apportent une provenance utile, tandis que les coordonnees exactes sensibles restent privees.",
+      introBody: "Voyages, architecture, littoraux et lieux habités — observés avec patience et présentés sans s’interposer entre vous et l’image.",
+      usageEyebrow: "De la découverte à l’usage", usageTitle: "Trouvez l’image. Sachez ce que vous pouvez en faire.",
+      usageIntro: "Pays, région, ville, année et note du photographe précisent la provenance, tandis que les coordonnées exactes sensibles restent confidentielles.",
       wallArtTitle: "Art mural",
-      licensingTitle: "Usage personnel, editorial ou commercial",
+      licensingTitle: "Usage personnel, éditorial ou commercial",
       provenanceTitle: "Lieu",
       usageAction: "Explorer les photographies",
-      series: "Serie", others: "Autres…", france: "France", usa: "Etats-Unis", spain: "Espagne", mexico: "Mexique",
+      series: "Série", others: "Autres…", france: "France", usa: "États-Unis", spain: "Espagne", mexico: "Mexique",
       italy: "Italie", portugal: "Portugal", slovakia: "Slovaquie",
-      latestSocial: "Dernieres publications",
-      footerLine: "Une autre facon de mieux voir.", support: "Assistance", privacy: "Confidentialite", terms: "Conditions", dataDeletion: "Suppression des donnees",
-      display: "Affichage", language: "Langue", theme: "Theme", night: "Nuit", day: "Jour",
+      latestSocial: "Dernières publications",
+      footerLine: "Une manière plus paisible d’en voir davantage.", support: "Assistance", privacy: "Confidentialité", terms: "Conditions", dataDeletion: "Suppression des données",
+      display: "Affichage", language: "Langue", theme: "Thème", night: "Nuit", day: "Jour",
       surface: "Surface", glass: "Verre", solid: "Opaque", transparency: "Transparence des panneaux", translucency: "Flou du verre",
-      continueGoogle: "Continuer avec Google", legacyLogin: "Ou utiliser l'acces classique", username: "Nom d'utilisateur ou e-mail",
+      continueGoogle: "Continuer avec Google", legacyLogin: "Ou utiliser l’accès classique", username: "Nom d’utilisateur ou e-mail",
       password: "Mot de passe", showPassword: "Afficher", hidePassword: "Masquer", continueVisitor: "Continuer comme visiteur",
-      signedIn: "Connecte", signOut: "Se deconnecter", sharedWithMe: "Partage avec moi", checkingSession: "Verification du compte…", signingIn: "Connexion…",
-      redirecting: "Ouverture de Google…", signingOut: "Deconnexion…", loginFailed: "Nom d'utilisateur/e-mail ou mot de passe incorrect.",
-      sessionFailed: "Le compte est temporairement indisponible. Vous pouvez continuer comme visiteur."
+      signedIn: "Connecté", signOut: "Se déconnecter", sharedWithMe: "Partagé avec moi", checkingSession: "Vérification du compte…", signingIn: "Connexion…",
+      redirecting: "Ouverture de Google…", signingOut: "Déconnexion…", loginFailed: "Nom d’utilisateur/e-mail ou mot de passe incorrect.",
+      sessionFailed: "Le compte est temporairement indisponible. Vous pouvez continuer comme visiteur.",
+      skipCollection: "Aller directement à la collection", primaryNavigation: "Navigation principale", home: "Accueil Photos By Elie",
+      mainNavigation: "Menu principal", openAccount: "Ouvrir le compte", openDisplaySettings: "Ouvrir les réglages d’affichage",
+      featuredPhotography: "Photographies à la une", exploreByCountry: "Explorer par pays",
+      featuredControls: "Commandes des images à la une", previousImage: "Image précédente", nextImage: "Image suivante",
+      pauseSlideshow: "Mettre le diaporama automatique en pause", resumeSlideshow: "Reprendre le diaporama automatique",
+      scrollExplore: "Faire défiler pour explorer", explorePhotographyCountry: "Explorer les photographies par pays",
+      latestSocialCollections: "Dernières collections sur les réseaux sociaux", legalSupport: "Mentions légales et assistance",
+      closeAccount: "Fermer le compte", closeSettings: "Fermer les réglages", siteVersion: "Version du site", reviewConcept: "Concept à examiner",
+      exploreSpain: "Explorer l’Espagne", exploreSpainPlaces: "Explorer l’Espagne par lieu",
+      exploreFrance: "Explorer la France", exploreFrancePlaces: "Explorer la France par lieu",
+      exploreItaly: "Explorer l’Italie", exploreItalyPlaces: "Explorer l’Italie par lieu",
+      exploreUsa: "Explorer les États-Unis", exploreUsaPlaces: "Explorer les États-Unis par lieu",
+      exploreMexico: "Explorer le Mexique", exploreMexicoPlaces: "Explorer le Mexique par lieu",
+      explorePortugal: "Explorer le Portugal", explorePortugalPlaces: "Explorer le Portugal par lieu",
+      exploreSlovakia: "Explorer la Slovaquie",
+      heroParisTitle: "Paris après la foule", heroParisLocation: "Le Louvre, Paris",
+      heroRondaTitle: "Ronda, entre deux mondes", heroRondaLocation: "Andalousie, Espagne",
+      heroNerjaTitle: "Une crique en pleine lumière", heroNerjaLocation: "Nerja, Andalousie",
+      heroSolanaTitle: "Là où le jour rencontre le Pacifique", heroSolanaLocation: "Solana Beach, Californie",
+      heroPuertoTitle: "La baie retient le soir", heroPuertoLocation: "Puerto Vallarta, Mexique",
+      heroCascaisTitle: "Cascais rencontre l’Atlantique", heroCascaisLocation: "Cascais, Portugal",
+      placeSpain: "Plaza de España, Séville", placeFrance: "Le Louvre, Paris", placeItaly: "Florence",
+      placeUsa: "Solana Beach", placeMexico: "Puerto Vallarta", placePortugal: "Cascais", placeSlovakia: "Bratislava",
+      andalusia: "Andalousie", louvre: "Le Louvre", florence: "Florence", lisbon: "Lisbonne",
+      socialDelMar: "Coucher de soleil à Dog Beach, Del Mar",
+      socialFuengirola: "La lune sur la Méditerranée à Fuengirola",
+      socialSanDiego: "Portraits animaliers au zoo de San Diego",
+      altLouvre: "Vue panoramique nocturne de la cour du Louvre et de sa pyramide de verre",
+      altRonda: "Vue panoramique sur les gorges de Ronda et les montagnes verdoyantes d’Andalousie",
+      altNerja: "Vue panoramique sur une crique méditerranéenne ensoleillée à Nerja",
+      altSolana: "Coucher de soleil panoramique sur Solana Beach, en Californie",
+      altPuerto: "Panorama côtier de Puerto Vallarta",
+      altCascais: "Vue panoramique du front de mer et de la baie de Cascais",
+      altSpain: "Large panorama de la Plaza de España à Séville",
+      altItaly: "L’Arno à Florence",
+      altSlovakia: "La place Hviezdoslav et ses fontaines à Bratislava",
+      altWallArt: "Une photographie encadrée de Notre-Dame exposée au-dessus d’un canapé",
+      altLicensing: "Une photographie de plage présentée en tirage, dans une revue et sur un support commercial",
+      altProvenance: "Une fiche de catalogue photographique indiquant le pays, la région, la ville, l’année et un repère de lieu privé"
     },
     es: {
-      photos: "Fotos", signUp: "Registrarse", signIn: "Iniciar sesion",
-      eyebrow: "Lugares, luz y el instante intermedio", explore: "Explorar la coleccion",
-      discover: "Descubrir", selectedWork: "Seleccion",
-      introTitle: "Fotografia que deja respirar cada lugar.",
-      introBody: "Viajes, arquitectura, costas y espacios vividos — observados con paciencia y presentados sin interponerse entre tu y la imagen.",
-      usageEyebrow: "Del descubrimiento al uso", usageTitle: "Encuentra la imagen y conoce lo que puedes hacer con ella.",
-      usageIntro: "Pais, region, ciudad, ano y una nota del fotografo aportan procedencia util, mientras las coordenadas exactas sensibles siguen siendo privadas.",
+      productionPageTitle: "Photos By Elie | Fotografía de viajes y arte mural",
+      conceptPageTitle: "Photos By Elie — Concepto de página de inicio",
+      pageDescription: "Descubre la fotografía de viajes, arquitectura, costas y bellas artes de Elie Cohen, con descargas digitales seguras.",
+      photos: "Fotos", signUp: "Registrarse", signIn: "Iniciar sesión",
+      eyebrow: "Lugares, luz y el instante intermedio", explore: "Explorar la colección",
+      discover: "Descubrir", selectedWork: "Selección",
+      introTitle: "Fotografía que deja respirar cada lugar.",
+      introBody: "Viajes, arquitectura, costas y espacios vividos — observados con paciencia y presentados sin interponerse entre tú y la imagen.",
+      usageEyebrow: "Del descubrimiento al uso", usageTitle: "Encuentra la imagen. Descubre lo que puedes hacer con ella.",
+      usageIntro: "El país, la región, la ciudad, el año y una nota del fotógrafo aportan un contexto útil, mientras las coordenadas exactas sensibles siguen siendo privadas.",
       wallArtTitle: "Arte mural",
       licensingTitle: "Uso personal, editorial o comercial",
-      provenanceTitle: "Ubicacion",
-      usageAction: "Explorar fotografias",
-      series: "Serie", others: "Otros…", france: "Francia", usa: "EE. UU.", spain: "Espana", mexico: "Mexico",
+      provenanceTitle: "Ubicación",
+      usageAction: "Explorar fotografías",
+      series: "Serie", others: "Otras…", france: "Francia", usa: "EE. UU.", spain: "España", mexico: "México",
       italy: "Italia", portugal: "Portugal", slovakia: "Eslovaquia",
-      latestSocial: "Ultimas publicaciones",
-      footerLine: "Una forma mas serena de ver mas.", support: "Ayuda", privacy: "Privacidad", terms: "Condiciones", dataDeletion: "Borrado de datos",
-      display: "Pantalla", language: "Idioma", theme: "Tema", night: "Noche", day: "Dia",
-      surface: "Superficie", glass: "Cristal", solid: "Solida", transparency: "Transparencia de los paneles", translucency: "Desenfoque del cristal",
-      continueGoogle: "Continuar con Google", legacyLogin: "O usar el acceso clasico", username: "Usuario o correo",
-      password: "Contrasena", showPassword: "Mostrar", hidePassword: "Ocultar", continueVisitor: "Continuar como visitante",
-      signedIn: "Sesion iniciada", signOut: "Cerrar sesion", sharedWithMe: "Compartido conmigo", checkingSession: "Comprobando la cuenta…", signingIn: "Iniciando sesion…",
-      redirecting: "Abriendo Google…", signingOut: "Cerrando sesion…", loginFailed: "El usuario/correo o la contrasena no son correctos.",
-      sessionFailed: "La cuenta no esta disponible temporalmente. Puedes continuar como visitante."
+      latestSocial: "Últimas publicaciones",
+      footerLine: "Una forma más serena de ver más.", support: "Ayuda", privacy: "Privacidad", terms: "Condiciones", dataDeletion: "Eliminación de datos",
+      display: "Pantalla", language: "Idioma", theme: "Tema", night: "Noche", day: "Día",
+      surface: "Superficie", glass: "Cristal", solid: "Sólida", transparency: "Transparencia de los paneles", translucency: "Desenfoque del cristal",
+      continueGoogle: "Continuar con Google", legacyLogin: "O usar el acceso clásico", username: "Usuario o correo electrónico",
+      password: "Contraseña", showPassword: "Mostrar", hidePassword: "Ocultar", continueVisitor: "Continuar como visitante",
+      signedIn: "Sesión iniciada", signOut: "Cerrar sesión", sharedWithMe: "Compartido conmigo", checkingSession: "Comprobando la cuenta…", signingIn: "Iniciando sesión…",
+      redirecting: "Abriendo Google…", signingOut: "Cerrando sesión…", loginFailed: "El usuario, el correo o la contraseña no son correctos.",
+      sessionFailed: "La cuenta no está disponible temporalmente. Puedes continuar como visitante.",
+      skipCollection: "Saltar a la colección", primaryNavigation: "Navegación principal", home: "Inicio de Photos By Elie",
+      mainNavigation: "Principal", openAccount: "Abrir cuenta", openDisplaySettings: "Abrir ajustes de pantalla",
+      featuredPhotography: "Fotografías destacadas", exploreByCountry: "Explorar por país",
+      featuredControls: "Controles de las imágenes destacadas", previousImage: "Imagen anterior", nextImage: "Imagen siguiente",
+      pauseSlideshow: "Pausar la presentación automática", resumeSlideshow: "Reanudar la presentación automática",
+      scrollExplore: "Desplazarse para explorar", explorePhotographyCountry: "Explorar fotografías por país",
+      latestSocialCollections: "Últimas colecciones en redes sociales", legalSupport: "Información legal y ayuda",
+      closeAccount: "Cerrar cuenta", closeSettings: "Cerrar ajustes", siteVersion: "Versión del sitio", reviewConcept: "Concepto para revisión",
+      exploreSpain: "Explorar España", exploreSpainPlaces: "Explorar España por lugar",
+      exploreFrance: "Explorar Francia", exploreFrancePlaces: "Explorar Francia por lugar",
+      exploreItaly: "Explorar Italia", exploreItalyPlaces: "Explorar Italia por lugar",
+      exploreUsa: "Explorar EE. UU.", exploreUsaPlaces: "Explorar EE. UU. por lugar",
+      exploreMexico: "Explorar México", exploreMexicoPlaces: "Explorar México por lugar",
+      explorePortugal: "Explorar Portugal", explorePortugalPlaces: "Explorar Portugal por lugar",
+      exploreSlovakia: "Explorar Eslovaquia",
+      heroParisTitle: "París después de las multitudes", heroParisLocation: "El Louvre, París",
+      heroRondaTitle: "Ronda, entre dos mundos", heroRondaLocation: "Andalucía, España",
+      heroNerjaTitle: "Una cala a plena luz", heroNerjaLocation: "Nerja, Andalucía",
+      heroSolanaTitle: "Donde el día se encuentra con el Pacífico", heroSolanaLocation: "Solana Beach, California",
+      heroPuertoTitle: "La bahía guarda el atardecer", heroPuertoLocation: "Puerto Vallarta, México",
+      heroCascaisTitle: "Cascais frente al Atlántico", heroCascaisLocation: "Cascais, Portugal",
+      placeSpain: "Plaza de España, Sevilla", placeFrance: "El Louvre, París", placeItaly: "Florencia",
+      placeUsa: "Solana Beach", placeMexico: "Puerto Vallarta", placePortugal: "Cascais", placeSlovakia: "Bratislava",
+      andalusia: "Andalucía", louvre: "El Louvre", florence: "Florencia", lisbon: "Lisboa",
+      socialDelMar: "Atardecer en Dog Beach, Del Mar",
+      socialFuengirola: "La luna sobre el Mediterráneo en Fuengirola",
+      socialSanDiego: "Retratos de animales en el zoo de San Diego",
+      altLouvre: "Vista panorámica nocturna del patio del Louvre y su pirámide de cristal",
+      altRonda: "Vista panorámica del desfiladero de Ronda y las verdes montañas andaluzas",
+      altNerja: "Vista panorámica de una cala mediterránea soleada en Nerja",
+      altSolana: "Atardecer panorámico sobre Solana Beach, California",
+      altPuerto: "Panorama costero de Puerto Vallarta",
+      altCascais: "Vista panorámica del paseo marítimo y la bahía de Cascais",
+      altSpain: "Amplio panorama de la Plaza de España en Sevilla",
+      altItaly: "El río Arno en Florencia",
+      altSlovakia: "La plaza Hviezdoslav y sus fuentes en Bratislava",
+      altWallArt: "Una fotografía enmarcada de Notre-Dame expuesta sobre un sofá",
+      altLicensing: "Una fotografía de playa presentada como impresión, reportaje editorial y anuncio comercial",
+      altProvenance: "Una ficha de catálogo fotográfico con país, región, ciudad, año y un marcador de ubicación privada"
     }
   };
 
@@ -145,8 +271,8 @@
       slide.setAttribute("aria-hidden", String(!isActive));
     });
     const activeSlide = slides[activeIndex];
-    if (title) title.textContent = activeSlide.dataset.title;
-    if (location) location.textContent = activeSlide.dataset.location;
+    if (title) title.textContent = text(activeSlide.dataset.titleI18n) || activeSlide.dataset.title;
+    if (location) location.textContent = text(activeSlide.dataset.locationI18n) || activeSlide.dataset.location;
     if (currentLabel) currentLabel.textContent = pad(activeIndex + 1);
     animatePanorama(activeSlide);
     if (restart) startTimer();
@@ -155,7 +281,7 @@
   const syncPauseButton = () => {
     if (!pauseButton) return;
     pauseButton.setAttribute("aria-pressed", String(paused));
-    pauseButton.setAttribute("aria-label", paused ? "Resume automatic slideshow" : "Pause automatic slideshow");
+    pauseButton.setAttribute("aria-label", text(paused ? "resumeSlideshow" : "pauseSlideshow"));
     pauseButton.textContent = paused ? "▶" : "Ⅱ";
   };
 
@@ -174,6 +300,19 @@
       const value = translations[selected][element.dataset.i18n];
       if (value) element.textContent = value;
     });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+      const value = translations[selected][element.dataset.i18nAriaLabel];
+      if (value) element.setAttribute("aria-label", value);
+    });
+    document.querySelectorAll("[data-i18n-alt]").forEach((element) => {
+      const value = translations[selected][element.dataset.i18nAlt];
+      if (value) element.setAttribute("alt", value);
+    });
+    document.title = translations[selected][productionLanding ? "productionPageTitle" : "conceptPageTitle"];
+    const description = document.querySelector('meta[name="description"]');
+    if (description) description.setAttribute("content", translations[selected].pageDescription);
+    showSlide(activeIndex, { restart: false });
+    syncPauseButton();
     if (languageSelect) languageSelect.value = selected;
     return selected;
   };

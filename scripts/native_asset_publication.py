@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback  # noqa: E402
+from native_catalog_promotion import refresh_public_catalog_artifacts  # noqa: E402
 from native_publication_pipeline import run_upload_batch, upload_run_status  # noqa: E402
 from sidecar_state_db import (  # noqa: E402
     _planned_r2_keys,
@@ -242,6 +243,17 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
         return list((row.get("upload") or {}).get("keys") or [])
 
     completed = retry_sqlite_lock(lambda: run_upload_batch(repo_root, run_id, upload))
+    catalog_items = [
+        item for item in completed.get("items") or []
+        if str(item.get("catalog_state") or "") == "local"
+    ]
+    if catalog_items:
+        artifacts = retry_sqlite_lock(
+            lambda: refresh_public_catalog_artifacts(repo_root)
+        )
+        completed["publicCatalogArtifacts"] = artifacts
+        if not artifacts.get("ok"):
+            completed["ok"] = False
     bridge_failed = int(completed.get("failed") or 0)
     if str(bridge.get("status") or "") == "running":
         retry_sqlite_lock(

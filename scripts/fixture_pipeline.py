@@ -340,6 +340,24 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_asset_publications_asset
           ON asset_publications(asset_id, state, published_at);
 
+        CREATE TABLE IF NOT EXISTS public_catalog_publications (
+          asset_id TEXT NOT NULL,
+          source_version_hash TEXT NOT NULL,
+          media_id TEXT NOT NULL,
+          state TEXT NOT NULL DEFAULT 'pending'
+            CHECK (state IN ('pending', 'local', 'live', 'failed')),
+          public_url TEXT NOT NULL DEFAULT '',
+          catalog_sha256 TEXT NOT NULL DEFAULT '',
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          verified_at TEXT,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (asset_id, source_version_hash),
+          FOREIGN KEY (asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_public_catalog_publications_state
+          ON public_catalog_publications(state, updated_at, asset_id);
+
         CREATE TABLE IF NOT EXISTS asset_sale_references (
           order_id TEXT NOT NULL,
           asset_id TEXT NOT NULL,

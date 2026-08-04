@@ -27,27 +27,27 @@
     <link rel="stylesheet" href="./landing-concept/landing.css?v=155.0">
   </head>
   <body>
-    <a class="skip-link" href="#explore">Skip to the collection</a>
+    <a class="skip-link" href="#explore" data-i18n="skipCollection">Skip to the collection</a>
 
-    <header class="site-header" aria-label="Primary navigation">
-      <a class="brand" href="./?v=155.0" aria-label="Photos By Elie home">
+    <header class="site-header" aria-label="Primary navigation" data-i18n-aria-label="primaryNavigation">
+      <a class="brand" href="./?v=155.0" aria-label="Photos By Elie home" data-i18n-aria-label="home">
         <img src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="" width="48" height="48">
         <span>Photos By Elie</span>
       </a>
-      <nav class="primary-nav" aria-label="Main">
+      <nav class="primary-nav" aria-label="Main" data-i18n-aria-label="mainNavigation">
         <a href="./gallery.html?v=155.0" data-i18n="photos">Photos</a>
         <div class="account-entry-actions" id="account-entry-actions">
           <button class="account-pill" id="account-signup" type="button" data-i18n="signUp">Sign up</button>
           <button class="account-pill account-pill-primary" id="account-signin" type="button" data-i18n="signIn">Sign in</button>
         </div>
         <a class="account-pill account-shared-link" id="account-shared-entry" href="./gallery.html?gallery=shared" data-i18n="sharedWithMe" hidden>Shared with me</a>
-        <button class="icon-button account-face" id="account-face" type="button" aria-label="Open account" aria-haspopup="dialog" hidden>
+        <button class="icon-button account-face" id="account-face" type="button" aria-label="Open account" data-i18n-aria-label="openAccount" aria-haspopup="dialog" hidden>
           <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="12" cy="8" r="3.25"></circle>
             <path d="M5.75 19c.55-3.25 2.7-5 6.25-5s5.7 1.75 6.25 5"></path>
           </svg>
         </button>
-        <button class="icon-button" id="settings-open" type="button" aria-label="Open display settings" aria-haspopup="dialog">
+        <button class="icon-button" id="settings-open" type="button" aria-label="Open display settings" data-i18n-aria-label="openDisplaySettings" aria-haspopup="dialog">
           <svg class="header-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path>
             <circle cx="16" cy="7" r="2"></circle>
@@ -58,25 +58,25 @@
     </header>
 
     <main>
-      <section class="hero" aria-label="Featured photography">
+      <section class="hero" aria-label="Featured photography" data-i18n-aria-label="featuredPhotography">
         <div class="hero-slides" id="hero-slides">
-          <figure class="hero-slide is-active" data-title="Paris after the crowds" data-location="The Louvre, Paris" aria-hidden="false">
-            <img src="./assets/gallery-heroes/france.jpg" alt="A panoramic night view of the Louvre courtyard and glass pyramid" fetchpriority="high">
+          <figure class="hero-slide is-active" data-title="Paris after the crowds" data-title-i18n="heroParisTitle" data-location="The Louvre, Paris" data-location-i18n="heroParisLocation" aria-hidden="false">
+            <img src="./assets/gallery-heroes/france.jpg" alt="A panoramic night view of the Louvre courtyard and glass pyramid" data-i18n-alt="altLouvre" fetchpriority="high">
           </figure>
-          <figure class="hero-slide" data-title="Ronda, between worlds" data-location="Andalucia, Spain" aria-hidden="true">
-            <img src="./landing-concept/assets/pano-ronda.jpg" alt="A panoramic view across the Ronda gorge and green Andalusian mountains" loading="lazy">
+          <figure class="hero-slide" data-title="Ronda, between worlds" data-title-i18n="heroRondaTitle" data-location="Andalusia, Spain" data-location-i18n="heroRondaLocation" aria-hidden="true">
+            <img src="./landing-concept/assets/pano-ronda.jpg" alt="A panoramic view across the Ronda gorge and green Andalusian mountains" data-i18n-alt="altRonda" loading="lazy">
           </figure>
-          <figure class="hero-slide" data-title="A cove in full light" data-location="Nerja, Andalucia" aria-hidden="true">
-            <img src="./landing-concept/assets/pano-nerja.jpg" alt="A panoramic view across a sunny Mediterranean cove in Nerja" loading="lazy">
+          <figure class="hero-slide" data-title="A cove in full light" data-title-i18n="heroNerjaTitle" data-location="Nerja, Andalusia" data-location-i18n="heroNerjaLocation" aria-hidden="true">
+            <img src="./landing-concept/assets/pano-nerja.jpg" alt="A panoramic view across a sunny Mediterranean cove in Nerja" data-i18n-alt="altNerja" loading="lazy">
           </figure>
-          <figure class="hero-slide" data-title="Where the day meets the Pacific" data-location="Solana Beach, California" aria-hidden="true">
-            <img src="./assets/gallery-heroes/usa.jpg" alt="A panoramic sunset over Solana Beach in California" loading="lazy">
+          <figure class="hero-slide" data-title="Where the day meets the Pacific" data-title-i18n="heroSolanaTitle" data-location="Solana Beach, California" data-location-i18n="heroSolanaLocation" aria-hidden="true">
+            <img src="./assets/gallery-heroes/usa.jpg" alt="A panoramic sunset over Solana Beach in California" data-i18n-alt="altSolana" loading="lazy">
           </figure>
-          <figure class="hero-slide" data-title="The bay holds the evening" data-location="Puerto Vallarta, Mexico" aria-hidden="true">
-            <img src="./assets/gallery-heroes/mexico.jpg" alt="A coastal panorama of Puerto Vallarta" loading="lazy">
+          <figure class="hero-slide" data-title="The bay holds the evening" data-title-i18n="heroPuertoTitle" data-location="Puerto Vallarta, Mexico" data-location-i18n="heroPuertoLocation" aria-hidden="true">
+            <img src="./assets/gallery-heroes/mexico.jpg" alt="A coastal panorama of Puerto Vallarta" data-i18n-alt="altPuerto" loading="lazy">
           </figure>
-          <figure class="hero-slide" data-title="Cascais meets the Atlantic" data-location="Cascais, Portugal" aria-hidden="true">
-            <img src="./assets/gallery-heroes/portugal.jpg" alt="A panoramic waterfront view across Cascais Bay" loading="lazy">
+          <figure class="hero-slide" data-title="Cascais meets the Atlantic" data-title-i18n="heroCascaisTitle" data-location="Cascais, Portugal" data-location-i18n="heroCascaisLocation" aria-hidden="true">
+            <img src="./assets/gallery-heroes/portugal.jpg" alt="A panoramic waterfront view across Cascais Bay" data-i18n-alt="altCascais" loading="lazy">
           </figure>
         </div>
 
@@ -88,7 +88,7 @@
           <p id="hero-location">The Louvre, Paris</p>
           <div class="explore-menu" id="explore-menu">
             <button class="explore-button" id="explore-trigger" type="button" aria-expanded="false" aria-controls="country-links" data-i18n="explore">Explore the collection</button>
-            <nav class="country-links" id="country-links" aria-label="Explore by country">
+            <nav class="country-links" id="country-links" aria-label="Explore by country" data-i18n-aria-label="exploreByCountry">
               <a href="./gallery.html?gallery=france&amp;v=143.4" data-i18n="france">France</a>
               <a href="./gallery.html?gallery=usa&amp;v=143.4" data-i18n="usa">USA</a>
               <a href="./gallery.html?gallery=spain&amp;v=143.4" data-i18n="spain">Spain</a>
@@ -99,14 +99,14 @@
           </div>
         </div>
 
-        <div class="hero-controls" aria-label="Featured image controls">
-          <button class="round-button" id="previous-slide" type="button" aria-label="Previous image">←</button>
+        <div class="hero-controls" aria-label="Featured image controls" data-i18n-aria-label="featuredControls">
+          <button class="round-button" id="previous-slide" type="button" aria-label="Previous image" data-i18n-aria-label="previousImage">←</button>
           <div class="slide-status"><span id="slide-current">01</span><span aria-hidden="true">/</span><span id="slide-total">06</span></div>
-          <button class="round-button" id="next-slide" type="button" aria-label="Next image">→</button>
-          <button class="round-button" id="pause-slides" type="button" aria-label="Pause automatic slideshow" aria-pressed="false">Ⅱ</button>
+          <button class="round-button" id="next-slide" type="button" aria-label="Next image" data-i18n-aria-label="nextImage">→</button>
+          <button class="round-button" id="pause-slides" type="button" aria-label="Pause automatic slideshow" data-i18n-aria-label="pauseSlideshow" aria-pressed="false">Ⅱ</button>
         </div>
 
-        <a class="scroll-cue" href="#explore" aria-label="Scroll to explore">
+        <a class="scroll-cue" href="#explore" aria-label="Scroll to explore" data-i18n-aria-label="scrollExplore">
           <span data-i18n="discover">Discover</span>
           <span aria-hidden="true">↓</span>
         </a>
@@ -129,7 +129,7 @@
         <div class="usage-guide-grid">
           <article>
             <figure class="usage-guide-visual">
-              <img src="./assets/usage-guide/wall-art-notre-dame.webp" alt="A framed Notre-Dame photograph displayed above a sofa" loading="lazy" decoding="async">
+              <img src="./assets/usage-guide/wall-art-notre-dame.webp" alt="A framed Notre-Dame photograph displayed above a sofa" data-i18n-alt="altWallArt" loading="lazy" decoding="async">
             </figure>
             <div class="usage-guide-card-copy">
               <h3 data-i18n="wallArtTitle">Wall art</h3>
@@ -137,7 +137,7 @@
           </article>
           <article>
             <figure class="usage-guide-visual">
-              <img src="./assets/usage-guide/licensing-contexts.webp" alt="One beach photograph shown as a print, editorial spread, and commercial display" loading="lazy" decoding="async">
+              <img src="./assets/usage-guide/licensing-contexts.webp" alt="One beach photograph shown as a print, editorial spread, and commercial display" data-i18n-alt="altLicensing" loading="lazy" decoding="async">
             </figure>
             <div class="usage-guide-card-copy">
               <h3 data-i18n="licensingTitle">Personal, editorial, or commercial</h3>
@@ -145,7 +145,7 @@
           </article>
           <article>
             <figure class="usage-guide-visual">
-              <img src="./assets/usage-guide/location-provenance.webp" alt="A Plaza de España panorama arranged with a regional map, notebook, and camera" loading="lazy" decoding="async">
+              <img src="./assets/usage-guide/location-provenance.webp" alt="A photography catalog card showing country, region, city, year, and a private location marker" data-i18n-alt="altProvenance" loading="lazy" decoding="async">
             </figure>
             <div class="usage-guide-card-copy">
               <h3 data-i18n="provenanceTitle">Location</h3>
@@ -155,50 +155,50 @@
         <a class="usage-guide-action" href="./gallery.html?gallery=selection&amp;v=145.0" data-i18n="usageAction">Explore photographs</a>
       </section>
 
-      <section class="story-grid" aria-label="Explore photography by country">
+      <section class="story-grid" aria-label="Explore photography by country" data-i18n-aria-label="explorePhotographyCountry">
         <article class="story-card story-card-wide">
-          <a class="story-card-main" href="./gallery.html?gallery=spain&amp;v=143.4" aria-label="Explore Spain">
-          <img src="./assets/gallery-heroes/spain.jpg" alt="A sweeping panorama of Plaza de Espana in Seville" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="spain">Spain</strong><em>Plaza de Espana, Seville</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=spain&amp;v=143.4" aria-label="Explore Spain" data-i18n-aria-label="exploreSpain">
+          <img src="./assets/gallery-heroes/spain.jpg" alt="A sweeping panorama of Plaza de España in Seville" data-i18n-alt="altSpain" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="spain">Spain</strong><em data-i18n="placeSpain">Plaza de España, Seville</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore Spain by place">
+          <nav class="story-card-fan" aria-label="Explore Spain by place" data-i18n-aria-label="exploreSpainPlaces">
             <a href="./gallery.html?gallery=spain&amp;q=Madrid&amp;v=143.4">Madrid</a>
-            <a href="./gallery.html?gallery=spain&amp;q=Andalusia&amp;v=143.4">Andalusia</a>
+            <a href="./gallery.html?gallery=spain&amp;q=Andalusia&amp;v=143.4" data-i18n="andalusia">Andalusia</a>
             <a href="./gallery.html?gallery=spain&amp;q=Valencia&amp;v=143.4">Valencia</a>
             <a href="./gallery.html?gallery=spain&amp;q=Bilbao&amp;v=143.4">Bilbao</a>
             <a href="./gallery.html?gallery=spain&amp;v=143.4" data-i18n="others">Others…</a>
           </nav>
         </article>
         <article class="story-card">
-          <a class="story-card-main" href="./gallery.html?gallery=france&amp;v=143.4" aria-label="Explore France">
-          <img src="./assets/gallery-heroes/france.jpg" alt="The Louvre courtyard and glass pyramid at night" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="france">France</strong><em>The Louvre, Paris</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=france&amp;v=143.4" aria-label="Explore France" data-i18n-aria-label="exploreFrance">
+          <img src="./assets/gallery-heroes/france.jpg" alt="A panoramic night view of the Louvre courtyard and glass pyramid" data-i18n-alt="altLouvre" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="france">France</strong><em data-i18n="placeFrance">The Louvre, Paris</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore France by place">
+          <nav class="story-card-fan" aria-label="Explore France by place" data-i18n-aria-label="exploreFrancePlaces">
             <a href="./gallery.html?gallery=france&amp;q=Versailles&amp;v=143.4">Versailles</a>
             <a href="./gallery.html?gallery=france&amp;q=Giverny&amp;v=143.4">Giverny</a>
-            <a href="./gallery.html?gallery=france&amp;q=Louvre&amp;v=143.4">Le Louvre</a>
+            <a href="./gallery.html?gallery=france&amp;q=Louvre&amp;v=143.4" data-i18n="louvre">The Louvre</a>
             <a href="./gallery.html?gallery=france&amp;v=143.4" data-i18n="others">Others…</a>
           </nav>
         </article>
         <article class="story-card">
-          <a class="story-card-main" href="./gallery.html?gallery=italy&amp;v=143.4" aria-label="Explore Italy">
-          <img src="./assets/gallery-heroes/italy.jpg" alt="The Arno river in Florence" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="italy">Italy</strong><em>Florence</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=italy&amp;v=143.4" aria-label="Explore Italy" data-i18n-aria-label="exploreItaly">
+          <img src="./assets/gallery-heroes/italy.jpg" alt="The Arno river in Florence" data-i18n-alt="altItaly" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="italy">Italy</strong><em data-i18n="placeItaly">Florence</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore Italy by place">
+          <nav class="story-card-fan" aria-label="Explore Italy by place" data-i18n-aria-label="exploreItalyPlaces">
             <a href="./gallery.html?gallery=italy&amp;q=Pisa&amp;v=143.4">Pisa</a>
-            <a href="./gallery.html?gallery=italy&amp;q=Florence&amp;v=143.4">Florence</a>
+            <a href="./gallery.html?gallery=italy&amp;q=Florence&amp;v=143.4" data-i18n="florence">Florence</a>
             <a href="./gallery.html?gallery=italy&amp;q=San%20Gimignano&amp;v=143.4">San Gimignano</a>
             <a href="./gallery.html?gallery=italy&amp;v=143.4" data-i18n="others">Others…</a>
           </nav>
         </article>
         <article class="story-card story-card-landscape">
-          <a class="story-card-main" href="./gallery.html?gallery=usa&amp;v=143.4" aria-label="Explore USA">
-          <img src="./assets/gallery-heroes/usa.jpg" alt="A panoramic sunset over Solana Beach in California" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="usa">USA</strong><em>Solana Beach</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=usa&amp;v=143.4" aria-label="Explore USA" data-i18n-aria-label="exploreUsa">
+          <img src="./assets/gallery-heroes/usa.jpg" alt="A panoramic sunset over Solana Beach in California" data-i18n-alt="altSolana" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="usa">USA</strong><em data-i18n="placeUsa">Solana Beach</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore USA by place">
+          <nav class="story-card-fan" aria-label="Explore USA by place" data-i18n-aria-label="exploreUsaPlaces">
             <a href="./gallery.html?gallery=usa&amp;q=San%20Diego&amp;v=143.4">San Diego</a>
             <a href="./gallery.html?gallery=usa&amp;q=Del%20Mar&amp;v=143.4">Del Mar</a>
             <a href="./gallery.html?gallery=usa&amp;q=Oceanside&amp;v=143.4">Oceanside</a>
@@ -207,11 +207,11 @@
           </nav>
         </article>
         <article class="story-card">
-          <a class="story-card-main" href="./gallery.html?gallery=mexico&amp;v=143.4" aria-label="Explore Mexico">
-          <img src="./assets/gallery-heroes/mexico.jpg" alt="A coastal panorama of Puerto Vallarta" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="mexico">Mexico</strong><em>Puerto Vallarta</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=mexico&amp;v=143.4" aria-label="Explore Mexico" data-i18n-aria-label="exploreMexico">
+          <img src="./assets/gallery-heroes/mexico.jpg" alt="A coastal panorama of Puerto Vallarta" data-i18n-alt="altPuerto" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="mexico">Mexico</strong><em data-i18n="placeMexico">Puerto Vallarta</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore Mexico by place">
+          <nav class="story-card-fan" aria-label="Explore Mexico by place" data-i18n-aria-label="exploreMexicoPlaces">
             <a href="./gallery.html?gallery=mexico&amp;q=Puerto%20Vallarta&amp;v=143.4">Puerto Vallarta</a>
             <a href="./gallery.html?gallery=mexico&amp;q=San%20Pancho&amp;v=143.4">San Pancho</a>
             <a href="./gallery.html?gallery=mexico&amp;q=Cabo%20Corrientes&amp;v=143.4">Cabo Corrientes</a>
@@ -219,12 +219,12 @@
           </nav>
         </article>
         <article class="story-card story-card-landscape">
-          <a class="story-card-main" href="./gallery.html?gallery=portugal&amp;v=143.4" aria-label="Explore Portugal">
-          <img src="./assets/gallery-heroes/portugal.jpg" alt="A panoramic waterfront view across Cascais Bay" loading="lazy">
-          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="portugal">Portugal</strong><em>Cascais</em></span>
+          <a class="story-card-main" href="./gallery.html?gallery=portugal&amp;v=143.4" aria-label="Explore Portugal" data-i18n-aria-label="explorePortugal">
+          <img src="./assets/gallery-heroes/portugal.jpg" alt="A panoramic waterfront view across Cascais Bay" data-i18n-alt="altCascais" loading="lazy">
+          <span class="story-card-copy"><small data-i18n="series">Series</small><strong data-i18n="portugal">Portugal</strong><em data-i18n="placePortugal">Cascais</em></span>
           </a>
-          <nav class="story-card-fan" aria-label="Explore Portugal by place">
-            <a href="./gallery.html?gallery=portugal&amp;q=Lisbon&amp;v=143.4">Lisbon</a>
+          <nav class="story-card-fan" aria-label="Explore Portugal by place" data-i18n-aria-label="explorePortugalPlaces">
+            <a href="./gallery.html?gallery=portugal&amp;q=Lisbon&amp;v=143.4" data-i18n="lisbon">Lisbon</a>
             <a href="./gallery.html?gallery=portugal&amp;q=Sintra&amp;v=143.4">Sintra</a>
             <a href="./gallery.html?gallery=portugal&amp;q=Cascais&amp;v=143.4">Cascais</a>
             <a href="./gallery.html?gallery=portugal&amp;q=Porto&amp;v=143.4">Porto</a>
@@ -233,17 +233,17 @@
         </article>
         <aside class="social-shelf" aria-labelledby="latest-social-title">
           <h2 class="social-shelf-title" id="latest-social-title" data-i18n="latestSocial">Latest social</h2>
-          <nav class="social-shelf-list" aria-label="Latest social collections">
+          <nav class="social-shelf-list" aria-label="Latest social collections" data-i18n-aria-label="latestSocialCollections">
             <a class="social-shelf-item" href="./campaign.html?c=facebook-del-mar-dog-beach-sunset-2026-07-14&amp;v=145.0">
-              <span><small>Facebook</small><strong>Del Mar Dog Beach Sunset</strong></span>
+              <span><small>Facebook</small><strong data-i18n="socialDelMar">Del Mar Dog Beach Sunset</strong></span>
               <span class="social-shelf-arrow" aria-hidden="true">↗</span>
             </a>
             <a class="social-shelf-item" href="./campaign.html?c=instagram-fuengirola-moon-mediterranean-2026-07-14&amp;v=145.0">
-              <span><small>Instagram / Threads</small><strong>Fuengirola Moon Over the Mediterranean</strong></span>
+              <span><small>Instagram / Threads</small><strong data-i18n="socialFuengirola">Fuengirola Moon Over the Mediterranean</strong></span>
               <span class="social-shelf-arrow" aria-hidden="true">↗</span>
             </a>
             <a class="social-shelf-item" href="./campaign.html?c=pinterest-san-diego-zoo-wildlife-portraits-2026-07-14&amp;v=145.0">
-              <span><small>Pinterest</small><strong>San Diego Zoo Wildlife Portraits</strong></span>
+              <span><small>Pinterest</small><strong data-i18n="socialSanDiego">San Diego Zoo Wildlife Portraits</strong></span>
               <span class="social-shelf-arrow" aria-hidden="true">↗</span>
             </a>
           </nav>
@@ -256,7 +256,7 @@
           <span>Photos By Elie</span>
         </a>
         <p data-i18n="footerLine">A quieter way to see more.</p>
-        <nav class="footer-links" aria-label="Legal and support">
+        <nav class="footer-links" aria-label="Legal and support" data-i18n-aria-label="legalSupport">
           <a href="./support.html?v=155.0" data-i18n="support">Support</a>
           <a href="./privacy.html?v=155.0" data-i18n="privacy">Privacy</a>
           <a href="./terms.html?v=155.0" data-i18n="terms">Terms</a>
@@ -272,7 +272,7 @@
             <p class="eyebrow">Photos By Elie</p>
             <h2 id="account-title" data-i18n="signIn">Sign in</h2>
           </div>
-          <button class="round-button dialog-close" id="account-close" type="button" aria-label="Close account">×</button>
+          <button class="round-button dialog-close" id="account-close" type="button" aria-label="Close account" data-i18n-aria-label="closeAccount">×</button>
         </div>
         <section id="account-signed-out">
           <button class="account-action account-action-primary" id="account-google-signin" type="button" data-i18n="continueGoogle">Continue with Google</button>
@@ -303,14 +303,14 @@
             <p class="eyebrow">Photos By Elie</p>
             <h2 id="settings-title" data-i18n="display">Display</h2>
           </div>
-          <button class="round-button dialog-close" value="close" aria-label="Close settings">×</button>
+          <button class="round-button dialog-close" value="close" aria-label="Close settings" data-i18n-aria-label="closeSettings">×</button>
         </div>
 
         <label for="language-select" data-i18n="language">Language</label>
         <select id="language-select">
           <option value="en">English</option>
-          <option value="fr">Francais</option>
-          <option value="es">Espanol</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
         </select>
 
         <fieldset>
@@ -334,7 +334,7 @@
       </form>
     </dialog>
 
-    <span class="version-pill site-version-badge" aria-label="Site version">v155.0</span>
+    <span class="version-pill site-version-badge" aria-label="Site version" data-i18n-aria-label="siteVersion">v155.0</span>
     <script src="./media-config.js?v=155.0"></script>
     <script src="./landing-concept/landing.js?v=155.0"></script>
     <script src="./analytics.js?v=155.0"></script>

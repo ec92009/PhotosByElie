@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -11,9 +12,23 @@ const productionVersion = fs.readFileSync(path.join(root, "VERSION"), "utf8").tr
 const css = fs.readFileSync(path.join(root, "landing-concept", "landing.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "utf8");
 
+const translationMatch = js.match(/const translations = (\{[\s\S]*?\n  \});\n\n  const activeLanguage/);
+assert.ok(translationMatch, "landing translations object is readable");
+const translations = vm.runInNewContext(`(${translationMatch[1]})`);
+
+const landingTranslationKeys = (...documents) => {
+  const keys = new Set();
+  for (const document of documents) {
+    for (const attribute of ["data-i18n", "data-i18n-aria-label", "data-i18n-alt", "data-title-i18n", "data-location-i18n"]) {
+      for (const match of document.matchAll(new RegExp(`${attribute}="([^"]+)"`, "g"))) keys.add(match[1]);
+    }
+  }
+  return keys;
+};
+
 test("landing concept remains isolated and search-engine private", () => {
   assert.match(html, /noindex, nofollow, noarchive/);
-  assert.match(html, /Review concept · v143\.4/);
+  assert.match(html, /data-i18n="reviewConcept">Review concept<\/span> · v143\.4/);
   assert.doesNotMatch(html, /_1800|masters\//);
 });
 
@@ -30,6 +45,32 @@ test("landing concept exposes complete review controls", () => {
   assert.match(html, /name="surface"/);
   assert.match(html, /id="transparency-range"/);
   assert.match(html, /class="version-pill"/);
+});
+
+test("public language pickers preserve French and Spanish accents", () => {
+  for (const document of [html, productionHtml]) {
+    assert.match(document, /<option value="fr">Français<\/option>/);
+    assert.match(document, /<option value="es">Español<\/option>/);
+  }
+});
+
+test("landing French and Spanish copy covers all visible and accessible strings", () => {
+  const requiredKeys = landingTranslationKeys(html, productionHtml);
+  requiredKeys.add("resumeSlideshow");
+  for (const language of ["en", "fr", "es"]) {
+    const missing = [...requiredKeys].filter((key) => !translations[language][key]);
+    assert.deepEqual(missing, [], `${language} is missing landing translations`);
+  }
+  assert.deepEqual(Object.keys(translations.fr).sort(), Object.keys(translations.en).sort());
+  assert.deepEqual(Object.keys(translations.es).sort(), Object.keys(translations.en).sort());
+  assert.match(translations.fr.introBody, /habités/);
+  assert.match(translations.es.usageIntro, /país/);
+  assert.match(js, /\[data-i18n-aria-label\]/);
+  assert.match(js, /\[data-i18n-alt\]/);
+  assert.equal((productionHtml.match(/data-title-i18n=/g) || []).length, 6);
+  assert.equal((productionHtml.match(/data-location-i18n=/g) || []).length, 6);
+  assert.equal((html.match(/data-title-i18n=/g) || []).length, 6);
+  assert.equal((html.match(/data-location-i18n=/g) || []).length, 6);
 });
 
 test("landing concept exposes all live country collections", () => {

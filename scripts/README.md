@@ -483,6 +483,10 @@ node scripts/generate_title_keyword_review_queue.mjs --limit 100
 
 `assets/owner-actions/title-keyword-review-queue/proposed-state.json` is retired. Use `Owner.sqlite:title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions` for proposal state.
 
+When an ordinary run selects an OpenAI rung from the PBB-66 ladder, the generator groups photos deterministically by gallery/source folder (or Apple Photos album) and an anchored two-hour capture window. It sends bounded chunks with defaults of 8 photos, 8 MiB of prompt plus preview input, and 64,000 conservative estimated input tokens. Override these limits only for an inspected run with `PBE_TITLE_KEYWORD_BATCH_MAX_IMAGES`, `PBE_TITLE_KEYWORD_BATCH_MAX_INPUT_BYTES`, `PBE_TITLE_KEYWORD_BATCH_MAX_INPUT_TOKENS`, or `PBE_TITLE_KEYWORD_CAPTURE_WINDOW_MS`. The model must return a structured `results` collection keyed by `photo_id`; valid rows are retained even when another row is malformed, and failed rows are retried or split in isolation. Chunk and per-photo attempt, validation, preview, model-ladder, input-bound, and provenance state is persisted in `Owner.sqlite:title_keyword_batch_chunks` and `title_keyword_batch_items`, so an interrupted batch resumes under the same batch id. Rework remains per-photo, Ollama/local models remain out of scope, and no catalog metadata is changed until separate human approval.
+
+Each generated batch view also includes a deterministic before/after invocation plan plus observed bounded-run latency, throughput, item error rate, retry/split counts, input bytes/tokens, and the model ladder. Codex CLI does not expose per-request billing to this script, so the recorded input-token basis is intended for reconciliation with the model usage export rather than presented as a fabricated price.
+
 Review on localhost:
 
 - Start the local helper server: `python3 scripts/local_server.py 8000`

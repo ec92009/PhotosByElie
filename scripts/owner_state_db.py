@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import json
 import re
 import sqlite3
+import sys
 import uuid
 from pathlib import Path
 from typing import Any, Iterable
@@ -313,6 +314,55 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY (media_id, attempt) REFERENCES title_keyword_proposals(media_id, attempt) ON DELETE CASCADE
         ) WITHOUT ROWID;
 
+        CREATE TABLE IF NOT EXISTS title_keyword_batch_chunks (
+          batch_id                  TEXT NOT NULL,
+          chunk_id                  TEXT NOT NULL,
+          parent_chunk_id           TEXT,
+          status                    TEXT NOT NULL CHECK (status IN ('pending', 'running', 'partial', 'completed', 'failed', 'cancelled')),
+          shoot_key                 TEXT,
+          requested_generator_model TEXT,
+          generator_model_level     INTEGER,
+          model_ladder              TEXT NOT NULL DEFAULT '[]',
+          capture_newest            TEXT,
+          capture_oldest            TEXT,
+          photo_ids                 TEXT NOT NULL DEFAULT '[]',
+          image_count               INTEGER NOT NULL DEFAULT 0 CHECK (image_count >= 0),
+          input_bytes               INTEGER NOT NULL DEFAULT 0 CHECK (input_bytes >= 0),
+          input_tokens              INTEGER NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+          split_depth               INTEGER NOT NULL DEFAULT 0 CHECK (split_depth >= 0),
+          invocation_count          INTEGER NOT NULL DEFAULT 0 CHECK (invocation_count >= 0),
+          last_error                TEXT,
+          started_at                TEXT,
+          finished_at               TEXT,
+          updated_at                TEXT,
+          PRIMARY KEY (batch_id, chunk_id),
+          FOREIGN KEY (batch_id) REFERENCES title_keyword_batches(batch_id)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE IF NOT EXISTS title_keyword_batch_items (
+          batch_id                  TEXT NOT NULL,
+          chunk_id                  TEXT NOT NULL,
+          photo_id                  TEXT NOT NULL,
+          proposal_attempt          INTEGER NOT NULL CHECK (proposal_attempt > 0),
+          status                    TEXT NOT NULL CHECK (status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
+          model_attempts            INTEGER NOT NULL DEFAULT 0 CHECK (model_attempts >= 0),
+          validation_state          TEXT,
+          validation_error          TEXT,
+          preview_path              TEXT,
+          preview_bytes             INTEGER NOT NULL DEFAULT 0 CHECK (preview_bytes >= 0),
+          input_bytes               INTEGER NOT NULL DEFAULT 0 CHECK (input_bytes >= 0),
+          input_tokens              INTEGER NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+          requested_generator_model TEXT,
+          resolved_model            TEXT,
+          reasoning_effort          TEXT,
+          vision                    INTEGER NOT NULL DEFAULT 0 CHECK (vision IN (0, 1)),
+          model_ladder              TEXT NOT NULL DEFAULT '[]',
+          provenance                TEXT NOT NULL DEFAULT '{}',
+          updated_at                TEXT,
+          PRIMARY KEY (batch_id, chunk_id, photo_id),
+          FOREIGN KEY (batch_id, chunk_id) REFERENCES title_keyword_batch_chunks(batch_id, chunk_id)
+        ) WITHOUT ROWID;
+
         CREATE TABLE IF NOT EXISTS r2_objects (
           bucket                TEXT NOT NULL,
           object_key            TEXT NOT NULL,
@@ -409,6 +459,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_title_keyword_proposals_status ON title_keyword_proposals(proposal_status, proposed_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_decisions_state_time ON title_keyword_decisions(decision_state, decided_at);
         CREATE INDEX IF NOT EXISTS idx_title_keyword_decisions_applied_at ON title_keyword_decisions(applied_at);
+        CREATE INDEX IF NOT EXISTS idx_title_keyword_batch_chunks_status ON title_keyword_batch_chunks(status, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_title_keyword_batch_items_photo ON title_keyword_batch_items(photo_id, status, updated_at);
         CREATE INDEX IF NOT EXISTS idx_import_source_history_kind_active ON import_source_history(source_kind, removed_at, pinned, last_used_at);
         CREATE INDEX IF NOT EXISTS idx_country_assignments_country ON country_assignments(country_slug, media_id);
         CREATE INDEX IF NOT EXISTS idx_country_assignments_batch ON country_assignments(batch_id);
@@ -1866,6 +1918,231 @@ def _upsert_batch(conn: sqlite3.Connection, payload: dict[str, Any], notes: str 
     )
 
 
+def _json_object(value: Any, fallback: Any) -> Any:
+    if isinstance(value, (dict, list)):
+        return value
+    return _read_json_text(str(value or ""), fallback)
+
+
+def _batch_chunk_json_row(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "batch_id": row["batch_id"],
+        "chunk_id": row["chunk_id"],
+        "parent_chunk_id": row["parent_chunk_id"] or "",
+        "status": row["status"],
+        "shoot_key": row["shoot_key"] or "",
+        "requested_generator_model": row["requested_generator_model"] or "",
+        "generator_model_level": row["generator_model_level"],
+        "model_ladder": _json_object(row["model_ladder"], []),
+        "capture_newest": row["capture_newest"] or "",
+        "capture_oldest": row["capture_oldest"] or "",
+        "photo_ids": _json_object(row["photo_ids"], []),
+        "image_count": int(row["image_count"] or 0),
+        "input_bytes": int(row["input_bytes"] or 0),
+        "input_tokens": int(row["input_tokens"] or 0),
+        "split_depth": int(row["split_depth"] or 0),
+        "invocation_count": int(row["invocation_count"] or 0),
+        "last_error": row["last_error"] or "",
+        "started_at": row["started_at"] or "",
+        "finished_at": row["finished_at"] or "",
+        "updated_at": row["updated_at"] or "",
+    }
+
+
+def _batch_item_json_row(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "batch_id": row["batch_id"],
+        "chunk_id": row["chunk_id"],
+        "photo_id": row["photo_id"],
+        "proposal_attempt": int(row["proposal_attempt"] or 1),
+        "status": row["status"],
+        "model_attempts": int(row["model_attempts"] or 0),
+        "validation_state": row["validation_state"] or "",
+        "validation_error": row["validation_error"] or "",
+        "preview_path": row["preview_path"] or "",
+        "preview_bytes": int(row["preview_bytes"] or 0),
+        "input_bytes": int(row["input_bytes"] or 0),
+        "input_tokens": int(row["input_tokens"] or 0),
+        "requested_generator_model": row["requested_generator_model"] or "",
+        "resolved_model": row["resolved_model"] or "",
+        "reasoning_effort": row["reasoning_effort"] or "",
+        "vision": bool(row["vision"]),
+        "model_ladder": _json_object(row["model_ladder"], []),
+        "provenance": _json_object(row["provenance"], {}),
+        "updated_at": row["updated_at"] or "",
+    }
+
+
+def record_title_keyword_batch_chunk(
+    repo_root: Path,
+    payload: dict[str, Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Persist one bounded proposal chunk and its per-photo state atomically."""
+    batch_id = str(payload.get("batch_id") or "").strip()
+    chunk_id = str(payload.get("chunk_id") or "").strip()
+    if not batch_id or not chunk_id:
+        raise ValueError("title/keyword batch chunk requires batch_id and chunk_id")
+    status = str(payload.get("status") or "pending").strip()
+    if status not in {"pending", "running", "partial", "completed", "failed", "cancelled"}:
+        raise ValueError(f"invalid title/keyword batch chunk status: {status}")
+    photo_ids = [str(value or "").strip() for value in payload.get("photo_ids") or [] if str(value or "").strip()]
+    items_by_photo_id = {
+        str(item.get("photo_id") or "").strip(): item
+        for item in payload.get("items") or []
+        if isinstance(item, dict) and str(item.get("photo_id") or "").strip()
+    }
+    generated_at = str(payload.get("generated_at") or now_iso())
+    selection = payload.get("selection") if isinstance(payload.get("selection"), dict) else {
+        "total_count": len(photo_ids),
+        "ordinary_new_count": len(photo_ids),
+        "rework_count": 0,
+    }
+    conn = connect(repo_root, db_path)
+    try:
+        _upsert_batch(conn, {"batch_id": batch_id, "generated_at": generated_at, "selection": selection}, "bounded-proposal-batch")
+        conn.execute(
+            """
+            INSERT INTO title_keyword_batch_chunks (
+              batch_id, chunk_id, parent_chunk_id, status, shoot_key,
+              requested_generator_model, generator_model_level, model_ladder,
+              capture_newest, capture_oldest, photo_ids, image_count,
+              input_bytes, input_tokens, split_depth, invocation_count,
+              last_error, started_at, finished_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(batch_id, chunk_id) DO UPDATE SET
+              parent_chunk_id = excluded.parent_chunk_id,
+              status = excluded.status,
+              shoot_key = excluded.shoot_key,
+              requested_generator_model = excluded.requested_generator_model,
+              generator_model_level = excluded.generator_model_level,
+              model_ladder = excluded.model_ladder,
+              capture_newest = excluded.capture_newest,
+              capture_oldest = excluded.capture_oldest,
+              photo_ids = excluded.photo_ids,
+              image_count = excluded.image_count,
+              input_bytes = excluded.input_bytes,
+              input_tokens = excluded.input_tokens,
+              split_depth = excluded.split_depth,
+              invocation_count = max(title_keyword_batch_chunks.invocation_count, excluded.invocation_count),
+              last_error = excluded.last_error,
+              started_at = COALESCE(NULLIF(excluded.started_at, ''), title_keyword_batch_chunks.started_at),
+              finished_at = excluded.finished_at,
+              updated_at = excluded.updated_at
+            """,
+            (
+                batch_id,
+                chunk_id,
+                str(payload.get("parent_chunk_id") or ""),
+                status,
+                str(payload.get("shoot_key") or ""),
+                str(payload.get("requested_generator_model") or ""),
+                payload.get("generator_model_level"),
+                json.dumps(payload.get("model_ladder") or [], ensure_ascii=False),
+                str(payload.get("capture_newest") or ""),
+                str(payload.get("capture_oldest") or ""),
+                json.dumps(photo_ids, ensure_ascii=False),
+                max(0, int(payload.get("image_count") or 0)),
+                max(0, int(payload.get("input_bytes") or 0)),
+                max(0, int(payload.get("input_tokens") or 0)),
+                max(0, int(payload.get("split_depth") or 0)),
+                max(0, int(payload.get("invocation_count") or 0)),
+                str(payload.get("last_error") or ""),
+                str(payload.get("started_at") or ""),
+                str(payload.get("finished_at") or ""),
+                str(payload.get("updated_at") or now_iso()),
+            ),
+        )
+        for photo_id in photo_ids:
+            item = items_by_photo_id.get(photo_id, {})
+            item_status = str(item.get("status") or ("running" if status == "running" else "pending"))
+            if item_status not in {"pending", "running", "succeeded", "failed", "cancelled"}:
+                raise ValueError(f"invalid title/keyword batch item status: {item_status}")
+            model_ladder = item.get("model_ladder") if isinstance(item.get("model_ladder"), list) else payload.get("model_ladder") or []
+            provenance = item.get("provenance") if isinstance(item.get("provenance"), (dict, list)) else {}
+            conn.execute(
+                """
+                INSERT INTO title_keyword_batch_items (
+                  batch_id, chunk_id, photo_id, proposal_attempt, status,
+                  model_attempts, validation_state, validation_error,
+                  preview_path, preview_bytes, input_bytes, input_tokens,
+                  requested_generator_model, resolved_model, reasoning_effort,
+                  vision, model_ladder, provenance, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(batch_id, chunk_id, photo_id) DO UPDATE SET
+                  proposal_attempt = excluded.proposal_attempt,
+                  status = excluded.status,
+                  model_attempts = max(title_keyword_batch_items.model_attempts, excluded.model_attempts),
+                  validation_state = excluded.validation_state,
+                  validation_error = excluded.validation_error,
+                  preview_path = excluded.preview_path,
+                  preview_bytes = excluded.preview_bytes,
+                  input_bytes = excluded.input_bytes,
+                  input_tokens = excluded.input_tokens,
+                  requested_generator_model = excluded.requested_generator_model,
+                  resolved_model = excluded.resolved_model,
+                  reasoning_effort = excluded.reasoning_effort,
+                  vision = excluded.vision,
+                  model_ladder = excluded.model_ladder,
+                  provenance = excluded.provenance,
+                  updated_at = excluded.updated_at
+                """,
+                (
+                    batch_id,
+                    chunk_id,
+                    photo_id,
+                    max(1, int(item.get("proposal_attempt") or 1)),
+                    item_status,
+                    max(0, int(item.get("model_attempts") or 0)),
+                    str(item.get("validation_state") or ""),
+                    str(item.get("validation_error") or ""),
+                    str(item.get("preview_path") or ""),
+                    max(0, int(item.get("preview_bytes") or 0)),
+                    max(0, int(item.get("input_bytes") or payload.get("input_bytes") or 0)),
+                    max(0, int(item.get("input_tokens") or payload.get("input_tokens") or 0)),
+                    str(item.get("requested_generator_model") or payload.get("requested_generator_model") or ""),
+                    str(item.get("resolved_model") or ""),
+                    str(item.get("reasoning_effort") or ""),
+                    1 if item.get("vision") is True else 0,
+                    json.dumps(model_ladder, ensure_ascii=False),
+                    json.dumps(provenance, ensure_ascii=False, sort_keys=True),
+                    str(item.get("updated_at") or payload.get("updated_at") or now_iso()),
+                ),
+            )
+        conn.commit()
+        return {"db": (db_path or DEFAULT_DB).as_posix(), "batch_id": batch_id, "chunk_id": chunk_id, "photo_count": len(photo_ids), "status": status}
+    finally:
+        conn.close()
+
+
+def title_keyword_batch_resume_state_for_connection(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Return the newest interrupted bounded batch so a later run can resume it."""
+    chunk_rows = conn.execute(
+        """
+        SELECT c.*
+        FROM title_keyword_batch_chunks AS c
+        WHERE c.status IN ('pending', 'running', 'partial', 'cancelled')
+        ORDER BY COALESCE(c.updated_at, c.started_at, '') DESC, c.batch_id DESC, c.chunk_id
+        """
+    ).fetchall()
+    if not chunk_rows:
+        return {"batch_id": "", "chunks": [], "items": []}
+    batch_id = str(chunk_rows[0]["batch_id"])
+    chunks = []
+    items = []
+    for row in chunk_rows:
+        if str(row["batch_id"]) != batch_id:
+            continue
+        chunk = _batch_chunk_json_row(row)
+        chunks.append(chunk)
+        item_rows = conn.execute(
+            "SELECT * FROM title_keyword_batch_items WHERE batch_id = ? AND chunk_id = ? ORDER BY photo_id",
+            (batch_id, row["chunk_id"]),
+        ).fetchall()
+        items.extend(_batch_item_json_row(item) for item in item_rows)
+    return {"batch_id": batch_id, "chunks": chunks, "items": items}
+
+
 def _latest_attempt(conn: sqlite3.Connection, media_id: str, batch_id: str = "") -> int:
     if batch_id:
         row = conn.execute(
@@ -3131,6 +3408,7 @@ def title_keyword_generator_state(
             "keyword_blacklist": keyword_blacklist_terms(repo_root, db_path, conn),
             "counts": counts,
             "queue": queue,
+            "batch_resume": title_keyword_batch_resume_state_for_connection(conn),
         }
     finally:
         conn.close()
@@ -3324,6 +3602,8 @@ def main() -> None:
     parser.add_argument("--mark-title-keyword-reviewed-file", type=Path)
     parser.add_argument("--repair-title-keyword-proposal-keywords", action="store_true")
     parser.add_argument("--title-keyword-generator-state-json", action="store_true")
+    parser.add_argument("--title-keyword-batch-resume-json", action="store_true")
+    parser.add_argument("--record-title-keyword-batch-chunk-json", action="store_true")
     parser.add_argument("--park-retry-exhausted", action="store_true")
     parser.add_argument("--park-twice-rejected", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--import-keyword-blacklist", action="store_true")
@@ -3344,6 +3624,18 @@ def main() -> None:
         import_owner_actions(repo_root, args.db, force=args.force)
     elif args.title_keyword_generator_state_json:
         print(json.dumps(title_keyword_generator_state(repo_root, args.db, park_retry_exhausted=park_retry_exhausted), ensure_ascii=False))
+        return
+    elif args.title_keyword_batch_resume_json:
+        conn = connect(repo_root, args.db)
+        try:
+            print(json.dumps(title_keyword_batch_resume_state_for_connection(conn), ensure_ascii=False))
+        finally:
+            conn.close()
+        return
+    elif args.record_title_keyword_batch_chunk_json:
+        payload = json.load(sys.stdin)
+        result = record_title_keyword_batch_chunk(repo_root, payload, args.db)
+        print(json.dumps(result, ensure_ascii=False))
         return
     elif args.media_lifecycle_json:
         print(json.dumps(media_lifecycle_snapshot(repo_root, args.db), ensure_ascii=False))
@@ -3423,7 +3715,7 @@ def main() -> None:
     else:
         conn = connect(repo_root, args.db)
         try:
-            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle", "import_operations", "access_users"]
+            tables = ["keyword_blacklist", "country_assignments", "title_keyword_batches", "title_keyword_batch_chunks", "title_keyword_batch_items", "title_keyword_queue", "title_keyword_proposals", "title_keyword_decisions", "r2_objects", "media_lifecycle", "import_operations", "access_users"]
             print(", ".join(f"{table}={conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0]}" for table in tables))
         finally:
             conn.close()

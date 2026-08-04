@@ -164,6 +164,63 @@ class TitleReviewUndoTests(unittest.TestCase):
             owner_comment="seeded for unit test",
         )
 
+    def test_bounded_title_keyword_chunk_state_resumes_without_losing_item_provenance(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            db_path = repo_root / "Owner.sqlite"
+            running = {
+                "batch_id": "batch-bounded-test",
+                "chunk_id": "batch-bounded-test-chunk-1",
+                "status": "running",
+                "shoot_key": "spain|shoot-1",
+                "requested_generator_model": "codex-gpt-5.6-luna-xhigh-vision",
+                "generator_model_level": 1,
+                "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+                "photo_ids": ["photo-a"],
+                "image_count": 1,
+                "input_bytes": 1200,
+                "input_tokens": 300,
+                "invocation_count": 1,
+                "items": [{
+                    "photo_id": "photo-a",
+                    "proposal_attempt": 2,
+                    "status": "running",
+                    "model_attempts": 1,
+                    "validation_state": "pending",
+                    "preview_path": "assets/preview-a.jpg",
+                    "preview_bytes": 900,
+                    "input_bytes": 1200,
+                    "input_tokens": 300,
+                    "requested_generator_model": "codex-gpt-5.6-luna-xhigh-vision",
+                    "resolved_model": "gpt-5.6-luna",
+                    "reasoning_effort": "xhigh",
+                    "vision": True,
+                    "model_ladder": ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+                    "provenance": {"batch_id": "batch-bounded-test", "chunk_id": "batch-bounded-test-chunk-1"},
+                }],
+            }
+            owner_state_db.record_title_keyword_batch_chunk(repo_root, running, db_path)
+            conn = owner_state_db.connect(repo_root, db_path)
+            try:
+                resume = owner_state_db.title_keyword_batch_resume_state_for_connection(conn)
+            finally:
+                conn.close()
+            self.assertEqual(resume["batch_id"], "batch-bounded-test")
+            self.assertEqual(resume["items"][0]["photo_id"], "photo-a")
+            self.assertEqual(resume["items"][0]["model_attempts"], 1)
+            self.assertEqual(resume["items"][0]["resolved_model"], "gpt-5.6-luna")
+
+            completed = dict(running)
+            completed["status"] = "completed"
+            completed["finished_at"] = "2026-08-03T10:00:00Z"
+            completed["items"] = [dict(running["items"][0], status="succeeded", validation_state="valid")]
+            owner_state_db.record_title_keyword_batch_chunk(repo_root, completed, db_path)
+            conn = owner_state_db.connect(repo_root, db_path)
+            try:
+                self.assertEqual(owner_state_db.title_keyword_batch_resume_state_for_connection(conn)["batch_id"], "")
+            finally:
+                conn.close()
+
     def _write_catalog_db(self, repo_root, rows):
         catalog_path = repo_root / "assets/catalog/photosbyelie.sqlite"
         catalog_path.parent.mkdir(parents=True, exist_ok=True)

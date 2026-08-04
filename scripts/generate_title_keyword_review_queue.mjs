@@ -6,6 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import catalogTsv from "./catalog_tsv.cjs";
 
 const REPO_ROOT = process.cwd();
@@ -20,6 +21,21 @@ const TITLE_KEYWORD_PARK_REJECTED_COUNT = 10;
 const DEFAULT_MODEL_RETRIES = 2;
 const DEFAULT_MODEL_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_MODEL_CONCURRENCY = 3;
+// Ordinary vision requests are deliberately small enough to retry or split.
+// Input tokens are a conservative byte estimate because the Codex CLI does
+// not expose a tokenizer to this generator.
+const DEFAULT_BATCH_MAX_IMAGES = 8;
+const DEFAULT_BATCH_MAX_INPUT_BYTES = 8 * 1024 * 1024;
+const DEFAULT_BATCH_MAX_INPUT_TOKENS = 64_000;
+const DEFAULT_CAPTURE_WINDOW_MS = 2 * 60 * 60 * 1000;
+const positiveSetting = (raw, fallback, minimum = 1) => {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= minimum ? parsed : fallback;
+};
+const BATCH_MAX_IMAGES = Math.floor(positiveSetting(process.env.PBE_TITLE_KEYWORD_BATCH_MAX_IMAGES, DEFAULT_BATCH_MAX_IMAGES));
+const BATCH_MAX_INPUT_BYTES = positiveSetting(process.env.PBE_TITLE_KEYWORD_BATCH_MAX_INPUT_BYTES, DEFAULT_BATCH_MAX_INPUT_BYTES);
+const BATCH_MAX_INPUT_TOKENS = positiveSetting(process.env.PBE_TITLE_KEYWORD_BATCH_MAX_INPUT_TOKENS, DEFAULT_BATCH_MAX_INPUT_TOKENS);
+const CAPTURE_WINDOW_MS = positiveSetting(process.env.PBE_TITLE_KEYWORD_CAPTURE_WINDOW_MS, DEFAULT_CAPTURE_WINDOW_MS, 60_000);
 const OWNER_STATE_DB_MAX_BUFFER = Math.max(
   16 * 1024 * 1024,
   Number(process.env.PBE_OWNER_STATE_DB_MAX_BUFFER || 0),
@@ -163,6 +179,126 @@ const captureForPhoto = (photo) => {
   const captured = parseCaptured(metadataValue(photo, "Captured"));
   if (captured.sort) return captured;
   return parseIdCapture(photo?.id);
+};
+
+const captureEpochForRow = (row) => {
+  const sort = String(row?.capture?.sort || "").trim();
+  if (!sort) return null;
+  const timestamp = Date.parse(`${sort}Z`);
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const shootSourceKey = (row) => {
+  const photo = row?.photo || {};
+  const sourceFile = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length && typeof photo.sourceFiles[0] === "object"
+    ? photo.sourceFiles[0]
+    : {};
+  const rawPath = String(sourceFile?.path || "").replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
+  const parent = rawPath ? rawPath.split("/").slice(0, -1).join("/") : "";
+  const album = sourceAlbumFromPhoto(photo, sourceFile);
+  const source = parent || album;
+  if (!source) return `unknown:${String(row?.id || photo?.id || "")}`;
+  return `${String(row?.galleryKey || "").trim().toLowerCase()}|${source.trim().toLowerCase()}`;
+};
+
+const groupOrdinaryCandidates = (rows) => {
+  const ordered = [...rows].sort((a, b) => {
+    const aEpoch = captureEpochForRow(a);
+    const bEpoch = captureEpochForRow(b);
+    if (aEpoch == null && bEpoch != null) return 1;
+    if (aEpoch != null && bEpoch == null) return -1;
+    if (aEpoch != null && bEpoch != null && aEpoch !== bEpoch) return aEpoch - bEpoch;
+    return String(a?.id || "").localeCompare(String(b?.id || ""));
+  });
+  const groups = [];
+  let active = null;
+  for (const row of ordered) {
+    const key = shootSourceKey(row);
+    const epoch = captureEpochForRow(row);
+    const startsNewWindow = !active
+      || active.source_key !== key
+      || epoch == null
+      || active.started_at == null
+      || epoch - active.started_at >= CAPTURE_WINDOW_MS;
+    if (startsNewWindow) {
+      active = {
+        shoot_key: key,
+        source_key: key,
+        started_at: epoch,
+        ended_at: epoch,
+        rows: [],
+      };
+      groups.push(active);
+    }
+    active.rows.push(row);
+    if (epoch != null) active.ended_at = epoch;
+  }
+  return groups
+    .map((group) => ({
+      ...group,
+      rows: [...group.rows].sort((a, b) => {
+        const captureCompare = String(b?.captureSort || "").localeCompare(String(a?.captureSort || ""));
+        return captureCompare || String(b?.id || "").localeCompare(String(a?.id || ""));
+      }),
+    }))
+    .sort((a, b) => (b.started_at ?? -1) - (a.started_at ?? -1));
+};
+
+const localFileBytes = (filePath) => {
+  if (!filePath) return 0;
+  try {
+    return Number(fs.statSync(filePath).size || 0);
+  } catch {
+    return 0;
+  }
+};
+
+const estimateBatchInput = ({ inputs, prompt }) => {
+  const promptBytes = Buffer.byteLength(String(prompt || ""), "utf8");
+  const imageBytes = inputs.reduce((total, input) => total + localFileBytes(input.previewPath), 0);
+  const inputBytes = promptBytes + imageBytes;
+  return {
+    image_count: inputs.length,
+    attachment_count: inputs.filter((input) => input.previewPath).length,
+    prompt_bytes: promptBytes,
+    image_bytes: imageBytes,
+    input_bytes: inputBytes,
+    input_tokens: Math.ceil(inputBytes / 4),
+  };
+};
+
+const benchmarkBatchPlan = ({ rows = [], maxImages = BATCH_MAX_IMAGES } = {}) => {
+  const candidates = Array.isArray(rows) ? rows : [];
+  const boundedImageCount = Math.max(1, Math.floor(Number(maxImages) || BATCH_MAX_IMAGES));
+  const groups = groupOrdinaryCandidates(candidates);
+  const boundedInvocations = groups.reduce(
+    (total, group) => total + Math.ceil(group.rows.length / boundedImageCount),
+    0,
+  );
+  const baselineInvocations = candidates.length;
+  return {
+    baseline: {
+      model_invocations: baselineInvocations,
+      photos_per_invocation: baselineInvocations ? 1 : 0,
+    },
+    bounded_image_count_plan: {
+      model_invocations: boundedInvocations,
+      max_images: boundedImageCount,
+      photos_per_invocation: boundedInvocations ? candidates.length / boundedInvocations : 0,
+    },
+    invocation_reduction: baselineInvocations - boundedInvocations,
+    invocation_reduction_ratio: baselineInvocations
+      ? (baselineInvocations - boundedInvocations) / baselineInvocations
+      : 0,
+    throughput_multiplier: boundedInvocations ? baselineInvocations / boundedInvocations : 0,
+    shoot_count: groups.length,
+  };
+};
+
+const stableChunkId = (batchId, ordinal, inputs, splitDepth = 0) => {
+  const photoIds = inputs.map((input) => String(input.photo?.id || "")).join("\u0000");
+  const digest = createHash("sha1").update(photoIds).digest("hex").slice(0, 12);
+  return `${batchId}-chunk-${String(ordinal).padStart(4, "0")}-d${splitDepth}-${digest}`;
 };
 
 const splitKeywordText = (raw) => String(raw || "")
@@ -310,6 +446,7 @@ const loadOwnerGeneratorState = () => {
     counts: payload.counts || {},
     modelLadder: Array.isArray(payload.model_ladder) ? normalizeModelLadder(payload.model_ladder) : null,
     modelCatalog: Array.isArray(payload.model_catalog) ? payload.model_catalog : MODEL_CATALOG,
+    batchResume: payload.batch_resume && typeof payload.batch_resume === "object" ? payload.batch_resume : { batch_id: "", chunks: [], items: [] },
     parkRejectedCount: Number(payload.park_retry_rejected_count || TITLE_KEYWORD_PARK_REJECTED_COUNT),
     parkedRetryExhausted: Number(payload.parked_retry_exhausted || payload.parked_twice_rejected || 0),
   };
@@ -883,6 +1020,31 @@ const modelOutputSchema = () => ({
   },
 });
 
+const batchModelOutputSchema = () => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["results"],
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["photo_id", "title", "keywords", "confidence", "status", "reason", "needs_owner_context"],
+        properties: {
+          photo_id: { type: "string", minLength: 1 },
+          title: { type: "string" },
+          keywords: { type: "array", items: { type: "string" } },
+          confidence: { type: "string" },
+          status: { type: "string" },
+          reason: { type: "string" },
+          needs_owner_context: { type: "boolean" },
+        },
+      },
+    },
+  },
+});
+
 const codexBinary = () => String(process.env.PBE_TITLE_KEYWORD_CODEX_BIN || "codex").trim() || "codex";
 
 const codexModelConfig = (modelInfo) => {
@@ -947,7 +1109,7 @@ const localPreviewPathForPhoto = (photo) => {
     || existingLocalPath(metadataValue(photo, "Preview file"));
 };
 
-const modelPromptForPhoto = ({
+const modelContextForPhoto = ({
   row,
   photo,
   galleryLabel,
@@ -965,7 +1127,7 @@ const modelPromptForPhoto = ({
   const preview = media?.publicPreview || {};
   const albumTitle = sourceAlbumFromPhoto(photo, sourceFile);
   const gps = sourceGpsFromPhoto(photo, sourceFile);
-  const context = {
+  return {
     photo_id: String(photo?.id || ""),
     gallery: galleryLabel,
     capture: row.capture || {},
@@ -1007,6 +1169,10 @@ const modelPromptForPhoto = ({
     requested_generator: requestedGenerator,
     retry_note: retryNote,
   };
+};
+
+const modelPromptForPhoto = (input) => {
+  const context = modelContextForPhoto(input);
   return [
     "Generate one Photos By Elie Owner-review metadata proposal for the photo described below.",
     "Return JSON only, matching this shape: {\"title\":\"...\",\"keywords\":[\"...\"],\"confidence\":\"low|medium|high\",\"status\":\"model_rework|model_context|needs_owner_context\",\"reason\":\"...\",\"needs_owner_context\":false}.",
@@ -1023,13 +1189,50 @@ const modelPromptForPhoto = ({
   ].join("\n");
 };
 
-const codexInvocation = ({ modelInfo, imagePath = "" }) => {
+const modelBatchPromptForRows = ({ inputs, requestedGenerator, batchId, chunkId, retryNote = "" }) => {
+  let imageIndex = 0;
+  const photos = inputs.map((input) => {
+    const attachmentIndex = input.previewPath ? imageIndex++ : null;
+    return {
+      ...modelContextForPhoto({ ...input, requestedGenerator, retryNote }),
+      image_attachment_index: attachmentIndex,
+    };
+  });
+  return [
+    "Generate one Photos By Elie Owner-review metadata proposal for every photo in the input batch.",
+    "Return JSON only with this shape: {\"results\":[{\"photo_id\":\"...\",\"title\":\"...\",\"keywords\":[\"...\"],\"confidence\":\"low|medium|high\",\"status\":\"model_rework|model_context|needs_owner_context\",\"reason\":\"...\",\"needs_owner_context\":false}]}.",
+    "Every input photo_id must appear exactly once. Never omit, duplicate, or invent a photo_id.",
+    "Keep each title and keyword list attached to the matching photo_id; never copy an answer to another photo.",
+    "Rules:",
+    "- Titles must be non-empty, human-readable, and photo-relevant; do not use filename-style or keyword-dump titles.",
+    "- Use the attached image whose image_attachment_index matches the photo record when pixels are available.",
+    "- Existing keywords and source context are clues, not proof. Be conservative when the image is uncertain.",
+    "- Provide at least 10 concise searchable keywords when possible and do not include workflow flags.",
+    "- If uncertain, provide a conservative working title and set needs_owner_context to true.",
+    JSON.stringify({
+      batch_id: batchId,
+      chunk_id: chunkId,
+      requested_generator: requestedGenerator,
+      photos,
+      attachments: inputs.filter((input) => input.previewPath).map((input, index) => ({
+        image_attachment_index: index,
+        photo_id: String(input.photo?.id || ""),
+        path: input.previewPath,
+        ordinal: index,
+      })),
+      retry_note: retryNote,
+    }, null, 2),
+  ].join("\n");
+};
+
+const codexInvocation = ({ modelInfo, imagePath = "", imagePaths = [], batch = false }) => {
   const codexConfig = codexModelConfig(modelInfo);
   if (!codexConfig?.model) throw new Error(`No Codex model mapping for ${modelInfo?.model || "unknown model"}.`);
+  const attachedImages = uniqueValues([imagePath, ...(imagePaths || [])]);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pbe-title-keyword-model-"));
   const schemaPath = path.join(tempDir, "schema.json");
   const outputPath = path.join(tempDir, "proposal.json");
-  fs.writeFileSync(schemaPath, JSON.stringify(modelOutputSchema(), null, 2) + "\n");
+  fs.writeFileSync(schemaPath, JSON.stringify(batch ? batchModelOutputSchema() : modelOutputSchema(), null, 2) + "\n");
   const args = [
     "-a",
     "never",
@@ -1050,15 +1253,15 @@ const codexInvocation = ({ modelInfo, imagePath = "" }) => {
   if (codexConfig.reasoningEffort) {
     args.push("-c", `model_reasoning_effort="${codexConfig.reasoningEffort}"`);
   }
-  if (codexConfig.vision && imagePath) {
-    args.push("--image", imagePath);
+  if (codexConfig.vision) {
+    for (const attachedImage of attachedImages) args.push("--image", attachedImage);
   }
   args.push("-");
   return { args, outputPath };
 };
 
-const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
-  const { args, outputPath } = codexInvocation({ modelInfo, imagePath });
+const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "", imagePaths = [], batch = false }) => {
+  const { args, outputPath } = codexInvocation({ modelInfo, imagePath, imagePaths, batch });
   const result = spawnSync(codexBinary(), args, {
     cwd: REPO_ROOT,
     encoding: "utf8",
@@ -1074,8 +1277,8 @@ const invokeCodexProposalModel = ({ modelInfo, prompt, imagePath = "" }) => {
   return parseModelProposalText(output);
 };
 
-const invokeCodexProposalModelAsync = ({ modelInfo, prompt, imagePath = "" }) => {
-  const { args, outputPath } = codexInvocation({ modelInfo, imagePath });
+const invokeCodexProposalModelAsync = ({ modelInfo, prompt, imagePath = "", imagePaths = [], batch = false }) => {
+  const { args, outputPath } = codexInvocation({ modelInfo, imagePath, imagePaths, batch });
   return new Promise((resolve, reject) => {
     const child = spawn(codexBinary(), args, {
       cwd: REPO_ROOT,
@@ -1158,6 +1361,79 @@ const normalizeModelProposal = ({ payload, localProposal, currentKeywords, black
     keywordTargetMet: safeProposedKeywords.length >= MIN_PROPOSED_KEYWORDS,
     noChangeNeeded: false,
     blacklistOnlyCleanup: false,
+  };
+};
+
+const batchResultEntries = (payload) => {
+  const rawResults = payload?.results;
+  if (Array.isArray(rawResults)) return rawResults;
+  if (rawResults && typeof rawResults === "object") {
+    return Object.entries(rawResults).map(([photoId, result]) => ({
+      ...(result && typeof result === "object" ? result : {}),
+      photo_id: result?.photo_id || photoId,
+    }));
+  }
+  throw new Error("Batch model response did not contain a results array or photo_id map.");
+};
+
+const normalizeBatchModelResults = ({ payload, inputs, blacklist }) => {
+  const expected = new Map(inputs.map((input) => [String(input.photo?.id || ""), input]));
+  const entries = batchResultEntries(payload);
+  const byPhotoId = new Map();
+  const duplicatePhotoIds = new Set();
+  const unexpectedPhotoIds = [];
+  for (const entry of entries) {
+    const photoId = String(entry?.photo_id || entry?.photoId || "").trim();
+    if (!photoId || !expected.has(photoId)) {
+      if (photoId) unexpectedPhotoIds.push(photoId);
+      continue;
+    }
+    if (byPhotoId.has(photoId)) {
+      duplicatePhotoIds.add(photoId);
+      continue;
+    }
+    byPhotoId.set(photoId, entry);
+  }
+
+  const successes = [];
+  const failures = [];
+  for (const input of inputs) {
+    const photoId = String(input.photo?.id || "");
+    const entry = byPhotoId.get(photoId);
+    if (duplicatePhotoIds.has(photoId)) {
+      failures.push({ input, error: `Duplicate batch result for photo_id ${photoId}.`, kind: "duplicate_photo_id" });
+      continue;
+    }
+    if (!entry) {
+      failures.push({ input, error: `Batch response omitted photo_id ${photoId}.`, kind: "missing_photo_id" });
+      continue;
+    }
+    if (!String(entry.title || "").trim() || (!Array.isArray(entry.keywords) && !String(entry.keywords || "").trim())) {
+      failures.push({ input, error: `Batch result for photo_id ${photoId} failed the required title/keywords shape.`, kind: "invalid_result" });
+      continue;
+    }
+    try {
+      const proposal = normalizeModelProposal({
+        payload: entry,
+        localProposal: input.localProposal,
+        currentKeywords: input.currentKeywords,
+        blacklist,
+        sourcePath: input.sourceFile?.path || input.meta?.original_file || "",
+      });
+      successes.push({ input, proposal });
+    } catch (error) {
+      failures.push({
+        input,
+        error: String(error?.message || error || "Batch result validation failed.").slice(0, 800),
+        kind: "invalid_result",
+      });
+    }
+  }
+  return {
+    successes,
+    failures,
+    duplicatePhotoIds: [...duplicatePhotoIds],
+    unexpectedPhotoIds: uniqueValues(unexpectedPhotoIds),
   };
 };
 
@@ -1538,12 +1814,13 @@ const main = async () => {
   }
 
   const queueDir = path.join("assets", "owner-actions", "title-keyword-review-queue");
-  const batchId = runBatchId();
+  const proposalStatePath = path.join("assets", "owner-actions", "Owner.sqlite");
+  const ownerGeneratorState = loadOwnerGeneratorState();
+  const resumedBatchId = String(ownerGeneratorState.batchResume?.batch_id || "").trim();
+  const batchId = resumedBatchId || runBatchId();
   const batchFilename = `batch-${batchId}.json`;
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
-  const proposalStatePath = path.join("assets", "owner-actions", "Owner.sqlite");
-  const ownerGeneratorState = loadOwnerGeneratorState();
   MODEL_LADDER = normalizeModelLadder(
     envModelLadder || ownerGeneratorState.modelLadder || MODEL_LADDER,
   );
@@ -1635,7 +1912,7 @@ const main = async () => {
     `skipped_parked=${skippedParked.length}`,
   );
 
-  const buildPhotoRecord = async (row) => {
+  const buildPhotoContext = (row) => {
     const photo = row.photo || {};
     const currentKeywordsRaw = metadataValue(photo, "Keywords");
     const currentKeywords = uniqueKeywords(splitKeywordText(currentKeywordsRaw));
@@ -1656,9 +1933,6 @@ const main = async () => {
     const sourceFile = Array.isArray(photo?.sourceFiles) && photo.sourceFiles.length && typeof photo.sourceFiles[0] === "object"
       ? photo.sourceFiles[0]
       : {};
-    const sourceAlbumTitle = sourceAlbumFromPhoto(photo, sourceFile);
-    const sourcePlaceHint = metadataValue(photo, "Location");
-    const sourceGps = sourceGpsFromPhoto(photo, sourceFile);
     const localProposal = proposalForPhoto({
       photo,
       galleryLabel: row.galleryLabel,
@@ -1670,11 +1944,42 @@ const main = async () => {
       capture: row.capture,
     });
     const requestedGenerator = selectedGeneratorForRow(row);
+    return {
+      photo,
+      currentKeywordsRaw,
+      currentKeywords,
+      currentTitle,
+      meta,
+      sourceFile,
+      sourceAlbumTitle: sourceAlbumFromPhoto(photo, sourceFile),
+      sourcePlaceHint: metadataValue(photo, "Location"),
+      sourceGps: sourceGpsFromPhoto(photo, sourceFile),
+      localProposal,
+      requestedGenerator,
+      previewPath: localPreviewPathForPhoto(photo),
+    };
+  };
+
+  const buildPhotoRecord = async (row, modelOverride = null) => {
+    const context = buildPhotoContext(row);
+    const {
+      photo,
+      currentKeywordsRaw,
+      currentKeywords,
+      currentTitle,
+      meta,
+      sourceFile,
+      sourceAlbumTitle,
+      sourcePlaceHint,
+      sourceGps,
+      localProposal,
+      requestedGenerator,
+    } = context;
     let actualGenerator = isAiGeneratorModel(requestedGenerator.model) ? requestedGenerator : generatorModelInfo();
     let proposal = { ...localProposal };
     let modelBlocker = null;
     let modelAttempts = 0;
-    let modelPreviewPath = "";
+    let modelPreviewPath = context.previewPath || "";
     if (row.reworkPriority) {
       const comment = row.reworkComment ? ` Owner note: ${row.reworkComment.slice(0, 240)}` : "";
       proposal.status = proposal.status === "needs_owner_context" ? proposal.status : "rework_requested";
@@ -1691,6 +1996,21 @@ const main = async () => {
         attempts: 0,
         message: "Latest rejected proposal already used the strongest configured model.",
       };
+    } else if (modelOverride) {
+      modelAttempts = modelOverride.attempts || 0;
+      modelPreviewPath = modelOverride.previewPath || modelPreviewPath;
+      if (modelOverride.ok) {
+        proposal = modelOverride.proposal;
+        actualGenerator = requestedGenerator;
+      } else {
+        modelBlocker = {
+          kind: modelOverride.kind || "model_escalation_blocker",
+          requested_generator: requestedGenerator,
+          attempts: modelOverride.attempts ?? MODEL_RETRIES,
+          preview_path: modelOverride.previewPath || modelPreviewPath,
+          message: modelOverride.error || "Selected model could not produce a valid proposal.",
+        };
+      }
     } else if (isAiGeneratorModel(requestedGenerator.model)) {
       const modelResult = await generateModelProposal({
         row,
@@ -1802,6 +2122,15 @@ const main = async () => {
   const unresolvedReworkRows = [];
   const modelBlockedRows = [];
   let ordinaryNewCount = 0;
+  let modelBatchInvocationCount = 0;
+  let modelBatchSplitCount = 0;
+  let modelBatchInputBytes = 0;
+  let modelBatchInputTokens = 0;
+  let modelBatchAttemptedPhotoCount = 0;
+  let modelBatchFailedItemCount = 0;
+  let modelBatchFailureCount = 0;
+  let modelBatchRetryCount = 0;
+  let modelBatchElapsedMs = 0;
 
   const logCandidateOutcome = (row, outcome) => {
     progress(
@@ -1846,6 +2175,398 @@ const main = async () => {
     return true;
   };
 
+  const batchAttemptsByPhoto = new Map();
+  for (const item of ownerGeneratorState.batchResume?.items || []) {
+    if (!item?.photo_id) continue;
+    const photoId = String(item.photo_id);
+    const attempts = Math.max(0, Number(item.model_attempts || 0));
+    batchAttemptsByPhoto.set(photoId, Math.max(attempts, batchAttemptsByPhoto.get(photoId) || 0));
+  }
+
+  const recordBatchChunkState = (payload) => {
+    const output = runOwnerStateDb(["--record-title-keyword-batch-chunk-json"], {
+      input: `${JSON.stringify(payload)}\n`,
+    });
+    return output.trim() ? JSON.parse(output) : null;
+  };
+
+  const persistPartialBatch = (records) => {
+    if (!records.length) return;
+    const partialPath = path.join("tmp", `title-keyword-batch-${batchId}-partial.json`);
+    const partialPayload = {
+      format: "photosbyelie-title-keyword-review-queue",
+      schema_version: 2,
+      generated_at: new Date().toISOString(),
+      batch_id: batchId,
+      model_ladder: MODEL_LADDER,
+      proposal_files: { batch: batchPath, latest: latestPath },
+      selection: {
+        total_count: records.length,
+        ordinary_new_count: records.filter((record) => record?.state?.rework_requested !== true).length,
+        rework_count: records.filter((record) => record?.state?.rework_requested === true).length,
+      },
+      photos: records,
+    };
+    fs.mkdirSync(path.join(REPO_ROOT, "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(REPO_ROOT, partialPath), JSON.stringify(partialPayload, null, 2) + "\n");
+    runOwnerStateDb(["--import-title-keyword-batch-file", partialPath]);
+    fs.rmSync(path.join(REPO_ROOT, partialPath), { force: true });
+  };
+
+  const prepareBatchInput = (row) => ({
+    ...buildPhotoContext(row),
+    row,
+    galleryLabel: row.galleryLabel,
+  });
+
+  const batchItemState = ({ input, status, attempts, metrics, chunkId, shootKey, validationState = "", validationError = "" }) => {
+    const requested = input.requestedGenerator;
+    const contextBytes = Buffer.byteLength(JSON.stringify(modelContextForPhoto({ ...input, requestedGenerator: requested })), "utf8");
+    const previewBytes = localFileBytes(input.previewPath);
+    return {
+      photo_id: String(input.photo?.id || ""),
+      proposal_attempt: Math.max(1, Number(input.row?.proposalAttempt || 1)),
+      status,
+      model_attempts: attempts,
+      validation_state: validationState,
+      validation_error: validationError,
+      preview_path: input.previewPath || "",
+      preview_bytes: previewBytes,
+      input_bytes: contextBytes + previewBytes,
+      input_tokens: Math.ceil((contextBytes + previewBytes) / 4),
+      requested_generator_model: requested.model,
+      resolved_model: requested.resolved_model,
+      reasoning_effort: requested.reasoning_effort,
+      vision: requested.vision === true,
+      model_ladder: requested.model_ladder,
+      provenance: {
+        batch_id: batchId,
+        chunk_id: chunkId,
+        shoot_key: shootKey,
+        capture: input.row?.capture || {},
+        requested_generator: requested,
+        batch_limits: {
+          max_images: BATCH_MAX_IMAGES,
+          max_input_bytes: BATCH_MAX_INPUT_BYTES,
+          max_input_tokens: BATCH_MAX_INPUT_TOKENS,
+        },
+        batch_input: metrics,
+      },
+      updated_at: new Date().toISOString(),
+    };
+  };
+
+  const runModelBatchRows = async ({ rows, shootKey, ordinal, parentChunkId = "", splitDepth = 0 }) => {
+    if (!rows.length) return;
+    const inputs = rows.map(prepareBatchInput);
+    const requestedGenerator = inputs[0]?.requestedGenerator || generatorModelInfo();
+    const chunkId = stableChunkId(batchId, ordinal, inputs, splitDepth);
+    const prompt = modelBatchPromptForRows({
+      inputs,
+      requestedGenerator,
+      batchId,
+      chunkId,
+    });
+    const metrics = estimateBatchInput({ inputs, prompt });
+    const startedAt = new Date().toISOString();
+    const currentAttempts = new Map(inputs.map((input) => [
+      String(input.photo?.id || ""),
+      Math.max(0, Number(batchAttemptsByPhoto.get(String(input.photo?.id || "")) || 0)),
+    ]));
+    const withinBounds = inputs.length <= BATCH_MAX_IMAGES
+      && metrics.input_bytes <= BATCH_MAX_INPUT_BYTES
+      && metrics.input_tokens <= BATCH_MAX_INPUT_TOKENS;
+    const runningItems = inputs.map((input) => batchItemState({
+      input,
+      status: "running",
+      attempts: currentAttempts.get(String(input.photo?.id || "")) || 0,
+      metrics,
+      chunkId,
+      shootKey,
+      validationState: withinBounds ? "pending" : "split_required",
+      validationError: withinBounds ? "" : "Chunk exceeds one or more request bounds.",
+    }));
+    recordBatchChunkState({
+      batch_id: batchId,
+      chunk_id: chunkId,
+      parent_chunk_id: parentChunkId,
+      status: "running",
+      shoot_key: shootKey,
+      requested_generator_model: requestedGenerator.model,
+      generator_model_level: requestedGenerator.model_level,
+      model_ladder: requestedGenerator.model_ladder,
+      capture_newest: rows[0]?.captureSort || "",
+      capture_oldest: rows[rows.length - 1]?.captureSort || "",
+      photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+      image_count: metrics.image_count,
+      input_bytes: metrics.input_bytes,
+      input_tokens: metrics.input_tokens,
+      split_depth: splitDepth,
+      invocation_count: 0,
+      started_at: startedAt,
+      items: runningItems,
+    });
+
+    if (!withinBounds) {
+      if (inputs.length > 1) {
+        modelBatchSplitCount += 1;
+        const splitAt = Math.ceil(inputs.length / 2);
+        recordBatchChunkState({
+          batch_id: batchId,
+          chunk_id: chunkId,
+          parent_chunk_id: parentChunkId,
+          status: "partial",
+          shoot_key: shootKey,
+          requested_generator_model: requestedGenerator.model,
+          generator_model_level: requestedGenerator.model_level,
+          model_ladder: requestedGenerator.model_ladder,
+          capture_newest: rows[0]?.captureSort || "",
+          capture_oldest: rows[rows.length - 1]?.captureSort || "",
+          photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+          image_count: metrics.image_count,
+          input_bytes: metrics.input_bytes,
+          input_tokens: metrics.input_tokens,
+          split_depth: splitDepth,
+          last_error: "Chunk split before invocation to satisfy request bounds.",
+          started_at: startedAt,
+          finished_at: new Date().toISOString(),
+          items: inputs.map((input) => batchItemState({
+            input,
+            status: "pending",
+            attempts: currentAttempts.get(String(input.photo?.id || "")) || 0,
+            metrics,
+            chunkId,
+            shootKey,
+            validationState: "split_required",
+            validationError: "Chunk split before invocation to satisfy request bounds.",
+          })),
+        });
+        await runModelBatchRows({ rows: rows.slice(0, splitAt), shootKey, ordinal, parentChunkId: chunkId, splitDepth: splitDepth + 1 });
+        await runModelBatchRows({ rows: rows.slice(splitAt), shootKey, ordinal: ordinal + 1, parentChunkId: chunkId, splitDepth: splitDepth + 1 });
+        recordBatchChunkState({
+          batch_id: batchId,
+          chunk_id: chunkId,
+          parent_chunk_id: parentChunkId,
+          status: "completed",
+          shoot_key: shootKey,
+          requested_generator_model: requestedGenerator.model,
+          generator_model_level: requestedGenerator.model_level,
+          model_ladder: requestedGenerator.model_ladder,
+          photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+          image_count: metrics.image_count,
+          input_bytes: metrics.input_bytes,
+          input_tokens: metrics.input_tokens,
+          split_depth: splitDepth,
+          last_error: "Chunk split before invocation to satisfy request bounds.",
+          started_at: startedAt,
+          finished_at: new Date().toISOString(),
+          items: runningItems.map((item) => ({ ...item, status: "cancelled", validation_state: "split" })),
+        });
+        return;
+      }
+      const input = inputs[0];
+      const error = `Photo ${input.photo?.id || ""} exceeds bounded request limits (${metrics.input_bytes} bytes, ${metrics.input_tokens} estimated tokens).`;
+      const built = await buildPhotoRecord(input.row, {
+        ok: false,
+        kind: "input_budget_exceeded",
+        attempts: currentAttempts.get(String(input.photo?.id || "")) || 0,
+        previewPath: input.previewPath,
+        error,
+      });
+      applyCandidateResult(input.row, built, true);
+      recordBatchChunkState({
+        batch_id: batchId,
+        chunk_id: chunkId,
+        parent_chunk_id: parentChunkId,
+        status: "completed",
+        shoot_key: shootKey,
+        requested_generator_model: requestedGenerator.model,
+        generator_model_level: requestedGenerator.model_level,
+        model_ladder: requestedGenerator.model_ladder,
+        photo_ids: [String(input.photo?.id || "")],
+        image_count: metrics.image_count,
+        input_bytes: metrics.input_bytes,
+        input_tokens: metrics.input_tokens,
+        split_depth: splitDepth,
+        last_error: error,
+        started_at: startedAt,
+        finished_at: new Date().toISOString(),
+        items: [batchItemState({
+          input,
+          status: "failed",
+          attempts: currentAttempts.get(String(input.photo?.id || "")) || 0,
+          metrics,
+          chunkId,
+          shootKey,
+          validationState: "input_budget_exceeded",
+          validationError: error,
+        })],
+      });
+      return;
+    }
+
+    const attemptsByInput = new Map();
+    for (const input of inputs) {
+      const photoId = String(input.photo?.id || "");
+      const attempts = (currentAttempts.get(photoId) || 0) + 1;
+      attemptsByInput.set(photoId, attempts);
+      batchAttemptsByPhoto.set(photoId, attempts);
+    }
+    let normalized;
+    const invocationStartedAt = Date.now();
+    try {
+      modelBatchInvocationCount += 1;
+      modelBatchInputBytes += metrics.input_bytes;
+      modelBatchInputTokens += metrics.input_tokens;
+      modelBatchAttemptedPhotoCount += inputs.length;
+      progress(`Model batch ${chunkId}: invoking ${requestedGenerator.model} photos=${inputs.length} bytes=${metrics.input_bytes} tokens≈${metrics.input_tokens}`);
+      const payload = await invokeCodexProposalModelAsync({
+        modelInfo: requestedGenerator,
+        prompt,
+        imagePaths: inputs.map((input) => input.previewPath).filter(Boolean),
+        batch: true,
+      });
+      normalized = normalizeBatchModelResults({ payload, inputs, blacklist });
+    } catch (error) {
+      const message = String(error?.message || error || "Batch model invocation failed.").slice(0, 800);
+      normalized = {
+        successes: [],
+        failures: inputs.map((input) => ({ input, error: message, kind: "model_invocation" })),
+        duplicatePhotoIds: [],
+        unexpectedPhotoIds: [],
+      };
+    } finally {
+      modelBatchElapsedMs += Math.max(0, Date.now() - invocationStartedAt);
+    }
+    modelBatchFailedItemCount += normalized.failures.length;
+    if (normalized.failures.length) modelBatchFailureCount += 1;
+
+    const successfulRecords = [];
+    for (const success of normalized.successes) {
+      const photoId = String(success.input.photo?.id || "");
+      const built = await buildPhotoRecord(success.input.row, {
+        ok: true,
+        proposal: success.proposal,
+        attempts: attemptsByInput.get(photoId) || 1,
+        previewPath: success.input.previewPath,
+      });
+      applyCandidateResult(success.input.row, built, true);
+      successfulRecords.push(built.record);
+    }
+    persistPartialBatch(successfulRecords);
+
+    const successIds = new Set(normalized.successes.map((success) => String(success.input.photo?.id || "")));
+    const failureByPhotoId = new Map(normalized.failures.map((failure) => [String(failure.input.photo?.id || ""), failure]));
+    const chunkItems = inputs.map((input) => {
+      const photoId = String(input.photo?.id || "");
+      const failure = failureByPhotoId.get(photoId);
+      return batchItemState({
+        input,
+        status: successIds.has(photoId) ? "succeeded" : "failed",
+        attempts: attemptsByInput.get(photoId) || 1,
+        metrics,
+        chunkId,
+        shootKey,
+        validationState: successIds.has(photoId) ? "valid" : (failure?.kind || "invalid_result"),
+        validationError: failure?.error || (normalized.unexpectedPhotoIds?.length ? `Unexpected photo_id values: ${normalized.unexpectedPhotoIds.join(", ")}` : ""),
+      });
+    });
+    if (!normalized.failures.length) {
+      recordBatchChunkState({
+        batch_id: batchId,
+        chunk_id: chunkId,
+        parent_chunk_id: parentChunkId,
+        status: "completed",
+        shoot_key: shootKey,
+        requested_generator_model: requestedGenerator.model,
+        generator_model_level: requestedGenerator.model_level,
+        model_ladder: requestedGenerator.model_ladder,
+        capture_newest: rows[0]?.captureSort || "",
+        capture_oldest: rows[rows.length - 1]?.captureSort || "",
+        photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+        image_count: metrics.image_count,
+        input_bytes: metrics.input_bytes,
+        input_tokens: metrics.input_tokens,
+        split_depth: splitDepth,
+        invocation_count: 1,
+        started_at: startedAt,
+        finished_at: new Date().toISOString(),
+        items: chunkItems,
+      });
+      return;
+    }
+
+    const failureInputs = normalized.failures.map((failure) => failure.input);
+    recordBatchChunkState({
+      batch_id: batchId,
+      chunk_id: chunkId,
+      parent_chunk_id: parentChunkId,
+      status: "partial",
+      shoot_key: shootKey,
+      requested_generator_model: requestedGenerator.model,
+      generator_model_level: requestedGenerator.model_level,
+      model_ladder: requestedGenerator.model_ladder,
+      capture_newest: rows[0]?.captureSort || "",
+      capture_oldest: rows[rows.length - 1]?.captureSort || "",
+      photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+      image_count: metrics.image_count,
+      input_bytes: metrics.input_bytes,
+      input_tokens: metrics.input_tokens,
+      split_depth: splitDepth,
+      invocation_count: 1,
+      last_error: normalized.failures.map((failure) => `${failure.input.photo?.id || ""}: ${failure.error}`).join("; ").slice(0, 2000),
+      started_at: startedAt,
+      finished_at: new Date().toISOString(),
+      items: chunkItems,
+    });
+
+    if (failureInputs.length > 1) {
+      modelBatchSplitCount += 1;
+      modelBatchRetryCount += failureInputs.length;
+      const splitAt = Math.ceil(failureInputs.length / 2);
+      await runModelBatchRows({ rows: failureInputs.slice(0, splitAt).map((input) => input.row), shootKey, ordinal, parentChunkId: chunkId, splitDepth: splitDepth + 1 });
+      await runModelBatchRows({ rows: failureInputs.slice(splitAt).map((input) => input.row), shootKey, ordinal: ordinal + 1, parentChunkId: chunkId, splitDepth: splitDepth + 1 });
+    } else {
+      const failure = normalized.failures[0];
+      const photoId = String(failure.input.photo?.id || "");
+      if ((attemptsByInput.get(photoId) || 0) < MODEL_RETRIES) {
+        modelBatchRetryCount += 1;
+        await runModelBatchRows({ rows: [failure.input.row], shootKey, ordinal, parentChunkId: chunkId, splitDepth: splitDepth + 1 });
+      } else {
+        const built = await buildPhotoRecord(failure.input.row, {
+          ok: false,
+          kind: failure.kind || "model_escalation_blocker",
+          attempts: attemptsByInput.get(photoId) || MODEL_RETRIES,
+          previewPath: failure.input.previewPath,
+          error: failure.error,
+        });
+        applyCandidateResult(failure.input.row, built, true);
+      }
+    }
+    recordBatchChunkState({
+      batch_id: batchId,
+      chunk_id: chunkId,
+      parent_chunk_id: parentChunkId,
+      status: "completed",
+      shoot_key: shootKey,
+      requested_generator_model: requestedGenerator.model,
+      generator_model_level: requestedGenerator.model_level,
+      model_ladder: requestedGenerator.model_ladder,
+      capture_newest: rows[0]?.captureSort || "",
+      capture_oldest: rows[rows.length - 1]?.captureSort || "",
+      photo_ids: inputs.map((input) => String(input.photo?.id || "")),
+      image_count: metrics.image_count,
+      input_bytes: metrics.input_bytes,
+      input_tokens: metrics.input_tokens,
+      split_depth: splitDepth,
+      invocation_count: 1,
+      last_error: normalized.failures.map((failure) => `${failure.input.photo?.id || ""}: ${failure.error}`).join("; ").slice(0, 2000),
+      started_at: startedAt,
+      finished_at: new Date().toISOString(),
+      items: chunkItems,
+    });
+  };
+
   const addCandidate = async (row, ordinarySlot = false) => applyCandidateResult(row, await buildPhotoRecord(row), ordinarySlot);
 
   const reworkGroupsByModel = new Map();
@@ -1875,11 +2596,57 @@ const main = async () => {
     });
     reworkOffset += group.rows.length;
   }
-  for (let index = 0; index < ordinaryCandidates.length; index += 1) {
-    const row = ordinaryCandidates[index];
-    if (ordinaryNewCount >= args.limit) break;
-    progress(`Ordinary candidate ${index + 1}/${ordinaryCandidates.length}: ${row.id} ordinary=${ordinaryNewCount}/${args.limit}`);
-    await addCandidate(row, true);
+  const ordinaryBatchingEnabled = isAiGeneratorModel(GENERATOR_MODEL);
+  if (!ordinaryBatchingEnabled) {
+    for (let index = 0; index < ordinaryCandidates.length; index += 1) {
+      const row = ordinaryCandidates[index];
+      if (ordinaryNewCount >= args.limit) break;
+      progress(`Ordinary candidate ${index + 1}/${ordinaryCandidates.length}: ${row.id} ordinary=${ordinaryNewCount}/${args.limit}`);
+      await addCandidate(row, true);
+    }
+  } else {
+    const shootGroups = groupOrdinaryCandidates(ordinaryCandidates);
+    let ordinal = 0;
+    progress(
+      `Ordinary batching enabled: shoots=${shootGroups.length} max_images=${BATCH_MAX_IMAGES} ` +
+      `max_input_bytes=${BATCH_MAX_INPUT_BYTES} max_input_tokens=${BATCH_MAX_INPUT_TOKENS}`,
+    );
+    for (const group of shootGroups) {
+      let offset = 0;
+      while (offset < group.rows.length && ordinaryNewCount < args.limit) {
+        const remaining = Math.max(1, args.limit - ordinaryNewCount);
+        const maxRows = Math.min(BATCH_MAX_IMAGES, remaining, group.rows.length - offset);
+        const candidateRows = group.rows.slice(offset, offset + maxRows);
+        const selectedRows = [];
+        const selectedInputs = [];
+        for (const row of candidateRows) {
+          const input = prepareBatchInput(row);
+          const candidateInputs = [...selectedInputs, input];
+          const planningPrompt = modelBatchPromptForRows({
+            inputs: candidateInputs,
+            requestedGenerator: input.requestedGenerator,
+            batchId,
+            chunkId: "planning",
+          });
+          const planningMetrics = estimateBatchInput({ inputs: candidateInputs, prompt: planningPrompt });
+          if (selectedRows.length && (
+            candidateInputs.length > BATCH_MAX_IMAGES
+            || planningMetrics.input_bytes > BATCH_MAX_INPUT_BYTES
+            || planningMetrics.input_tokens > BATCH_MAX_INPUT_TOKENS
+          )) break;
+          selectedRows.push(row);
+          selectedInputs.push(input);
+        }
+        if (!selectedRows.length) selectedRows.push(candidateRows[0]);
+        progress(
+          `Ordinary shoot ${group.shoot_key} chunk ${ordinal}: rows=${selectedRows.length} ` +
+          `ordinary=${ordinaryNewCount}/${args.limit}`,
+        );
+        await runModelBatchRows({ rows: selectedRows, shootKey: group.shoot_key, ordinal });
+        offset += selectedRows.length;
+        ordinal += 1;
+      }
+    }
   }
 
   const ordinaryBatch = photos.filter((item) => item?.state?.rework_requested !== true);
@@ -1952,6 +2719,10 @@ const main = async () => {
     return summary;
   };
   const qualitySummary = qualitySummaryFor(photos);
+  const benchmarkPlan = benchmarkBatchPlan({ rows: ordinaryCandidates, maxImages: BATCH_MAX_IMAGES });
+  const modelBatchItemErrorRate = modelBatchAttemptedPhotoCount
+    ? modelBatchFailedItemCount / modelBatchAttemptedPhotoCount
+    : 0;
   const modelBlockedExportRows = modelBlockedRows.map(({ row, record, blocker }) => ({
     photo_id: record.photo_id,
     rework_requested: row.reworkPriority === true,
@@ -1964,7 +2735,7 @@ const main = async () => {
 
   const payload = {
     format: "photosbyelie-title-keyword-review-queue",
-    schema_version: 1,
+    schema_version: 2,
     generated_at: new Date().toISOString(),
     batch_id: batchId,
     limit: args.limit,
@@ -1981,6 +2752,43 @@ const main = async () => {
     proposal_files: {
       batch: batchPath,
       latest: latestPath,
+    },
+    batching: {
+      enabled: ordinaryBatchingEnabled,
+      grouping: "gallery + source folder/album + anchored capture window",
+      capture_window_ms: CAPTURE_WINDOW_MS,
+      max_images: BATCH_MAX_IMAGES,
+      max_input_bytes: BATCH_MAX_INPUT_BYTES,
+      max_input_tokens: BATCH_MAX_INPUT_TOKENS,
+      ordinary_shoot_count: groupOrdinaryCandidates(ordinaryCandidates).length,
+      model_invocations: modelBatchInvocationCount,
+      split_or_isolation_count: modelBatchSplitCount,
+      input_bytes: modelBatchInputBytes,
+      input_tokens: modelBatchInputTokens,
+      rework_batched: false,
+    },
+    benchmark: {
+      plan: benchmarkPlan,
+      observed_bounded: {
+        model_invocations: modelBatchInvocationCount,
+        failed_invocation_count: modelBatchFailureCount,
+        retry_count: modelBatchRetryCount,
+        split_or_isolation_count: modelBatchSplitCount,
+        attempted_photo_results: modelBatchAttemptedPhotoCount,
+        failed_photo_results: modelBatchFailedItemCount,
+        item_error_rate: modelBatchItemErrorRate,
+        elapsed_ms: modelBatchElapsedMs,
+        throughput_photos_per_second: modelBatchElapsedMs > 0
+          ? modelBatchAttemptedPhotoCount / (modelBatchElapsedMs / 1000)
+          : null,
+        input_bytes: modelBatchInputBytes,
+        input_tokens: modelBatchInputTokens,
+      },
+      cost: {
+        model_ladder: MODEL_LADDER,
+        input_tokens: modelBatchInputTokens,
+        accounting: "Codex CLI does not expose per-request billing here; reconcile input_tokens with the model usage export.",
+      },
     },
     range: {
       newest: rangeNewest,
@@ -2005,6 +2813,8 @@ const main = async () => {
       generator_counts: generatorCounts,
       rework_generator_counts: reworkGeneratorCounts,
       quality_summary: qualitySummary,
+      batch_model_invocations: modelBatchInvocationCount,
+      batch_split_or_isolation_count: modelBatchSplitCount,
     },
     skipped: {
       reviewed: skippedReviewed.filter(Boolean),
@@ -2075,7 +2885,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 }
 
 export {
+  batchModelOutputSchema,
+  groupOrdinaryCandidates,
+  modelBatchPromptForRows,
+  normalizeBatchModelResults,
   codexModelConfig,
+  estimateBatchInput,
+  benchmarkBatchPlan,
   normalizeModelLadder,
   firstAiGeneratorInfo,
   generatorModelInfo,

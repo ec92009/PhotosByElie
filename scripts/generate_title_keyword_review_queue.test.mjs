@@ -5,13 +5,132 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  batchModelOutputSchema,
+  benchmarkBatchPlan,
   codexModelConfig,
+  groupOrdinaryCandidates,
   invokeCodexProposalModel,
+  modelBatchPromptForRows,
+  normalizeBatchModelResults,
   normalizeModelLadder,
   parseModelProposalText,
   proposalForPhoto,
   selectedGeneratorForRow,
 } from "./generate_title_keyword_review_queue.mjs";
+
+const batchTestInput = (photoId, capture = "2026-06-14T10:00:00") => ({
+  row: {
+    id: photoId,
+    galleryKey: "spain",
+    galleryLabel: "Spain",
+    capture: { raw: capture.replaceAll("-", ":").replace("T", " "), sort: capture, date: capture.slice(0, 10) },
+    captureSort: capture,
+    proposalAttempt: 1,
+  },
+  photo: {
+    id: photoId,
+    sourceFiles: [{ path: "apple-photos-import/20260614T100000Z-shoot/" + photoId + ".jpg" }],
+  },
+  galleryLabel: "Spain",
+  currentKeywords: [],
+  localProposal: { title: "", keywords: [], status: "needs_owner_context", reason: "" },
+  blacklist: [],
+  sourceFile: { path: "apple-photos-import/20260614T100000Z-shoot/" + photoId + ".jpg" },
+  meta: { original_file: photoId + ".jpg" },
+  previewPath: "",
+  requestedGenerator: {
+    model: "codex-gpt-5.6-luna-xhigh-vision",
+    model_level: 1,
+    model_ladder: ["codex-gpt-5.4-mini", "codex-gpt-5.6-luna-xhigh-vision"],
+    resolved_model: "gpt-5.6-luna",
+    reasoning_effort: "xhigh",
+    vision: true,
+  },
+});
+
+const validBatchResult = (photoId, title = "Spanish courtyard") => ({
+  photo_id: photoId,
+  title,
+  keywords: ["Spain", "Travel", "Architecture", "Courtyard", "Historic", "Europe", "Photography", "Culture", "Urban", "Light"],
+  confidence: "medium",
+  status: "model_context",
+  reason: "The image and source context support this proposal.",
+  needs_owner_context: false,
+});
+
+test("same-shoot grouping is deterministic and bounded by capture windows", () => {
+  const rows = [
+    { ...batchTestInput("a", "2026-06-14T10:00:00").row, photo: batchTestInput("a").photo },
+    { ...batchTestInput("b", "2026-06-14T10:30:00").row, photo: batchTestInput("b").photo },
+    { ...batchTestInput("c", "2026-06-14T13:01:00").row, photo: batchTestInput("c").photo },
+  ];
+  const groups = groupOrdinaryCandidates(rows);
+  assert.deepEqual(groups.map((group) => group.rows.length), [1, 2]);
+  assert.equal(groups[1].rows.map((row) => row.id).sort().join(","), "a,b");
+  const benchmark = benchmarkBatchPlan({ rows, maxImages: 2 });
+  assert.equal(benchmark.baseline.model_invocations, 3);
+  assert.equal(benchmark.bounded_image_count_plan.model_invocations, 2);
+  assert.equal(benchmark.invocation_reduction_ratio, 1 / 3);
+  assert.equal(benchmark.throughput_multiplier, 1.5);
+});
+
+test("batch prompt requires every photo_id and preserves attachment identity", () => {
+  const inputs = [batchTestInput("photo-a"), batchTestInput("photo-b")];
+  const prompt = modelBatchPromptForRows({
+    inputs,
+    requestedGenerator: inputs[0].requestedGenerator,
+    batchId: "batch-test",
+    chunkId: "chunk-test",
+  });
+  assert.match(prompt, /Every input photo_id must appear exactly once/);
+  assert.match(prompt, /photo-a/);
+  assert.match(prompt, /photo-b/);
+  assert.deepEqual(batchModelOutputSchema().properties.results.items.required, [
+    "photo_id",
+    "title",
+    "keywords",
+    "confidence",
+    "status",
+    "reason",
+    "needs_owner_context",
+  ]);
+  assert.equal(batchModelOutputSchema().properties.results.items.additionalProperties, false);
+});
+
+test("batch validation isolates duplicate and missing photo IDs", () => {
+  const inputs = [batchTestInput("photo-a"), batchTestInput("photo-b")];
+  const result = normalizeBatchModelResults({
+    inputs,
+    blacklist: [],
+    payload: {
+      results: [
+        validBatchResult("photo-a"),
+        validBatchResult("photo-a", "Duplicate answer"),
+      ],
+    },
+  });
+  assert.equal(result.successes.length, 0);
+  assert.deepEqual(
+    result.failures.map((failure) => [failure.input.photo.id, failure.kind]).sort(),
+    [["photo-a", "duplicate_photo_id"], ["photo-b", "missing_photo_id"]],
+  );
+});
+
+test("batch validation keeps valid results when one item is malformed", () => {
+  const inputs = [batchTestInput("photo-a"), batchTestInput("photo-b")];
+  const result = normalizeBatchModelResults({
+    inputs,
+    blacklist: [],
+    payload: {
+      results: [
+        validBatchResult("photo-a"),
+        { photo_id: "photo-b", title: "", keywords: [] },
+      ],
+    },
+  });
+  assert.deepEqual(result.successes.map((success) => success.input.photo.id), ["photo-a"]);
+  assert.equal(result.failures[0].input.photo.id, "photo-b");
+});
 
 test("rework rows with missing provenance start at the first AI ladder level", () => {
   const selected = selectedGeneratorForRow({

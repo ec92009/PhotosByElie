@@ -1220,6 +1220,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             photo_ids.insert(0, single_photo_id)
         photo_optional_operations = {
             "save-keyword-blacklist",
+            "save-title-keyword-model-ladder",
             "save-title-keyword-review-approvals",
             "apply-title-keyword-review-approvals",
             "apply-approved-title-keyword-review-approvals",
@@ -1234,6 +1235,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "title",
             "caption",
             "keywords",
+            "model_ladder",
             "mode",
             "restoreTitles",
             "batch_id",

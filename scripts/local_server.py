@@ -349,6 +349,9 @@ from owner_state_db import import_title_keyword_batch_file as import_title_keywo
 from owner_state_db import queue_title_keyword_review_photo as queue_title_keyword_review_photo_db  # noqa: E402
 from owner_state_db import queue_title_keyword_review_photos as queue_title_keyword_review_photos_db  # noqa: E402
 from owner_state_db import record_title_keyword_review_decisions as record_title_keyword_review_decisions_db  # noqa: E402
+from owner_state_db import save_title_keyword_model_ladder as save_title_keyword_model_ladder_db  # noqa: E402
+from owner_state_db import title_keyword_model_catalog as title_keyword_model_catalog_db  # noqa: E402
+from owner_state_db import title_keyword_model_ladder_for_connection as title_keyword_model_ladder_for_connection_db  # noqa: E402
 from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from sidecar_state_db import upload_bridge_plan as upload_bridge_plan_db  # noqa: E402
@@ -5180,6 +5183,8 @@ def title_keyword_review_queue_payload(
 ) -> dict:
     conn = owner_db_connect(repo_root)
     try:
+        model_ladder = title_keyword_model_ladder_for_connection_db(conn)
+        model_catalog = title_keyword_model_catalog_db()
         stale_cleanup = (
             _clear_stale_title_keyword_review_rows(repo_root, conn)
             if run_maintenance
@@ -5233,6 +5238,8 @@ def title_keyword_review_queue_payload(
                 "schema_version": 1,
                 "queue_source": "owner-sqlite-helper",
                 "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+                "model_ladder": model_ladder,
+                "model_catalog": model_catalog,
                 "review_scope": "all-pending",
                 "batch_id": "all-pending",
                 "batch_ids": batch_ids,
@@ -5263,6 +5270,8 @@ def title_keyword_review_queue_payload(
             "schema_version": 1,
             "queue_source": "owner-sqlite-helper",
             "source_of_truth": OWNER_ACTION_ROOT.joinpath("Owner.sqlite").as_posix(),
+            "model_ladder": model_ladder,
+            "model_catalog": model_catalog,
             "batch_id": "",
             "pending_batches": [],
             "selection": {
@@ -11806,6 +11815,12 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "mode": payload.get("mode") or "replace",
         })
         return {**result, "catalog_publish_pending": True}
+    if operation == "save-title-keyword-model-ladder":
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "model_ladder": payload.get("model_ladder"),
+        })
+        return {**result, "catalog_publish_pending": False}
     if operation in {
         "save-title-keyword-review-approvals",
         "apply-title-keyword-review-approvals",
@@ -11928,6 +11943,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "publish-hidden-blacklist",
         "wipe-hidden-r2",
         "save-title-keyword-review-approvals",
+        "save-title-keyword-model-ladder",
         "clear-title-keyword-review-block",
         "save-keyword-blacklist",
     }:
@@ -11944,6 +11960,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "save-title-keyword-review-approvals",
         "apply-title-keyword-review-approvals",
         "apply-approved-title-keyword-review-approvals",
+        "save-title-keyword-model-ladder",
         "save-keyword-blacklist",
     } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
@@ -12115,6 +12132,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
 
     if action == "save-keyword-blacklist":
         return _save_keyword_blacklist(repo_root, payload)
+
+    if action == "save-title-keyword-model-ladder":
+        result = save_title_keyword_model_ladder_db(repo_root, payload.get("model_ladder"))
+        return {
+            "ok": True,
+            "action": action,
+            **result,
+        }
 
     if action == "queue-title-keyword-review":
         queue_result = queue_title_keyword_review_photo_db(

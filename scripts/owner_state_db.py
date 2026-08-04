@@ -36,6 +36,35 @@ TITLE_KEYWORD_STATE_FLAGS = {
 }
 TITLE_KEYWORD_APPROVED_STATES = {"approved", "applied"}
 TITLE_KEYWORD_ACTIVE_REVIEW_STATES = {"proposed", "rejected"}
+TITLE_KEYWORD_MODEL_LADDER_SETTING = "title_keyword_model_ladder_json"
+TITLE_KEYWORD_MODEL_CATALOG = (
+    {
+        "alias": "codex-gpt-5.4-mini",
+        "label": "Free",
+        "resolved_model": "gpt-5.4-mini",
+        "reasoning_effort": "low",
+        "vision": False,
+        "estimated_cost": "Lowest-cost OpenAI rung",
+    },
+    {
+        "alias": "codex-gpt-5.6-luna-xhigh-vision",
+        "label": "Luna XHigh vision",
+        "resolved_model": "gpt-5.6-luna",
+        "reasoning_effort": "xhigh",
+        "vision": True,
+        "estimated_cost": "Higher: xhigh + image",
+    },
+    {
+        "alias": "codex-gpt-5.6-sol-high-vision",
+        "label": "Sol High vision",
+        "resolved_model": "gpt-5.6-sol",
+        "reasoning_effort": "high",
+        "vision": True,
+        "estimated_cost": "High: high + image",
+    },
+)
+TITLE_KEYWORD_MODEL_ALIASES = frozenset(item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG)
+DEFAULT_TITLE_KEYWORD_MODEL_LADDER = [item["alias"] for item in TITLE_KEYWORD_MODEL_CATALOG]
 
 
 def now_iso() -> str:
@@ -58,6 +87,98 @@ def _read_json_text(value: str, fallback: Any) -> Any:
         return json.loads(value)
     except json.JSONDecodeError:
         return fallback
+
+
+def title_keyword_model_catalog() -> list[dict[str, Any]]:
+    return [dict(item) for item in TITLE_KEYWORD_MODEL_CATALOG]
+
+
+def normalize_title_keyword_model_ladder(value: object) -> list[str]:
+    """Validate the owner-selectable OpenAI ladder and return canonical aliases."""
+    if isinstance(value, dict):
+        value = value.get("model_ladder") or value.get("aliases")
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            value = []
+        elif raw.startswith("["):
+            try:
+                value = json.loads(raw)
+            except json.JSONDecodeError as error:
+                raise ValueError("model_ladder must be a JSON list or comma-separated aliases") from error
+        else:
+            value = raw.split(",")
+    if not isinstance(value, (list, tuple)):
+        raise ValueError("model_ladder must be a list of supported OpenAI aliases")
+    if not value:
+        raise ValueError("model_ladder must include at least one supported OpenAI rung")
+    if len(value) > len(TITLE_KEYWORD_MODEL_CATALOG):
+        raise ValueError(f"model_ladder may contain at most {len(TITLE_KEYWORD_MODEL_CATALOG)} supported OpenAI rungs")
+
+    aliases_by_key = {alias.casefold(): alias for alias in TITLE_KEYWORD_MODEL_ALIASES}
+    normalized: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            item = item.get("alias") or item.get("model")
+        alias = str(item or "").strip()
+        canonical = aliases_by_key.get(alias.casefold())
+        if not canonical:
+            raise ValueError(
+                f"unsupported title/keyword model ladder rung {alias or '<empty>'}; "
+                "Ollama and local-inference models are out of scope"
+            )
+        if canonical in normalized:
+            raise ValueError(f"model_ladder contains duplicate rung {canonical}")
+        normalized.append(canonical)
+    return normalized
+
+
+def title_keyword_model_ladder_for_connection(conn: sqlite3.Connection) -> list[str]:
+    row = conn.execute(
+        "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+        (TITLE_KEYWORD_MODEL_LADDER_SETTING,),
+    ).fetchone()
+    if not row:
+        return list(DEFAULT_TITLE_KEYWORD_MODEL_LADDER)
+    try:
+        return normalize_title_keyword_model_ladder(_read_json_text(str(row["setting_value"] or ""), []))
+    except ValueError:
+        # A pre-selector or manually edited setting must not make proposal reads
+        # or resumptions fail; the compiled default remains the safe fallback.
+        return list(DEFAULT_TITLE_KEYWORD_MODEL_LADDER)
+
+
+def title_keyword_model_ladder(repo_root: Path, db_path: Path | None = None) -> list[str]:
+    conn = connect(repo_root, db_path)
+    try:
+        return title_keyword_model_ladder_for_connection(conn)
+    finally:
+        conn.close()
+
+
+def save_title_keyword_model_ladder(
+    repo_root: Path,
+    model_ladder: object,
+    db_path: Path | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> dict[str, Any]:
+    owns_conn = conn is None
+    conn = conn or connect(repo_root, db_path)
+    try:
+        normalized = normalize_title_keyword_model_ladder(model_ladder)
+        previous = title_keyword_model_ladder_for_connection(conn)
+        _set_setting(conn, TITLE_KEYWORD_MODEL_LADDER_SETTING, json.dumps(normalized, ensure_ascii=False))
+        conn.commit()
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "setting": TITLE_KEYWORD_MODEL_LADDER_SETTING,
+            "previous_model_ladder": previous,
+            "model_ladder": normalized,
+            "changed": previous != normalized,
+        }
+    finally:
+        if owns_conn:
+            conn.close()
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -3002,6 +3123,8 @@ def title_keyword_generator_state(
             "format": "photosbyelie-title-keyword-generator-state",
             "schema_version": 1,
             "source_of_truth": (db_path or DEFAULT_DB).as_posix(),
+            "model_ladder": title_keyword_model_ladder_for_connection(conn),
+            "model_catalog": title_keyword_model_catalog(),
             "park_retry_rejected_count": TITLE_KEYWORD_PARK_REJECTED_COUNT,
             "parked_retry_exhausted": parked_now,
             "parked_twice_rejected": parked_now,

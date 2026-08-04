@@ -25,17 +25,67 @@ const OWNER_STATE_DB_MAX_BUFFER = Math.max(
   Number(process.env.PBE_OWNER_STATE_DB_MAX_BUFFER || 0),
 );
 const DEFAULT_MODEL_LADDER = [
-  LOCAL_GENERATOR_MODEL,
   "codex-gpt-5.4-mini",
-  "codex-gpt-5.4",
-  "codex-gpt-5.5",
-  "codex-gpt-5.5-xhigh-vision",
+  "codex-gpt-5.6-luna-xhigh-vision",
+  "codex-gpt-5.6-sol-high-vision",
 ];
-const MODEL_LADDER = (process.env.PBE_TITLE_KEYWORD_MODEL_LADDER || DEFAULT_MODEL_LADDER.join(","))
-  .split(",")
-  .map((item) => item.trim())
-  .filter(Boolean);
-const GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0] || "local-metadata-rules-v1").trim();
+const MODEL_CATALOG = [
+  {
+    alias: "codex-gpt-5.4-mini",
+    label: "Free",
+    resolvedModel: "gpt-5.4-mini",
+    reasoningEffort: "low",
+    vision: false,
+    estimatedCost: "Lowest-cost OpenAI rung",
+  },
+  {
+    alias: "codex-gpt-5.6-luna-xhigh-vision",
+    label: "Luna XHigh vision",
+    resolvedModel: "gpt-5.6-luna",
+    reasoningEffort: "xhigh",
+    vision: true,
+    estimatedCost: "Higher: xhigh + image",
+  },
+  {
+    alias: "codex-gpt-5.6-sol-high-vision",
+    label: "Sol High vision",
+    resolvedModel: "gpt-5.6-sol",
+    reasoningEffort: "high",
+    vision: true,
+    estimatedCost: "High: high + image",
+  },
+];
+const SUPPORTED_MODEL_ALIASES = new Set(MODEL_CATALOG.map((item) => item.alias));
+const normalizeModelLadder = (value) => {
+  let candidate = value;
+  if (typeof candidate === "string") {
+    const raw = candidate.trim();
+    if (!raw) candidate = [];
+    else if (raw.startsWith("[")) candidate = JSON.parse(raw);
+    else candidate = raw.split(",");
+  }
+  if (!Array.isArray(candidate) || candidate.length === 0) {
+    throw new Error("title/keyword model ladder must contain at least one supported OpenAI rung");
+  }
+  if (candidate.length > MODEL_CATALOG.length) {
+    throw new Error(`title/keyword model ladder may contain at most ${MODEL_CATALOG.length} supported OpenAI rungs`);
+  }
+  const aliasesByKey = new Map(MODEL_CATALOG.map((item) => [item.alias.toLowerCase(), item.alias]));
+  const normalized = [];
+  for (const item of candidate) {
+    const raw = typeof item === "object" && item !== null ? item.alias || item.model : item;
+    const alias = aliasesByKey.get(String(raw || "").trim().toLowerCase());
+    if (!alias) {
+      throw new Error(`unsupported title/keyword model ladder rung ${String(raw || "<empty>")}; Ollama and local-inference models are out of scope`);
+    }
+    if (normalized.includes(alias)) throw new Error(`title/keyword model ladder contains duplicate rung ${alias}`);
+    normalized.push(alias);
+  }
+  return normalized;
+};
+const envModelLadder = process.env.PBE_TITLE_KEYWORD_MODEL_LADDER;
+let MODEL_LADDER = normalizeModelLadder(envModelLadder || DEFAULT_MODEL_LADDER);
+let GENERATOR_MODEL = (process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || MODEL_LADDER[0]).trim();
 const MODEL_RETRIES = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_RETRIES || DEFAULT_MODEL_RETRIES));
 const MODEL_TIMEOUT_MS = Math.max(30_000, Number(process.env.PBE_TITLE_KEYWORD_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS));
 const MODEL_CONCURRENCY = Math.max(1, Number(process.env.PBE_TITLE_KEYWORD_MODEL_CONCURRENCY || DEFAULT_MODEL_CONCURRENCY));
@@ -170,7 +220,7 @@ const isLocalGeneratorModel = (model) => String(model || "").trim() === LOCAL_GE
 
 const isAiGeneratorModel = (model) => {
   const value = String(model || "").trim();
-  return Boolean(value && !isLocalGeneratorModel(value));
+  return Boolean(value && !isLocalGeneratorModel(value) && SUPPORTED_MODEL_ALIASES.has(value));
 };
 
 const modelLevel = (model) => {
@@ -180,13 +230,20 @@ const modelLevel = (model) => {
 };
 
 const generatorModelInfo = (model = GENERATOR_MODEL) => {
-  const selected = String(model || GENERATOR_MODEL || LOCAL_GENERATOR_MODEL).trim();
+  const candidate = String(model || GENERATOR_MODEL || DEFAULT_MODEL_LADDER[0]).trim();
+  const selected = SUPPORTED_MODEL_ALIASES.has(candidate) ? candidate : MODEL_LADDER[0];
   const level = modelLevel(selected);
+  const catalog = MODEL_CATALOG.find((item) => item.alias === selected) || MODEL_CATALOG[0];
   return {
     model: selected,
     model_level: level,
     model_maxed: level >= MODEL_LADDER.length - 1,
     model_ladder: MODEL_LADDER,
+    label: catalog.label,
+    resolved_model: catalog.resolvedModel,
+    reasoning_effort: catalog.reasoningEffort,
+    vision: catalog.vision,
+    estimated_cost: catalog.estimatedCost,
   };
 };
 
@@ -209,10 +266,13 @@ const nextModelAfterLevel = (level) => {
 
 const selectedGeneratorForRow = (row) => {
   if (!row?.reworkPriority) return generatorModelInfo();
-  if (row.previousGeneratorModelMaxed === true) {
+  const previousModel = String(row.previousGeneratorModel || "").trim();
+  const previousIndex = MODEL_LADDER.findIndex((item) => item === previousModel);
+  if (previousIndex >= 0 && previousIndex >= MODEL_LADDER.length - 1) {
     return { ...generatorModelInfoAtLevel(MODEL_LADDER.length - 1), exhausted: true };
   }
-  return nextModelAfterLevel(row.previousGeneratorModelLevel);
+  if (previousIndex >= 0) return generatorModelInfoAtLevel(previousIndex + 1);
+  return firstAiGeneratorInfo();
 };
 
 const loadOwnerGeneratorState = () => {
@@ -248,6 +308,8 @@ const loadOwnerGeneratorState = () => {
     state,
     blacklist: blacklistRules(Array.isArray(payload.keyword_blacklist) ? payload.keyword_blacklist : []),
     counts: payload.counts || {},
+    modelLadder: Array.isArray(payload.model_ladder) ? normalizeModelLadder(payload.model_ladder) : null,
+    modelCatalog: Array.isArray(payload.model_catalog) ? payload.model_catalog : MODEL_CATALOG,
     parkRejectedCount: Number(payload.park_retry_rejected_count || TITLE_KEYWORD_PARK_REJECTED_COUNT),
     parkedRetryExhausted: Number(payload.parked_retry_exhausted || payload.parked_twice_rejected || 0),
   };
@@ -1481,12 +1543,19 @@ const main = async () => {
   const batchPath = path.join(queueDir, batchFilename);
   const latestPath = path.join(queueDir, "latest.json");
   const proposalStatePath = path.join("assets", "owner-actions", "Owner.sqlite");
+  const ownerGeneratorState = loadOwnerGeneratorState();
+  MODEL_LADDER = normalizeModelLadder(
+    envModelLadder || ownerGeneratorState.modelLadder || MODEL_LADDER,
+  );
+  const envGenerator = String(process.env.PBE_TITLE_KEYWORD_GENERATOR_MODEL || "").trim();
+  if (envGenerator && !MODEL_LADDER.includes(envGenerator)) {
+    throw new Error(`PBE_TITLE_KEYWORD_GENERATOR_MODEL ${envGenerator} is not selected in the saved model ladder`);
+  }
+  GENERATOR_MODEL = envGenerator || MODEL_LADDER[0];
   progress(
     `Starting batch ${batchId}: limit=${args.limit} generator=${GENERATOR_MODEL} ` +
     `ladder=${MODEL_LADDER.join(" > ")}`,
   );
-
-  const ownerGeneratorState = loadOwnerGeneratorState();
   const proposedState = ownerGeneratorState.state;
 
   const photosData = loadCatalogWindow(REPO_ROOT).photosByElieData;
@@ -1901,6 +1970,8 @@ const main = async () => {
     limit: args.limit,
     ordinary_new_limit: args.limit,
     review_flag: REVIEW_FLAG,
+    model_ladder: MODEL_LADDER,
+    model_catalog: ownerGeneratorState.modelCatalog || MODEL_CATALOG,
     proposal_state: {
       flag: PROPOSED_FLAG,
       parked_flag: PARKED_FLAG,
@@ -2005,6 +2076,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
 export {
   codexModelConfig,
+  normalizeModelLadder,
   firstAiGeneratorInfo,
   generatorModelInfo,
   invokeCodexProposalModel,

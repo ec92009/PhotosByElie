@@ -1107,9 +1107,54 @@ private struct MetadataGiveBackView: View {
                 Text(model.metadataReviewStatus)
                     .foregroundStyle(.secondary)
             }
+            Section("OpenAI title & keyword proposal ladder") {
+                Text("New and rework attempts use this saved order. The default is Free → Luna XHigh vision → Sol High vision.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(model.metadataModelCatalog) { rung in
+                    let selectedIndex = model.metadataModelLadder.firstIndex(where: { $0.alias == rung.alias })
+                    HStack {
+                        Text(selectedIndex.map { "\($0 + 1)." } ?? "—")
+                            .frame(width: 24, alignment: .leading)
+                            .foregroundStyle(.secondary)
+                        Toggle(rung.label, isOn: Binding(
+                            get: { model.metadataModelLadder.contains(where: { $0.alias == rung.alias }) },
+                            set: { _ in model.toggleMetadataModelRung(rung) }
+                        ))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(rung.resolvedModel) · \(rung.reasoningEffort) · \(rung.vision ? "vision" : "text")")
+                                .font(.caption)
+                            Text(rung.estimatedCost)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("↑") {
+                            model.moveMetadataModelRung(rung, offset: -1)
+                        }
+                        .disabled(selectedIndex == nil || selectedIndex == 0)
+                        Button("↓") {
+                            model.moveMetadataModelRung(rung, offset: 1)
+                        }
+                        .disabled(selectedIndex == nil || selectedIndex == model.metadataModelLadder.count - 1)
+                    }
+                }
+                HStack {
+                    Button("Save ladder") {
+                        Task { await model.saveMetadataModelLadder() }
+                    }
+                    .disabled(model.metadataModelLadder.isEmpty || model.isSavingMetadataModelLadder)
+                    Text(model.metadataModelLadderStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Each rung records its OpenAI alias, resolved model, reasoning effort, vision mode, and relative cost estimate. Approval remains a separate human decision.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("AI proposal review") {
                 HStack {
-                    Button("Load proposals") {
+                    Button("Load ladder & proposals") {
                         Task { await model.loadMetadataProposals() }
                     }
                     .backstageHelp("Load pending AI metadata proposals from the local read-only Owner helper for human review.")
@@ -1133,6 +1178,21 @@ private struct MetadataGiveBackView: View {
                                 .foregroundStyle(.secondary)
                             if let reason = proposal.proposed.reason, !reason.isEmpty {
                                 Text(reason).font(.caption2).foregroundStyle(.tertiary)
+                            }
+                            if let generator = proposal.proposed.generator {
+                                Text("\(generator.label ?? generator.model) · \(generator.resolvedModel ?? "model") · \(generator.reasoningEffort ?? "effort unknown") · \(generator.vision == true ? "vision" : "text")")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                if generator.modelMaxed {
+                                    Text("Strongest configured rung; another rejection exhausts this ladder.")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            if let state = proposal.state, let attempt = state.proposalAttempt {
+                                Text("Attempt \(attempt) · model calls \(state.modelAttempts ?? 0)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
                         }
                     }

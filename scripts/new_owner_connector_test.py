@@ -564,6 +564,37 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(calls[0]["batch_id"], "batch-1")
         self.assertEqual(calls[0]["approvals"][0]["photo_id"], "photo-a")
 
+    def test_photo_moderation_forwards_model_ladder_without_photo_ids(self):
+        calls = []
+
+        def apply_public_photo_moderation(_repo_root, payload):
+            calls.append(payload)
+            return {"ok": True, "action": payload["operation"], "model_ladder": payload["model_ladder"]}
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply_public_photo_moderation),
+        ):
+            execute_action(self.config, {
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "save-title-keyword-model-ladder",
+                    "model_ladder": [
+                        "codex-gpt-5.6-luna-xhigh-vision",
+                        "codex-gpt-5.4-mini",
+                    ],
+                },
+            })
+
+        self.assertEqual(calls, [{
+            "operation": "save-title-keyword-model-ladder",
+            "photo_ids": [],
+            "model_ladder": [
+                "codex-gpt-5.6-luna-xhigh-vision",
+                "codex-gpt-5.4-mini",
+            ],
+        }])
+
     def test_photo_moderation_allows_keyword_blacklist_without_photo_ids(self):
         calls = []
 

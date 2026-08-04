@@ -229,6 +229,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataHistory: [MetadataHistoryEntry] = []
     @Published var metadataProposals: [MetadataProposal] = []
     @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
+    @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
+    @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
+    @Published var metadataModelLadderStatus = "Default OpenAI ladder: Free → Luna XHigh vision → Sol High vision."
+    @Published var isSavingMetadataModelLadder = false
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
     @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
@@ -3011,10 +3015,64 @@ final class BackstageViewModel: ObservableObject {
     func loadMetadataProposals() async {
         do {
             let queue = try await metadataReviewService.proposals()
+            let catalog = queue.modelCatalog?.filter { rung in
+                MetadataModelLadderRung.catalog.contains(where: { $0.alias == rung.alias })
+            }
+            if let catalog, !catalog.isEmpty {
+                metadataModelCatalog = catalog
+            }
+            if let aliases = queue.modelLadder {
+                let loaded = modelLadderRungs(for: aliases)
+                if !loaded.isEmpty {
+                    metadataModelLadder = loaded
+                }
+            }
             metadataProposals = queue.photos
             metadataProposalStatus = "\(queue.photos.count) pending proposal\(queue.photos.count == 1 ? "" : "s") loaded from Owner.sqlite."
+            metadataModelLadderStatus = "Saved ladder loaded: \(metadataModelLadder.map(\.label).joined(separator: " → "))."
         } catch {
             metadataProposalStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func saveMetadataModelLadder() async {
+        guard !metadataModelLadder.isEmpty else {
+            metadataModelLadderStatus = "Choose at least one OpenAI rung before saving."
+            return
+        }
+        isSavingMetadataModelLadder = true
+        defer { isSavingMetadataModelLadder = false }
+        do {
+            let change = try await metadataReviewService.replaceModelLadderDetailed(metadataModelLadder)
+            let saved = modelLadderRungs(for: change.after)
+            if !saved.isEmpty {
+                metadataModelLadder = saved
+            }
+            metadataModelLadderStatus = "Saved \(metadataModelLadder.map(\.label).joined(separator: " → ")) through audited action \(change.actionID)."
+        } catch {
+            metadataModelLadderStatus = String(describing: error)
+        }
+    }
+
+    func toggleMetadataModelRung(_ rung: MetadataModelLadderRung) {
+        if let index = metadataModelLadder.firstIndex(where: { $0.alias == rung.alias }) {
+            metadataModelLadder.remove(at: index)
+        } else {
+            metadataModelLadder.append(rung)
+        }
+    }
+
+    func moveMetadataModelRung(_ rung: MetadataModelLadderRung, offset: Int) {
+        guard let index = metadataModelLadder.firstIndex(where: { $0.alias == rung.alias }) else { return }
+        let destination = index + offset
+        guard metadataModelLadder.indices.contains(destination) else { return }
+        metadataModelLadder.swapAt(index, destination)
+    }
+
+    private func modelLadderRungs(for aliases: [String]) -> [MetadataModelLadderRung] {
+        aliases.compactMap { alias in
+            metadataModelCatalog.first(where: { $0.alias == alias })
+                ?? MetadataModelLadderRung.catalog.first(where: { $0.alias == alias })
         }
     }
 

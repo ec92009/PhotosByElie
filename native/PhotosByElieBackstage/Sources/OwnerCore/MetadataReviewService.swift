@@ -1,12 +1,157 @@
 import Foundation
 
+public struct MetadataModelLadderRung: Codable, Identifiable, Sendable, Equatable {
+    public var alias: String
+    public var label: String
+    public var resolvedModel: String
+    public var reasoningEffort: String
+    public var vision: Bool
+    public var estimatedCost: String
+
+    public var id: String { alias }
+
+    public init(
+        alias: String,
+        label: String,
+        resolvedModel: String,
+        reasoningEffort: String,
+        vision: Bool,
+        estimatedCost: String
+    ) {
+        self.alias = alias
+        self.label = label
+        self.resolvedModel = resolvedModel
+        self.reasoningEffort = reasoningEffort
+        self.vision = vision
+        self.estimatedCost = estimatedCost
+    }
+
+    public static let catalog: [MetadataModelLadderRung] = [
+        MetadataModelLadderRung(
+            alias: "codex-gpt-5.4-mini",
+            label: "Free",
+            resolvedModel: "gpt-5.4-mini",
+            reasoningEffort: "low",
+            vision: false,
+            estimatedCost: "Lowest-cost OpenAI rung"
+        ),
+        MetadataModelLadderRung(
+            alias: "codex-gpt-5.6-luna-xhigh-vision",
+            label: "Luna XHigh vision",
+            resolvedModel: "gpt-5.6-luna",
+            reasoningEffort: "xhigh",
+            vision: true,
+            estimatedCost: "Higher: xhigh + image"
+        ),
+        MetadataModelLadderRung(
+            alias: "codex-gpt-5.6-sol-high-vision",
+            label: "Sol High vision",
+            resolvedModel: "gpt-5.6-sol",
+            reasoningEffort: "high",
+            vision: true,
+            estimatedCost: "High: high + image"
+        ),
+    ]
+
+    public static let defaultLadder: [MetadataModelLadderRung] = catalog
+
+    enum CodingKeys: String, CodingKey {
+        case alias, label
+        case resolvedModel = "resolved_model"
+        case reasoningEffort = "reasoning_effort"
+        case vision
+        case estimatedCost = "estimated_cost"
+    }
+}
+
+public struct MetadataProposalGenerator: Codable, Sendable, Equatable {
+    public var model: String
+    public var modelLevel: Int?
+    public var modelMaxed: Bool
+    public var modelLadder: [String]
+    public var label: String?
+    public var resolvedModel: String?
+    public var reasoningEffort: String?
+    public var vision: Bool?
+    public var estimatedCost: String?
+
+    public init(
+        model: String,
+        modelLevel: Int? = nil,
+        modelMaxed: Bool = false,
+        modelLadder: [String] = [],
+        label: String? = nil,
+        resolvedModel: String? = nil,
+        reasoningEffort: String? = nil,
+        vision: Bool? = nil,
+        estimatedCost: String? = nil
+    ) {
+        self.model = model
+        self.modelLevel = modelLevel
+        self.modelMaxed = modelMaxed
+        self.modelLadder = modelLadder
+        self.label = label
+        self.resolvedModel = resolvedModel
+        self.reasoningEffort = reasoningEffort
+        self.vision = vision
+        self.estimatedCost = estimatedCost
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case modelLevel = "model_level"
+        case modelMaxed = "model_maxed"
+        case modelLadder = "model_ladder"
+        case label
+        case resolvedModel = "resolved_model"
+        case reasoningEffort = "reasoning_effort"
+        case vision
+        case estimatedCost = "estimated_cost"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        model = try container.decodeIfPresent(String.self, forKey: .model) ?? ""
+        modelLevel = try container.decodeIfPresent(Int.self, forKey: .modelLevel)
+        modelMaxed = try container.decodeIfPresent(Bool.self, forKey: .modelMaxed) ?? false
+        modelLadder = try container.decodeIfPresent([String].self, forKey: .modelLadder) ?? []
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+        resolvedModel = try container.decodeIfPresent(String.self, forKey: .resolvedModel)
+        reasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+        vision = try container.decodeIfPresent(Bool.self, forKey: .vision)
+        estimatedCost = try container.decodeIfPresent(String.self, forKey: .estimatedCost)
+    }
+}
+
+public struct MetadataProposalState: Codable, Sendable, Equatable {
+    public var proposalAttempt: Int?
+    public var reworkRequested: Bool?
+    public var requestedGenerator: MetadataProposalGenerator?
+    public var previousGenerator: MetadataProposalGenerator?
+    public var modelAttempts: Int?
+    public var modelPreviewPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case proposalAttempt = "proposal_attempt"
+        case reworkRequested = "rework_requested"
+        case requestedGenerator = "requested_generator"
+        case previousGenerator = "previous_generator"
+        case modelAttempts = "model_attempts"
+        case modelPreviewPath = "model_preview_path"
+    }
+}
+
 public struct MetadataProposalQueue: Codable, Sendable, Equatable {
     public var batchId: String
     public var photos: [MetadataProposal]
+    public var modelLadder: [String]?
+    public var modelCatalog: [MetadataModelLadderRung]?
 
     enum CodingKeys: String, CodingKey {
         case batchId = "batch_id"
         case photos
+        case modelLadder = "model_ladder"
+        case modelCatalog = "model_catalog"
     }
 }
 
@@ -16,21 +161,24 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
         public var keywords: [String]
         public var reason: String?
         public var confidence: String?
+        public var generator: MetadataProposalGenerator?
 
         public init(
             title: String,
             keywords: [String],
             reason: String? = nil,
-            confidence: String? = nil
+            confidence: String? = nil,
+            generator: MetadataProposalGenerator? = nil
         ) {
             self.title = title
             self.keywords = keywords
             self.reason = reason
             self.confidence = confidence
+            self.generator = generator
         }
 
         enum CodingKeys: String, CodingKey {
-            case title, keywords, reason, confidence
+            case title, keywords, reason, confidence, generator
         }
 
         public init(from decoder: Decoder) throws {
@@ -45,6 +193,7 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
             } else {
                 confidence = nil
             }
+            generator = try container.decodeIfPresent(MetadataProposalGenerator.self, forKey: .generator)
         }
     }
 
@@ -52,6 +201,7 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
     public var batchId: String
     public var current: Values
     public var proposed: Values
+    public var state: MetadataProposalState?
 
     public var id: String { photoId }
 
@@ -59,18 +209,21 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
         case photoId = "photo_id"
         case batchId = "batch_id"
         case current, proposed
+        case state
     }
 
     public init(
         photoID: String,
         batchID: String,
         current: Values,
-        proposed: Values
+        proposed: Values,
+        state: MetadataProposalState? = nil
     ) {
         photoId = photoID
         batchId = batchID
         self.current = current
         self.proposed = proposed
+        self.state = state
     }
 }
 
@@ -98,6 +251,12 @@ public struct MetadataEditChange: Sendable, Equatable {
 }
 
 public struct MetadataBlacklistChange: Sendable, Equatable {
+    public var actionID: String
+    public var before: [String]
+    public var after: [String]
+}
+
+public struct MetadataModelLadderChange: Sendable, Equatable {
     public var actionID: String
     public var before: [String]
     public var after: [String]
@@ -258,6 +417,24 @@ public actor MetadataReviewService {
         )
     }
 
+    public func replaceModelLadder(_ rungs: [MetadataModelLadderRung]) async throws -> OwnerAction {
+        let aliases = try normalizeModelLadder(rungs)
+        return try await submit(operation: "save-title-keyword-model-ladder", payload: [
+            "model_ladder": .array(aliases.map(JSONValue.string)),
+        ])
+    }
+
+    public func replaceModelLadderDetailed(_ rungs: [MetadataModelLadderRung]) async throws -> MetadataModelLadderChange {
+        let aliases = try normalizeModelLadder(rungs)
+        let action = try await replaceModelLadder(rungs)
+        let result = action.result?["result"]?.objectValue ?? action.result ?? [:]
+        return MetadataModelLadderChange(
+            actionID: action.id,
+            before: result["previous_model_ladder"]?.arrayValue?.compactMap(\.stringValue) ?? [],
+            after: result["model_ladder"]?.arrayValue?.compactMap(\.stringValue) ?? aliases
+        )
+    }
+
     private func submit(
         operation: String,
         payload: [String: JSONValue]
@@ -287,6 +464,36 @@ public actor MetadataReviewService {
                 let key = $0.lowercased()
                 return !$0.isEmpty && seen.insert(key).inserted
             }
+    }
+
+    private func normalizeModelLadder(_ rungs: [MetadataModelLadderRung]) throws -> [String] {
+        let aliases = rungs.map(\.alias)
+        let supported = Set(MetadataModelLadderRung.catalog.map(\.alias))
+        guard !aliases.isEmpty else {
+            throw APIErrorEnvelope(error: .init(
+                code: "empty_model_ladder",
+                message: "Choose at least one OpenAI model rung for the title/keyword ladder."
+            ))
+        }
+        guard aliases.count <= MetadataModelLadderRung.catalog.count else {
+            throw APIErrorEnvelope(error: .init(
+                code: "model_ladder_too_large",
+                message: "The title/keyword ladder can contain at most three OpenAI rungs."
+            ))
+        }
+        guard aliases.allSatisfy(supported.contains) else {
+            throw APIErrorEnvelope(error: .init(
+                code: "unsupported_model_ladder_rung",
+                message: "Only the supported OpenAI Free, Luna, and Sol rungs can be saved."
+            ))
+        }
+        guard Set(aliases).count == aliases.count else {
+            throw APIErrorEnvelope(error: .init(
+                code: "duplicate_model_ladder_rung",
+                message: "Each title/keyword model rung can appear only once."
+            ))
+        }
+        return aliases
     }
 
     private func values(from object: [String: JSONValue]) -> MetadataValues {

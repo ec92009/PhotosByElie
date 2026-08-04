@@ -297,6 +297,48 @@ class TitleReviewUndoTests(unittest.TestCase):
             self.assertEqual(counts["approved"], 2)
             self.assertEqual(counts["accepted"], 0)
 
+    def test_model_ladder_is_openai_only_persisted_and_visible_to_generator(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            default_ladder = owner_state_db.title_keyword_model_ladder(repo_root)
+            self.assertEqual(default_ladder, [
+                "codex-gpt-5.4-mini",
+                "codex-gpt-5.6-luna-xhigh-vision",
+                "codex-gpt-5.6-sol-high-vision",
+            ])
+
+            saved = local_server.apply_public_photo_moderation(repo_root, {
+                "operation": "save-title-keyword-model-ladder",
+                "model_ladder": [
+                    "codex-gpt-5.6-sol-high-vision",
+                    "codex-gpt-5.4-mini",
+                ],
+            })
+            self.assertEqual(saved["model_ladder"], [
+                "codex-gpt-5.6-sol-high-vision",
+                "codex-gpt-5.4-mini",
+            ])
+            self.assertFalse(saved["catalog_publish_pending"])
+
+            queue = local_server.title_keyword_review_queue_payload(
+                repo_root,
+                include_backlog=False,
+                run_maintenance=False,
+            )
+            self.assertEqual(queue["model_ladder"], saved["model_ladder"])
+            self.assertEqual(
+                [item["alias"] for item in queue["model_catalog"]],
+                default_ladder,
+            )
+            generator_state = owner_state_db.title_keyword_generator_state(repo_root)
+            self.assertEqual(generator_state["model_ladder"], saved["model_ladder"])
+
+            with self.assertRaisesRegex(ValueError, "out of scope"):
+                local_server.apply_public_photo_moderation(repo_root, {
+                    "operation": "save-title-keyword-model-ladder",
+                    "model_ladder": ["local-metadata-rules-v1"],
+                })
+
     def test_review_queue_excludes_manifest_only_backlog_without_site_writeback_target(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)

@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   codexModelConfig,
   invokeCodexProposalModel,
+  normalizeModelLadder,
   parseModelProposalText,
   proposalForPhoto,
   selectedGeneratorForRow,
@@ -19,42 +20,65 @@ test("rework rows with missing provenance start at the first AI ladder level", (
     previousGeneratorModelMaxed: false,
   });
   assert.equal(selected.model, "codex-gpt-5.4-mini");
-  assert.equal(selected.model_level, 1);
+  assert.equal(selected.model_level, 0);
   assert.equal(selected.model_maxed, false);
 });
 
-test("rework rows after local rules escalate to the next model", () => {
+test("legacy local provenance restarts on the first supported OpenAI rung", () => {
   const selected = selectedGeneratorForRow({
     reworkPriority: true,
     previousGeneratorModelLevel: 0,
     previousGeneratorModelMaxed: false,
   });
   assert.equal(selected.model, "codex-gpt-5.4-mini");
-  assert.equal(selected.model_level, 1);
+  assert.equal(selected.model_level, 0);
 });
 
 test("maxed rejected rows are marked exhausted instead of cycling the same model", () => {
   const selected = selectedGeneratorForRow({
     reworkPriority: true,
-    previousGeneratorModelLevel: 4,
+    previousGeneratorModel: "codex-gpt-5.6-sol-high-vision",
+    previousGeneratorModelLevel: 2,
     previousGeneratorModelMaxed: true,
   });
-  assert.equal(selected.model, "codex-gpt-5.5-xhigh-vision");
+  assert.equal(selected.model, "codex-gpt-5.6-sol-high-vision");
   assert.equal(selected.model_maxed, true);
   assert.equal(selected.exhausted, true);
 });
 
+test("new proposals use the exact default Free to Luna to Sol ladder", () => {
+  const selected = selectedGeneratorForRow({ reworkPriority: false });
+  assert.deepEqual(selected.model_ladder, [
+    "codex-gpt-5.4-mini",
+    "codex-gpt-5.6-luna-xhigh-vision",
+    "codex-gpt-5.6-sol-high-vision",
+  ]);
+  assert.equal(selected.label, "Free");
+});
+
 test("Codex ladder aliases map to real Codex CLI model settings", () => {
-  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.5-xhigh-vision" }), {
-    model: "gpt-5.5",
+  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.6-luna-xhigh-vision" }), {
+    model: "gpt-5.6-luna",
     reasoningEffort: "xhigh",
     vision: true,
   });
-  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.4-mini" }), {
-    model: "gpt-5.4-mini",
-    reasoningEffort: "low",
-    vision: false,
+  assert.deepEqual(codexModelConfig({ model: "codex-gpt-5.6-sol-high-vision" }), {
+    model: "gpt-5.6-sol",
+    reasoningEffort: "high",
+    vision: true,
   });
+});
+
+test("model ladder validation excludes local and Ollama choices", () => {
+  assert.throws(() => normalizeModelLadder(["local-metadata-rules-v1"]), /out of scope/);
+  assert.throws(() => normalizeModelLadder(["ollama-llama"]), /out of scope/);
+  assert.deepEqual(normalizeModelLadder([
+    "codex-gpt-5.6-sol-high-vision",
+    "codex-gpt-5.4-mini",
+  ]), [
+    "codex-gpt-5.6-sol-high-vision",
+    "codex-gpt-5.4-mini",
+  ]);
 });
 
 test("model proposal text parser accepts fenced JSON", () => {

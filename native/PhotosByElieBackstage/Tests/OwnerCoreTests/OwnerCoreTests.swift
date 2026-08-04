@@ -1821,6 +1821,48 @@ struct OwnerCoreTests {
         #expect(approval?["title"]?.stringValue == "New")
     }
 
+    @Test("Native model ladder saves the selected OpenAI order through Max")
+    func nativeModelLadderSave() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-model-ladder",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": .object([
+                    "previous_model_ladder": .array([.string("codex-gpt-5.4-mini")]),
+                    "model_ladder": .array([
+                        .string("codex-gpt-5.6-sol-high-vision"),
+                        .string("codex-gpt-5.4-mini"),
+                    ]),
+                ]),
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let service = MetadataReviewService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let selected = [
+            MetadataModelLadderRung.catalog[2],
+            MetadataModelLadderRung.catalog[0],
+        ]
+
+        let change = try await service.replaceModelLadderDetailed(selected)
+
+        #expect(change.before == ["codex-gpt-5.4-mini"])
+        #expect(change.after == ["codex-gpt-5.6-sol-high-vision", "codex-gpt-5.4-mini"])
+        let request = try #require(await api.requests().first)
+        #expect(request.payload["operation"]?.stringValue == "save-title-keyword-model-ladder")
+        #expect(request.payload["target"] == nil)
+        #expect(request.payload["model_ladder"]?.arrayValue?.compactMap(\.stringValue) == [
+            "codex-gpt-5.6-sol-high-vision",
+            "codex-gpt-5.4-mini",
+        ])
+    }
+
     @Test("Native lifecycle loads private titles and restores through moderation")
     func nativeLifecycleRestore() async throws {
         let ledger = OwnerAction(

@@ -438,6 +438,49 @@ body.has-country-background .gallery-country-background{
   font-size:.82rem;
   font-weight:700;
 }
+.gallery-status-row{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:4px 12px;
+}
+.gallery-status-row .gallery-status{
+  flex:0 1 auto;
+}
+.owner-cull-count{
+  display:inline-flex;
+  align-items:center;
+  min-height:1.25rem;
+  margin-top:10px;
+  color:var(--text);
+  font-size:.82rem;
+  font-weight:850;
+  white-space:nowrap;
+}
+.owner-cull-touch-actions{
+  display:none;
+  gap:6px;
+  align-items:center;
+}
+.owner-cull-touch-actions button{
+  min-height:34px;
+  padding:5px 10px;
+  border:1px solid var(--glass-border);
+  border-radius:999px;
+  background:var(--glass-field-bg);
+  color:var(--text);
+  font:inherit;
+  font-size:.76rem;
+  font-weight:800;
+}
+.owner-cull-touch-actions button:disabled{
+  opacity:.45;
+}
+@media (hover:none), (pointer:coarse){
+  .owner-cull-touch-actions:not([hidden]){
+    display:inline-flex;
+  }
+}
 .keyboard-hint{
   margin:8px var(--panel-inline) 0;
   padding:8px 10px;

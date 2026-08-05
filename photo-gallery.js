@@ -88,7 +88,8 @@ let selectedIndex = 0;
 const selectedPhotoIds = new Set();
 let selectionAnchorPhotoId = "";
 let lastCulledPhotoIds = [];
-let ownerCullToolbar = null;
+let ownerCullCount = null;
+let ownerCullTouchActions = null;
 const pageSize = 24;
 const showAllChunkSize = pageSize * 4;
 const showAllChunkDelayMs = 16;
@@ -127,65 +128,29 @@ let ownerSuperSearchPromise = null;
 const shortcutKey = (label) => `<kbd>${label}</kbd>`;
 
 const syncOwnerCullToolbar = () => {
-  if (!ownerCullToolbar) return;
+  if (!ownerCullCount) return;
   const count = selectedPhotoIds.size;
-  ownerCullToolbar.querySelector("[data-owner-cull-count]").textContent = `${count} selected`;
-  ownerCullToolbar.querySelector("[data-owner-cull-hide]").disabled = count === 0;
-  ownerCullToolbar.querySelector("[data-owner-cull-clear]").disabled = count === 0;
-  ownerCullToolbar.querySelector("[data-owner-cull-undo]").disabled = lastCulledPhotoIds.length === 0;
+  ownerCullCount.textContent = `${count} selected`;
+  ownerCullTouchActions?.querySelector("[data-owner-cull-touch-hide]")?.toggleAttribute("disabled", count === 0);
+  ownerCullTouchActions?.querySelector("[data-owner-cull-touch-undo]")?.toggleAttribute("disabled", lastCulledPhotoIds.length === 0);
 };
 
 const ensureOwnerCullToolbar = () => {
-  if (!ownerCullingEnabled || !galleryActions || ownerCullToolbar) return;
-  ownerCullToolbar = document.createElement("div");
-  ownerCullToolbar.className = "owner-cull-toolbar";
-  ownerCullToolbar.setAttribute("aria-label", "Owner culling controls");
-  ownerCullToolbar.innerHTML = `
-    <strong data-owner-cull-count>0 selected</strong>
-    <button class="btn secondary" type="button" data-owner-cull-select-visible>Select visible</button>
-    <button class="btn" type="button" data-owner-cull-hide disabled>Move to Waste Basket</button>
-    <button class="btn secondary" type="button" data-owner-cull-clear disabled>Clear</button>
-    <button class="btn secondary" type="button" data-owner-cull-undo disabled>Undo</button>
-  `;
-  galleryActions.prepend(ownerCullToolbar);
-  ownerCullToolbar.querySelector("[data-owner-cull-select-visible]").addEventListener("click", () => {
-    renderedGalleryPhotos.slice(0, 500).forEach((photo) => selectedPhotoIds.add(photo.id));
-    selectionAnchorPhotoId = renderedGalleryPhotos[0]?.id || "";
-    renderGallery();
-  });
-  ownerCullToolbar.querySelector("[data-owner-cull-clear]").addEventListener("click", () => {
-    selectedPhotoIds.clear();
-    selectionAnchorPhotoId = "";
-    renderGallery();
-  });
-  ownerCullToolbar.querySelector("[data-owner-cull-hide]").addEventListener("click", async () => {
-    const ids = [...selectedPhotoIds].slice(0, 500);
-    if (!ids.length) return;
-    try {
-      setGalleryStatus(`Moving ${ids.length} photo${ids.length === 1 ? "" : "s"} to Waste Basket...`);
-      await hiddenActions.markMany(ids);
-      lastCulledPhotoIds = ids;
-      selectedPhotoIds.clear();
-      selectionAnchorPhotoId = "";
-      renderGallery();
-      setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
-    } catch (error) {
-      setGalleryStatus(error?.message || "Could not move the selected photos to Waste Basket.");
-    }
-  });
-  ownerCullToolbar.querySelector("[data-owner-cull-undo]").addEventListener("click", async () => {
-    if (!lastCulledPhotoIds.length) return;
-    const ids = [...lastCulledPhotoIds];
-    try {
-      setGalleryStatus(`Restoring ${ids.length} photo${ids.length === 1 ? "" : "s"}...`);
-      await hiddenActions.undoMany(ids);
-      lastCulledPhotoIds = [];
-      renderGallery();
-      setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} restored.`);
-    } catch (error) {
-      setGalleryStatus(error?.message || "Could not undo the last basket move.");
-    }
-  });
+  if (!ownerCullingEnabled || ownerCullCount) return;
+  ownerCullCount = document.querySelector("[data-owner-cull-count]");
+  if (!ownerCullCount) return;
+  ownerCullCount.hidden = false;
+  ownerCullCount.setAttribute("aria-label", "Owner culling selection count");
+  ownerCullTouchActions = document.querySelector("[data-owner-cull-touch-actions]");
+  if (ownerCullTouchActions) {
+    ownerCullTouchActions.hidden = false;
+    ownerCullTouchActions.querySelector("[data-owner-cull-touch-hide]")?.addEventListener("click", () => {
+      void moveOwnerSelectionToWasteBasket();
+    });
+    ownerCullTouchActions.querySelector("[data-owner-cull-touch-undo]")?.addEventListener("click", () => {
+      void undoLastOwnerCull();
+    });
+  }
   syncOwnerCullToolbar();
 };
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -1027,6 +992,62 @@ const setGalleryBlockedVisual = (photoId, state = "") => {
   card.classList.toggle("is-review-blocked", blocked);
 };
 
+const moveOwnerSelectionToWasteBasket = async () => {
+  const photos = filteredVisiblePhotos();
+  const selected = photos[selectedIndex];
+  const ids = selectedPhotoIds.size ? [...selectedPhotoIds].slice(0, 500) : [selected?.id].filter(Boolean);
+  if (!ids.length) return false;
+  try {
+    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
+    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
+    if (ids.length === 1) await hiddenActions.mark(ids[0]);
+    else await hiddenActions.markMany(ids);
+    lastCulledPhotoIds = ids;
+    selectedPhotoIds.clear();
+    selectionAnchorPhotoId = "";
+    selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
+    renderGallery();
+    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
+    return true;
+  } catch (error) {
+    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
+    setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
+    syncOwnerCullToolbar();
+    return false;
+  }
+};
+
+const undoLastOwnerCull = async () => {
+  let undoneId = null;
+  try {
+    if (lastCulledPhotoIds.length > 1) {
+      const restored = await hiddenActions.undoMany(lastCulledPhotoIds);
+      undoneId = restored[0] || null;
+    } else {
+      undoneId = await hiddenActions.undo(lastCulledPhotoIds[0] || null);
+    }
+    lastCulledPhotoIds = [];
+  } catch (error) {
+    setGalleryStatus(error?.message || "Could not undo the last basket move.");
+    syncOwnerCullToolbar();
+    return false;
+  }
+  renderGallery();
+  if (!undoneId) {
+    setGalleryStatus("No local basket move to undo.");
+    return false;
+  }
+  const nextPhotos = filteredVisiblePhotos();
+  const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
+  if (restoredIndex >= 0) {
+    selectedIndex = restoredIndex;
+    expandGalleryToIncludeIndex(restoredIndex);
+  }
+  updateSelection();
+  setGalleryStatus("Last local basket move undone.");
+  return true;
+};
+
 const nearestVisiblePhotoIndex = () => {
   const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index]") || [])];
   if (!cards.length) return selectedIndex;
@@ -1740,24 +1761,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
-        const selected = photos[selectedIndex];
-        const ids = selectedPhotoIds.size ? [...selectedPhotoIds].slice(0, 500) : [selected?.id].filter(Boolean);
-        if (!ids.length) return;
-        try {
-          ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
-          setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
-          if (ids.length === 1) await hiddenActions.mark(ids[0]);
-          else await hiddenActions.markMany(ids);
-          lastCulledPhotoIds = ids;
-          selectedPhotoIds.clear();
-          selectionAnchorPhotoId = "";
-          selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
-          renderGallery();
-          setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
-        } catch (error) {
-          ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
-          setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
-        }
+        await moveOwnerSelectionToWasteBasket();
         event.preventDefault();
         return;
       }
@@ -1782,33 +1786,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() !== "u") return;
-      let undoneId = null;
-      try {
-        if (lastCulledPhotoIds.length > 1) {
-          const restored = await hiddenActions.undoMany(lastCulledPhotoIds);
-          undoneId = restored[0] || null;
-        } else {
-          undoneId = await hiddenActions.undo(lastCulledPhotoIds[0] || null);
-        }
-        lastCulledPhotoIds = [];
-      } catch (error) {
-        setGalleryStatus(error?.message || "Could not undo the last basket move.");
-        event.preventDefault();
-        return;
-      }
-      renderGallery();
-      if (!undoneId) {
-        setGalleryStatus("No local basket move to undo.");
-        return;
-      }
-      const nextPhotos = filteredVisiblePhotos();
-      const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
-      if (restoredIndex >= 0) {
-        selectedIndex = restoredIndex;
-        expandGalleryToIncludeIndex(restoredIndex);
-      }
-      updateSelection();
-      setGalleryStatus("Last local basket move undone.");
+      await undoLastOwnerCull();
       event.preventDefault();
     });
 

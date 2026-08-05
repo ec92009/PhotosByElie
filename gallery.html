@@ -52,7 +52,14 @@
     <section class="panel gallery-hero" data-gallery-hero>
       <div class="gallery-hero-copy">
         <h1 data-gallery-title data-i18n="nav.gallery">Gallery</h1>
-        <p class="gallery-status" data-gallery-status aria-live="polite"></p>
+        <div class="gallery-status-row">
+          <p class="gallery-status" data-gallery-status aria-live="polite"></p>
+          <strong class="owner-cull-count" data-owner-cull-count hidden>0 selected</strong>
+          <span class="owner-cull-touch-actions" data-owner-cull-touch-actions hidden>
+            <button type="button" data-owner-cull-touch-hide disabled>Hide selected</button>
+            <button type="button" data-owner-cull-touch-undo disabled>Undo</button>
+          </span>
+        </div>
         <div class="cta" data-gallery-actions></div>
       </div>
     </section>

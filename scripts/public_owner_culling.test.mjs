@@ -32,9 +32,18 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   assert.match(gallery, /syncOwnerSelectionButtons\(\)/);
   assert.match(gallery, /await window\.photosByElieHiddenActionsReady/);
   assert.match(detail, /await window\.photosByElieHiddenActionsReady/);
-  assert.match(gallery, /data-owner-cull-select-visible/);
-  assert.match(gallery, /data-owner-cull-hide/);
-  assert.match(gallery, /data-owner-cull-undo/);
+  assert.match(gallery, /data-owner-cull-count/);
+  assert.doesNotMatch(gallery, /data-owner-cull-select-visible/);
+  assert.doesNotMatch(gallery, /data-owner-cull-hide/);
+  assert.doesNotMatch(gallery, /data-owner-cull-undo/);
+  assert.match(gallery, /event\.key\.toLowerCase\(\) === "x" \|\| event\.key\.toLowerCase\(\) === "b" \|\| event\.key\.toLowerCase\(\) === "h"/);
+  assert.match(gallery, /event\.key\.toLowerCase\(\) !== "u"/);
+  assert.match(gallery, /moveOwnerSelectionToWasteBasket/);
+  assert.match(gallery, /undoLastOwnerCull/);
+  assert.match(gallery, /data-owner-cull-touch-hide/);
+  assert.match(gallery, /data-owner-cull-touch-undo/);
+  assert.match(read("gallery.html"), /data-owner-cull-touch-actions/);
+  assert.match(read("photos.css"), /@media \(hover:none\), \(pointer:coarse\)[\s\S]*?owner-cull-touch-actions:not\(\[hidden\]\)/);
 });
 
 test("photo detail and preview omit debugging-only metadata", () => {

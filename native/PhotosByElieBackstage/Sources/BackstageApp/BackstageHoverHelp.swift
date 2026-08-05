@@ -39,7 +39,7 @@ private struct BackstageHoverHelpModifier: ViewModifier {
                             .font(.callout)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: 320, alignment: .leading)
+                            .frame(width: 280, alignment: .leading)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 9)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))

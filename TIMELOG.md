@@ -729,8 +729,9 @@ Clock state: running
 | 2026-08-05 | 00:10 CEST | 00:12 CEST | 0:02 | Reported Backstage interaction, Culling filter, gallery-state, and approval-to-upload visibility regressions; authorized the signed corrective release. |
 | 2026-08-05 | 09:24 CEST | 09:36 CEST | 0:12 | Reported the stale Needs AI counter and tooltip hit-target regression; repaired both, added coverage, and installed signed Backstage v0.5.2 (build 71). |
 | 2026-08-05 | 09:44 CEST | 09:49 CEST | 0:05 | Authorized the calendar-visible version migration for Backstage; updated the canonical SOP, released v217.0 (build 72), and verified the installed label. |
+| 2026-08-05 | 09:50 CEST | 09:54 CEST | 0:04 | Reported the narrow tooltip layout; widened the pass-through help card, released v217.1 (build 73), and verified the installed build. |
 
 ## Totals
 
-Active collaboration time used: 35:00
+Active collaboration time used: 35:04
 Remaining budget: not set

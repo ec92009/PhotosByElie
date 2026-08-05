@@ -64,9 +64,9 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>217.0</string>
+  <string>217.1</string>
   <key>CFBundleVersion</key>
-  <string>72</string>
+  <string>73</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>

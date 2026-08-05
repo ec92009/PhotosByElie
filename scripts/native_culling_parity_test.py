@@ -927,6 +927,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".overlay(alignment: .bottom)", hover_help)
         self.assertIn("Group {", hover_help)
         self.assertIn(".allowsHitTesting(false)", hover_help)
+        self.assertIn(".frame(width: 280, alignment: .leading)", hover_help)
         self.assertNotIn(".popover(", hover_help)
         self.assertIn(".accessibilityHint(explanation)", hover_help)
 

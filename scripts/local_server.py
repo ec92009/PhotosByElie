@@ -2843,13 +2843,21 @@ def _bump_visible_version(repo_root: Path) -> tuple[str, str, list[str]]:
             readme_path.write_text(updated, encoding="utf-8")
             changed.append("README.md")
 
-    for html_path in sorted(repo_root.glob("*.html")):
+    html_paths = [
+        *repo_root.glob("*.html"),
+        *(repo_root / "landing-concept").glob("*.html"),
+    ]
+    for html_path in sorted(html_paths):
         source = html_path.read_text(encoding="utf-8")
-        updated = re.sub(r"\?v=[0-9.]+", f"?v={new_version}", source)
+        updated = re.sub(
+            r"(?P<separator>\?|&amp;|&)v=[0-9.]+",
+            rf"\g<separator>v={new_version}",
+            source,
+        )
         updated = re.sub(r">v[0-9.]+<", f">v{new_version}<", updated)
         if updated != source:
             html_path.write_text(updated, encoding="utf-8")
-            changed.append(html_path.name)
+            changed.append(str(html_path.relative_to(repo_root)))
     return old_version, new_version, changed
 
 

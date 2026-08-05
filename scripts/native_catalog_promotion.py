@@ -321,6 +321,57 @@ def _update_catalog_audit(
                 timestamp,
             ),
         )
+        if state == "live":
+            conn.execute(
+                """
+                UPDATE asset_upload_run_items
+                SET status = 'live', error_text = '', updated_at = ?
+                WHERE asset_id = ? AND source_version_hash = ?
+                  AND status = 'verified'
+                """,
+                (timestamp, asset_id, source_version_hash),
+            )
+        run_ids = [
+            str(row["run_id"])
+            for row in conn.execute(
+                """
+                SELECT DISTINCT run_id
+                FROM asset_upload_run_items
+                WHERE asset_id = ? AND source_version_hash = ?
+                """,
+                (asset_id, source_version_hash),
+            ).fetchall()
+        ]
+        for run_id in run_ids:
+            summary = conn.execute(
+                """
+                SELECT count(*) AS total,
+                       sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) AS processed,
+                       sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) AS live,
+                       sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+                FROM asset_upload_run_items
+                WHERE run_id = ?
+                """,
+                (run_id,),
+            ).fetchone()
+            total = int(summary["total"] or 0)
+            processed = int(summary["processed"] or 0)
+            conn.execute(
+                """
+                UPDATE asset_upload_runs
+                SET processed_count = ?, live_count = ?, failed_count = ?,
+                    remaining_count = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (
+                    processed,
+                    int(summary["live"] or 0),
+                    int(summary["failed"] or 0),
+                    max(0, total - processed),
+                    timestamp,
+                    run_id,
+                ),
+            )
         conn.commit()
 
 
@@ -540,6 +591,149 @@ def verify_public_catalog(
         raise
 
 
+def reconcile_upload_run_catalog_states(repo_root: Path, run_id: str) -> dict[str, Any]:
+    """Make upload-run status reflect the independently verified catalog audit."""
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM asset_upload_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        if exists is None:
+            raise CatalogPromotionError("upload run does not exist")
+        conn.execute(
+            """
+            UPDATE asset_upload_run_items
+            SET status = CASE (
+                    SELECT catalog.state
+                    FROM public_catalog_publications AS catalog
+                    WHERE catalog.asset_id = asset_upload_run_items.asset_id
+                      AND catalog.source_version_hash = asset_upload_run_items.source_version_hash
+                )
+                WHEN 'live' THEN 'live'
+                ELSE 'verified'
+                END,
+                error_text = '',
+                updated_at = ?
+            WHERE run_id = ?
+              AND status NOT IN ('failed', 'skipped')
+              AND EXISTS (
+                SELECT 1
+                FROM public_catalog_publications AS catalog
+                WHERE catalog.asset_id = asset_upload_run_items.asset_id
+                  AND catalog.source_version_hash = asset_upload_run_items.source_version_hash
+              )
+            """,
+            (timestamp, run_id),
+        )
+        summary = conn.execute(
+            """
+            SELECT count(*) AS total,
+                   sum(CASE WHEN item.status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) AS processed,
+                   sum(CASE WHEN item.status = 'live' THEN 1 ELSE 0 END) AS live,
+                   sum(CASE WHEN item.status = 'verified' THEN 1 ELSE 0 END) AS verified,
+                   sum(CASE WHEN item.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                   sum(CASE WHEN catalog.state = 'failed' THEN 1 ELSE 0 END) AS catalog_failed
+            FROM asset_upload_run_items AS item
+            LEFT JOIN public_catalog_publications AS catalog
+              ON catalog.asset_id = item.asset_id
+             AND catalog.source_version_hash = item.source_version_hash
+            WHERE item.run_id = ?
+            """,
+            (run_id,),
+        ).fetchone()
+        total = int(summary["total"] or 0)
+        processed = int(summary["processed"] or 0)
+        conn.execute(
+            """
+            UPDATE asset_upload_runs
+            SET processed_count = ?, live_count = ?, failed_count = ?,
+                remaining_count = ?, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (
+                processed,
+                int(summary["live"] or 0),
+                int(summary["failed"] or 0),
+                max(0, total - processed),
+                timestamp,
+                run_id,
+            ),
+        )
+        conn.commit()
+    return {
+        "runId": run_id,
+        "total": total,
+        "processed": processed,
+        "live": int(summary["live"] or 0),
+        "verified": int(summary["verified"] or 0),
+        "failed": int(summary["failed"] or 0),
+        "catalogFailed": int(summary["catalog_failed"] or 0),
+        "remaining": max(0, total - processed),
+    }
+
+
+def verify_upload_run_catalog(
+    repo_root: Path,
+    run_id: str,
+    *,
+    fetch: Callable[[str], tuple[int, bytes, str]] | None = None,
+) -> dict[str, Any]:
+    """Verify every catalog-audited item in a run using a cached live catalog."""
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT item.asset_id, item.source_version_hash, catalog.public_url
+            FROM asset_upload_run_items AS item
+            JOIN public_catalog_publications AS catalog
+              ON catalog.asset_id = item.asset_id
+             AND catalog.source_version_hash = item.source_version_hash
+            WHERE item.run_id = ?
+            ORDER BY item.asset_id
+            """,
+            (run_id,),
+        ).fetchall()
+    cache: dict[str, tuple[int, bytes, str]] = {}
+
+    def cached_fetch(url: str) -> tuple[int, bytes, str]:
+        if url not in cache:
+            if fetch:
+                cache[url] = fetch(url)
+            else:
+                response = urlopen(
+                    Request(url, headers={"User-Agent": "PhotosByElie catalog verifier"}),
+                    timeout=20,
+                )
+                cache[url] = (
+                    int(response.status),
+                    response.read(),
+                    str(response.headers.get("ETag") or ""),
+                )
+        return cache[url]
+
+    outcomes: list[dict[str, Any]] = []
+    for row in rows:
+        asset_id = str(row["asset_id"])
+        source_version_hash = str(row["source_version_hash"])
+        try:
+            result = verify_public_catalog(
+                repo_root,
+                asset_id,
+                source_version_hash,
+                fetch=cached_fetch,
+            )
+            outcomes.append({"assetId": asset_id, **result})
+        except Exception as error:  # noqa: BLE001 - each catalog item is independently retryable.
+            outcomes.append({"assetId": asset_id, "state": "failed", "error": str(error)})
+    summary = reconcile_upload_run_catalog_states(repo_root, run_id)
+    return {
+        "ok": True,
+        "task": "verify-upload-run-catalog",
+        **summary,
+        "items": outcomes,
+    }
+
+
 def _bridge_results(repo_root: Path, asset_id: str) -> list[dict[str, Any]]:
     with connect(repo_root) as conn:
         row = conn.execute(
@@ -574,6 +768,12 @@ def _verify_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _verify_run_command(args: argparse.Namespace) -> int:
+    result = verify_upload_run_catalog(args.repo_root.resolve(), args.run_id)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
@@ -586,6 +786,9 @@ def main() -> int:
     verify.add_argument("--asset-id", required=True)
     verify.add_argument("--source-version-hash", required=True)
     verify.set_defaults(func=_verify_command)
+    verify_run = subparsers.add_parser("verify-upload-run-catalog")
+    verify_run.add_argument("--run-id", required=True)
+    verify_run.set_defaults(func=_verify_run_command)
     args = parser.parse_args()
     return int(args.func(args))
 

@@ -163,12 +163,12 @@ struct UploadView: View {
                     )
                 }
             }
-            if model.isRunningNativePublication,
-               let run = model.nativeUploadRun,
+            if let run = model.nativeUploadRun,
                !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)
-                    TableColumn("State", value: \.status)
+                    TableColumn("Upload", value: \.status)
+                    TableColumn("Public catalog", value: \.catalogState)
                     TableColumn("Error", value: \.errorText)
                 }
                 .frame(minHeight: 180)

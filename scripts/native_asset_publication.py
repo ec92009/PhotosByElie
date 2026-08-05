@@ -80,8 +80,8 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
         )
         summary = conn.execute(
             """
-            SELECT count(*) total,
-                   sum(CASE WHEN status IN ('live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
+                SELECT count(*) total,
+                   sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
                    sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) live,
                    sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) failed
             FROM asset_upload_run_items
@@ -264,7 +264,10 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
                 summary={
                     "requestedCount": len(asset_ids),
                     "processedCount": int(completed.get("processed") or 0),
-                    "uploadedCount": int(completed.get("live") or 0),
+                    "uploadedCount": sum(
+                        str(item.get("status") or "") in {"verified", "live"}
+                        for item in completed.get("items") or []
+                    ),
                     "failedCount": bridge_failed,
                     "nativePublicationRunId": run_id,
                 },
@@ -272,19 +275,19 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
             )
         )
 
-    live_ids = [
+    giveback_ids = [
         str(item.get("asset_id") or item.get("assetId") or "")
         for item in completed.get("items") or []
-        if str(item.get("status") or "") == "live"
+        if str(item.get("status") or "") in {"verified", "live"}
     ]
     photos = (
         commit_writeback(
             repo_root,
             "",
-            live_ids,
+            giveback_ids,
             adapter=SignedPhotosBridgeAdapter(repo_root),
         )
-        if live_ids
+        if giveback_ids
         else {
             "ok": True,
             "writtenCount": 0,

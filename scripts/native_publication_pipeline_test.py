@@ -20,9 +20,10 @@ from native_publication_pipeline import (
     record_photos_sync_snapshot,
     record_sale_reference,
     run_upload_batch,
+    upload_run_status,
     upload_eligibility_plan,
 )
-from native_catalog_promotion import verify_public_catalog
+from native_catalog_promotion import verify_public_catalog, verify_upload_run_catalog
 from sidecar_state_db import upsert_assets
 
 
@@ -189,18 +190,62 @@ class NativePublicationPipelineTest(unittest.TestCase):
             )
 
     def test_upload_run_is_bounded_and_isolates_failure(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Run catalog title",
+                "keywords": ["Spain", "Sea"],
+                "renderedFingerprint": "render-run-catalog",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, captured_at = '2022-12-10T12:00:00Z', location_label = 'Spain' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = 'Run catalog title', keywords_json = '[\"Spain\",\"Sea\"]' WHERE asset_id = 'asset-1'"
+            )
+            conn.commit()
+        stale_catalog = (self.root / "assets/catalog/photosbyelie.sqlite").read_bytes()
         run = create_upload_run(self.root, ["asset-1", "asset-2"], limit=50, concurrency=2)
 
         def upload(asset_id):
             if asset_id == "asset-2":
                 raise RuntimeError("network failed")
-            return [verified(f"masters/{asset_id}.jpg", "photosbyelie-private")]
+            return verified_public_set(f"run-{asset_id}")
 
         result = run_upload_batch(self.root, run["runId"], upload)
         self.assertEqual(result["status"], "completed-with-errors")
-        self.assertEqual(result["live"], 1)
+        self.assertEqual(result["live"], 0)
         self.assertEqual(result["failed"], 1)
         self.assertEqual(result["remaining"], 0)
+        verified_item = next(item for item in result["items"] if item["asset_id"] == "asset-1")
+        self.assertEqual(verified_item["status"], "verified")
+        self.assertEqual(verified_item["catalog_state"], "local")
+
+        failed_verification = verify_upload_run_catalog(
+            self.root,
+            run["runId"],
+            fetch=lambda _url: (200, stale_catalog, '"stale-catalog"'),
+        )
+        self.assertEqual(failed_verification["live"], 0)
+        self.assertEqual(failed_verification["verified"], 1)
+        self.assertEqual(failed_verification["catalogFailed"], 1)
+
+        catalog = (self.root / "assets/catalog/photosbyelie.sqlite").read_bytes()
+        verified_catalog = verify_upload_run_catalog(
+            self.root,
+            run["runId"],
+            fetch=lambda _url: (200, catalog, '"catalog-run-test"'),
+        )
+        self.assertEqual(verified_catalog["catalogFailed"], 0)
+        verified_run = upload_run_status(self.root, run["runId"])
+        self.assertEqual(verified_run["live"], 1)
+        self.assertEqual(
+            next(item for item in verified_run["items"] if item["asset_id"] == "asset-1")["status"],
+            "live",
+        )
 
     def test_upload_eligibility_plan_is_fixture_scoped_and_read_only(self):
         child = create_fixture(self.root, "Child", parent_fixture_id=self.fixture["fixtureId"])

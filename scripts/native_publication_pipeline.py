@@ -1034,11 +1034,14 @@ def run_upload_batch(
             asset_id, result, error_text = future.result()
             timestamp = now_iso()
             with connect(repo_root) as conn:
-                status = (
-                    "live"
-                    if result and result.get("published", True)
-                    else ("skipped" if result else "failed")
-                )
+                if not result:
+                    status = "failed"
+                elif not result.get("published", True):
+                    status = "skipped"
+                elif str(result.get("catalogState") or "") == "live":
+                    status = "live"
+                else:
+                    status = "verified"
                 conn.execute(
                     """
                     UPDATE asset_upload_run_items
@@ -1078,7 +1081,7 @@ def run_upload_batch(
                 summary = conn.execute(
                     """
                     SELECT count(*) total,
-                           sum(CASE WHEN status IN ('live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
+                           sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
                            sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) live,
                            sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) failed
                     FROM asset_upload_run_items WHERE run_id = ?

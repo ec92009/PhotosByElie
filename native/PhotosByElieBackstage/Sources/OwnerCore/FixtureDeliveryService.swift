@@ -110,6 +110,7 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
     public var id: String { assetID }
     public var assetID: String
     public var status: String
+    public var catalogState: String
     public var errorText: String
 }
 
@@ -602,6 +603,9 @@ public actor FixtureDeliveryService {
             return NativeUploadRunItem(
                 assetID: assetID,
                 status: item["status"]?.stringValue ?? "",
+                catalogState: item["catalog_state"]?.stringValue
+                    ?? item["catalogState"]?.stringValue
+                    ?? "not-applicable",
                 errorText: item["error_text"]?.stringValue
                     ?? item["errorText"]?.stringValue
                     ?? ""

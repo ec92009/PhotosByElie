@@ -3463,6 +3463,8 @@ final class BackstageViewModel: ObservableObject {
         var totalProcessed = 0
         var totalLive = 0
         var totalFailed = 0
+        var totalCatalogPending = 0
+        var totalCatalogFailed = 0
         var attemptedIDs = Set<String>()
         var successfulIDs = Set<String>()
         var failedIDs = Set<String>()
@@ -3488,17 +3490,31 @@ final class BackstageViewModel: ObservableObject {
                 totalProcessed += run.processed
                 totalLive += run.live
                 totalFailed += run.failed
+                totalCatalogPending += run.items.lazy.filter {
+                    $0.status == "verified" && ["pending", "local"].contains($0.catalogState)
+                }.count
+                totalCatalogFailed += run.items.lazy.filter {
+                    $0.status == "verified" && $0.catalogState == "failed"
+                }.count
                 successfulIDs.formUnion(
-                    run.items.lazy.filter { $0.status == "live" }.map(\.assetID)
+                    run.items.lazy.filter { ["verified", "live"].contains($0.status) }.map(\.assetID)
                 )
                 failedIDs.formUnion(
                     run.items.lazy.filter { $0.status == "failed" }.map(\.assetID)
                 )
             }
             let skipped = max(0, ids.count - totalRequested)
-            let completion = totalFailed == 0
-                ? "Published \(totalLive) verified asset\(totalLive == 1 ? "" : "s")."
-                : "Published \(totalLive); \(totalFailed) failed and remain independently retryable."
+            let checksumVerified = totalLive + totalCatalogPending + totalCatalogFailed
+            let completion = "Uploaded and checksum-verified \(checksumVerified) asset\(checksumVerified == 1 ? "" : "s"); \(totalLive) live on the public site."
+                + (totalCatalogPending > 0
+                    ? " \(totalCatalogPending) await catalog deployment and live verification."
+                    : "")
+                + (totalCatalogFailed > 0
+                    ? " \(totalCatalogFailed) failed catalog verification and can retry without re-uploading."
+                    : "")
+                + (totalFailed > 0
+                    ? " \(totalFailed) upload\(totalFailed == 1 ? "" : "s") failed and remain independently retryable."
+                    : "")
             await preserveNativeUploadTray(
                 afterAttempting: attemptedIDs,
                 successfulIDs: successfulIDs,

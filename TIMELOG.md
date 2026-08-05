@@ -728,8 +728,9 @@ Clock state: running
 | 2026-08-04 | 22:47 CEST | 22:59 CEST | 0:01 | Authorized the post-approval city-to-country resolver, recovered the ten Barcelona publication failures, and verified catalog and Photos give-back completion; background implementation and test runtime excluded. |
 | 2026-08-05 | 00:10 CEST | 00:12 CEST | 0:02 | Reported Backstage interaction, Culling filter, gallery-state, and approval-to-upload visibility regressions; authorized the signed corrective release. |
 | 2026-08-05 | 09:24 CEST | 09:36 CEST | 0:12 | Reported the stale Needs AI counter and tooltip hit-target regression; repaired both, added coverage, and installed signed Backstage v0.5.2 (build 71). |
+| 2026-08-05 | 09:44 CEST | 09:49 CEST | 0:05 | Authorized the calendar-visible version migration for Backstage; updated the canonical SOP, released v217.0 (build 72), and verified the installed label. |
 
 ## Totals
 
-Active collaboration time used: 34:55
+Active collaboration time used: 35:00
 Remaining budget: not set

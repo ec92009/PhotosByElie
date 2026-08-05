@@ -39,14 +39,24 @@ test("exact dates remain compatible with the existing filter contract", () => {
   assert.equal(JSON.stringify(picker.partsFromDateValue("invalid")), JSON.stringify({ year: "", month: "", day: "" }));
 });
 
-test("date years are catalog-derived, unique, and newest first", () => {
+test("date years cover the full catalog span, newest first", () => {
   assert.equal(JSON.stringify(
     picker.yearsFromPhotos([
       { metadata: [{ label: "Captured", value: "2022:12:10 09:00:00" }] },
       { metadata: [{ label: "Captured", value: "2026:01:02 09:00:00" }] },
       { metadata: [{ label: "Captured", value: "2022:01:01 09:00:00" }] },
     ]),
-  ), JSON.stringify(["2026", "2022"]));
+  ), JSON.stringify(["2026", "2025", "2024", "2023", "2022"]));
+});
+
+test("date-range defaults use the earliest and latest captured dates", () => {
+  assert.equal(JSON.stringify(
+    picker.dateRangeFromPhotos([
+      { metadata: [{ label: "Captured", value: "2026:06:23 09:00:00" }] },
+      { metadata: [{ label: "Captured", value: "2011:11:02 09:00:00" }] },
+      { metadata: [{ label: "Captured", value: "invalid" }] },
+    ]),
+  ), JSON.stringify({ dateFrom: "2011-11-02", dateTo: "2026-06-23" }));
 });
 
 test("inverted ranges are normalized instead of producing an impossible filter", () => {

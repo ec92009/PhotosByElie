@@ -109,13 +109,14 @@ const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 const diversityBucketMinutes = 10;
 const photoFilter = window.photosByEliePhotoFilter;
 const galleryDatePicker = window.photosByElieGalleryDatePicker || {};
+const galleryDateRange = galleryDatePicker.dateRangeFromPhotos?.(gallery?.photos || []) || { dateFrom: "", dateTo: "" };
 const defaultFilterState = {
   query: "",
   orientation: "all",
   sort: "newest",
   mediaType: "all",
-  dateFrom: "",
-  dateTo: ""
+  dateFrom: galleryDateRange.dateFrom,
+  dateTo: galleryDateRange.dateTo
 };
 const persistedFilterKeys = ["orientation", "mediaType", "dateFrom", "dateTo"];
 let filterBar = null;
@@ -325,7 +326,7 @@ const inlineDatePickerOptions = (part, parts = {}) => {
     ];
   }
   return [
-    { value: "", label: "YYYY" },
+    { value: "", label: t("gallery.any_year") },
     ...inlineDatePickerYears().map((year) => ({ value: year, label: year })),
   ];
 };

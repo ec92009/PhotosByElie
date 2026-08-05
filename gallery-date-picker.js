@@ -63,13 +63,30 @@
     return "";
   };
 
-  const yearsFromPhotos = (photos = []) => [...new Set(
-    photos.map(captureDate).filter(Boolean).map((value) => value.slice(0, 4))
-  )].sort((left, right) => Number(right) - Number(left));
+  const yearsFromPhotos = (photos = []) => {
+    const years = photos.map(captureDate)
+      .filter(Boolean)
+      .map((value) => Number(value.slice(0, 4)))
+      .filter((year) => Number.isInteger(year));
+    if (!years.length) return [];
+    const newest = Math.max(...years);
+    const oldest = Math.min(...years);
+    return Array.from({ length: newest - oldest + 1 }, (_, index) => String(newest - index));
+  };
+
+  const dateRangeFromPhotos = (photos = []) => {
+    const dates = photos.map(captureDate).filter(Boolean).sort();
+    return {
+      dateFrom: dates[0] || "",
+      dateTo: dates.at(-1) || "",
+    };
+  };
 
   window.photosByElieGalleryDatePicker = {
+    captureDate,
     daysInMonth,
     dateValueFromParts,
+    dateRangeFromPhotos,
     partsFromDateValue,
     normalizeRange,
     rangeValuesFromParts,

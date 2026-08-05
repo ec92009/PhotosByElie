@@ -255,6 +255,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
     @Published var isRunningNativePublication = false
+    @Published var isCancellingNativePublication = false
     @Published var nativePublicationBatchNumber = 0
     @Published var nativePublicationBatchCount = 0
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
@@ -264,8 +265,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
     @Published var isSyncingPhotos = false
+    @Published var isCancellingPhotosSync = false
     @Published var r2Reconciliation: R2ReconciliationReport?
     @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
+    @Published var isRunningR2Reconciliation = false
+    @Published var isCancellingR2Reconciliation = false
     @Published var deliverables: [FixtureDeliverable] = []
     @Published var deliverableKind = "pdf"
     @Published var deliverableShareLink = ""
@@ -279,6 +283,9 @@ final class BackstageViewModel: ObservableObject {
         photoAccess: "checking",
         message: "Checking the signed Photos helper…"
     )
+    private var nativePublicationCancellationRequested = false
+    private var photosSyncCancellationRequested = false
+    private var r2ReconciliationCancellationRequested = false
 
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
@@ -3460,17 +3467,53 @@ final class BackstageViewModel: ObservableObject {
         guard !isSyncingPhotos else { return }
         guard authentication.phase == .authenticated else { return }
         isSyncingPhotos = true
-        defer { isSyncingPhotos = false }
+        isCancellingPhotosSync = false
+        photosSyncCancellationRequested = false
+        defer {
+            isSyncingPhotos = false
+            isCancellingPhotosSync = false
+            photosSyncCancellationRequested = false
+        }
         do {
-            let report = try await deliveryService.syncPhotos(limit: limit)
+            var report = try await deliveryService.startPhotosSync(limit: limit)
             photosSyncReport = report
+            if photosSyncCancellationRequested, !report.runID.isEmpty {
+                report = try await deliveryService.cancelPhotosSync(runID: report.runID)
+                photosSyncReport = report
+            }
+            while !report.isFinished {
+                photosSyncStatus = "\(report.stage) • \(report.scanned) of \(report.requested) checked • \(report.remaining) remaining."
+                try await Task.sleep(for: .seconds(1))
+                report = try await deliveryService.photosSyncStatus(runID: report.runID)
+                photosSyncReport = report
+            }
             if report.attached {
                 photosSyncStatus = "An Apple Photos sync pass is already running."
+            } else if report.status == "cancelled" {
+                photosSyncStatus = "Stopped safely after \(report.scanned) of \(report.requested); \(report.remaining) remain for the next pass. Completed checkpoints are recorded."
+            } else if report.status == "failed" {
+                photosSyncStatus = report.errorText.isEmpty
+                    ? "Apple Photos sync failed. Retry starts a new bounded pass."
+                    : report.errorText
             } else {
                 photosSyncStatus = "Scanned \(report.scanned) of \(report.requested) in \(report.elapsedSeconds.formatted(.number.precision(.fractionLength(1))))s: \(report.metadataOnly) metadata, \(report.appearance) appearance, \(report.sourceMissing) missing, \(report.failed) failed."
             }
         } catch {
             photosSyncStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func cancelPhotosSync() async {
+        guard isSyncingPhotos else { return }
+        photosSyncCancellationRequested = true
+        isCancellingPhotosSync = true
+        photosSyncStatus = "Stopping safely after the current PhotoKit checkpoint…"
+        guard let runID = photosSyncReport?.runID, !runID.isEmpty else { return }
+        do {
+            photosSyncReport = try await deliveryService.cancelPhotosSync(runID: runID)
+        } catch {
+            photosSyncStatus = userFacingMessage(for: error)
+            isCancellingPhotosSync = false
         }
     }
 
@@ -3498,6 +3541,8 @@ final class BackstageViewModel: ObservableObject {
         }
         isRunningDelivery = true
         isRunningNativePublication = true
+        isCancellingNativePublication = false
+        nativePublicationCancellationRequested = false
         nativeUploadRun = nil
         nativePublicationBatchNumber = 0
         nativePublicationBatchCount = batches.count
@@ -3505,6 +3550,8 @@ final class BackstageViewModel: ObservableObject {
             isRunningNativePublication = false
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
+            isCancellingNativePublication = false
+            nativePublicationCancellationRequested = false
             isRunningDelivery = false
         }
         var totalRequested = 0
@@ -3518,14 +3565,18 @@ final class BackstageViewModel: ObservableObject {
         var failedIDs = Set<String>()
         do {
             for (batchIndex, batch) in batches.enumerated() {
+                if nativePublicationCancellationRequested { break }
                 nativePublicationBatchNumber = batchIndex + 1
                 var run = try await deliveryService.startNativeUpload(
                     assetIDs: batch,
                     limit: batch.count,
                     concurrency: 4
                 )
-                attemptedIDs.formUnion(batch)
                 nativeUploadRun = run
+                if nativePublicationCancellationRequested, !run.runID.isEmpty {
+                    run = try await deliveryService.cancelNativeUpload(runID: run.runID)
+                    nativeUploadRun = run
+                }
                 totalRequested += run.requested
                 if run.requested == 0 { continue }
                 nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed) of \(ids.count) processed."
@@ -3535,6 +3586,11 @@ final class BackstageViewModel: ObservableObject {
                     nativeUploadRun = run
                     nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed + run.processed) of \(ids.count) processed • \(totalLive + run.live) live • \(totalFailed + run.failed) failed."
                 }
+                attemptedIDs.formUnion(
+                    run.items.lazy.filter {
+                        ["verified", "live", "failed", "skipped"].contains($0.status)
+                    }.map(\.assetID)
+                )
                 totalProcessed += run.processed
                 totalLive += run.live
                 totalFailed += run.failed
@@ -3550,8 +3606,9 @@ final class BackstageViewModel: ObservableObject {
                 failedIDs.formUnion(
                     run.items.lazy.filter { $0.status == "failed" }.map(\.assetID)
                 )
+                if run.status == "cancelled" { break }
             }
-            let skipped = max(0, ids.count - totalRequested)
+            let skipped = nativePublicationCancellationRequested ? 0 : max(0, ids.count - totalRequested)
             let checksumVerified = totalLive + totalCatalogPending + totalCatalogFailed
             let completion = "Uploaded and checksum-verified \(checksumVerified) asset\(checksumVerified == 1 ? "" : "s"); \(totalLive) live on the public site."
                 + (totalCatalogPending > 0
@@ -3568,12 +3625,16 @@ final class BackstageViewModel: ObservableObject {
                 successfulIDs: successfulIDs,
                 failedIDs: failedIDs
             )
-            nativeUploadStatus = completion
+            nativeUploadStatus = (nativePublicationCancellationRequested
+                ? "Stopped safely after \(totalProcessed) of \(ids.count); completed uploads remain verified and all unstarted items remain in the tray. "
+                : completion)
                 + (skipped > 0 ? " \(skipped) changed eligibility before publication and were skipped safely." : "")
-                + (failedIDs.isEmpty
+                + (nativePublicationCancellationRequested
+                    ? " Retry resumes from the remaining independently eligible items."
+                    : failedIDs.isEmpty
                     ? " This batch is complete; load the next 200 when ready."
                     : " Failed items remain in this tray for retry.")
-                + " Give Back completed for approved metadata."
+                + (nativePublicationCancellationRequested ? "" : " Give Back completed for approved metadata.")
         } catch {
             if !attemptedIDs.isEmpty {
                 await preserveNativeUploadTray(
@@ -3586,6 +3647,20 @@ final class BackstageViewModel: ObservableObject {
                 ? "Published \(totalLive) before the run stopped; \(totalFailed) failed. "
                 : "")
                 + userFacingMessage(for: error)
+        }
+    }
+
+    func cancelNativePublication() async {
+        guard isRunningNativePublication else { return }
+        nativePublicationCancellationRequested = true
+        isCancellingNativePublication = true
+        nativeUploadStatus = "Stopping safely after currently uploading assets finish…"
+        guard let runID = nativeUploadRun?.runID, !runID.isEmpty else { return }
+        do {
+            nativeUploadRun = try await deliveryService.cancelNativeUpload(runID: runID)
+        } catch {
+            nativeUploadStatus = userFacingMessage(for: error)
+            isCancellingNativePublication = false
         }
     }
 
@@ -3658,16 +3733,57 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runR2Reconciliation(commit: Bool) async {
+        guard !isRunningR2Reconciliation else { return }
         isRunningDelivery = true
-        defer { isRunningDelivery = false }
+        isRunningR2Reconciliation = true
+        isCancellingR2Reconciliation = false
+        r2ReconciliationCancellationRequested = false
+        defer {
+            isRunningDelivery = false
+            isRunningR2Reconciliation = false
+            isCancellingR2Reconciliation = false
+            r2ReconciliationCancellationRequested = false
+        }
         do {
-            let report = try await deliveryService.r2Reconciliation(commit: commit)
+            var report = try await deliveryService.startR2Reconciliation(commit: commit)
             r2Reconciliation = report
-            r2ReconciliationStatus = commit
-                ? "Reconciled \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) quarantined, \(report.restored) restored, \(report.deleted) deleted after the second pass."
-                : "Previewed \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) would enter quarantine, \(report.eligibleDelete) eligible after a prior 30-day pass."
+            if r2ReconciliationCancellationRequested, !report.runID.isEmpty {
+                report = try await deliveryService.cancelR2Reconciliation(runID: report.runID)
+                r2Reconciliation = report
+            }
+            while !report.isFinished {
+                r2ReconciliationStatus = "\(report.stage) • \(report.scanned) of \(report.requested) checked • \(report.remaining) remaining."
+                try await Task.sleep(for: .seconds(1))
+                report = try await deliveryService.r2ReconciliationStatus(runID: report.runID)
+                r2Reconciliation = report
+            }
+            if report.status == "cancelled" {
+                r2ReconciliationStatus = "Stopped safely after \(report.scanned) of \(report.requested); \(report.remaining) remain. Every completed object checkpoint is in the run receipt."
+            } else if report.status == "failed" {
+                r2ReconciliationStatus = report.errorText.isEmpty
+                    ? "R2 reconciliation failed. The completed checkpoints remain auditable and retryable."
+                    : report.errorText
+            } else {
+                r2ReconciliationStatus = commit
+                    ? "Reconciled \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) quarantined, \(report.restored) restored, \(report.deleted) deleted after the second pass."
+                    : "Previewed \(report.scanned): \(report.protected) sale-protected, \(report.quarantined) would enter quarantine, \(report.eligibleDelete) eligible after a prior 30-day pass."
+            }
         } catch {
             r2ReconciliationStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func cancelR2Reconciliation() async {
+        guard isRunningR2Reconciliation else { return }
+        r2ReconciliationCancellationRequested = true
+        isCancellingR2Reconciliation = true
+        r2ReconciliationStatus = "Stopping safely after the current R2 object checkpoint…"
+        guard let runID = r2Reconciliation?.runID, !runID.isEmpty else { return }
+        do {
+            r2Reconciliation = try await deliveryService.cancelR2Reconciliation(runID: runID)
+        } catch {
+            r2ReconciliationStatus = userFacingMessage(for: error)
+            isCancellingR2Reconciliation = false
         }
     }
 

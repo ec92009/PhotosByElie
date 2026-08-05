@@ -413,17 +413,47 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           run_id TEXT PRIMARY KEY,
           mode TEXT NOT NULL CHECK (mode IN ('plan', 'commit', 'exceptional-sold-purge')),
           status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+          stage TEXT NOT NULL DEFAULT 'Queued',
+          requested_count INTEGER NOT NULL DEFAULT 0,
           scanned_count INTEGER NOT NULL DEFAULT 0,
           protected_count INTEGER NOT NULL DEFAULT 0,
           quarantined_count INTEGER NOT NULL DEFAULT 0,
           restored_count INTEGER NOT NULL DEFAULT 0,
           eligible_delete_count INTEGER NOT NULL DEFAULT 0,
           deleted_count INTEGER NOT NULL DEFAULT 0,
+          remaining_count INTEGER NOT NULL DEFAULT 0,
+          cancel_requested INTEGER NOT NULL DEFAULT 0,
+          actions_json TEXT NOT NULL DEFAULT '[]',
           error_text TEXT NOT NULL DEFAULT '',
           created_at TEXT NOT NULL,
           completed_at TEXT,
           updated_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS photos_sync_runs (
+          run_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+          stage TEXT NOT NULL DEFAULT 'Queued',
+          requested_count INTEGER NOT NULL DEFAULT 0,
+          scanned_count INTEGER NOT NULL DEFAULT 0,
+          remaining_count INTEGER NOT NULL DEFAULT 0,
+          baseline_count INTEGER NOT NULL DEFAULT 0,
+          unchanged_count INTEGER NOT NULL DEFAULT 0,
+          metadata_only_count INTEGER NOT NULL DEFAULT 0,
+          appearance_count INTEGER NOT NULL DEFAULT 0,
+          source_missing_count INTEGER NOT NULL DEFAULT 0,
+          source_returned_count INTEGER NOT NULL DEFAULT 0,
+          failed_count INTEGER NOT NULL DEFAULT 0,
+          cancel_requested INTEGER NOT NULL DEFAULT 0,
+          failures_json TEXT NOT NULL DEFAULT '[]',
+          elapsed_seconds REAL NOT NULL DEFAULT 0,
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          completed_at TEXT,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_photos_sync_runs_status
+          ON photos_sync_runs(status, updated_at);
 
         CREATE TABLE IF NOT EXISTS asset_upload_runs (
           run_id TEXT PRIMARY KEY,
@@ -669,6 +699,19 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_sha256 TEXT NOT NULL DEFAULT ''"
         )
+    reconciliation_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(r2_reconciliation_runs)").fetchall()
+    }
+    for column, ddl in {
+        "stage": "ALTER TABLE r2_reconciliation_runs ADD COLUMN stage TEXT NOT NULL DEFAULT 'Queued'",
+        "requested_count": "ALTER TABLE r2_reconciliation_runs ADD COLUMN requested_count INTEGER NOT NULL DEFAULT 0",
+        "remaining_count": "ALTER TABLE r2_reconciliation_runs ADD COLUMN remaining_count INTEGER NOT NULL DEFAULT 0",
+        "cancel_requested": "ALTER TABLE r2_reconciliation_runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0",
+        "actions_json": "ALTER TABLE r2_reconciliation_runs ADD COLUMN actions_json TEXT NOT NULL DEFAULT '[]'",
+    }.items():
+        if column not in reconciliation_columns:
+            conn.execute(ddl)
     proposal_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(asset_ai_proposals)").fetchall()

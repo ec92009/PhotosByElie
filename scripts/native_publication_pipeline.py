@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -1019,6 +1019,14 @@ def run_upload_batch(
             raise ValueError("upload run does not exist")
         if run["status"] not in {"queued", "running"}:
             return upload_run_status(repo_root, run_id)
+        if int(run["cancel_requested"] or 0):
+            completed_at = now_iso()
+            conn.execute(
+                "UPDATE asset_upload_runs SET status = 'cancelled', completed_at = ?, updated_at = ? WHERE run_id = ?",
+                (completed_at, completed_at, run_id),
+            )
+            conn.commit()
+            return upload_run_status(repo_root, run_id)
         rows = conn.execute(
             """
             SELECT asset_id FROM asset_upload_run_items
@@ -1033,10 +1041,6 @@ def run_upload_batch(
             "UPDATE asset_upload_runs SET status = 'running', started_at = COALESCE(started_at, ?), updated_at = ? WHERE run_id = ?",
             (started_at, started_at, run_id),
         )
-        conn.executemany(
-            "UPDATE asset_upload_run_items SET status = 'uploading', started_at = COALESCE(started_at, ?), updated_at = ? WHERE run_id = ? AND asset_id = ?",
-            [(started_at, started_at, run_id, asset_id) for asset_id in asset_ids],
-        )
         conn.commit()
 
     def worker(asset_id: str) -> tuple[str, dict[str, Any] | None, str]:
@@ -1046,94 +1050,133 @@ def run_upload_batch(
         except Exception as error:  # noqa: BLE001 - failures are isolated per asset.
             return asset_id, None, str(error)
 
+    def cancellation_requested() -> bool:
+        with connect(repo_root) as conn:
+            row = conn.execute(
+                "SELECT cancel_requested FROM asset_upload_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+        return bool(row and int(row["cancel_requested"] or 0))
+
+    def submit(
+        executor: ThreadPoolExecutor,
+        futures: dict[Future[tuple[str, dict[str, Any] | None, str]], str],
+        asset_id: str,
+    ) -> None:
+        timestamp = now_iso()
+        with connect(repo_root) as conn:
+            conn.execute(
+                "UPDATE asset_upload_run_items SET status = 'uploading', started_at = COALESCE(started_at, ?), updated_at = ? WHERE run_id = ? AND asset_id = ?",
+                (timestamp, timestamp, run_id, asset_id),
+            )
+            conn.commit()
+        futures[executor.submit(worker, asset_id)] = asset_id
+
+    pending_ids = iter(asset_ids)
+    futures: dict[Future[tuple[str, dict[str, Any] | None, str]], str] = {}
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        futures = {executor.submit(worker, asset_id): asset_id for asset_id in asset_ids}
-        for future in as_completed(futures):
-            asset_id, result, error_text = future.result()
-            timestamp = now_iso()
-            with connect(repo_root) as conn:
-                if not result:
-                    status = "failed"
-                elif not result.get("published", True):
-                    status = "skipped"
-                elif str(result.get("catalogState") or "") == "live":
-                    status = "live"
-                else:
-                    status = "verified"
-                conn.execute(
-                    """
-                    UPDATE asset_upload_run_items
-                    SET status = ?, source_version_hash = ?, object_keys_json = ?,
-                        error_text = ?, completed_at = ?, updated_at = ?
-                    WHERE run_id = ? AND asset_id = ?
-                    """,
-                    (
-                        status,
-                        str(result.get("sourceVersionHash") or "") if result else "",
-                        _json(result.get("objectKeys") or []) if result else _json([]),
-                        error_text,
-                        timestamp,
-                        timestamp,
-                        run_id,
-                        asset_id,
-                    ),
-                )
-                if error_text:
+        while len(futures) < concurrency and not cancellation_requested():
+            try:
+                submit(executor, futures, next(pending_ids))
+            except StopIteration:
+                break
+        while futures:
+            completed, _ = wait(futures, return_when=FIRST_COMPLETED)
+            for future in completed:
+                futures.pop(future, None)
+                asset_id, result, error_text = future.result()
+                timestamp = now_iso()
+                with connect(repo_root) as conn:
+                    if not result:
+                        status = "failed"
+                    elif not result.get("published", True):
+                        status = "skipped"
+                    elif str(result.get("catalogState") or "") == "live":
+                        status = "live"
+                    else:
+                        status = "verified"
                     conn.execute(
                         """
-                        UPDATE asset_delivery_state
-                        SET delivery_state = 'failed', last_error = ?, updated_at = ?
-                        WHERE asset_id = ?
+                        UPDATE asset_upload_run_items
+                        SET status = ?, source_version_hash = ?, object_keys_json = ?,
+                            error_text = ?, completed_at = ?, updated_at = ?
+                        WHERE run_id = ? AND asset_id = ?
                         """,
-                        (error_text, timestamp, asset_id),
+                        (
+                            status,
+                            str(result.get("sourceVersionHash") or "") if result else "",
+                            _json(result.get("objectKeys") or []) if result else _json([]),
+                            error_text,
+                            timestamp,
+                            timestamp,
+                            run_id,
+                            asset_id,
+                        ),
                     )
-                elif result and not result.get("published", True):
+                    if error_text:
+                        conn.execute(
+                            """
+                            UPDATE asset_delivery_state
+                            SET delivery_state = 'failed', last_error = ?, updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            (error_text, timestamp, asset_id),
+                        )
+                    elif result and not result.get("published", True):
+                        conn.execute(
+                            """
+                            UPDATE asset_delivery_state
+                            SET delivery_state = 'not-ready', last_error = ?, updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            (str(result.get("reason") or "retired from sales"), timestamp, asset_id),
+                        )
+                    summary = conn.execute(
+                        """
+                        SELECT count(*) total,
+                               sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
+                               sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) live,
+                               sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) failed
+                        FROM asset_upload_run_items WHERE run_id = ?
+                        """,
+                        (run_id,),
+                    ).fetchone()
+                    processed = int(summary["processed"] or 0)
+                    total = int(summary["total"] or 0)
                     conn.execute(
                         """
-                        UPDATE asset_delivery_state
-                        SET delivery_state = 'not-ready', last_error = ?, updated_at = ?
-                        WHERE asset_id = ?
+                        UPDATE asset_upload_runs
+                        SET processed_count = ?, live_count = ?, failed_count = ?,
+                            remaining_count = ?, updated_at = ?
+                        WHERE run_id = ?
                         """,
-                        (str(result.get("reason") or "retired from sales"), timestamp, asset_id),
+                        (
+                            processed,
+                            int(summary["live"] or 0),
+                            int(summary["failed"] or 0),
+                            max(0, total - processed),
+                            timestamp,
+                            run_id,
+                        ),
                     )
-                summary = conn.execute(
-                    """
-                    SELECT count(*) total,
-                           sum(CASE WHEN status IN ('verified', 'live', 'failed', 'skipped') THEN 1 ELSE 0 END) processed,
-                           sum(CASE WHEN status = 'live' THEN 1 ELSE 0 END) live,
-                           sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) failed
-                    FROM asset_upload_run_items WHERE run_id = ?
-                    """,
-                    (run_id,),
-                ).fetchone()
-                processed = int(summary["processed"] or 0)
-                total = int(summary["total"] or 0)
-                conn.execute(
-                    """
-                    UPDATE asset_upload_runs
-                    SET processed_count = ?, live_count = ?, failed_count = ?,
-                        remaining_count = ?, updated_at = ?
-                    WHERE run_id = ?
-                    """,
-                    (
-                        processed,
-                        int(summary["live"] or 0),
-                        int(summary["failed"] or 0),
-                        max(0, total - processed),
-                        timestamp,
-                        run_id,
-                    ),
-                )
-                conn.commit()
-            if progress:
-                progress(upload_run_status(repo_root, run_id))
+                    conn.commit()
+                if progress:
+                    progress(upload_run_status(repo_root, run_id))
+            while len(futures) < concurrency and not cancellation_requested():
+                try:
+                    submit(executor, futures, next(pending_ids))
+                except StopIteration:
+                    break
     completed_at = now_iso()
     with connect(repo_root) as conn:
         summary = conn.execute(
-            "SELECT failed_count FROM asset_upload_runs WHERE run_id = ?",
+            "SELECT failed_count, cancel_requested FROM asset_upload_runs WHERE run_id = ?",
             (run_id,),
         ).fetchone()
-        final_status = "completed-with-errors" if int(summary["failed_count"] or 0) else "completed"
+        if int(summary["cancel_requested"] or 0):
+            final_status = "cancelled"
+        else:
+            final_status = "completed-with-errors" if int(summary["failed_count"] or 0) else "completed"
         conn.execute(
             """
             UPDATE asset_upload_runs
@@ -1143,6 +1186,33 @@ def run_upload_batch(
             (final_status, completed_at, completed_at, run_id),
         )
         conn.commit()
+    return upload_run_status(repo_root, run_id)
+
+
+def request_upload_run_cancel(repo_root: Path, run_id: str) -> dict[str, Any]:
+    """Request a checkpointed stop; already-started uploads finish and remain audited."""
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT status FROM asset_upload_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("upload run does not exist")
+        status = str(row["status"])
+        if status in {"queued", "running"}:
+            terminal_status = "cancelled" if status == "queued" else status
+            conn.execute(
+                """
+                UPDATE asset_upload_runs
+                SET cancel_requested = 1, status = ?,
+                    completed_at = CASE WHEN ? = 'cancelled' THEN ? ELSE completed_at END,
+                    updated_at = ?
+                WHERE run_id = ?
+                """,
+                (terminal_status, terminal_status, timestamp, timestamp, run_id),
+            )
+            conn.commit()
     return upload_run_status(repo_root, run_id)
 
 
@@ -1176,6 +1246,7 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         "live": int(row["live_count"] or 0),
         "failed": int(row["failed_count"] or 0),
         "remaining": int(row["remaining_count"] or 0),
+        "cancelRequested": bool(row["cancel_requested"]),
         "concurrency": int(row["concurrency"] or 1),
         "startedAt": str(row["started_at"] or ""),
         "completedAt": str(row["completed_at"] or ""),
@@ -1230,6 +1301,84 @@ def record_sale_reference(
     return {"ok": True, **values, "recordedAt": timestamp}
 
 
+def create_r2_reconciliation_run(
+    repo_root: Path,
+    *,
+    commit: bool = False,
+    exceptional_sold_purge: bool = False,
+    now: str | None = None,
+) -> dict[str, Any]:
+    timestamp = now or now_iso()
+    run_id = f"r2rec-{uuid.uuid4().hex[:16]}"
+    mode = "exceptional-sold-purge" if exceptional_sold_purge else ("commit" if commit else "plan")
+    with connect(repo_root) as conn:
+        requested = int(conn.execute(
+            "SELECT count(*) total FROM r2_objects WHERE lifecycle_state != 'deleted_confirmed'"
+        ).fetchone()["total"] or 0)
+        conn.execute(
+            """
+            INSERT INTO r2_reconciliation_runs (
+              run_id, mode, status, stage, requested_count, remaining_count,
+              created_at, updated_at
+            ) VALUES (?, ?, 'running', 'Queued', ?, ?, ?, ?)
+            """,
+            (run_id, mode, requested, requested, timestamp, timestamp),
+        )
+        conn.commit()
+    return reconciliation_run_status(repo_root, run_id)
+
+
+def reconciliation_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT * FROM r2_reconciliation_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+    if not row:
+        raise ValueError("R2 reconciliation run does not exist")
+    return {
+        "ok": True,
+        "runId": run_id,
+        "mode": str(row["mode"]),
+        "status": str(row["status"]),
+        "stage": str(row["stage"] or ""),
+        "requested": int(row["requested_count"] or 0),
+        "scanned": int(row["scanned_count"] or 0),
+        "protected": int(row["protected_count"] or 0),
+        "quarantined": int(row["quarantined_count"] or 0),
+        "restored": int(row["restored_count"] or 0),
+        "eligibleDelete": int(row["eligible_delete_count"] or 0),
+        "deleted": int(row["deleted_count"] or 0),
+        "remaining": int(row["remaining_count"] or 0),
+        "cancelRequested": bool(row["cancel_requested"]),
+        "error": str(row["error_text"] or ""),
+        "completedAt": str(row["completed_at"] or ""),
+        "actions": _read_json(row["actions_json"], []),
+    }
+
+
+def request_r2_reconciliation_cancel(repo_root: Path, run_id: str) -> dict[str, Any]:
+    timestamp = now_iso()
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT status FROM r2_reconciliation_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("R2 reconciliation run does not exist")
+        if str(row["status"]) == "running":
+            conn.execute(
+                """
+                UPDATE r2_reconciliation_runs
+                SET cancel_requested = 1, stage = 'Stopping after the current object', updated_at = ?
+                WHERE run_id = ?
+                """,
+                (timestamp, run_id),
+            )
+            conn.commit()
+    return reconciliation_run_status(repo_root, run_id)
+
+
 def reconcile_r2_objects(
     repo_root: Path,
     *,
@@ -1237,12 +1386,20 @@ def reconcile_r2_objects(
     now: str | None = None,
     delete_object: Callable[[str, str], None] | None = None,
     exceptional_sold_purge: bool = False,
+    run_id: str | None = None,
+    progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Two-pass quarantine. Sold keys are immutable absent exceptional workflow."""
     timestamp = now or now_iso()
     current_time = _parse_timestamp(timestamp)
-    run_id = f"r2rec-{uuid.uuid4().hex[:16]}"
     mode = "exceptional-sold-purge" if exceptional_sold_purge else ("commit" if commit else "plan")
+    if not run_id:
+        run_id = create_r2_reconciliation_run(
+            repo_root,
+            commit=commit,
+            exceptional_sold_purge=exceptional_sold_purge,
+            now=timestamp,
+        )["runId"]
     actions: list[dict[str, Any]] = []
     with connect(repo_root) as conn:
         sale_rows = conn.execute(
@@ -1278,22 +1435,27 @@ def reconcile_r2_objects(
             """
         ).fetchall()
         conn.execute(
-            """
-            INSERT INTO r2_reconciliation_runs (
-              run_id, mode, status, created_at, updated_at
-            ) VALUES (?, ?, 'running', ?, ?)
-            """,
-            (run_id, mode, timestamp, timestamp),
+            "UPDATE r2_reconciliation_runs SET status = 'running', stage = 'Checking R2 references', updated_at = ? WHERE run_id = ?",
+            (timestamp, run_id),
         )
+        conn.commit()
         counts = {
-            "scanned": len(objects),
+            "scanned": 0,
             "protected": 0,
             "quarantined": 0,
             "restored": 0,
             "eligibleDelete": 0,
             "deleted": 0,
         }
+        cancelled = False
         for obj in objects:
+            cancel_row = conn.execute(
+                "SELECT cancel_requested FROM r2_reconciliation_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if cancel_row and int(cancel_row["cancel_requested"] or 0):
+                cancelled = True
+                break
             bucket = str(obj["bucket"])
             key = str(obj["object_key"])
             sold = key in sold_keys
@@ -1327,9 +1489,7 @@ def reconcile_r2_objects(
                     "action": action,
                 }
             )
-            if not commit:
-                continue
-            if action == "protected":
+            if commit and action == "protected":
                 conn.execute(
                     """
                     INSERT INTO r2_quarantine (
@@ -1350,7 +1510,7 @@ def reconcile_r2_objects(
                         timestamp,
                     ),
                 )
-            elif action == "restored":
+            elif commit and action == "restored":
                 conn.execute(
                     """
                     UPDATE r2_quarantine
@@ -1369,7 +1529,7 @@ def reconcile_r2_objects(
                     """,
                     (timestamp, bucket, key),
                 )
-            elif action == "quarantine":
+            elif commit and action == "quarantine":
                 delete_after = (
                     current_time + timedelta(days=QUARANTINE_DAYS)
                 ).isoformat().replace("+00:00", "Z")
@@ -1407,7 +1567,7 @@ def reconcile_r2_objects(
                     """,
                     (timestamp, timestamp, bucket, key),
                 )
-            elif action == "eligible-delete":
+            elif commit and action == "eligible-delete":
                 conn.execute(
                     """
                     UPDATE r2_quarantine
@@ -1437,23 +1597,56 @@ def reconcile_r2_objects(
                         (timestamp, timestamp, bucket, key),
                     )
                     counts["deleted"] += 1
+            counts["scanned"] += 1
+            checkpoint = now_iso()
+            conn.execute(
+                """
+                UPDATE r2_reconciliation_runs
+                SET stage = ?, scanned_count = ?, protected_count = ?,
+                    quarantined_count = ?, restored_count = ?,
+                    eligible_delete_count = ?, deleted_count = ?,
+                    remaining_count = ?, actions_json = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (
+                    f"Checking object {counts['scanned']} of {len(objects)}",
+                    counts["scanned"],
+                    counts["protected"],
+                    counts["quarantined"],
+                    counts["restored"],
+                    counts["eligibleDelete"],
+                    counts["deleted"],
+                    max(0, len(objects) - counts["scanned"]),
+                    _json(actions),
+                    checkpoint,
+                    run_id,
+                ),
+            )
+            conn.commit()
+            if progress:
+                progress(reconciliation_run_status(repo_root, run_id))
         completed_at = now_iso()
         conn.execute(
             """
             UPDATE r2_reconciliation_runs
-            SET status = 'completed', scanned_count = ?, protected_count = ?,
+            SET status = ?, stage = ?, scanned_count = ?, protected_count = ?,
                 quarantined_count = ?, restored_count = ?,
                 eligible_delete_count = ?, deleted_count = ?,
+                remaining_count = ?, actions_json = ?,
                 completed_at = ?, updated_at = ?
             WHERE run_id = ?
             """,
             (
+                "cancelled" if cancelled else "completed",
+                "Stopped safely" if cancelled else "Completed",
                 counts["scanned"],
                 counts["protected"],
                 counts["quarantined"],
                 counts["restored"],
                 counts["eligibleDelete"],
                 counts["deleted"],
+                max(0, len(objects) - counts["scanned"]),
+                _json(actions),
                 completed_at,
                 completed_at,
                 run_id,
@@ -1464,7 +1657,11 @@ def reconcile_r2_objects(
         "ok": True,
         "mode": mode,
         "runId": run_id,
+        "status": "cancelled" if cancelled else "completed",
+        "stage": "Stopped safely" if cancelled else "Completed",
         "committed": commit,
+        "requested": len(objects),
+        "remaining": max(0, len(objects) - counts["scanned"]),
         **counts,
         "actions": actions,
     }

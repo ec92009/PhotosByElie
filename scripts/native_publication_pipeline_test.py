@@ -2,6 +2,7 @@ import tempfile
 import unittest
 import shutil
 import sqlite3
+import threading
 from pathlib import Path
 import sys
 
@@ -14,12 +15,15 @@ from fixture_pipeline import (
     set_fixture_asset_state,
 )
 from native_publication_pipeline import (
+    create_r2_reconciliation_run,
     create_upload_run,
     publish_verified_asset,
     reconcile_r2_objects,
+    reconciliation_run_status,
     record_photos_sync_snapshot,
     record_sale_reference,
     run_upload_batch,
+    request_upload_run_cancel,
     upload_run_status,
     upload_eligibility_plan,
 )
@@ -337,6 +341,40 @@ class NativePublicationPipelineTest(unittest.TestCase):
             "live",
         )
 
+    def test_upload_cancellation_finishes_in_flight_work_and_leaves_the_rest_retryable(self):
+        run = create_upload_run(self.root, ["asset-1", "asset-2"], limit=50, concurrency=1)
+        started = threading.Event()
+        release = threading.Event()
+        uploaded = []
+
+        def upload(asset_id):
+            uploaded.append(asset_id)
+            started.set()
+            self.assertTrue(release.wait(timeout=2))
+            return verified_public_set(f"cancel-{asset_id}")
+
+        holder = {}
+        worker = threading.Thread(
+            target=lambda: holder.update(result=run_upload_batch(self.root, run["runId"], upload)),
+        )
+        worker.start()
+        self.assertTrue(started.wait(timeout=2))
+        cancelling = request_upload_run_cancel(self.root, run["runId"])
+        self.assertTrue(cancelling["cancelRequested"])
+        release.set()
+        worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+
+        result = holder["result"]
+        self.assertEqual(result["status"], "cancelled")
+        self.assertEqual(result["processed"], 1)
+        self.assertEqual(result["remaining"], 1)
+        self.assertEqual(uploaded, ["asset-1"])
+        self.assertEqual(
+            next(item for item in result["items"] if item["asset_id"] == "asset-2")["status"],
+            "queued",
+        )
+
     def test_upload_eligibility_plan_is_fixture_scoped_and_read_only(self):
         child = create_fixture(self.root, "Child", parent_fixture_id=self.fixture["fixtureId"])
         set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "picked")
@@ -462,6 +500,40 @@ class NativePublicationPipelineTest(unittest.TestCase):
             ).fetchone()
             self.assertEqual(sold["lifecycle_state"], "current")
             self.assertEqual(orphan["lifecycle_state"], "deleted_confirmed")
+
+    def test_reconciliation_cancellation_stops_between_objects_and_keeps_receipts(self):
+        with connect(self.root) as conn:
+            for key in ("masters/one.jpg", "masters/two.jpg"):
+                conn.execute(
+                    """
+                    INSERT INTO r2_objects (
+                      bucket, object_key, photo_id, object_kind, lifecycle_state,
+                      first_seen_at, updated_at
+                    ) VALUES ('photosbyelie-private', ?, 'asset-1', 'master', 'current',
+                              '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')
+                    """,
+                    (key,),
+                )
+            conn.commit()
+        run = create_r2_reconciliation_run(self.root, commit=False)
+
+        def stop_after_first(status):
+            if status["scanned"] == 1:
+                from native_publication_pipeline import request_r2_reconciliation_cancel
+                request_r2_reconciliation_cancel(self.root, run["runId"])
+
+        result = reconcile_r2_objects(
+            self.root,
+            commit=False,
+            run_id=run["runId"],
+            progress=stop_after_first,
+        )
+        receipt = reconciliation_run_status(self.root, run["runId"])
+        self.assertEqual(result["status"], "cancelled")
+        self.assertEqual(receipt["status"], "cancelled")
+        self.assertEqual(receipt["scanned"], 1)
+        self.assertEqual(receipt["remaining"], 1)
+        self.assertEqual(len(receipt["actions"]), 1)
 
 
 if __name__ == "__main__":

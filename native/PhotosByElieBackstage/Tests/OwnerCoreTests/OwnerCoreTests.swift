@@ -2288,6 +2288,85 @@ struct OwnerCoreTests {
         #expect(requests[4].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
+    @Test("Native long-running publication operations expose checkpointed cancellation")
+    func nativePublicationCancellationContracts() async throws {
+        func action(_ id: String, _ result: [String: JSONValue]) -> OwnerAction {
+            OwnerAction(
+                id: id,
+                actionKind: "sidecar-culling-review",
+                target: "max",
+                state: .completed,
+                result: result
+            )
+        }
+        let responses: [OwnerAction] = [
+            action("upload-cancel", ["uploadRun": [
+                "runId": "uplrun-1", "status": "running", "requested": 2,
+                "processed": 1, "remaining": 1, "cancelRequested": true,
+            ]]),
+            action("photos-start", ["photosSync": [
+                "runId": "photos-sync-1", "status": "running", "stage": "Reading metadata",
+                "requested": 25, "scanned": 0, "remaining": 25,
+            ]]),
+            action("photos-status", ["photosSync": [
+                "runId": "photos-sync-1", "status": "running", "stage": "Classifying changes",
+                "requested": 25, "scanned": 12, "remaining": 13,
+            ]]),
+            action("photos-cancel", ["photosSync": [
+                "runId": "photos-sync-1", "status": "cancelled", "stage": "Stopped safely",
+                "requested": 25, "scanned": 12, "remaining": 13, "cancelRequested": true,
+            ]]),
+            action("r2-start", ["reconciliation": [
+                "runId": "r2rec-1", "mode": "commit", "status": "running", "stage": "Queued",
+                "requested": 10, "scanned": 0, "remaining": 10,
+            ]]),
+            action("r2-status", ["reconciliation": [
+                "runId": "r2rec-1", "mode": "commit", "status": "running", "stage": "Checking object 4 of 10",
+                "requested": 10, "scanned": 4, "remaining": 6,
+            ]]),
+            action("r2-cancel", ["reconciliation": [
+                "runId": "r2rec-1", "mode": "commit", "status": "cancelled", "stage": "Stopped safely",
+                "requested": 10, "scanned": 4, "remaining": 6, "cancelRequested": true,
+            ]]),
+        ]
+        let api = ScriptedOwnerActionAPI(completed: responses)
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let upload = try await service.cancelNativeUpload(runID: "uplrun-1")
+        #expect(upload.cancelRequested)
+        let photosStart = try await service.startPhotosSync(limit: 25)
+        let photosStatus = try await service.photosSyncStatus(runID: photosStart.runID)
+        let photosStopped = try await service.cancelPhotosSync(runID: photosStart.runID)
+        #expect(photosStatus.stage == "Classifying changes")
+        #expect(photosStopped.isFinished)
+        #expect(photosStopped.remaining == 13)
+        let r2Start = try await service.startR2Reconciliation(commit: true)
+        let r2Status = try await service.r2ReconciliationStatus(runID: r2Start.runID)
+        let r2Stopped = try await service.cancelR2Reconciliation(runID: r2Start.runID)
+        #expect(r2Status.scanned == 4)
+        #expect(r2Stopped.isFinished)
+        #expect(r2Stopped.cancelRequested)
+
+        let requests = await api.requests()
+        let modes = requests.compactMap {
+            $0.payload["manifest"]?.objectValue?["mode"]?.stringValue
+        }
+        #expect(modes == [
+            "asset-upload-run-cancel",
+            "photos-sync-run-start",
+            "photos-sync-run-status",
+            "photos-sync-run-cancel",
+            "r2-reconciliation-run-start",
+            "r2-reconciliation-run-status",
+            "r2-reconciliation-run-cancel",
+        ])
+    }
+
     @Test("Review AI requests update the loaded editorial summary")
     func reviewSummaryTracksAIRequestTransition() {
         var summary = FixtureReviewSummary(

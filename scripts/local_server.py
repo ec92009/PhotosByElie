@@ -404,10 +404,14 @@ from fixture_policy import (  # noqa: E402
 )
 from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
 from native_publication_pipeline import (  # noqa: E402
+    create_r2_reconciliation_run,
     create_upload_run as create_native_upload_run,
+    reconciliation_run_status,
     record_photos_sync_snapshot,
     record_sale_reference,
     reconcile_r2_objects,
+    request_r2_reconciliation_cancel,
+    request_upload_run_cancel,
     upload_eligibility_plan as native_upload_eligibility_plan,
     upload_run_status as native_upload_run_status,
 )
@@ -1804,6 +1808,8 @@ def _incremental_photos_sync(
     limit: int = 25,
     adapter: SignedPhotosBridgeAdapter | None = None,
     preview_runner: Callable[..., dict] | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
+    progress: Callable[[dict], None] | None = None,
 ) -> dict:
     """Read a bounded least-recently-scanned PhotoKit slice and import fingerprints."""
     bounded_limit = max(1, min(int(limit or 25), 50))
@@ -1842,6 +1848,33 @@ def _incremental_photos_sync(
             "failures": [],
             "changes": {},
             "elapsedSeconds": 0.0,
+            "cancelled": False,
+            "remaining": 0,
+        }
+
+    def stopped() -> bool:
+        return bool(cancel_requested and cancel_requested())
+
+    def report(stage: str, scanned: int = 0) -> None:
+        if progress:
+            progress({
+                "stage": stage,
+                "requested": len(targets),
+                "scanned": scanned,
+                "remaining": max(0, len(targets) - scanned),
+            })
+
+    report("Reading Apple Photos metadata")
+    if stopped():
+        return {
+            "ok": True,
+            "requested": len(targets),
+            "scanned": 0,
+            "failures": [],
+            "changes": {},
+            "elapsedSeconds": round(time.monotonic() - started, 3),
+            "cancelled": True,
+            "remaining": len(targets),
         }
 
     metadata_rows = adapter.read_many([
@@ -1872,9 +1905,14 @@ def _incremental_photos_sync(
             json.dumps(preview_requests, ensure_ascii=False),
             encoding="utf-8",
         )
-        preview_payload = preview_runner(
-            repo_root,
-            ["preview-many", "--input", str(preview_input)],
+        report("Rendering comparison previews")
+        preview_payload = (
+            {"ok": False, "error": "Stopped before preview rendering", "items": []}
+            if stopped()
+            else preview_runner(
+                repo_root,
+                ["preview-many", "--input", str(preview_input)],
+            )
         )
         if preview_payload.get("ok"):
             preview_by_id = {
@@ -1886,7 +1924,12 @@ def _incremental_photos_sync(
         snapshots: list[dict] = []
         failures: list[dict] = []
         transient_errors: list[tuple[str, str, str]] = []
+        processed = 0
+        cancelled = stopped()
         for target in targets:
+            if stopped():
+                cancelled = True
+                break
             asset_id = target["assetId"]
             photos_id = target["photosAssetId"]
             metadata = metadata_by_id.get(photos_id) or {}
@@ -1907,6 +1950,8 @@ def _incremental_photos_sync(
             if metadata_error and not missing:
                 failures.append({"assetId": asset_id, "error": metadata_error})
                 transient_errors.append((asset_id, photos_id, combined_error))
+                processed += 1
+                report("Classifying changes", processed)
                 continue
             destination = destination_by_id[photos_id]
             rendered = (
@@ -1929,6 +1974,8 @@ def _incremental_photos_sync(
                 ],
                 "renderedFingerprint": rendered,
             })
+            processed += 1
+            report("Classifying changes", processed)
 
         imported = record_photos_sync_snapshot(repo_root, snapshots)
         if transient_errors:
@@ -1963,11 +2010,200 @@ def _incremental_photos_sync(
     return {
         "ok": not failures,
         "requested": len(targets),
-        "scanned": imported["count"],
+        "scanned": processed,
         "failures": failures,
         "changes": imported["changes"],
         "elapsedSeconds": round(time.monotonic() - started, 3),
+        "cancelled": cancelled,
+        "remaining": max(0, len(targets) - processed),
     }
+
+
+def _photos_sync_run_status(repo_root: Path, run_id: str) -> dict:
+    with fixture_connect(repo_root) as connection:
+        row = connection.execute(
+            "SELECT * FROM photos_sync_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+    if not row:
+        raise ValueError("Photos sync run does not exist")
+    return {
+        "ok": str(row["status"]) != "failed",
+        "runId": run_id,
+        "status": str(row["status"]),
+        "stage": str(row["stage"] or ""),
+        "requested": int(row["requested_count"] or 0),
+        "scanned": int(row["scanned_count"] or 0),
+        "remaining": int(row["remaining_count"] or 0),
+        "changes": {
+            "baseline": int(row["baseline_count"] or 0),
+            "unchanged": int(row["unchanged_count"] or 0),
+            "metadataOnly": int(row["metadata_only_count"] or 0),
+            "appearance": int(row["appearance_count"] or 0),
+            "sourceMissing": int(row["source_missing_count"] or 0),
+            "sourceReturned": int(row["source_returned_count"] or 0),
+        },
+        "failures": json.loads(str(row["failures_json"] or "[]")),
+        "elapsedSeconds": float(row["elapsed_seconds"] or 0),
+        "cancelRequested": bool(row["cancel_requested"]),
+        "error": str(row["error_text"] or ""),
+        "completedAt": str(row["completed_at"] or ""),
+    }
+
+
+def _request_photos_sync_cancel(repo_root: Path, run_id: str) -> dict:
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    with fixture_connect(repo_root) as connection:
+        row = connection.execute(
+            "SELECT status FROM photos_sync_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("Photos sync run does not exist")
+        if str(row["status"]) == "running":
+            connection.execute(
+                """
+                UPDATE photos_sync_runs
+                SET cancel_requested = 1,
+                    stage = 'Stopping after the current PhotoKit checkpoint',
+                    updated_at = ?
+                WHERE run_id = ?
+                """,
+                (timestamp, run_id),
+            )
+            connection.commit()
+    return _photos_sync_run_status(repo_root, run_id)
+
+
+def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
+    if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                UPDATE photos_sync_runs
+                SET status = 'failed', stage = 'Could not start',
+                    error_text = 'Another Apple Photos sync pass is already running.',
+                    completed_at = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (timestamp, timestamp, run_id),
+            )
+            connection.commit()
+        return
+
+    def cancelled() -> bool:
+        with fixture_connect(repo_root) as connection:
+            row = connection.execute(
+                "SELECT cancel_requested FROM photos_sync_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+        return bool(row and int(row["cancel_requested"] or 0))
+
+    def update_progress(values: dict) -> None:
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                UPDATE photos_sync_runs
+                SET stage = ?, requested_count = ?, scanned_count = ?,
+                    remaining_count = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (
+                    str(values.get("stage") or "Working"),
+                    int(values.get("requested") or 0),
+                    int(values.get("scanned") or 0),
+                    int(values.get("remaining") or 0),
+                    timestamp,
+                    run_id,
+                ),
+            )
+            connection.commit()
+
+    try:
+        result = _incremental_photos_sync(
+            repo_root,
+            limit=limit,
+            cancel_requested=cancelled,
+            progress=update_progress,
+        )
+        changes = result.get("changes") or {}
+        terminal = "cancelled" if result.get("cancelled") else "completed"
+        stage = "Stopped safely" if terminal == "cancelled" else "Completed"
+        completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                UPDATE photos_sync_runs
+                SET status = ?, stage = ?, requested_count = ?, scanned_count = ?,
+                    remaining_count = ?, baseline_count = ?, unchanged_count = ?,
+                    metadata_only_count = ?, appearance_count = ?,
+                    source_missing_count = ?, source_returned_count = ?,
+                    failed_count = ?, failures_json = ?, elapsed_seconds = ?,
+                    completed_at = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (
+                    terminal,
+                    stage,
+                    int(result.get("requested") or 0),
+                    int(result.get("scanned") or 0),
+                    int(result.get("remaining") or 0),
+                    int(changes.get("baseline") or 0),
+                    int(changes.get("unchanged") or 0),
+                    int(changes.get("metadataOnly") or 0),
+                    int(changes.get("appearance") or 0),
+                    int(changes.get("sourceMissing") or 0),
+                    int(changes.get("sourceReturned") or 0),
+                    len(result.get("failures") or []),
+                    json.dumps(result.get("failures") or [], ensure_ascii=False),
+                    float(result.get("elapsedSeconds") or 0),
+                    completed_at,
+                    completed_at,
+                    run_id,
+                ),
+            )
+            connection.commit()
+    except Exception as error:  # noqa: BLE001 - persist the audit receipt for retry.
+        completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                UPDATE photos_sync_runs
+                SET status = 'failed', stage = 'Failed', error_text = ?,
+                    completed_at = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (str(error), completed_at, completed_at, run_id),
+            )
+            connection.commit()
+    finally:
+        PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+
+
+def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
+    bounded_limit = max(1, min(int(limit or 25), 50))
+    run_id = f"photos-sync-{uuid.uuid4().hex[:16]}"
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    with fixture_connect(repo_root) as connection:
+        connection.execute(
+            """
+            INSERT INTO photos_sync_runs (
+              run_id, status, stage, requested_count, remaining_count,
+              created_at, updated_at
+            ) VALUES (?, 'running', 'Queued', ?, ?, ?, ?)
+            """,
+            (run_id, bounded_limit, bounded_limit, timestamp, timestamp),
+        )
+        connection.commit()
+    worker = threading.Thread(
+        target=_run_photos_sync_task,
+        args=(repo_root, run_id, bounded_limit),
+        daemon=True,
+    )
+    worker.start()
+    return {**_photos_sync_run_status(repo_root, run_id), "started": True}
 
 
 def _start_requested_ai_pass(repo_root: Path) -> dict:
@@ -2034,6 +2270,40 @@ def _start_native_publication_run(repo_root: Path, run_id: str) -> dict:
         "pid": process.pid,
         "logPath": str(log_path),
     }
+
+
+def _run_r2_reconciliation_task(repo_root: Path, run_id: str, commit: bool) -> None:
+    try:
+        reconcile_r2_objects(
+            repo_root,
+            commit=commit,
+            delete_object=_delete_reconciled_r2_object if commit else None,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001 - persist the failed run for inspection and retry.
+        completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                UPDATE r2_reconciliation_runs
+                SET status = 'failed', stage = 'Failed', error_text = ?,
+                    completed_at = ?, updated_at = ?
+                WHERE run_id = ?
+                """,
+                (str(error), completed_at, completed_at, run_id),
+            )
+            connection.commit()
+
+
+def _start_r2_reconciliation_run(repo_root: Path, *, commit: bool) -> dict:
+    run = create_r2_reconciliation_run(repo_root, commit=commit)
+    worker = threading.Thread(
+        target=_run_r2_reconciliation_task,
+        args=(repo_root, str(run["runId"]), commit),
+        daemon=True,
+    )
+    worker.start()
+    return {**run, "started": True}
 
 
 def _delete_reconciled_r2_object(bucket: str, key: str) -> None:
@@ -2217,6 +2487,30 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 })
             finally:
                 PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+    elif mode == "photos-sync-run-start":
+        result.update({
+            "readOnly": False,
+            "photosSync": _start_photos_sync_run(
+                repo_root,
+                limit=int(manifest.get("limit") or 25),
+            ),
+        })
+    elif mode == "photos-sync-run-status":
+        result.update({
+            "readOnly": True,
+            "photosSync": _photos_sync_run_status(
+                repo_root,
+                str(manifest.get("runId") or ""),
+            ),
+        })
+    elif mode == "photos-sync-run-cancel":
+        result.update({
+            "readOnly": False,
+            "photosSync": _request_photos_sync_cancel(
+                repo_root,
+                str(manifest.get("runId") or ""),
+            ),
+        })
     elif mode == "asset-upload-plan":
         result.update({
             "readOnly": True,
@@ -2252,6 +2546,14 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 str(manifest.get("runId") or ""),
             ),
         })
+    elif mode == "asset-upload-run-cancel":
+        result.update({
+            "readOnly": False,
+            "uploadRun": request_upload_run_cancel(
+                repo_root,
+                str(manifest.get("runId") or ""),
+            ),
+        })
     elif mode == "asset-sale-reference-record":
         result.update({
             "readOnly": False,
@@ -2277,6 +2579,30 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 commit=True,
                 delete_object=_delete_reconciled_r2_object,
+            ),
+        })
+    elif mode == "r2-reconciliation-run-start":
+        result.update({
+            "readOnly": False,
+            "reconciliation": _start_r2_reconciliation_run(
+                repo_root,
+                commit=bool(manifest.get("commit")),
+            ),
+        })
+    elif mode == "r2-reconciliation-run-status":
+        result.update({
+            "readOnly": True,
+            "reconciliation": reconciliation_run_status(
+                repo_root,
+                str(manifest.get("runId") or ""),
+            ),
+        })
+    elif mode == "r2-reconciliation-run-cancel":
+        result.update({
+            "readOnly": False,
+            "reconciliation": request_r2_reconciliation_cancel(
+                repo_root,
+                str(manifest.get("runId") or ""),
             ),
         })
     elif mode == "fixture-access-effective":
@@ -2591,12 +2917,19 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-la-concha-migrate": "Created the La Concha target fixture tree without moving source assets.",
         "photos-sync-snapshot": "Imported the incremental Apple Photos snapshot into the version ledger.",
         "photos-sync-run": "Scanned a bounded Apple Photos slice and imported metadata and rendered-image fingerprints.",
+        "photos-sync-run-start": "Started a bounded Apple Photos sync with checkpointed progress and a durable receipt.",
+        "photos-sync-run-status": "Loaded current Apple Photos sync progress.",
+        "photos-sync-run-cancel": "Requested a safe stop after the current Apple Photos checkpoint.",
         "asset-upload-plan": "Loaded the fixture-scoped approved publication queue without changing any asset.",
         "asset-upload-run-start": "Started a bounded verified upload run. Each successful asset publishes immediately.",
         "asset-upload-run-status": "Loaded current upload and publication progress.",
+        "asset-upload-run-cancel": "Requested a safe stop after currently uploading assets finish.",
         "asset-sale-reference-record": "Protected the exact sold source version and object keys.",
         "r2-reconciliation-plan": "Previewed protected, referenced, quarantined, and deletion-eligible R2 objects.",
         "r2-reconciliation-commit": "Applied the guarded two-pass R2 reconciliation.",
+        "r2-reconciliation-run-start": "Started guarded R2 reconciliation with per-object checkpoints.",
+        "r2-reconciliation-run-status": "Loaded current R2 reconciliation progress and receipts.",
+        "r2-reconciliation-run-cancel": "Requested a safe stop after the current R2 object checkpoint.",
     }.get(mode, "Fixture operation completed."))
     return {
         "ok": True,
@@ -2619,12 +2952,19 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
     if mode.startswith("fixture-") or mode in {
         "photos-sync-snapshot",
         "photos-sync-run",
+        "photos-sync-run-start",
+        "photos-sync-run-status",
+        "photos-sync-run-cancel",
         "asset-upload-plan",
         "asset-upload-run-start",
         "asset-upload-run-status",
+        "asset-upload-run-cancel",
         "asset-sale-reference-record",
         "r2-reconciliation-plan",
         "r2-reconciliation-commit",
+        "r2-reconciliation-run-start",
+        "r2-reconciliation-run-status",
+        "r2-reconciliation-run-cancel",
     }:
         return _new_owner_fixture_pipeline_result(repo_root, action, connector_id)
     if mode.startswith("apple-photos-re-"):

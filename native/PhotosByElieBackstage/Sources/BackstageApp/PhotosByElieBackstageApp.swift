@@ -313,12 +313,19 @@ private struct PublicationView: View {
                 Button("Apply guarded reconciliation…") { confirming = true }
                     .disabled(model.isRunningDelivery || model.r2Reconciliation == nil)
                     .backstageHelp("Review the confirmation for applying exactly the currently previewed guarded R2 reconciliation.")
+                if model.isRunningR2Reconciliation {
+                    Button(model.isCancellingR2Reconciliation ? "Stopping…" : "Stop safely") {
+                        Task { await model.cancelR2Reconciliation() }
+                    }
+                    .disabled(model.isCancellingR2Reconciliation)
+                    .backstageHelp("Stop after the current R2 object checkpoint. Completed quarantine, restore, protection, or deletion receipts remain auditable.")
+                }
             }
             Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
             Text(model.r2ReconciliationStatus).font(.callout).foregroundStyle(.secondary)
-            if model.isRunningDelivery {
-                ProgressView("Checking R2 references and sale protection…")
+            if model.isRunningR2Reconciliation {
+                ProgressView(model.r2Reconciliation?.stage ?? "Checking R2 references and sale protection…")
             }
             if let report = model.r2Reconciliation {
                 HStack {
@@ -1050,6 +1057,11 @@ private struct MetadataGiveBackView: View {
                     .backstageHelp("Run one bounded incremental Photos synchronization now and classify metadata, appearance, missing, and returned changes.")
                     if model.isSyncingPhotos {
                         ProgressView().controlSize(.small)
+                        Button(model.isCancellingPhotosSync ? "Stopping…" : "Stop safely") {
+                            Task { await model.cancelPhotosSync() }
+                        }
+                        .disabled(model.isCancellingPhotosSync)
+                        .backstageHelp("Stop after the current PhotoKit checkpoint. Completed asset classifications remain recorded and the rest retry on the next pass.")
                     }
                     Text(model.photosSyncStatus)
                         .foregroundStyle(.secondary)

@@ -223,6 +223,7 @@ public struct NativeUploadRun: Sendable, Equatable {
     public var concurrency: Int
     public var startedAt: String
     public var completedAt: String
+    public var cancelRequested: Bool
     public var items: [NativeUploadRunItem]
 
     public var isFinished: Bool {
@@ -243,16 +244,29 @@ public struct R2ReconciliationItem: Identifiable, Sendable, Equatable {
 public struct R2ReconciliationReport: Sendable, Equatable {
     public var runID: String
     public var mode: String
+    public var status: String
+    public var stage: String
+    public var requested: Int
     public var scanned: Int
     public var protected: Int
     public var quarantined: Int
     public var restored: Int
     public var eligibleDelete: Int
     public var deleted: Int
+    public var remaining: Int
+    public var cancelRequested: Bool
+    public var errorText: String
     public var items: [R2ReconciliationItem]
+
+    public var isFinished: Bool {
+        ["completed", "failed", "cancelled"].contains(status)
+    }
 }
 
 public struct PhotosSyncReport: Sendable, Equatable {
+    public var runID: String
+    public var status: String
+    public var stage: String
     public var attached: Bool
     public var requested: Int
     public var scanned: Int
@@ -263,7 +277,14 @@ public struct PhotosSyncReport: Sendable, Equatable {
     public var sourceMissing: Int
     public var sourceReturned: Int
     public var failed: Int
+    public var remaining: Int
     public var elapsedSeconds: Double
+    public var cancelRequested: Bool
+    public var errorText: String
+
+    public var isFinished: Bool {
+        ["completed", "failed", "cancelled"].contains(status)
+    }
 }
 
 public enum FixtureDeliveryError: Error, Sendable, Equatable {
@@ -401,11 +422,45 @@ public actor FixtureDeliveryService {
         return try decodeNativeUploadRun(action)
     }
 
+    public func cancelNativeUpload(runID: String) async throws -> NativeUploadRun {
+        let action = try await runAction(
+            mode: "asset-upload-run-cancel",
+            runID: runID
+        )
+        return try decodeNativeUploadRun(action)
+    }
+
+    public func startR2Reconciliation(commit: Bool = false) async throws -> R2ReconciliationReport {
+        let action = try await fixtureAction(
+            mode: "r2-reconciliation-run-start",
+            fixtureID: "",
+            extra: ["commit": .bool(commit)]
+        )
+        return try decodeR2Reconciliation(action, commit: commit)
+    }
+
+    public func r2ReconciliationStatus(runID: String) async throws -> R2ReconciliationReport {
+        let action = try await runAction(mode: "r2-reconciliation-run-status", runID: runID)
+        return try decodeR2Reconciliation(action, commit: false)
+    }
+
+    public func cancelR2Reconciliation(runID: String) async throws -> R2ReconciliationReport {
+        let action = try await runAction(mode: "r2-reconciliation-run-cancel", runID: runID)
+        return try decodeR2Reconciliation(action, commit: false)
+    }
+
     public func r2Reconciliation(commit: Bool = false) async throws -> R2ReconciliationReport {
         let action = try await fixtureAction(
             mode: commit ? "r2-reconciliation-commit" : "r2-reconciliation-plan",
             fixtureID: ""
         )
+        return try decodeR2Reconciliation(action, commit: commit)
+    }
+
+    private func decodeR2Reconciliation(
+        _ action: OwnerAction,
+        commit: Bool
+    ) throws -> R2ReconciliationReport {
         guard let result = action.result?["reconciliation"]?.objectValue else {
             throw FixtureDeliveryError.missingResult("reconciliation")
         }
@@ -424,14 +479,41 @@ public actor FixtureDeliveryService {
         return R2ReconciliationReport(
             runID: result["runId"]?.stringValue ?? "",
             mode: result["mode"]?.stringValue ?? (commit ? "commit" : "plan"),
+            status: result["status"]?.stringValue ?? "completed",
+            stage: result["stage"]?.stringValue ?? "Completed",
+            requested: result["requested"]?.intValue
+                ?? result["scanned"]?.intValue
+                ?? items.count,
             scanned: result["scanned"]?.intValue ?? items.count,
             protected: result["protected"]?.intValue ?? 0,
             quarantined: result["quarantined"]?.intValue ?? 0,
             restored: result["restored"]?.intValue ?? 0,
             eligibleDelete: result["eligibleDelete"]?.intValue ?? 0,
             deleted: result["deleted"]?.intValue ?? 0,
+            remaining: result["remaining"]?.intValue ?? 0,
+            cancelRequested: result["cancelRequested"]?.boolValue ?? false,
+            errorText: result["error"]?.stringValue ?? "",
             items: items
         )
+    }
+
+    public func startPhotosSync(limit: Int = 25) async throws -> PhotosSyncReport {
+        let action = try await fixtureAction(
+            mode: "photos-sync-run-start",
+            fixtureID: "",
+            extra: ["limit": .number(Double(max(1, min(limit, 50))))]
+        )
+        return try decodePhotosSync(action)
+    }
+
+    public func photosSyncStatus(runID: String) async throws -> PhotosSyncReport {
+        let action = try await runAction(mode: "photos-sync-run-status", runID: runID)
+        return try decodePhotosSync(action)
+    }
+
+    public func cancelPhotosSync(runID: String) async throws -> PhotosSyncReport {
+        let action = try await runAction(mode: "photos-sync-run-cancel", runID: runID)
+        return try decodePhotosSync(action)
     }
 
     public func syncPhotos(limit: Int = 25) async throws -> PhotosSyncReport {
@@ -440,6 +522,10 @@ public actor FixtureDeliveryService {
             fixtureID: "",
             extra: ["limit": .number(Double(max(1, min(limit, 50))))]
         )
+        return try decodePhotosSync(action)
+    }
+
+    private func decodePhotosSync(_ action: OwnerAction) throws -> PhotosSyncReport {
         guard let result = action.result?["photosSync"]?.objectValue else {
             throw FixtureDeliveryError.missingResult("photosSync")
         }
@@ -451,6 +537,9 @@ public actor FixtureDeliveryService {
             elapsedSeconds = 0
         }
         return PhotosSyncReport(
+            runID: result["runId"]?.stringValue ?? "",
+            status: result["status"]?.stringValue ?? "completed",
+            stage: result["stage"]?.stringValue ?? "Completed",
             attached: result["attached"]?.boolValue ?? false,
             requested: result["requested"]?.intValue ?? 0,
             scanned: result["scanned"]?.intValue ?? 0,
@@ -461,7 +550,10 @@ public actor FixtureDeliveryService {
             sourceMissing: changes["sourceMissing"]?.intValue ?? 0,
             sourceReturned: changes["sourceReturned"]?.intValue ?? 0,
             failed: result["failures"]?.arrayValue?.count ?? 0,
-            elapsedSeconds: elapsedSeconds
+            remaining: result["remaining"]?.intValue ?? 0,
+            elapsedSeconds: elapsedSeconds,
+            cancelRequested: result["cancelRequested"]?.boolValue ?? false,
+            errorText: result["error"]?.stringValue ?? ""
         )
     }
 
@@ -653,7 +745,20 @@ public actor FixtureDeliveryService {
             concurrency: result["concurrency"]?.intValue ?? 1,
             startedAt: result["startedAt"]?.stringValue ?? "",
             completedAt: result["completedAt"]?.stringValue ?? "",
+            cancelRequested: result["cancelRequested"]?.boolValue ?? false,
             items: items
+        )
+    }
+
+    private func runAction(mode: String, runID: String) async throws -> OwnerAction {
+        let cleanedRunID = runID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedRunID.isEmpty else {
+            throw FixtureDeliveryError.missingResult("runID")
+        }
+        return try await fixtureAction(
+            mode: mode,
+            fixtureID: "",
+            extra: ["runId": .string(cleanedRunID)]
         )
     }
 

@@ -530,6 +530,54 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertFalse(routed["result"]["readOnly"])
             self.assertEqual(routed["result"]["photosSync"]["scanned"], 1)
 
+    def test_incremental_photos_sync_cancellation_keeps_completed_asset_checkpoints(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(
+                root,
+                [
+                    {"localIdentifier": "photos-local-1", "assetId": "asset-1", "filename": "One.JPG", "mediaType": "photo"},
+                    {"localIdentifier": "photos-local-2", "assetId": "asset-2", "filename": "Two.JPG", "mediaType": "photo"},
+                ],
+            )
+
+            class FakeAdapter:
+                def read_many(self, requests):
+                    return [
+                        {"assetId": request["assetId"], "title": request["assetId"], "keywords": ["Spain"]}
+                        for request in requests
+                    ]
+
+            def fake_preview(_repo_root, args):
+                input_path = Path(args[args.index("--input") + 1])
+                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
+                for request in requests:
+                    Path(request["destination"]).write_bytes(request["assetId"].encode())
+                return {"ok": True, "items": requests}
+
+            should_stop = {"value": False}
+
+            def progress(values):
+                if values.get("scanned") == 1:
+                    should_stop["value"] = True
+
+            result = local_server._incremental_photos_sync(
+                root,
+                limit=25,
+                adapter=FakeAdapter(),
+                preview_runner=fake_preview,
+                cancel_requested=lambda: should_stop["value"],
+                progress=progress,
+            )
+            self.assertTrue(result["cancelled"])
+            self.assertEqual(result["scanned"], 1)
+            self.assertEqual(result["remaining"], 1)
+            with connect(root) as connection:
+                self.assertEqual(
+                    connection.execute("SELECT count(*) total FROM asset_sync_state").fetchone()["total"],
+                    1,
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

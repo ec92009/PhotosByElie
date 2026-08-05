@@ -1583,7 +1583,7 @@ if (galleryRoot && gallery) {
 
   if (!viewControls) {
     viewControls = document.createElement("div");
-    viewControls.className = "gallery-view-controls";
+    viewControls.className = "gallery-view-controls is-header-mounted";
     viewControls.setAttribute("aria-label", t("a11y.gallery_view_controls"));
     viewControls.dataset.i18nAriaLabel = "a11y.gallery_view_controls";
     const densityControl = document.createElement("div");
@@ -1591,8 +1591,8 @@ if (galleryRoot && gallery) {
     densityControl.setAttribute("role", "group");
     densityControl.setAttribute("aria-label", t("a11y.gallery_density"));
     densityControl.innerHTML = `
-      <button type="button" data-gallery-density-step="-1" data-i18n-aria-label="a11y.gallery_density_decrease" aria-label="${t("a11y.gallery_density_decrease")}"><span aria-hidden="true">−</span></button>
-      <button type="button" data-gallery-density-step="1" data-i18n-aria-label="a11y.gallery_density_increase" aria-label="${t("a11y.gallery_density_increase")}"><span aria-hidden="true">+</span></button>
+      <button type="button" data-gallery-density-step="1" data-i18n-aria-label="a11y.gallery_density_decrease" aria-label="${t("a11y.gallery_density_decrease")}"><span aria-hidden="true">−</span></button>
+      <button type="button" data-gallery-density-step="-1" data-i18n-aria-label="a11y.gallery_density_increase" aria-label="${t("a11y.gallery_density_increase")}"><span aria-hidden="true">+</span></button>
     `;
     const fitControl = document.createElement("div");
     fitControl.className = "gallery-fit-control gallery-fit-split";
@@ -1609,14 +1609,11 @@ if (galleryRoot && gallery) {
     topButton.dataset.galleryBackToTop = "";
     topButton.setAttribute("aria-label", t("a11y.back_to_top"));
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
-    viewControls.append(densityControl, fitControl, topButton);
+    viewControls.append(densityControl, fitControl);
     const headerControls = document.querySelector(".header-controls");
-    if (headerControls) {
-      viewControls.classList.add("is-header-mounted");
-      headerControls.insertBefore(viewControls, headerControls.querySelector(".site-version-badge"));
-    } else {
-      document.body.append(viewControls);
-    }
+    if (headerControls) headerControls.prepend(viewControls);
+    else document.body.append(viewControls);
+    document.body.append(topButton);
     densityButtons = [...densityControl.querySelectorAll("[data-gallery-density-step]")];
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
     topButton.addEventListener("click", () => {

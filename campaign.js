@@ -148,12 +148,14 @@
     const topButton = document.createElement("button");
     topButton.className = "gallery-top-button";
     topButton.type = "button";
+    topButton.dataset.galleryBackToTop = "";
     topButton.setAttribute("aria-label", "Back to top");
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
-    viewControls.append(densityControl, topButton, fitControl);
+    viewControls.append(densityControl, fitControl);
     const headerControls = document.querySelector(".header-controls");
-    headerControls?.insertBefore(viewControls, headerControls.querySelector(".site-version-badge"));
-    if (!viewControls.isConnected) document.body.append(viewControls);
+    if (headerControls) headerControls.prepend(viewControls);
+    else document.body.append(viewControls);
+    document.body.append(topButton);
     densityInput = densityControl.querySelector("[data-gallery-density]");
     densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];

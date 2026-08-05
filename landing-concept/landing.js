@@ -369,7 +369,7 @@
     const signup = document.querySelector("#account-signup");
     const signin = document.querySelector("#account-signin");
     const face = document.querySelector("#account-face");
-    const sharedEntry = document.querySelector("#account-shared-entry");
+    const sharedEntries = [...document.querySelectorAll(".account-shared-link")];
     const dialog = document.querySelector("#account-dialog");
     const close = document.querySelector("#account-close");
     const visitor = document.querySelector("#account-visitor");
@@ -386,9 +386,11 @@
     const routeKey = "photosbyelie-route-after-login";
     let authenticated = false;
     let email = "";
+    let sharedPhotoCount = 0;
     let accountProfile = null;
     let applyingAccountProfile = false;
     let accountProfileWriteTimer = null;
+    const sharedGalleryPolicyPromise = import("../shared-gallery-visibility.mjs");
 
     const accountInitialFor = (value = "") => {
       const first = Array.from(String(value || "").trim())[0] || "?";
@@ -403,7 +405,9 @@
     const render = () => {
       entry.hidden = authenticated;
       face.hidden = !authenticated;
-      if (sharedEntry) sharedEntry.hidden = !authenticated;
+      sharedEntries.forEach((sharedEntry) => {
+        sharedEntry.hidden = !authenticated || sharedPhotoCount <= 0;
+      });
       if (authenticated) {
         const initial = document.createElement("span");
         initial.className = "account-initial";
@@ -467,6 +471,22 @@
       applyingAccountProfile = false;
     };
 
+    const refreshSharedGalleryVisibility = async (worker) => {
+      sharedPhotoCount = 0;
+      render();
+      try {
+        const policy = await sharedGalleryPolicyPromise;
+        const response = await fetch(`${worker}/shared-galleries`, { cache: "no-store", credentials: "include" });
+        if (!response.ok) return;
+        const payload = await response.json().catch(() => ({}));
+        sharedPhotoCount = policy.sharedPhotoCountFrom(payload);
+      } catch {
+        sharedPhotoCount = 0;
+      } finally {
+        render();
+      }
+    };
+
     const scheduleAccountProfileSave = (preferences) => {
       if (!authenticated || applyingAccountProfile || !accountProfile) return;
       window.clearTimeout(accountProfileWriteTimer);
@@ -506,7 +526,10 @@
         email = payload.user?.email || payload.email || "";
         render();
         if (authenticated) {
-          await loadAccountProfile(worker).catch(() => {});
+          await Promise.all([
+            loadAccountProfile(worker).catch(() => {}),
+            refreshSharedGalleryVisibility(worker),
+          ]);
           const routeRequested = sessionStorage.getItem(routeKey) === "google";
           if (!routeAuthorizedClient(payload.realEstateClients) && routeRequested) sessionStorage.removeItem(routeKey);
         }

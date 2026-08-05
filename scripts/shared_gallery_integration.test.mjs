@@ -11,10 +11,12 @@ const photoHtml = read("photo.html");
 const galleryJs = read("photo-gallery.js");
 const detailJs = read("photo-detail.js");
 const accountJs = read("photos.js");
+const landingJs = read("landing-concept/landing.js");
 const sharedStore = read("shared-gallery-store.js");
 const sharedCss = read("shared.css");
 const landingHtml = read("index.html");
 const legacyHtml = read("shared-galleries.html");
+const sharedVisibilityModule = await import("../shared-gallery-visibility.mjs");
 
 test("shared access maps authorized IDs onto canonical catalog products", () => {
   assert.match(sharedStore, /\/shared-galleries/);
@@ -43,13 +45,43 @@ test("shared cards use the normal gallery, detail, likes, and basket path", () =
   assert.match(photoHtml, /liked-store\.js/);
 });
 
-test("shared entry is visible but remains an ordinary gallery link", () => {
+test("shared entry stays hidden until the account has shared photos", () => {
   assert.match(accountJs, /account-shared-entry/);
   assert.match(accountJs, /gallery\.html\?gallery=shared/);
-  assert.match(accountJs, /sharedGalleryEntry\.hidden = !state\.authenticated/);
+  assert.match(accountJs, /sharedGalleryVisible = state\.authenticated/);
+  assert.match(accountJs, /state\.sharedPhotoCount > 0/);
+  assert.match(accountJs, /refreshSharedGalleryVisibility/);
   assert.match(sharedCss, /\.account-shared-entry/);
+  assert.match(sharedCss, /\.site-account-mini-action\.is-shared-gallery\[hidden\]/);
   assert.match(sharedCss, /translateY\(-3px\)/);
   assert.match(landingHtml, /id="account-shared-entry"[^>]+gallery\.html\?gallery=shared/);
+  assert.match(landingHtml, /class="account-action account-shared-link"[^>]+hidden/);
+  assert.match(landingJs, /sharedPhotoCount/);
+  assert.match(landingJs, /\/shared-galleries/);
+});
+
+test("shared entry visibility fails closed for loading, zero-share, failure, and sign-out states", () => {
+  const loading = { authenticated: true, ...sharedVisibilityModule.sharedGalleryLoadingState() };
+  const zeroShares = { authenticated: true, ...sharedVisibilityModule.sharedGalleryResolvedState({ fixtures: [] }) };
+  const failed = { authenticated: true, ...sharedVisibilityModule.sharedGalleryClearedState() };
+  const signedOut = { authenticated: false, ...sharedVisibilityModule.sharedGalleryResolvedState({ uniquePhotoCount: 2 }) };
+  assert.equal(sharedVisibilityModule.sharedGalleryIsVisible(loading), false);
+  assert.equal(sharedVisibilityModule.sharedGalleryIsVisible(zeroShares), false);
+  assert.equal(sharedVisibilityModule.sharedGalleryIsVisible(failed), false);
+  assert.equal(sharedVisibilityModule.sharedGalleryIsVisible(signedOut), false);
+});
+
+test("shared entry appears only after unique shared photos are confirmed", () => {
+  const payload = {
+    uniquePhotoCount: 1,
+    fixtures: [
+      { photos: [{ id: "photo-1" }, { id: "photo-1" }] },
+      { photos: [{ id: "photo-2" }] },
+    ],
+  };
+  const resolved = { authenticated: true, ...sharedVisibilityModule.sharedGalleryResolvedState(payload) };
+  assert.equal(resolved.sharedPhotoCount, 2);
+  assert.equal(sharedVisibilityModule.sharedGalleryIsVisible(resolved), true);
 });
 
 test("the obsolete private viewer redirects into the standard gallery", () => {

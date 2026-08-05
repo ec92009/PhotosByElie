@@ -4173,9 +4173,13 @@ const ensureSiteAccount = () => {
     profileLoaded: false,
     profile: { liked: [], basket: [], language: "", theme: "" },
     orders: [],
+    sharedGalleryChecked: false,
+    sharedGalleryLoading: false,
+    sharedPhotoCount: 0,
   };
   let accountProfileWriteTimer = null;
   let applyingAccountProfile = false;
+  const sharedGalleryPolicyPromise = import("./shared-gallery-visibility.mjs");
   let accountEntryMode = 'signup';
   const accountRouteAfterLoginKey = 'photosbyelie-route-after-login';
   let accountReturnControl = null;
@@ -4244,7 +4248,7 @@ const ensureSiteAccount = () => {
           <span data-i18n="account.memory_body">${translate('account.memory_body')}</span>
         </div>
         <div class="site-account-memory-actions">
-          <a class="site-account-mini-action is-shared-gallery" href="./gallery.html?gallery=shared" data-i18n="account.open_shared">${translate('account.open_shared')}</a>
+          <a class="site-account-mini-action is-shared-gallery" href="./gallery.html?gallery=shared" data-i18n="account.open_shared" hidden>${translate('account.open_shared')}</a>
           <a class="site-account-mini-action" href="./liked.html" data-i18n="account.open_liked">${translate('account.open_liked')}</a>
           <a class="site-account-mini-action" href="./basket.html" data-i18n="account.open_basket">${translate('account.open_basket')}</a>
           <button class="site-account-mini-action" type="button" data-account-sync data-i18n-title="account.sync_help" title="${translate('account.sync_help')}">${translate('account.sync_now')}</button>
@@ -4488,6 +4492,21 @@ const ensureSiteAccount = () => {
     return payload;
   };
 
+  const refreshSharedGalleryVisibility = async () => {
+    if (!state.authenticated || state.sharedGalleryLoading) return;
+    const policy = await sharedGalleryPolicyPromise;
+    Object.assign(state, policy.sharedGalleryLoadingState());
+    updateAccountView();
+    try {
+      const payload = await accountApiFetch("/shared-galleries");
+      Object.assign(state, policy.sharedGalleryResolvedState(payload));
+    } catch {
+      Object.assign(state, policy.sharedGalleryClearedState());
+    } finally {
+      updateAccountView();
+    }
+  };
+
   const applyAccountProfileToStores = (profile) => {
     if (!profile) return;
     applyingAccountProfile = true;
@@ -4583,9 +4602,15 @@ const ensureSiteAccount = () => {
     const workerBase = accountWorkerBaseUrl();
     state.available = Boolean(workerBase);
     const activeAuth = accountIsAuthenticated();
+    const sharedGalleryVisible = state.authenticated
+      && state.sharedGalleryChecked
+      && state.sharedPhotoCount > 0;
     accountEntry.hidden = activeAuth;
     accountButton.hidden = !activeAuth;
-    sharedGalleryEntry.hidden = !state.authenticated;
+    sharedGalleryEntry.hidden = !sharedGalleryVisible;
+    modal.querySelectorAll('.is-shared-gallery').forEach((link) => {
+      link.hidden = !sharedGalleryVisible;
+    });
     accountButton.classList.toggle("is-authenticated", activeAuth);
     if (activeAuth) {
       const identity = state.authenticated
@@ -4644,6 +4669,9 @@ const ensureSiteAccount = () => {
       state.profileLoaded = false;
       state.profile = { liked: [], basket: [], language: "", theme: "" };
       state.orders = [];
+      state.sharedGalleryChecked = true;
+      state.sharedGalleryLoading = false;
+      state.sharedPhotoCount = 0;
       updateAccountView();
       return { ...state };
     }
@@ -4668,6 +4696,11 @@ const ensureSiteAccount = () => {
         state.profileLoaded = false;
         state.profile = { liked: [], basket: [], language: "", theme: "" };
         state.orders = [];
+        state.sharedGalleryChecked = true;
+        state.sharedPhotoCount = 0;
+      } else {
+        state.sharedGalleryChecked = false;
+        state.sharedPhotoCount = 0;
       }
       updateAccountView();
       const routeMode = sessionStorage.getItem(accountRouteAfterLoginKey);
@@ -4682,6 +4715,7 @@ const ensureSiteAccount = () => {
         return { ...state };
       }
       if (routeMode) sessionStorage.removeItem(accountRouteAfterLoginKey);
+      if (state.authenticated) await refreshSharedGalleryVisibility();
       if (state.authenticated && syncProfile) {
         await loadAccountProfile({ mergeLocal, quiet });
       }
@@ -4696,6 +4730,9 @@ const ensureSiteAccount = () => {
       state.profileLoaded = false;
       state.profile = { liked: [], basket: [], language: "", theme: "" };
       state.orders = [];
+      state.sharedGalleryChecked = true;
+      state.sharedGalleryLoading = false;
+      state.sharedPhotoCount = 0;
       updateAccountView();
       if (!quiet) setMessage(translate('account.session_failed'), true);
     }

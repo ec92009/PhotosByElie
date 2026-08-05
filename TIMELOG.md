@@ -730,8 +730,23 @@ Clock state: running
 | 2026-08-05 | 09:24 CEST | 09:36 CEST | 0:12 | Reported the stale Needs AI counter and tooltip hit-target regression; repaired both, added coverage, and installed signed Backstage v0.5.2 (build 71). |
 | 2026-08-05 | 09:44 CEST | 09:49 CEST | 0:05 | Authorized the calendar-visible version migration for Backstage; updated the canonical SOP, released v217.0 (build 72), and verified the installed label. |
 | 2026-08-05 | 09:50 CEST | 09:54 CEST | 0:04 | Reported the narrow tooltip layout; widened the pass-through help card, released v217.1 (build 73), and verified the installed build. |
+| 2026-08-05 | 10:07 CEST | 10:08 CEST | 0:01 | Audited the latest approved/uploaded batch and performed a fresh read-only Apple Photos give-back reread; background inspection excluded. |
+| 2026-08-05 | 10:54 CEST | 10:55 CEST | 0:01 | Reviewed a read-only histogram of catalog keyword counts per photo; database querying and render verification excluded. |
+| 2026-08-05 | 10:57 CEST | 10:58 CEST | 0:01 | Authorized reversible video sales quarantine while preserving R2 files; background implementation, catalog rebuild, and verification excluded. |
+| 2026-08-05 | 11:10 CEST | 11:11 CEST | 0:01 | Authorized quarantining approved photos with three or fewer keywords for T-K review; background database mutation and verification excluded. |
+| 2026-08-05 | 11:31 CEST | 11:34 CEST | 0:03 | Reported the native Safari date-year pulldown; replaced the cryptic YYYY placeholder with the localized Any year reset while retaining every year represented by the current gallery. |
+| 2026-08-05 | 11:58 CEST | 12:02 CEST | 0:04 | Reported the missing 2025 year; changed the gallery year picker to show every calendar year between the oldest and newest photo and verified the refreshed local list. |
+| 2026-08-05 | 12:03 CEST | 12:05 CEST | 0:03 | Requested unrestricted-looking date defaults; prefilled each gallery with its oldest and newest capture dates and verified France opens at 2011-11-02 through 2026-06-23. |
+| 2026-08-05 | 15:35 CEST | 15:36 CEST | 0:01 | Resumed and closed out the gallery chrome redesign, zoom-direction correction, conditional Shared with me visibility, and verified YouTrack PBE-122; prior implementation, test, and browser runtime excluded. |
+| 2026-08-05 | 15:44 CEST | 15:50 CEST | 0:02 | Corrected the gallery header hierarchy so breadcrumbs remain content-width and buyer/view controls occupy the following row; background implementation and browser runtime excluded. |
+| 2026-08-05 | 15:54 CEST | 16:03 CEST | 0:02 | Clarified and verified explicit wide two-row and narrow three-row header placement, including cache refresh and the floating top control; background implementation and browser runtime excluded. |
+| 2026-08-05 | 17:06 CEST | 17:07 CEST | 0:01 | Requested and reviewed a fresh unresolved PBE/PBB YouTrack inventory; API retrieval time excluded. |
+| 2026-08-05 | 17:32 CEST | 17:33 CEST | 0:01 | Directed a loose-end audit, ticket creation, and dependency mapping while explicitly excluding PBE-122; background repository and API work excluded. |
+| 2026-08-05 | 17:46 CEST | 17:47 CEST | 0:01 | Selected PBE-125 as the next cleanup item; background catalog reconciliation, generation, and validation excluded. |
+| 2026-08-05 | 22:31 CEST | 22:32 CEST | 0:01 | Directed a recent-task and full PBE/PBB ticket audit, including evidence-backed closure, supersession, and replacement checks; background API, repository, and test work excluded. |
+| 2026-08-05 | 23:30 CEST | 23:31 CEST | 0:01 | Prioritized and completed PBB-69: deployed the reconciled public catalog, corrected live-status gating, reconciled the Aug. 2 run, and verified the release; background implementation, tests, deployment, and API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:04
+Active collaboration time used: 35:28
 Remaining budget: not set

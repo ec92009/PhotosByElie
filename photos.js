@@ -2292,7 +2292,9 @@ const productCatalogUrl = './assets/catalog/product-pricing.json';
 const normalizeStorefrontPolicy = (policy = {}) => ({
   retiredCollectionKeys: [...new Set((policy.retiredCollectionKeys || ['ai']).map((value) => String(value).trim().toLowerCase()).filter(Boolean))],
   retiredSourceOrigins: [...new Set((policy.retiredSourceOrigins || ['ai']).map((value) => String(value).trim().toLowerCase()).filter(Boolean))],
+  retiredMediaTypes: [...new Set((policy.retiredMediaTypes || []).map((value) => String(value).trim().toLowerCase()).filter(Boolean))],
 });
+const storefrontPhotoMediaType = (photo) => String(photo?.media?.type || photo?.type || 'photo').trim().toLowerCase();
 const storefrontPhotoOrigin = (photo, collectionKey = '') => {
   const origin = String(photo?.sourceOrigin || photo?.origin || '').trim().toLowerCase();
   if (origin) return origin;
@@ -2305,6 +2307,7 @@ window.photosByElieCollectionIsRetired = (collectionKey = '') => (
 );
 window.photosByElieStorefrontAllowsPhoto = (photo, collectionKey = '') => (
   !window.photosByElieCollectionIsRetired(collectionKey)
+  && !window.photosByElieStorefrontPolicy.retiredMediaTypes.includes(storefrontPhotoMediaType(photo))
   && !window.photosByElieStorefrontPolicy.retiredSourceOrigins.includes(storefrontPhotoOrigin(photo, collectionKey))
 );
 window.photosByElieApplyStorefrontPolicy = (collections = {}) => {

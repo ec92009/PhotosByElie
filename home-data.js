@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 684,
+    "count": 545,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 148,
+    "count": 154,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 2289,
+    "count": 1650,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -214,7 +214,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 96,
+    "count": 29,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
@@ -280,11 +280,11 @@ window.photosByElieHomeData = {
     ]
   },
   "italy": {
-    "number": "06",
+    "number": "05",
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 91,
+    "count": 57,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -299,24 +299,6 @@ window.photosByElieHomeData = {
             "allowed": true,
             "galleryKey": "expo/img-1141-e7e66ca045_900.jpg",
             "detailKey": "expo/img-1141-e7e66ca045_1800.jpg"
-          }
-        }
-      },
-      {
-        "id": "img-1163-865c215612",
-        "title": "San Gimignano",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "media": {
-          "type": "video",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/img-1163-865c215612_900.jpg",
-            "detailKey": "expo/img-1163-865c215612_short_5s_720p.mp4"
-          },
-          "video": {
-            "duration": 0.7
           }
         }
       },
@@ -349,11 +331,26 @@ window.photosByElieHomeData = {
             "detailKey": "expo/img-1184-adad54985d_1800.jpg"
           }
         }
+      },
+      {
+        "id": "img-1180-fe3d9faa8d",
+        "title": "San Gimignano",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/img-1180-fe3d9faa8d_900.jpg",
+            "detailKey": "expo/img-1180-fe3d9faa8d_1800.jpg"
+          }
+        }
       }
     ]
   },
   "portugal": {
-    "number": "07",
+    "number": "06",
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
@@ -423,7 +420,7 @@ window.photosByElieHomeData = {
     ]
   },
   "slovakia": {
-    "number": "08",
+    "number": "07",
     "title": "Slovakia",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",

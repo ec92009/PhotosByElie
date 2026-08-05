@@ -26,12 +26,24 @@ from import_source_anchor import photo_id_for_source_path
 
 
 PUBLIC_CATALOG_PATH = Path("assets/catalog/photosbyelie.sqlite")
+PRODUCT_PRICING_PATH = Path("assets/catalog/product-pricing.json")
 PUBLIC_CATALOG_URL = "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite"
 _CATALOG_LOCK = threading.RLock()
 
 
 class CatalogPromotionError(RuntimeError):
     """Raised when a verified upload cannot be represented in the catalog."""
+
+
+def retired_storefront_media_types(repo_root: Path) -> set[str]:
+    """Return media types that are intentionally excluded from sales."""
+    path = repo_root / PRODUCT_PRICING_PATH
+    try:
+        pricing = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return set()
+    values = (pricing.get("storefrontPolicy") or {}).get("retiredMediaTypes") or []
+    return {str(value).strip().casefold() for value in values if str(value).strip()}
 
 
 def _json(value: Any) -> str:
@@ -231,6 +243,8 @@ def catalog_candidate(
     media_type = str(row["media_type"] or "photo").casefold()
     if media_type not in {"photo", "video"}:
         return {"eligible": False, "reason": "unsupported_media_type"}
+    if media_type in retired_storefront_media_types(repo_root):
+        return {"eligible": False, "reason": "retired_media_type"}
     try:
         objects = _object_set(upload_results, media_type)
     except CatalogPromotionError as error:

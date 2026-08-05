@@ -10,6 +10,9 @@ const catalogWindow = catalogTsv.loadCatalogWindow(repoRoot);
 const storefrontPolicy = { ...(catalogWindow.photosByElieStorefrontPolicy || {}) };
 const retiredCollectionKeys = new Set((storefrontPolicy.retiredCollectionKeys || []).map((value) => String(value).toLowerCase()));
 const retiredSourceOrigins = new Set((storefrontPolicy.retiredSourceOrigins || []).map((value) => String(value).toLowerCase()));
+const retiredMediaTypes = new Set((storefrontPolicy.retiredMediaTypes || []).map((value) => String(value).toLowerCase()));
+
+const photoMediaTypeFor = (photo) => String(photo?.media?.type || photo?.type || "photo").toLowerCase();
 
 const photoOriginFor = (photo, collectionKey) => {
   const origin = String(photo?.sourceOrigin || photo?.origin || "").toLowerCase();
@@ -49,6 +52,7 @@ const workerCollections = Object.fromEntries(
     .map(([key, collection]) => [key, {
       ...collection,
       photos: (collection.photos || [])
+        .filter((photo) => !retiredMediaTypes.has(photoMediaTypeFor(photo)))
         .filter((photo) => !retiredSourceOrigins.has(photoOriginFor(photo, key)))
         .map(({ pricingTier: _pricingTier, ...photo }) => photo),
     }])

@@ -655,6 +655,7 @@ export const createCatalogIndex = ({
 } = {}) => {
   const retiredCollectionKeys = new Set(normalizedPolicyValues(storefrontPolicy.retiredCollectionKeys));
   const retiredSourceOrigins = new Set(normalizedPolicyValues(storefrontPolicy.retiredSourceOrigins));
+  const retiredMediaTypes = new Set(normalizedPolicyValues(storefrontPolicy.retiredMediaTypes, []));
   const photos = new Map();
   const options = new Map([
     ...resolutions.map((option) => [option.id, option]),
@@ -663,6 +664,7 @@ export const createCatalogIndex = ({
 
   Object.entries(publicCatalogOnly(collections, retiredCollectionKeys)).forEach(([collectionKey, collection]) => {
     (collection.photos || []).forEach((photo) => {
+      if (retiredMediaTypes.has(mediaTypeFor(photo))) return;
       if (retiredSourceOrigins.has(photoOriginFor(photo, collectionKey))) return;
       photos.set(photo.id, { photo, collectionKey, collectionTitle: collection.title || collectionKey });
     });
@@ -686,6 +688,7 @@ export const createCatalogIndex = ({
     storefrontPolicy: {
       retiredCollectionKeys: [...retiredCollectionKeys],
       retiredSourceOrigins: [...retiredSourceOrigins],
+      retiredMediaTypes: [...retiredMediaTypes],
     },
     availableOptionsFor,
   };

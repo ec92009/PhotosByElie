@@ -320,6 +320,22 @@ The public site still exposes the same `window.photosByElieData` browser contrac
 
 The populated `photosbyelie.sqlite` schema keeps `media_items` dense by using short integer lookup ids for collections, cameras, lenses, media types, source origins, formats, asset types, and keyword terms. Rebuild it with `python3 scripts/build_public_catalog_db.py`; `node scripts/write_catalog_tsv.cjs` is a legacy-named compatibility command that refreshes the SQLite bootstrap and public DB. The current active public database has `5,827` `media_items` and `34,962` `media_assets`. `Owner.sqlite` has local workflow tables for settings, keyword blacklist, country assignments, title/keyword batches, queue state, proposals, and decisions. See `docs/architecture/sqlite-catalog-owner-state.md`.
 
+After a lifecycle or storefront quarantine, reconcile the tracked public SQLite
+catalog and every generated projection through the guarded dry-run/apply command:
+
+```bash
+python3 scripts/reconcile_public_catalog_artifacts.py
+python3 scripts/reconcile_public_catalog_artifacts.py --apply
+```
+
+The command unions the supported historical and current Owner approval paths,
+then lets lifecycle blocks and retired media types win. Apply mode stages and
+integrity-checks a replacement SQLite catalog, filters the Expo compatibility
+manifest, and refreshes `photos-data.js`, `home-data.js`,
+`assets/media-sidecar.json`, and `worker/photos-catalog.generated.mjs`. If a
+projection step fails, it restores the pre-run artifact set. A second dry run
+should report zero removals before publishing.
+
 Legacy `.sqlite.br` files are no longer used by normal site or Owner operations. If a retained compressed artifact needs inspection in VS Code, open it and run the task `View Brotli SQLite in SQLite Viewer`. The task uses `scripts/view_sqlite_br.cjs` to Brotli-decompress the file into ignored `tmp/vscode-sqlite-br/*.sqlite`, validates it with `sqlite3 PRAGMA integrity_check`, and opens the decoded database so the SQLite Viewer extension can display it. The same bridge can be run directly:
 
 ```bash

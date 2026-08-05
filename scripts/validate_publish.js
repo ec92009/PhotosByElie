@@ -128,103 +128,13 @@ const loadDiscardedIds = () => {
   return ids;
 };
 
-const loadLifecycleBlockedIds = () => {
-  const ids = loadDiscardedIds();
+const loadPublicCatalogPolicy = () => {
   const output = childProcess.execFileSync(
     "python3",
-    ["scripts/owner_state_db.py", "--media-lifecycle-json"],
+    ["scripts/public_catalog_policy.py", "--json"],
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
-  const lifecycle = JSON.parse(output || "{}");
-  (Array.isArray(lifecycle.blockedPhotoIds) ? lifecycle.blockedPhotoIds : []).forEach((value) => {
-    const id = String(value || "").trim();
-    if (id) ids.add(id);
-  });
-  return ids;
-};
-
-const loadAppliedTitleKeywordIds = () => {
-  const ownerDb = path.join(repoRoot, "assets", "owner-actions", "Owner.sqlite");
-  if (!fs.existsSync(ownerDb)) {
-    throw new Error("assets/owner-actions/Owner.sqlite is missing.");
-  }
-  const sql = `
-    SELECT q.media_id
-    FROM title_keyword_queue AS q
-    JOIN title_keyword_decisions AS d
-      ON d.media_id = q.media_id
-     AND d.attempt = q.latest_attempt
-    WHERE q.review_state IN ('approved', 'applied')
-      AND d.decision_state = 'accepted'
-      AND COALESCE(d.applied_at, '') <> '';
-  `;
-  const output = childProcess.execFileSync(
-    "sqlite3",
-    ["-cmd", ".timeout 10000", ownerDb, sql],
-    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  );
-  const ids = new Set(output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
-  const sidecarSql = `
-    SELECT DISTINCT i.photo_id
-    FROM sidecar_decisions AS d
-    JOIN sidecar_upload_bridge_run_items AS i ON i.asset_id = d.asset_id
-    WHERE d.pick_state = 'picked'
-      AND d.metadata_state = 'approved'
-      AND i.upload_status = 'uploaded'
-      AND COALESCE(i.photo_id, '') <> ''
-      AND NOT EXISTS (
-        SELECT 1 FROM sidecar_tombstones AS t
-        WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
-      );
-  `;
-  const sidecarOutput = childProcess.execFileSync(
-    "sqlite3",
-    ["-cmd", ".timeout 10000", ownerDb, sidecarSql],
-    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  );
-  sidecarOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((id) => ids.add(id));
-  const nativeCatalogTableOutput = childProcess.execFileSync(
-    "sqlite3",
-    [
-      "-cmd", ".timeout 10000", ownerDb,
-      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'public_catalog_publications' LIMIT 1;",
-    ],
-    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  );
-  if (nativeCatalogTableOutput.trim() === "1") {
-    const nativeCatalogSql = `
-      SELECT DISTINCT catalog.media_id
-      FROM public_catalog_publications AS catalog
-      JOIN asset_editorial_state AS editorial
-        ON editorial.asset_id = catalog.asset_id
-       AND editorial.editorial_state = 'approved'
-      WHERE catalog.state IN ('local', 'live')
-        AND COALESCE(catalog.media_id, '') <> ''
-        AND NOT EXISTS (
-          SELECT 1 FROM sidecar_tombstones AS tombstone
-          WHERE tombstone.asset_id = catalog.asset_id
-            AND tombstone.tombstone_state = 'active'
-        );
-    `;
-    const nativeCatalogOutput = childProcess.execFileSync(
-      "sqlite3",
-      ["-cmd", ".timeout 10000", ownerDb, nativeCatalogSql],
-      { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-    );
-    nativeCatalogOutput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((id) => ids.add(id));
-  }
-  try {
-    const baseline = JSON.parse(childProcess.execFileSync(
-      "git",
-      ["show", "HEAD:assets/expo-manifest.json"],
-      { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-    ));
-    (Array.isArray(baseline.photos) ? baseline.photos : []).forEach((photo) => {
-      const id = String(photo?.id || "").trim();
-      if (id) ids.add(id);
-    });
-  } catch {}
-  return ids;
+  return JSON.parse(output || "{}");
 };
 
 const cleanLocalReference = (reference) => String(reference || "")
@@ -259,14 +169,11 @@ const validate = () => {
   let lifecycleBlockedIds = loadDiscardedIds();
   let appliedTitleKeywordIds = new Set();
   try {
-    lifecycleBlockedIds = loadLifecycleBlockedIds();
+    const policy = loadPublicCatalogPolicy();
+    lifecycleBlockedIds = new Set(policy.blockedMediaIds || []);
+    appliedTitleKeywordIds = new Set(policy.eligibleMediaIds || []);
   } catch (error) {
-    errors.push(`Could not load hidden/discarded lifecycle state: ${error.message}`);
-  }
-  try {
-    appliedTitleKeywordIds = loadAppliedTitleKeywordIds();
-  } catch (error) {
-    errors.push(`Could not load applied title/keyword state: ${error.message}`);
+    errors.push(`Could not load public catalog policy: ${error.message}`);
   }
 
   resolutions.forEach((resolution) => {

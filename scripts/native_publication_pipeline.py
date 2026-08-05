@@ -21,6 +21,7 @@ from native_catalog_promotion import (
     catalog_candidate,
     promote_verified_asset,
     record_catalog_pending,
+    retired_storefront_media_types,
 )
 
 
@@ -149,6 +150,20 @@ def upload_eligibility_plan(
     safe_offset = max(0, int(offset or 0))
     safe_limit = max(1, min(500, int(limit or 200)))
     with connect(repo_root) as conn:
+        retired_media_types = retired_storefront_media_types(repo_root)
+        retired_media_filter = ""
+        retired_media_params: dict[str, str] = {}
+        if retired_media_types:
+            names = []
+            for index, media_type in enumerate(sorted(retired_media_types)):
+                name = f"retired_media_type_{index}"
+                names.append(f":{name}")
+                retired_media_params[name] = media_type
+            retired_media_filter = (
+                " AND LOWER(COALESCE(asset.media_type, 'photo')) NOT IN ("
+                + ", ".join(names)
+                + ")"
+            )
         fixture = conn.execute(
             """
             SELECT fixture_id, name
@@ -166,7 +181,7 @@ def upload_eligibility_plan(
         )["effective"]
         cloud_allowed = policy_allows_cloud(policy)
         summary = conn.execute(
-            """
+            f"""
             SELECT
               count(*) AS picked_count,
               sum(CASE WHEN editorial.editorial_state = 'approved' THEN 1 ELSE 0 END)
@@ -175,17 +190,19 @@ def upload_eligibility_plan(
                 AS needs_review_count,
               sum(CASE WHEN editorial.editorial_state = 'approved'
                         AND delivery.delivery_state IN ('needs-upload', 'failed')
+                        {retired_media_filter}
                        THEN 1 ELSE 0 END)
                 AS needs_upload_count,
               sum(CASE WHEN editorial.editorial_state = 'approved'
                         AND delivery.delivery_state = 'live'
+                        {retired_media_filter}
                        THEN 1 ELSE 0 END)
                 AS live_count
             FROM fixture_asset_decisions AS decision
             JOIN sidecar_assets AS asset ON asset.asset_id = decision.asset_id
             JOIN asset_editorial_state AS editorial ON editorial.asset_id = decision.asset_id
             JOIN asset_delivery_state AS delivery ON delivery.asset_id = decision.asset_id
-            WHERE decision.fixture_id = ?
+            WHERE decision.fixture_id = :fixture_id
               AND decision.eligibility_state = 'active'
               AND decision.placement_state = 'picked'
               AND (asset.missing_at IS NULL OR asset.missing_at = '')
@@ -195,12 +212,12 @@ def upload_eligibility_plan(
                   AND tombstone.tombstone_state = 'active'
               )
             """,
-            (clean_fixture_id,),
+            {"fixture_id": clean_fixture_id, **retired_media_params},
         ).fetchone()
         items: list[dict[str, Any]] = []
         if cloud_allowed:
             rows = conn.execute(
-                """
+                f"""
                 SELECT decision.asset_id,
                        asset.source_anchor,
                        asset.raw_json,
@@ -219,7 +236,7 @@ def upload_eligibility_plan(
                 JOIN asset_delivery_state AS delivery ON delivery.asset_id = decision.asset_id
                 LEFT JOIN sidecar_decisions AS global_decision
                   ON global_decision.asset_id = decision.asset_id
-                WHERE decision.fixture_id = ?
+                WHERE decision.fixture_id = :fixture_id
                   AND decision.eligibility_state = 'active'
                   AND decision.placement_state = 'picked'
                   AND editorial.editorial_state = 'approved'
@@ -236,10 +253,16 @@ def upload_eligibility_plan(
                       AND source.state = 'source-missing'
                       AND source.source_exists = 0
                   )
+                  {retired_media_filter}
                 ORDER BY delivery.updated_at, decision.asset_id
-                LIMIT ? OFFSET ?
+                LIMIT :limit OFFSET :offset
                 """,
-                (clean_fixture_id, safe_limit, safe_offset),
+                {
+                    "fixture_id": clean_fixture_id,
+                    "limit": safe_limit,
+                    "offset": safe_offset,
+                    **retired_media_params,
+                },
             ).fetchall()
             items = [
                 {
@@ -333,17 +356,19 @@ def record_photos_sync_snapshot(
         "sourceReturned": 0,
     }
     rows_out: list[dict[str, Any]] = []
+    retired_media_types = retired_storefront_media_types(repo_root)
     with connect(repo_root) as conn:
         for item in items:
             asset_id = str(item.get("assetId") or "").strip()
             if not asset_id:
                 raise ValueError("sync items require assetId")
             asset = conn.execute(
-                "SELECT asset_id, missing_at FROM sidecar_assets WHERE asset_id = ?",
+                "SELECT asset_id, missing_at, media_type FROM sidecar_assets WHERE asset_id = ?",
                 (asset_id,),
             ).fetchone()
             if not asset:
                 raise ValueError(f"sync asset is not indexed: {asset_id}")
+            retired_media = str(asset["media_type"] or "photo").casefold() in retired_media_types
             photos_asset_id = str(item.get("photosAssetId") or asset_id).strip()
             source_exists = bool(item.get("sourceExists", True))
             title, caption, keywords, rating, color = _photos_metadata(item)
@@ -527,6 +552,26 @@ def record_photos_sync_snapshot(
                 elif giveback_echo:
                     kind = "unchanged"
 
+            if retired_media:
+                conn.execute(
+                    """
+                    UPDATE asset_publications
+                    SET state = 'withdrawn', withdrawn_at = COALESCE(withdrawn_at, ?), updated_at = ?
+                    WHERE asset_id = ? AND state = 'live'
+                    """,
+                    (timestamp, timestamp, asset_id),
+                )
+                conn.execute(
+                    """
+                    UPDATE asset_delivery_state
+                    SET delivery_state = 'not-ready',
+                        last_error = 'Media type retired from sales',
+                        updated_at = ?
+                    WHERE asset_id = ?
+                    """,
+                    (timestamp, asset_id),
+                )
+
             conn.execute(
                 """
                 INSERT INTO asset_sync_state (
@@ -596,6 +641,29 @@ def publish_verified_asset(
     results = _verified_results(upload_results)
     timestamp = now_iso()
     with connect(repo_root) as conn:
+        media_row = conn.execute(
+            "SELECT media_type FROM sidecar_assets WHERE asset_id = ?",
+            (asset_id,),
+        ).fetchone()
+        media_type = str(media_row["media_type"] or "photo").casefold() if media_row else "photo"
+        if media_type in retired_storefront_media_types(repo_root):
+            return {
+                "ok": True,
+                "published": False,
+                "assetId": asset_id,
+                "sourceVersionHash": "",
+                "fixtureIds": [],
+                "skippedFixtureIds": [],
+                "fixturePolicies": {},
+                "objectCount": len(results),
+                "objectKeys": [
+                    {"bucket": str(item["bucket"]), "key": str(item["key"])}
+                    for item in results
+                ],
+                "catalogState": "not-applicable",
+                "publicCatalog": {"state": "not-applicable", "reason": "retired_media_type"},
+                "reason": "retired_media_type",
+            }
         editorial = conn.execute(
             "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
             (asset_id,),
@@ -824,15 +892,26 @@ def create_upload_run(
     timestamp = now_iso()
     run_id = f"uplrun-{uuid.uuid4().hex[:16]}"
     with connect(repo_root) as conn:
+        retired_media_types = retired_storefront_media_types(repo_root)
         params: list[Any] = []
         requested_filter = ""
         if requested:
             requested_filter = f" AND delivery.asset_id IN ({','.join('?' for _ in requested)})"
             params.extend(requested)
+        retired_media_filter = ""
+        if retired_media_types:
+            retired_media_filter = (
+                " AND LOWER(COALESCE(asset.media_type, 'photo')) NOT IN ("
+                + ", ".join("?" for _ in retired_media_types)
+                + ")"
+            )
+            params.extend(sorted(retired_media_types))
         rows = conn.execute(
             f"""
             SELECT delivery.asset_id
             FROM asset_delivery_state AS delivery
+            JOIN sidecar_assets AS asset
+              ON asset.asset_id = delivery.asset_id
             JOIN asset_editorial_state AS editorial
               ON editorial.asset_id = delivery.asset_id
             WHERE delivery.delivery_state IN ('needs-upload', 'failed')
@@ -849,6 +928,7 @@ def create_upload_run(
                   AND source.source_exists = 0
               )
               {requested_filter}
+              {retired_media_filter}
             ORDER BY delivery.updated_at, delivery.asset_id
             LIMIT ?
             """,
@@ -954,7 +1034,11 @@ def run_upload_batch(
             asset_id, result, error_text = future.result()
             timestamp = now_iso()
             with connect(repo_root) as conn:
-                status = "live" if result else "failed"
+                status = (
+                    "live"
+                    if result and result.get("published", True)
+                    else ("skipped" if result else "failed")
+                )
                 conn.execute(
                     """
                     UPDATE asset_upload_run_items
@@ -981,6 +1065,15 @@ def run_upload_batch(
                         WHERE asset_id = ?
                         """,
                         (error_text, timestamp, asset_id),
+                    )
+                elif result and not result.get("published", True):
+                    conn.execute(
+                        """
+                        UPDATE asset_delivery_state
+                        SET delivery_state = 'not-ready', last_error = ?, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        (str(result.get("reason") or "retired from sales"), timestamp, asset_id),
                     )
                 summary = conn.execute(
                     """

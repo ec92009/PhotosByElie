@@ -16,7 +16,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from owner_state_db import connect as owner_db_connect, media_lifecycle_snapshot
+from owner_state_db import connect as owner_db_connect
+from public_catalog_policy import public_catalog_policy_snapshot
 
 DEFAULT_OUTPUT = Path("assets/catalog/photosbyelie.sqlite")
 DEFAULT_PRODUCT_PRICING = Path("assets/catalog/product-pricing.json")
@@ -744,11 +745,16 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
 def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: bool = False) -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
     title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
-    applied_title_keyword_ids = set(title_keyword_decisions)
+    publication_policy = public_catalog_policy_snapshot(repo_root)
+    applied_title_keyword_ids = set(publication_policy["eligibleMediaIds"])
     applied_title_keywords = apply_title_keyword_decisions(catalog, title_keyword_decisions)
-    lifecycle = media_lifecycle_snapshot(repo_root)
-    blocked_lifecycle_ids = set(lifecycle.get("blockedPhotoIds") or [])
+    blocked_lifecycle_ids = set(publication_policy["blockedMediaIds"])
     pricing = load_product_pricing(repo_root)
+    retired_media_types = {
+        str(value).strip().lower()
+        for value in (pricing.get("storefrontPolicy") or {}).get("retiredMediaTypes") or []
+        if str(value).strip()
+    }
     existing_video_durations = load_existing_video_durations(output)
     collection_entries = ordered_collections(catalog)
     photos: list[tuple[str, dict[str, Any], str, int, dict[str, Any]]] = []
@@ -760,6 +766,9 @@ def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: b
                 photo_id = str(photo["id"])
                 source_origin = str(photo.get("sourceOrigin") or photo.get("origin") or "").strip().lower()
                 pricing_tier = str(photo.get("pricingTier") or "").strip().lower()
+                media_type = str((photo.get("media") or {}).get("type") or photo.get("type") or "photo").strip().lower()
+                if media_type in retired_media_types:
+                    continue
                 if source_origin in RETIRED_STOREFRONT_ORIGINS or pricing_tier in RETIRED_STOREFRONT_ORIGINS:
                     continue
                 if photo_id in blocked_lifecycle_ids:

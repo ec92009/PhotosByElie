@@ -2542,6 +2542,25 @@ test("AI sourceOrigin is retired even outside the former AI collection", async (
   assert.equal((await response.json()).error.code, "unknown_photo");
 });
 
+test("retired media types are excluded from the checkout catalog", () => {
+  const catalog = createCatalogIndex({
+    collections: {
+      spain: {
+        title: "Spain",
+        photos: [
+          { id: "retired-video", media: { type: "video" } },
+          { id: "sale-photo", media: { type: "photo" }, megapixels: 12 },
+        ],
+      },
+    },
+    storefrontPolicy: { retiredMediaTypes: ["video"] },
+  });
+
+  assert.equal(catalog.photos.has("retired-video"), false);
+  assert.equal(catalog.photos.has("sale-photo"), true);
+  assert.deepEqual(catalog.storefrontPolicy.retiredMediaTypes, ["video"]);
+});
+
 test("published camera products use the approved whole-dollar ladder", () => {
   const catalog = loadCatalog();
   assert.equal(catalog.options.get("jpg-1mp").price, 8);

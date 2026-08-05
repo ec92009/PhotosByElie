@@ -2288,6 +2288,30 @@ struct OwnerCoreTests {
         #expect(requests[4].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
+    @Test("Review AI requests update the loaded editorial summary")
+    func reviewSummaryTracksAIRequestTransition() {
+        var summary = FixtureReviewSummary(
+            total: 10,
+            unreviewed: 8,
+            requestingAI: 1,
+            proposed: 1,
+            approved: 0
+        )
+        summary.applyEditorialStateTransition(
+            from: "unreviewed",
+            to: "requesting-ai"
+        )
+        #expect(summary.total == 10)
+        #expect(summary.unreviewed == 7)
+        #expect(summary.requestingAI == 2)
+        #expect(summary.proposed == 1)
+        summary.applyEditorialStateTransition(
+            from: "requesting-ai",
+            to: "requesting-ai"
+        )
+        #expect(summary.requestingAI == 2)
+    }
+
     @Test("Backstage reports signed Photos helper identity and headless health")
     func signedPhotosBridgeHealth() async throws {
         let root = FileManager.default.temporaryDirectory

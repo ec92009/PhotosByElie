@@ -33,25 +33,29 @@ private struct BackstageHoverHelpModifier: ViewModifier {
                 }
             }
             .overlay(alignment: .bottom) {
-                if isPresented {
-                    Text(explanation)
-                        .font(.callout)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 320, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(.secondary.opacity(0.25))
-                        }
-                        .shadow(radius: 8, y: 3)
-                        .offset(y: 8)
-                        .allowsHitTesting(false)
-                        .zIndex(1000)
-                        .accessibilityAddTraits(.isStaticText)
+                Group {
+                    if isPresented {
+                        Text(explanation)
+                            .font(.callout)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 320, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(.secondary.opacity(0.25))
+                            }
+                            .shadow(radius: 8, y: 3)
+                            .offset(y: 8)
+                            .accessibilityAddTraits(.isStaticText)
+                    }
                 }
+                // The conditional overlay container must also be pass-through;
+                // otherwise it can consume the next click for the button it explains.
+                .allowsHitTesting(false)
+                .zIndex(1000)
             }
             .accessibilityHint(explanation)
             .onDisappear {

@@ -925,6 +925,8 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn("Task.sleep(for: .milliseconds(500))", hover_help)
         self.assertIn(".overlay(alignment: .bottom)", hover_help)
+        self.assertIn("Group {", hover_help)
+        self.assertIn(".allowsHitTesting(false)", hover_help)
         self.assertNotIn(".popover(", hover_help)
         self.assertIn(".accessibilityHint(explanation)", hover_help)
 

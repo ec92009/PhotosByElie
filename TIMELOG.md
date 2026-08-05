@@ -727,8 +727,9 @@ Clock state: running
 | 2026-08-04 | 21:36 CEST | 21:56 CEST | 0:03 | Defined an arbitrary-length vision-only title/keyword model-effort ladder, corrected the Luna Max runtime distinction, and authorized replacing the stale global npm Codex CLI with Homebrew Codex 0.146.0; implementation, tests, build, installation, and package-manager runtime excluded. |
 | 2026-08-04 | 22:47 CEST | 22:59 CEST | 0:01 | Authorized the post-approval city-to-country resolver, recovered the ten Barcelona publication failures, and verified catalog and Photos give-back completion; background implementation and test runtime excluded. |
 | 2026-08-05 | 00:10 CEST | 00:12 CEST | 0:02 | Reported Backstage interaction, Culling filter, gallery-state, and approval-to-upload visibility regressions; authorized the signed corrective release. |
+| 2026-08-05 | 09:24 CEST | 09:36 CEST | 0:12 | Reported the stale Needs AI counter and tooltip hit-target regression; repaired both, added coverage, and installed signed Backstage v0.5.2 (build 71). |
 
 ## Totals
 
-Active collaboration time used: 34:43
+Active collaboration time used: 34:55
 Remaining budget: not set

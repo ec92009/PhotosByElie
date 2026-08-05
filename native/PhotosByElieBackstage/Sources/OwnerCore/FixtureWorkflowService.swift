@@ -642,6 +642,29 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         proposed = json["proposed"]?.intValue ?? 0
         approved = json["approved"]?.intValue ?? 0
     }
+
+    /// Apply a durable editorial-state transition to the already-loaded
+    /// Review summary without reloading the queue or disturbing selection.
+    public mutating func applyEditorialStateTransition(
+        from before: String,
+        to after: String
+    ) {
+        guard before != after else { return }
+        switch before {
+        case "unreviewed": unreviewed = max(0, unreviewed - 1)
+        case "requesting-ai": requestingAI = max(0, requestingAI - 1)
+        case "proposed": proposed = max(0, proposed - 1)
+        case "approved": approved = max(0, approved - 1)
+        default: break
+        }
+        switch after {
+        case "unreviewed": unreviewed += 1
+        case "requesting-ai": requestingAI += 1
+        case "proposed": proposed += 1
+        case "approved": approved += 1
+        default: break
+        }
+    }
 }
 
 public struct FixtureReviewWindow: Sendable, Equatable {

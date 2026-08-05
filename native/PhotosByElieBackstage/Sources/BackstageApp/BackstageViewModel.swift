@@ -2038,6 +2038,14 @@ final class BackstageViewModel: ObservableObject {
         let changesByID = Dictionary(
             uniqueKeysWithValues: result.changes.map { ($0.assetID, $0.after) }
         )
+        if action == .requestAI {
+            for change in result.changes {
+                guard let before = change.before["editorialState"]?.stringValue,
+                      let after = change.after["editorialState"]?.stringValue
+                else { continue }
+                window.summary.applyEditorialStateTransition(from: before, to: after)
+            }
+        }
         let updatesTitle = action == .approve
             || action == .editMetadata
             || action == .propagateTitle

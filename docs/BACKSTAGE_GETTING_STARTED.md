@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **v217.2 (build 74)**.
+The current native workflow is included in version **v218.0 (build 75)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -355,6 +355,11 @@ are audited actions; they are not direct SQLite edits.
 Backstage preserves unrelated Photos keywords and re-reads every changed item
 before recording a verified receipt.
 
+The bounded incremental Photos scan reports its current stage, checked count,
+and remaining count. **Stop safely** requests a stop after the current PhotoKit
+checkpoint; completed classifications remain recorded and the remaining items
+return on a later pass.
+
 ## Waste Basket
 
 The Waste Basket has two intentionally different actions:
@@ -388,7 +393,9 @@ file name, capture date, state, and any eligibility error.
    N…** to accept the exact loaded window. The latter drains the visible
    snapshot through sequential runs of at most 50 assets, preserving the
    existing isolated-failure contract.
-6. Watch the aggregate progress and per-item R2 and Photos states.
+6. Watch the aggregate progress and per-item R2 and Photos states. **Stop
+   safely** lets already-started uploads finish, keeps their verified receipts,
+   and leaves every unstarted item in the queue for an independent retry.
 
 If an approved item needs more editorial work, select one or more rows and
 choose **Return to Review…**. After confirmation, Backstage reverses the
@@ -429,6 +436,11 @@ explicitly public.
 Registration changes catalog source files. It does not deploy or push the
 website and it does not message anyone. Keep private and Real Estate fixtures
 out of this gate.
+
+The separate **R2 safety** workspace reports the current object checkpoint and
+remaining count for both preview and commit runs. **Stop safely** finishes the
+current object atomically, preserves its quarantine/protection/deletion
+receipt, and leaves the remaining objects for a fresh reconciliation run.
 
 ## Activity and troubleshooting
 

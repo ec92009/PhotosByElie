@@ -150,17 +150,24 @@ struct UploadView: View {
             if model.isRunningNativePublication,
                let run = model.nativeUploadRun,
                run.requested > 0 {
-                ProgressView(
-                    value: Double(run.processed),
-                    total: Double(run.requested)
-                ) {
-                    Text(
-                        "Batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
-                        + " • \(run.processed) of \(run.requested)"
-                        + " • \(run.live) live"
-                        + " • \(run.failed) failed"
-                        + " • \(run.remaining) remaining"
-                    )
+                HStack {
+                    ProgressView(
+                        value: Double(run.processed),
+                        total: Double(run.requested)
+                    ) {
+                        Text(
+                            "Batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
+                            + " • \(run.processed) of \(run.requested)"
+                            + " • \(run.live) live"
+                            + " • \(run.failed) failed"
+                            + " • \(run.remaining) remaining"
+                        )
+                    }
+                    Button(model.isCancellingNativePublication ? "Stopping…" : "Stop safely") {
+                        Task { await model.cancelNativePublication() }
+                    }
+                    .disabled(model.isCancellingNativePublication)
+                    .backstageHelp("Stop after currently uploading assets finish. Completed receipts remain valid and unstarted assets stay retryable.")
                 }
             }
             if let run = model.nativeUploadRun,

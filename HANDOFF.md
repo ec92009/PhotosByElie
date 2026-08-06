@@ -1,5 +1,31 @@
 # PhotosByElie Handoff
 
+## 2026-08-07 — Backstage v219 control CLI release and David TCC checkpoint
+
+- Backstage and Photos Bridge now share release `v219.0` / build `76`. The
+  signed release contains the CUA-free `--control` surface from PBB-74 plus the
+  helper compatibility repair from PBE-135.
+- Max and David both have matching Backstage and Photos Bridge bundles
+  installed under `~/Applications`. Max uses the stable Apple Development
+  identity; David uses the existing stable ad-hoc designated requirements
+  because that Mac has no signing identity. Both pairs pass deep/strict
+  signature verification. The prior `v218.0` / build `75` bundles remain
+  recoverable beside the installed apps with the
+  `previous-v218.0-build75-20260807T011912+0200` suffix.
+- Direct CLI `release verify` succeeds on David with exit `0`: app/helper
+  `219.0` / `76`, expected bundle IDs, helper headless, compatible, and Photos
+  authorized. This removes the stale-helper ambiguity without Computer Use.
+- David `photos health` reports Backstage Photos access `not_determined`.
+  The explicit `photos authorize` command was exercised over SSH and returned
+  `denied`; macOS did not grant access from that session. A person must grant
+  Full Photos access to **PhotosByElie Backstage** in David's System Settings,
+  then rerun `photos health` and `health`. Do not reset or bypass TCC.
+- Verification passed 56 Swift tests, 33 native parity tests, the Xcode Debug
+  build, shell checks, signed release builds, archive hash parity, and installed
+  bundle/CLI checks. David's existing dirty repository files were not touched.
+  No Owner action, fixture/source state, upload, publication, client message,
+  or public gallery write occurred.
+
 ## 2026-08-01 — Review approval atomically accepts title and keywords
 
 - Backstage `0.4.57` build `68` sends the focused Review title/keyword draft in

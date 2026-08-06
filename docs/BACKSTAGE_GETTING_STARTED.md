@@ -8,7 +8,7 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **v218.0 (build 75)**.
+The current native workflow is included in version **v219.0 (build 76)**.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -52,12 +52,12 @@ scripts/backstage-control.zsh photos authorize --pretty
 The response includes Backstage release metadata, Photos Bridge compatibility
 and authorization, Backstage Photos access, Owner session state, connector
 identity, and an actionable message. Exit code `0` means local readiness; `2`
-means a readiness gate needs attention; `64` means invalid arguments. These
+means a readiness gate needs attention; `64` means invalid arguments.
 `release verify` checks the Backstage/helper release path without requiring
 first-run Photos/TCC access. `health`, `doctor`, and `photos health` include
 that access gate. These commands do not open the UI, use accessibility
-automation, or mutate
-cloud/photo state, so they can be invoked over a supported SSH/mesh channel
+automation, or mutate cloud/photo state, so they can be invoked over a
+supported SSH/mesh channel
 during remote acceptance. `photos authorize` is the explicit exception: it asks
 PhotoKit to show the standard macOS permission request and reports the result;
 it does not click or automate that prompt. Cloud/photo mutations remain behind

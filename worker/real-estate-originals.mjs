@@ -238,7 +238,7 @@ export const createRealEstateOriginals = ({
     }
   };
 
-  const createSession = async (payload = {}) => {
+  const prepareRequest = (payload = {}) => {
     const galleryKey = canonicalRealEstateGalleryKey(payload.galleryKey);
     const gallery = galleriesByKey.get(galleryKey);
     if (!gallery) {
@@ -277,10 +277,49 @@ export const createRealEstateOriginals = ({
       };
     }).filter(Boolean);
 
-    const metadata = await Promise.all(requested.map(async (item) => ({
-      item,
-      object: await objectMetadata(privateBucket, item.objectKey),
-    })));
+    return { gallery, galleryKey, requested };
+  };
+
+  const metadataFor = async (requested) => Promise.all(requested.map(async (item) => ({
+    item,
+    object: await objectMetadata(privateBucket, item.objectKey),
+  })));
+
+  const preflight = async (payload = {}) => {
+    const { galleryKey, requested } = prepareRequest(payload);
+    const metadata = await metadataFor(requested);
+    const items = metadata.map(({ item, object }) => ({
+      photoId: item.photoId,
+      name: item.name,
+      contentType: item.contentType,
+      available: Boolean(object),
+      bytes: object ? objectBytes(object) : null,
+    }));
+    const availableCount = items.filter((item) => item.available).length;
+    const missingCount = items.length - availableCount;
+
+    return {
+      schemaVersion: 1,
+      command: "real-estate originals preflight",
+      mode: "read-only",
+      checkedAt: now().toISOString(),
+      ok: missingCount === 0,
+      galleryKey,
+      requestedCount: items.length,
+      availableCount,
+      missingCount,
+      totalBytes: items.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0),
+      items,
+      message: missingCount === 0
+        ? "Selected originals are available for an authorized download session."
+        : `${missingCount} selected original${missingCount === 1 ? " is" : "s are"} not ready in private storage.`,
+    };
+  };
+
+  const createSession = async (payload = {}) => {
+    const { gallery, galleryKey, requested } = prepareRequest(payload);
+
+    const metadata = await metadataFor(requested);
     const missing = metadata
       .filter(({ object }) => !object)
       .map(({ item }) => ({
@@ -355,5 +394,5 @@ export const createRealEstateOriginals = ({
     return withEmail;
   };
 
-  return { createSession };
+  return { createSession, preflight };
 };

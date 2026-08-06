@@ -15,16 +15,34 @@
 - Direct CLI `release verify` succeeds on David with exit `0`: app/helper
   `219.0` / `76`, expected bundle IDs, helper headless, compatible, and Photos
   authorized. This removes the stale-helper ambiguity without Computer Use.
-- David `photos health` reports Backstage Photos access `not_determined`.
-  The explicit `photos authorize` command was exercised over SSH and returned
-  `denied`; macOS did not grant access from that session. A person must grant
-  Full Photos access to **PhotosByElie Backstage** in David's System Settings,
-  then rerun `photos health` and `health`. Do not reset or bypass TCC.
+- David's SSH-launched `photos health` process reports Backstage Photos access
+  `not_determined`, and its explicit `photos authorize` call returned `denied`.
+  That result is an SSH audit-session limitation, not the persisted GUI state:
+  David System Settings shows Full Photos access for Backstage and Photos
+  Bridge, the user TCC database records both bundle IDs as allowed, and the
+  normal Backstage Overview reports Photos access `authorized`, helper
+  `219.0 (76)`, and Compatibility `Compatible`.
+- PBE-133 is now Done. The normal David Backstage process authenticated from
+  its preserved Owner credential, cached 2,000 recent Photos previews, and
+  loaded fixture RE read-only at 52,308 match/in-scope, 52,184 undecided, 124
+  picked, and 0 hidden. The UI confirmed no culling changes in the session.
+- PBE-115 remains Active. Its read-only deployed access rehearsal is green for
+  anonymous denials and public-catalog privacy, but the signed-in private La
+  Concha page still shows 99 source photos, 3 shoots, and 0 saved products; it
+  does not yet evidence the new 121-approved-photo release. Do not call the
+  current originals-session endpoint for rehearsal because it creates
+  token/order records and invokes client email delivery.
+- PBB-74 now includes a source-ready authenticated
+  `/api/v1/real-estate/originals/preflight` endpoint. It returns schema-v1
+  read-only availability without tokens, orders, email, private object keys,
+  or gallery/asset writes. The Worker/API and native contract tests pass, but
+  this API slice is not deployed; production release and the 121-photo gallery
+  integration remain separate next decisions.
 - Verification passed 56 Swift tests, 33 native parity tests, the Xcode Debug
   build, shell checks, signed release builds, archive hash parity, and installed
   bundle/CLI checks. David's existing dirty repository files were not touched.
   No Owner action, fixture/source state, upload, publication, client message,
-  or public gallery write occurred.
+  access-policy change, or public gallery write occurred.
 
 ## 2026-08-01 — Review approval atomically accepts title and keywords
 

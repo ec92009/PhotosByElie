@@ -118,6 +118,13 @@ const anonymousDefinitions = (knownOrderId) => {
       expected: EXPECTED_CODES.real_estate_login_required,
     },
     {
+      label: "Anonymous Real Estate originals preflight is denied",
+      method: "POST",
+      path: "/real-estate/originals/preflight",
+      body: { galleryKey: "corine-real-estate", items: [] },
+      expected: EXPECTED_CODES.real_estate_login_required,
+    },
+    {
       label: "Anonymous Real Estate original-session creation is denied",
       method: "POST",
       path: "/real-estate/originals/session",

@@ -3,7 +3,7 @@ import Foundation
 
 public enum OwnerContract {
     public static let openAPIVersion = "1.0.0"
-    public static let specSHA256 = "0e4208befd85e58dd7cd433f1e331705d378bd3f3d52fd146f3e61eba8ad7f7b"
+    public static let specSHA256 = "4bb2d1804e81a8dc15a694786157d9ec78a559a20527de30f2f8aa8abb0d0e33"
     public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerTokenBundle", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
@@ -33,6 +33,7 @@ public enum OwnerContract {
         case listDeliverables = "listDeliverables"
         case listOwnerDevices = "listOwnerDevices"
         case logout = "logout"
+        case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
         case refreshOwnerTokens = "refreshOwnerTokens"
         case revokeOwnerDevice = "revokeOwnerDevice"
@@ -81,6 +82,7 @@ public enum OwnerContract {
         .listDeliverables: Endpoint(method: "POST", path: "/deliverables/list"),
         .listOwnerDevices: Endpoint(method: "GET", path: "/devices"),
         .logout: Endpoint(method: "POST", path: "/auth/logout"),
+        .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
         .refreshOwnerTokens: Endpoint(method: "POST", path: "/auth/refresh"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),

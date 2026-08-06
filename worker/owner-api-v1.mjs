@@ -33,6 +33,7 @@ const exactRoutes = new Map([
   ["/real-estate/login", "/api/real-estate/login"],
   ["/real-estate/session", "/api/real-estate/session"],
   ["/real-estate/logout", "/api/real-estate/logout"],
+  ["/real-estate/originals/preflight", "/api/real-estate/originals/preflight"],
   ["/real-estate/originals/session", "/api/real-estate/originals/session"],
   ["/deliverables", "/api/real-estate/deliverables"],
   ["/deliverables/list", "/api/real-estate/deliverables/list"],

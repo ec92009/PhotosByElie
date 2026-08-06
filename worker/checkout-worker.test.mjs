@@ -3121,6 +3121,90 @@ test("deployed Worker renders missing JPG products with Cloudflare Images and ca
   assert.equal(images.calls[0].output.quality, 90);
 });
 
+test("real-estate originals preflight is authenticated, read-only, and storage-safe", async () => {
+  const availablePhotoId = "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043";
+  const missingPhotoId = "corine-re-2026-la-concha-1-apt-8ab1-missing";
+  const albumSlug = "re-2026-la-concha-1-apt-8ab1";
+  const privateKey = `real-estate/corine-real-estate/masters/${albumSlug}/${availablePhotoId}.jpg`;
+  const privateR2 = createFakeR2({
+    [privateKey]: {
+      body: new TextEncoder().encode("real estate original bytes"),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const emailClient = createFakeEmailClient();
+  const galleries = [{
+    key: "corine-real-estate",
+    username: "Corine",
+    accessCode: "LaConcha",
+    privateMasterPrefix: "real-estate/corine-real-estate/masters",
+  }];
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    store,
+    randomUUID,
+    realEstateOriginals: createRealEstateOriginals({
+      privateBucket: privateR2,
+      store,
+      randomUUID,
+      now: () => new Date("2026-08-07T00:00:00.000Z"),
+      galleries,
+      emailClient,
+    }),
+    realEstateAuth: createRealEstateAuth({
+      galleries,
+      sessionSecret: "test-real-estate-session-secret",
+    }),
+  });
+
+  const anonymousResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/originals/preflight", {
+    galleryKey: "corine-real-estate",
+    items: [{ photoId: availablePhotoId, albumSlug, sourceFile: "D5H_3043.JPG" }],
+  }));
+  assert.equal(anonymousResponse.status, 401);
+  assert.equal((await anonymousResponse.json()).error.code, "real_estate_login_required");
+
+  const cookie = await realEstateSessionCookie(worker);
+  const preflightResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/real-estate/originals/preflight", {
+    galleryKey: "corine-real-estate",
+    items: [
+      {
+        photoId: availablePhotoId,
+        albumSlug,
+        sourceFile: "D5H_3043.JPG",
+        title: "La Concha 1 Apt 8AB1 - 01",
+        sortIndex: 1,
+      },
+      {
+        photoId: missingPhotoId,
+        albumSlug,
+        sourceFile: "MISSING.JPG",
+        title: "La Concha 1 Apt 8AB1 - missing",
+        sortIndex: 2,
+      },
+    ],
+  }, { cookie }));
+  assert.equal(preflightResponse.status, 200);
+  assert.equal(preflightResponse.headers.get("x-pbe-api-version"), "1");
+  const body = await preflightResponse.json();
+  assert.equal(body.preflight.schemaVersion, 1);
+  assert.equal(body.preflight.mode, "read-only");
+  assert.equal(body.preflight.checkedAt, "2026-08-07T00:00:00.000Z");
+  assert.equal(body.preflight.ok, false);
+  assert.equal(body.preflight.requestedCount, 2);
+  assert.equal(body.preflight.availableCount, 1);
+  assert.equal(body.preflight.missingCount, 1);
+  assert.equal(body.preflight.items[0].available, true);
+  assert.equal(body.preflight.items[1].available, false);
+  assert.equal(body.preflight.items[1].bytes, null);
+  assert.doesNotMatch(JSON.stringify(body), /objectKey|privateMasterPrefix|real-estate\/corine-real-estate\/masters/);
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+  assert.equal(emailClient.sent.length, 0);
+});
+
 test("real-estate originals endpoint creates private download tokens", async () => {
   const photoId = "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043";
   const videoId = "corine-re-2026-la-concha-1-apt-8ab1-video-001";

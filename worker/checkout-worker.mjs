@@ -3299,6 +3299,16 @@ export const createPhotosByElieWorker = ({
     return credentialedJson(request, { originals }, 201);
   };
 
+  const preflightRealEstateOriginals = async (request) => {
+    if (!realEstateOriginals || typeof realEstateOriginals.preflight !== "function") {
+      return errorJson(503, "real_estate_originals_unavailable", "Real-estate originals delivery is not configured.");
+    }
+    const payload = await parseJson(request);
+    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    const preflight = await realEstateOriginals.preflight(payload);
+    return credentialedJson(request, { preflight });
+  };
+
   const listRealEstateDeliverables = async (request) => {
     if (!realEstateDeliverables || typeof realEstateDeliverables.listDeliverables !== "function") {
       return errorJson(503, "real_estate_deliverables_unavailable", "Real-estate cloud products are not configured.");
@@ -3595,6 +3605,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/real-estate/login") return await loginRealEstate(request);
       if (request.method === "GET" && path === "/real-estate/session") return await getRealEstateSession(request);
       if (request.method === "POST" && path === "/real-estate/logout") return await logoutRealEstate(request);
+      if (request.method === "POST" && path === "/real-estate/originals/preflight") return await preflightRealEstateOriginals(request);
       if (request.method === "POST" && path === "/real-estate/originals/session") return await createRealEstateOriginalsSession(request);
       const internalRealEstateRenderJobMatch = path.match(/^\/real-estate\/internal\/render-jobs\/([^/]+)$/);
       if (request.method === "GET" && internalRealEstateRenderJobMatch) {

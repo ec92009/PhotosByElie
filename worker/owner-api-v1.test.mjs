@@ -39,6 +39,10 @@ test("Owner API v1 exposes explicit compatibility routes", () => {
     "/api/access-console/people/person-1/disable"
   );
   assert.equal(
+    resolveOwnerApiV1Route("/api/v1/real-estate/originals/preflight"),
+    "/api/real-estate/originals/preflight"
+  );
+  assert.equal(
     resolveOwnerApiV1Route("/api/v1/deliverables/output-1/download"),
     "/api/real-estate/deliverables/output-1/download"
   );

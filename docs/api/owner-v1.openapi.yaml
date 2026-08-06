@@ -423,6 +423,74 @@ paths:
       responses:
         "200":
           description: Applied decisions
+  /real-estate/originals/preflight:
+    post:
+      tags: [Delivery]
+      security: [{ realEstateSession: [] }]
+      operationId: preflightRealEstateOriginals
+      description: >
+        Checks selected private originals using the authenticated Real Estate
+        gallery session. This read-only operation creates no download tokens,
+        order records, email, or client message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [galleryKey, items]
+              properties:
+                galleryKey: { type: string }
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 300
+                  items:
+                    type: object
+                    required: [photoId, albumSlug]
+                    properties:
+                      photoId: { type: string }
+                      albumSlug: { type: string }
+                      sourceFile: { type: string }
+                      title: { type: string }
+                      sortIndex: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Read-only availability report
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [preflight]
+                properties:
+                  preflight:
+                    type: object
+                    required: [schemaVersion, mode, ok, galleryKey, requestedCount, availableCount, missingCount, items]
+                    properties:
+                      schemaVersion: { type: integer, enum: [1] }
+                      command: { type: string }
+                      mode: { type: string, enum: [read-only] }
+                      checkedAt: { type: string, format: date-time }
+                      ok: { type: boolean }
+                      galleryKey: { type: string }
+                      requestedCount: { type: integer }
+                      availableCount: { type: integer }
+                      missingCount: { type: integer }
+                      totalBytes: { type: integer }
+                      message: { type: string }
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          required: [photoId, name, contentType, available]
+                          properties:
+                            photoId: { type: string }
+                            name: { type: string }
+                            contentType: { type: string }
+                            available: { type: boolean }
+                            bytes: { type: [integer, "null"] }
+        "401":
+          $ref: "#/components/responses/Error"
   /deliverables:
     post:
       tags: [Delivery]
@@ -515,6 +583,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: PBE connector credential
+    realEstateSession:
+      type: apiKey
+      in: cookie
+      name: pbe_re_session
   parameters:
     ActionId:
       in: path

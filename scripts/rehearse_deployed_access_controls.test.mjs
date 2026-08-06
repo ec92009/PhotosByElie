@@ -20,7 +20,7 @@ const expectedFetch = async (url) => {
   if (["/owner/session", "/owner/actions", "/access-console/state", "/access-console/gallery-access", "/shared-galleries"].includes(parsed.pathname)) {
     return errorResponse(401, "owner_auth_missing");
   }
-  if (["/real-estate/session", "/real-estate/originals/session"].includes(parsed.pathname)) {
+  if (["/real-estate/session", "/real-estate/originals/preflight", "/real-estate/originals/session"].includes(parsed.pathname)) {
     return errorResponse(401, "real_estate_login_required");
   }
   if (parsed.pathname === "/orders/PBE-20260802-EXAMPLE") return errorResponse(403, "order_email_required");

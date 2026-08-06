@@ -63,6 +63,25 @@ PhotoKit to show the standard macOS permission request and reports the result;
 it does not click or automate that prompt. Cloud/photo mutations remain behind
 the existing Owner action and explicit authorization gates.
 
+### No-send client-originals preflight API
+
+PBB-74 also defines a versioned cloud preflight for the private Real Estate
+download path:
+
+`POST https://auth.photos-by-elie.com/api/v1/real-estate/originals/preflight`
+
+Call it with an existing signed `pbe_re_session` client cookie and a JSON body
+containing `galleryKey` plus the selected `photoId`, `albumSlug`, and optional
+source/title fields. The response is machine-readable schema version 1 and
+reports each selected original as available or missing. It deliberately
+returns no private object key.
+
+This endpoint is read-only: it creates no download token, order, email, client
+message, gallery change, or asset mutation. A successful preflight proves that
+an authenticated client selection is ready for the separate, explicit
+download-session action. It does not replace client authentication and does
+not bypass the signed session cookie.
+
 Backstage restores its working layout between launches: the main and Quick
 Look window frames, the last selected workspace, the navigation sidebar's
 visibility and width, the Fixtures and People & Access dividers, and the

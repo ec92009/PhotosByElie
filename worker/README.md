@@ -45,6 +45,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /real-estate/login` | Real Estate client username/password login | Verifies an ACS-managed D1 password first, falls back to a Worker-held migration credential, and issues a short-lived signed HttpOnly session cookie |
 | `GET /real-estate/session` | Real Estate client checks current auth | Validates the signed session cookie |
 | `POST /real-estate/logout` | Real Estate client logs out | Clears the signed session cookie |
+| `POST /real-estate/originals/preflight` | Real Estate client checks selected originals | Requires the signed session cookie and returns read-only private-R2 availability without creating tokens, orders, or email |
 | `POST /real-estate/originals/session` | Real Estate client requests selected originals | Requires the signed session cookie, checks private R2 originals, and returns per-file private download tokens |
 | `POST /real-estate/deliverables` | Real Estate client or assembler saves a product record | Requires the signed session cookie and stores the small product/job manifest in private R2 |
 | `POST /real-estate/deliverables/jobs` | Real Estate client queues cloud PDF/video assembly from a saved selection manifest | Requires the signed session cookie, persists pending job records in private R2, and records video source-audio ducking under the guitar bed |

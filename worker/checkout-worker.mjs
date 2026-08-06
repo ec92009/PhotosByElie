@@ -2675,7 +2675,7 @@ export const createPhotosByElieWorker = ({
       connectorId,
       surface: String(payload.surface || "owner").trim().slice(0, 80),
       updatedAt: timestamp.toISOString(),
-      activeUntil: new Date(timestamp.getTime() + 25_000).toISOString(),
+      activeUntil: new Date(timestamp.getTime() + (5 * 60 * 1000)).toISOString(),
     };
     await ownerActionStore.putInteractiveLease(connectorId, lease);
     return credentialedJson(request, { ok: true, interactivePolling: true, lease });

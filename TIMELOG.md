@@ -750,8 +750,9 @@ Clock state: running
 | 2026-08-06 | 09:36 CEST | 09:37 CEST | 0:01 | Re-evaluated the live PBE/PBB queue and prioritized PBB-63 as the final PBB-56 dependency; background rehearsal implementation, test execution, and ticket refresh runtime excluded. |
 | 2026-08-06 | 09:58 CEST | 09:59 CEST | 0:01 | Prioritized PBE-115, refreshed the La Concha migration checkpoint, and confirmed the remaining human cull gate; background Photos Bridge sync, tests, and ticket API runtime excluded. |
 | 2026-08-06 | 10:39 CEST | 10:40 CEST | 0:01 | Prioritized PBE-92, completed the deployed anonymous bypass rehearsal, and identified the remaining authenticated and expired-link manual gates; background implementation, tests, live probes, and ticket API runtime excluded. |
+| 2026-08-06 | 11:08 CEST | 11:09 CEST | 0:01 | Prioritized PBE-97, deployed recurring KV write coalescing, captured the capacity baseline and plan, and verified the live Worker routes; background implementation, tests, deployment, and API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:33
+Active collaboration time used: 35:34
 Remaining budget: not set

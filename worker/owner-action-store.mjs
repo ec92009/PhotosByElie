@@ -71,6 +71,9 @@ export const createMemoryOwnerActionStore = () => {
 export const createKvOwnerActionStore = ({
   namespace,
   prefix = "pbe",
+  connectorHeartbeatWriteIntervalSeconds = 5 * 60,
+  interactiveLeaseMinimumRemainingSeconds = 2 * 60,
+  interactiveLeaseTtlSeconds = 10 * 60,
 } = {}) => {
   if (!namespace) throw new Error("createKvOwnerActionStore requires a KV namespace binding.");
   const actionPrefix = `${prefix}:owner-actions:`;
@@ -96,6 +99,13 @@ export const createKvOwnerActionStore = ({
     return [];
   };
   const pendingKeyFor = (id) => `${pendingIndexPrefix}${cleanId(id)}`;
+  const connectorFingerprint = (connector = {}) => JSON.stringify({
+    state: String(connector.state || ""),
+    hostname: String(connector.hostname || ""),
+    platform: String(connector.platform || ""),
+    version: String(connector.version || ""),
+    capabilities: Array.isArray(connector.capabilities) ? connector.capabilities.map(String) : [],
+  });
 
   return {
     putAction: async (action) => {
@@ -193,10 +203,26 @@ export const createKvOwnerActionStore = ({
     putConnector: async (connector) => {
       const id = cleanId(connector?.id);
       if (!id) throw new Error("Owner connector requires an id.");
-      await namespace.put(`${connectorPrefix}${id}`, JSON.stringify(connector), { expirationTtl: 24 * 60 * 60 });
+      const connectorKey = `${connectorPrefix}${id}`;
+      const current = await namespace.get(connectorKey, { type: "json" });
+      const currentAt = Date.parse(current?.lastSeenAt || "");
+      const nextAt = Date.parse(connector?.lastSeenAt || "");
+      const minimumGapMs = Math.max(0, Number(connectorHeartbeatWriteIntervalSeconds) || 0) * 1000;
+      const unchanged = current && connectorFingerprint(current) === connectorFingerprint(connector);
+      const heartbeatIsFresh = unchanged
+        && Number.isFinite(currentAt)
+        && Number.isFinite(nextAt)
+        && nextAt >= currentAt
+        && nextAt - currentAt < minimumGapMs;
+      if (heartbeatIsFresh) return clone(connector);
+
+      await namespace.put(connectorKey, JSON.stringify(connector), { expirationTtl: 24 * 60 * 60 });
       const head = await namespace.get(connectorHeadKey, { type: "json" });
       const ids = Array.isArray(head?.ids) ? head.ids.map(cleanId).filter(Boolean) : [];
-      await namespace.put(connectorHeadKey, JSON.stringify({ ids: [id, ...ids.filter((item) => item !== id)].slice(0, 25) }));
+      const nextIds = [id, ...ids.filter((item) => item !== id)].slice(0, 25);
+      if (JSON.stringify(ids) !== JSON.stringify(nextIds)) {
+        await namespace.put(connectorHeadKey, JSON.stringify({ ids: nextIds }));
+      }
       return clone(connector);
     },
     listConnectors: async () => {
@@ -212,7 +238,18 @@ export const createKvOwnerActionStore = ({
     putInteractiveLease: async (connectorId, lease) => {
       const id = cleanId(connectorId);
       if (!id) throw new Error("Interactive Owner lease requires a connector id.");
-      await namespace.put(`${interactiveLeasePrefix}${id}`, JSON.stringify(lease), { expirationTtl: 60 });
+      const leaseKey = `${interactiveLeasePrefix}${id}`;
+      const current = await namespace.get(leaseKey, { type: "json" });
+      const currentUntil = Date.parse(current?.activeUntil || "");
+      const nextAt = Date.parse(lease?.updatedAt || "");
+      const minimumRemainingMs = Math.max(0, Number(interactiveLeaseMinimumRemainingSeconds) || 0) * 1000;
+      const sameSurface = current && String(current.surface || "") === String(lease?.surface || "");
+      if (sameSurface && Number.isFinite(currentUntil) && Number.isFinite(nextAt) && currentUntil - nextAt > minimumRemainingMs) {
+        return clone(lease);
+      }
+      await namespace.put(leaseKey, JSON.stringify(lease), {
+        expirationTtl: Math.max(60, Number(interactiveLeaseTtlSeconds) || 10 * 60),
+      });
       return clone(lease);
     },
     getInteractiveLease: async (connectorId) => {

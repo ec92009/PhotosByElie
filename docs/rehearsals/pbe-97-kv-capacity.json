@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-06T09:05:26.302Z",
+  "source": "Cloudflare GraphQL Analytics API",
+  "adaptiveEstimates": true,
+  "accountId": "26aa9df8b20960f20cf0e8dba5cb2f88",
+  "namespaceId": "0ea4d21c491246c986c2c0308bebc560",
+  "window": {
+    "start": "2026-07-07",
+    "end": "2026-08-06",
+    "days": 31
+  },
+  "operations": {
+    "daily": [
+      {
+        "date": "2026-07-08",
+        "read": 680,
+        "write": 0,
+        "delete": 0,
+        "list": 10,
+        "total": 690
+      },
+      {
+        "date": "2026-07-10",
+        "read": 200320,
+        "write": 18750,
+        "delete": 0,
+        "list": 19440,
+        "total": 238510
+      },
+      {
+        "date": "2026-07-11",
+        "read": 665380,
+        "write": 50170,
+        "delete": 0,
+        "list": 48950,
+        "total": 764500
+      },
+      {
+        "date": "2026-07-12",
+        "read": 736280,
+        "write": 49650,
+        "delete": 0,
+        "list": 47870,
+        "total": 833800
+      },
+      {
+        "date": "2026-07-13",
+        "read": 752430,
+        "write": 50330,
+        "delete": 0,
+        "list": 49740,
+        "total": 852500
+      },
+      {
+        "date": "2026-07-14",
+        "read": 757800,
+        "write": 51880,
+        "delete": 0,
+        "list": 51290,
+        "total": 860970
+      },
+      {
+        "date": "2026-07-15",
+        "read": 741280,
+        "write": 48190,
+        "delete": 0,
+        "list": 48410,
+        "total": 837880
+      },
+      {
+        "date": "2026-07-16",
+        "read": 878870,
+        "write": 52300,
+        "delete": 0,
+        "list": 51100,
+        "total": 982270
+      },
+      {
+        "date": "2026-07-17",
+        "read": 1178300,
+        "write": 54530,
+        "delete": 0,
+        "list": 54380,
+        "total": 1287210
+      },
+      {
+        "date": "2026-07-18",
+        "read": 1281050,
+        "write": 50000,
+        "delete": 0,
+        "list": 49240,
+        "total": 1380290
+      },
+      {
+        "date": "2026-07-19",
+        "read": 1448620,
+        "write": 51310,
+        "delete": 0,
+        "list": 50700,
+        "total": 1550630
+      },
+      {
+        "date": "2026-07-20",
+        "read": 1333020,
+        "write": 44470,
+        "delete": 0,
+        "list": 42320,
+        "total": 1419810
+      },
+      {
+        "date": "2026-07-21",
+        "read": 972730,
+        "write": 42150,
+        "delete": 150,
+        "list": 33410,
+        "total": 1048440
+      },
+      {
+        "date": "2026-07-22",
+        "read": 122620,
+        "write": 35840,
+        "delete": 110,
+        "list": 16800,
+        "total": 175370
+      },
+      {
+        "date": "2026-07-23",
+        "read": 103640,
+        "write": 30220,
+        "delete": 0,
+        "list": 15300,
+        "total": 149160
+      },
+      {
+        "date": "2026-07-24",
+        "read": 130720,
+        "write": 31330,
+        "delete": 30,
+        "list": 15890,
+        "total": 177970
+      },
+      {
+        "date": "2026-07-25",
+        "read": 125630,
+        "write": 33790,
+        "delete": 140,
+        "list": 16340,
+        "total": 175900
+      },
+      {
+        "date": "2026-07-26",
+        "read": 113920,
+        "write": 33120,
+        "delete": 20,
+        "list": 16380,
+        "total": 163440
+      },
+      {
+        "date": "2026-07-27",
+        "read": 114560,
+        "write": 18910,
+        "delete": 560,
+        "list": 6470,
+        "total": 140500
+      },
+      {
+        "date": "2026-07-28",
+        "read": 110280,
+        "write": 34740,
+        "delete": 2780,
+        "list": 2660,
+        "total": 150460
+      },
+      {
+        "date": "2026-07-29",
+        "read": 114990,
+        "write": 62320,
+        "delete": 4940,
+        "list": 2120,
+        "total": 184370
+      },
+      {
+        "date": "2026-07-30",
+        "read": 60720,
+        "write": 28580,
+        "delete": 1920,
+        "list": 1870,
+        "total": 93090
+      },
+      {
+        "date": "2026-07-31",
+        "read": 77010,
+        "write": 41450,
+        "delete": 3200,
+        "list": 2510,
+        "total": 124170
+      },
+      {
+        "date": "2026-08-01",
+        "read": 80470,
+        "write": 33190,
+        "delete": 2800,
+        "list": 2920,
+        "total": 119380
+      },
+      {
+        "date": "2026-08-02",
+        "read": 80440,
+        "write": 8650,
+        "delete": 360,
+        "list": 2780,
+        "total": 92230
+      },
+      {
+        "date": "2026-08-03",
+        "read": 51240,
+        "write": 5860,
+        "delete": 280,
+        "list": 2550,
+        "total": 59930
+      },
+      {
+        "date": "2026-08-04",
+        "read": 67140,
+        "write": 21220,
+        "delete": 1190,
+        "list": 2930,
+        "total": 92480
+      },
+      {
+        "date": "2026-08-05",
+        "read": 107750,
+        "write": 52860,
+        "delete": 3890,
+        "list": 2930,
+        "total": 167430
+      },
+      {
+        "date": "2026-08-06",
+        "read": 20400,
+        "write": 2520,
+        "delete": 20,
+        "list": 980,
+        "total": 23920
+      }
+    ],
+    "totals": {
+      "read": 12428290,
+      "write": 1038330,
+      "delete": 22390,
+      "list": 658290,
+      "total": 14147300
+    },
+    "peakWriteDay": {
+      "date": "2026-07-29",
+      "write": 62320
+    },
+    "recent": {
+      "days": 7,
+      "writes": 165750,
+      "averageWritesPerDay": 23679,
+      "projectedWritesPer30Days": 710357
+    }
+  },
+  "storage": {
+    "date": "2026-08-06",
+    "keyCount": 33720,
+    "byteCount": 245847762
+  },
+  "limits": {
+    "snapshotDate": "2026-08-06",
+    "free": {
+      "writesPerDay": 1000,
+      "storageBytes": 1000000000
+    },
+    "paid": {
+      "includedWritesPerMonth": 1000000,
+      "includedStorageBytes": 1000000000
+    },
+    "sources": [
+      "https://developers.cloudflare.com/kv/platform/pricing/",
+      "https://developers.cloudflare.com/workers/platform/pricing/",
+      "https://developers.cloudflare.com/kv/observability/metrics-analytics/"
+    ]
+  },
+  "capacity": {
+    "freeWriteLimitExceededOnPeakDay": true,
+    "projectedPaidWriteAllowanceUsedPercent": 71,
+    "paidStorageAllowanceUsedPercent": 24.58
+  }
+}

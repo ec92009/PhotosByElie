@@ -2,6 +2,30 @@
 
 SwiftPM remains the release build and command-line test source of truth.
 
+## Control CLI
+
+The release executable has a non-UI control mode for supported remote checks:
+
+```sh
+scripts/backstage-control.zsh health --pretty
+scripts/backstage-control.zsh doctor --pretty
+scripts/backstage-control.zsh release verify --pretty
+scripts/backstage-control.zsh photos health --pretty
+scripts/backstage-control.zsh photos authorize --pretty
+```
+
+The wrapper invokes the installed app binary with `--control`, preserving the
+Backstage bundle identity for PhotoKit/TCC inspection. Responses are JSON with
+`schemaVersion`, `ok`, release/helper metadata, authorization state, connector
+identity, and an actionable `message`. The health commands are read-only and
+never invoke Computer Use or open the Backstage UI. `release verify` checks the
+Backstage/helper release path without requiring first-run Photos/TCC access.
+`health`, `doctor`, and `photos health` include that access gate.
+`photos authorize` is an explicit PhotoKit permission request and reports the
+standard macOS prompt
+result without automating the prompt. Exit code `0` means local readiness, `2`
+means a readiness check failed, and `64` means invalid CLI arguments.
+
 ## Xcode Canvas
 
 Open [`PhotosByElieBackstage.xcodeproj`](PhotosByElieBackstage.xcodeproj) in

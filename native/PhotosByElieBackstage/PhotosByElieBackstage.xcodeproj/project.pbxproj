@@ -21,6 +21,7 @@
 		24656154924A698C1CB836B8 /* MetadataGiveBackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0F0E197FD86EC46D20B800 /* MetadataGiveBackService.swift */; };
 		26A15073D2A01FB5868A4DE2 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B31D0E07A87397F37067AA7E /* UploadView.swift */; };
 		2B22F422E9747862C6D8F7E5 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88CB1E92117027223296FE1B /* Security.framework */; };
+		3B7959F7B24C65FF0C87AAD2 /* BackstageControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */; };
 		40FCDE82D936CF0F2C7E4770 /* MetadataReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */; };
 		4628074BA54F4ECE704A7053 /* AccessControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */; };
 		475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */; };
@@ -106,6 +107,7 @@
 		04733C0078B7BE63D367291F /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
 		0CB6E2056746C1F076962053 /* OwnerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerModels.swift; sourceTree = "<group>"; };
 		0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageViewModel.swift; sourceTree = "<group>"; };
+		177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageControlService.swift; sourceTree = "<group>"; };
 		1B8EB0E6BEDA648050434552 /* OwnerCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OwnerCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2578FB791C0EF56084A5E52A /* FixturePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixturePicker.swift; sourceTree = "<group>"; };
 		2E049889FFB8A0BF84C78303 /* owner-api-examples.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "owner-api-examples.json"; sourceTree = "<group>"; };
@@ -261,6 +263,7 @@
 			isa = PBXGroup;
 			children = (
 				6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */,
+				177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */,
 				45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */,
 				8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */,
 				928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */,
@@ -439,6 +442,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4628074BA54F4ECE704A7053 /* AccessControlService.swift in Sources */,
+				3B7959F7B24C65FF0C87AAD2 /* BackstageControlService.swift in Sources */,
 				85C552A4DC7DAE3B98B0D2CE /* CullingWorkspace.swift in Sources */,
 				C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */,
 				1DC5B1F0D74089B35C517977 /* FixtureWorkflowService.swift in Sources */,

@@ -37,6 +37,32 @@ the button's accessibility hint.
 Those checks are read-only. They do not change a photo, upload a file, publish
 anything, or contact a client.
 
+## Control CLI without Computer Use
+
+The installed Backstage executable also exposes a structured, read-only control
+surface. It runs inside the Backstage bundle identity, so its Photos/TCC result
+is about Backstage itself rather than a third helper process:
+
+```sh
+scripts/backstage-control.zsh health --pretty
+scripts/backstage-control.zsh release verify --pretty
+scripts/backstage-control.zsh photos authorize --pretty
+```
+
+The response includes Backstage release metadata, Photos Bridge compatibility
+and authorization, Backstage Photos access, Owner session state, connector
+identity, and an actionable message. Exit code `0` means local readiness; `2`
+means a readiness gate needs attention; `64` means invalid arguments. These
+`release verify` checks the Backstage/helper release path without requiring
+first-run Photos/TCC access. `health`, `doctor`, and `photos health` include
+that access gate. These commands do not open the UI, use accessibility
+automation, or mutate
+cloud/photo state, so they can be invoked over a supported SSH/mesh channel
+during remote acceptance. `photos authorize` is the explicit exception: it asks
+PhotoKit to show the standard macOS permission request and reports the result;
+it does not click or automate that prompt. Cloud/photo mutations remain behind
+the existing Owner action and explicit authorization gates.
+
 Backstage restores its working layout between launches: the main and Quick
 Look window frames, the last selected workspace, the navigation sidebar's
 visibility and width, the Fixtures and People & Access dividers, and the

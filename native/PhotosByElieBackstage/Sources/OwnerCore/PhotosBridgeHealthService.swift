@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PhotosBridgeHealth: Sendable, Equatable {
+public struct PhotosBridgeHealth: Codable, Sendable, Equatable {
     public var installed: Bool
     public var headless: Bool
     public var bundleIdentifier: String

@@ -2479,6 +2479,91 @@ struct OwnerCoreTests {
         #expect(health.photoAccess == "authorized")
         #expect(health.message.contains("incompatible"))
     }
+
+    @Test("Backstage control health stays structured and CUA-free")
+    func backstageControlHealthIsMachineReadable() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-control-health-\(UUID().uuidString)")
+        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
+        let contents = app.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
+            "CFBundleShortVersionString": "218.0",
+            "CFBundleVersion": "75",
+            "LSUIElement": true,
+        ]
+        let plistData = try PropertyListSerialization.data(
+            fromPropertyList: plist,
+            format: .xml,
+            options: 0
+        )
+        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
+        let bridge = PhotosBridgeHealthService(
+            appURL: app,
+            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
+            expectedVersion: "218.0",
+            expectedBuild: "75"
+        ) { _, resultURL in
+            let result: [String: Any] = [
+                "ok": true,
+                "headless": true,
+                "bundleIdentifier": "com.photosbyelie.photos-bridge",
+                "photoAccess": "authorized",
+            ]
+            let data = try JSONSerialization.data(withJSONObject: result)
+            try data.write(to: resultURL)
+        }
+        let release = BackstageReleaseIdentity(
+            bundleIdentifier: "com.photosbyelie.backstage",
+            version: "218.0",
+            build: "75",
+            helperBundleIdentifier: "com.photosbyelie.photos-bridge",
+            helperVersion: "218.0",
+            helperBuild: "75"
+        )
+        let service = BackstageControlService(
+            release: release,
+            photosBridge: bridge,
+            photoLibrary: StaticPhotoLibrary(access: .notDetermined),
+            connectorIdentity: StaticOwnerConnectorIdentity("max"),
+            authenticationSnapshot: {
+                OwnerAuthenticationSnapshot(
+                    phase: .authenticated,
+                    deviceId: "owner-device-test"
+                )
+            }
+        )
+
+        let health = await service.health(command: "release verify")
+        #expect(health.ok)
+        #expect(health.command == "release verify")
+        #expect(health.release.helperBuild == "75")
+        #expect(health.helper.compatible)
+        #expect(health.photoLibraryAccess == "not_determined")
+        #expect(health.ownerAuthenticated)
+        #expect(health.connectorID == "max")
+        #expect(health.message == "Backstage release and Photos Bridge helper are compatible.")
+
+        let photosHealth = await service.health(command: "photos health")
+        #expect(!photosHealth.ok)
+        #expect(photosHealth.message.contains("not_determined"))
+
+        let encoded = try JSONEncoder.ownerAPI.encode(health)
+        let decoded = try JSONDecoder.ownerAPI.decode(BackstageControlHealth.self, from: encoded)
+        #expect(decoded.schemaVersion == health.schemaVersion)
+        #expect(decoded.command == health.command)
+        #expect(abs(decoded.checkedAt.timeIntervalSince(health.checkedAt)) < 1)
+        #expect(decoded.ok == health.ok)
+        #expect(decoded.release == health.release)
+        #expect(decoded.helper == health.helper)
+        #expect(decoded.photoLibraryAccess == health.photoLibraryAccess)
+        #expect(decoded.ownerSession == health.ownerSession)
+        #expect(decoded.ownerAuthenticated == health.ownerAuthenticated)
+        #expect(decoded.connectorID == health.connectorID)
+        #expect(decoded.message == health.message)
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {
@@ -2498,6 +2583,24 @@ private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {
         throw OwnerDatabaseError.unavailable("test scalar unavailable")
     }
     return String(cString: sqlite3_column_text(statement, 0))
+}
+
+private struct StaticPhotoLibrary: PhotoLibraryServing {
+    let access: PhotoLibraryAccess
+
+    func authorization() -> PhotoLibraryAccess { access }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { access }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
 }
 
 private final class MemoryCredentialVault: CredentialVault, @unchecked Sendable {

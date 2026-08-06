@@ -654,6 +654,40 @@ class NativeCullingParityTest(unittest.TestCase):
             build_script,
         )
 
+    def test_backstage_control_cli_is_structured_and_does_not_use_cua(self):
+        control = (
+            NATIVE / "Sources" / "OwnerCore" / "BackstageControlService.swift"
+        ).read_text(encoding="utf-8")
+        launcher = (
+            NATIVE / "Sources" / "BackstageLauncher" / "main.swift"
+        ).read_text(encoding="utf-8")
+        wrapper = (ROOT / "scripts" / "backstage-control.zsh").read_text(
+            encoding="utf-8"
+        )
+        docs = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
+            encoding="utf-8"
+        )
+
+        for marker in (
+            "BackstageControlHealth",
+            "schemaVersion",
+            "PhotosBridgeHealthService",
+            "photoLibrary.authorization()",
+            "ownerAuthenticated",
+            "release verify",
+            "photos health",
+            "photos authorize",
+            "requestAuthorization",
+            "invalid_arguments",
+        ):
+            self.assertIn(marker, control)
+        self.assertIn('arguments.first == "--control"', launcher)
+        self.assertIn("Darwin.exit(exitCode)", launcher)
+        self.assertIn('exec "$executable" --control "$@"', wrapper)
+        self.assertIn("scripts/backstage-control.zsh health --pretty", docs)
+        self.assertNotIn("AXUIElement", control)
+        self.assertNotIn("CGEvent", control)
+
     def test_culling_refreshes_previews_without_competing_owner_reconciliation(self):
         source = backstage_ui_source()
         model_source = (

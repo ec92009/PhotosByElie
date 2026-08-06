@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-06T08:38:12.023Z",
+  "mode": "read-only-anonymous",
+  "knownOrderWrongEmailProbe": true,
+  "pass": true,
+  "hosts": [
+    {
+      "host": "https://photosbyelie-checkout-mock.ec92009.workers.dev",
+      "pass": true,
+      "checks": [
+        {
+          "label": "Health is reachable",
+          "method": "GET",
+          "path": "/health",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous account session remains signed out",
+          "method": "GET",
+          "path": "/auth/session",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner session is denied",
+          "method": "GET",
+          "path": "/owner/session",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner actions are denied",
+          "method": "GET",
+          "path": "/owner/actions",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin console is denied",
+          "method": "GET",
+          "path": "/access-console/state",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin policy inspection is denied",
+          "method": "GET",
+          "path": "/access-console/gallery-access?galleryKind=event&galleryKey=pbe-rehearsal",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous shared galleries are denied",
+          "method": "GET",
+          "path": "/shared-galleries",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate session is denied",
+          "method": "GET",
+          "path": "/real-estate/session?galleryKey=corine-real-estate",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate original-session creation is denied",
+          "method": "POST",
+          "path": "/real-estate/originals/session",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Guessed order number is non-enumerable",
+          "method": "GET",
+          "path": "/orders/<guessed-order>?email=<wrong-email>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed checkout session is non-enumerable",
+          "method": "GET",
+          "path": "/orders/by-session/<guessed-session>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed download token is non-enumerable",
+          "method": "GET",
+          "path": "/download/<guessed-token>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_download",
+          "actualStatus": 404,
+          "actualCode": "unknown_download",
+          "pass": true
+        },
+        {
+          "label": "Guessed paid master path is absent",
+          "method": "GET",
+          "path": "/media/masters/pbe-rehearsal.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Guessed Real Estate master path is absent",
+          "method": "GET",
+          "path": "/media/real-estate/pbe-rehearsal/masters/photo.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Known order rejects the wrong checkout email",
+          "method": "GET",
+          "path": "/orders/<known-order>?email=<wrong-email>",
+          "expectedStatus": 403,
+          "expectedCode": "order_email_required",
+          "actualStatus": 403,
+          "actualCode": "order_email_required",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "host": "https://download.photos-by-elie.com",
+      "pass": true,
+      "checks": [
+        {
+          "label": "Health is reachable",
+          "method": "GET",
+          "path": "/health",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous account session remains signed out",
+          "method": "GET",
+          "path": "/auth/session",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner session is denied",
+          "method": "GET",
+          "path": "/owner/session",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner actions are denied",
+          "method": "GET",
+          "path": "/owner/actions",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin console is denied",
+          "method": "GET",
+          "path": "/access-console/state",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin policy inspection is denied",
+          "method": "GET",
+          "path": "/access-console/gallery-access?galleryKind=event&galleryKey=pbe-rehearsal",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous shared galleries are denied",
+          "method": "GET",
+          "path": "/shared-galleries",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate session is denied",
+          "method": "GET",
+          "path": "/real-estate/session?galleryKey=corine-real-estate",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate original-session creation is denied",
+          "method": "POST",
+          "path": "/real-estate/originals/session",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Guessed order number is non-enumerable",
+          "method": "GET",
+          "path": "/orders/<guessed-order>?email=<wrong-email>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed checkout session is non-enumerable",
+          "method": "GET",
+          "path": "/orders/by-session/<guessed-session>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed download token is non-enumerable",
+          "method": "GET",
+          "path": "/download/<guessed-token>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_download",
+          "actualStatus": 404,
+          "actualCode": "unknown_download",
+          "pass": true
+        },
+        {
+          "label": "Guessed paid master path is absent",
+          "method": "GET",
+          "path": "/media/masters/pbe-rehearsal.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Guessed Real Estate master path is absent",
+          "method": "GET",
+          "path": "/media/real-estate/pbe-rehearsal/masters/photo.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Known order rejects the wrong checkout email",
+          "method": "GET",
+          "path": "/orders/<known-order>?email=<wrong-email>",
+          "expectedStatus": 403,
+          "expectedCode": "order_email_required",
+          "actualStatus": 403,
+          "actualCode": "order_email_required",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "host": "https://auth.photos-by-elie.com",
+      "pass": true,
+      "checks": [
+        {
+          "label": "Health is reachable",
+          "method": "GET",
+          "path": "/health",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous account session remains signed out",
+          "method": "GET",
+          "path": "/auth/session",
+          "expectedStatus": 200,
+          "expectedCode": null,
+          "actualStatus": 200,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner session is denied",
+          "method": "GET",
+          "path": "/owner/session",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Owner actions are denied",
+          "method": "GET",
+          "path": "/owner/actions",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin console is denied",
+          "method": "GET",
+          "path": "/access-console/state",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Admin policy inspection is denied",
+          "method": "GET",
+          "path": "/access-console/gallery-access?galleryKind=event&galleryKey=pbe-rehearsal",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous shared galleries are denied",
+          "method": "GET",
+          "path": "/shared-galleries",
+          "expectedStatus": 401,
+          "expectedCode": "owner_auth_missing",
+          "actualStatus": 401,
+          "actualCode": "owner_auth_missing",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate session is denied",
+          "method": "GET",
+          "path": "/real-estate/session?galleryKey=corine-real-estate",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Anonymous Real Estate original-session creation is denied",
+          "method": "POST",
+          "path": "/real-estate/originals/session",
+          "expectedStatus": 401,
+          "expectedCode": "real_estate_login_required",
+          "actualStatus": 401,
+          "actualCode": "real_estate_login_required",
+          "pass": true
+        },
+        {
+          "label": "Guessed order number is non-enumerable",
+          "method": "GET",
+          "path": "/orders/<guessed-order>?email=<wrong-email>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed checkout session is non-enumerable",
+          "method": "GET",
+          "path": "/orders/by-session/<guessed-session>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_order",
+          "actualStatus": 404,
+          "actualCode": "unknown_order",
+          "pass": true
+        },
+        {
+          "label": "Guessed download token is non-enumerable",
+          "method": "GET",
+          "path": "/download/<guessed-token>",
+          "expectedStatus": 404,
+          "expectedCode": "unknown_download",
+          "actualStatus": 404,
+          "actualCode": "unknown_download",
+          "pass": true
+        },
+        {
+          "label": "Guessed paid master path is absent",
+          "method": "GET",
+          "path": "/media/masters/pbe-rehearsal.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Guessed Real Estate master path is absent",
+          "method": "GET",
+          "path": "/media/real-estate/pbe-rehearsal/masters/photo.jpg",
+          "expectedStatus": 404,
+          "expectedCode": null,
+          "actualStatus": 404,
+          "actualCode": null,
+          "pass": true
+        },
+        {
+          "label": "Known order rejects the wrong checkout email",
+          "method": "GET",
+          "path": "/orders/<known-order>?email=<wrong-email>",
+          "expectedStatus": 403,
+          "expectedCode": "order_email_required",
+          "actualStatus": 403,
+          "actualCode": "order_email_required",
+          "pass": true
+        }
+      ]
+    }
+  ],
+  "publicCatalog": {
+    "label": "Public SQLite catalog contains no private storage markers",
+    "path": "/assets/catalog/photosbyelie.sqlite",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "bytes": 1445888,
+    "forbiddenMarkers": [],
+    "pass": true
+  },
+  "manualGates": [
+    "Authenticated deployed role checks require explicit signed-in Owner/Admin, buyer, family/event, and Real Estate test sessions.",
+    "Expired and exhausted download checks require naturally expired/exhausted records or separately approved synthetic production fixtures."
+  ]
+}

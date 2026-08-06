@@ -749,8 +749,9 @@ Clock state: running
 | 2026-08-06 | 00:45 CEST | 00:46 CEST | 0:01 | Prioritized and completed PBB-62: added checkpointed cancellation and durable progress receipts across Photos sync, native uploads, and R2 reconciliation, then installed signed Backstage v218.0 (build 75); background implementation, tests, build, installation, and API runtime excluded. |
 | 2026-08-06 | 09:36 CEST | 09:37 CEST | 0:01 | Re-evaluated the live PBE/PBB queue and prioritized PBB-63 as the final PBB-56 dependency; background rehearsal implementation, test execution, and ticket refresh runtime excluded. |
 | 2026-08-06 | 09:58 CEST | 09:59 CEST | 0:01 | Prioritized PBE-115, refreshed the La Concha migration checkpoint, and confirmed the remaining human cull gate; background Photos Bridge sync, tests, and ticket API runtime excluded. |
+| 2026-08-06 | 10:39 CEST | 10:40 CEST | 0:01 | Prioritized PBE-92, completed the deployed anonymous bypass rehearsal, and identified the remaining authenticated and expired-link manual gates; background implementation, tests, live probes, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:32
+Active collaboration time used: 35:33
 Remaining budget: not set

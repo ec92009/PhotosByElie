@@ -332,3 +332,21 @@ npm run auth:preflight -- --worker-url https://photosbyelie-checkout-mock.ec9200
 ```
 
 Use `--offline` to check only local repo configuration.
+
+Run the deployed anonymous bypass rehearsal before an access release or after a
+Worker routing change:
+
+```bash
+npm run access:rehearse
+```
+
+The rehearsal is read-only. It checks all three deployed Worker hostnames for
+anonymous Owner/Admin/shared-gallery/Real Estate denial, guessed order/session/
+download behavior, private media path guesses, and the public SQLite catalog
+for private storage markers. Pass `--known-order-id <existing-order>` to add a
+wrong-checkout-email denial probe; the resulting report records only that the
+probe ran, never the order number, email, token, or response body.
+
+This command does not manufacture expired or exhausted links and does not sign
+in as role fixtures. Those remain explicit manual gates unless naturally
+expired/exhausted records and approved test accounts already exist.

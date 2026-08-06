@@ -752,8 +752,9 @@ Clock state: running
 | 2026-08-06 | 10:39 CEST | 10:40 CEST | 0:01 | Prioritized PBE-92, completed the deployed anonymous bypass rehearsal, and identified the remaining authenticated and expired-link manual gates; background implementation, tests, live probes, and ticket API runtime excluded. |
 | 2026-08-06 | 11:08 CEST | 11:09 CEST | 0:01 | Prioritized PBE-97, deployed recurring KV write coalescing, captured the capacity baseline and plan, and verified the live Worker routes; background implementation, tests, deployment, and API runtime excluded. |
 | 2026-08-06 | 12:09 CEST | 12:10 CEST | 0:01 | Attempted the PBB-70 cloud Owner Quick Look rehearsal, confirmed the production page is signed out, preserved the sign-in handoff, and recorded the blocker without changing photo state; browser and ticket API runtime excluded. |
+| 2026-08-06 | 13:03 CEST | 13:04 CEST | 0:01 | Resumed PBB-70 after Owner sign-in, verified cloud photo and panorama context previews plus Quick Look navigation and close behavior, and closed the ticket as Verified; video remained absent from the public catalog by policy. |
 
 ## Totals
 
-Active collaboration time used: 35:35
+Active collaboration time used: 35:36
 Remaining budget: not set

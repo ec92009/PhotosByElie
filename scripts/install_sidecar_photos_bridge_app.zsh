@@ -33,6 +33,23 @@ if [[ ! -f "$bridge_source" ]]; then
   exit 1
 fi
 
+release_metadata="$repo_root/native/PhotosByElieBackstage/release-metadata.zsh"
+if [[ ! -r "$release_metadata" ]]; then
+  printf 'Missing native release metadata: %s\n' "$release_metadata" >&2
+  exit 1
+fi
+source "$release_metadata"
+if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
+      "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
+  printf 'Native release metadata contains an unexpected bundle identity.\n' >&2
+  exit 1
+fi
+if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
+      "$PBE_BACKSTAGE_BUILD" != "$PBE_PHOTOS_BRIDGE_BUILD" ]]; then
+  printf 'Backstage and Photos Bridge release metadata must match.\n' >&2
+  exit 1
+fi
+
 app_contents="$app_dir/Contents"
 macos_dir="$app_contents/MacOS"
 resources_dir="$app_contents/Resources"
@@ -58,7 +75,7 @@ cat > "$app_contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key>
   <string>$icon_name</string>
   <key>CFBundleIdentifier</key>
-  <string>com.photosbyelie.photos-bridge</string>
+  <string>$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
@@ -66,9 +83,9 @@ cat > "$app_contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>$(tr -d '\n' < "$repo_root/SIDECAR_VERSION")</string>
+  <string>$PBE_PHOTOS_BRIDGE_VERSION</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>$PBE_PHOTOS_BRIDGE_BUILD</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
   <key>LSUIElement</key>

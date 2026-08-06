@@ -2402,6 +2402,7 @@ struct OwnerCoreTests {
         let plist: [String: Any] = [
             "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
             "CFBundleShortVersionString": "148.0",
+            "CFBundleVersion": "12",
             "LSUIElement": true,
         ]
         let plistData = try PropertyListSerialization.data(
@@ -2410,7 +2411,12 @@ struct OwnerCoreTests {
             options: 0
         )
         try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let service = PhotosBridgeHealthService(appURL: app) { _, resultURL in
+        let service = PhotosBridgeHealthService(
+            appURL: app,
+            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
+            expectedVersion: "148.0",
+            expectedBuild: "12"
+        ) { _, resultURL in
             let result: [String: Any] = [
                 "ok": true,
                 "headless": true,
@@ -2426,7 +2432,52 @@ struct OwnerCoreTests {
         #expect(health.headless)
         #expect(health.bundleIdentifier == "com.photosbyelie.photos-bridge")
         #expect(health.version == "148.0")
+        #expect(health.build == "12")
         #expect(health.photoAccess == "authorized")
+        #expect(health.compatible)
+        #expect(health.message == "Signed helper is compatible and authorized.")
+    }
+
+    @Test("Backstage reports a stale Photos helper before mutation")
+    func stalePhotosBridgeHealthIsIncompatible() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-bridge-stale-(UUID().uuidString)")
+        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
+        let contents = app.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
+            "CFBundleShortVersionString": "141.10",
+            "CFBundleVersion": "1",
+            "LSUIElement": true,
+        ]
+        let plistData = try PropertyListSerialization.data(
+            fromPropertyList: plist,
+            format: .xml,
+            options: 0
+        )
+        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
+        let service = PhotosBridgeHealthService(
+            appURL: app,
+            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
+            expectedVersion: "218.0",
+            expectedBuild: "75"
+        ) { _, resultURL in
+            let result: [String: Any] = [
+                "ok": true,
+                "headless": true,
+                "bundleIdentifier": "com.photosbyelie.photos-bridge",
+                "photoAccess": "authorized",
+            ]
+            let data = try JSONSerialization.data(withJSONObject: result)
+            try data.write(to: resultURL)
+        }
+
+        let health = await service.probe()
+        #expect(!health.compatible)
+        #expect(health.photoAccess == "authorized")
+        #expect(health.message.contains("incompatible"))
     }
 }
 

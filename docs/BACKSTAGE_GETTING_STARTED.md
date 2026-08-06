@@ -317,8 +317,10 @@ Photos Bridge.
 
 Photos Bridge runs as a background-only helper. It should not appear in the
 Dock or as a second operator application. On **Overview**, the **Signed Photos
-helper** card reports whether it is installed, background-only, and authorized
-for Photos. Use **Check helper** after an upgrade or permissions change.
+helper** card reports its version/build, whether it is compatible with the
+installed Backstage release, and whether it is authorized for Photos. Use
+**Check helper** after an upgrade or permissions change. Backstage blocks culling
+and metadata give-back while the helper is stale, missing, or unauthorized.
 
 ### Edit metadata
 
@@ -456,8 +458,10 @@ was already exchanged should not be reused.
 ### Photos access is required
 
 Choose **Allow Photos**. If macOS no longer prompts, open **System Settings →
-Privacy & Security → Photos** and grant PhotosByElie Backstage full access,
-then return to the app and choose **Refresh**.
+Privacy & Security → Photos** and grant Full Access to both **PhotosByElie
+Backstage** and **PhotosByElie Photos Bridge**, then return to the app and choose
+**Refresh**. The Overview helper card must report **Compatible** and
+**authorized** before culling or metadata give-back.
 
 ### Photos indexed, but an item is absent
 

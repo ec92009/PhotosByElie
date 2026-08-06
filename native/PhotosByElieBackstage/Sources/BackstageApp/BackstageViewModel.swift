@@ -280,7 +280,9 @@ final class BackstageViewModel: ObservableObject {
         headless: false,
         bundleIdentifier: "",
         version: "",
+        build: "",
         photoAccess: "checking",
+        compatible: false,
         message: "Checking the signed Photos helper…"
     )
     private var nativePublicationCancellationRequested = false
@@ -468,6 +470,10 @@ final class BackstageViewModel: ObservableObject {
             photoAccess = await photoLibrary.requestAuthorization()
         } else {
             photoAccess = photoLibrary.authorization()
+        }
+        await refreshPhotosBridgeHealth()
+        if !photosBridgeHealth.compatible || photosBridgeHealth.photoAccess != "authorized" {
+            cullingStatus = photosBridgeHealth.message
         }
         await refreshPhotos()
     }
@@ -2804,6 +2810,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func applyCullingDecisions(_ decisions: [SidecarDecision], label: String) async {
+        guard await preparePhotosMutation() else {
+            cullingStatus = photosMutationReadinessMessage()
+            return
+        }
         let selectedBefore = cullingSelection.selectedIDs
         isApplyingCullingDecision = true
         cullingCancellationRequested = false
@@ -2895,6 +2905,10 @@ final class BackstageViewModel: ObservableObject {
         let ids = selectedCullingAssetIDs
         guard !cullingFixtureID.isEmpty, !ids.isEmpty else {
             cullingStatus = "Choose a fixture and select one or more Photos items."
+            return
+        }
+        guard await preparePhotosMutation() else {
+            cullingStatus = photosMutationReadinessMessage()
             return
         }
         let selectedBefore = cullingSelection.selectedIDs
@@ -3958,6 +3972,22 @@ final class BackstageViewModel: ObservableObject {
         return true
     }
 
+    private func preparePhotosMutation() async -> Bool {
+        photoAccess = photoLibrary.authorization()
+        photosBridgeHealth = await photosBridgeHealthService.probe()
+        return [.authorized, .limited].contains(photoAccess)
+            && photosBridgeHealth.installed
+            && photosBridgeHealth.compatible
+            && photosBridgeHealth.photoAccess == "authorized"
+    }
+
+    private func photosMutationReadinessMessage() -> String {
+        guard [.authorized, .limited].contains(photoAccess) else {
+            return "Backstage Photos access is required before culling or metadata give-back. Choose Allow Photos or grant Full Access in System Settings."
+        }
+        return photosBridgeHealth.message
+    }
+
     private func presentAuthenticationFailureIfNeeded(_ error: Error) async {
         guard let envelope = error as? APIErrorEnvelope,
               envelope.error.code == "google_login_required" else { return }
@@ -3998,6 +4028,10 @@ final class BackstageViewModel: ObservableObject {
 
     private func runMetadata(commit: Bool) async {
         let fixture = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
+        if commit, !(await preparePhotosMutation()) {
+            metadataStatus = photosMutationReadinessMessage()
+            return
+        }
         isRunningMetadata = true
         defer { isRunningMetadata = false }
         do {

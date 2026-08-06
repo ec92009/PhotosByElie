@@ -12,6 +12,23 @@ repo_root="${package_root:h:h}"
 icon_source="${repo_root}/assets/branding/photosbyelie-camera-tripod-logo-1024.png"
 iconset="${output_root}/Backstage.iconset"
 icon_file="${contents}/Resources/Backstage.icns"
+release_metadata="${package_root}/release-metadata.zsh"
+
+if [[ ! -r "$release_metadata" ]]; then
+  print -u2 "Missing native release metadata: $release_metadata"
+  exit 1
+fi
+source "$release_metadata"
+if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
+      "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
+  print -u2 "Native release metadata contains an unexpected bundle identity."
+  exit 1
+fi
+if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
+      "$PBE_BACKSTAGE_BUILD" != "$PBE_PHOTOS_BRIDGE_BUILD" ]]; then
+  print -u2 "Backstage and Photos Bridge release metadata must match."
+  exit 1
+fi
 
 cd "$package_root"
 swift build -c "$configuration"
@@ -42,7 +59,7 @@ done
 iconutil -c icns "$iconset" -o "$icon_file"
 rm -rf "$iconset"
 
-cat > "${contents}/Info.plist" <<'PLIST'
+cat > "${contents}/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -56,7 +73,7 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundleIconFile</key>
   <string>Backstage</string>
   <key>CFBundleIdentifier</key>
-  <string>com.photosbyelie.backstage</string>
+  <string>${PBE_BACKSTAGE_BUNDLE_IDENTIFIER}</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
@@ -64,15 +81,21 @@ cat > "${contents}/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>218.0</string>
+  <string>${PBE_BACKSTAGE_VERSION}</string>
   <key>CFBundleVersion</key>
-  <string>75</string>
+  <string>${PBE_BACKSTAGE_BUILD}</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSPhotoLibraryUsageDescription</key>
   <string>Backstage reads Photos for private culling, preview, and export workflows.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Verified metadata give-back is performed through the signed PhotosByElie bridge.</string>
+  <key>PBEPhotosBridgeBundleIdentifier</key>
+  <string>${PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER}</string>
+  <key>PBEPhotosBridgeVersion</key>
+  <string>${PBE_PHOTOS_BRIDGE_VERSION}</string>
+  <key>PBEPhotosBridgeBuild</key>
+  <string>${PBE_PHOTOS_BRIDGE_BUILD}</string>
 </dict>
 </plist>
 PLIST

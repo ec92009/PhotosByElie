@@ -618,6 +618,31 @@ class NativeCullingParityTest(unittest.TestCase):
             "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
             build_script,
         )
+
+    def test_backstage_and_bridge_release_metadata_stay_in_lockstep(self):
+        metadata = (NATIVE / "release-metadata.zsh").read_text(encoding="utf-8")
+        build_script = (NATIVE / "scripts" / "build-app.zsh").read_text(
+            encoding="utf-8"
+        )
+        bridge_installer = (
+            ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
+        ).read_text(encoding="utf-8")
+
+        def value(name: str) -> str:
+            match = re.search(rf'^{name}="([^"]+)"$', metadata, re.MULTILINE)
+            self.assertIsNotNone(match, name)
+            return match.group(1)
+
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "218.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "75")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), value("PBE_PHOTOS_BRIDGE_VERSION"))
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), value("PBE_PHOTOS_BRIDGE_BUILD"))
+        self.assertIn('source "$release_metadata"', build_script)
+        self.assertIn('source "$release_metadata"', bridge_installer)
+        self.assertIn("PBEPhotosBridgeVersion", build_script)
+        self.assertIn("PBEPhotosBridgeBuild", build_script)
+        self.assertNotIn("SIDECAR_VERSION", build_script)
+        self.assertNotIn("SIDECAR_VERSION", bridge_installer)
         self.assertIn(
             'if [[ "$identity" == "-" && "$configuration" == "release"',
             build_script,

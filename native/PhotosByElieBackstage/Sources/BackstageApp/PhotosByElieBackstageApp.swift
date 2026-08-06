@@ -211,9 +211,15 @@ private struct OverviewView: View {
                     if !model.photosBridgeHealth.version.isEmpty {
                         LabeledContent(
                             "Photos Bridge helper version",
-                            value: model.photosBridgeHealth.version
+                            value: model.photosBridgeHealth.build.isEmpty
+                                ? model.photosBridgeHealth.version
+                                : "\(model.photosBridgeHealth.version) (\(model.photosBridgeHealth.build))"
                         )
                     }
+                    LabeledContent(
+                        "Compatibility",
+                        value: model.photosBridgeHealth.compatible ? "Compatible" : "Incompatible"
+                    )
                     Text(model.photosBridgeHealth.message)
                         .font(.callout)
                         .foregroundStyle(.secondary)

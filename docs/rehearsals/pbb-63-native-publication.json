@@ -1,0 +1,510 @@
+{
+  "checks": {
+    "acsGrantInherited": true,
+    "allGuardedArtifactsUnchanged": true,
+    "appearanceConflictReturnsToReview": true,
+    "failedUploadRetriesCleanly": true,
+    "firstPassProtectsSoldObjects": true,
+    "installedBackstagePresent": true,
+    "installedBackstageSigned": true,
+    "liveOwnerDatabaseUnchanged": true,
+    "orphanDeletedOnlyOnLaterPass": true,
+    "ownerDatabaseIntegrityPasses": true,
+    "partialFailureIsolated": true,
+    "photosBaselineImported": true,
+    "photosRepeatIsIdempotent": true,
+    "previewShowsProtectionAndQuarantine": true,
+    "publicCatalogRegisteredOnce": true,
+    "publicClientArtifactsUnchanged": true,
+    "referencedObjectRestored": true,
+    "saleReferenceIsIdempotent": true,
+    "soldObjectsRemainProtected": true
+  },
+  "evidence": {
+    "database": {
+      "appearanceConflict": {
+        "delivery_state": "not-ready",
+        "editorial_state": "unreviewed"
+      },
+      "catalogMediaRows": 1,
+      "catalogPublication": {
+        "media_id": "pbb63-sold",
+        "state": "local"
+      },
+      "ownerIntegrity": "ok",
+      "quarantineStates": {
+        "masters/pbb63-orphan.jpg": "deleted",
+        "masters/pbb63-restored.jpg": "restored",
+        "masters/pbb63-sold.jpg": "protected"
+      },
+      "soldObjectStates": {
+        "expo/pbb63-sold_1800.jpg": "current",
+        "expo/pbb63-sold_900.jpg": "current",
+        "masters/pbb63-sold.jpg": "current"
+      }
+    },
+    "finalReconciliation": {
+      "actions": [
+        {
+          "action": "eligible-delete",
+          "assetId": "pbb63-orphan",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-orphan.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-restored",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-restored.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-retry.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-sold.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_1800.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_900.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_1800.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_900.jpg",
+          "referenced": true,
+          "sold": true
+        }
+      ],
+      "committed": true,
+      "deleted": 1,
+      "eligibleDelete": 1,
+      "mode": "commit",
+      "ok": true,
+      "protected": 3,
+      "quarantined": 0,
+      "remaining": 0,
+      "requested": 8,
+      "restored": 0,
+      "runId": "r2rec-fe0ebe7550314e88",
+      "scanned": 8,
+      "stage": "Completed",
+      "status": "completed"
+    },
+    "firstReconciliation": {
+      "actions": [
+        {
+          "action": "quarantine",
+          "assetId": "pbb63-orphan",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-orphan.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "quarantine",
+          "assetId": "pbb63-restored",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-restored.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-retry.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-sold.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_1800.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_900.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_1800.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_900.jpg",
+          "referenced": true,
+          "sold": true
+        }
+      ],
+      "committed": true,
+      "deleted": 0,
+      "eligibleDelete": 0,
+      "mode": "commit",
+      "ok": true,
+      "protected": 3,
+      "quarantined": 2,
+      "remaining": 0,
+      "requested": 8,
+      "restored": 0,
+      "runId": "r2rec-de11e8602c56497e",
+      "scanned": 8,
+      "stage": "Completed",
+      "status": "completed"
+    },
+    "partialUpload": {
+      "cancelRequested": false,
+      "completedAt": "2026-08-06T07:35:46.401264Z",
+      "concurrency": 1,
+      "failed": 1,
+      "items": [
+        {
+          "asset_id": "pbb63-retry",
+          "catalog_state": "not-applicable",
+          "error_text": "synthetic retryable upload failure",
+          "source_version_hash": "",
+          "status": "failed",
+          "updated_at": "2026-08-06T07:35:46.377407Z"
+        },
+        {
+          "asset_id": "pbb63-sold",
+          "catalog_state": "local",
+          "error_text": "",
+          "source_version_hash": "srcv-78b87e706839a6d8a8caac6a751ec18b",
+          "status": "verified",
+          "updated_at": "2026-08-06T07:35:46.398848Z"
+        }
+      ],
+      "live": 0,
+      "ok": true,
+      "processed": 2,
+      "remaining": 0,
+      "requested": 2,
+      "runId": "uplrun-f7585a2258594de9",
+      "startedAt": "2026-08-06T07:35:46.373708Z",
+      "status": "completed-with-errors"
+    },
+    "reconciliationPlan": {
+      "actions": [
+        {
+          "action": "quarantine",
+          "assetId": "pbb63-orphan",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-orphan.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "quarantine",
+          "assetId": "pbb63-restored",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-restored.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-retry.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-sold.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_1800.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_900.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_1800.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_900.jpg",
+          "referenced": true,
+          "sold": true
+        }
+      ],
+      "committed": false,
+      "deleted": 0,
+      "eligibleDelete": 0,
+      "mode": "plan",
+      "ok": true,
+      "protected": 3,
+      "quarantined": 2,
+      "remaining": 0,
+      "requested": 8,
+      "restored": 0,
+      "runId": "r2rec-e13279a89659453d",
+      "scanned": 8,
+      "stage": "Completed",
+      "status": "completed"
+    },
+    "retryUpload": {
+      "cancelRequested": false,
+      "completedAt": "2026-08-06T07:35:46.428703Z",
+      "concurrency": 1,
+      "failed": 0,
+      "items": [
+        {
+          "asset_id": "pbb63-retry",
+          "catalog_state": "local",
+          "error_text": "",
+          "source_version_hash": "srcv-a49c8b3cc11301aab78033a0df3d9906",
+          "status": "verified",
+          "updated_at": "2026-08-06T07:35:46.426222Z"
+        }
+      ],
+      "live": 0,
+      "ok": true,
+      "processed": 1,
+      "remaining": 0,
+      "requested": 1,
+      "runId": "uplrun-1a152b9b4de14b5a",
+      "startedAt": "2026-08-06T07:35:46.405339Z",
+      "status": "completed"
+    },
+    "secondReconciliation": {
+      "actions": [
+        {
+          "action": "waiting",
+          "assetId": "pbb63-orphan",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-orphan.jpg",
+          "referenced": false,
+          "sold": false
+        },
+        {
+          "action": "restored",
+          "assetId": "pbb63-restored",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-restored.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-retry.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-private",
+          "key": "masters/pbb63-sold.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_1800.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "current",
+          "assetId": "pbb63-retry",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-retry_900.jpg",
+          "referenced": true,
+          "sold": false
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_1800.jpg",
+          "referenced": true,
+          "sold": true
+        },
+        {
+          "action": "protected",
+          "assetId": "pbb63-sold",
+          "bucket": "photosbyelie-public",
+          "key": "expo/pbb63-sold_900.jpg",
+          "referenced": true,
+          "sold": true
+        }
+      ],
+      "committed": true,
+      "deleted": 0,
+      "eligibleDelete": 0,
+      "mode": "commit",
+      "ok": true,
+      "protected": 3,
+      "quarantined": 0,
+      "remaining": 0,
+      "requested": 8,
+      "restored": 1,
+      "runId": "r2rec-8618133e97ab41e1",
+      "scanned": 8,
+      "stage": "Completed",
+      "status": "completed"
+    },
+    "syntheticDeletes": [
+      {
+        "bucket": "photosbyelie-private",
+        "key": "masters/pbb63-orphan.jpg"
+      }
+    ]
+  },
+  "generatedAt": "2026-08-06T07:35:46.948356Z",
+  "guardedArtifacts": {
+    "count": 14,
+    "sha256After": {
+      "assets/catalog/photosbyelie.sqlite": "fdc449b2ded3dc5356d067a47cdb6d26113c555d22cecee8ec376bb9de1ae9a9",
+      "assets/owner-actions/Owner.sqlite": "1e5ffa8639e326bcfae215c2f55f140f9bcb72ec760bfffb15607b8e6f490b7b",
+      "basket.html": "5bd0e97c3bacd7b375cdfcdac069e2cb5e0b38eabc2d41ca8a597e2cef156af3",
+      "gallery.html": "9dd34d252df760917db6f1c57c16e0a6f11633a665519e40a9680e025a58fa00",
+      "index.html": "8c2067ea4d97fe7b81c07da377147b0895de2df3ba5678fd93260c8c5d247b0b",
+      "liked.html": "884a6c5fc5f1b691897327831881dddc366ec7f584daa414a04dc4db8b53ea56",
+      "order.html": "e0954ee8c284118655e249de330083a2c8e6ca3227a51e76c72b7cfbd94b1136",
+      "photo-detail.js": "899272d201698c6efc516ec0d082e80df2280994062de6a7e41a2f01a92b8c31",
+      "photo-gallery.js": "f079de7b5e15bab5afe029baad9555c21eba28f4091fbc5cdd33f78ebb0fc99e",
+      "photo.html": "88dba1022b19ac236c15dece86dee4b9d8b1d7633b745d215d85c41c562e0f86",
+      "photos-data.js": "4762aeabc80d927ee16e8aea81d3d04684f3490eb66b365bdc8777442336c5bf",
+      "real-estate.html": "2efa88c61d782c90346205f6ac91eb4d00c6ff9959aa150c1d34de567f8732a9",
+      "shared-auth.js": "missing",
+      "worker/photos-catalog.generated.mjs": "2bbfd10bd98a8a96986410a1e39b3917276877f2e2d7e065cc823d717a9b1c0f"
+    },
+    "sha256Before": {
+      "assets/catalog/photosbyelie.sqlite": "fdc449b2ded3dc5356d067a47cdb6d26113c555d22cecee8ec376bb9de1ae9a9",
+      "assets/owner-actions/Owner.sqlite": "1e5ffa8639e326bcfae215c2f55f140f9bcb72ec760bfffb15607b8e6f490b7b",
+      "basket.html": "5bd0e97c3bacd7b375cdfcdac069e2cb5e0b38eabc2d41ca8a597e2cef156af3",
+      "gallery.html": "9dd34d252df760917db6f1c57c16e0a6f11633a665519e40a9680e025a58fa00",
+      "index.html": "8c2067ea4d97fe7b81c07da377147b0895de2df3ba5678fd93260c8c5d247b0b",
+      "liked.html": "884a6c5fc5f1b691897327831881dddc366ec7f584daa414a04dc4db8b53ea56",
+      "order.html": "e0954ee8c284118655e249de330083a2c8e6ca3227a51e76c72b7cfbd94b1136",
+      "photo-detail.js": "899272d201698c6efc516ec0d082e80df2280994062de6a7e41a2f01a92b8c31",
+      "photo-gallery.js": "f079de7b5e15bab5afe029baad9555c21eba28f4091fbc5cdd33f78ebb0fc99e",
+      "photo.html": "88dba1022b19ac236c15dece86dee4b9d8b1d7633b745d215d85c41c562e0f86",
+      "photos-data.js": "4762aeabc80d927ee16e8aea81d3d04684f3490eb66b365bdc8777442336c5bf",
+      "real-estate.html": "2efa88c61d782c90346205f6ac91eb4d00c6ff9959aa150c1d34de567f8732a9",
+      "shared-auth.js": "missing",
+      "worker/photos-catalog.generated.mjs": "2bbfd10bd98a8a96986410a1e39b3917276877f2e2d7e065cc823d717a9b1c0f"
+    }
+  },
+  "machine": {
+    "backstage": {
+      "build": "75",
+      "codeSignatureValid": true,
+      "path": "/Users/ecohen/Applications/PhotosByElie Backstage.app",
+      "present": true,
+      "version": "218.0"
+    },
+    "computerName": "Max",
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O"
+  },
+  "passed": true,
+  "scenario": {
+    "connectorModes": [
+      "photos-sync-snapshot",
+      "fixture-access-effective",
+      "asset-sale-reference-record",
+      "r2-reconciliation-plan",
+      "r2-reconciliation-commit"
+    ],
+    "externalDeletes": 0,
+    "externalUploads": 0,
+    "lifecycle": [
+      "PhotoKit baseline and idempotent repeat",
+      "appearance conflict back to Review",
+      "inherited ACS access",
+      "partial publication failure and retry",
+      "local catalog registration",
+      "exact sale-object protection",
+      "first-pass quarantine",
+      "referenced-object restoration",
+      "later-pass orphan deletion through a synthetic adapter"
+    ],
+    "syntheticAssetCount": 4
+  },
+  "schema": "photosbyelie.nativePublicationRehearsal.v1",
+  "ticket": "PBB-63"
+}

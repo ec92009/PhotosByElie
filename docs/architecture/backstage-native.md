@@ -186,3 +186,23 @@ above rather than deletion of the compatibility surface.
 The completed `v147.6` native-only cutover, verification evidence, reversible
 legacy-app archive, and rollback procedure are recorded in
 [`backstage-native-cutover-2026-07-25.md`](backstage-native-cutover-2026-07-25.md).
+
+## Native publication lifecycle rehearsal
+
+PBB-63 has a checked-in, repeatable Max rehearsal for the complete native
+publication safety path:
+
+```sh
+python3 scripts/native_publication_rehearsal.py \
+  --report docs/rehearsals/pbb-63-native-publication.json
+```
+
+The rehearsal uses temporary Owner and catalog databases plus synthetic R2
+upload/delete adapters. It drives the Backstage connector contract through
+Photos sync, inherited ACS access, partial publication and retry, local catalog
+registration, exact sale-object protection, first-pass quarantine,
+referenced-object restoration, and later-pass cleanup. Before/after SHA-256
+guards prove that the live Owner database and public/client artifacts were not
+changed. The recorded 2026-08-06 run passed on signed Backstage 218.0 build 75
+on Max; its detailed evidence is in
+[`pbb-63-native-publication.json`](../rehearsals/pbb-63-native-publication.json).

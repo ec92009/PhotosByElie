@@ -2564,6 +2564,135 @@ struct OwnerCoreTests {
         #expect(decoded.connectorID == health.connectorID)
         #expect(decoded.message == health.message)
     }
+
+    @Test("Backstage CLI runs an Owner-authenticated originals preflight without CUA")
+    func backstageControlRunsRealEstateOriginalsPreflight() async throws {
+        let itemsURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-originals-preflight-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: itemsURL) }
+        let expectedItem = RealEstateOriginalsPreflightRequest.Item(
+            photoId: "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043",
+            albumSlug: "re-2026-la-concha-1-apt-8ab1",
+            sourceFile: "D5H_3043.JPG",
+            title: "La Concha 1 Apt 8AB1 - 01",
+            sortIndex: 1
+        )
+        try JSONEncoder.ownerAPI.encode([expectedItem]).write(to: itemsURL)
+
+        let expectedReport = RealEstateOriginalsPreflight(
+            checkedAt: "2026-08-07T10:00:00.000Z",
+            ok: true,
+            galleryKey: "corine-real-estate",
+            requestedCount: 1,
+            availableCount: 1,
+            missingCount: 0,
+            totalBytes: 1234,
+            items: [.init(
+                photoId: expectedItem.photoId,
+                name: "001-La-Concha-D5H_3043.JPG",
+                contentType: "image/jpeg",
+                available: true,
+                bytes: 1234
+            )],
+            message: "Selected originals are available for an authorized download session."
+        )
+        let service = BackstageControlService(realEstateOriginalsPreflight: { request in
+            guard request.galleryKey == "corine-real-estate",
+                  request.items == [expectedItem] else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "unexpected_request",
+                    message: "The CLI request did not match the items file."
+                ))
+            }
+            return RealEstateOriginalsPreflightEnvelope(preflight: expectedReport)
+        })
+        let output = LockedStringOutput()
+
+        let exitCode = await BackstageControlCLI.run(
+            arguments: [
+                "real-estate", "originals", "preflight",
+                "--gallery", "corine-real-estate",
+                "--items-file", itemsURL.path,
+            ],
+            service: service,
+            output: { output.append($0) }
+        )
+
+        #expect(exitCode == 0)
+        let payload = try #require(output.values().last)
+        let decoded = try JSONDecoder.ownerAPI.decode(
+            RealEstateOriginalsPreflight.self,
+            from: Data(payload.utf8)
+        )
+        #expect(decoded == expectedReport)
+        #expect(decoded.mode == "read-only")
+    }
+
+    @Test("Backstage CLI uses stable exit codes for unavailable originals and invalid arguments")
+    func backstageControlPreflightExitCodesAreStable() async throws {
+        let itemsURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-originals-preflight-missing-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: itemsURL) }
+        let item = RealEstateOriginalsPreflightRequest.Item(
+            photoId: "corine-re-2026-la-concha-missing",
+            albumSlug: "re-2026-la-concha-1-apt-8ab1"
+        )
+        try JSONEncoder.ownerAPI.encode([item]).write(to: itemsURL)
+        let report = RealEstateOriginalsPreflight(
+            checkedAt: "2026-08-07T10:00:00.000Z",
+            ok: false,
+            galleryKey: "corine-real-estate",
+            requestedCount: 1,
+            availableCount: 0,
+            missingCount: 1,
+            totalBytes: 0,
+            items: [.init(
+                photoId: item.photoId,
+                name: "001-missing.jpg",
+                contentType: "image/jpeg",
+                available: false
+            )],
+            message: "1 selected original is not ready in private storage."
+        )
+        let service = BackstageControlService(realEstateOriginalsPreflight: { _ in
+            RealEstateOriginalsPreflightEnvelope(preflight: report)
+        })
+
+        let missingExitCode = await BackstageControlCLI.run(
+            arguments: [
+                "real-estate", "originals", "preflight",
+                "--gallery", "corine-real-estate",
+                "--items-file", itemsURL.path,
+            ],
+            service: service,
+            output: { _ in }
+        )
+        #expect(missingExitCode == 2)
+
+        let output = LockedStringOutput()
+        let invalidExitCode = await BackstageControlCLI.run(
+            arguments: ["real-estate", "originals", "preflight", "--gallery", "corine-real-estate"],
+            service: service,
+            output: { output.append($0) }
+        )
+        #expect(invalidExitCode == 64)
+        let payload = try #require(output.values().last)
+        #expect(payload.contains("invalid_arguments"))
+        #expect(payload.contains("--items-file"))
+    }
+}
+
+private final class LockedStringOutput: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String] = []
+
+    func append(_ value: String) {
+        lock.withLock { storage.append(value) }
+    }
+
+    func values() -> [String] {
+        lock.withLock { storage }
+    }
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {

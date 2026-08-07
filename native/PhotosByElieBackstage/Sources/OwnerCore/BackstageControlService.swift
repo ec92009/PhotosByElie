@@ -85,14 +85,123 @@ public struct BackstageControlHealth: Codable, Sendable, Equatable {
     }
 }
 
+public struct RealEstateOriginalsPreflightRequest: Codable, Sendable, Equatable {
+    public struct Item: Codable, Sendable, Equatable {
+        public var photoId: String
+        public var albumSlug: String
+        public var sourceFile: String?
+        public var title: String?
+        public var sortIndex: Int?
+
+        public init(
+            photoId: String,
+            albumSlug: String,
+            sourceFile: String? = nil,
+            title: String? = nil,
+            sortIndex: Int? = nil
+        ) {
+            self.photoId = photoId
+            self.albumSlug = albumSlug
+            self.sourceFile = sourceFile
+            self.title = title
+            self.sortIndex = sortIndex
+        }
+    }
+
+    public var galleryKey: String
+    public var items: [Item]
+
+    public init(galleryKey: String, items: [Item]) {
+        self.galleryKey = galleryKey
+        self.items = items
+    }
+}
+
+public struct RealEstateOriginalsPreflight: Codable, Sendable, Equatable {
+    public struct Item: Codable, Sendable, Equatable {
+        public var photoId: String
+        public var name: String
+        public var contentType: String
+        public var available: Bool
+        public var bytes: Int?
+
+        public init(
+            photoId: String,
+            name: String,
+            contentType: String,
+            available: Bool,
+            bytes: Int? = nil
+        ) {
+            self.photoId = photoId
+            self.name = name
+            self.contentType = contentType
+            self.available = available
+            self.bytes = bytes
+        }
+    }
+
+    public var schemaVersion: Int
+    public var command: String
+    public var mode: String
+    public var checkedAt: String
+    public var ok: Bool
+    public var galleryKey: String
+    public var requestedCount: Int
+    public var availableCount: Int
+    public var missingCount: Int
+    public var totalBytes: Int
+    public var items: [Item]
+    public var message: String
+
+    public init(
+        schemaVersion: Int = 1,
+        command: String = "real-estate originals preflight",
+        mode: String = "read-only",
+        checkedAt: String,
+        ok: Bool,
+        galleryKey: String,
+        requestedCount: Int,
+        availableCount: Int,
+        missingCount: Int,
+        totalBytes: Int,
+        items: [Item],
+        message: String
+    ) {
+        self.schemaVersion = schemaVersion
+        self.command = command
+        self.mode = mode
+        self.checkedAt = checkedAt
+        self.ok = ok
+        self.galleryKey = galleryKey
+        self.requestedCount = requestedCount
+        self.availableCount = availableCount
+        self.missingCount = missingCount
+        self.totalBytes = totalBytes
+        self.items = items
+        self.message = message
+    }
+}
+
+public struct RealEstateOriginalsPreflightEnvelope: Codable, Sendable, Equatable {
+    public var preflight: RealEstateOriginalsPreflight
+
+    public init(preflight: RealEstateOriginalsPreflight) {
+        self.preflight = preflight
+    }
+}
+
 public struct BackstageControlService: Sendable {
     public typealias AuthenticationSnapshotProvider = @Sendable () async -> OwnerAuthenticationSnapshot
+    public typealias RealEstateOriginalsPreflightProvider = @Sendable (
+        RealEstateOriginalsPreflightRequest
+    ) async throws -> RealEstateOriginalsPreflightEnvelope
 
     private let release: BackstageReleaseIdentity
     private let photosBridge: PhotosBridgeHealthService
     private let photoLibrary: any PhotoLibraryServing
     private let connectorIdentity: any OwnerConnectorIdentifying
     private let authenticationSnapshot: AuthenticationSnapshotProvider
+    private let realEstateOriginalsPreflight: RealEstateOriginalsPreflightProvider
 
     public init(
         appURL: URL? = nil,
@@ -101,7 +210,8 @@ public struct BackstageControlService: Sendable {
         photosBridge: PhotosBridgeHealthService? = nil,
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         connectorIdentity: any OwnerConnectorIdentifying = LocalOwnerConnectorIdentity(),
-        authenticationSnapshot: AuthenticationSnapshotProvider? = nil
+        authenticationSnapshot: AuthenticationSnapshotProvider? = nil,
+        realEstateOriginalsPreflight: RealEstateOriginalsPreflightProvider? = nil
     ) {
         let resolvedAppURL = appURL ?? Self.defaultAppURL
         let resolvedHelperURL = helperURL ?? Self.defaultHelperURL
@@ -125,6 +235,26 @@ public struct BackstageControlService: Sendable {
             let service = OwnerAuthenticationService(api: OwnerAPIClient())
             self.authenticationSnapshot = {
                 await service.currentSnapshot()
+            }
+        }
+        if let realEstateOriginalsPreflight {
+            self.realEstateOriginalsPreflight = realEstateOriginalsPreflight
+        } else {
+            let api = OwnerAPIClient()
+            let authentication = OwnerAuthenticationService(api: api)
+            self.realEstateOriginalsPreflight = { request in
+                let snapshot = await authentication.bootstrap()
+                guard snapshot.phase == .authenticated else {
+                    throw APIErrorEnvelope(error: .init(
+                        code: "owner_authentication_required",
+                        message: "Backstage Owner enrollment or session renewal is required."
+                    ))
+                }
+                return try await api.request(
+                    path: "/real-estate/originals/preflight",
+                    method: "POST",
+                    body: request
+                )
             }
         }
     }
@@ -169,6 +299,12 @@ public struct BackstageControlService: Sendable {
     public func authorizePhotos(command: String = "photos authorize") async -> BackstageControlHealth {
         _ = await photoLibrary.requestAuthorization()
         return await health(command: command)
+    }
+
+    public func preflightRealEstateOriginals(
+        _ request: RealEstateOriginalsPreflightRequest
+    ) async throws -> RealEstateOriginalsPreflight {
+        try await realEstateOriginalsPreflight(request).preflight
     }
 
     private func message(
@@ -229,10 +365,16 @@ public enum BackstageControlCLI {
     }
 
     private static let usage = """
-    Usage: backstage-control [health|doctor|release verify|photos health|photos authorize] [--pretty]
+    Usage:
+      backstage-control [health|doctor|release verify|photos health|photos authorize] [--pretty]
+      backstage-control real-estate originals preflight --gallery <gallery-key> --items-file <items.json> [--pretty]
 
     Commands return JSON on stdout. Exit codes: 0 ready, 1 internal error,
     2 readiness check failed, 64 invalid arguments.
+
+    The preflight items file is a JSON array. Each item requires photoId and
+    albumSlug; sourceFile, title, and sortIndex are optional. Preflight is
+    read-only and never creates download tokens, orders, email, or messages.
     """
 
     public static func run(
@@ -279,6 +421,14 @@ public enum BackstageControlCLI {
             output(encode(health, pretty: pretty))
             return health.ok ? 0 : 2
         }
+        if Array(tokens.prefix(3)) == ["real-estate", "originals", "preflight"] {
+            return await emitRealEstateOriginalsPreflight(
+                arguments: Array(tokens.dropFirst(3)),
+                pretty: pretty,
+                service: service,
+                output: output
+            )
+        }
         if tokens == ["help"] {
             output(usage)
             return 0
@@ -306,6 +456,148 @@ public enum BackstageControlCLI {
         let health = await service.health(command: command)
         output(encode(health, pretty: pretty))
         return health.ok ? 0 : 2
+    }
+
+    private static func emitRealEstateOriginalsPreflight(
+        arguments: [String],
+        pretty: Bool,
+        service: BackstageControlService,
+        output: @escaping @Sendable (String) -> Void
+    ) async -> Int32 {
+        var galleryKey: String?
+        var itemsFile: String?
+        var index = 0
+        while index < arguments.count {
+            let argument = arguments[index]
+            guard ["--gallery", "--items-file"].contains(argument),
+                  index + 1 < arguments.count else {
+                return emitError(
+                    code: "invalid_arguments",
+                    message: "Preflight requires --gallery and --items-file.",
+                    pretty: pretty,
+                    exitCode: 64,
+                    output: output
+                )
+            }
+            let value = arguments[index + 1]
+            if argument == "--gallery" {
+                guard galleryKey == nil else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--gallery may be provided only once.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                galleryKey = value
+            } else {
+                guard itemsFile == nil else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--items-file may be provided only once.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                itemsFile = value
+            }
+            index += 2
+        }
+
+        guard let galleryKey = galleryKey?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !galleryKey.isEmpty,
+              let itemsFile,
+              !itemsFile.isEmpty else {
+            return emitError(
+                code: "invalid_arguments",
+                message: "Preflight requires non-empty --gallery and --items-file values.",
+                pretty: pretty,
+                exitCode: 64,
+                output: output
+            )
+        }
+
+        let data: Data
+        do {
+            data = try Data(contentsOf: URL(fileURLWithPath: itemsFile))
+        } catch {
+            return emitError(
+                code: "items_file_unreadable",
+                message: "The preflight items file could not be read.",
+                pretty: pretty,
+                exitCode: 64,
+                output: output
+            )
+        }
+
+        let items: [RealEstateOriginalsPreflightRequest.Item]
+        do {
+            items = try JSONDecoder.ownerAPI.decode(
+                [RealEstateOriginalsPreflightRequest.Item].self,
+                from: data
+            )
+        } catch {
+            return emitError(
+                code: "invalid_items_file",
+                message: "The preflight items file must be a JSON array with photoId and albumSlug for every item.",
+                pretty: pretty,
+                exitCode: 64,
+                output: output
+            )
+        }
+        guard !items.isEmpty else {
+            return emitError(
+                code: "invalid_items_file",
+                message: "The preflight items file must contain at least one item.",
+                pretty: pretty,
+                exitCode: 64,
+                output: output
+            )
+        }
+
+        do {
+            let preflight = try await service.preflightRealEstateOriginals(.init(
+                galleryKey: galleryKey,
+                items: items
+            ))
+            output(encode(preflight, pretty: pretty))
+            return preflight.ok ? 0 : 2
+        } catch let error as APIErrorEnvelope {
+            return emitError(
+                code: error.error.code,
+                message: error.error.message,
+                pretty: pretty,
+                exitCode: 1,
+                output: output
+            )
+        } catch {
+            return emitError(
+                code: "preflight_failed",
+                message: "The read-only originals preflight could not be completed.",
+                pretty: pretty,
+                exitCode: 1,
+                output: output
+            )
+        }
+    }
+
+    private static func emitError(
+        code: String,
+        message: String,
+        pretty: Bool,
+        exitCode: Int32,
+        output: @escaping @Sendable (String) -> Void
+    ) -> Int32 {
+        output(encode(
+            ErrorPayload(
+                error: .init(code: code, message: message),
+                usage: usage
+            ),
+            pretty: pretty
+        ))
+        return exitCode
     }
 
     private static func encode<Value: Encodable>(_ value: Value, pretty: Bool) -> String {

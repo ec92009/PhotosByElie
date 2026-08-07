@@ -1,5 +1,39 @@
 # PhotosByElie Handoff
 
+## 2026-08-07 — PBB-74 supported no-CUA originals preflight release
+
+- PBB-74 now has a production-supported native command for private Real Estate
+  originals availability:
+  `scripts/backstage-control.zsh real-estate originals preflight --gallery
+  <gallery-key> --items-file <items.json> [--pretty]`. The items file is a JSON
+  array with required `photoId`/`albumSlug` and optional `sourceFile`, `title`,
+  and `sortIndex`. It emits schema-v1 JSON with deterministic exits `0` ready,
+  `2` missing originals, `1` authentication/API failure, and `64` invalid input.
+- The command renews the installed Backstage Owner device credential and calls
+  only `POST /api/v1/real-estate/originals/preflight`. Worker version
+  `690aced6-5895-4fd1-87c1-eb352a98fa53` accepts either the existing signed
+  client cookie or an Owner Bearer session for that read-only route. The same
+  Owner Bearer session remains rejected by `/originals/session`, so it cannot
+  create download tokens, orders, email, or client messages.
+- Signed Backstage and Photos Bridge `v219.1` / build `77` are installed on Max.
+  Both bundles use the stable Apple Development identity, pass deep/strict
+  verification, and report compatible/authorized through `release verify`.
+  Recoverable `v219.0` / build `76` copies remain in `~/Applications` with the
+  `previous-v219.0-build76-pbb74-20260807T0748CEST` suffix.
+- The installed CLI completed an end-to-end production preflight for one known
+  current La Concha original: `1/1` available, `3,460,601` bytes, exit `0`.
+  This was a no-send/no-session check; no token, order, email, client message,
+  gallery write, source/fixture change, or private object key was produced.
+- Verification passed 187 JavaScript tests, 223 Python tests, 58 Swift tests,
+  33 native parity tests, the generated OpenAPI contract check, Xcode Debug
+  build, signed release build, deployed anonymous access rehearsal, installed
+  release verification, and installed production CLI proof.
+- PBE-115 remains Active and separate: its R2 and Apple Photos receipts remain
+  `121/121`, while the deployed private gallery still exposes the older
+  99-photo context. Integrating the approved 121-photo gallery and then running
+  a full client-scoped release rehearsal are not hidden inside PBB-74 and no
+  client was contacted.
+
 ## 2026-08-07 — Backstage v219 control CLI release and David TCC checkpoint
 
 - Backstage and Photos Bridge now share release `v219.0` / build `76`. The

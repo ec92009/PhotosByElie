@@ -3145,6 +3145,10 @@ test("real-estate originals preflight is authenticated, read-only, and storage-s
     catalog: loadCatalog(),
     store,
     randomUUID,
+    accessAuth: fakeAccessAuthFor("owner@example.com"),
+    accessUserRegistry: createMemoryAccessUserRegistry([
+      { email: "owner@example.com", tier: "owner" },
+    ]),
     realEstateOriginals: createRealEstateOriginals({
       privateBucket: privateR2,
       store,
@@ -3200,6 +3204,26 @@ test("real-estate originals preflight is authenticated, read-only, and storage-s
   assert.equal(body.preflight.items[1].available, false);
   assert.equal(body.preflight.items[1].bytes, null);
   assert.doesNotMatch(JSON.stringify(body), /objectKey|privateMasterPrefix|real-estate\/corine-real-estate\/masters/);
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+  assert.equal(emailClient.sent.length, 0);
+
+  const ownerPreflightResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/real-estate/originals/preflight", {
+    galleryKey: "corine-real-estate",
+    items: [{ photoId: availablePhotoId, albumSlug, sourceFile: "D5H_3043.JPG" }],
+  }, { authorization: "Bearer native-owner-access-token" }));
+  assert.equal(ownerPreflightResponse.status, 200);
+  assert.equal((await ownerPreflightResponse.json()).preflight.ok, true);
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+  assert.equal(emailClient.sent.length, 0);
+
+  const ownerMutationResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/real-estate/originals/session", {
+    galleryKey: "corine-real-estate",
+    items: [{ photoId: availablePhotoId, albumSlug, sourceFile: "D5H_3043.JPG" }],
+  }, { authorization: "Bearer native-owner-access-token" }));
+  assert.equal(ownerMutationResponse.status, 401);
+  assert.equal((await ownerMutationResponse.json()).error.code, "real_estate_login_required");
   assert.equal(store._debug.downloads.size, 0);
   assert.equal(store._debug.orders.size, 0);
   assert.equal(emailClient.sent.length, 0);

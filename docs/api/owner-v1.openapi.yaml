@@ -426,12 +426,16 @@ paths:
   /real-estate/originals/preflight:
     post:
       tags: [Delivery]
-      security: [{ realEstateSession: [] }]
+      security:
+        - realEstateSession: []
+        - ownerSession: []
       operationId: preflightRealEstateOriginals
       description: >
-        Checks selected private originals using the authenticated Real Estate
-        gallery session. This read-only operation creates no download tokens,
-        order records, email, or client message.
+        Checks selected private originals using either the authenticated Real
+        Estate gallery session or a Backstage Owner Bearer session. This
+        read-only operation creates no download tokens, order records, email,
+        or client message. Owner Bearer authorization applies only to this
+        preflight and does not authorize download-session creation.
       requestBody:
         required: true
         content:

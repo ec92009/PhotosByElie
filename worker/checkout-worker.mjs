@@ -3233,6 +3233,25 @@ export const createPhotosByElieWorker = ({
     return realEstateAuth.requireSession(request, payload.galleryKey);
   };
 
+  const requireRealEstatePreflightSession = async (request, payload) => {
+    const authorization = String(request.headers.get("authorization") || "").trim();
+    if (!/^Bearer\s+/i.test(authorization)) {
+      return requireRealEstateSession(request, payload);
+    }
+    const ownerSession = await authSessionFor(request, { requiredRole: "owner" });
+    if (!canUseRealEstateGallery(ownerSession, payload.galleryKey)) {
+      throw Object.assign(new Error("This Owner account is not authorized for this photo pool."), {
+        status: 403,
+        code: "real_estate_gallery_forbidden",
+      });
+    }
+    return {
+      galleryKey: payload.galleryKey,
+      username: ownerSession.email,
+      provider: ownerSession.provider || "backstage-owner",
+    };
+  };
+
   const loginRealEstateWithAccess = async (request) => {
     if (!realEstateAuth || typeof realEstateAuth.loginTrusted !== "function") {
       return credentialedErrorJson(request, 503, "real_estate_auth_unavailable", "Real-estate client login is not configured.");
@@ -3304,7 +3323,7 @@ export const createPhotosByElieWorker = ({
       return errorJson(503, "real_estate_originals_unavailable", "Real-estate originals delivery is not configured.");
     }
     const payload = await parseJson(request);
-    payload.realEstateSession = await requireRealEstateSession(request, payload);
+    payload.realEstateSession = await requireRealEstatePreflightSession(request, payload);
     const preflight = await realEstateOriginals.preflight(payload);
     return credentialedJson(request, { preflight });
   };

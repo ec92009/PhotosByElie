@@ -12,6 +12,10 @@ scripts/backstage-control.zsh doctor --pretty
 scripts/backstage-control.zsh release verify --pretty
 scripts/backstage-control.zsh photos health --pretty
 scripts/backstage-control.zsh photos authorize --pretty
+scripts/backstage-control.zsh real-estate originals preflight \
+  --gallery corine-real-estate \
+  --items-file /path/to/items.json \
+  --pretty
 ```
 
 The wrapper invokes the installed app binary with `--control`, preserving the
@@ -24,7 +28,16 @@ Backstage/helper release path without requiring first-run Photos/TCC access.
 `photos authorize` is an explicit PhotoKit permission request and reports the
 standard macOS prompt
 result without automating the prompt. Exit code `0` means local readiness, `2`
-means a readiness check failed, and `64` means invalid CLI arguments.
+means a readiness check failed or one or more originals are unavailable, `1`
+means an authentication/API failure, and `64` means invalid CLI arguments.
+
+The Real Estate preflight uses the installed Backstage Owner device credential
+to renew a short-lived Bearer session and call only the read-only preflight
+endpoint. Its items file is a JSON array; every item requires `photoId` and
+`albumSlug`, while `sourceFile`, `title`, and `sortIndex` are optional. The
+command never creates a download token, order, email, client message, or gallery
+change. Owner Bearer credentials are not accepted by the separate download-
+session endpoint.
 
 ## Xcode Canvas
 

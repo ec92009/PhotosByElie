@@ -47,6 +47,10 @@ is about Backstage itself rather than a third helper process:
 scripts/backstage-control.zsh health --pretty
 scripts/backstage-control.zsh release verify --pretty
 scripts/backstage-control.zsh photos authorize --pretty
+scripts/backstage-control.zsh real-estate originals preflight \
+  --gallery corine-real-estate \
+  --items-file /path/to/items.json \
+  --pretty
 ```
 
 The response includes Backstage release metadata, Photos Bridge compatibility
@@ -70,17 +74,19 @@ download path:
 
 `POST https://auth.photos-by-elie.com/api/v1/real-estate/originals/preflight`
 
-Call it with an existing signed `pbe_re_session` client cookie and a JSON body
-containing `galleryKey` plus the selected `photoId`, `albumSlug`, and optional
-source/title fields. The response is machine-readable schema version 1 and
-reports each selected original as available or missing. It deliberately
-returns no private object key.
+Call it with either an existing signed `pbe_re_session` client cookie or a
+short-lived Backstage Owner Bearer session and a JSON body containing
+`galleryKey` plus the selected `photoId`, `albumSlug`, and optional source/title
+fields. The CLI renews that Owner session from the installed app's device
+credential, so no browser session or Computer Use is required. The response is
+machine-readable schema version 1 and reports each selected original as
+available or missing. It deliberately returns no private object key.
 
 This endpoint is read-only: it creates no download token, order, email, client
 message, gallery change, or asset mutation. A successful preflight proves that
 an authenticated client selection is ready for the separate, explicit
-download-session action. It does not replace client authentication and does
-not bypass the signed session cookie.
+download-session action. Owner Bearer access applies only to preflight and does
+not authorize that mutating download-session action.
 
 Backstage restores its working layout between launches: the main and Quick
 Look window frames, the last selected workspace, the navigation sidebar's

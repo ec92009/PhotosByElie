@@ -6,10 +6,14 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v217.2`
+- Current visible version: `v219.0`
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v219.0` releases the verified 121-photo La Concha receipt set into Corine's
+  private gallery without re-exporting source media. The Worker authorizes the
+  canonical private masters through a fixture-derived allowlist, while the
+  gallery reuses the already-verified public preview objects.
 - `v217.0` consolidates the gallery search and filter bar with the Aug 4 date
   range controls and streamlined filter set, preserving URL-aware filtering.
 - `v155.0` restores truthful Owner Quick Look previews in cloud sessions by

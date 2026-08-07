@@ -13,12 +13,14 @@ import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
+import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { createRealEstateOriginals } from "./real-estate-originals.mjs";
 import { createR2ZipDelivery } from "./r2-zip-delivery.mjs";
 import { createResendEmailClient } from "./resend-email-client.mjs";
 import { createD1SidecarStateStore } from "./sidecar-state-store.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
 import { collections, frameOptions, resolutions, storefrontPolicy, videoPriceTiers } from "./photos-catalog.generated.mjs";
+import { REAL_ESTATE_GALLERY_RELEASES } from "./real-estate-gallery-releases.generated.mjs";
 
 const catalog = createCatalogIndex({ collections, resolutions, frameOptions, videoPriceTiers, storefrontPolicy });
 
@@ -127,7 +129,19 @@ const cleanRealEstateGallery = (gallery = {}) => {
     customer: String(gallery.customer || gallery.username || "").trim(),
     propertyTitle: String(gallery.propertyTitle || gallery.property || "").trim(),
     maxItems: Number(gallery.maxItems || 300) || 300,
+    privateMasterLayout: String(gallery.privateMasterLayout || "nested").trim().toLowerCase(),
+    allowedPhotoIds: Array.isArray(gallery.allowedPhotoIds)
+      ? [...new Set(gallery.allowedPhotoIds.map((value) => String(value || "").trim()).filter(Boolean))]
+      : [],
   };
+};
+
+const withVerifiedRealEstateRelease = (gallery) => {
+  const release = REAL_ESTATE_GALLERY_RELEASES[
+    canonicalRealEstateGalleryKey(gallery?.key).toLowerCase()
+  ];
+  if (!release) return gallery;
+  return cleanRealEstateGallery({ ...gallery, ...release });
 };
 
 const AGNES_COMMON_GALLERY_KEY = "agnes-la-concha-common";
@@ -150,6 +164,8 @@ const withScopedRealEstateGalleries = (galleries = []) => {
       accessCodeSalt: "",
       propertyTitle: "La Concha / Common",
       maxItems: 14,
+      privateMasterLayout: "nested",
+      allowedPhotoIds: [],
     },
   ];
 };
@@ -161,7 +177,7 @@ export const realEstateGalleriesFor = (env = {}) => {
       const parsed = JSON.parse(rawJson);
       const source = Array.isArray(parsed) ? parsed : Array.isArray(parsed.galleries) ? parsed.galleries : [];
       const galleries = source.map(cleanRealEstateGallery).filter((gallery) => gallery?.username);
-      if (galleries.length) return withScopedRealEstateGalleries(galleries);
+      if (galleries.length) return withScopedRealEstateGalleries(galleries).map(withVerifiedRealEstateRelease);
     } catch {
       // Fall through to the legacy single-gallery environment variables.
     }
@@ -172,7 +188,7 @@ export const realEstateGalleriesFor = (env = {}) => {
     accessCode: env.REAL_ESTATE_CORINE_ACCESS_CODE || "",
     privateMasterPrefix: env.REAL_ESTATE_CORINE_PRIVATE_MASTER_PREFIX || "real-estate/corine-real-estate/masters",
   });
-  return legacy?.username ? withScopedRealEstateGalleries([legacy]) : [];
+  return legacy?.username ? withScopedRealEstateGalleries([legacy]).map(withVerifiedRealEstateRelease) : [];
 };
 
 export const realEstateDeliverablesFor = (env = {}, { assemblyDispatcher = null } = {}) => createRealEstateDeliverables({

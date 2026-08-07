@@ -120,6 +120,10 @@ test("deployed Worker derives an Agnes Common-only gallery without a static pass
   assert.equal(agnes.privateMasterPrefix, "RE/Corine/masters");
   assert.equal(agnes.accessCode, "");
   assert.equal(agnes.accessCodeHash, "");
+  const corine = galleries.find((gallery) => gallery.key === "Corine-gallery");
+  assert.equal(corine.privateMasterPrefix, "masters");
+  assert.equal(corine.privateMasterLayout, "flat");
+  assert.equal(corine.allowedPhotoIds.length, 121);
 });
 
 test("Access logout targets the team-domain session cookie when configured", () => {
@@ -3227,6 +3231,55 @@ test("real-estate originals preflight is authenticated, read-only, and storage-s
   assert.equal(store._debug.downloads.size, 0);
   assert.equal(store._debug.orders.size, 0);
   assert.equal(emailClient.sent.length, 0);
+});
+
+test("receipt-backed real-estate release allows only its flat canonical master IDs", async () => {
+  const allowedPhotoId = "001-release-allowed";
+  const forbiddenPhotoId = "001-release-forbidden";
+  const privateR2 = createFakeR2({
+    [`masters/${allowedPhotoId}.jpg`]: {
+      body: new TextEncoder().encode("allowed receipt-backed original"),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+    [`masters/${forbiddenPhotoId}.jpg`]: {
+      body: new TextEncoder().encode("other private original"),
+      httpMetadata: { contentType: "image/jpeg" },
+    },
+  });
+  const store = createMemoryStore();
+  const originals = createRealEstateOriginals({
+    privateBucket: privateR2,
+    store,
+    galleries: [{
+      key: "corine-real-estate",
+      username: "Corine",
+      privateMasterPrefix: "masters",
+      privateMasterLayout: "flat",
+      allowedPhotoIds: [allowedPhotoId],
+    }],
+    now: () => new Date("2026-08-07T08:00:00.000Z"),
+  });
+  const realEstateSession = { galleryKey: "corine-real-estate", username: "Corine" };
+
+  const available = await originals.preflight({
+    galleryKey: "corine-real-estate",
+    realEstateSession,
+    items: [{ photoId: allowedPhotoId, albumSlug: "la-concha", sourceFile: "D5H_3001.jpg" }],
+  });
+  assert.equal(available.ok, true);
+  assert.equal(available.availableCount, 1);
+  assert.doesNotMatch(JSON.stringify(available), /masters\//);
+
+  await assert.rejects(
+    originals.preflight({
+      galleryKey: "corine-real-estate",
+      realEstateSession,
+      items: [{ photoId: forbiddenPhotoId, albumSlug: "la-concha", sourceFile: "D5H_3002.jpg" }],
+    }),
+    (error) => error?.status === 403 && error?.code === "real_estate_original_forbidden",
+  );
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
 });
 
 test("real-estate originals endpoint creates private download tokens", async () => {

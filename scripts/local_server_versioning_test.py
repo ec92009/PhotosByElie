@@ -3,10 +3,13 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from scripts.local_server import _bump_visible_version
+from scripts.local_server import _bump_visible_version, _next_visible_version
 
 
 class VisibleVersionBumpTests(unittest.TestCase):
+    def test_uses_the_shared_calendar_version_epoch(self):
+        self.assertEqual(_next_visible_version("217.2", date(2026, 8, 7)), "219.0")
+
     def test_updates_root_and_isolated_concept_version_surfaces(self):
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)

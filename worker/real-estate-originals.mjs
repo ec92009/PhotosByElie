@@ -206,10 +206,29 @@ export const createRealEstateOriginals = ({
   };
 
   const originalKeyFor = (gallery, item) => {
-    const albumSlug = safeKeySegment(item.albumSlug, "albumSlug");
     const photoId = safeKeySegment(item.photoId, "photoId");
     const extension = extensionFor(item.sourceFile || item.full || item.originalFile || photoId);
     const prefix = normalizeKeyPrefix(gallery.privateMasterPrefix || `real-estate/${gallery.key}/masters`);
+    if (gallery.privateMasterLayout === "flat") {
+      const allowedPhotoIds = new Set(Array.isArray(gallery.allowedPhotoIds) ? gallery.allowedPhotoIds : []);
+      if (!allowedPhotoIds.size) {
+        throw Object.assign(new Error("The private gallery release allowlist is not configured."), {
+          status: 503,
+          code: "real_estate_release_unavailable",
+        });
+      }
+      if (!allowedPhotoIds.has(photoId)) {
+        throw Object.assign(new Error("This original is not part of the authorized gallery release."), {
+          status: 403,
+          code: "real_estate_original_forbidden",
+        });
+      }
+      return {
+        key: `${prefix}/${photoId}.${extension}`,
+        extension,
+      };
+    }
+    const albumSlug = safeKeySegment(item.albumSlug, "albumSlug");
     return {
       key: `${prefix}/${albumSlug}/${photoId}.${extension}`,
       extension,

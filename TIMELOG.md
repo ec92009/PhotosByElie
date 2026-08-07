@@ -758,8 +758,9 @@ Clock state: running
 | 2026-08-07 | 07:20 CEST | 07:23 CEST | 0:02 | Reported missing La Concha previews on David v219, then folded the screenshot-backed reproduction into PBE-137 and closed PBE-142 as a duplicate; background code and API inspection excluded. |
 | 2026-08-07 | 07:26 CEST | 07:27 CEST | 0:01 | Re-evaluated the live PBE/PBB critical path and kept PBB-74 ahead of PBE-115 and PBE-137; API retrieval time excluded. |
 | 2026-08-07 | 07:28 CEST | 07:29 CEST | 0:01 | Selected PBB-74 for implementation; delivered and released the supported no-CUA originals preflight CLI/API. Background coding, tests, deployment, installation, and API runtime excluded. |
+| 2026-08-07 | 07:30 CEST | 07:31 CEST | 0:01 | Selected PBE-115 for completion of the La Concha private-gallery release, signed-in access, and no-send originals rehearsal; background implementation, tests, deployment, browser verification, and API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:46
+Active collaboration time used: 35:47
 Remaining budget: not set

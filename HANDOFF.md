@@ -26,6 +26,14 @@
   its preserved Owner credential, cached 2,000 recent Photos previews, and
   loaded fixture RE read-only at 52,308 match/in-scope, 52,184 undecided, 124
   picked, and 0 hidden. The UI confirmed no culling changes in the session.
+- PBE-137 remains Active after the decisive David v219.0 (76) child-fixture
+  retest: La Concha loads the correct 124-item scope and all 124 picked
+  decisions, but every visible D5H card remains a generic thumbnail
+  placeholder. The user screenshot is attached to PBE-137. Its Next Action is
+  a read-only comparison of the fixture-window `photoLibraryIdentifier` values
+  with David's PhotoKit preview errors, followed by hydrated or explicitly
+  retryable cards without changing decisions. PBE-142 was folded into PBE-137
+  as a duplicate and closed Done.
 - PBE-115 remains Active. Its read-only deployed access rehearsal is green for
   anonymous denials and public-catalog privacy, but the signed-in private La
   Concha page still shows 99 source photos, 3 shoots, and 0 saved products; it

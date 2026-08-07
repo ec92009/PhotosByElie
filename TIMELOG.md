@@ -755,8 +755,9 @@ Clock state: running
 | 2026-08-06 | 13:03 CEST | 13:04 CEST | 0:01 | Resumed PBB-70 after Owner sign-in, verified cloud photo and panorama context previews plus Quick Look navigation and close behavior, and closed the ticket as Verified; video remained absent from the public catalog by policy. |
 | 2026-08-07 | 01:12 CEST | 01:13 CEST | 0:01 | Reviewed the live critical queue and identified David CLI/TCC acceptance as the next critical-path move; API retrieval time excluded. |
 | 2026-08-07 | 01:27 CEST | 01:35 CEST | 0:05 | Supplied David Photos-permission and Backstage screenshots, verified the v219 helper/TCC handoff, and confirmed the read-only RE Culling scope; background diagnosis, coding, tests, browser rehearsal, and ticket API runtime excluded. |
+| 2026-08-07 | 07:20 CEST | 07:23 CEST | 0:02 | Reported missing La Concha previews on David v219, then folded the screenshot-backed reproduction into PBE-137 and closed PBE-142 as a duplicate; background code and API inspection excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:42
+Active collaboration time used: 35:44
 Remaining budget: not set

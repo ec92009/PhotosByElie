@@ -3282,6 +3282,47 @@ test("receipt-backed real-estate release allows only its flat canonical master I
   assert.equal(store._debug.orders.size, 0);
 });
 
+test("real-estate preflight falls back to a one-byte read without creating delivery state", async () => {
+  const photoId = "001-release-range-read";
+  const source = new TextEncoder().encode("receipt-backed original bytes");
+  const privateR2 = {
+    head: async () => null,
+    get: async (key, options = {}) => {
+      assert.equal(key, `masters/${photoId}.jpg`);
+      assert.deepEqual(options, { range: { offset: 0, length: 1 } });
+      return {
+        size: source.byteLength,
+        body: { cancel: async () => {} },
+        httpMetadata: { contentType: "image/jpeg" },
+      };
+    },
+  };
+  const store = createMemoryStore();
+  const originals = createRealEstateOriginals({
+    privateBucket: privateR2,
+    store,
+    galleries: [{
+      key: "corine-real-estate",
+      username: "Corine",
+      privateMasterPrefix: "masters",
+      privateMasterLayout: "flat",
+      allowedPhotoIds: [photoId],
+    }],
+  });
+
+  const preflight = await originals.preflight({
+    galleryKey: "corine-real-estate",
+    realEstateSession: { galleryKey: "corine-real-estate", username: "Corine" },
+    items: [{ photoId, albumSlug: "la-concha", sourceFile: "D5H_3003.jpg" }],
+  });
+  assert.equal(preflight.ok, true);
+  assert.equal(preflight.availableCount, 1);
+  assert.equal(preflight.totalBytes, source.byteLength);
+  assert.equal(preflight.items[0].verificationMethod, "range-read");
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+});
+
 test("real-estate originals endpoint creates private download tokens", async () => {
   const photoId = "corine-re-2026-la-concha-1-apt-8ab1-d5h-3043";
   const videoId = "corine-re-2026-la-concha-1-apt-8ab1-video-001";

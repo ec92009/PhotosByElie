@@ -56,8 +56,15 @@ const contentTypeFor = (extension) => {
 
 const objectMetadata = async (bucket, key) => {
   if (!key) return null;
-  if (typeof bucket.head === "function") return bucket.head(key);
-  return bucket.get(key);
+  if (typeof bucket.head === "function") {
+    const object = await bucket.head(key);
+    if (object) return { object, verificationMethod: "head" };
+  }
+  if (typeof bucket.get !== "function") return null;
+  const object = await bucket.get(key, { range: { offset: 0, length: 1 } });
+  if (!object) return null;
+  if (typeof object.body?.cancel === "function") await object.body.cancel();
+  return { object, verificationMethod: "range-read" };
 };
 
 const objectBytes = (object) => {
@@ -299,20 +306,25 @@ export const createRealEstateOriginals = ({
     return { gallery, galleryKey, requested };
   };
 
-  const metadataFor = async (requested) => Promise.all(requested.map(async (item) => ({
-    item,
-    object: await objectMetadata(privateBucket, item.objectKey),
-  })));
+  const metadataFor = async (requested) => Promise.all(requested.map(async (item) => {
+    const metadata = await objectMetadata(privateBucket, item.objectKey);
+    return {
+      item,
+      object: metadata?.object || null,
+      verificationMethod: metadata?.verificationMethod || "missing",
+    };
+  }));
 
   const preflight = async (payload = {}) => {
     const { galleryKey, requested } = prepareRequest(payload);
     const metadata = await metadataFor(requested);
-    const items = metadata.map(({ item, object }) => ({
+    const items = metadata.map(({ item, object, verificationMethod }) => ({
       photoId: item.photoId,
       name: item.name,
       contentType: item.contentType,
       available: Boolean(object),
       bytes: object ? objectBytes(object) : null,
+      verificationMethod,
     }));
     const availableCount = items.filter((item) => item.available).length;
     const missingCount = items.length - availableCount;

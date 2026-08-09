@@ -829,6 +829,11 @@ class FixturePipelineTest(unittest.TestCase):
             "assetId": "asset-2",
             "action": "tombstone",
             "reason": "Owner rejected",
+            "legacyMigration": {
+                "kind": "PBB-78-legacy-expo-hidden",
+                "planDigest": "test-plan",
+                "auditReceipt": "test-receipt",
+            },
         })
 
         upsert_assets(self.root, [

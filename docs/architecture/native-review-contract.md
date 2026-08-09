@@ -21,7 +21,8 @@ all of these conditions:
 
 1. the asset has an active `picked` placement in that exact fixture;
 2. the asset is still present in the local Photos index;
-3. the asset is not globally tombstoned;
+3. the asset is neither globally tombstoned nor in the recoverable Waste
+   Basket;
 4. the global editorial state is not `approved`.
 
 Fixture membership is exact rather than inherited. A parent and child can both
@@ -61,7 +62,8 @@ chosen mode; it does not create a different state model.
 
 Precedence and invariants:
 
-1. A global tombstone always removes an asset from Review.
+1. A global tombstone or recoverable Waste Basket entry always removes an
+   asset from Review.
 2. A fixture-local hide removes the asset only from that fixture's Review
    universe. It resets an outstanding AI request for the asset to
    `unreviewed`, but does not alter another fixture's picked placement.

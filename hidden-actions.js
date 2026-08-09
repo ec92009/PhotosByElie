@@ -30,7 +30,11 @@
     "undo-hide": "Putting master back...",
     "promote-hidden": "Putting master back...",
     "return-to-reserve": "Returning photo to Reserve...",
-    discard: "Discarding photo and updating manifests...",
+    discard: "Moving photo to Waste Basket...",
+    "waste-basket-x": "Moving photo to Waste Basket...",
+    "waste-basket-x-many": "Moving photos to Waste Basket...",
+    "waste-basket-restore": "Restoring photo from Waste Basket...",
+    "waste-basket-empty": "Emptying Waste Basket...",
     "assign-country": "Assigning country and refreshing catalog state...",
     "sync-country-keywords": "Syncing country metadata into generated catalog files...",
     "remove-collection-keyword": "Removing collection keyword from catalog metadata...",
@@ -39,7 +43,7 @@
     "queue-title-keyword-review-many": "Sending visible photos to title/keyword review...",
     "apply-title-keyword-review-approvals": "Saving title/keyword approvals and rejections...",
     "publish-hidden-blacklist": "Publishing master blacklist...",
-    "wipe-hidden-r2": "Emptying waste basket",
+    "wipe-hidden-r2": "R2 cleanup is disabled for lifecycle transitions",
     "save-title-keyword-review-approvals": "Saving title/keyword review decisions...",
   };
 
@@ -348,7 +352,12 @@
       photoIds,
       requestedConnector: "max",
     };
-    ["title", "keywords", "mode"].forEach((key) => {
+    [
+      "title", "keywords", "mode", "source", "actor", "fixture_id", "fixtureId",
+      "gallery_id", "galleryId", "request_key", "requestKey", "owner_mode", "ownerMode",
+      "owner_authorized", "ownerAuthorized", "confirmed", "confirmation_token",
+      "confirmationToken", "explicit_tombstone_restore", "explicitTombstoneRestore",
+    ].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
     });
     const response = await fetch(`${ownerApiBaseUrl}/actions`, {
@@ -405,18 +414,27 @@
     if (ownerAuth?.enabled && !authorized) {
       throw new Error("Owner helper server required.");
     }
-    const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2", "save-keyword-blacklist"];
+    const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2", "save-keyword-blacklist", "waste-basket-empty"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
+    if (requestPayload.source === "owner-gallery") {
+      requestPayload.owner_mode = true;
+      requestPayload.owner_authorized = authorized !== false;
+    }
     const blocksPage = localEnabled || !["hide", "hide-many", "update-photo-metadata"].includes(action);
     if (blocksPage) setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       if (!localEnabled) {
-        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "discard", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
+        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "discard", "waste-basket-x", "waste-basket-x-many", "waste-basket-restore", "waste-basket-empty", "waste-basket-tombstone-restore", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
           throw new Error("This Owner action is available from Sidecar on Max.");
         }
-        return await remoteOwnerAction(action, photoId, extra);
+        return await remoteOwnerAction(action, photoId, {
+          ...extra,
+          ...(extra.source === "owner-gallery"
+            ? { owner_mode: true, owner_authorized: authorized !== false }
+            : {}),
+        });
       }
       const response = await fetch(photoActionEndpoint, {
         method: "POST",
@@ -547,18 +565,20 @@
     if (changed) writePromotions(promotions);
   };
 
+  const wasteBasketContext = { source: "owner-gallery", owner_mode: true, reason: "Owner gallery X" };
+
   const mark = async (photoId) => {
     if (!cullingEnabled() || !photoId) return read();
     const current = read();
     const queueHideAction = (options = {}) => {
-      return enqueuePhotoAction("hide", photoId).then(() => {
+      return enqueuePhotoAction("waste-basket-x", photoId, wasteBasketContext).then(() => {
         pendingHiddenIds.delete(photoId);
       }).catch((error) => {
         pendingHiddenIds.delete(photoId);
         const latest = read();
         if (options.revertOnError && latest.includes(photoId)) write(latest.filter((item) => item !== photoId));
         window.dispatchEvent(new CustomEvent("photosbyelie:owneractionerror", {
-          detail: { action: "hide", photoId, message: error?.message || "Could not move photo to Waste Basket." },
+          detail: { action: "waste-basket-x", photoId, message: error?.message || "Could not move photo to Waste Basket." },
         }));
         throw error;
       });
@@ -584,7 +604,7 @@
     const nextItems = write([...current, ...ids]);
     writeHistory([...readHistory(), ...ids]);
     try {
-      await enqueuePhotoAction("hide-many", ids[0], { photo_ids: ids });
+      await enqueuePhotoAction("waste-basket-x-many", ids[0], { photo_ids: ids, ...wasteBasketContext });
       ids.forEach((photoId) => pendingHiddenIds.delete(photoId));
       return nextItems;
     } catch (error) {
@@ -598,7 +618,7 @@
     if (!cullingEnabled() || !photoId) return null;
     forgetReserveOnly([photoId]);
     removePromotionEverywhere(photoId);
-    const result = await photoAction("discard", photoId);
+    const result = await photoAction("waste-basket-x", photoId, wasteBasketContext);
     unmark(photoId);
     return result;
   };
@@ -704,11 +724,24 @@
     return photoAction("wipe-hidden-r2", null);
   };
 
+  const emptyWasteBasket = async (photoIds = []) => {
+    if (!cullingEnabled()) return null;
+    const ids = normalize(photoIds);
+    return photoAction("waste-basket-empty", null, {
+      photo_ids: ids,
+      source: "backstage-waste-basket",
+      actor: "owner",
+      confirmed: true,
+      confirmation_token: "EMPTY_WASTE_BASKET",
+      reason: "explicit Empty Waste Basket",
+    });
+  };
+
   const undo = async (preferredPhotoId = null) => {
     if (!cullingEnabled()) return null;
     const items = read();
     if (preferredPhotoId && items.includes(preferredPhotoId)) {
-      await photoAction("undo-hide", preferredPhotoId);
+      await photoAction("waste-basket-restore", preferredPhotoId, wasteBasketContext);
       return preferredPhotoId;
     }
 
@@ -717,7 +750,7 @@
       const candidate = history.pop();
       if (!items.includes(candidate)) continue;
       writeHistory(history);
-      await photoAction("undo-hide", candidate);
+      await photoAction("waste-basket-restore", candidate, wasteBasketContext);
       return candidate;
     }
     writeHistory(history);
@@ -728,9 +761,9 @@
     const ids = normalize(photoIds).filter((photoId) => read().includes(photoId));
     if (!cullingEnabled() || !ids.length) return [];
     if (localEnabled) {
-      for (const photoId of ids) await photoAction("undo-hide", photoId);
+      for (const photoId of ids) await photoAction("waste-basket-restore", photoId, wasteBasketContext);
     } else {
-      await photoAction("undo-hide-many", ids[0], { photo_ids: ids });
+      await photoAction("waste-basket-restore", ids[0], { photo_ids: ids, ...wasteBasketContext });
     }
     unmarkMany(ids);
     const restored = new Set(ids);
@@ -786,6 +819,7 @@
     unmarkMany,
     updatePhotoMetadata,
     wipeHiddenR2,
+    emptyWasteBasket,
   };
   window.photosByElieHiddenActionsReady = (async () => {
     if (localEnabled) return syncFromPublishedBlacklist().catch(() => read());

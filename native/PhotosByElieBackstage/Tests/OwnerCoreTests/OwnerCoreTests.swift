@@ -1933,7 +1933,21 @@ struct OwnerCoreTests {
             state: .completed,
             result: ["ok": true]
         )
-        let api = ScriptedOwnerActionAPI(completed: [ledger, restored])
+        let moved = OwnerAction(
+            id: "owner-action-lifecycle-move",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let emptied = OwnerAction(
+            id: "owner-action-lifecycle-empty",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [ledger, restored, moved, emptied])
         let service = LifecycleService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -1952,8 +1966,19 @@ struct OwnerCoreTests {
                 == ["hidden"]
         )
         #expect(requests[1].actionKind == "photo-moderation")
-        #expect(requests[1].payload["operation"]?.stringValue == "undo-hide-many")
+        #expect(requests[1].payload["operation"]?.stringValue == "waste-basket-restore")
         #expect(requests[1].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-hidden"])
+        #expect(requests[1].payload["requestKey"]?.stringValue?.hasPrefix("native-lifecycle:waste-basket-restore:") == true)
+
+        _ = try await service.moveToWasteBasket(mediaIDs: ["photo-x"], fixtureID: "fixture-expo")
+        _ = try await service.emptyWasteBasket(confirmed: true)
+        let finalRequests = await api.requests()
+        #expect(finalRequests[2].payload["operation"]?.stringValue == "waste-basket-x")
+        #expect(finalRequests[2].payload["source"]?.stringValue == "backstage-culling")
+        #expect(finalRequests[2].payload["requestKey"]?.stringValue?.hasPrefix("native-lifecycle:waste-basket-x:") == true)
+        #expect(finalRequests[3].payload["operation"]?.stringValue == "waste-basket-empty")
+        #expect(finalRequests[3].payload["confirmed"]?.boolValue == true)
+        #expect(finalRequests[3].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
     }
 
     @Test("Native delivery keeps fixture upload and publication as separate actions")

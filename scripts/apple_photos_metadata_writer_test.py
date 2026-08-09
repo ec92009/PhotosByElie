@@ -131,6 +131,11 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
                 "assetId": "asset-2",
                 "action": "tombstone",
                 "reason": "owner rejected",
+                "legacyMigration": {
+                    "kind": "PBB-78-legacy-expo-hidden",
+                    "planDigest": "test-plan",
+                    "auditReceipt": "test-receipt",
+                },
             },
         )
         adapter = FastFakePhotos()
@@ -158,6 +163,11 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
                 "assetId": "asset-1",
                 "action": "tombstone",
                 "reason": "superseded after approval",
+                "legacyMigration": {
+                    "kind": "PBB-78-legacy-expo-hidden",
+                    "planDigest": "test-plan",
+                    "auditReceipt": "test-receipt",
+                },
             },
         )
         adapter = FastFakePhotos()

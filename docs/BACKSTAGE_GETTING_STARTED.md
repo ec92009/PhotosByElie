@@ -123,7 +123,8 @@ Backstage separates work into distinct stages:
 3. **Culling** records picks, rejects, and ratings.
 4. **Metadata** prepares titles, captions, keywords, and verified Photos
    give-back.
-5. **Waste Basket** handles recoverable removals and permanent discards.
+5. **Waste Basket** handles recoverable removals and explicitly confirmed
+   global tombstones.
 6. **Uploads** sends approved fixture media to R2, verifies it, and makes each
    verified source live in its effective picked fixtures.
 7. **Delivery** records ready PDF, video, or Originals links.
@@ -292,7 +293,8 @@ audited Owner action path.
    focused item.
 6. Use **Fixture decision** for Include, Exclude, or Undecided. P, H, and U are
    the matching fixture-local shortcuts; X remains the separate global
-   tombstone action.
+   recoverable Waste Basket action. Only a confirmed **Empty Waste Basket**
+   operation activates a global tombstone.
 7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
    0 through 5 apply the corresponding value.
 8. Use **Color** and **Apply color** for the five labels or to clear a label.
@@ -415,14 +417,16 @@ return on a later pass.
 
 ## Waste Basket
 
-The Waste Basket has two intentionally different actions:
+The Waste Basket has two intentionally different normal actions:
 
 - **Put back** restores all selected recoverable items.
-- **Discard** permanently discards one item after a separate confirmation.
+- **Empty Waste Basket** changes recoverable entries into active global
+  tombstones only after explicit confirmation.
 
 Use **Refresh**, select the items to restore, and choose **Put back**.
-Permanent discard is deliberately one item at a time and should be used only
-when recovery is no longer wanted.
+Emptying retains source media, R2 objects, and history. A tombstoned item can
+return only through the separate explicit tombstone-restore path; ordinary X
+and restore remain idempotent and auditable.
 
 ## Uploads
 

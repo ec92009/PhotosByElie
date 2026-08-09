@@ -36,7 +36,7 @@ the authoritative store for every mutation.
 | Universal search | Catalog and Photos-index search | `Owner.sqlite` and local Photos index | `/actions` | Native search and fixture assignment |
 | Sidecar culling | Query, apply, batch apply, upsert | Worker sidecar state + local receipts | `/sidecar/decisions/*` | Keyboard culling and batch decisions |
 | Metadata review | Title/keyword proposals, accept/undo, blacklist | `Owner.sqlite`; Photos Bridge give-back | `/actions` | Compare, edit, approve, undo, blacklist |
-| Waste Basket | Hide, restore, discard, empty; recover saved title | `Owner.sqlite` lifecycle state | `/actions` | Multi-select lifecycle workspace |
+| Waste Basket | X to recoverable entry, restore, confirmed empty, explicit tombstone restore | `Owner.sqlite` Waste Basket gateway and receipts | `/actions` plus connector/local gateway | Multi-select lifecycle workspace with confirmation gate |
 | Upload bridge | Queue, R2 upload, collision/receipt accounting | `Owner.sqlite`, private/public R2 | `/actions` | Upload queue with progress and cancellation |
 | Apple Photos give-back | Signed-app batch read, explicit batch mutation, re-read verification and independently retryable receipts | Signed Photos Bridge app | `/actions` | Native dry run, explicit commit, verified/failed receipts and failed-only retry |
 | Delivery | PDF/video assembly, status, view/download | Worker + R2 | `/deliverables*`, `/jobs*` | Delivery builder and download/share view |

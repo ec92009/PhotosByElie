@@ -304,6 +304,10 @@ struct ReviewView: View {
                         Task { await model.applyReviewAction(.hide) }
                         return .handled
                     }
+                    .onKeyPress("x") {
+                        Task { await model.moveReviewSelectionToWasteBasket() }
+                        return .handled
+                    }
                     .onKeyPress("u") {
                         Task { await model.unpickReviewSelection() }
                         return .handled
@@ -691,6 +695,11 @@ private struct ReviewInspector: View {
                         }
                         .keyboardShortcut("h", modifiers: [])
                         .backstageHelp("Hide the selected assets from this fixture without deleting their files.")
+                        Button("Waste Basket") {
+                            Task { await model.moveReviewSelectionToWasteBasket() }
+                        }
+                        .keyboardShortcut("x", modifiers: [])
+                        .backstageHelp("Move the selected Review assets to the recoverable Waste Basket through the shared lifecycle gateway.")
                         Button("Unpick") {
                             Task { await model.unpickReviewSelection() }
                         }

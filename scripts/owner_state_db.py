@@ -1360,7 +1360,16 @@ def sync_media_lifecycle_from_compat(
     conn: sqlite3.Connection | None = None,
     *,
     db_path: Path | None = None,
+    apply: bool = False,
+    audit_receipt: str = "",
+    plan_digest: str = "",
 ) -> dict[str, Any]:
+    """Explicitly import legacy JSON lifecycle artifacts into Owner SQLite.
+
+    This is a named compatibility/migration operation, never a read-path
+    default. Normal UI, API, export, catalog, and cleanup reads must use the
+    SQLite rows already present in Owner.sqlite.
+    """
     owns_conn = conn is None
     conn = conn or connect(repo_root, db_path)
     timestamp = now_iso()
@@ -1372,6 +1381,19 @@ def sync_media_lifecycle_from_compat(
         discarded_entries = _photo_entries_by_id(discarded_tombstone)
         discarded_ids = _ids_from_payload(discarded_tombstone) | _ids_from_payload(discarded_manifest)
         hidden_ids = (_ids_from_payload(hidden_blacklist) | set(hidden_entries)) - discarded_ids
+
+        if not apply:
+            return {
+                "db": (db_path or DEFAULT_DB).as_posix(),
+                "dryRun": True,
+                "hidden": len(hidden_ids),
+                "discarded": len(discarded_ids),
+                "applied": False,
+            }
+        if (hidden_ids or discarded_ids) and (not str(audit_receipt or "").strip() or not str(plan_digest or "").strip()):
+            raise ValueError(
+                "Legacy compatibility lifecycle apply requires a non-empty audit receipt and plan digest."
+            )
 
         discarded_count = 0
         for media_id in sorted(discarded_ids):
@@ -1389,8 +1411,29 @@ def sync_media_lifecycle_from_compat(
                 hidden_count += 1
 
         _set_setting(conn, "media_lifecycle_compat_json", "true")
+        _set_setting(
+            conn,
+            "media_lifecycle_compat_audit",
+            json.dumps(
+                {
+                    "kind": "legacy-media-lifecycle-compat-import",
+                    "auditReceipt": str(audit_receipt).strip(),
+                    "planDigest": str(plan_digest).strip(),
+                    "appliedAt": timestamp,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        )
         conn.commit()
-        return {"db": (db_path or DEFAULT_DB).as_posix(), "hidden": hidden_count, "discarded": discarded_count}
+        return {
+            "db": (db_path or DEFAULT_DB).as_posix(),
+            "dryRun": False,
+            "hidden": hidden_count,
+            "discarded": discarded_count,
+            "applied": True,
+        }
     finally:
         if owns_conn:
             conn.close()
@@ -1403,6 +1446,10 @@ def record_media_lifecycle_entries(
     db_path: Path | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
+    if lifecycle_state == "discarded":
+        raise ValueError(
+            "Direct discarded lifecycle writes are disabled; use the Waste Basket gateway Empty operation."
+        )
     owns_conn = conn is None
     conn = conn or connect(repo_root, db_path)
     timestamp = now_iso()
@@ -1436,7 +1483,9 @@ def record_media_lifecycle_discarded(
     db_path: Path | None = None,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
-    return record_media_lifecycle_entries(repo_root, entries, "discarded", db_path, conn)
+    raise ValueError(
+        "Direct discarded lifecycle writes are disabled; use the Waste Basket gateway Empty operation."
+    )
 
 
 def record_media_lifecycle_active(
@@ -1598,7 +1647,7 @@ def media_lifecycle_snapshot(
     db_path: Path | None = None,
     conn: sqlite3.Connection | None = None,
     *,
-    sync_compat: bool = True,
+    sync_compat: bool = False,
 ) -> dict[str, Any]:
     owns_conn = conn is None
     conn = conn or connect(repo_root, db_path)
@@ -3360,7 +3409,9 @@ def import_owner_actions(repo_root: Path, db_path: Path | None = None, *, force:
         import_keyword_blacklist(repo_root, conn, force=force)
         import_country_assignments(repo_root, conn, force=force)
         import_title_keyword_review(repo_root, conn, force=force)
-        sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=db_path)
+        # Legacy lifecycle JSON is deliberately excluded from the normal
+        # Owner-action import. Use the explicit audited compatibility command
+        # instead; normal imports must not activate a global tombstone.
         _set_setting(conn, "imported_from_owner_action_json", "true")
         conn.commit()
     finally:
@@ -3682,6 +3733,13 @@ def main() -> None:
     parser.add_argument("--export-keyword-blacklist", action="store_true")
     parser.add_argument("--import-discarded-r2-manifest", action="store_true")
     parser.add_argument("--sync-media-lifecycle", action="store_true")
+    parser.add_argument(
+        "--sync-media-lifecycle-apply",
+        action="store_true",
+        help="Apply the named legacy lifecycle compatibility import; requires audit receipt and plan digest.",
+    )
+    parser.add_argument("--legacy-audit-receipt", default="")
+    parser.add_argument("--legacy-plan-digest", default="")
     parser.add_argument("--media-lifecycle-json", action="store_true")
     parser.add_argument("--r2-state-file", type=Path)
     parser.add_argument("--r2-state", choices=("current", "marked_for_delete", "deleted_confirmed"))
@@ -3726,7 +3784,18 @@ def main() -> None:
             if args.import_title_keyword_review:
                 import_title_keyword_review(repo_root, conn, force=args.force)
             if args.sync_media_lifecycle:
-                sync_media_lifecycle_from_compat(repo_root, conn=conn, db_path=args.db)
+                result = sync_media_lifecycle_from_compat(
+                    repo_root,
+                    conn=conn,
+                    db_path=args.db,
+                    apply=args.sync_media_lifecycle_apply,
+                    audit_receipt=args.legacy_audit_receipt,
+                    plan_digest=args.legacy_plan_digest,
+                )
+                print(
+                    "legacy_media_lifecycle "
+                    f"dry_run={result['dryRun']} hidden={result['hidden']} discarded={result['discarded']}"
+                )
             if args.import_title_keyword_batch_file:
                 conn.close()
                 result = import_title_keyword_batch_file(repo_root, args.import_title_keyword_batch_file, args.db)

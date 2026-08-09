@@ -377,14 +377,14 @@ private struct PublicationView: View {
 
 private struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
-    @State private var pendingDiscard: LifecycleItem?
+    @State private var confirmingEmpty = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Waste Basket").font(.largeTitle.bold())
-                    Text("Restore is recoverable. Permanent discard is deliberately one item at a time.")
+                    Text("X is recoverable. Only a confirmed Empty Waste Basket action activates global tombstones.")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -394,6 +394,9 @@ private struct LifecycleView: View {
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
                     .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
+                Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
+                    .disabled(model.isRunningLifecycle || model.lifecycleItems.allSatisfy { $0.state != "hidden" })
+                    .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
             Text(model.lifecycleStatus)
                 .font(.callout)
@@ -403,17 +406,13 @@ private struct LifecycleView: View {
                     Text(item.title.isEmpty ? item.mediaID : item.title)
                 }
                 TableColumn("State") { item in
-                    Text(item.state == "hidden" ? "Recoverable" : "Discarded")
+                    Text(item.state == "hidden" ? "Recoverable" : "Active global tombstone")
                         .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
                 }
                 TableColumn("Collection", value: \.sourceSlug)
                 TableColumn("Kind", value: \.mediaType)
                 TableColumn("Updated", value: \.updatedAt)
                 TableColumn("") { item in
-                    if item.state == "hidden" {
-                        Button("Discard", role: .destructive) { pendingDiscard = item }
-                            .backstageHelp("Open the one-item confirmation for permanently discarding this recoverable asset.")
-                    }
                 }
                 .width(90)
             }
@@ -424,7 +423,7 @@ private struct LifecycleView: View {
                     ContentUnavailableView(
                         "Waste Basket is empty",
                         systemImage: "trash",
-                        description: Text("Recoverable and permanently discarded items will appear here.")
+                        description: Text("Recoverable and active global-tombstone items will appear here.")
                     )
                 }
             }
@@ -432,22 +431,18 @@ private struct LifecycleView: View {
         .padding()
         .task { await model.loadLifecycle() }
         .confirmationDialog(
-            "Permanently discard this item?",
-            isPresented: Binding(
-                get: { pendingDiscard != nil },
-                set: { if !$0 { pendingDiscard = nil } }
-            ),
-            presenting: pendingDiscard
-        ) { item in
-            Button("Discard permanently", role: .destructive) {
-                pendingDiscard = nil
-                Task { await model.discardLifecycleItem(item.id) }
+            "Empty Waste Basket?",
+            isPresented: $confirmingEmpty
+        ) {
+            Button("Empty Waste Basket", role: .destructive) {
+                confirmingEmpty = false
+                Task { await model.emptyWasteBasket() }
             }
-            .backstageHelp("Permanently discard this single item after the explicit Waste Basket confirmation.")
-            Button("Cancel", role: .cancel) { pendingDiscard = nil }
-                .backstageHelp("Close this confirmation and keep the item recoverable in the Waste Basket.")
-        } message: { item in
-            Text(item.title.isEmpty ? item.mediaID : item.title)
+            .backstageHelp("Confirm the only normal transition that activates global tombstones. Source media, R2 objects, and history remain retained.")
+            Button("Cancel", role: .cancel) { confirmingEmpty = false }
+                .backstageHelp("Close this confirmation and keep every recoverable item in the Waste Basket.")
+        } message: {
+            Text("This changes recoverable Waste Basket entries into active global tombstones. Explicit tombstone restore remains a separate audited path.")
         }
     }
 }

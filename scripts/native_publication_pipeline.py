@@ -218,6 +218,11 @@ def upload_eligibility_plan(
                 WHERE tombstone.asset_id = decision.asset_id
                   AND tombstone.tombstone_state = 'active'
               )
+              AND NOT EXISTS (
+                SELECT 1 FROM media_lifecycle AS lifecycle
+                WHERE lifecycle.media_id = decision.asset_id
+                  AND lifecycle.lifecycle_state IN ('hidden', 'discarded')
+              )
             """,
             {"fixture_id": clean_fixture_id, **retired_media_params},
         ).fetchone()
@@ -253,6 +258,11 @@ def upload_eligibility_plan(
                     SELECT 1 FROM sidecar_tombstones AS tombstone
                     WHERE tombstone.asset_id = decision.asset_id
                       AND tombstone.tombstone_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM media_lifecycle AS lifecycle
+                    WHERE lifecycle.media_id = decision.asset_id
+                      AND lifecycle.lifecycle_state IN ('hidden', 'discarded')
                   )
                   AND NOT EXISTS (
                     SELECT 1 FROM asset_source_versions AS source
@@ -688,6 +698,14 @@ def publish_verified_asset(
             (asset_id,),
         ).fetchone():
             raise ValueError("tombstoned assets cannot be published")
+        if conn.execute(
+            """
+            SELECT 1 FROM media_lifecycle
+            WHERE media_id = ? AND lifecycle_state IN ('hidden', 'discarded')
+            """,
+            (asset_id,),
+        ).fetchone():
+            raise ValueError("Waste Basket assets cannot be published")
         source = conn.execute(
             """
             SELECT * FROM asset_source_versions
@@ -938,6 +956,11 @@ def create_upload_run(
                 SELECT 1 FROM sidecar_tombstones AS tombstone
                 WHERE tombstone.asset_id = delivery.asset_id
                   AND tombstone.tombstone_state = 'active'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM media_lifecycle AS lifecycle
+                WHERE lifecycle.media_id = delivery.asset_id
+                  AND lifecycle.lifecycle_state IN ('hidden', 'discarded')
               )
               AND NOT EXISTS (
                 SELECT 1 FROM asset_source_versions AS source

@@ -982,7 +982,7 @@ class TitleReviewUndoTests(unittest.TestCase):
                 }
             finally:
                 conn.close()
-            self.assertEqual(states, {"reject-a": "discarded", "reject-c": "discarded"})
+            self.assertEqual(states, {"reject-a": "hidden", "reject-c": "hidden"})
 
     def test_batch_import_cannot_pull_approved_rows_back_into_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1323,7 +1323,7 @@ class TitleReviewUndoTests(unittest.TestCase):
             finally:
                 conn.close()
 
-    def test_discard_records_durable_lifecycle_and_tombstone(self):
+    def test_discard_alias_moves_to_recoverable_waste_basket_without_tombstone(self):
         photo_id = "pbe-discard-lifecycle"
         fallback_photo = {
             "id": photo_id,
@@ -1351,14 +1351,10 @@ class TitleReviewUndoTests(unittest.TestCase):
                     repo_root,
                     {"action": "discard", "photo_id": photo_id},
                 )
-                self.assertEqual(result["moved"]["to"], "discarded")
+                self.assertEqual(result["state"], "recoverable")
+                self.assertEqual(result["items"][0]["status"], "applied")
                 self.assertEqual(state["expo"]["france"], [])
 
-            tombstone = local_server._read_json_file(
-                repo_root / local_server.DISCARDED_TOMBSTONE_PATH,
-                {},
-            )
-            self.assertIn(photo_id, tombstone.get("photo_ids") or [])
             conn = sqlite3.connect(repo_root / "assets/owner-actions/Owner.sqlite")
             conn.row_factory = sqlite3.Row
             try:
@@ -1367,8 +1363,8 @@ class TitleReviewUndoTests(unittest.TestCase):
                     (photo_id,),
                 ).fetchone()
                 self.assertIsNotNone(lifecycle)
-                self.assertEqual(lifecycle["lifecycle_state"], "discarded")
-                self.assertTrue(lifecycle["discarded_at"])
+                self.assertEqual(lifecycle["lifecycle_state"], "hidden")
+                self.assertIsNone(lifecycle["discarded_at"])
             finally:
                 conn.close()
 

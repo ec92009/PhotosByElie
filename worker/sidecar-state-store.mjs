@@ -59,6 +59,36 @@ const normalizeMetadataState = (value, fallback = "unreviewed") => {
   return VALID_METADATA_STATES.has(state) ? state : fallback;
 };
 
+const legacyMigrationFrom = (payload = {}) => {
+  if (payload.legacyMigration && typeof payload.legacyMigration === "object") return payload.legacyMigration;
+  if (payload.state?.legacyMigration && typeof payload.state.legacyMigration === "object") return payload.state.legacyMigration;
+  if (payload.decision?.legacyMigration && typeof payload.decision.legacyMigration === "object") return payload.decision.legacyMigration;
+  return null;
+};
+
+const hasAuditedLegacyMigration = (payload = {}) => {
+  const legacyMigration = legacyMigrationFrom(payload);
+  return Boolean(
+    legacyMigration
+      && legacyMigration.kind === "PBB-78-legacy-expo-hidden"
+      && cleanText(legacyMigration.auditReceipt, 500)
+      && cleanText(legacyMigration.planDigest, 500)
+  );
+};
+
+const assertTombstoneWriteAllowed = (payload = {}) => {
+  const source = payload.state && typeof payload.state === "object"
+    ? payload.state
+    : (payload.decision && typeof payload.decision === "object" ? payload.decision : payload);
+  const tombstoneState = cleanText(source.tombstoneState ?? source.tombstone_state, 32).toLowerCase();
+  if (tombstoneState === "active" && !hasAuditedLegacyMigration(payload)) {
+    throw Object.assign(new Error("Direct global tombstone writes are disabled; use the Waste Basket gateway."), {
+      status: 409,
+      code: "waste_basket_gateway_required",
+    });
+  }
+};
+
 const defaultDecision = (assetId = "") => ({
   schema: SCHEMA,
   assetId,
@@ -132,6 +162,14 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
     throw Object.assign(new Error("assetId is required."), { status: 400, code: "sidecar_asset_id_required" });
   }
   const action = cleanText(payload.action || payload.decision, 80).toLowerCase();
+  if (action === "tombstone") {
+    if (!hasAuditedLegacyMigration(payload)) {
+      throw Object.assign(new Error("Direct global tombstone writes are disabled; use the Waste Basket gateway."), {
+        status: 409,
+        code: "waste_basket_gateway_required",
+      });
+    }
+  }
   const before = normalizeDecision({ assetId, state: current || {} }, null, timestamp);
   const after = { ...before, keywords: cleanKeywords(before.keywords), metadataAiEvidence: cleanKeywords(before.metadataAiEvidence) };
   const changedFamilies = new Set();
@@ -357,6 +395,7 @@ export const createMemorySidecarStateStore = ({
 
   const getDecision = async (assetId) => clone(decisions.get(cleanAssetId(assetId))) || null;
   const putDecision = async (payload, context = {}) => {
+    assertTombstoneWriteAllowed(payload);
     const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
     const assetId = cleanAssetId(payload.assetId || payload.asset_id || payload.state?.assetId || payload.state?.asset_id);
     const current = assetId ? decisions.get(assetId) : null;
@@ -373,6 +412,7 @@ export const createMemorySidecarStateStore = ({
     return rows;
   };
   const putDecisions = async (payloads = [], context = {}) => {
+    for (const payload of payloads) assertTombstoneWriteAllowed(payload);
     const items = [];
     for (const payload of payloads) {
       items.push(await putDecision(payload, context));
@@ -383,7 +423,11 @@ export const createMemorySidecarStateStore = ({
     const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
     const current = await getDecision(payload.assetId || payload.asset_id || payload.localIdentifier);
     const result = applyDecisionAction(current, payload, timestamp);
-    const decision = await putDecision({ assetId: result.assetId, state: result.state }, context);
+    const decision = await putDecision({
+      assetId: result.assetId,
+      state: result.state,
+      legacyMigration: payload.legacyMigration,
+    }, context);
     const actor = actorForEvent(context);
     events.unshift({
       id: `sidecar-event-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
@@ -430,6 +474,7 @@ export const createD1SidecarStateStore = ({
   };
 
   const putDecision = async (payload, context = {}) => {
+    assertTombstoneWriteAllowed(payload);
     const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
     const assetId = cleanAssetId(payload.assetId || payload.asset_id || payload.state?.assetId || payload.state?.asset_id);
     const current = assetId ? await getDecision(assetId) : null;
@@ -458,6 +503,7 @@ export const createD1SidecarStateStore = ({
   };
 
   const putDecisions = async (payloads = [], context = {}) => {
+    for (const payload of payloads) assertTombstoneWriteAllowed(payload);
     const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
     const items = payloads.map((payload) => normalizeDecision(payload, null, timestamp));
     if (!items.length) return [];
@@ -481,7 +527,11 @@ export const createD1SidecarStateStore = ({
     const timestamp = cleanTimestamp(context.timestamp, now().toISOString());
     const current = await getDecision(payload.assetId || payload.asset_id || payload.localIdentifier);
     const result = applyDecisionAction(current, payload, timestamp);
-    const decision = await putDecision({ assetId: result.assetId, state: result.state }, { ...context, timestamp });
+    const decision = await putDecision({
+      assetId: result.assetId,
+      state: result.state,
+      legacyMigration: payload.legacyMigration,
+    }, { ...context, timestamp });
     const actor = actorForEvent(context);
     await database.prepare(`
       INSERT INTO pbe_sidecar_decision_events (
@@ -517,7 +567,13 @@ export const createD1SidecarStateStore = ({
     for (const payload of cleanPayloads) {
       const assetId = cleanAssetId(payload.assetId || payload.asset_id || payload.localIdentifier);
       const result = applyDecisionAction(currentByAssetId.get(assetId) || null, payload, timestamp);
-      const decision = normalizeDecision({ assetId: result.assetId, state: result.state }, currentByAssetId.get(assetId) || null, timestamp);
+      const decisionPayload = {
+        assetId: result.assetId,
+        state: result.state,
+        legacyMigration: payload.legacyMigration,
+      };
+      assertTombstoneWriteAllowed(decisionPayload);
+      const decision = normalizeDecision(decisionPayload, currentByAssetId.get(assetId) || null, timestamp);
       currentByAssetId.set(result.assetId, decision);
       results.push({ ...result, state: decision });
     }

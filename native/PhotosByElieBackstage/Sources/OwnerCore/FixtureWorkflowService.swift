@@ -356,6 +356,7 @@ public enum FixtureCullingAction: Sendable, Equatable {
     case include
     case exclude
     case clear
+    /// Legacy compatibility semantic; normal Culling X uses LifecycleService.
     case tombstone
 }
 

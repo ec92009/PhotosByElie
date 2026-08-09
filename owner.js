@@ -5777,11 +5777,11 @@
     wasteCleanupActive = activeTasks.length > 0;
     wasteDeleteActive = activeEmptyTasks.length > 0;
     if (wipeHiddenR2Button) {
-      wipeHiddenR2Button.disabled = wasteDeleteActive;
-      wipeHiddenR2Button.textContent = wasteDeleteActive ? "Purging..." : "Purge R2 copies";
+      wipeHiddenR2Button.disabled = true;
+      wipeHiddenR2Button.textContent = "R2 cleanup disabled";
     }
     if (basketStateNoteRoot) {
-      basketStateNoteRoot.textContent = wasteDeleteActive ? "Purging R2 copies" : "Undo queue";
+      basketStateNoteRoot.textContent = wasteDeleteActive ? "Legacy cleanup task observed" : "Recoverable until explicit Empty";
     }
     if (!blockedPreviewProgressRoot) return;
     if (!latestWasteTask) {
@@ -6235,32 +6235,7 @@
   });
 
   wipeHiddenR2Button?.addEventListener("click", async () => {
-    if (wasteDeleteActive) {
-      setStatus("Waste Basket R2 purge is already running. Watch R2 artifacts left on the card.");
-      return;
-    }
-    const ok = window.confirm("Purge R2 media artifacts for every Waste Basket photo? This deletes up to 6 artifacts per photo: 2 public previews, 1 private master, and 3 private JPG renders. Ban/tombstone records stay, so these photos remain banned and do not return.");
-    if (!ok) return;
-    wipeHiddenR2Button.disabled = true;
-    setStatus("Queueing banned-photo R2 purge...");
-    try {
-      const result = await hiddenActions.wipeHiddenR2?.();
-      renderCounts();
-      if (result?.r2_delete_task) renderR2Progress([result.r2_delete_task]);
-      loadR2Progress();
-      setStatus(`R2 purge queued: ${formatCount(result?.moved_to_tombstones_count || 0)} live bans moved to permanent tombstones, ${formatCount(result?.discarded_count || 0)} total tombstones.`);
-      Promise.all([
-        refreshDiscardedCount(),
-        loadR2Coverage(),
-        refreshBlockedSyncPanel(),
-      ]).catch((error) => {
-        console.warn("Waste Basket refresh after purge queue failed", error);
-      });
-    } catch (error) {
-      setStatus(error?.message || "Could not queue banned-photo R2 purge.");
-    } finally {
-      if (!wasteDeleteActive) wipeHiddenR2Button.disabled = false;
-    }
+    setStatus("R2 cleanup cannot empty Waste Basket or activate tombstones. Use the explicit Empty Waste Basket action; source media and R2 objects are retained.");
   });
 
   [burstCullPreviewButton, burstCullLoadButton].forEach((button) => {

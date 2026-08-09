@@ -28,7 +28,7 @@ public struct LifecycleLedger: Sendable, Equatable {
 public enum LifecycleServiceError: Error, Sendable, Equatable {
     case missingResult
     case emptySelection
-    case discardRequiresOneItem
+    case emptyRequiresConfirmation
 }
 
 public actor LifecycleService {
@@ -59,13 +59,55 @@ public actor LifecycleService {
     public func restore(mediaIDs: [String]) async throws -> OwnerAction {
         let ids = clean(mediaIDs)
         guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
-        return try await submitModeration(operation: "undo-hide-many", mediaIDs: ids)
+        return try await submitModeration(
+            operation: "waste-basket-restore",
+            mediaIDs: ids,
+            source: "backstage-waste-basket"
+        )
     }
 
-    public func discard(mediaID: String) async throws -> OwnerAction {
-        let ids = clean([mediaID])
-        guard ids.count == 1 else { throw LifecycleServiceError.discardRequiresOneItem }
-        return try await submitModeration(operation: "discard", mediaIDs: ids)
+    public func moveToWasteBasket(
+        mediaIDs: [String],
+        fixtureID: String = "",
+        galleryID: String = "",
+        source: String = "backstage-culling"
+    ) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await submitModeration(
+            operation: "waste-basket-x",
+            mediaIDs: ids,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID
+        )
+    }
+
+    public func emptyWasteBasket(
+        confirmed: Bool,
+        confirmationToken: String = "EMPTY_WASTE_BASKET"
+    ) async throws -> OwnerAction {
+        guard confirmed, confirmationToken == "EMPTY_WASTE_BASKET" else {
+            throw LifecycleServiceError.emptyRequiresConfirmation
+        }
+        return try await submitModeration(
+            operation: "waste-basket-empty",
+            mediaIDs: [],
+            source: "backstage-waste-basket",
+            confirmed: true,
+            confirmationToken: confirmationToken
+        )
+    }
+
+    public func restoreTombstone(mediaIDs: [String]) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await submitModeration(
+            operation: "waste-basket-tombstone-restore",
+            mediaIDs: ids,
+            source: "backstage-waste-basket",
+            explicitTombstoneRestore: true
+        )
     }
 
     private func clean(_ values: [String]) -> [String] {
@@ -94,24 +136,38 @@ public actor LifecycleService {
         )
     }
 
-    private func submitModeration(operation: String, mediaIDs: [String]) async throws -> OwnerAction {
+    private func submitModeration(
+        operation: String,
+        mediaIDs: [String],
+        source: String,
+        fixtureID: String = "",
+        galleryID: String = "",
+        confirmed: Bool = false,
+        confirmationToken: String = "",
+        explicitTombstoneRestore: Bool = false
+    ) async throws -> OwnerAction {
+        let requestKey = "native-lifecycle:\(operation):\(UUID().uuidString)"
+        var payload: [String: JSONValue] = [
+            "operation": .string(operation),
+            "photoIds": .array(mediaIDs.map(JSONValue.string)),
+            "source": .string(source),
+            "actor": .string("backstage"),
+            "requestKey": .string(requestKey),
+            "requestedConnector": .string(connectorID),
+        ]
+        if !fixtureID.isEmpty { payload["fixtureId"] = .string(fixtureID) }
+        if !galleryID.isEmpty { payload["galleryId"] = .string(galleryID) }
+        if confirmed { payload["confirmed"] = .bool(true) }
+        if !confirmationToken.isEmpty { payload["confirmationToken"] = .string(confirmationToken) }
+        if explicitTombstoneRestore { payload["explicitTombstoneRestore"] = .bool(true) }
         let request = OwnerActionCreate(
             actionKind: "photo-moderation",
             target: connectorID,
-            payload: [
-                "operation": .string(operation),
-                "photoIds": .array(mediaIDs.map(JSONValue.string)),
-                "requestedConnector": .string(connectorID),
-            ]
+            payload: payload
         )
         return try await runner.submit(
             request,
-            idempotencyKey: [
-                "native-lifecycle",
-                operation,
-                mediaIDs.joined(separator: ","),
-                UUID().uuidString,
-            ].joined(separator: ":")
+            idempotencyKey: requestKey
         )
     }
 }

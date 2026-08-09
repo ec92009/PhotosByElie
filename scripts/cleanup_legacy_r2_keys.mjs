@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Explicit legacy/repair cleanup only. PBB-79 gateway tombstones are
+// retained and excluded from this old-key removal path.
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
@@ -64,6 +66,14 @@ const sqliteJson = (query) => {
     throw new Error((result.stderr || result.stdout || "sqlite3 failed").trim());
   }
   return JSON.parse(result.stdout || "[]");
+};
+
+const readGatewayTombstonedIds = () => {
+  const table = sqliteJson("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'owner_waste_basket_entries';");
+  if (!table.length) return new Set();
+  return new Set(sqliteJson(
+    "SELECT asset_id FROM owner_waste_basket_entries WHERE state = 'tombstoned';",
+  ).map((row) => String(row.asset_id || "").trim()).filter(Boolean));
 };
 
 const normalizedExtension = (value) => {
@@ -183,6 +193,7 @@ const rows = sqliteJson(`
     )
   ORDER BY bucket, object_key
 `);
+const gatewayTombstonedIds = readGatewayTombstonedIds();
 const currentKeys = new Set(sqliteJson(`
   SELECT bucket || char(9) || object_key AS id
   FROM r2_objects
@@ -194,6 +205,10 @@ const candidates = [];
 for (const row of rows) {
   const legacyKind = legacyShape(row.bucket, row.key);
   if (!legacyKind) continue;
+  if (gatewayTombstonedIds.has(String(row.photo_id || "").trim())) {
+    skipped.push({ ...row, legacyKind, reason: "PBB-79 gateway tombstone retains source and R2 media" });
+    continue;
+  }
   const counterpart = flatCounterpart(row.bucket, row.key);
   const counterpartCurrent = counterpart ? currentKeys.has(`${row.bucket}\t${counterpart}`) : false;
   if (row.lifecycle_state === "current" && !counterpartCurrent && !forceCurrent) {
@@ -216,6 +231,7 @@ const report = {
   failed: 0,
   byKind: {},
   failures: [],
+  retainedWasteBasketPhotoIds: [...gatewayTombstonedIds].sort(),
   skippedRows: skipped.slice(0, 200),
 };
 for (const row of candidates) {
@@ -277,5 +293,5 @@ if (!dryRun && deletedObjects.length) {
 }
 
 await writeJson(reportPath, report);
-console.log(`Legacy cleanup ${dryRun ? "dry run" : "delete"}: selected ${selected.length}/${candidates.length}, skipped ${skipped.length}, deleted ${report.deleted}, failed ${report.failed}.`);
+console.log(`Legacy cleanup ${dryRun ? "dry run" : "delete"}: selected ${selected.length}/${candidates.length}, skipped ${skipped.length}, retained ${gatewayTombstonedIds.size} PBB-79 tombstoned photos, deleted ${report.deleted}, failed ${report.failed}.`);
 if (dryRun) console.log("Dry run only. Add --delete to remove selected legacy keys and mark them deleted_confirmed.");

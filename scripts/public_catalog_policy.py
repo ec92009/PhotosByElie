@@ -108,7 +108,8 @@ def public_catalog_policy_snapshot(
             for value in lifecycle.get("blockedPhotoIds", [])
             if str(value or "").strip()
         }
-        eligible_ids = title_keyword_ids | sidecar_ids | native_ids | legacy_ids
+        # Lifecycle blocks win over every approval or legacy baseline source.
+        eligible_ids = (title_keyword_ids | sidecar_ids | native_ids | legacy_ids) - blocked_ids
 
         pricing = _read_json(repo_root / DEFAULT_PRODUCT_PRICING, {})
         retired_media_types = {

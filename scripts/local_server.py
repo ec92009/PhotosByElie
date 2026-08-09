@@ -305,7 +305,7 @@ from asset_state import (  # noqa: E402
     write_regular_manifest_from_site,
     write_reserve_data_from_site,
 )
-from media_keys import private_master_key, private_render_key, public_preview_key  # noqa: E402
+from media_keys import private_render_key, public_preview_key  # noqa: E402
 from import_eligibility import import_select_for_source_root, row_import_eligible  # noqa: E402
 from media_policy import private_master_allowed, public_preview_allowed  # noqa: E402
 from sync_r2_media import (  # noqa: E402
@@ -342,7 +342,6 @@ from owner_state_db import record_country_assignments as record_country_assignme
 from owner_state_db import record_keyword_blacklist as record_keyword_blacklist_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_active as record_media_lifecycle_active_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_restored as record_media_lifecycle_restored_db  # noqa: E402
-from owner_state_db import record_media_lifecycle_discarded as record_media_lifecycle_discarded_db  # noqa: E402
 from owner_state_db import record_media_lifecycle_hidden as record_media_lifecycle_hidden_db  # noqa: E402
 from owner_state_db import clear_title_keyword_review_blocks as clear_title_keyword_review_blocks_db  # noqa: E402
 from owner_state_db import import_title_keyword_batch_file as import_title_keyword_batch_file_db  # noqa: E402
@@ -355,6 +354,13 @@ from owner_state_db import title_keyword_model_ladder_for_connection as title_ke
 from sidecar_state_db import record_decision as record_sidecar_decision_db  # noqa: E402
 from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from sidecar_state_db import upload_bridge_plan as upload_bridge_plan_db  # noqa: E402
+from waste_basket_gateway import (  # noqa: E402
+    EMPTY_CONFIRMATION_TOKEN,
+    empty_waste_basket as empty_waste_basket_gateway,
+    move_to_waste_basket as move_to_waste_basket_gateway,
+    restore_from_waste_basket as restore_from_waste_basket_gateway,
+    restore_tombstone as restore_tombstone_gateway,
+)
 from fixture_pipeline import (  # noqa: E402
     apply_fixture_state_migration,
     apply_pool_refresh,
@@ -442,7 +448,6 @@ HIDDEN_BLACKLIST_PATH = HIDDEN_ASSET_ROOT / "hidden-blacklist.json"
 HIDDEN_BLACKLIST_R2_KEY = "hidden-blacklist.json"
 DISCARDED_TOMBSTONE_PATH = Path("assets/discarded/discarded-photo-ids.json")
 DISCARDED_MEDIA_MANIFEST_PATH = Path("assets/discarded-media-manifest.json")
-PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 LOCAL_TOOL_DIRS = (
     Path("/opt/homebrew/bin"),
     Path("/usr/local/bin"),
@@ -4250,13 +4255,29 @@ def owner_burst_cull_run(repo_root: Path, protected_ids: list[str] | None = None
             "asset_paths": _photo_asset_paths(photo),
             "source_paths": _owner_burst_manifest_source_paths(row),
             "public_preview_keys": _hidden_public_preview_keys(photo, slug),
-            "private_keys": _discarded_private_keys(photo),
         })
         outcomes.append({**item, "applied": True})
 
+    gateway_result = {
+        "ok": True,
+        "operation": "x",
+        "items": [],
+        "assetIds": [],
+        "state": "recoverable",
+    }
     if entries:
-        _record_discarded_lifecycle(repo_root, entries)
-        _write_discarded_tombstones(repo_root, entries)
+        reject_asset_ids = [str(entry["id"]) for entry in entries]
+        request_key = "owner-burst-cull:" + hashlib.sha256(
+            json.dumps(sorted(reject_asset_ids), separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        gateway_result = move_to_waste_basket_gateway(
+            repo_root,
+            reject_asset_ids,
+            source="owner-web",
+            actor="owner-burst-cull",
+            reason="owner burst cull",
+            request_key=request_key,
+        )
 
     counts = dict(preview["counts"])
     counts["failures"] = len(failures)
@@ -4271,6 +4292,7 @@ def owner_burst_cull_run(repo_root: Path, protected_ids: list[str] | None = None
         "outcomes": outcomes,
         "protected": preview.get("protected") or [],
         "failures": failures,
+        "gateway": gateway_result,
     }
 
 
@@ -5990,179 +6012,6 @@ def _hidden_public_delete_items(repo_root: Path, hidden_groups: dict[str, list[d
     return items
 
 
-def _waste_basket_discard_entries(hidden_groups: dict[str, list[dict]]) -> list[dict]:
-    repo_root = Path.cwd()
-    entries: list[dict] = []
-    photo_ids = {
-        str(photo.get("id") or "").strip()
-        for photos in hidden_groups.values()
-        for photo in photos
-        if str(photo.get("id") or "").strip()
-    }
-    manifest_source_paths = _source_paths_from_manifest_rows_for_ids(repo_root, photo_ids)
-    for slug, photos in hidden_groups.items():
-        for photo in photos:
-            photo_id = str(photo.get("id") or "")
-            if not photo_id:
-                continue
-            _source_state, original_slug = _hidden_provenance(photo, "expo", slug)
-            entries.append(
-                {
-                    "id": photo_id,
-                    "title": photo.get("title") or photo_id,
-                    "discarded_at": datetime.now(timezone.utc).isoformat(),
-                    "from_state": "hidden",
-                    "from_slug": slug,
-                    "source_slug": original_slug,
-                    "media_type": _photo_media_type(photo),
-                    "asset_paths": _photo_asset_paths(photo),
-                    "source_paths": _photo_source_paths(repo_root, photo, manifest_source_paths.get(photo_id, [])),
-                    "public_preview_keys": _hidden_public_preview_keys(photo, original_slug),
-                    "private_keys": _discarded_private_keys(photo),
-                }
-            )
-    return entries
-
-
-def _waste_basket_delete_items(repo_root: Path, hidden_groups: dict[str, list[dict]]) -> list[UploadItem]:
-    items: list[UploadItem] = []
-    seen: set[str] = set()
-    for slug, photos in hidden_groups.items():
-        for photo in photos:
-            _source_state, original_slug = _hidden_provenance(photo, "expo", slug)
-            for item in _discarded_delete_items(repo_root, photo, original_slug):
-                identifier = f"{item.bucket}/{item.key}"
-                if identifier in seen:
-                    continue
-                seen.add(identifier)
-                items.append(item)
-    return items
-
-
-def _legacy_discarded_photo_ids(repo_root: Path) -> set[str]:
-    payload = _read_json_file(repo_root / DISCARDED_MEDIA_MANIFEST_PATH, {})
-    if not isinstance(payload, dict):
-        return set()
-    values = payload.get("discardedPhotoIds") or []
-    return {value for value in values if isinstance(value, str) and value}
-
-
-def _read_discarded_tombstone(repo_root: Path) -> dict:
-    payload = _read_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, {})
-    if not isinstance(payload, dict):
-        payload = {}
-    photos = payload.get("photos") if isinstance(payload.get("photos"), list) else []
-    photo_ids = set(_legacy_discarded_photo_ids(repo_root))
-    photo_ids.update(value for value in payload.get("photo_ids") or [] if isinstance(value, str) and value)
-    photo_ids.update(photo.get("id") for photo in photos if isinstance(photo, dict) and isinstance(photo.get("id"), str))
-    return {
-        "format": payload.get("format") or "photosbyelie-discarded-photo-ids",
-        "version": 1,
-        "updated_at": payload.get("updated_at"),
-        "photo_ids": sorted(photo_ids),
-        "source_paths": sorted({
-            path
-            for path in payload.get("source_paths") or []
-            if isinstance(path, str) and path
-        }),
-        "public_preview_keys": sorted({
-            key
-            for key in payload.get("public_preview_keys") or []
-            if isinstance(key, str) and key
-        }),
-        "private_keys": sorted({
-            key
-            for key in payload.get("private_keys") or []
-            if isinstance(key, str) and key
-        }),
-        "photos": [photo for photo in photos if isinstance(photo, dict) and photo.get("id")],
-    }
-
-
-def _discarded_photo_ids(repo_root: Path) -> set[str]:
-    return set(_read_discarded_tombstone(repo_root).get("photo_ids") or [])
-
-
-def _source_basename(source: dict) -> str:
-    return Path(str(source.get("path") or "")).name
-
-
-def _discarded_private_keys(photo: dict) -> list[str]:
-    photo_id = str(photo.get("id") or "")
-    if not photo_id:
-        return []
-    keys = []
-    media_type = _photo_media_type(photo)
-    for source in photo.get("sourceFiles") or []:
-        if not isinstance(source, dict):
-            continue
-        source_name = _source_basename(source)
-        if not source_name:
-            continue
-        keys.append(private_master_key(DEFAULT_PRIVATE_PREFIX, photo_id, source_name))
-        if media_type != "video":
-            keys.extend(private_render_key(photo_id, product_id) for product_id in PRIVATE_RENDER_PRODUCTS)
-    return sorted(set(keys))
-
-
-def _discarded_delete_items(repo_root: Path, photo: dict, source_slug: str) -> list[UploadItem]:
-    placeholder = repo_root / DISCARDED_TOMBSTONE_PATH
-    items = []
-    seen = set()
-    for bucket, keys in (
-        (DEFAULT_PUBLIC_BUCKET, _hidden_public_preview_keys(photo, source_slug)),
-        (DEFAULT_PRIVATE_BUCKET, _discarded_private_keys(photo)),
-    ):
-        for key in keys:
-            identifier = f"{bucket}/{key}"
-            if identifier in seen:
-                continue
-            seen.add(identifier)
-            items.append(
-                UploadItem(
-                    bucket=bucket,
-                    key=key,
-                    path=placeholder,
-                    content_type=mimetypes.guess_type(key)[0] or "application/octet-stream",
-                )
-            )
-    return items
-
-
-def _write_discarded_tombstones(repo_root: Path, discarded_photos: list[dict] | None = None) -> dict:
-    payload = _read_discarded_tombstone(repo_root)
-    photos_by_id = {
-        str(photo.get("id")): photo
-        for photo in payload.get("photos") or []
-        if isinstance(photo, dict) and photo.get("id")
-    }
-    photo_ids = set(payload.get("photo_ids") or [])
-    source_paths = set(payload.get("source_paths") or [])
-    public_preview_keys = set(payload.get("public_preview_keys") or [])
-    private_keys = set(payload.get("private_keys") or [])
-    for discarded_photo in discarded_photos or []:
-        photo_id = str(discarded_photo.get("id") or "")
-        if not photo_id:
-            continue
-        photos_by_id[photo_id] = discarded_photo
-        photo_ids.add(photo_id)
-        source_paths.update(discarded_photo.get("source_paths") or [])
-        public_preview_keys.update(discarded_photo.get("public_preview_keys") or [])
-        private_keys.update(discarded_photo.get("private_keys") or [])
-    payload["photo_ids"] = sorted(photo_id for photo_id in photo_ids if isinstance(photo_id, str) and photo_id)
-    payload["source_paths"] = sorted(path for path in source_paths if isinstance(path, str) and path)
-    payload["public_preview_keys"] = sorted(key for key in public_preview_keys if isinstance(key, str) and key)
-    payload["private_keys"] = sorted(key for key in private_keys if isinstance(key, str) and key)
-    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-    payload["photos"] = sorted(photos_by_id.values(), key=lambda photo: str(photo.get("id") or ""))
-    _write_json_file(repo_root / DISCARDED_TOMBSTONE_PATH, payload)
-    return payload
-
-
-def _write_discarded_tombstone(repo_root: Path, discarded_photo: dict | None = None) -> dict:
-    return _write_discarded_tombstones(repo_root, [discarded_photo] if discarded_photo else [])
-
-
 def _hidden_lifecycle_entry(
     repo_root: Path,
     photo: dict,
@@ -6188,10 +6037,6 @@ def _hidden_lifecycle_entry(
 
 def _record_hidden_lifecycle(repo_root: Path, entries: list[dict]) -> dict:
     return record_media_lifecycle_hidden_db(repo_root, entries) if entries else {"hidden": 0}
-
-
-def _record_discarded_lifecycle(repo_root: Path, entries: list[dict]) -> dict:
-    return record_media_lifecycle_discarded_db(repo_root, entries) if entries else {"discarded": 0}
 
 
 def _record_active_lifecycle(repo_root: Path, photo_ids: list[str]) -> dict:
@@ -12204,15 +12049,67 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "keywords": payload.get("keywords") or [],
         })
         return {**result, "catalog_publish_pending": True}
-    if operation == "discard":
-        if len(photo_ids) != 1:
-            raise ValueError("public discard requires exactly one photo id")
+    if operation in {"discard", "waste-basket-x", "waste-basket-x-many"}:
+        if not photo_ids or len(photo_ids) > 500:
+            raise ValueError("Waste Basket X requires 1 to 500 photo ids")
+        result = apply_photo_action(repo_root, {
+            "action": "waste-basket-x-many" if len(photo_ids) > 1 else "waste-basket-x",
+            "photo_id": photo_ids[0],
+            "photo_ids": photo_ids,
+            "source": payload.get("source") or "owner-web",
+            "actor": payload.get("actor") or "owner",
+            "fixture_id": payload.get("fixture_id") or payload.get("fixtureId") or "",
+            "gallery_id": payload.get("gallery_id") or payload.get("galleryId") or "",
+            "reason": payload.get("reason") or ("legacy discard alias" if operation == "discard" else ""),
+            "request_key": payload.get("request_key") or payload.get("requestKey") or "",
+            "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+        })
+        return {**result, "catalog_publish_pending": True}
+    if operation in {"waste-basket-restore", "restore"}:
+        if not photo_ids or len(photo_ids) > 500:
+            raise ValueError("Waste Basket restore requires 1 to 500 photo ids")
+        result = apply_photo_action(repo_root, {
+            "action": "waste-basket-restore",
+            "photo_ids": photo_ids,
+            "photo_id": photo_ids[0],
+            "source": payload.get("source") or "owner-web",
+            "actor": payload.get("actor") or "owner",
+            "request_key": payload.get("request_key") or payload.get("requestKey") or "",
+            "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+        })
+        return {**result, "catalog_publish_pending": True}
+    if operation == "waste-basket-empty":
+        result = apply_photo_action(repo_root, {
+            "action": operation,
+            "photo_ids": photo_ids,
+            "source": payload.get("source") or "owner-web",
+            "actor": payload.get("actor") or "owner",
+            "reason": payload.get("reason") or "empty waste basket",
+            "confirmed": payload.get("confirmed") is True,
+            "confirmation_token": payload.get("confirmation_token") or payload.get("confirmationToken") or "",
+            "request_key": payload.get("request_key") or payload.get("requestKey") or "",
+            "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+        })
+        return {**result, "catalog_publish_pending": True}
+    if operation == "waste-basket-tombstone-restore":
+        if not photo_ids or len(photo_ids) > 500:
+            raise ValueError("Tombstone restore requires 1 to 500 photo ids")
         result = apply_photo_action(repo_root, {
             "action": operation,
             "photo_id": photo_ids[0],
+            "photo_ids": photo_ids,
+            "source": payload.get("source") or "owner-web",
+            "actor": payload.get("actor") or "owner",
+            "request_key": payload.get("request_key") or payload.get("requestKey") or "",
+            "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            "explicit_tombstone_restore": payload.get("explicit_tombstone_restore") is True
+            or payload.get("explicitTombstoneRestore") is True,
         })
-        hidden_ids = sorted(_lifecycle_hidden_ids(repo_root))
-        return {**result, "hidden_ids": hidden_ids, "catalog_publish_pending": True}
+        return {**result, "catalog_publish_pending": True}
     if operation not in {"hide", "hide-many", "undo-hide", "undo-hide-many"}:
         raise ValueError("unsupported public photo moderation operation")
     if not photo_ids or len(photo_ids) > 500:
@@ -12289,6 +12186,11 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "promote-hidden",
         "return-to-reserve",
         "discard",
+        "waste-basket-x",
+        "waste-basket-x-many",
+        "waste-basket-restore",
+        "waste-basket-empty",
+        "waste-basket-tombstone-restore",
         "assign-country",
         "sync-country-keywords",
         "remove-collection-keyword",
@@ -12320,8 +12222,25 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "apply-approved-title-keyword-review-approvals",
         "save-title-keyword-model-ladder",
         "save-keyword-blacklist",
+        "waste-basket-empty",
     } and (not isinstance(photo_id, str) or not photo_id):
         raise ValueError("photo_id must be a non-empty string")
+    if action == "discard":
+        # Historical callers used ``discard`` for X. Keep that alias safe:
+        # it now enters the recoverable gateway and cannot create a tombstone.
+        return apply_photo_action(
+            repo_root,
+            {
+                **payload,
+                "action": "waste-basket-x",
+                "source": payload.get("source") or "owner-web",
+                "reason": payload.get("reason") or "legacy discard alias",
+            },
+        )
+    if action == "wipe-hidden-r2":
+        raise ValueError(
+            "R2 cleanup cannot empty Waste Basket or activate tombstones; use explicit Empty Waste Basket"
+        )
     if action == "assign-country":
         target_slug = payload.get("gallery_key") or payload.get("country")
         if target_slug not in COUNTRY_ASSIGNMENT_TARGETS:
@@ -12559,9 +12478,183 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
     ensure_state_folders(repo_root / HIDDEN_ASSET_ROOT)
     (repo_root / DISCARDED_TOMBSTONE_PATH).parent.mkdir(parents=True, exist_ok=True)
 
-    expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    gateway_actions = {
+        "waste-basket-x",
+        "waste-basket-x-many",
+        "waste-basket-restore",
+        "waste-basket-empty",
+        "waste-basket-tombstone-restore",
+    }
+    compatibility_state_available = True
+    try:
+        expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+        if action not in gateway_actions:
+            raise
+        # Synthetic connector/Owner SQLite tests need the authoritative
+        # gateway without a checked-out static catalog or Node helper.
+        compatibility_state_available = False
+        expo_groups = {slug: [] for slug in ORDER}
+        reserve_groups = {slug: [] for slug in ORDER}
+        hidden_groups = {slug: [] for slug in ORDER}
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
     moved = None
+
+    if action in {"waste-basket-x", "waste-basket-x-many"}:
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids") or photo_id)
+        if not photo_ids or len(photo_ids) > 500:
+            raise ValueError("Waste Basket X requires 1 to 500 photo ids")
+        gateway_result = move_to_waste_basket_gateway(
+            repo_root,
+            photo_ids,
+            source=payload.get("source") or "owner-web",
+            actor=payload.get("actor") or "owner",
+            fixture_id=payload.get("fixture_id") or payload.get("fixtureId") or "",
+            gallery_id=payload.get("gallery_id") or payload.get("galleryId") or "",
+            reason=payload.get("reason") or "",
+            request_key=payload.get("request_key") or payload.get("requestKey") or "",
+            owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+        )
+        if not compatibility_state_available:
+            return {
+                **gateway_result,
+                "action": "waste-basket-x",
+                "photo_ids": photo_ids,
+                "moved_ids": [],
+                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+                "catalog_publish_pending": True,
+                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
+                "site": {"ok": False, "state": "skipped-no-static-catalog"},
+            }
+        moved_ids = []
+        for current_photo_id in photo_ids:
+            found = _find_and_remove(hidden_groups, current_photo_id)
+            if found:
+                source_slug, source_photo = found
+                hidden_groups[source_slug].append(
+                    _hidden_review_photo(source_photo, source_slug, "hidden", datetime.now(timezone.utc).isoformat())
+                )
+                moved_ids.append(current_photo_id)
+                continue
+            found = _find_and_remove(expo_groups, current_photo_id) or _find_and_remove(reserve_groups, current_photo_id)
+            if found:
+                source_slug, source_photo = found
+                hidden_groups[source_slug].append(
+                    _hidden_review_photo(source_photo, source_slug, "expo", datetime.now(timezone.utc).isoformat())
+                )
+                moved_ids.append(current_photo_id)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        return {
+            **gateway_result,
+            "action": "waste-basket-x",
+            "photo_ids": photo_ids,
+            "moved_ids": moved_ids,
+            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+            "catalog_publish_pending": True,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
+    if action in {"waste-basket-restore", "waste-basket-tombstone-restore"}:
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids") or photo_id)
+        if not photo_ids or len(photo_ids) > 500:
+            raise ValueError("Waste Basket restore requires 1 to 500 photo ids")
+        if action == "waste-basket-tombstone-restore":
+            gateway_result = restore_tombstone_gateway(
+                repo_root,
+                photo_ids,
+                source=payload.get("source") or "owner-web",
+                actor=payload.get("actor") or "owner",
+                request_key=payload.get("request_key") or payload.get("requestKey") or "",
+                owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
+                owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+                explicit_tombstone_restore=bool(
+                    payload.get("explicit_tombstone_restore") or payload.get("explicitTombstoneRestore")
+                ),
+            )
+        else:
+            gateway_result = restore_from_waste_basket_gateway(
+                repo_root,
+                photo_ids,
+                source=payload.get("source") or "owner-web",
+                actor=payload.get("actor") or "owner",
+                request_key=payload.get("request_key") or payload.get("requestKey") or "",
+                owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
+                owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            )
+        if not compatibility_state_available:
+            return {
+                **gateway_result,
+                "action": action,
+                "photo_ids": photo_ids,
+                "restored_ids": photo_ids,
+                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+                "catalog_publish_pending": True,
+                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
+                "site": {"ok": False, "state": "skipped-no-static-catalog"},
+            }
+        restored_ids = []
+        for current_photo_id in photo_ids:
+            found = _find_and_remove(hidden_groups, current_photo_id)
+            if not found:
+                continue
+            hidden_slug, hidden_photo = found
+            target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
+            restored = _restore_hidden_photo_to_normal_group(
+                expo_groups,
+                reserve_groups,
+                hidden_photo,
+                current_photo_id,
+                target_state,
+                target_slug,
+            )
+            if restored:
+                restored_ids.append(current_photo_id)
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        return {
+            **gateway_result,
+            "action": action,
+            "photo_ids": photo_ids,
+            "restored_ids": restored_ids,
+            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+            "catalog_publish_pending": True,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
+
+    if action == "waste-basket-empty":
+        photo_ids = _normalized_photo_ids(payload.get("photo_ids"))
+        gateway_result = empty_waste_basket_gateway(
+            repo_root,
+            photo_ids,
+            confirmed=payload.get("confirmed") is True,
+            confirmation_token=payload.get("confirmation_token") or payload.get("confirmationToken") or "",
+            source=payload.get("source") or "owner-web",
+            actor=payload.get("actor") or "owner",
+            reason=payload.get("reason") or "empty waste basket",
+            request_key=payload.get("request_key") or payload.get("requestKey") or "",
+            owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
+            owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+        )
+        if not compatibility_state_available:
+            return {
+                **gateway_result,
+                "action": action,
+                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+                "catalog_publish_pending": True,
+                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
+                "site": {"ok": False, "state": "skipped-no-static-catalog"},
+            }
+        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        return {
+            **gateway_result,
+            "action": action,
+            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+            "catalog_publish_pending": True,
+            "worker_catalog": worker_catalog,
+            "site": site_state,
+        }
 
     if action == "sync-country-keywords":
         keyword_updates = _sync_collection_keywords(repo_root, expo_groups, reserve_groups, hidden_groups)
@@ -12607,37 +12700,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "hidden_count": sum(len(photos) for photos in hidden_groups.values()),
             "r2_upload_task": r2_task,
             "site": site_state,
-        }
-
-    if action == "wipe-hidden-r2":
-        discard_entries = _waste_basket_discard_entries(hidden_groups)
-        hidden_count_before = sum(len(photos) for photos in hidden_groups.values())
-        tombstone = _write_discarded_tombstones(repo_root, discard_entries)
-        lifecycle_result = _record_discarded_lifecycle(repo_root, discard_entries)
-        delete_items = _waste_basket_delete_items(repo_root, hidden_groups)
-        cleared_hidden_groups = {slug: [] for slug in ORDER}
-
-        def prepare_waste_basket_media_wipe() -> None:
-            _write_state(repo_root, expo_groups, reserve_groups, cleared_hidden_groups)
-
-        r2_task = _start_r2_delete_task(
-            "waste-basket-cloud-media",
-            delete_items,
-            "waste-basket-media-wipe",
-            prepare=prepare_waste_basket_media_wipe,
-        )
-        if r2_task is None:
-            threading.Thread(target=prepare_waste_basket_media_wipe, daemon=True).start()
-        return {
-            "ok": True,
-            "action": action,
-            "hidden_count": 0,
-            "hidden_count_before": hidden_count_before,
-            "moved_to_tombstones_count": len(discard_entries),
-            "discarded_count": len(tombstone.get("photo_ids") or []),
-            "lifecycle": lifecycle_result,
-            "hidden_ids": [],
-            "r2_delete_task": r2_task,
         }
 
     if action == "hide-many":
@@ -12887,60 +12949,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             "skipped": skipped,
             "action_log": action_log,
             "keyword_updates": keyword_updates,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
-        }
-
-    if action == "discard":
-        hidden_found = _find_and_remove(hidden_groups, photo_id)
-        expo_found = _find_and_remove(expo_groups, photo_id)
-        reserve_found = _find_and_remove(reserve_groups, photo_id)
-        found = hidden_found or expo_found or reserve_found
-        source_state = "hidden" if hidden_found else "expo" if expo_found else "reserve"
-        if not found:
-            if photo_id in _lifecycle_discarded_ids(repo_root):
-                site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-                tombstone = _write_discarded_tombstone(repo_root)
-                return {
-                    "ok": True,
-                    "action": action,
-                    "photo_id": photo_id,
-                    "message": "already discarded",
-                    "discarded_count": len(tombstone.get("photo_ids") or []),
-                    "worker_catalog": worker_catalog,
-                    "site": site_state,
-                }
-            raise ValueError(f"photo not found in Expo, Reserve, or Waste Basket: {photo_id}")
-        source_slug, source_photo = found
-        _source_state, original_slug = _hidden_provenance(source_photo, "expo", source_slug)
-        source_assets = _photo_asset_paths(source_photo)
-        public_preview_keys = _hidden_public_preview_keys(source_photo, original_slug)
-        private_keys = _discarded_private_keys(source_photo)
-        tombstone_entry = {
-            "id": photo_id,
-            "title": source_photo.get("title") or photo_id,
-            "discarded_at": datetime.now(timezone.utc).isoformat(),
-            "from_state": source_state,
-            "from_slug": source_slug,
-            "source_slug": original_slug,
-            "media_type": _photo_media_type(source_photo),
-            "asset_paths": source_assets,
-            "source_paths": _photo_source_paths(repo_root, source_photo),
-            "public_preview_keys": public_preview_keys,
-            "private_keys": private_keys,
-        }
-        tombstone = _write_discarded_tombstone(repo_root, tombstone_entry)
-        lifecycle_result = _record_discarded_lifecycle(repo_root, [tombstone_entry])
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        r2_task = _start_r2_delete_task(photo_id, _discarded_delete_items(repo_root, source_photo, original_slug), "discarded-media-wipe")
-        return {
-            "ok": True,
-            "action": action,
-            "photo_id": photo_id,
-            "moved": {"from": source_state, "from_slug": source_slug, "to": "discarded", "to_slug": original_slug},
-            "discarded_count": len(tombstone.get("photo_ids") or []),
-            "lifecycle": lifecycle_result,
-            "r2_delete_task": r2_task,
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

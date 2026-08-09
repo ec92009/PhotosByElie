@@ -189,7 +189,15 @@ class IndexedWindowTest(unittest.TestCase):
             sidecar_state_db.upsert_assets(repo_root, rows)
             sidecar_state_db.record_decision(repo_root, {"assetId": "cloud-3", "action": "pick"})
             sidecar_state_db.record_decision(repo_root, {"assetId": "cloud-2", "action": "reject"})
-            sidecar_state_db.record_decision(repo_root, {"assetId": "cloud-1", "action": "tombstone"})
+            sidecar_state_db.record_decision(repo_root, {
+                "assetId": "cloud-1",
+                "action": "tombstone",
+                "legacyMigration": {
+                    "kind": "PBB-78-legacy-expo-hidden",
+                    "planDigest": "test-plan",
+                    "auditReceipt": "test-receipt",
+                },
+            })
 
             payload = sidecar_state_db.indexed_library_window(
                 repo_root,

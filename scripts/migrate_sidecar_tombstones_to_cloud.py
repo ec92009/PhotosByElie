@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -96,7 +97,13 @@ def configure_cloud(config_path: Path) -> None:
         raise RuntimeError(f"Connector cloud credentials are incomplete: {config_path}")
 
 
-def apply_migration(rows: list[MigrationRow], batch_size: int) -> tuple[list[dict[str, Any]], int]:
+def apply_migration(
+    rows: list[MigrationRow],
+    batch_size: int,
+    *,
+    plan_digest: str,
+    audit_receipt: str,
+) -> tuple[list[dict[str, Any]], int]:
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
     from sidecar_server import _sidecar_cloud_request  # pylint: disable=import-outside-toplevel
     from sidecar_state_db import mirror_cloud_decisions  # pylint: disable=import-outside-toplevel
@@ -133,6 +140,11 @@ def apply_migration(rows: list[MigrationRow], batch_size: int) -> tuple[list[dic
                         "assetId": row.cloud_identifier,
                         "action": "tombstone",
                         "reason": row.reason,
+                        "legacyMigration": {
+                            "kind": "PBB-78-legacy-expo-hidden",
+                            "planDigest": plan_digest,
+                            "auditReceipt": audit_receipt,
+                        },
                     }
                     for row in pending
                 ]
@@ -192,7 +204,15 @@ def main() -> int:
         raise RuntimeError(f"Refusing migration with {len(unmapped)} unmapped legacy tombstones.")
 
     configure_cloud(args.connector_config)
-    migrated, already_active = apply_migration(rows, max(1, min(args.batch_size, 100)))
+    plan_digest = hashlib.sha256(
+        json.dumps(plan, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    migrated, already_active = apply_migration(
+        rows,
+        max(1, min(args.batch_size, 100)),
+        plan_digest=plan_digest,
+        audit_receipt=str(args.report),
+    )
     report = {
         **plan,
         "migratedCount": len(migrated),

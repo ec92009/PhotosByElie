@@ -15,7 +15,7 @@ test("public Owner culling waits for cloud auth and uses the Max connector queue
   assert.match(hidden, /"update-photo-metadata", "save-keyword-blacklist"/);
   assert.match(hidden, /const saveKeywordBlacklist = async/);
   assert.match(hidden, /moderationPayload\[key\] = extra\[key\]/);
-  assert.match(hidden, /\["title", "keywords", "mode"\]/);
+  assert.match(hidden, /"owner_authorized", "ownerAuthorized"/);
   assert.doesNotMatch(hidden, /moderationPayload\["restoreTitles"\]/);
   assert.match(hidden, /\/photosbyelie\/wake-owner-action/);
   assert.match(hidden, /body: JSON\.stringify\(\{ actionId \}\)/);
@@ -134,10 +134,10 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hiddenActions, /if \(remoteCullingEnabled\) refreshRemoteHiddenMetadata\(\)\.catch/);
   assert.match(hiddenActions, /metadataFor/);
   assert.doesNotMatch(hiddenActions, /restoreTitles = Object\.fromEntries/);
-  assert.match(hiddenActions, /photoAction\("undo-hide-many", ids\[0\], \{ photo_ids: ids \}\)/);
+  assert.match(hiddenActions, /photoAction\("waste-basket-restore", ids\[0\], \{ photo_ids: ids/);
   assert.match(hidden, /window\.photosByElieHiddenActionsReady/);
   assert.match(review, /data-hidden-restore-selected/);
-  assert.match(review, /data-hidden-discard-selected/);
+  assert.doesNotMatch(review, /data-hidden-discard-selected/);
   assert.match(review, /data-hidden-empty/);
   assert.match(review, /Shift[\s\S]*Arrows[\s\S]*select range/);
   assert.match(hidden, /const restorePhotoIds = async/);
@@ -157,10 +157,10 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);
   assert.match(hidden, /detailKey: `expo\/\$\{photoId\}_1800\.jpg`/);
   assert.match(hidden, /metadata\.title \|\| "Untitled photo"/);
-  assert.match(hidden, /const discardPhotoIds = async/);
+  assert.doesNotMatch(hidden, /const discardPhotoIds = async/);
   assert.match(hidden, /const extendKeyboardSelection =/);
   assert.match(hidden, /moveKeyboardFocus\(selectedIndex \+ 1, \{ extend: event\.shiftKey \}\)/);
-  assert.match(hiddenActions, /if \(localEnabled\) \{[\s\S]*for \(const photoId of ids\) await photoAction\("undo-hide", photoId\);[\s\S]*photoAction\("undo-hide-many"/);
+  assert.match(hiddenActions, /if \(localEnabled\) \{[\s\S]*for \(const photoId of ids\) await photoAction\("waste-basket-restore", photoId/);
   assert.match(ownerScript, /grid\.prepend\(wasteBasketCard\)/);
   assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);

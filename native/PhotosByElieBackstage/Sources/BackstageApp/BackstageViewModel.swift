@@ -1577,7 +1577,7 @@ final class BackstageViewModel: ObservableObject {
             currentFixtureID: cullingFixtureID
         ) {
         case .unavailable:
-            cullingStatus = "Choose a current fixture before using P, H, or U. X remains the global reject action."
+            cullingStatus = "Choose a current fixture before using P, H, or U. X still moves the asset to the recoverable Waste Basket."
         case let .fixtureState(state):
             let label = switch state {
             case .picked: "Include"
@@ -1590,16 +1590,22 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func tombstoneCullingSelection() async {
+    func moveCullingSelectionToWasteBasket() async {
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             cullingStatus = "Select one or more Photos items."
             return
         }
-        await applyCullingDecisions(
-            ids.map { .tombstone($0, reason: "Backstage culling") },
-            label: "Tombstone"
-        )
+        do {
+            let action = try await lifecycleService.moveToWasteBasket(
+                mediaIDs: ids,
+                fixtureID: cullingFixtureID,
+                source: "backstage-culling"
+            )
+            cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
+        } catch {
+            cullingStatus = "Waste Basket move failed: \(userFacingMessage(for: error))"
+        }
         if !cullingFixtureID.isEmpty, cullingPool == nil {
             await loadFixtureCullingWindow()
         }
@@ -1897,6 +1903,49 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Unpicked \(changes.count.formatted()) item\(changes.count == 1 ? "" : "s") from \(fixtureLabel)."
         } catch {
             reviewStatus = "Unpick failed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func moveReviewSelectionToWasteBasket() async {
+        guard !isRunningReview else {
+            reviewStatus = "Finish the current Review action first."
+            return
+        }
+        let ids = selectedReviewAssetIDs
+        guard !ids.isEmpty else {
+            reviewStatus = "Select one or more Review items."
+            return
+        }
+        let focusedID = reviewSelection.focusedID ?? ids.first
+        isRunningReview = true
+        reviewStatus = "Moving \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket…"
+        defer { isRunningReview = false }
+        do {
+            let action = try await lifecycleService.moveToWasteBasket(
+                mediaIDs: ids,
+                fixtureID: reviewFixtureID,
+                source: "backstage-review"
+            )
+            guard var window = fixtureReviewWindow else {
+                reviewStatus = "Review window is no longer available."
+                return
+            }
+            window.items.removeAll { ids.contains($0.id) }
+            fixtureReviewWindow = window
+            let orderedIDs = reviewItems.map(\.id)
+            let replacementID = orderedIDs.contains(focusedID ?? "")
+                ? focusedID
+                : orderedIDs.first
+            reviewSelection = OwnerSelectionModel(
+                orderedIDs: orderedIDs,
+                selectedIDs: Set(replacementID.map { [$0] } ?? []),
+                anchorID: replacementID,
+                focusedID: replacementID
+            )
+            syncReviewDraft()
+            reviewStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to Waste Basket through action \(action.id)."
+        } catch {
+            reviewStatus = "Waste Basket move failed: \(userFacingMessage(for: error))"
         }
     }
 
@@ -3185,7 +3234,7 @@ final class BackstageViewModel: ObservableObject {
             let ledger = try await lifecycleService.ledger()
             lifecycleItems = ledger.items
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
-            lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) permanently discarded item\(ledger.items.count == 1 ? "" : "s")."
+            lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
         }
@@ -3210,12 +3259,12 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func discardLifecycleItem(_ id: String) async {
+    func emptyWasteBasket() async {
         isRunningLifecycle = true
         defer { isRunningLifecycle = false }
         do {
-            let action = try await lifecycleService.discard(mediaID: id)
-            lifecycleStatus = "Permanently discarded one item through action \(action.id)."
+            let action = try await lifecycleService.emptyWasteBasket(confirmed: true)
+            lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
             await loadLifecycle()
         } catch {
             lifecycleStatus = userFacingMessage(for: error)

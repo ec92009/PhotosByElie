@@ -89,6 +89,8 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
         Self(assetId: assetID, action: "color", color: value.rawValue)
     }
 
+    /// Legacy PBB-78/repair compatibility primitive. Normal Owner actions use
+    /// LifecycleService and the Waste Basket gateway instead.
     public static func tombstone(_ assetID: String, reason: String = "") -> Self {
         Self(assetId: assetID, action: "tombstone", reason: reason)
     }

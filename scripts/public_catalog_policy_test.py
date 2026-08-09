@@ -64,7 +64,7 @@ class PublicCatalogPolicyTest(unittest.TestCase):
             conn.close()
         self.assertEqual(
             set(snapshot["eligibleMediaIds"]),
-            {"legacy-photo", "legacy-video", "title-approved", "sidecar-approved", "native-approved"},
+            {"legacy-video", "title-approved", "sidecar-approved", "native-approved"},
         )
         self.assertEqual(set(snapshot["blockedMediaIds"]), {"legacy-photo"})
         self.assertEqual(set(snapshot["retiredMediaTypes"]), {"video"})

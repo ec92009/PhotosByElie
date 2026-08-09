@@ -1522,7 +1522,17 @@ def record_decision(
     asset_id = str(payload.get("assetId") or payload.get("asset_id") or payload.get("localIdentifier") or "").strip()
     if not asset_id:
         raise ValueError("assetId is required")
-    action = str(payload.get("action") or "").strip().casefold()
+    action = str(payload.get("action") or payload.get("decision") or "").strip().casefold()
+    if action == "tombstone":
+        legacy_migration = payload.get("legacyMigration")
+        audited_legacy_path = (
+            isinstance(legacy_migration, dict)
+            and legacy_migration.get("kind") == "PBB-78-legacy-expo-hidden"
+            and str(legacy_migration.get("auditReceipt") or "").strip()
+            and str(legacy_migration.get("planDigest") or "").strip()
+        )
+        if not audited_legacy_path:
+            raise ValueError("Direct global tombstone writes are disabled; use the Waste Basket gateway.")
     now = now_iso()
     connection_context = nullcontext(conn) if conn is not None else connect(repo_root)
     with connection_context as conn:
@@ -1790,31 +1800,31 @@ def summary(repo_root: Path) -> dict[str, Any]:
         ],
     }
 
-def empty_wastebasket(repo_root: Path) -> dict[str, Any]:
-    with connect(repo_root) as conn:
-        rows = conn.execute(
-            """
-            SELECT d.asset_id
-            FROM sidecar_decisions AS d
-            JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
-            WHERE d.pick_state IN ('rejected', 'hidden')
-              AND (a.missing_at IS NULL OR a.missing_at = '')
-              AND NOT EXISTS (
-                SELECT 1 FROM sidecar_tombstones AS t
-                WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
-              )
-            ORDER BY d.updated_at, d.asset_id
-            """
-        ).fetchall()
-    items = [
-        record_decision(repo_root, {
-            "assetId": row["asset_id"],
-            "action": "tombstone",
-            "reason": "empty wastebasket",
-        })
-        for row in rows
-    ]
-    return {"ok": True, "count": len(items), "items": items, "summary": summary(repo_root)}
+def empty_wastebasket(
+    repo_root: Path,
+    *,
+    confirmed: bool = False,
+    confirmation_token: str = "",
+    actor: str = "legacy-sidecar",
+    request_key: str | None = None,
+) -> dict[str, Any]:
+    """Compatibility wrapper; direct Sidecar empty is no longer a writer.
+
+    The retired Sidecar route remains callable only as an explicit, audited
+    compatibility surface.  It cannot promote ``hidden``/``rejected`` rows
+    to tombstones without the same confirmation gate as Backstage.
+    """
+    from waste_basket_gateway import empty_waste_basket
+
+    return empty_waste_basket(
+        repo_root,
+        (),
+        confirmed=confirmed,
+        confirmation_token=confirmation_token,
+        source="backstage-waste-basket",
+        actor=actor,
+        request_key=request_key,
+    )
 
 
 def _fixture_authorized_upload_asset_ids(

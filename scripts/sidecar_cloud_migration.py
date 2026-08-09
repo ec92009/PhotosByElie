@@ -269,6 +269,11 @@ def main() -> int:
 
     mapping, mapping_failures = load_cloud_map(args.mapping)
     decisions, unmapped = load_local_decisions(args.db, mapping, limit=max(0, args.limit))
+    legacy_tombstone_ids = [
+        str(item.get("assetId") or "")
+        for item in decisions
+        if str(item.get("tombstoneState") or "").strip().casefold() == "active"
+    ]
     config = _read_connector_config(args.config.expanduser()) if not (args.worker_base and args.token) else {}
     worker_base = args.worker_base.strip() or config.get("workerBase", "")
     token = args.token.strip() or config.get("token", "")
@@ -280,6 +285,8 @@ def main() -> int:
         "localDecisionCount": len(decisions) + len(unmapped),
         "migratableDecisionCount": len(decisions),
         "unmappedDecisionCount": len(unmapped),
+        "legacyTombstoneCount": len(legacy_tombstone_ids),
+        "legacyTombstoneSample": legacy_tombstone_ids[:20],
         "dryRun": bool(args.dry_run),
         "workerBase": worker_base,
         "batches": [],
@@ -287,6 +294,11 @@ def main() -> int:
         "unmappedSample": unmapped[:20],
     }
     if not args.dry_run:
+        if legacy_tombstone_ids:
+            raise RuntimeError(
+                "Refusing to upsert active legacy tombstones through the generic cloud migration; "
+                "use migrate_sidecar_tombstones_to_cloud.py for the separately audited PBB-78 path."
+            )
         if not worker_base or not token:
             raise RuntimeError("Worker base and connector token are required for a non-dry-run migration.")
         batch_size = max(1, min(500, args.batch_size))

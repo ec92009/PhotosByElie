@@ -1224,6 +1224,7 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "save-title-keyword-review-approvals",
             "apply-title-keyword-review-approvals",
             "apply-approved-title-keyword-review-approvals",
+            "waste-basket-empty",
         }
         if (not photo_ids and operation not in photo_optional_operations) or len(photo_ids) > 500:
             raise RuntimeError("photo-moderation requires 1 to 500 photo IDs")
@@ -1243,6 +1244,23 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "rejections",
             "blocked",
             "reason",
+            "source",
+            "actor",
+            "fixture_id",
+            "fixtureId",
+            "gallery_id",
+            "galleryId",
+            "request_key",
+            "requestKey",
+            "owner_mode",
+            "ownerMode",
+            "owner_authorized",
+            "ownerAuthorized",
+            "confirmed",
+            "confirmation_token",
+            "confirmationToken",
+            "explicit_tombstone_restore",
+            "explicitTombstoneRestore",
         ):
             if key in payload:
                 moderation_payload[key] = payload[key]

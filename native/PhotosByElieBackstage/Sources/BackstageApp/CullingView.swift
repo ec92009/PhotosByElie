@@ -475,7 +475,7 @@ struct CullingView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             cullingOperationProgress
-            Text("Shortcuts: P include in fixture • H exclude from fixture • X globally reject • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("Shortcuts: P include in fixture • H exclude from fixture • X move to recoverable Waste Basket • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -827,7 +827,7 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
                 return .handled
             }
             .onKeyPress("x") {
-                Task { await model.tombstoneCullingSelection() }
+                Task { await model.moveCullingSelectionToWasteBasket() }
                 return .handled
             }
             .onKeyPress("u") {

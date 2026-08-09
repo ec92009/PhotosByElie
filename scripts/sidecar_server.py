@@ -1192,6 +1192,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
+            if str(payload.get("action") or payload.get("decision") or "").strip().casefold() == "tombstone":
+                raise ValueError("Direct global tombstone writes are disabled; use the Waste Basket gateway.")
             if _sidecar_cloud_enabled():
                 cloud = _sidecar_cloud_request("POST", "/api/v1/sidecar/decisions/apply", payload)
                 result = _cloud_state_item(cloud)
@@ -1228,6 +1230,12 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 raise ValueError("decisions must be a JSON array.")
             if len(decisions) > 500:
                 raise ValueError("Sidecar batch decisions are limited to 500 rows.")
+            if any(
+                isinstance(item, dict)
+                and str(item.get("action") or item.get("decision") or "").strip().casefold() == "tombstone"
+                for item in decisions
+            ):
+                raise ValueError("Direct global tombstone writes are disabled; use the Waste Basket gateway.")
             if _sidecar_cloud_enabled():
                 cloud = _sidecar_cloud_request("POST", "/api/v1/sidecar/decisions/apply-batch", {"decisions": decisions}, timeout=60)
                 items = [_cloud_state_item(item) for item in cloud.get("items") or [] if isinstance(item, dict)]
@@ -1274,8 +1282,18 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
-            result = empty_wastebasket(Path.cwd())
+            payload = self._read_json_body()
+            result = empty_wastebasket(
+                Path.cwd(),
+                confirmed=payload.get("confirmed") is True,
+                confirmation_token=payload.get("confirmationToken") or payload.get("confirmation_token") or "",
+                actor=payload.get("actor") or "legacy-sidecar",
+                request_key=payload.get("requestKey") or payload.get("request_key") or "",
+            )
             _invalidate_summary_cache()
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
+            return
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return

@@ -29,7 +29,7 @@
         Owner shortcuts:
         <kbd>P</kbd> put back
         <span aria-hidden="true">|</span>
-        <kbd>D</kbd> discard
+        <kbd>E</kbd> empty basket
         <span aria-hidden="true">|</span>
         <kbd>Z</kbd> fit / fill
         <span aria-hidden="true">|</span>
@@ -51,7 +51,6 @@
             <button class="btn secondary" type="button" data-hidden-select-all>All visible</button>
             <button class="btn secondary" type="button" data-hidden-clear-selection disabled>Clear</button>
             <button class="btn secondary" type="button" data-hidden-restore-selected disabled>Restore selected</button>
-            <button class="btn secondary waste-basket-danger" type="button" data-hidden-discard-selected disabled>Delete selected permanently</button>
             <button class="btn waste-basket-danger" type="button" data-hidden-empty>Empty Waste Basket</button>
           </div>
         </section>

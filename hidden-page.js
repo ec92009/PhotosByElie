@@ -10,7 +10,6 @@
   const selectAllButton = document.querySelector("[data-hidden-select-all]");
   const clearSelectionButton = document.querySelector("[data-hidden-clear-selection]");
   const restoreSelectedButton = document.querySelector("[data-hidden-restore-selected]");
-  const discardSelectedButton = document.querySelector("[data-hidden-discard-selected]");
   const emptyWasteBasketButton = document.querySelector("[data-hidden-empty]");
   const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
   const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
@@ -83,7 +82,7 @@
     if (selectionCount) {
       selectionCount.textContent = `${count.toLocaleString()} selected · ${allHiddenPhotos.length.toLocaleString()} in Waste Basket`;
     }
-    [clearSelectionButton, restoreSelectedButton, discardSelectedButton].forEach((button) => {
+    [clearSelectionButton, restoreSelectedButton].forEach((button) => {
       if (button) button.disabled = managerBusy || count === 0;
     });
     if (selectAllButton) selectAllButton.disabled = managerBusy || renderedPhotos.length === 0;
@@ -112,25 +111,20 @@
     }
   };
 
-  const discardPhotoIds = async (photoIds, { empty = false } = {}) => {
-    const ids = [...new Set(photoIds)].filter(Boolean);
+  const emptyWasteBasket = async () => {
+    const ids = allHiddenPhotos.map((photo) => photo.id).filter(Boolean);
     if (!ids.length) return;
-    const label = empty ? "the entire Waste Basket" : `${ids.length.toLocaleString()} selected photo${ids.length === 1 ? "" : "s"}`;
-    if (!window.confirm(`Permanently discard ${label}?\n\nThis writes durable tombstones and queues deletion of matching R2 media. It cannot be undone from the Waste Basket.`)) return;
+    if (!window.confirm("Empty the entire Waste Basket?\n\nThis is the only normal action that activates global tombstones. Source media, R2 objects, and history are retained; an explicit tombstone restore remains separately auditable.")) return;
     setManagerBusy(true);
-    let completed = 0;
     try {
-      for (const photoId of ids) {
-        setStatus(`Permanently discarding ${completed + 1} of ${ids.length}...`);
-        await hiddenActions.discard(photoId);
-        selectedIds.delete(photoId);
-        completed += 1;
-      }
+      setStatus(`Emptying ${ids.length.toLocaleString()} Waste Basket item${ids.length === 1 ? "" : "s"}...`);
+      await hiddenActions.emptyWasteBasket(ids);
+      ids.forEach((photoId) => selectedIds.delete(photoId));
       render({ scrollSelection: false });
-      setStatus(`${completed.toLocaleString()} photo${completed === 1 ? "" : "s"} permanently discarded; R2 deletion is queued.`);
+      setStatus(`${ids.length.toLocaleString()} item${ids.length === 1 ? "" : "s"} moved to the audited global-tombstone state. Source and R2 media were retained.`);
     } catch (error) {
       render({ scrollSelection: false });
-      throw new Error(`${completed.toLocaleString()} completed before the operation stopped. ${error?.message || "Could not finish permanent discard."}`);
+      throw new Error(error?.message || "Could not empty the Waste Basket.");
     } finally {
       setManagerBusy(false);
     }
@@ -460,11 +454,8 @@
   restoreSelectedButton?.addEventListener("click", () => {
     restorePhotoIds(selectedPhotoIds()).catch((error) => setStatus(error?.message || "Could not restore selected photos."));
   });
-  discardSelectedButton?.addEventListener("click", () => {
-    discardPhotoIds(selectedPhotoIds()).catch((error) => setStatus(error?.message || "Could not discard selected photos."));
-  });
   emptyWasteBasketButton?.addEventListener("click", () => {
-    discardPhotoIds(allHiddenPhotos.map((photo) => photo.id), { empty: true })
+    emptyWasteBasket()
       .catch((error) => setStatus(error?.message || "Could not empty the Waste Basket."));
   });
 
@@ -523,25 +514,17 @@
       event.preventDefault();
       return;
     }
-    const selected = photos[selectedIndex];
-    if (!selected) return;
-    if (event.key.toLowerCase() === "d") {
-      const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis keeps the master blacklisted, removes remaining review/catalog copies, and leaves only the tombstone so imports do not bring it back.`);
-      if (!confirmed) {
-        event.preventDefault();
-        return;
-      }
+    if (event.key.toLowerCase() === "e") {
       try {
-        await hiddenActions.discard?.(selected.id);
-        selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
-        render();
-        setStatus(`${selected.title} discarded.`);
+        await emptyWasteBasket();
       } catch (error) {
-        setStatus(error?.message || "Could not discard photo.");
+        setStatus(error?.message || "Could not empty the Waste Basket.");
       }
       event.preventDefault();
       return;
     }
+    const selected = photos[selectedIndex];
+    if (!selected) return;
     if (event.key.toLowerCase() !== "p") return;
     try {
       await restorePhotoIds([selected.id]);

@@ -18,6 +18,7 @@ import threading
 from typing import Any, Iterable
 import uuid
 
+import owner_state_db
 from sidecar_state_db import (
     DEFAULT_DB as OWNER_DB,
     connect as connect_owner,
@@ -786,6 +787,7 @@ def connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     with _SCHEMA_LOCK:
         if schema_key not in _SCHEMA_READY:
             try:
+                owner_state_db.ensure_schema(conn)
                 ensure_schema(conn)
                 conn.commit()
             except Exception:
@@ -1357,6 +1359,13 @@ def fixture_candidate_asset_ids(
                      WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active'
                    )"""
             )
+            predicates.append(
+                """NOT EXISTS (
+                     SELECT 1 FROM sidecar_decisions global_decision
+                     WHERE global_decision.asset_id = a.asset_id
+                       AND global_decision.pick_state = 'hidden'
+                   )"""
+            )
             rows = conn.execute(
                 f"""
                 SELECT a.asset_id
@@ -1378,6 +1387,11 @@ def fixture_candidate_asset_ids(
                   AND NOT EXISTS (
                     SELECT 1 FROM sidecar_tombstones t
                     WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sidecar_decisions global_decision
+                    WHERE global_decision.asset_id = d.asset_id
+                      AND global_decision.pick_state = 'hidden'
                   )
                 ORDER BY a.captured_at DESC, d.asset_id
                 """,
@@ -1450,6 +1464,7 @@ def fixture_culling_window(
                 AND tombstone.tombstone_state = 'active'
             )
             """,
+            "COALESCE(global_decision.pick_state, '') <> 'hidden'",
         ]
         clean_media = {
             str(value or "").strip().casefold()
@@ -1668,6 +1683,7 @@ def _fixture_review_predicates(
             AND tombstone.tombstone_state = 'active'
         )
         """,
+        "COALESCE(decision.pick_state, '') <> 'hidden'",
     ]
     if not include_approved:
         predicates.append("editorial.editorial_state != 'approved'")
@@ -3353,7 +3369,12 @@ def publication_plan(
 
 def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, limit: int = 500, offset: int = 0) -> dict[str, Any]:
     filters = filters or {}
-    predicates = ["(a.missing_at IS NULL OR a.missing_at = '')"]
+    predicates = [
+        "(a.missing_at IS NULL OR a.missing_at = '')",
+        "COALESCE(d.pick_state, '') <> 'hidden'",
+        "NOT EXISTS (SELECT 1 FROM sidecar_tombstones t WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active')",
+        "NOT EXISTS (SELECT 1 FROM media_lifecycle lifecycle WHERE lifecycle.media_id = a.asset_id AND lifecycle.lifecycle_state IN ('hidden', 'discarded'))",
+    ]
     params: list[Any] = []
     exact_ids = _unique(filters.get("assetIds") or filters.get("albumAssetIds") or [])
     if exact_ids:
@@ -4233,12 +4254,19 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
             SELECT p.asset_id,
                    COALESCE(scoped.placement_state, d.pick_state, 'undecided') pick_state,
                    COALESCE(d.metadata_state, 'unreviewed') metadata_state,
+                   COALESCE(d.pick_state, '') global_pick_state,
+                   COALESCE(t.tombstone_state, '') tombstone_state,
+                   COALESCE(lifecycle.lifecycle_state, '') lifecycle_state,
                    x.destinations_json,
                    x.version_hash
           FROM fixture_asset_placements p
           LEFT JOIN fixture_asset_decisions scoped
             ON scoped.fixture_id = p.fixture_id AND scoped.asset_id = p.asset_id
           LEFT JOIN sidecar_decisions d ON d.asset_id = p.asset_id
+          LEFT JOIN sidecar_tombstones t
+            ON t.asset_id = p.asset_id AND t.tombstone_state = 'active'
+          LEFT JOIN media_lifecycle lifecycle
+            ON lifecycle.media_id = p.asset_id
           LEFT JOIN fixture_asset_destinations x ON x.fixture_id = p.fixture_id AND x.asset_id = p.asset_id
           WHERE p.fixture_id = ? AND p.state = 'active'
           ORDER BY p.placed_at, p.asset_id
@@ -4267,7 +4295,8 @@ def delivery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
                     "items": destination_receipts,
                     "errorText": "; ".join(errors),
                 }
-            approved = row["pick_state"] == "picked" and row["metadata_state"] == "approved"
+            globally_blocked = row["global_pick_state"] == "hidden" or row["tombstone_state"] == "active" or row["lifecycle_state"] in {"hidden", "discarded"}
+            approved = row["pick_state"] == "picked" and row["metadata_state"] == "approved" and not globally_blocked
             complete = approved and all(receipt_map.get(destination, {}).get("status") == "verified" for destination in destinations)
             items.append({"assetId": row["asset_id"], "pickState": row["pick_state"], "metadataState": row["metadata_state"], "approved": approved, "destinations": destinations, "versionHash": version_hash, "receipts": receipt_map, "complete": complete})
     return {

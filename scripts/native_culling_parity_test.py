@@ -70,7 +70,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'onKeyPress("b")',
             "P include in fixture",
             "H exclude from fixture",
-            "X globally reject",
+            "X move to recoverable Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
             "CullingMediaFilter.selectableCases",
@@ -495,7 +495,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "completed batches remain audited and undoable",
             "FixtureCullingSemantics.mutation(",
             "await applyFixturePlacement(state, label: label)",
-            "X remains the global reject action",
+            "X still moves the asset to the recoverable Waste Basket",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("await applyPickDecision()", source)

@@ -363,7 +363,7 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("L")} like`,
     `${shortcutKey("U")} undo`,
     ...(localModerationEnabled ? [
-      `${shortcutKey("D")} discard`,
+      `${shortcutKey("D")} Waste Basket`,
       `${shortcutKey("T")} title`,
       `${shortcutKey("K")} keywords`,
       `${shortcutKey("R")} review`
@@ -1766,7 +1766,7 @@ if (galleryRoot && gallery) {
         if (!localModerationEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
-        const confirmed = window.confirm(`Discard "${selected.title}"?\n\nThis removes it from the catalog and keeps a tombstone so imports do not bring it back.`);
+        const confirmed = window.confirm(`Move "${selected.title}" to the recoverable Waste Basket?\n\nThis preserves the exact prior state for restore. Only an explicit Empty Waste Basket action activates a global tombstone.`);
         if (!confirmed) {
           event.preventDefault();
           return;
@@ -1775,9 +1775,9 @@ if (galleryRoot && gallery) {
           await hiddenActions.discard?.(selected.id);
           selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
           renderGallery();
-          setGalleryStatus(`${selected.title} discarded.`);
+          setGalleryStatus(`${selected.title} moved to the recoverable Waste Basket.`);
         } catch (error) {
-          setGalleryStatus(error?.message || "Could not discard photo.");
+          setGalleryStatus(error?.message || "Could not move photo to the Waste Basket.");
         }
         event.preventDefault();
         return;

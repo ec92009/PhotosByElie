@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Legacy/repair cleanup only. PBB-79 gateway tombstones are deliberately
+// excluded below: Empty Waste Basket retains source and R2 media.
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
@@ -83,6 +85,19 @@ const readOwnerLifecycle = () => {
     console.warn("Owner DB lifecycle snapshot skipped: invalid JSON");
     return {};
   }
+};
+
+const readGatewayTombstonedIds = () => {
+  const result = spawnSync(
+    "sqlite3",
+    [fullPath(ownerDbPath), "SELECT asset_id FROM owner_waste_basket_entries WHERE state = 'tombstoned';"],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+  );
+  if (result.status !== 0) {
+    console.warn(`PBB-79 gateway tombstone read skipped: ${(result.stderr || result.error?.message || "unknown error").trim()}`);
+    return new Set();
+  }
+  return new Set(result.stdout.split(/\r?\n/).map((value) => value.trim()).filter(Boolean));
 };
 
 const readOwnerDbDeletedKeys = () => {
@@ -238,6 +253,7 @@ const deleteCandidates = async (candidates, progress) => {
 const tombstone = await readJson(tombstonePath, {});
 const previousManifest = await readJson(outputPath, {});
 const ownerLifecycle = readOwnerLifecycle();
+const gatewayTombstonedIds = readGatewayTombstonedIds();
 const currentDiscardedIds = new Set((Array.isArray(tombstone.photo_ids) ? tombstone.photo_ids : [])
   .filter((id) => typeof id === "string" && id));
 (Array.isArray(tombstone.photos) ? tombstone.photos : [])
@@ -259,6 +275,7 @@ if (Array.isArray(ownerLifecycle.discardedPhotoIds)) {
   .map((photo) => photo?.id)
   .filter((id) => typeof id === "string" && id)
   .forEach((id) => discardedIds.add(id));
+for (const id of gatewayTombstonedIds) discardedIds.delete(id);
 const keyPhotoId = (key) => {
   const value = String(key || "");
   if (value.startsWith("masters/")) {
@@ -283,6 +300,7 @@ if (!discardedIds.size) {
     updatedAt: new Date().toISOString(),
     dryRun,
     discardedPhotoIds: [],
+    retainedWasteBasketPhotoIds: [...gatewayTombstonedIds].sort(),
     publicKeys: [],
     privateKeys: [],
   });
@@ -414,8 +432,9 @@ await writeJson(outputPath, {
   publicBucket,
   privateBucket,
   discardedPhotoIds: [...discardedIds].sort(),
+  retainedWasteBasketPhotoIds: [...gatewayTombstonedIds].sort(),
   publicKeys: [...new Set([...recordedPublicKeys, ...deletedPublic])].sort(),
   privateKeys: [...new Set([...recordedPrivateKeys, ...deletedPrivate])].sort(),
 });
 
-console.log(`Done. ${dryRun ? "Would check" : "Checked"} ${deletedPublic.length} public and ${deletedPrivate.length} private banned-photo R2 key checks for ${discardedIds.size} discarded photos; ${ownerDbConfirmedCount} already trusted from Owner DB.`);
+console.log(`Done. ${dryRun ? "Would check" : "Checked"} ${deletedPublic.length} public and ${deletedPrivate.length} private legacy R2 key checks for ${discardedIds.size} discarded photos; retained ${gatewayTombstonedIds.size} PBB-79 tombstoned photos; ${ownerDbConfirmedCount} already trusted from Owner DB.`);

@@ -69,6 +69,7 @@ const credentialedCorsHeaders = (request, extraHeaders = {}) => {
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
+    "cache-control": "private, no-store",
     vary: "Origin",
     ...extraHeaders,
   };

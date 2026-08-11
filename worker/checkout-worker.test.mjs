@@ -2127,6 +2127,7 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
     headers: { origin },
   }));
   assert.equal(accountProfileResponse.status, 200);
+  assert.equal(accountProfileResponse.headers.get("cache-control"), "private, no-store");
   const accountProfile = await accountProfileResponse.json();
   assert.equal(accountProfile.orders.length, 1);
   assert.equal(accountProfile.orders[0].id, paid.order.id);
@@ -2136,6 +2137,7 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
     headers: { origin },
   }));
   assert.equal(accountOrderResponse.status, 200);
+  assert.equal(accountOrderResponse.headers.get("cache-control"), "private, no-store");
   const accountOrder = await accountOrderResponse.json();
   assert.equal(accountOrder.order.id, paid.order.id);
   assert.equal(accountOrder.order.delivery.files[0].productId, "full");
@@ -2149,6 +2151,7 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
     headers: { origin },
   }));
   assert.equal(forbiddenOrderResponse.status, 403);
+  assert.equal(forbiddenOrderResponse.headers.get("cache-control"), "private, no-store");
 });
 
 test("signed-in account claims previous guest purchases by checkout email", async () => {

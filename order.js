@@ -85,9 +85,9 @@ const orderAccountWorkerBaseUrl = () => {
 
 const currentParams = () => new URLSearchParams(window.location.search);
 const orderId = () => currentParams().get("id") || checkoutState().orderId || "";
-const buyerEmail = () => currentParams().get("email") || checkoutState().email || "";
-const checkoutSessionId = () => currentParams().get("session_id") || checkoutState().checkoutSessionId || "";
 const accountOrderRequested = () => currentParams().get("account") === "1";
+const buyerEmail = () => accountOrderRequested() ? "" : (currentParams().get("email") || checkoutState().email || "");
+const checkoutSessionId = () => currentParams().get("session_id") || checkoutState().checkoutSessionId || "";
 const supportHrefFor = (order = {}) => {
   const url = new URL("./support.html", window.location.href);
   const id = order.id || orderId();
@@ -284,6 +284,24 @@ const setProgress = (state) => {
     step.classList.toggle("is-failed", isFailed && stepState === "preparing");
     step.classList.toggle("is-complete", state === "ready" || ((state === "preparing" || isFailed) && stepState === "pending_payment"));
   });
+};
+
+const clearRenderedOrder = () => {
+  window.clearTimeout(refreshTimer);
+  refreshTimer = null;
+  currentZipPath = "";
+  currentDownloadHref = "";
+  currentDeliveryFiles = [];
+  currentOrder = null;
+  currentAccountOrders = [];
+  details?.replaceChildren();
+  itemsRoot?.replaceChildren();
+  downloadZip.hidden = true;
+  downloadZip.removeAttribute("href");
+  downloadZip.removeAttribute("download");
+  if (copyZipPath) copyZipPath.hidden = true;
+  setProgress("");
+  syncZipLocationField();
 };
 
 const scheduleOrderRefresh = (order) => {
@@ -610,19 +628,12 @@ const loadOrder = async () => {
       status.textContent = t("order.refreshed");
       return;
     } catch (error) {
-      if (!email) {
-        syncOrderLookup(true);
-        heading.textContent = t("order.unavailable");
-        message.textContent = error.message;
-        setProgress("");
-        currentZipPath = "";
-        currentDownloadHref = "";
-        currentOrder = null;
-        downloadZip.hidden = true;
-        syncZipLocationField();
-        status.textContent = t("order.could_not_load");
-        return;
-      }
+      syncOrderLookup(false);
+      heading.textContent = t("order.unavailable");
+      message.textContent = error.message;
+      clearRenderedOrder();
+      status.textContent = t("order.could_not_load");
+      return;
     }
   }
   if (!id || !email) {

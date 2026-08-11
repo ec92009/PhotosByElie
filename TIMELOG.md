@@ -759,8 +759,15 @@ Clock state: running
 | 2026-08-07 | 07:26 CEST | 07:27 CEST | 0:01 | Re-evaluated the live PBE/PBB critical path and kept PBB-74 ahead of PBE-115 and PBE-137; API retrieval time excluded. |
 | 2026-08-07 | 07:28 CEST | 07:29 CEST | 0:01 | Selected PBB-74 for implementation; delivered and released the supported no-CUA originals preflight CLI/API. Background coding, tests, deployment, installation, and API runtime excluded. |
 | 2026-08-07 | 07:30 CEST | 07:31 CEST | 0:01 | Selected PBE-115 for completion of the La Concha private-gallery release, signed-in access, and no-send originals rehearsal; background implementation, tests, deployment, browser verification, and API runtime excluded. |
+| 2026-08-11 | 12:00 CEST | 12:10 CEST | 0:01 | Resumed PBB-72 and authorized the isolated read-only AX comparison; background builds, Computer Use probes, tests, cleanup, and ticket API runtime excluded. |
+| 2026-08-11 | 12:23 CEST | 12:41 CEST | 0:01 | Authorized and completed the isolated Culling-start AX A/B plus OpenAI support follow-up; background build, probe, cleanup, and ticket API runtime excluded. |
+| 2026-08-11 | 12:42 CEST | 12:49 CEST | 0:01 | Re-evaluated the fresh PBB/PBE queue and kept PBB-76 next because direct Review startup now offers a safe closure path; API and status-check runtime excluded. |
+| 2026-08-11 | 13:32 CEST | 17:42 CEST | 2:10 | Defined the paired PBB-79/PBE-147 role-sensitive action, selection, Quick Look, Waste Basket, fixture, and Owner-session contract through Q133; idle gaps and background specification work excluded. |
+| 2026-08-11 | 17:55 CEST | 17:56 CEST | 0:01 | Re-evaluated the live PBE/PBB queue and selected PBB-79 as the highest-value safe next ticket, with PBE-147 as its paired UI acceptance surface; API runtime excluded. |
+| 2026-08-11 | 18:13 CEST | 18:28 CEST | 0:05 | Completed the authenticated PBE-92 buyer/wrong-account handoff, confirmed the live cross-account download-control failure, and stopped before any download; background probes, tests, Cloudflare inspection, and ticket API runtime excluded. |
+| 2026-08-11 | 18:28 CEST | 18:29 CEST | 0:01 | Authorized the PBE-92 wrong-account isolation repair and release path; background diagnosis, implementation, tests, deployment, live verification, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 35:47
+Active collaboration time used: 38:07
 Remaining budget: not set

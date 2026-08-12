@@ -68,7 +68,6 @@ Verification checks, in order:
 
 Only after all five checks does Backstage show `verified` and offer to reveal
 the isolated artifact for a separately reviewed manual action.
-
 ## Connector runtime installation
 
 The connector installer is a separate local mechanism; the Backstage updater

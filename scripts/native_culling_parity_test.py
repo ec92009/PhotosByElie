@@ -993,12 +993,19 @@ class NativeCullingParityTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("Task.sleep(for: .milliseconds(500))", hover_help)
-        self.assertIn(".overlay(alignment: .bottom)", hover_help)
-        self.assertIn("Group {", hover_help)
+        self.assertIn("BackstageTooltipPlacement", hover_help)
+        self.assertIn("NSPanel", hover_help)
+        self.assertIn("window.addChildWindow(panel, ordered: .above)", hover_help)
+        self.assertIn("NSWindow.didResizeNotification", hover_help)
+        self.assertIn("NSView.boundsDidChangeNotification", hover_help)
+        self.assertIn("maximumContentHeight", hover_help)
+        self.assertIn("maximumLineCount", hover_help)
+        self.assertIn(".truncationMode(.tail)", hover_help)
         self.assertIn(".allowsHitTesting(false)", hover_help)
-        self.assertIn(".frame(width: 280, alignment: .leading)", hover_help)
+        self.assertIn("panel.ignoresMouseEvents = true", hover_help)
         self.assertNotIn(".popover(", hover_help)
         self.assertIn(".accessibilityHint(explanation)", hover_help)
+        self.assertIn(".accessibilityLabel(explanation)", hover_help)
 
     def test_upload_preview_hides_current_item_and_advances(self):
         ui = backstage_ui_source()

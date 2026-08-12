@@ -164,6 +164,121 @@ test("the production landing keeps real account entry and ACS routing plumbing",
   assert.match(js, /photosbyelie:landingpreferenceschange/);
 });
 
+test("the production account primary actions keep WCAG AA contrast across themes and states", () => {
+  assert.match(productionHtml, /<button class="account-pill account-pill-primary" id="account-signin"/);
+  assert.match(productionHtml, /<button class="account-action account-action-primary" id="account-google-signin"/);
+
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+    selectors: match[1].split(",").map((selector) => selector.trim()),
+    declarations: Object.fromEntries(
+      [...match[2].matchAll(/([\w-]+)\s*:\s*([^;]+);/g)]
+        .map((declaration) => [declaration[1], declaration[2].trim()]),
+    ),
+  }));
+  const ruleFor = (selector) => {
+    const rule = rules.find((candidate) => candidate.selectors.includes(selector));
+    assert.ok(rule, `${selector} must have an explicit CSS rule`);
+    return rule;
+  };
+
+  const expectedThemes = {
+    night: {
+      "--account-primary-bg": "#f7f3eb",
+      "--account-primary-fg": "#11110f",
+      "--account-primary-hover-bg": "#d8ff69",
+      "--account-primary-hover-fg": "#11110f",
+      "--account-primary-active-bg": "#b6e248",
+      "--account-primary-active-fg": "#11110f",
+      "--account-primary-disabled-bg": "#4a4a43",
+      "--account-primary-disabled-fg": "#f7f3eb",
+      "--account-primary-focus": "#d8ff69",
+      "--account-primary-focus-guard": "#11110f",
+    },
+    day: {
+      "--account-primary-bg": "#1b1b18",
+      "--account-primary-fg": "#fffdf6",
+      "--account-primary-hover-bg": "#6b4d00",
+      "--account-primary-hover-fg": "#fffdf6",
+      "--account-primary-active-bg": "#4b3500",
+      "--account-primary-active-fg": "#fffdf6",
+      "--account-primary-disabled-bg": "#b7b0a2",
+      "--account-primary-disabled-fg": "#34312c",
+      "--account-primary-focus": "#6b4d00",
+      "--account-primary-focus-guard": "#fffdf6",
+    },
+  };
+  const rootVariables = ruleFor(":root").declarations;
+  const themeVariables = {
+    night: rootVariables,
+    day: { ...rootVariables, ...ruleFor('[data-theme="day"]').declarations },
+  };
+  for (const [theme, expected] of Object.entries(expectedThemes)) {
+    for (const [name, value] of Object.entries(expected)) {
+      assert.equal(themeVariables[theme][name], value, `${theme} ${name} must keep the audited palette`);
+    }
+  }
+
+  const states = {
+    default: { suffix: "", background: "--account-primary-bg", foreground: "--account-primary-fg" },
+    hover: { suffix: ":hover", background: "--account-primary-hover-bg", foreground: "--account-primary-hover-fg" },
+    "focus-visible": { suffix: ":focus-visible", background: "--account-primary-hover-bg", foreground: "--account-primary-hover-fg" },
+    active: { suffix: ":active", background: "--account-primary-active-bg", foreground: "--account-primary-active-fg" },
+    disabled: { suffix: ":disabled", background: "--account-primary-disabled-bg", foreground: "--account-primary-disabled-fg" },
+  };
+  const surfaces = ["account-pill-primary", "account-action-primary"];
+  for (const surface of surfaces) {
+    for (const [state, values] of Object.entries(states)) {
+      const selector = `.${surface}${values.suffix}`;
+      const rule = ruleFor(selector);
+      assert.equal(rule.declarations.background, `var(${values.background})`, `${selector} background`);
+      assert.equal(rule.declarations["border-color"], `var(${values.background})`, `${selector} border`);
+      assert.equal(rule.declarations.color, `var(${values.foreground})`, `${selector} text`);
+      if (state === "focus-visible") {
+        assert.equal(rule.declarations.outline, "3px solid var(--account-primary-focus)");
+        assert.equal(rule.declarations["outline-offset"], "3px");
+        assert.equal(rule.declarations["box-shadow"], "0 0 0 3px var(--account-primary-focus-guard)");
+      }
+      if (state === "disabled") {
+        assert.ok(rule.selectors.includes(`.${surface}:disabled:hover`));
+        assert.ok(rule.selectors.includes(`.${surface}:disabled:active`));
+        assert.equal(rule.declarations.cursor, "not-allowed");
+        assert.equal(rule.declarations.opacity, "1");
+      }
+    }
+  }
+
+  const luminance = (hex) => {
+    assert.match(hex, /^#[\da-f]{6}$/i);
+    const channels = hex.slice(1).match(/../g)
+      .map((channel) => parseInt(channel, 16) / 255)
+      .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const contrastRatio = (foreground, background) => {
+    const foregroundLuminance = luminance(foreground);
+    const backgroundLuminance = luminance(background);
+    return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+      / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+  };
+  for (const [theme, variables] of Object.entries(themeVariables)) {
+    for (const surface of surfaces) {
+      for (const [state, values] of Object.entries(states)) {
+        const ratio = contrastRatio(variables[values.foreground], variables[values.background]);
+        assert.ok(ratio >= 4.5, `${theme} ${surface} ${state} text contrast is ${ratio.toFixed(2)}:1`);
+      }
+    }
+    const focusContrast = contrastRatio(
+      variables["--account-primary-focus"],
+      variables["--account-primary-focus-guard"],
+    );
+    assert.ok(focusContrast >= 3, `${theme} two-tone focus indicator contrast is ${focusContrast.toFixed(2)}:1`);
+  }
+
+  assert.match(css, /\.primary-nav \{[\s\S]*?font-size: 0\.87rem/);
+  const narrowCss = css.slice(css.indexOf("@media (max-width: 760px)"));
+  assert.match(narrowCss, /\.account-pill \{[\s\S]*?font-size: 0\.78rem/);
+});
+
 test("the production landing presents the six substantial country collections", () => {
   const countryNav = (productionHtml.match(/id="country-links"[\s\S]*?<\/nav>/) || [""])[0];
   assert.equal(countryNav.match(/gallery=/g)?.length, 6);

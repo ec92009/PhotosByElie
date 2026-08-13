@@ -108,6 +108,25 @@ test("selection, round-trip state, and Quick Look follow the integrated contract
   assert.match(photosCss, /\.detail-fullscreen-preview\.is-fill-preview/);
 });
 
+test("density changes update the grid without leaving a stale Grid status helper", () => {
+  const densityMoreCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "density-more"'),
+    galleryJs.indexOf('id: "density-less"'),
+  );
+  const densityLessCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "density-less"'),
+    galleryJs.indexOf('id: "fit-fill"'),
+  );
+  assert.match(densityMoreCommand, /stepGalleryDensity\(1\)/);
+  assert.match(densityLessCommand, /stepGalleryDensity\(-1\)/);
+  assert.match(galleryJs, /galleryCommandRegistry\.dispatch\(button\.dataset\.galleryCommand/);
+  assert.match(galleryJs, /galleryCommandRegistry\.commandForKeyboard\(event\)/);
+  assert.doesNotMatch(galleryJs, /densityControl\.addEventListener\("click"/);
+  assert.doesNotMatch(galleryJs, /if \(event\.key === "g" \|\| event\.key === "G"\)/);
+  assert.doesNotMatch(densityMoreCommand, /setGalleryStatus|Grid /);
+  assert.doesNotMatch(densityLessCommand, /setGalleryStatus|Grid /);
+});
+
 test("search and filter changes keep the filter controls in view", () => {
   const filterControls = galleryJs.slice(
     galleryJs.indexOf("filterBar.addEventListener(\"change\""),
@@ -122,6 +141,51 @@ test("search and filter changes keep the filter controls in view", () => {
     galleryJs.indexOf("if (moreButton) moreButton.hidden = true", galleryJs.indexOf("data-clear-gallery-empty")),
   );
   assert.match(emptyFilterReset, /renderGallery\(\{ scrollSelection: false \}\);/);
+});
+
+test("public gallery filter bar compacts every control without changing its markup contract", () => {
+  const filterMarkupStart = galleryJs.indexOf("filterBar.innerHTML = `");
+  const filterMarkupEnd = galleryJs.indexOf("`;", filterMarkupStart);
+  const filterMarkup = galleryJs.slice(filterMarkupStart, filterMarkupEnd);
+  assert.match(filterMarkup, /gallery-search-label/);
+  assert.match(filterMarkup, /data-gallery-search/);
+  assert.match(galleryJs, /datePickerControlMarkup\("dateFrom", "gallery\.date_from"\)/);
+  assert.match(galleryJs, /datePickerControlMarkup\("dateTo", "gallery\.date_to"\)/);
+  const dateMarkupStart = galleryJs.indexOf("const datePickerControlMarkup");
+  const dateMarkupEnd = galleryJs.indexOf("const ensureGalleryFilterControls", dateMarkupStart);
+  const dateMarkup = galleryJs.slice(dateMarkupStart, dateMarkupEnd);
+  assert.match(dateMarkup, /gallery-date-label/);
+  assert.match(dateMarkup, /gallery-date-control/);
+  assert.match(filterMarkup, /data-gallery-filter="mediaType"/);
+  assert.match(filterMarkup, /data-gallery-filter="orientation"/);
+  assert.match(filterMarkup, /gallery-sort-label/);
+  assert.match(filterMarkup, /data-gallery-filter="sort"/);
+  assert.match(filterMarkup, /gallery-filter-clear/);
+  assert.match(filterMarkup, /data-clear-gallery-filters/);
+
+  const filterCssStart = photosCss.indexOf(".gallery-filter-bar{\n");
+  const filterCssEnd = photosCss.indexOf(".gallery-filter-toggle", filterCssStart);
+  const filterCss = photosCss.slice(filterCssStart, filterCssEnd);
+  assert.match(filterCss, /--gallery-filter-control-size:34px;/);
+  assert.match(filterCss, /column-gap:6px;[\s\S]*?row-gap:0;/);
+  assert.match(filterCss, /margin-top:15px;/);
+  assert.match(filterCss, /padding:15px;/);
+  assert.match(photosCss, /grid-template-rows:auto var\(--gallery-filter-control-size\);/);
+  assert.match(photosCss, /\.gallery-filter-bar label\{[\s\S]*?gap:1px;/);
+  assert.match(photosCss, /\.gallery-filter-bar label > span\{[\s\S]*?min-height:1em;/);
+  assert.match(photosCss, /flex:2 1 220px;[\s\S]*?max-width:340px;/);
+  assert.match(photosCss, /flex:1 1 180px;[\s\S]*?max-width:230px;/);
+  assert.match(photosCss, /height:var\(--gallery-filter-control-size\);[\s\S]*?min-height:var\(--gallery-filter-control-size\);/);
+  assert.match(photosCss, /\.gallery-filter-bar select:focus-visible,[\s\S]*?outline:2px solid currentColor;/);
+
+  const responsiveStart = photosCss.indexOf("  .gallery-filter-toggle{\n    display:inline-flex;");
+  const responsiveCss = photosCss.slice(responsiveStart);
+  assert.match(responsiveCss, /\.gallery-filter-bar\{\n    display:none;\n  \}/);
+  assert.match(responsiveCss, /\.gallery-filter-bar\.is-open\{\n    display:flex;\n  \}/);
+  assert.match(responsiveCss, /\.gallery-filter-bar label,[\s\S]*?flex:1 1 calc\(50% - 6px\);/);
+  assert.match(responsiveCss, /\.gallery-filter-bar label:has\(\.gallery-date-control\)[\s\S]*?flex-basis:100%;/);
+  assert.match(responsiveCss, /\.gallery-filter-bar \.gallery-search-label,[\s\S]*?\.gallery-sort-label\{[\s\S]*?flex-basis:100%;/);
+  assert.match(responsiveCss, /\.gallery-filter-clear\{\n    flex:1 1 100%;/);
 });
 
 test("gallery date filters use inline DD MMM YYYY controls", () => {

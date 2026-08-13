@@ -1622,19 +1622,13 @@ const galleryCommands = [
     id: "density-more", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 30,
     label: "More Photos", icon: "−", shortcut: commandShortcut("G", { caseSensitive: true }), shortcutLabel: "G",
     state: () => ({ enabled: preferredDensityColumns() < maxDensityColumns(), disabledReason: "Already showing the most columns." }),
-    execute: () => {
-      const columns = stepGalleryDensity(1);
-      setGalleryStatus(`Grid ${columns}.`);
-    },
+    execute: () => stepGalleryDensity(1),
   },
   {
     id: "density-less", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 40,
     label: "Fewer Photos", icon: "+", shortcut: commandShortcut("g", { caseSensitive: true }), shortcutLabel: "g",
     state: () => ({ enabled: preferredDensityColumns() > 1, disabledReason: "Already showing the fewest columns." }),
-    execute: () => {
-      const columns = stepGalleryDensity(-1);
-      setGalleryStatus(`Grid ${columns}.`);
-    },
+    execute: () => stepGalleryDensity(-1),
   },
   {
     id: "fit-fill", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 50,

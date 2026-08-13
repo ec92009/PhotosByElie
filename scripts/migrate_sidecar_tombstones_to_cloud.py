@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
-"""Migrate legacy PhotoKit-local Sidecar tombstones to Apple cloud IDs."""
+"""Inventory legacy PhotoKit-local Sidecar tombstones for PBB-78 redesign.
+
+The former ``--apply`` path is intentionally retired. Sidecar is not a
+lifecycle authority, and this script must never write tombstones locally or to
+cloud state. A future PBB-78 migration requires its own canonical PBB-79
+gateway contract and receipt-backed deployed deny projection.
+"""
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
-import hashlib
+from dataclasses import dataclass
 import json
-import os
 from pathlib import Path
 import sqlite3
-import sys
 from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OWNER_DB = REPO_ROOT / "assets/owner-actions/Owner.sqlite"
 DEFAULT_MAPPING = REPO_ROOT / "tmp/sidecar-cloud-id-map/max-local-to-cloud.jsonl"
-DEFAULT_CONFIG = Path.home() / ".config/photosbyelie/connector.json"
 DEFAULT_REPORT = REPO_ROOT / "tmp/sidecar-tombstone-audit/cloud-migration-report.json"
 
 
@@ -88,86 +90,6 @@ def migration_plan(owner_db: Path, mapping: dict[str, str]) -> tuple[list[Migrat
     return rows, unmapped, current_cloud_ids
 
 
-def configure_cloud(config_path: Path) -> None:
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    os.environ["PBE_OWNER_WORKER_BASE"] = str(payload.get("workerBase") or "").rstrip("/")
-    os.environ["PBE_OWNER_CONNECTOR_TOKEN"] = str(payload.get("token") or "")
-    os.environ["PBE_OWNER_CONNECTOR_ID"] = str(payload.get("connectorId") or "")
-    if not os.environ["PBE_OWNER_WORKER_BASE"] or not os.environ["PBE_OWNER_CONNECTOR_TOKEN"]:
-        raise RuntimeError(f"Connector cloud credentials are incomplete: {config_path}")
-
-
-def apply_migration(
-    rows: list[MigrationRow],
-    batch_size: int,
-    *,
-    plan_digest: str,
-    audit_receipt: str,
-) -> tuple[list[dict[str, Any]], int]:
-    sys.path.insert(0, str(REPO_ROOT / "scripts"))
-    from sidecar_server import _sidecar_cloud_request  # pylint: disable=import-outside-toplevel
-    from sidecar_state_db import mirror_cloud_decisions  # pylint: disable=import-outside-toplevel
-
-    migrated: list[dict[str, Any]] = []
-    already_active = 0
-    for start in range(0, len(rows), batch_size):
-        batch = rows[start:start + batch_size]
-        query = _sidecar_cloud_request(
-            "POST",
-            "/api/v1/sidecar/decisions/query",
-            {"assetIds": [row.cloud_identifier for row in batch]},
-            timeout=60,
-        )
-        current = query.get("decisions") if isinstance(query.get("decisions"), dict) else {}
-        active_states = [
-            {"assetId": row.cloud_identifier, "state": current[row.cloud_identifier]}
-            for row in batch
-            if current.get(row.cloud_identifier, {}).get("tombstoneState") == "active"
-        ]
-        if active_states:
-            mirror_cloud_decisions(REPO_ROOT, active_states)
-        pending = [row for row in batch if current.get(row.cloud_identifier, {}).get("tombstoneState") != "active"]
-        already_active += len(batch) - len(pending)
-        if not pending:
-            print(f"Checked {min(start + len(batch), len(rows))}/{len(rows)}: already protected", flush=True)
-            continue
-        applied = _sidecar_cloud_request(
-            "POST",
-            "/api/v1/sidecar/decisions/apply-batch",
-            {
-                "decisions": [
-                    {
-                        "assetId": row.cloud_identifier,
-                        "action": "tombstone",
-                        "reason": row.reason,
-                        "legacyMigration": {
-                            "kind": "PBB-78-legacy-expo-hidden",
-                            "planDigest": plan_digest,
-                            "auditReceipt": audit_receipt,
-                        },
-                    }
-                    for row in pending
-                ]
-            },
-            timeout=120,
-        )
-        states = [
-            {"assetId": item.get("assetId"), "state": item.get("state")}
-            for item in applied.get("items") or []
-            if isinstance(item, dict) and item.get("assetId") and isinstance(item.get("state"), dict)
-        ]
-        if len(states) != len(pending):
-            raise RuntimeError(f"Cloud batch returned {len(states)} states for {len(pending)} tombstones.")
-        mirror_cloud_decisions(REPO_ROOT, states)
-        migrated.extend(states)
-        print(
-            f"Migrated {len(migrated)}; checked {min(start + len(batch), len(rows))}/{len(rows)}; "
-            f"already protected {already_active}",
-            flush=True,
-        )
-    return migrated, already_active
-
-
 def write_report(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -177,17 +99,24 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--owner-db", type=Path, default=DEFAULT_OWNER_DB)
     parser.add_argument("--mapping", type=Path, default=DEFAULT_MAPPING)
-    parser.add_argument("--connector-config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    parser.add_argument("--batch-size", type=int, default=25)
-    parser.add_argument("--apply", action="store_true", help="Write missing tombstones to cloud state.")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Retired: exits before reading inputs and never writes lifecycle state.",
+    )
     args = parser.parse_args()
+    if args.apply:
+        parser.error(
+            "--apply is retired: Sidecar cannot write lifecycle state. "
+            "PBB-78 requires a separately designed canonical PBB-79 gateway migration."
+        )
 
     mapping = load_mapping(args.mapping)
     rows, unmapped, current_cloud_ids = migration_plan(args.owner_db, mapping)
     plan = {
         "ok": not unmapped,
-        "mode": "apply" if args.apply else "dry-run",
+        "mode": "inventory-only",
         "legacyTombstoneCount": len(rows) + len(unmapped),
         "mappedCount": len(rows),
         "unmappedCount": len(unmapped),
@@ -196,40 +125,9 @@ def main() -> int:
         "absentCurrentIndexTargetCount": sum(row.cloud_identifier not in current_cloud_ids for row in rows),
         "unmappedLocalIdentifiers": unmapped,
     }
-    if not args.apply:
-        write_report(args.report, plan)
-        print(json.dumps(plan, indent=2))
-        return 0 if not unmapped else 2
-    if unmapped:
-        raise RuntimeError(f"Refusing migration with {len(unmapped)} unmapped legacy tombstones.")
-
-    configure_cloud(args.connector_config)
-    plan_digest = hashlib.sha256(
-        json.dumps(plan, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    migrated, already_active = apply_migration(
-        rows,
-        max(1, min(args.batch_size, 100)),
-        plan_digest=plan_digest,
-        audit_receipt=str(args.report),
-    )
-    report = {
-        **plan,
-        "migratedCount": len(migrated),
-        "alreadyCloudTombstonedCount": already_active,
-        "migrated": [
-            {
-                "assetId": item["assetId"],
-                "tombstoneState": item["state"].get("tombstoneState"),
-                "updatedAt": item["state"].get("updatedAt"),
-            }
-            for item in migrated
-        ],
-        "sourceRows": [asdict(row) for row in rows],
-    }
-    write_report(args.report, report)
-    print(json.dumps({key: value for key, value in report.items() if key not in {"migrated", "sourceRows"}}, indent=2))
-    return 0
+    write_report(args.report, plan)
+    print(json.dumps(plan, indent=2))
+    return 0 if not unmapped else 2
 
 
 if __name__ == "__main__":

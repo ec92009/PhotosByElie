@@ -7,10 +7,13 @@ registry answers "what can this email do?"
 ## Tiers
 
 - `admin`: `ec92009@gmail.com` only. Admin can open the Access Console Sandbox
-  and manage the user registry through guarded cloud Worker routes. Admin is a
-  bootstrap identity, not a stored or grantable role.
-- `owner`: trusted Owner workflow user. Owner can run cloud Owner work from any
-  machine after Google login once the corresponding cloud Owner APIs exist.
+  from an enrolled Backstage session on a Mac and manage the user registry
+  through guarded cloud Worker routes. Direct Google browser sign-in is
+  provisioning-only and cannot open or act through the Access Console. Admin
+  is a bootstrap identity, not a stored or grantable role.
+- `owner`: trusted Owner workflow identity. Google login alone is not actionable.
+  Owner work runs from enrolled Backstage on a Mac with a device-bound bearer;
+  the browser exception for `ec92009@gmail.com` is credential provisioning only.
 - `re_client`: Real Estate client. The registry stores the exact gallery keys
   this email may open. No separate client password is required for the
   Google-backed path.
@@ -126,67 +129,73 @@ and cannot be granted through ACS.
 - `GET /auth/google/callback`: exchanges the Google authorization code,
   validates the Google ID token, sets the signed `pbe_google_session` cookie,
   and returns to the allowed `returnTo` URL. When that URL is an allowed
-  local/Tailscale HTTP preview, the callback also adds a signed session token to
-  the URL fragment so Safari can authenticate Owner/ACS API calls without
-  depending on third-party cookies.
+  local/Tailscale HTTP preview, the callback may also add a signed browser
+  session token to the URL fragment so Safari can authenticate credential
+  provisioning without depending on third-party cookies. That browser token
+  cannot authorize Access Console reads or writes and does not grant Owner
+  workflow actions.
 - `GET /auth/login`: legacy Cloudflare Access login entrypoint. Redirects back
   to the allowed `returnTo` origin after Access has authenticated the browser.
 - `GET /auth/logout` or `POST /auth/logout`: clears the direct OAuth session
   cookie when direct Google OAuth is configured. Otherwise it redirects through
   Cloudflare Access logout when Access is configured; with a Cloudflare Access
   team name, the Worker prefers the team-domain logout URL.
-- `GET /owner/session`: requires a Google session whose registry tier is
-  `owner`, or the configured Admin email.
-- `GET /owner/actions`: requires an Owner/Admin Google session and lists recent
+- `GET /owner/session`: reports the signed identity and explicitly distinguishes
+  provisioning-only Google sessions from actionable Backstage sessions.
+- `GET /owner/actions`: requires an active enrolled Backstage device session and lists recent
   queued cloud Owner actions from the KV recent-action head plus timestamp
   index. New actions update the head key so the Owner app can reload across
   machines without depending only on KV prefix-list freshness.
-- `POST /owner/actions`: requires an Owner/Admin Google session and stores a
+- `POST /owner/actions`: requires an active enrolled Backstage device session and stores a
   queued cloud Owner action record. This is the protected mutation entrypoint
-  for future remote Owner work; it does not grant roles.
-- `GET /owner/actions/<id>`: requires an Owner/Admin Google session and reads a
+  for native Owner work; it does not grant roles.
+- `GET /owner/actions/<id>`: requires an active enrolled Backstage device session and reads a
   queued cloud Owner action record.
-- `POST /owner/actions/<id>/claim`: requires an Owner/Admin Google session,
+- `POST /owner/actions/<id>/claim`: requires Backstage or the exact scoped connector,
   changes a queued action to `claimed`, stores connector id, claimant, claim
   time, and a short lease timestamp.
-- `POST /owner/actions/<id>/complete`: requires an Owner/Admin Google session,
+- `POST /owner/actions/<id>/complete`: requires Backstage or the exact scoped connector,
   changes a claimed action to `completed`, and stores a result object.
-- `POST /owner/actions/<id>/fail`: requires an Owner/Admin Google session and
+- `POST /owner/actions/<id>/fail`: requires Backstage or the exact scoped connector and
   marks a queued or claimed action `failed` with a short error message.
 - Local helper `POST /__photosbyelie/new-owner-connector`: requires localhost
   or `--allow-lan-owner` private/Tailscale access, accepts a claimed or
-  completed `sidecar-culling-review` action, reads Sidecar state from local
+  completed legacy `sidecar-culling-review` action, reads the historical
+  Sidecar-named decision schema from local
   `Owner.sqlite`, and returns compact review-window details for the Owner UI
   and Worker `complete` route. The read/open path does not grant roles and does
   not mutate `Owner.sqlite`.
 - Local helper `POST /__photosbyelie/new-owner-sidecar-decision`: requires the
   same local/private-LAN guard, accepts an explicit `pick`, `unpick`, or
-  `reject` decision for one Sidecar asset id, and writes the staged decision to
-  local `Owner.sqlite`.
-- `POST /real-estate/access-login`: requires a Google session whose registry
-  grants include the requested `galleryKey` or an Owner/Admin session. It mints
-  the existing signed Real Estate session cookie so the current gallery-scoped
-  deliverables/originals APIs keep their object-prefix restrictions.
-- `GET /access-console/state`: requires Admin and returns session, people,
+  `reject` decision for one historical Sidecar-named asset id, and writes the
+  staged decision to local `Owner.sqlite`. These identifiers are compatibility
+  only: Sidecar is obsolete and cannot launch or authorize Owner work.
+- `POST /real-estate/access-login`: requires a Google browser session whose
+  registry grants include the requested `galleryKey`, or an enrolled Backstage
+  device session with Owner/Admin privilege. Direct Google Owner/Admin identity
+  alone is not a gallery grant. The route mints the existing signed Real Estate
+  session cookie so the current gallery-scoped deliverables/originals APIs keep
+  their object-prefix restrictions.
+- `GET /access-console/state`: requires Backstage-device Admin and returns session, people,
   audience groups, gallery options, fixture events, audit events, grantable role
   metadata, capability metadata, and password-login status without password
   hashes or salts.
-- `GET /access-console/gallery-access`: requires Admin and returns a read-only
+- `GET /access-console/gallery-access`: requires Backstage-device Admin and returns a read-only
   policy rehearsal for a gallery key: regular visitor, selected access person,
   and Owner/Admin decisions for view, watermark/original preview, checkout,
   assigned downloads, re-downloads, PDF, and video.
-- `POST|PUT|PATCH /access-console/people`: requires Admin and upserts one
+- `POST|PUT|PATCH /access-console/people`: requires Backstage-device Admin and upserts one
   person's non-admin roles, audience group memberships, Real Estate grants,
   name, notes, and optional gallery-scoped password login. A blank password
   preserves an existing verifier; a new value replaces it.
-- `POST|PUT|PATCH /access-console/groups`: requires Admin and creates or updates
+- `POST|PUT|PATCH /access-console/groups`: requires Backstage-device Admin and creates or updates
   an audience group, gallery key, access policy, capability list, and
   per-gallery defaults.
-- `POST /access-console/groups/<id>/archive`: requires Admin, marks the audience
+- `POST /access-console/groups/<id>/archive`: requires Backstage-device Admin, marks the audience
   group archived, and revokes active memberships for that group.
-- `POST /access-console/people/<email>/disable`: requires Admin and revokes
+- `POST /access-console/people/<email>/disable`: requires Backstage-device Admin and revokes
   active roles, group memberships, and grants without deleting audit history.
-- `POST /access-console/fixtures/seed`: requires Admin and seeds fake `.test`
+- `POST /access-console/fixtures/seed`: requires Backstage-device Admin and seeds fake `.test`
   people plus the `Agnes's B'day`, `RE La Concha`, and `Johnson-Palmer wedding`
   family/event/RE rehearsal records.
 
@@ -199,8 +208,10 @@ fallback for older client links.
 
 `access-console.html` is the single-repo sandbox UI for role-management
 rehearsal. It talks to the auth Worker at the configured
-`authWorkerBaseUrl`/`checkoutWorkerBaseUrl`, requires the bootstrap Admin Google
-session, and performs reversible writes:
+`authWorkerBaseUrl`/`checkoutWorkerBaseUrl`, requires an active enrolled
+Backstage-device session for the bootstrap Admin, and performs reversible
+writes. A direct Google browser session, including the bootstrap Admin identity,
+cannot read or mutate Access Console state:
 
 - `owner` and `re_client` can be granted or revoked.
 - `admin` is displayed as bootstrap-only and rejected if submitted.

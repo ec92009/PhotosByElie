@@ -1,6 +1,6 @@
 # Photos By Elie North Star
 
-Last updated: 2026-07-08
+Last updated: 2026-08-13
 
 ## Purpose
 
@@ -10,7 +10,7 @@ The overarching goal is to make money from the enterprise. Product choices, work
 
 The main near-term asset is Elie's Apple Photos library of 57K+ photos. Many of those photos may be usable for the public gallery and store, so finishing intake, curation, metadata, publication, and protected sale/download paths for that library has priority over hypothetical future verticals.
 
-Elie can photograph travel, art, Real Estate, family, or events; decide who may see what; publish safely; sell downloads where appropriate; deliver Real Estate PDFs/videos; and manage the whole thing from any computer without being tied to one Mac.
+Elie can photograph travel, art, Real Estate, family, or events; decide who may see what; publish safely; sell downloads where appropriate; deliver Real Estate PDFs/videos; and manage Owner workflows from Backstage on any enrolled Mac rather than being tied to one specific Mac.
 
 "Finished" does not mean no future ideas. It means the system is dependable enough to use in real life without Codex babysitting every step.
 
@@ -58,11 +58,13 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
    - Attendees can buy or download allowed items.
    - Event access does not leak into other galleries or admin powers.
 
-6. **Owner Anywhere**
-   - The Owner app works from Mac, Windows, Linux, or tablet.
-   - Cloud auth identifies Owner/Admin access.
-   - Max, David, and Curie can act as local connectors when source files or Apple Photos are needed.
-   - Elie can switch computers without losing workflow state.
+6. **Owner On Any Mac**
+   - Backstage is a macOS app and may run on any enrolled Mac.
+   - Launching PBE from Backstage is the only path into an actionable hosted PBE Owner session.
+   - A normal PBE browser login, including Google login, never grants X, review, hide, or other Owner workflow actions.
+   - The sole browser exception is credential provisioning: a direct Google sign-in as `ec92009@gmail.com` may create a show-once Backstage credential, list its non-secret metadata, or revoke it (rotation is revoke then create), but cannot perform Owner workflow actions.
+   - Backstage stores the credential in macOS Keychain and uses it to mint a short-lived, fixture-frozen Owner session. Max, David, Curie, or another enrolled Mac may host the local connector without changing the authoritative fixture or writer.
+   - Elie can switch Macs without losing cloud-backed workflow and audit state.
 
 7. **Access And Roles**
    - Roles are clear: Owner/Admin, Real Estate client, event attendee, family, regular buyer, and unregistered visitor.
@@ -97,7 +99,7 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
 - Publish Real Estate client galleries with PDF/video deliverables.
 - Share family/private galleries safely.
 - Sell private event downloads with controlled access.
-- Manage access, roles, galleries, invites, and workflow state from Owner.
+- Manage access, roles, galleries, invites, and workflow state from Backstage on an enrolled Mac.
 - Use local connector machines only when hardware/local files are truly required.
 - Make every paid/private asset path security-reviewed.
 - Improve public discovery and SEO.
@@ -107,7 +109,7 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
 
 ## Goal Statement
 
-Photos By Elie is finished when Elie can independently run four real workflows end to end:
+Photos By Elie is finished when Elie can independently run five real workflows end to end:
 
 1. Intake, curate, publish, and sell usable photos from the Apple Photos library.
 2. Publish and sell a public photo download.
@@ -115,7 +117,7 @@ Photos By Elie is finished when Elie can independently run four real workflows e
 4. Share a family/friends gallery privately.
 5. Publish a private paid event gallery.
 
-All four should work from a normal browser, with secure access control, mobile usability, cloud-backed state, and no unpaid access to protected originals.
+Customer and client portions of all five workflows should work from a normal browser with secure access control, mobile usability, cloud-backed state, and no unpaid access to protected originals. Owner decisions and mutations run only in Backstage on an enrolled Mac, including a short-lived Backstage-launched PBE Owner gallery when that gallery surface is useful.
 
 ## Deviation Check
 

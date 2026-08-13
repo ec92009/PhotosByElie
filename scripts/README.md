@@ -158,15 +158,15 @@ Product and pricing data comes from `assets/catalog/product-pricing.json`. `scri
 
 Public catalog rebuilds refuse to overwrite a populated SQLite catalog, Worker catalog, or homepage manifest with zero media rows unless `PBE_ALLOW_EMPTY_PUBLIC_CATALOG=1` is set, or `scripts/build_public_catalog_db.py` is run with `--allow-empty`.
 
-For normal localhost preview with Owner tools, run the small local server instead of the bare static server:
+For a Backstage-hosted, fixture-frozen PBE Owner gallery, Backstage attaches to or launches the small local server instead of Expo or the bare static server:
 
 ```bash
 python3 scripts/local_server.py 8000
 ```
 
-This still serves the same static site files, but adds localhost-only endpoints that let the Owner page update the Waste Basket blacklist, classify Unknown photos, save owner metadata edits, summarize R2 coverage, and run local R2 maintenance. GitHub Pages never gets those endpoints; the published site remains static.
+This still serves the same static site files. The dedicated `/__photosbyelie/pbe-owner/*` endpoints require a short-lived Worker-validated session minted by enrolled Backstage, freeze the active fixture and source/catalog identities, and allow hosted gallery X/restore only through the shared PBB-79 Waste Basket gateway. GitHub Pages never gets those endpoints; the published site remains static.
 
-Owner mutation endpoints are unlocked on localhost by the helper server without a password.
+Loopback origin alone is not Owner authorization. A normal browser or Google login cannot use the PBE Owner endpoints, and the generic photo-action endpoint rejects hosted-gallery authority claims. Backstage keeps its device credential in macOS Keychain and the Worker session token in memory. The browser receives only a single-use opaque handoff, removes it immediately, and exchanges it for an HttpOnly, session-only loopback cookie.
 
 To create the macOS Dock launcher for an Owner import workstation, install the local app bundle and add it to the Dock:
 

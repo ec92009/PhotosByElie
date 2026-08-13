@@ -3,9 +3,10 @@
 ## Purpose
 
 PhotosByElie Backstage is the private macOS replacement for browser Owner
-mutation surfaces. Public buyer pages and private client pages remain web
-applications. The first production writer is Max; future Mac and mobile
-clients are readers and action submitters until an explicit authority
+mutation surfaces. It may run on any enrolled Mac. Public buyer pages and
+private client pages remain web applications; ordinary browser login never
+grants Owner workflow actions. The first production writer is Max, and other
+enrolled Macs remain readers or action submitters until an explicit authority
 migration is rehearsed.
 
 ## Modules
@@ -130,8 +131,12 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 
 ## Authentication and secrets
 
-- Human enrollment starts from a current Owner session.
-- A device credential is returned once and stored in Keychain.
+- Human enrollment starts only from a direct Google browser sign-in as
+  `ec92009@gmail.com`. That browser surface is credential provisioning only and
+  cannot X, review, hide, publish, or invoke another Owner workflow.
+- A device credential is returned once and stored by Backstage in macOS
+  Keychain. It is never stored in a URL, log, repo, fixture, test vector, or
+  durable browser storage.
 - OwnerCore exchanges it for a 15-minute bearer token and rotating 30-day
   refresh token.
 - Refresh tokens and connector credentials are different security classes.
@@ -139,6 +144,27 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 - Device revocation is independent and invalidates its indexed refresh tokens.
 - Cookies, OAuth secrets, connector credentials, and permanent R2 credentials
   are never embedded in the app.
+
+## Backstage-launched PBE Owner session
+
+The Backstage sidebar exposes the sole launch point for actionable hosted PBE
+Owner mode. It starts from the authoritative current fixture, verifies the
+existing loopback host readiness identities, mints a five-minute Worker session,
+and opens a gallery bound to that fixture, source/catalog identity, device,
+capabilities, expiry, and `pbb-79-waste-basket` lifecycle writer.
+
+The browser receives a one-time opaque handoff in the URL fragment, removes it
+immediately, and exchanges it for an HttpOnly, SameSite, session-only loopback
+cookie. The browser never receives the Worker session token or device
+credential. Backstage freezes the fixture while the session is active; the
+Worker and host reject a missing, revoked, expired, closed, mismatched, or
+unready lease.
+
+Hosted gallery X and restore route through the dedicated loopback session
+endpoint and shared PBB-79 gateway. Hosted PBE cannot directly create a global
+tombstone or empty the Waste Basket. See
+[`pbe-owner-host-session.md`](pbe-owner-host-session.md) for the complete
+contract.
 
 ## Threat model
 
@@ -173,10 +199,10 @@ The public Owner page declares its active writer on the `body` element:
   legacy Apple Photos intake, and the Owner action queue; it also skips their
   data loads and mutation listeners.
 
-Backstage mode leaves enrollment, authentication, access state, connector
-health, and audit views available. It does not delete compatibility routes or
-browser code. Rolling back is therefore one reviewed attribute change followed
-by the normal versioned publication process.
+Backstage mode leaves only Google authentication and device credential
+provisioning in the browser. Compatibility markup remains hidden for rollback,
+but Worker routes independently reject browser workflow mutation. Re-enabling
+markup alone cannot restore browser Owner authority.
 
 Max completed the gate on 2026-07-25: one-time device enrollment, cold
 Keychain session restoration, read-only `Owner.sqlite` access, explicit Photos
@@ -190,12 +216,13 @@ The production attribute is therefore `data-owner-writer="backstage"`.
 - `OwnerAPITransport` allows URLSession now and test/offline transports.
 - `OwnerDatabaseReading` keeps UI use cases independent of SQLite details.
 - `PhotoLibraryServing` isolates PhotoKit authorization and export.
-- `OwnerActionServing` and `OwnerActionRunner` allow future Macs and mobile devices to submit
-  actions without becoming writers.
+- `OwnerActionServing` and `OwnerActionRunner` allow future enrolled Macs to
+  submit actions without becoming writers.
 - Server-declared capabilities hide unsupported workflows on non-authoritative
   devices.
 
-Multi-Mac writer election and mobile Owner UI remain outside this architecture.
+Multi-Mac writer election remains outside this architecture. Mobile Owner UI is
+not a target; customer and client mobile web remain supported.
 Browser Owner retirement is implemented as the reversible active-writer gate
 above rather than deletion of the compatibility surface.
 

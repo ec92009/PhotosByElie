@@ -1,12 +1,16 @@
-# Photos By Elie Sidecar Architecture
+# Legacy Photos By Elie Sidecar Architecture
 
 Date: 2026-07-04
 
-Sidecar is the Apple Photos triage engine behind the authenticated cloud Owner
-workspace. Its Mac-local Culling and Review UI is the canonical working surface,
-launched from New Owner on the selected connector Mac; it is not replaced by a
-reduced cloud record list. Sidecar decides library fate and metadata; Owner
-controls which Mac opens it, connector work, publication, and commerce.
+Status: obsolete historical snapshot. Sidecar is not a supported product,
+authority, client, or launch path. Backstage is the supported Owner client;
+OwnerCore/`Owner.sqlite` and the PBB-79 gateway are the active state and
+lifecycle boundaries. Retained Sidecar-named schemas, services, routes, and
+action kinds are compatibility identifiers pending separately audited removal.
+
+The remainder of this document records the former design for migration and
+rollback archaeology only. Its present-tense statements must not be read as
+current architecture.
 
 ## Version
 

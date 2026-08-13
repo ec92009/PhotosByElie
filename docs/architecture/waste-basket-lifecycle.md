@@ -47,11 +47,12 @@ The public Python boundary is:
 | --- | --- | --- |
 | Native Culling | `LifecycleService.moveToWasteBasket` -> `photo-moderation` connector action | `source=backstage-culling` |
 | Native Review | `BackstageViewModel.moveReviewSelectionToWasteBasket` -> same service/action | `source=backstage-review` |
-| Owner web / Owner gallery | `hidden-actions.js` -> local server or Worker connector -> `apply_photo_action` | `source=owner-gallery` requires `owner_mode` and `owner_authorized` |
+| Backstage-hosted PBE Owner gallery | `hidden-actions.js` -> authenticated loopback session -> `apply_photo_action` | `source=owner-gallery` is derived from the frozen lease |
 | Waste Basket | native or web Empty/Put back controls -> same gateway | Empty confirmation and exact token are required |
 
-PBE-122 does not get a second host or writer in this change. Its future
-Owner-mode gallery call is defined by the `owner-gallery` authorization seam.
+PBE-122 does not get a second host or writer. Its hosted Owner gallery uses the
+existing loopback host and the `owner-gallery` authorization seam; the browser
+cannot assert the trusted booleans itself.
 
 ## Bypass and compatibility policy
 
@@ -65,11 +66,11 @@ Normal UI, API, import, cleanup, and R2 routes cannot write a tombstone:
 - `owner_state_db.py --sync-media-lifecycle` is a dry-run by default. Its
   `--sync-media-lifecycle-apply` form requires a non-empty legacy audit receipt
   and plan digest; read paths use existing SQLite rows and never invoke it;
-- direct local/cloud Sidecar tombstone decisions are rejected;
+- direct local/cloud legacy Sidecar tombstone decisions are rejected;
 - the generic `sidecar_cloud_migration.py` refuses to upsert active legacy
   tombstones; only the separately named, dry-run-by-default PBB-78 migration
   carries its audited legacy marker;
-- the low-level Python Sidecar primitive accepts a tombstone only with the
+- the low-level Python Sidecar-named compatibility primitive accepts a tombstone only with the
   explicit `PBB-78-legacy-expo-hidden` marker, non-empty plan digest, and audit
   receipt;
 - the PBB-78 migration remains dry-run by default and emits that marker only
@@ -77,6 +78,7 @@ Normal UI, API, import, cleanup, and R2 routes cannot write a tombstone:
 
 Existing cleanup and migration tools remain separately named legacy/repair
 surfaces. They are not allowed to masquerade as X or Empty Waste Basket.
+Sidecar itself is obsolete as a product, authority, and launch path.
 
 ## Rollback and operational gate
 

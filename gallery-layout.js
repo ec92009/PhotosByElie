@@ -18,6 +18,8 @@
     isPanorama = (photo) => window.photosByEliePhotoIsPanorama?.(photo),
   } = {}) => {
     let pendingLayout = 0;
+    let contentObserver = null;
+    const observedTargets = new Set();
     const params = new URLSearchParams(window.location.search);
     const initialDensity = Number(params.get("columns") || params.get("grid"));
     let densityOverride = Number.isFinite(initialDensity) && initialDensity > 0 ? initialDensity : null;
@@ -51,6 +53,54 @@
       if (!pendingLayout) return;
       window.cancelAnimationFrame(pendingLayout);
       pendingLayout = 0;
+    };
+
+    const schedulePreviewLayout = () => {
+      if (pendingLayout) return;
+      pendingLayout = window.requestAnimationFrame(() => {
+        pendingLayout = 0;
+        applyPreviewLayout(getPhotos());
+      });
+    };
+
+    const observePreviewContent = () => {
+      if (!root || typeof window.ResizeObserver !== "function") return;
+      if (!contentObserver) contentObserver = new window.ResizeObserver(schedulePreviewLayout);
+      const nextTargets = new Set([root, ...root.querySelectorAll("[data-photo-link], [data-photo-caption]")]);
+      observedTargets.forEach((target) => {
+        if (nextTargets.has(target)) return;
+        contentObserver.unobserve(target);
+        observedTargets.delete(target);
+      });
+      nextTargets.forEach((target) => {
+        if (observedTargets.has(target)) return;
+        contentObserver.observe(target);
+        observedTargets.add(target);
+      });
+    };
+
+    const styleValue = (card, property) => (
+      card.style.getPropertyValue?.(property) || card.style.get?.(property) || ""
+    );
+
+    const setStyleValue = (card, property, value) => {
+      const nextValue = String(value);
+      if (styleValue(card, property) === nextValue) return;
+      card.style.setProperty(property, nextValue);
+    };
+
+    const clearPreviewSpans = (card) => {
+      ["--gallery-column-span", "--gallery-masonry-span"].forEach((property) => {
+        if (styleValue(card, property)) card.style.removeProperty(property);
+      });
+    };
+
+    const photoForCard = (card, photos) => {
+      const rawIndex = String(card.dataset?.photoIndex ?? "");
+      if (!/^\d+$/.test(rawIndex)) return null;
+      const index = Number(rawIndex);
+      if (!Number.isSafeInteger(index) || index < 0 || index >= photos.length) return null;
+      return photos[index] || null;
     };
 
     const previewLayoutMetrics = () => {
@@ -133,28 +183,27 @@
       cancelPreviewLayout();
       applyDensityControls();
       applyFitMode();
-      const cards = root.querySelectorAll("[data-photo-index]");
+      const cards = [...root.querySelectorAll("[data-photo-index]")];
+      observePreviewContent();
       if (fitMode !== "fit") {
-        cards.forEach((card) => {
-          card.style.removeProperty("--gallery-column-span");
-          card.style.removeProperty("--gallery-masonry-span");
-        });
+        cards.forEach(clearPreviewSpans);
         return;
       }
       const metrics = previewLayoutMetrics();
       if (!metrics) {
-        pendingLayout = window.requestAnimationFrame(() => {
-          pendingLayout = 0;
-          applyPreviewLayout(photos);
-        });
+        cards.forEach(clearPreviewSpans);
         return;
       }
-      cards.forEach((card, index) => {
-        const photo = photos[index];
+      cards.forEach((card) => {
+        const photo = photoForCard(card, photos);
+        if (!photo) {
+          clearPreviewSpans(card);
+          return;
+        }
         const spanColumns = columnSpan(photo, metrics);
         const captionHeight = card.querySelector("[data-photo-caption]")?.getBoundingClientRect().height || 0;
-        card.style.setProperty("--gallery-column-span", String(spanColumns));
-        card.style.setProperty("--gallery-masonry-span", String(previewSpan(photo, metrics, captionHeight, spanColumns)));
+        setStyleValue(card, "--gallery-column-span", spanColumns);
+        setStyleValue(card, "--gallery-masonry-span", previewSpan(photo, metrics, captionHeight, spanColumns));
       });
     };
 
@@ -162,6 +211,7 @@
       applyDensityControls,
       applyFitMode,
       applyPreviewLayout,
+      observePreviewContent,
       clampDensityColumns,
       fitMode: () => fitMode,
       maxDensityColumns,

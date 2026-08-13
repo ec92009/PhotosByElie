@@ -328,12 +328,14 @@
     if (!galleryRoot) return;
     if (shortcutHint) shortcutHint.hidden = !hiddenActions?.enabled || !shouldShowKeyboardHints();
     if (!hiddenActions?.enabled) {
+      renderedPhotos = [];
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="Owner controls unavailable">
           <span>Owner controls are only available on localhost</span>
         </article>
       `;
       setStatus("Waste Basket review is locked on the public site.");
+      applyPreviewLayout();
       return;
     }
 
@@ -345,15 +347,18 @@
       if (!liveIds.has(photoId)) selectedIds.delete(photoId);
     });
     if (!catalogsLoaded) {
+      renderedPhotos = [];
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="Loading Waste Basket photos">
           <span>Loading Waste Basket photos</span>
         </article>
       `;
       setStatus("Loading Waste Basket photo catalogs.");
+      applyPreviewLayout();
       return;
     }
     if (!allHiddenPhotos.length) {
+      renderedPhotos = [];
       galleryRoot.innerHTML = `
         <article class="mock-photo empty-gallery-card" aria-label="No Waste Basket photos">
           <span>No Waste Basket photos</span>
@@ -361,6 +366,7 @@
       `;
       setStatus("The Waste Basket is empty.");
       syncPagingControls(allHiddenPhotos);
+      applyPreviewLayout();
       return;
     }
 

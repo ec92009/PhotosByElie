@@ -2009,6 +2009,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     writeDetailSequenceContext([]);
     renderedGalleryPhotos = [];
     galleryRoot.innerHTML = "";
+    applyGalleryPreviewLayout([]);
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
     if (showAllButton) showAllButton.hidden = true;
@@ -2064,6 +2065,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
+    applyGalleryPreviewLayout([]);
     return;
   }
   selectedIndex = Math.max(0, Math.min(selectedIndex, visibleSubset.length - 1));

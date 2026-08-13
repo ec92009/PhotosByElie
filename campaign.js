@@ -185,9 +185,11 @@
   const renderSearch = (query) => {
     const terms = window.photosByEliePhotoFilter?.searchTerms?.({ query }) || String(query || "").toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) {
+      searchEntries = [];
       els.searchResults.hidden = true;
       els.searchResults.innerHTML = "";
       els.searchStatus.textContent = "Enter a title, place, keyword, or subject.";
+      searchLayout?.applyPreviewLayout([]);
       return;
     }
     const matches = allPhotos()

@@ -912,6 +912,138 @@ def _lifecycle_request(
     )
 
 
+def _lifecycle_arm_intent_database(config: ConnectorConfig) -> Path:
+    return config.repo_root / "assets" / "owner-actions" / "Owner.sqlite"
+
+
+def _ensure_lifecycle_arm_intent_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """CREATE TABLE IF NOT EXISTS owner_connector_lifecycle_arm_intents (
+          operation_id    TEXT PRIMARY KEY CHECK (trim(operation_id) <> ''),
+          operation       TEXT NOT NULL CHECK (trim(operation) <> ''),
+          denied          INTEGER NOT NULL CHECK (denied IN (0, 1)),
+          asset_ids_json  TEXT NOT NULL,
+          request_json    TEXT NOT NULL,
+          created_at      TEXT NOT NULL,
+          updated_at      TEXT NOT NULL
+        )"""
+    )
+
+
+def _persist_lifecycle_arm_intent(
+    config: ConnectorConfig,
+    operation: str,
+    asset_ids: list[str],
+    request_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Persist the exact remote arm request before network I/O."""
+    operation_id = str(request_payload.get("operationId") or "").strip()
+    if not operation_id:
+        raise RuntimeError("Lifecycle arm intent requires a durable operation ID")
+    intent = {
+        "operationId": operation_id,
+        "operation": str(operation or "").strip().lower(),
+        "denied": bool(request_payload.get("denied")),
+        "assetIds": list(asset_ids),
+        "request": request_payload,
+    }
+    database_path = _lifecycle_arm_intent_database(config)
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(database_path)
+    now = _utc_iso_now()
+    asset_ids_json = json.dumps(intent["assetIds"], ensure_ascii=False, separators=(",", ":"))
+    request_json = json.dumps(request_payload, ensure_ascii=False, separators=(",", ":"))
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        _ensure_lifecycle_arm_intent_schema(connection)
+        existing = connection.execute(
+            """SELECT operation, denied, asset_ids_json, request_json
+                 FROM owner_connector_lifecycle_arm_intents WHERE operation_id = ?""",
+            (operation_id,),
+        ).fetchone()
+        expected = (intent["operation"], int(intent["denied"]), asset_ids_json, request_json)
+        if existing and tuple(existing) != expected:
+            raise RuntimeError("Lifecycle arm intent conflicts with durable initiating intent")
+        if not existing:
+            connection.execute(
+                """INSERT INTO owner_connector_lifecycle_arm_intents
+                  (operation_id, operation, denied, asset_ids_json, request_json, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (operation_id, *expected, now, now),
+            )
+        connection.commit()
+        return intent
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def _pending_lifecycle_arm_intents(config: ConnectorConfig) -> list[dict[str, Any]]:
+    database_path = _lifecycle_arm_intent_database(config)
+    if not database_path.exists():
+        return []
+    connection = sqlite3.connect(database_path)
+    try:
+        _ensure_lifecycle_arm_intent_schema(connection)
+        rows = connection.execute(
+            """SELECT operation_id, operation, denied, asset_ids_json, request_json
+                 FROM owner_connector_lifecycle_arm_intents ORDER BY created_at, operation_id"""
+        ).fetchall()
+        connection.commit()
+        return [{
+            "operationId": str(row[0]),
+            "operation": str(row[1]),
+            "denied": bool(row[2]),
+            "assetIds": json.loads(str(row[3])),
+            "request": json.loads(str(row[4])),
+        } for row in rows]
+    finally:
+        connection.close()
+
+
+def _clear_lifecycle_arm_intent(config: ConnectorConfig, intent: dict[str, Any]) -> None:
+    database_path = _lifecycle_arm_intent_database(config)
+    connection = sqlite3.connect(database_path)
+    request_json = json.dumps(intent["request"], ensure_ascii=False, separators=(",", ":"))
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        _ensure_lifecycle_arm_intent_schema(connection)
+        changed = connection.execute(
+            """DELETE FROM owner_connector_lifecycle_arm_intents
+                 WHERE operation_id = ? AND request_json = ?""",
+            (intent["operationId"], request_json),
+        ).rowcount
+        if changed != 1:
+            raise RuntimeError("Lifecycle arm intent changed before receipt persistence")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def _reconcile_lifecycle_arm_intent(
+    config: ConnectorConfig,
+    client: WorkerClient,
+    gateway: Any,
+    intent: dict[str, Any],
+) -> dict[str, Any]:
+    """Replay an uncertain arm and clear intent only after its receipt is durable."""
+    operation_id = intent["operationId"]
+    arm = _lifecycle_request(client, "arm", operation_id, intent["request"])
+    gateway.record_deployed_lifecycle_arm(
+        config.repo_root,
+        intent["operation"],
+        intent["assetIds"],
+        arm,
+    )
+    _clear_lifecycle_arm_intent(config, intent)
+    return arm
+
+
 def drain_deployed_lifecycle_outbox(
     config: ConnectorConfig,
     client: WorkerClient,
@@ -919,6 +1051,9 @@ def drain_deployed_lifecycle_outbox(
     """Replay durable lifecycle phases independently of cloud action state."""
     gateway = _load_lifecycle_gateway(config.repo_root)
     drained: list[dict[str, Any]] = []
+    for intent in _pending_lifecycle_arm_intents(config):
+        arm = _reconcile_lifecycle_arm_intent(config, client, gateway, intent)
+        drained.append({"operationId": intent["operationId"], "state": "armed", "remote": arm})
     for pending in gateway.pending_deployed_lifecycle_operations(config.repo_root):
         operation_id = pending["operationId"]
         digest = pending["operationDigest"]
@@ -1427,17 +1562,20 @@ def execute_action(
             if operation_id == "owner-action:":
                 raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
             active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
-            lifecycle_arm = _lifecycle_request(active_lifecycle_client, "arm", operation_id, {
+            arm_request = {
                 "operationId": operation_id,
                 "operation": lifecycle_operation,
                 "denied": denied,
                 "items": authoritative_members,
-            })
-            gateway.record_deployed_lifecycle_arm(
-                config.repo_root,
+            }
+            arm_intent = _persist_lifecycle_arm_intent(
+                config,
                 lifecycle_operation,
                 authoritative_ids,
-                lifecycle_arm,
+                arm_request,
+            )
+            lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                config, active_lifecycle_client, gateway, arm_intent
             )
             photo_ids = authoritative_ids
             moderation_payload["photo_ids"] = authoritative_ids

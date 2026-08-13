@@ -685,11 +685,13 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         }
 
     class FakeWorker:
-        def __init__(self, owner, *, fail_once_at=""):
+        def __init__(self, owner, *, fail_once_at="", lose_response_once_at=""):
             self.owner = owner
             self.fail_once_at = fail_once_at
+            self.lose_response_once_at = lose_response_once_at
             self.failed = False
             self.calls = []
+            self.arm_receipts = {}
 
         def request(self, method, path, payload=None, *, idempotency_key=""):
             phase = path.rsplit("/", 1)[-1]
@@ -698,7 +700,12 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                 self.failed = True
                 raise RuntimeError(f"synthetic {phase} crash")
             if phase == "arm":
-                return self.owner._arm(payload)
+                operation_id = payload["operationId"]
+                receipt = self.arm_receipts.setdefault(operation_id, self.owner._arm(payload))
+                if phase == self.lose_response_once_at and not self.failed:
+                    self.failed = True
+                    raise RuntimeError(f"synthetic {phase} response loss after commit")
+                return receipt
             return {"ok": True, "state": phase}
 
     def _persist_local_commit(self, operation_id="owner-action:action-1"):
@@ -772,6 +779,65 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                 "connector-lifecycle:owner-action:action-1:ack",
             ],
         )
+
+    def test_commit_then_arm_response_loss_replays_stable_intent_and_aborts(self):
+        worker = self.FakeWorker(self, lose_response_once_at="arm")
+        applied = []
+
+        def apply(*_args, **_kwargs):
+            applied.append(True)
+            raise AssertionError("local mutation must not run without a durable arm receipt")
+
+        action = {
+            "id": "action-response-loss",
+            "type": "photo-moderation",
+            "payload": {
+                "operation": "waste-basket-x",
+                "photoIds": ["asset-1"],
+                "source": "backstage-culling",
+            },
+        }
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "synthetic arm response loss after commit"):
+                execute_action(self.config, action, lifecycle_client=worker)
+
+        self.assertEqual(applied, [])
+        self.assertIn("owner-action:action-response-loss", worker.arm_receipts)
+        self.assertEqual(worker.calls[0][0], "arm")
+        self.assertEqual(
+            worker.calls[0][2],
+            "connector-lifecycle:owner-action:action-response-loss:arm",
+        )
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT operation_id FROM owner_connector_lifecycle_arm_intents"
+                ).fetchone()[0],
+                "owner-action:action-response-loss",
+            )
+
+        drained = drain_deployed_lifecycle_outbox(self.config, worker)
+
+        self.assertEqual([call[0] for call in worker.calls], ["arm", "arm", "abort"])
+        self.assertEqual(worker.calls[1][1], worker.calls[0][1])
+        self.assertEqual(worker.calls[1][2], worker.calls[0][2])
+        self.assertEqual(drained[-1]["state"], "aborted")
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_operation_state(
+                self.root, "owner-action:action-response-loss", self.db
+            ),
+            "aborted",
+        )
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM owner_connector_lifecycle_arm_intents"
+                ).fetchone()[0],
+                0,
+            )
 
     def test_drain_replays_from_each_committed_phase_after_crash(self):
         arm = self._persist_local_commit()

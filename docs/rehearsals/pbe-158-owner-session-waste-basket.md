@@ -137,3 +137,22 @@ All automated lifecycle tests use temporary synthetic SQLite databases. No
 credential, Keychain item, PhotoKit/TCC grant, source photo, R2 object, live
 catalog, live `Owner.sqlite`, production Worker/static asset, installation,
 signing state, or ticket was changed.
+
+## Candidate verification
+
+The committed source candidate passed these local checks on 2026-08-13:
+
+- focused security/lifecycle: 93 Node tests and 25 Python tests;
+- broad `npm test`: 206 Node tests plus 244 Python tests;
+- full Swift package: 72 tests across four suites;
+- `python3 scripts/generate_owner_swift_contract.py --check`: 38 operations
+  and 12 schemas current;
+- unsigned macOS Xcode build with `CODE_SIGNING_ALLOWED=NO`: succeeded; and
+- `git diff --check`: clean.
+
+`npm run validate` remains blocked by the existing public catalog's
+Owner-applied title/keyword visibility gate (it reports catalog media IDs whose
+metadata is not Owner-applied). This train changed no catalog artifact,
+approval row, or real Owner state and did not bypass or simulate that gate.
+The Python run also emitted pre-existing SQLite `ResourceWarning` diagnostics
+from fixture/performance tests, but all 244 tests passed.

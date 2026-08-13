@@ -166,7 +166,8 @@ test("browser Owner is provisioning-only while hosted PBE keeps the recoverable 
   assert.doesNotMatch(hidden, /const discardPhotoIds = async/);
   assert.match(hidden, /const extendKeyboardSelection =/);
   assert.match(hidden, /moveKeyboardFocus\(selectedIndex \+ 1, \{ extend: event\.shiftKey \}\)/);
-  assert.match(hiddenActions, /if \(localEnabled\) \{[\s\S]*for \(const photoId of ids\) await photoAction\("waste-basket-restore", photoId/);
+  assert.doesNotMatch(hiddenActions, /for \(const photoId of ids\).*waste-basket-restore/s);
+  assert.match(hiddenActions, /await photoAction\("waste-basket-restore", ids\[0\], \{ photo_ids: ids/);
   assert.match(ownerScript, /grid\.prepend\(wasteBasketCard\)/);
   assert.match(ownerScript, /details\.open = isPrimaryAction \|\| isWasteBasket/);
   assert.match(ownerStyles, /\.new-owner-card\[aria-label="Waste Basket"\]\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1;/);

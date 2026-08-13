@@ -604,8 +604,8 @@
     while (history.length) {
       const candidate = history.pop();
       if (!items.includes(candidate)) continue;
-      writeHistory(history);
       await photoAction("waste-basket-restore", candidate, wasteBasketContext);
+      writeHistory(history);
       return candidate;
     }
     writeHistory(history);
@@ -615,11 +615,9 @@
   const undoMany = async (photoIds = []) => {
     const ids = normalize(photoIds).filter((photoId) => read().includes(photoId));
     if (!cullingEnabled() || !ids.length) return [];
-    if (localEnabled) {
-      for (const photoId of ids) await photoAction("waste-basket-restore", photoId, wasteBasketContext);
-    } else {
-      await photoAction("waste-basket-restore", ids[0], { photo_ids: ids, ...wasteBasketContext });
-    }
+    // The PBB-79 gateway commits or rolls back the entire restore set. Never
+    // split a multi-selection into independently committed per-photo writes.
+    await photoAction("waste-basket-restore", ids[0], { photo_ids: ids, ...wasteBasketContext });
     unmarkMany(ids);
     const restored = new Set(ids);
     writeHistory(readHistory().filter((photoId) => !restored.has(photoId)));

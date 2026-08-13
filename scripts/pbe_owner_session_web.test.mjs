@@ -177,6 +177,87 @@ test("hosted PBE hidden history ignores stale global and prior-session state", a
   );
 });
 
+test("Undo preserves retry history on failure and batches multi-restore atomically", async () => {
+  const memoryStorage = (initial = {}) => {
+    const values = new Map(Object.entries(initial));
+    return {
+      getItem: (key) => values.has(key) ? values.get(key) : null,
+      setItem: (key, value) => values.set(key, String(value)),
+      removeItem: (key) => values.delete(key),
+    };
+  };
+  const sessionStorage = memoryStorage({
+    "photosbyelie-hidden:pbe-owner:undo-session": JSON.stringify(["photo-a", "photo-b"]),
+    "photosbyelie-hidden-history:pbe-owner:undo-session": JSON.stringify(["photo-a", "photo-b"]),
+  });
+  const actionCalls = [];
+  let failNext = true;
+  const document = {
+    documentElement: { classList: { toggle: () => {} } },
+    body: { append: () => {}, toggleAttribute: () => {} },
+    createElement: () => ({
+      dataset: {},
+      setAttribute: () => {},
+      querySelector: () => ({ textContent: "" }),
+      remove: () => {},
+    }),
+    querySelector: () => null,
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", search: "?gallery=pbe-owner" },
+    localStorage: memoryStorage(),
+    sessionStorage,
+    photosByEliePBEOwnerSession: {
+      isReady: () => true,
+      state: () => ({ session: { id: "undo-session", fixtureId: "fixture-current" } }),
+      action: async (...args) => {
+        actionCalls.push(args);
+        if (failNext) {
+          failNext = false;
+          throw new Error("synthetic gateway rollback");
+        }
+        return { ok: true };
+      },
+    },
+    photosByEliePBEOwnerSessionReady: Promise.resolve(),
+    addEventListener: () => {},
+    dispatchEvent: () => {},
+  };
+  vm.runInNewContext(read("hidden-actions.js"), {
+    window,
+    document,
+    localStorage: window.localStorage,
+    sessionStorage,
+    URLSearchParams,
+    CustomEvent: class CustomEvent {},
+    fetch: async () => { throw new Error("unexpected fetch"); },
+  });
+  await window.photosByElieHiddenActionsReady;
+
+  await assert.rejects(
+    () => window.photosByElieHiddenActions.undo(),
+    /synthetic gateway rollback/
+  );
+  assert.equal(
+    sessionStorage.getItem("photosbyelie-hidden-history:pbe-owner:undo-session"),
+    JSON.stringify(["photo-a", "photo-b"]),
+  );
+
+  const restored = await window.photosByElieHiddenActions.undoMany(["photo-a", "photo-b"]);
+  assert.deepEqual(Array.from(restored), ["photo-a", "photo-b"]);
+  assert.equal(actionCalls.length, 2);
+  assert.equal(actionCalls[1][0], "waste-basket-restore");
+  assert.deepEqual(Array.from(actionCalls[1][1].photo_ids), ["photo-a", "photo-b"]);
+  assert.equal(
+    sessionStorage.getItem("photosbyelie-hidden-history:pbe-owner:undo-session"),
+    "[]",
+  );
+  assert.equal(
+    sessionStorage.getItem("photosbyelie-hidden:pbe-owner:undo-session"),
+    "[]",
+  );
+});
+
 test("PBE Owner status remains usable at desktop and narrow widths", () => {
   const css = read("photos.css");
   assert.match(css, /\.pbe-owner-session\{[\s\S]*position:sticky[\s\S]*top:var\(--fixed-header-offset,86px\)[\s\S]*z-index:75/);

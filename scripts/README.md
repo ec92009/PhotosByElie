@@ -213,18 +213,18 @@ python3 scripts/sidecar_maintenance.py picked-ai-plan
 python3 scripts/sidecar_maintenance.py picked-ai-preview-export
 ```
 
-After changing Sidecar durable identity from Mac-local PhotoKit identifiers to
-Apple cloud identifiers, verify and hydrate legacy tombstones with:
+PBB-78 can inventory legacy Mac-local PhotoKit tombstones and cloud-ID mappings
+with:
 
 ```bash
 python3 scripts/migrate_sidecar_tombstones_to_cloud.py
-python3 scripts/migrate_sidecar_tombstones_to_cloud.py --apply
 ```
 
-The command is dry-run by default, refuses to apply when any legacy tombstone
-lacks a cloud-ID mapping, checks cloud state before every small batch, and
-mirrors already-protected cloud tombstones into the local Owner cache. Its
-ignored audit report is written under `tmp/sidecar-tombstone-audit/`.
+The command is inventory-only. Its retained `--apply` flag exits before reading
+inputs and never contacts cloud or writes local lifecycle state. PBB-78 needs a
+separately designed PBB-79 gateway migration and deployed deny receipt path
+before any apply mode can be restored. The ignored inventory report is written
+under `tmp/sidecar-tombstone-audit/`.
 
 The preview export writes
 `assets/owner-actions/sidecar-ai-metadata-previews.json` plus JPEG previews and,

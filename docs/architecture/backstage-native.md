@@ -160,6 +160,21 @@ credential. Backstage freezes the fixture while the session is active; the
 Worker and host reject a missing, revoked, expired, closed, mismatched, or
 unready lease.
 
+Backstage and the Python host independently attest the launched checkout as
+`git:<commit>:pbe-host-sha256:<digest>`. The digest covers the tracked Python
+host and hosted gallery code declared in
+`scripts/pbe_owner_host_tracked_paths.txt`. Both sides require those tracked
+files to match `HEAD`, including direct blob checks that defeat
+`assume-unchanged`; dirty host code fails before a bearer is sent. Ignored
+dependencies such as `node_modules` and unrelated untracked files do not alter
+the identity.
+
+Open PBE Owner captures the exact fixture synchronously. Both chooser and
+fixture refresh remain disabled through the asynchronous readiness/mint/attach
+sequence, and the provisional lock is released if launch fails. A browser
+session generation guard prevents an older heartbeat response from restoring
+`ready` after close.
+
 Hosted gallery X and restore route through the dedicated loopback session
 endpoint and shared PBB-79 gateway. Hosted PBE cannot directly create a global
 tombstone or empty the Waste Basket. See
@@ -181,12 +196,13 @@ contract.
 ## Application lifecycle
 
 1. Launch and load non-secret preferences.
-2. Read Keychain identity; refresh or request enrollment.
+2. Read the Keychain device identity; re-present it for a fresh bearer or
+   request enrollment.
 3. Check Worker health and Max connector status.
 4. Open `Owner.sqlite` read-only and show its schema/version.
 5. Resume non-terminal actions/jobs without resubmission.
 6. On backgrounding, cancel UI-only tasks but keep durable action IDs.
-7. On sign-out, revoke refresh state, clear Keychain, close the database, and
+7. On sign-out, clear bearer state and Keychain, close the database, and
    discard cached private previews.
 
 ## Reversible browser cutover

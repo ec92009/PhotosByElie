@@ -42,6 +42,12 @@ class RetiredSidecarTombstoneMigrationTests(unittest.TestCase):
         self.assertNotIn("/api/v1/sidecar/decisions/apply-batch", source)
         self.assertNotIn("mirror_cloud_decisions", source)
         self.assertFalse(hasattr(migration, "apply_migration"))
+        generic_migration = (
+            Path(migration.__file__).with_name("sidecar_cloud_migration.py")
+            .read_text(encoding="utf-8")
+        )
+        self.assertNotIn("use migrate_sidecar_tombstones_to_cloud.py", generic_migration)
+        self.assertIn("requires a canonical PBB-79 gateway migration", generic_migration)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

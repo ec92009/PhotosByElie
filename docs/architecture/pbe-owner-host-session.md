@@ -78,6 +78,15 @@ derivative of X/restore, so its identity deliberately survives an atomic rebuild
 at the same canonical slot with the same schema. A different checkout, missing
 or unreadable database, or incompatible schema still fails closed.
 
+The checkout identity is
+`git:<commit>:pbe-host-sha256:<tracked-host-tree-digest>`. Backstage and Python
+independently read `scripts/pbe_owner_host_tracked_paths.txt`, require every
+declared host/gallery file to be tracked at `HEAD`, reject tracked status
+changes, and hash each working-tree blob against the commit before calculating
+the same digest. This also detects `assume-unchanged` content changes. Ignored
+`node_modules` and unrelated untracked files are intentionally outside the
+host-code attestation.
+
 After cloud minting, Backstage calls
 `POST /__photosbyelie/pbe-owner/session/start` with the short-lived session token
 in the Authorization header. The local host:
@@ -92,7 +101,9 @@ in the Authorization header. The local host:
 
 Backstage does not open the browser until the cloud response, local response,
 and selected fixture all agree. The fixture coordinator remains frozen until
-close, expiry, or a fail-closed error.
+close, expiry, or a fail-closed error. The exact fixture is captured before the
+first asynchronous launch step; both fixture selection and refresh are locked
+until launch succeeds or the provisional freeze is released on failure.
 
 ## Browser handoff
 
@@ -108,6 +119,10 @@ credential, or browser cookie, and no authorization material is written to
 The accessible status region reports checking, ready, unavailable, closing,
 the frozen fixture, expiry, and the X recovery rule. Normal browser visits do
 not create the region and expose no Owner action state.
+
+Heartbeat responses carry an implicit client generation. Close invalidates the
+generation and clears the timer before awaiting the server, so a heartbeat
+that was already in flight cannot publish `ready` after the session is closed.
 
 Hosted hidden and Undo history is same-tab state in `sessionStorage`, with keys
 scoped by the active PBE Owner session id. A new session does not load or merge
@@ -144,6 +159,15 @@ restore transaction; a missing, tombstoned, unbound, or cross-fixture entry
 fails closed without restoring anything. X remains independently constrained
 to the actual displayed frozen-fixture window.
 
+The authoritative restore transaction and its static catalog projection have
+truthful separate acknowledgement. If projection fails after commit, the host
+returns `authoritative_committed=true` and a retryable `projection=pending`
+rather than claiming the restore rolled back. A later request may resolve the
+same fixture-bound restored receipt as `already-restored` and retry only the
+projection. Browser Undo history is therefore removed on authoritative
+success, while a lost HTTP acknowledgement remains safely retryable with a new
+idempotency key.
+
 There is no hosted PBE route for direct tombstone creation, tombstone restore,
 or Waste Basket Empty. X is recoverable until a separately authorized emptying
 operation. Backstage Culling X, Review X, and hosted PBE X therefore share the
@@ -157,6 +181,7 @@ Owner actions are disabled when any of these is true:
 - wrong provisioning email, provider, or token purpose;
 - missing, invalid, or revoked device;
 - unavailable Worker or loopback host;
+- dirty, untracked, or content-mismatched declared host code;
 - missing Owner database or public catalog;
 - missing capability or lifecycle writer;
 - absent or mismatched fixture/source/catalog/readiness binding;
@@ -171,6 +196,8 @@ session, direct SQLite mutation, or a direct global tombstone.
 
 Automated coverage includes Worker authorization/revocation/expiry, Python
 readiness and in-memory lease behavior, guarded X/restore payloads, Swift launch
-and transport bindings, script order and secret handling, and desktop/narrow
-status styling. Production remains unchanged until the normal Worker, static
-site, and signed Backstage release gates are completed and manually rehearsed.
+and transport bindings, dirty/`assume-unchanged` checkout rejection, stale
+heartbeat rejection, fixture-refresh locking, projection retry, script order
+and secret handling, and desktop/narrow status styling. Production remains
+unchanged until the normal Worker, static site, and signed Backstage release
+gates are completed and manually rehearsed.

@@ -297,7 +297,7 @@ def main() -> int:
         if legacy_tombstone_ids:
             raise RuntimeError(
                 "Refusing to upsert active legacy tombstones through the generic cloud migration; "
-                "use migrate_sidecar_tombstones_to_cloud.py for the separately audited PBB-78 path."
+                "no Sidecar apply exception exists. PBB-78 requires a canonical PBB-79 gateway migration."
             )
         if not worker_base or not token:
             raise RuntimeError("Worker base and connector token are required for a non-dry-run migration.")

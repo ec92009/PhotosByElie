@@ -19,6 +19,10 @@ compatibility views only.
   separate explicit and auditable operation.
 - Repeated requests converge by durable `request_key`; the SQLite transaction
   uses `BEGIN IMMEDIATE` and records an operation plus per-asset receipt.
+- A restore acknowledgement distinguishes the committed Owner transaction from
+  its derived static projection. Projection failure returns authoritative
+  success plus a retryable pending projection; a new request may safely resolve
+  the same fixture-bound restored receipt and reconcile the projection.
 
 ## Authoritative writer and schema
 
@@ -70,13 +74,12 @@ Normal UI, API, import, cleanup, and R2 routes cannot write a tombstone:
   and plan digest; read paths use existing SQLite rows and never invoke it;
 - direct local/cloud legacy Sidecar tombstone decisions are rejected;
 - the generic `sidecar_cloud_migration.py` refuses to upsert active legacy
-  tombstones; only the separately named, dry-run-by-default PBB-78 migration
-  carries its audited legacy marker;
-- the low-level Python Sidecar-named compatibility primitive accepts a tombstone only with the
-  explicit `PBB-78-legacy-expo-hidden` marker, non-empty plan digest, and audit
-  receipt;
-- the PBB-78 migration remains dry-run by default and emits that marker only
-  on its explicitly audited apply path.
+  tombstones;
+- `migrate_sidecar_tombstones_to_cloud.py` is inventory-only. Its retained
+  `--apply` flag exits before reading inputs, credentials, or lifecycle state;
+- no legacy marker re-enables a Sidecar tombstone writer. PBB-78 requires a
+  separately designed canonical PBB-79 gateway migration plus receipt-backed
+  deployed deny projection before any live apply path can exist.
 
 Existing cleanup and migration tools remain separately named legacy/repair
 surfaces. They are not allowed to masquerade as X or Empty Waste Basket.

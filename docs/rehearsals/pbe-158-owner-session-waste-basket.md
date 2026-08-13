@@ -26,6 +26,27 @@ Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
   authorized, explicitly confirmed Empty Waste Basket creates a tombstone.
 - Sidecar is obsolete as a product, authority, and launch path. Retained
   `sidecar-*` names are compatibility identifiers only.
+- Backstage sends no bearer until both Backstage and Python independently
+  attest the same clean tracked host tree at the exact git commit. Ignored
+  `node_modules` remains non-blocking.
+
+## Exact-commit audit remediation
+
+- Shannon P2: the host identity now includes a manifest-scoped tracked-tree
+  digest in addition to `HEAD`. Dirty and `assume-unchanged` host changes fail
+  closed in independently implemented Swift and Python checks.
+- Curie P1: restore returns authoritative success if its later static projection
+  fails. A new request can resolve the fixture-bound restored receipt and retry
+  projection without replaying the authoritative mutation.
+- Curie P2: browser session generations prevent an in-flight heartbeat from
+  publishing `ready` after close.
+- Curie P2: the old PBB-78 Sidecar tombstone apply path is retired. The script
+  is inventory-only and `--apply` exits before reading inputs; no legacy marker
+  enables a second writer.
+- Curie P3: fixture refresh and selection are both locked from synchronous
+  launch capture through mint/attach, with release on failure.
+- Curie P3: README now states that public browser Owner is
+  provisioning/list/revoke only; actionable PBE Owner is Backstage-launched.
 
 ## PBB-79 independent acceptance evidence
 
@@ -34,19 +55,24 @@ restore, explicit-empty, and legacy-bypass controls. This train adds a second
 fixture assertion inside the restore transaction, prohibits every retained
 Sidecar local/cloud tombstone-family write, strips lifecycle fields from D1
 editorial batches while preserving existing lifecycle state, and makes hosted
-multi-photo Undo one atomic gateway batch whose history survives failure.
+multi-photo Undo one atomic gateway batch whose history survives failure. A
+post-commit projection failure is acknowledged separately and can be reconciled
+through an already-restored receipt under a new request key.
 
 Focused proof:
 
 ```bash
 python3 -m unittest -v scripts.waste_basket_gateway_test
+python3 -m unittest -v \
+  scripts.local_server_title_review_undo_test.TitleReviewUndoTests.test_restore_acknowledges_authority_and_retries_failed_projection
 ```
 
 The tests cover recoverable X, exact restore, idempotent/concurrent retry,
 confirmed empty as the sole normal tombstone transition, culling/review/gallery
 gateway convergence, Sidecar restore/mirror rejection, D1 editorial-batch
-lifecycle preservation, atomic hosted batch restore, audited legacy markers,
-and transactional hosted-fixture restore.
+lifecycle preservation, atomic hosted batch restore, rejection even with a
+legacy marker, transactional hosted-fixture restore, and projection failure /
+acknowledgement-loss retry.
 
 Retained P1 blocker: immediate deployed revocation is not implemented. There is
 no dedicated ACCESS_DB lifecycle deny projection/control/receipt schema, no
@@ -76,7 +102,9 @@ uses an explicit Expo fallback; otherwise selection fails closed. The current
 breadcrumb uses leading truncation so the leaf remains visible. Menu rows carry
 hierarchical indentation, keyboard equivalents, and accessibility labels.
 Every fixture consumer reads the same coordinator, and a PBE Owner lease
-freezes it until close or expiry.
+freezes it until close or expiry. Launch captures that fixture before any
+suspension point and disables both the chooser and refresh until attach succeeds
+or the provisional lock is released.
 
 Focused proof:
 
@@ -102,11 +130,13 @@ transfer routes, session mint/introspection/close, fixture and identity binding,
 expiry, exact CORS allowlists, and rejection of direct Google Owner actions.
 Python tests prove opaque local identities, fixture-membership revisions, random
 loopback host launch with one-use bootstrap and independently checked checkout
-identity, one active in-memory lease, exact Origin/JSON CSRF checks, one-use
-browser handoff, HttpOnly browser session, expiry/close, exact fixture gallery
-scope, and guarded X/restore derivation. JavaScript tests prove page boot order,
-fail-closed actions, session-scoped transient history, absence of browser
-credential storage, and narrow/desktop status styling. Swift tests prove the
+identity, clean tracked host content (including an `assume-unchanged` adversary),
+one active in-memory lease, exact Origin/JSON CSRF checks, one-use browser
+handoff, HttpOnly browser session, expiry/close, exact fixture gallery scope,
+and guarded X/restore derivation. JavaScript tests prove page boot order,
+fail-closed actions, stale-heartbeat rejection after close, session-scoped
+transient history, absence of browser credential storage, and narrow/desktop
+status styling. Swift tests independently prove checkout attestation plus the
 Backstage device re-authentication and random-port mint/attach/freeze/close
 transport contract.
 
@@ -117,6 +147,7 @@ node --test worker/checkout-worker.test.mjs worker/google-oauth-auth.test.mjs \
   worker/owner-api-v1.test.mjs scripts/pbe_owner_session_web.test.mjs \
   scripts/public_owner_culling.test.mjs
 python3 -m unittest -v scripts.pbe_owner_session_test
+python3 -m unittest -v scripts.migrate_sidecar_tombstones_to_cloud_test
 swift test --package-path native/PhotosByElieBackstage \
   --filter 'PBEOwnerHostContractTests|FixtureSelectionCoordinatorTests|BackstageFixtureSelectionTests|generatedContractAndExamples'
 python3 scripts/generate_owner_swift_contract.py --check
@@ -142,9 +173,12 @@ signing state, or ticket was changed.
 
 The committed source candidate passed these local checks on 2026-08-13:
 
-- focused security/lifecycle: 93 Node tests and 25 Python tests;
-- broad `npm test`: 206 Node tests plus 244 Python tests;
-- full Swift package: 72 tests across four suites;
+- focused lifecycle/session/migration: 13 Node tests, 45 Python tests, and 15
+  Swift tests;
+- broad `npm test`: 207 Node tests plus 246 Python tests;
+- retired PBB-78 migration: 2 focused Python tests (including fail-before-input
+  `--apply`);
+- full Swift package: 73 tests across four suites;
 - `python3 scripts/generate_owner_swift_contract.py --check`: 38 operations
   and 12 schemas current;
 - unsigned macOS Xcode build with `CODE_SIGNING_ALLOWED=NO`: succeeded; and
@@ -155,4 +189,4 @@ Owner-applied title/keyword visibility gate (it reports catalog media IDs whose
 metadata is not Owner-applied). This train changed no catalog artifact,
 approval row, or real Owner state and did not bypass or simulate that gate.
 The Python run also emitted pre-existing SQLite `ResourceWarning` diagnostics
-from fixture/performance tests, but all 244 tests passed.
+from fixture/performance tests, but all 246 broad tests passed.

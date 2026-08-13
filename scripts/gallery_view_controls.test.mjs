@@ -236,6 +236,8 @@ test("primary search stays visible at and below the 760px secondary-filter break
   assert.match(responsiveCss, /\.gallery-filter-bar\{\n    display:flex;/);
   assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) > :not\(\.gallery-search-label\)/);
   assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) \.gallery-search-label/);
+  assert.match(photosCss, /\.gallery-filter-bar\{[\s\S]*?box-sizing:border-box;[\s\S]*?width:100%;[\s\S]*?max-width:100%;[\s\S]*?min-width:0;/);
+  assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) \.gallery-search-label\{[\s\S]*?max-width:none;/);
 });
 
 test("filter disclosure keeps one canonical search state through URL, storage, clear, reload, and focus", () => {
@@ -258,6 +260,8 @@ test("public gallery retires Media state without changing the private generic fi
   assert.doesNotMatch(galleryJs, /data-gallery-filter="mediaType"/);
   assert.doesNotMatch(galleryJs, /persistedFilterKeys[^\n]*mediaType/);
   assert.doesNotMatch(galleryJs, /galleryFilterKeys[^\n]*mediaType/);
+  assert.match(galleryJs, /\["q", "search", "mediaType", "media_type"\]\.forEach\(\(key\) => url\.searchParams\.delete\(key\)\)/);
+  assert.match(galleryJs, /const publicFilterState = \(state = \{\}\) => Object\.fromEntries/);
   assert.match(galleryJs, /window\.photosByElieI18n\?\.apply\?\.\(\);\n  writeFilterState\(\);\n  syncFilterControls\(\);/);
   assert.match(galleryJs, /matchesPhoto\(photo, \{ \.\.\.filterState, mediaType: "all" \}/);
   assert.match(detailJs, /Object\.entries\(payload\.filterState\)\.filter\(\(\[key\]\) => !\["mediaType", "media_type"\]\.includes\(key\)\)/);

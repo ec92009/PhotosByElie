@@ -81,26 +81,36 @@ const galleryStatus = document.querySelector("[data-gallery-status]");
 const hiddenActions = window.photosByElieHiddenActions;
 const reserveStore = window.photosByElieReserve;
 const likedStore = window.photosByElieLiked;
-const localModerationEnabled = Boolean(hiddenActions?.enabled);
-const ownerCullingEnabled = Boolean(hiddenActions?.cullingEnabled);
+const galleryCommandModel = window.photosByElieGalleryCommands;
+if (!galleryCommandModel?.createRegistry) throw new Error("Gallery command registry is unavailable.");
+const tapFirstInput = Boolean(window.photosByElieInputMode?.isTapFirst?.());
+const ownerCullingEnabled = isPBEOwnerGallery && Boolean(hiddenActions?.cullingEnabled) && !tapFirstInput;
+const localModerationEnabled = Boolean(hiddenActions?.enabled) && ownerCullingEnabled;
 const fullOwnerToolsEnabled = localModerationEnabled && !isPBEOwnerGallery;
+const galleryRole = ownerCullingEnabled ? "owner" : "visitor";
+const ownerCommandAdapter = window.photosByElieOwnerGalleryCommands || {};
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 let selectedIndex = 0;
 const selectedPhotoIds = new Set();
 let selectionAnchorPhotoId = "";
-let lastCulledPhotoIds = [];
-let ownerCullCount = null;
-let ownerCullTouchActions = null;
+let primaryPhotoId = "";
+let selectionRecency = [];
+let selectionDirection = "forward";
+let lastUndoableOwnerAction = null;
+const selectionErrors = new Map();
+let gallerySelectionCount = null;
+let galleryCommandBar = null;
+let galleryCommandRegistry = null;
+let syncGalleryCommandBar = () => {};
+const galleryActionLabelsKey = "photosbyelie-gallery-action-labels";
+const selectionLimit = galleryCommandModel.MAX_SELECTION;
 const pageSize = 24;
 const showAllChunkSize = pageSize * 4;
 const showAllChunkDelayMs = 16;
 const densityKey = "photosbyelie-gallery-columns";
 const fitModeKey = "photosbyelie-gallery-fit-mode";
-let densityButtons = [];
-let fitModeButtons = [];
-let viewControls = null;
 let renderedGalleryPhotos = [];
 let visibleLimit = pageSize;
 let moreButton = null;
@@ -110,6 +120,8 @@ let showAllRenderToken = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
+let detailRoundTripNonce = globalThis.crypto?.randomUUID?.()
+  || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const diversityBucketMinutes = 10;
 const photoFilter = window.photosByEliePhotoFilter;
 const galleryDatePicker = window.photosByElieGalleryDatePicker || {};
@@ -128,33 +140,20 @@ let filterToggle = null;
 let ownerSuperSearchIndex = new Map();
 let ownerSuperSearchPromise = null;
 
-const shortcutKey = (label) => `<kbd>${label}</kbd>`;
-
-const syncOwnerCullToolbar = () => {
-  if (!ownerCullCount) return;
+const syncGallerySelectionToolbar = () => {
+  if (!gallerySelectionCount) return;
   const count = selectedPhotoIds.size;
-  ownerCullCount.textContent = `${count} selected`;
-  ownerCullTouchActions?.querySelector("[data-owner-cull-touch-hide]")?.toggleAttribute("disabled", count === 0);
-  ownerCullTouchActions?.querySelector("[data-owner-cull-touch-undo]")?.toggleAttribute("disabled", lastCulledPhotoIds.length === 0);
+  gallerySelectionCount.textContent = `${count} selected`;
+  syncGalleryCommandBar();
 };
 
-const ensureOwnerCullToolbar = () => {
-  if (!ownerCullingEnabled || ownerCullCount) return;
-  ownerCullCount = document.querySelector("[data-owner-cull-count]");
-  if (!ownerCullCount) return;
-  ownerCullCount.hidden = false;
-  ownerCullCount.setAttribute("aria-label", "Owner culling selection count");
-  ownerCullTouchActions = document.querySelector("[data-owner-cull-touch-actions]");
-  if (ownerCullTouchActions) {
-    ownerCullTouchActions.hidden = false;
-    ownerCullTouchActions.querySelector("[data-owner-cull-touch-hide]")?.addEventListener("click", () => {
-      void moveOwnerSelectionToWasteBasket();
-    });
-    ownerCullTouchActions.querySelector("[data-owner-cull-touch-undo]")?.addEventListener("click", () => {
-      void undoLastOwnerCull();
-    });
-  }
-  syncOwnerCullToolbar();
+const ensureGallerySelectionToolbar = () => {
+  if (gallerySelectionCount) return;
+  gallerySelectionCount = document.querySelector("[data-owner-cull-count]");
+  if (!gallerySelectionCount) return;
+  gallerySelectionCount.hidden = false;
+  gallerySelectionCount.setAttribute("aria-label", `${galleryRole === "owner" ? "Owner" : "Visitor"} gallery selection count`);
+  syncGallerySelectionToolbar();
 };
 const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -354,35 +353,9 @@ const localizedCollectionTitle = () => {
   return translated && translated !== key ? translated : gallery?.title || "";
 };
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
-const shouldShowKeyboardHints = () => window.photosByElieInputMode?.shouldShowKeyboardHints?.() ?? true;
-const ensureGalleryKeyboardHint = () => {
-  if (!galleryRoot || !ownerCullingEnabled || document.querySelector("[data-gallery-shortcut-hint]")) return;
-  const hint = document.createElement("p");
-  hint.className = "keyboard-hint gallery-keyboard-hint";
-  hint.dataset.galleryShortcutHint = "";
-  hint.innerHTML = [
-    "Owner shortcuts:",
-    `${shortcutKey("X")} block`,
-    `${shortcutKey("L")} like`,
-    `${shortcutKey("U")} undo`,
-    ...(fullOwnerToolsEnabled ? [
-      `${shortcutKey("D")} Waste Basket`,
-      `${shortcutKey("T")} title`,
-      `${shortcutKey("K")} keywords`,
-      `${shortcutKey("R")} review`
-    ] : []),
-    `${shortcutKey("Z")} view`,
-    `${shortcutKey("Arrows")} select`,
-    `${shortcutKey("Enter")} detail`,
-    `${shortcutKey("Double-click")} detail`
-  ].join(" <span aria-hidden=\"true\">|</span> ");
-  hint.hidden = !shouldShowKeyboardHints();
-  galleryRoot.before(hint);
-};
-window.addEventListener("photosbyelie:inputmodechange", () => {
-  const hint = document.querySelector("[data-gallery-shortcut-hint]");
-  if (hint) hint.hidden = !ownerCullingEnabled || !shouldShowKeyboardHints();
-});
+const primaryShortcutLabel = () => /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
+  ? "⌘"
+  : "Ctrl+";
 
 const readFilterState = () => {
   const params = new URLSearchParams(window.location.search);
@@ -427,9 +400,19 @@ try {
     payload?.source === "detail"
     && payload.collectionKey === galleryKey
     && payload.photoId
+    && payload.navigationNonce
     && Date.now() - Number(payload.createdAt || 0) < maxReturnAgeMs
   ) {
     pendingGalleryReturnState = payload;
+    detailRoundTripNonce = String(payload.navigationNonce);
+    (Array.isArray(payload.selectionIds) ? payload.selectionIds : [])
+      .slice(0, selectionLimit)
+      .forEach((photoId) => selectedPhotoIds.add(String(photoId)));
+    primaryPhotoId = String(payload.primaryPhotoId || payload.photoId || "");
+    selectionRecency = (Array.isArray(payload.selectionRecency) ? payload.selectionRecency : [...selectedPhotoIds])
+      .map(String)
+      .filter((photoId, index, items) => photoId && items.indexOf(photoId) === index)
+      .slice(-selectionLimit);
     if (payload.filterState && typeof payload.filterState === "object") {
       filterState = normalizeDateFilterState({ ...defaultFilterState, ...payload.filterState });
     }
@@ -455,6 +438,10 @@ const writeDetailSequenceContext = (photos) => {
       collectionKey: galleryKey,
       collectionTitle: gallery?.title || "",
       photoIds: photos.map((photo) => photo.id),
+      selectionIds: [...selectedPhotoIds],
+      primaryPhotoId,
+      selectionRecency,
+      navigationNonce: detailRoundTripNonce,
       filterState,
       visibleLimit: visibleLimit >= photos.length ? "all" : visibleLimit,
       createdAt: Date.now()
@@ -492,31 +479,6 @@ const metadataValue = (photo, label) => (
   (photo?.metadata || []).find((item) => item.label === label)?.value || ""
 );
 
-const splitKeywordText = (value) => String(value || "")
-  .split(/[;,]/)
-  .map((keyword) => keyword.trim())
-  .filter(Boolean);
-
-const uniqueKeywords = (items) => {
-  const seen = new Set();
-  return items.filter((item) => {
-    const key = item.toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-};
-
-const setMetadataValue = (photo, label, value) => {
-  if (!Array.isArray(photo.metadata)) photo.metadata = [];
-  const item = photo.metadata.find((entry) => entry.label === label);
-  if (item) {
-    item.value = value;
-    return;
-  }
-  photo.metadata.unshift({ label, value });
-};
-
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "mediaType", "dateFrom", "dateTo"];
 const ownerSuperSearchText = (photo) => {
@@ -532,46 +494,6 @@ const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galle
 const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterState, filterContext());
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
-
-const ownerReviewFilterContext = (visibleItems = renderedGalleryPhotos, filteredItems = filteredVisiblePhotos()) => ({
-  view: isSelectionGallery ? "search-gallery" : "gallery",
-  collection_key: galleryKey,
-  collection_title: localizedCollectionTitle(),
-  filter_state: { ...filterState },
-  active_filter_count: activeFilterCount(),
-  query: String(filterState.query || ""),
-  visible_count: visibleItems.length,
-  filtered_total_count: filteredItems.length,
-  visible_limit: visibleLimit >= filteredItems.length ? "all" : visibleLimit,
-  url: window.location.pathname + window.location.search,
-});
-
-const reviewQueueResultText = (result, requestedCount) => {
-  const queued = Number(result?.queued_count ?? (result?.queued ? 1 : 0)) || 0;
-  const already = Number(result?.already_pending_count ?? (result?.already_pending ? 1 : 0)) || 0;
-  const failed = Number(result?.failed_count || 0) || 0;
-  if (requestedCount === 1 && already) return "Already in title/keyword review.";
-  if (requestedCount === 1 && queued) return "Sent to title/keyword review.";
-  const parts = [`${queued.toLocaleString()} queued`];
-  if (already) parts.push(`${already.toLocaleString()} already pending`);
-  if (failed) parts.push(`${failed.toLocaleString()} failed`);
-  return `${parts.join("; ")} for title/keyword review.`;
-};
-
-const queuePhotoForTitleKeywordReview = async (photo, source = "owner-gallery-r") => {
-  if (!photo?.id) return null;
-  if (!hiddenActions?.queueTitleKeywordReview) {
-    throw new Error("Refresh Owner mode to load title/keyword review queueing.");
-  }
-  return hiddenActions.queueTitleKeywordReview(photo.id, {
-    source,
-    requestedBy: "owner",
-    context: {
-      ...ownerReviewFilterContext([photo]),
-      photo_id: photo.id,
-    },
-  });
-};
 
 const loadOwnerSuperSearchIndex = () => {
   if (!localModerationEnabled) return Promise.resolve(ownerSuperSearchIndex);
@@ -921,18 +843,30 @@ const visiblePhotos = () => {
 
 const updateSelection = ({ scroll = true } = {}) => {
   const cards = [...galleryRoot.querySelectorAll("[data-photo-index]")];
-  if (!cards.length) return;
-  selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
+  if (!cards.length) {
+    syncGallerySelectionToolbar();
+    return;
+  }
+  if (ownerCullingEnabled) {
+    const selectedPrimaryIndex = renderedGalleryPhotos.findIndex((photo) => photo.id === primaryPhotoId);
+    if (selectedPrimaryIndex >= 0) selectedIndex = selectedPrimaryIndex;
+    selectedIndex = Math.max(0, Math.min(selectedIndex, cards.length - 1));
+  }
   cards.forEach((card, index) => {
-    card.classList.toggle("is-selected", index === selectedIndex);
-    card.classList.toggle("is-batch-selected", selectedPhotoIds.has(renderedGalleryPhotos[index]?.id));
+    const photoId = renderedGalleryPhotos[index]?.id || "";
+    card.classList.toggle("is-selected", ownerCullingEnabled && photoId === primaryPhotoId);
+    card.classList.toggle("is-batch-selected", selectedPhotoIds.has(photoId));
+    card.classList.toggle("has-selection-error", selectionErrors.has(photoId));
+    if (selectionErrors.has(photoId)) card.dataset.selectionError = selectionErrors.get(photoId);
+    else delete card.dataset.selectionError;
   });
-  syncOwnerCullToolbar();
-  if (scroll) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  syncGallerySelectionButtons();
+  syncGallerySelectionToolbar();
+  if (scroll && ownerCullingEnabled) cards[selectedIndex]?.scrollIntoView({ block: "nearest", inline: "nearest" });
 };
 
-const syncOwnerSelectionButtons = () => {
-  galleryRoot.querySelectorAll("[data-owner-select-photo]").forEach((button) => {
+const syncGallerySelectionButtons = () => {
+  galleryRoot.querySelectorAll("[data-gallery-select-photo]").forEach((button) => {
     const selected = selectedPhotoIds.has(button.dataset.photoId);
     button.classList.toggle("is-selected", selected);
     button.setAttribute("aria-label", selected ? "Remove from selection" : "Add to selection");
@@ -941,30 +875,84 @@ const syncOwnerSelectionButtons = () => {
   });
 };
 
+const rememberSelectedPhoto = (photoId) => {
+  selectionRecency = selectionRecency.filter((candidate) => candidate !== photoId);
+  selectionRecency.push(photoId);
+  primaryPhotoId = photoId;
+};
+
+const forgetSelectedPhoto = (photoId) => {
+  selectionRecency = selectionRecency.filter((candidate) => candidate !== photoId);
+  if (primaryPhotoId !== photoId) return;
+  primaryPhotoId = [...selectionRecency].reverse().find((candidate) => selectedPhotoIds.has(candidate)) || "";
+};
+
+const syncSelectionDetailContext = () => {
+  writeDetailSequenceContext(filteredVisiblePhotos());
+};
+
+const toggleGalleryPhotoSelection = (photoId, photos = renderedGalleryPhotos) => {
+  const index = photos.findIndex((photo) => photo.id === photoId);
+  if (index < 0) return false;
+  selectionErrors.delete(photoId);
+  if (selectedPhotoIds.has(photoId)) {
+    if (ownerCullingEnabled && selectedPhotoIds.size === 1) {
+      setGalleryStatus("Owner selection keeps one primary photo.");
+      return false;
+    }
+    selectedPhotoIds.delete(photoId);
+    forgetSelectedPhoto(photoId);
+  } else {
+    if (selectedPhotoIds.size >= selectionLimit) {
+      setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
+      return false;
+    }
+    selectedPhotoIds.add(photoId);
+    rememberSelectedPhoto(photoId);
+  }
+  if (ownerCullingEnabled && primaryPhotoId) {
+    const primaryIndex = photos.findIndex((photo) => photo.id === primaryPhotoId);
+    if (primaryIndex >= 0) selectedIndex = primaryIndex;
+  }
+  updateSelection({ scroll: false });
+  syncSelectionDetailContext();
+  return true;
+};
+
 const selectOwnerPhotoFromPointer = (photoId, photos, event = {}) => {
   const index = photos.findIndex((photo) => photo.id === photoId);
   if (index < 0) return;
   const toggle = Boolean(event.metaKey || event.ctrlKey);
   const anchorIndex = photos.findIndex((photo) => photo.id === selectionAnchorPhotoId);
   if (event.shiftKey && anchorIndex >= 0) {
-    if (!toggle) selectedPhotoIds.clear();
+    if (!toggle) {
+      selectedPhotoIds.clear();
+      selectionRecency = [];
+    }
     const start = Math.min(anchorIndex, index);
     const end = Math.max(anchorIndex, index);
     photos.slice(start, end + 1).forEach((photo) => {
-      if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photo.id);
+      if (selectedPhotoIds.size < selectionLimit) {
+        selectedPhotoIds.add(photo.id);
+        selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
+      }
     });
+    if (end - start + 1 > selectionLimit) setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
+    rememberSelectedPhoto(photoId);
   } else if (toggle) {
-    if (selectedPhotoIds.has(photoId)) selectedPhotoIds.delete(photoId);
-    else if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photoId);
+    toggleGalleryPhotoSelection(photoId, photos);
     selectionAnchorPhotoId = photoId;
+    return;
   } else {
     selectedPhotoIds.clear();
+    selectionRecency = [];
     selectedPhotoIds.add(photoId);
+    rememberSelectedPhoto(photoId);
     selectionAnchorPhotoId = photoId;
   }
   selectedIndex = index;
   updateSelection({ scroll: false });
-  syncOwnerSelectionButtons();
+  syncSelectionDetailContext();
 };
 
 const visibleColumnCount = () => {
@@ -995,89 +983,135 @@ const setGalleryBlockedVisual = (photoId, state = "") => {
   card.classList.toggle("is-review-blocked", blocked);
 };
 
-const moveOwnerSelectionToWasteBasket = async () => {
+const captureSelectionSnapshot = (photos = filteredVisiblePhotos()) => ({
+  selectedIds: [...selectedPhotoIds],
+  primaryPhotoId,
+  anchorPhotoId: selectionAnchorPhotoId,
+  selectionRecency: [...selectionRecency],
+  direction: selectionDirection,
+  orderedIds: photos.map((photo) => photo.id),
+  filterState: { ...filterState },
+  visibleLimit,
+  scrollY: window.scrollY,
+});
+
+const replacementAfterRemoval = (snapshot, survivingIds) => {
+  const orderedIds = snapshot?.orderedIds || [];
+  const primaryIndex = Math.max(0, orderedIds.indexOf(snapshot?.primaryPhotoId));
+  const primaryStep = snapshot?.direction === "backward" ? -1 : 1;
+  for (const step of [primaryStep, -primaryStep]) {
+    for (let index = primaryIndex + step; index >= 0 && index < orderedIds.length; index += step) {
+      if (survivingIds.has(orderedIds[index])) return orderedIds[index];
+    }
+  }
+  return "";
+};
+
+const moveOwnerSelectionToWasteBasket = async (requestedPhotoIds = null) => {
   const photos = filteredVisiblePhotos();
-  const selected = photos[selectedIndex];
-  const ids = selectedPhotoIds.size ? [...selectedPhotoIds].slice(0, 500) : [selected?.id].filter(Boolean);
-  if (!ids.length) return false;
+  const ids = (Array.isArray(requestedPhotoIds) ? requestedPhotoIds : [...selectedPhotoIds])
+    .map(String)
+    .filter(Boolean)
+    .slice(0, selectionLimit);
+  if (!ids.length) return { succeeded: [], failed: [] };
+  const snapshot = captureSelectionSnapshot(photos);
   try {
     ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
     setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
     if (ids.length === 1) await hiddenActions.mark(ids[0]);
     else await hiddenActions.markMany(ids);
-    lastCulledPhotoIds = ids;
-    selectedPhotoIds.clear();
-    selectionAnchorPhotoId = "";
-    selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
+    lastUndoableOwnerAction = { kind: "waste-basket", ids, snapshot };
+    ids.forEach((photoId) => {
+      selectedPhotoIds.delete(photoId);
+      forgetSelectedPhoto(photoId);
+    });
+    const survivingPhotos = filteredVisiblePhotos();
+    if (!selectedPhotoIds.size) {
+      selectionRecency = [];
+      selectionAnchorPhotoId = "";
+      const replacementId = replacementAfterRemoval(snapshot, new Set(survivingPhotos.map((photo) => photo.id)));
+      if (replacementId) {
+        selectedPhotoIds.add(replacementId);
+        rememberSelectedPhoto(replacementId);
+        selectionAnchorPhotoId = replacementId;
+        selectedIndex = survivingPhotos.findIndex((photo) => photo.id === replacementId);
+      } else {
+        primaryPhotoId = "";
+        selectedIndex = 0;
+      }
+    }
     renderGallery();
     setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
-    return true;
+    return { succeeded: ids, failed: [] };
   } catch (error) {
     ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
     setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
-    syncOwnerCullToolbar();
-    return false;
+    syncGallerySelectionToolbar();
+    return { succeeded: [], failed: ids.map((photoId) => ({ photoId, reason: error?.message || "Could not move photo to Waste Basket." })) };
   }
 };
 
-const undoLastOwnerCull = async () => {
+const undoLastOwnerCommand = async () => {
+  const undoable = lastUndoableOwnerAction;
+  if (!undoable?.ids?.length) return false;
   let undoneId = null;
   try {
-    if (lastCulledPhotoIds.length > 1) {
-      const restored = await hiddenActions.undoMany(lastCulledPhotoIds);
+    if (undoable.ids.length > 1) {
+      const restored = await hiddenActions.undoMany(undoable.ids);
       undoneId = restored[0] || null;
     } else {
-      undoneId = await hiddenActions.undo(lastCulledPhotoIds[0] || null);
+      undoneId = await hiddenActions.undo(undoable.ids[0] || null);
     }
-    lastCulledPhotoIds = [];
   } catch (error) {
-    setGalleryStatus(error?.message || "Could not undo the last basket move.");
-    syncOwnerCullToolbar();
+    setGalleryStatus(error?.message || "Could not undo the last Waste Basket move.");
+    syncGallerySelectionToolbar();
     return false;
   }
+  lastUndoableOwnerAction = null;
+  selectedPhotoIds.clear();
+  selectionRecency = [];
+  const restoredPhotos = filteredVisiblePhotos();
+  const restoredPhotoIds = new Set(restoredPhotos.map((photo) => photo.id));
+  undoable.snapshot.selectedIds.forEach((photoId) => {
+    if (restoredPhotoIds.has(photoId) && selectedPhotoIds.size < selectionLimit) selectedPhotoIds.add(photoId);
+  });
+  selectionRecency = undoable.snapshot.selectionRecency.filter((photoId) => selectedPhotoIds.has(photoId));
+  primaryPhotoId = selectedPhotoIds.has(undoable.snapshot.primaryPhotoId)
+    ? undoable.snapshot.primaryPhotoId
+    : selectionRecency.at(-1) || undoneId || "";
+  selectionAnchorPhotoId = selectedPhotoIds.has(undoable.snapshot.anchorPhotoId)
+    ? undoable.snapshot.anchorPhotoId
+    : primaryPhotoId;
+  selectionDirection = undoable.snapshot.direction;
+  visibleLimit = undoable.snapshot.visibleLimit;
   renderGallery();
   if (!undoneId) {
-    setGalleryStatus("No local basket move to undo.");
+    setGalleryStatus("The Waste Basket receipt is no longer undoable.");
     return false;
   }
   const nextPhotos = filteredVisiblePhotos();
-  const restoredIndex = nextPhotos.findIndex((photo) => photo.id === undoneId);
+  const restoredIndex = nextPhotos.findIndex((photo) => photo.id === primaryPhotoId || photo.id === undoneId);
   if (restoredIndex >= 0) {
     selectedIndex = restoredIndex;
     expandGalleryToIncludeIndex(restoredIndex);
   }
   updateSelection();
-  setGalleryStatus("Last local basket move undone.");
+  window.scrollTo({ top: undoable.snapshot.scrollY, behavior: "auto" });
+  setGalleryStatus("Last Waste Basket move undone.");
   return true;
-};
-
-const nearestVisiblePhotoIndex = () => {
-  const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index]") || [])];
-  if (!cards.length) return selectedIndex;
-  const viewportCenter = window.innerHeight / 2;
-  const nearest = cards
-    .map((card) => {
-      const rect = card.getBoundingClientRect();
-      const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-      const centerDistance = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
-      return {
-        index: Number(card.dataset.photoIndex || 0),
-        visibleHeight,
-        centerDistance
-      };
-    })
-    .filter((item) => item.visibleHeight > 0)
-    .sort((a, b) => a.centerDistance - b.centerDistance)[0];
-  return Number.isInteger(nearest?.index) ? nearest.index : selectedIndex;
 };
 
 const selectedShortcutPhoto = () => {
   const photos = filteredVisiblePhotos();
   if (!photos.length) return null;
-  if (!localModerationEnabled) selectedIndex = nearestVisiblePhotoIndex();
-  selectedIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
-  updateSelection({ scroll: false });
-  return photos[selectedIndex];
+  const explicitPrimary = primaryPhotoId && selectedPhotoIds.has(primaryPhotoId)
+    ? primaryPhotoId
+    : [...selectionRecency].reverse().find((photoId) => selectedPhotoIds.has(photoId));
+  if (!explicitPrimary) return null;
+  const index = photos.findIndex((photo) => photo.id === explicitPrimary);
+  if (index < 0) return null;
+  if (ownerCullingEnabled) selectedIndex = index;
+  return photos[index];
 };
 
 const galleryLayout = window.photosByElieGalleryLayout.createMasonryController({
@@ -1095,13 +1129,6 @@ const preferredDensityColumns = () => galleryLayout.preferredDensityColumns();
 
 const applyGalleryDensity = () => {
   galleryLayout.applyDensityControls();
-  const columns = preferredDensityColumns();
-  densityButtons.forEach((button) => {
-    const direction = Number(button.dataset.galleryDensityStep || 0);
-    button.disabled = direction < 0 ? columns <= 1 : columns >= maxDensityColumns();
-  });
-  const densityControl = densityButtons[0]?.closest(".gallery-density-control");
-  densityControl?.setAttribute("aria-label", `${t("a11y.gallery_density")}: ${columns}`);
 };
 
 const setGalleryDensityColumns = (columns) => {
@@ -1127,11 +1154,17 @@ const extendOwnerKeyboardSelection = (photos, destinationIndex) => {
   if (anchorIndex < 0) anchorIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
   selectionAnchorPhotoId = photos[anchorIndex]?.id || "";
   selectedPhotoIds.clear();
+  selectionRecency = [];
   const start = Math.min(anchorIndex, destinationIndex);
   const end = Math.max(anchorIndex, destinationIndex);
   photos.slice(start, end + 1).forEach((photo) => {
-    if (selectedPhotoIds.size < 500) selectedPhotoIds.add(photo.id);
+    if (selectedPhotoIds.size < selectionLimit) {
+      selectedPhotoIds.add(photo.id);
+      selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
+    }
   });
+  const destinationId = photos[destinationIndex]?.id || "";
+  if (destinationId) rememberSelectedPhoto(destinationId);
 };
 
 const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}) => {
@@ -1139,7 +1172,19 @@ const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}
   if (!photos.length) return;
   const step = columnJump ? visibleColumnCount() * delta : delta;
   const nextIndex = Math.max(0, Math.min(selectedIndex + step, photos.length - 1));
-  if (extend) extendOwnerKeyboardSelection(photos, nextIndex);
+  selectionDirection = delta < 0 ? "backward" : "forward";
+  if (extend) {
+    extendOwnerKeyboardSelection(photos, nextIndex);
+  } else if (ownerCullingEnabled) {
+    const nextId = photos[nextIndex]?.id || "";
+    selectedPhotoIds.clear();
+    selectionRecency = [];
+    if (nextId) {
+      selectedPhotoIds.add(nextId);
+      rememberSelectedPhoto(nextId);
+      selectionAnchorPhotoId = nextId;
+    }
+  }
   if (nextIndex >= visibleLimit && visibleLimit < photos.length) {
     selectedIndex = nextIndex;
     expandGalleryToIncludeIndex(nextIndex);
@@ -1148,6 +1193,7 @@ const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}
   }
   selectedIndex = nextIndex;
   updateSelection();
+  syncSelectionDetailContext();
 };
 
 const preferredFitMode = () => galleryLayout.fitMode();
@@ -1157,7 +1203,7 @@ const applyGalleryPreviewLayout = (photos = renderedGalleryPhotos) => {
 };
 
 const applyGalleryFitMode = () => {
-  galleryLayout.applyFitMode(fitModeButtons);
+  galleryLayout.applyFitMode();
 };
 
 const setGalleryFitMode = (mode) => {
@@ -1179,10 +1225,6 @@ const toggleGalleryFitMode = () => {
   const modes = ["fill", "fit", "cull"];
   const currentIndex = modes.indexOf(currentMode);
   return setGalleryFitMode(modes[(Math.max(0, currentIndex) + 1) % modes.length]);
-};
-
-const positionGalleryViewControls = () => {
-  window.photosByEliePositionGalleryViewControls?.(viewControls);
 };
 
 const photoAspectRatioStyle = (photo) => {
@@ -1244,107 +1286,572 @@ const toggleGalleryLike = (photo) => {
   return true;
 };
 
-const openOwnerMetadataModal = (photo, field) => {
-  if (!ownerCullingEnabled || !photo) return;
-  const dialog = document.createElement("dialog");
-  dialog.className = "owner-metadata-modal";
-  const title = "Edit title and keywords";
-  const currentTitle = photo.title || "";
-  const currentKeywords = metadataValue(photo, "Keywords");
-  const image = window.photosByElieMediaUrl?.(photo, "gallery") || "";
-  dialog.innerHTML = `
-    <form class="owner-metadata-modal-form" method="dialog">
-      <h2>${escapeHtml(title)}</h2>
-      ${image ? `
-        <figure class="owner-metadata-modal-preview">
-          <img src="${escapeHtml(image)}" alt="${escapeHtml(photo.title || title)}"/>
-        </figure>
-      ` : ""}
-      <label>
-        <span>Title</span>
-        <input type="text" value="${escapeHtml(currentTitle)}" data-owner-modal-title-field/>
-      </label>
-      <label>
-        <span>Keywords</span>
-        <textarea rows="4" data-owner-modal-keywords-field>${escapeHtml(currentKeywords)}</textarea>
-      </label>
-      <div class="owner-metadata-modal-actions">
-        <button class="btn secondary" type="button" data-owner-modal-cancel>Cancel</button>
-        <button class="btn" type="submit">Save</button>
-      </div>
-    </form>
-  `;
-  const form = dialog.querySelector("form");
-  const titleInput = dialog.querySelector("[data-owner-modal-title-field]");
-  const keywordsInput = dialog.querySelector("[data-owner-modal-keywords-field]");
-  const saveButton = dialog.querySelector("button[type='submit']");
-  const closeWithoutSaving = () => {
-    if (dialog.open) dialog.close("cancel");
-  };
-  dialog.addEventListener("cancel", (event) => {
-    event.preventDefault();
-    closeWithoutSaving();
+const selectedPhotosInOrder = (photos = renderedGalleryPhotos) => photos
+  .filter((photo) => selectedPhotoIds.has(photo.id));
+
+const ensureOwnerSelection = (photos) => {
+  const availableIds = new Set(photos.map((photo) => photo.id));
+  [...selectedPhotoIds].forEach((photoId) => {
+    if (!availableIds.has(photoId)) selectedPhotoIds.delete(photoId);
   });
-  dialog.querySelector("[data-owner-modal-cancel]")?.addEventListener("click", closeWithoutSaving);
-  dialog.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeWithoutSaving();
-      return;
-    }
-    if (!["Enter", "Return"].includes(event.key) || event.metaKey || event.ctrlKey || event.altKey) return;
-    event.preventDefault();
-    if (!saveButton.disabled) form.requestSubmit();
+  selectionRecency = selectionRecency.filter((photoId) => selectedPhotoIds.has(photoId));
+  if (!ownerCullingEnabled || !photos.length) return;
+  if (!selectedPhotoIds.size) {
+    const preferredIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
+    const preferredId = photos[preferredIndex]?.id || photos[0].id;
+    selectedPhotoIds.add(preferredId);
+    rememberSelectedPhoto(preferredId);
+    selectionAnchorPhotoId = preferredId;
+  } else if (!selectedPhotoIds.has(primaryPhotoId)) {
+    primaryPhotoId = [...selectionRecency].reverse().find((photoId) => selectedPhotoIds.has(photoId))
+      || selectedPhotosInOrder(photos).at(-1)?.id
+      || "";
+  }
+  const primaryIndex = photos.findIndex((photo) => photo.id === primaryPhotoId);
+  if (primaryIndex >= 0) selectedIndex = primaryIndex;
+};
+
+const selectAllLoadedPhotos = () => {
+  const before = selectedPhotoIds.size;
+  for (const photo of renderedGalleryPhotos) {
+    if (selectedPhotoIds.size >= selectionLimit) break;
+    if (selectedPhotoIds.has(photo.id)) continue;
+    selectedPhotoIds.add(photo.id);
+    selectionRecency.push(photo.id);
+  }
+  if (ownerCullingEnabled && !primaryPhotoId && selectionRecency.length) primaryPhotoId = selectionRecency.at(-1);
+  if (selectedPhotoIds.size >= selectionLimit && renderedGalleryPhotos.length > selectedPhotoIds.size) {
+    setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
+  } else {
+    setGalleryStatus(`${selectedPhotoIds.size - before} loaded photo${selectedPhotoIds.size - before === 1 ? "" : "s"} added to the selection.`);
+  }
+  updateSelection({ scroll: false });
+  syncSelectionDetailContext();
+};
+
+const clearVisitorSelection = () => {
+  selectedPhotoIds.clear();
+  selectionRecency = [];
+  primaryPhotoId = "";
+  selectionAnchorPhotoId = "";
+  selectionErrors.clear();
+  updateSelection({ scroll: false });
+  syncSelectionDetailContext();
+  setGalleryStatus("Selection cleared.");
+};
+
+const keepOwnerPrimary = () => {
+  const selected = selectedShortcutPhoto();
+  if (!selected) return;
+  selectedPhotoIds.clear();
+  selectedPhotoIds.add(selected.id);
+  selectionRecency = [selected.id];
+  primaryPhotoId = selected.id;
+  selectionAnchorPhotoId = selected.id;
+  updateSelection({ scroll: false });
+  syncSelectionDetailContext();
+  setGalleryStatus(`${selected.title} kept as primary.`);
+};
+
+const pulseLikedCards = (photoIds) => {
+  const wanted = new Set(photoIds);
+  galleryRoot.querySelectorAll("[data-photo-id]").forEach((card) => {
+    if (!wanted.has(card.dataset.photoId)) return;
+    card.classList.add("is-like-command-success");
+    window.setTimeout(() => card.classList.remove("is-like-command-success"), 700);
   });
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (saveButton.disabled) return;
-    saveButton.disabled = true;
-    const nextTitle = String(titleInput.value || "").trim();
-    const nextKeywordList = uniqueKeywords(splitKeywordText(keywordsInput.value));
-    const nextKeywords = nextKeywordList.join(", ");
-    if (!nextTitle) {
-      saveButton.disabled = false;
-      setGalleryStatus("Title cannot be empty.");
-      titleInput.focus();
-      return;
-    }
-    const previousTitle = photo.title || "";
-    const previousKeywords = currentKeywords;
-    const previousKeywordList = Array.isArray(photo.keywords) ? [...photo.keywords] : splitKeywordText(previousKeywords);
-    dialog.close("save");
-    photo.title = nextTitle;
-    photo.keywords = nextKeywordList;
-    setMetadataValue(photo, "Metadata title", nextTitle);
-    setMetadataValue(photo, "Keywords", nextKeywords);
-    const currentId = photo.id;
-    const nextIndex = filteredVisiblePhotos().findIndex((item) => item.id === currentId);
-    if (nextIndex >= 0) selectedIndex = nextIndex;
-    renderGallery();
-    setGalleryStatus("Saving metadata...");
+};
+
+const likeSelectedPhotos = () => {
+  const selected = selectedPhotosInOrder();
+  const succeeded = [];
+  const failed = [];
+  selected.forEach((photo) => {
     try {
-      await hiddenActions.updatePhotoMetadata?.(photo.id, { title: nextTitle, keywords: nextKeywords });
-      setGalleryStatus(`${photo.title} metadata saved.`);
+      if (!likedStore?.has?.(photo.id)) likedStore?.add?.(photo.id);
+      succeeded.push(photo.id);
+      selectionErrors.delete(photo.id);
     } catch (error) {
-      photo.title = previousTitle;
-      photo.keywords = previousKeywordList;
-      setMetadataValue(photo, "Metadata title", previousTitle);
-      setMetadataValue(photo, "Keywords", previousKeywords);
-      renderGallery();
-      setGalleryStatus(error?.message || "Could not save metadata.");
+      failed.push(photo.id);
+      selectionErrors.set(photo.id, error?.message || "Could not like this photo.");
     }
   });
-  dialog.addEventListener("close", () => dialog.remove());
-  document.body.append(dialog);
-  dialog.showModal();
-  const initialField = field === "keywords" ? keywordsInput : titleInput;
-  initialField?.focus();
-  initialField?.select?.();
+  updateGalleryLikeButtons();
+  pulseLikedCards(succeeded);
+  if (!ownerCullingEnabled) {
+    succeeded.forEach((photoId) => {
+      selectedPhotoIds.delete(photoId);
+      forgetSelectedPhoto(photoId);
+    });
+  }
+  updateSelection({ scroll: false });
+  syncSelectionDetailContext();
+  if (failed.length) setGalleryStatus(`${succeeded.length} liked; ${failed.length} failed and remain selected.`);
+  else setGalleryStatus(`${succeeded.length} photo${succeeded.length === 1 ? "" : "s"} liked.`);
+  return { succeeded, failed };
+};
+
+const ownerWorkflowContext = () => {
+  const value = typeof ownerCommandAdapter.context === "function"
+    ? ownerCommandAdapter.context()
+    : ownerCommandAdapter.context;
+  return value === "review" ? "review" : "gallery";
+};
+
+const ownerAdapterMethod = (name) => typeof ownerCommandAdapter?.[name] === "function"
+  ? ownerCommandAdapter[name].bind(ownerCommandAdapter)
+  : null;
+
+const normalizeOwnerCommandResult = (result, requestedIds) => {
+  const itemResults = Array.isArray(result?.results) ? result.results : [];
+  if (!itemResults.length) return { succeeded: [...requestedIds], failed: [] };
+  const succeeded = itemResults
+    .filter((item) => item?.ok !== false)
+    .map((item) => String(item.photoId || item.photo_id || item.id || ""))
+    .filter(Boolean);
+  const succeededIds = new Set(succeeded);
+  const failed = itemResults
+    .filter((item) => item?.ok === false)
+    .map((item) => ({
+      photoId: String(item.photoId || item.photo_id || item.id || ""),
+      reason: String(item.reason || item.error || "Owner command failed."),
+    }))
+    .filter((item) => item.photoId);
+  requestedIds.forEach((photoId) => {
+    if (!succeededIds.has(photoId) && !failed.some((item) => item.photoId === photoId)) {
+      failed.push({ photoId, reason: "No result was returned for this photo." });
+    }
+  });
+  return { succeeded, failed };
+};
+
+const runOwnerAdapterCommand = async (methodName, { value = null, removes = false, currentPhoto = null } = {}) => {
+  const method = ownerAdapterMethod(methodName);
+  if (!method) return null;
+  const requestedIds = currentPhoto?.id ? [currentPhoto.id] : [...selectedPhotoIds].slice(0, selectionLimit);
+  if (!requestedIds.length) return null;
+  const snapshot = captureSelectionSnapshot();
+  try {
+    const result = await method({
+      photoIds: requestedIds,
+      primaryPhotoId: currentPhoto?.id || primaryPhotoId,
+      fixtureId: ownerCommandAdapter.fixtureId || null,
+      idempotencyKey: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${methodName}`,
+      value,
+    });
+    const normalized = normalizeOwnerCommandResult(result, requestedIds);
+    normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
+    normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
+    if (removes) {
+      normalized.succeeded.forEach((photoId) => {
+        selectedPhotoIds.delete(photoId);
+        forgetSelectedPhoto(photoId);
+      });
+      if (!selectedPhotoIds.size) {
+        const survivors = filteredVisiblePhotos();
+        const replacementId = replacementAfterRemoval(snapshot, new Set(survivors.map((photo) => photo.id)));
+        if (replacementId) {
+          selectedPhotoIds.add(replacementId);
+          rememberSelectedPhoto(replacementId);
+          selectionAnchorPhotoId = replacementId;
+        }
+      }
+      renderGallery();
+    } else {
+      updateSelection({ scroll: false });
+    }
+    setGalleryStatus(normalized.failed.length
+      ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed and remain selected.`
+      : `${requestedIds.length} photo${requestedIds.length === 1 ? "" : "s"} updated.`);
+    return normalized;
+  } catch (error) {
+    requestedIds.forEach((photoId) => selectionErrors.set(photoId, error?.message || "Owner command failed."));
+    updateSelection({ scroll: false });
+    setGalleryStatus(error?.message || "Owner command failed.");
+    return { succeeded: [], failed: requestedIds.map((photoId) => ({ photoId, reason: error?.message || "Owner command failed." })) };
+  }
+};
+
+const burstCandidateIds = () => {
+  const resolver = ownerAdapterMethod("burstCandidates");
+  if (!resolver || !primaryPhotoId) return null;
+  try {
+    const result = resolver({ primaryPhotoId, loadedPhotoIds: renderedGalleryPhotos.map((photo) => photo.id) });
+    if (!Array.isArray(result)) return null;
+    const loadedIds = new Set(renderedGalleryPhotos.map((photo) => photo.id));
+    return [...new Set(result.map(String).filter((photoId) => loadedIds.has(photoId)))].slice(0, selectionLimit);
+  } catch {
+    return null;
+  }
+};
+
+const selectBurstCandidates = () => {
+  const previous = captureSelectionSnapshot();
+  const candidateIds = burstCandidateIds();
+  if (!candidateIds?.length) return false;
+  try {
+    selectedPhotoIds.clear();
+    selectionRecency = [];
+    candidateIds.forEach((photoId) => {
+      selectedPhotoIds.add(photoId);
+      selectionRecency.push(photoId);
+    });
+    primaryPhotoId = candidateIds.includes(previous.primaryPhotoId) ? previous.primaryPhotoId : candidateIds[0];
+    selectionAnchorPhotoId = primaryPhotoId;
+    updateSelection({ scroll: false });
+    syncSelectionDetailContext();
+    setGalleryStatus(`${candidateIds.length} burst candidate${candidateIds.length === 1 ? "" : "s"} selected.`);
+    return true;
+  } catch (error) {
+    selectedPhotoIds.clear();
+    previous.selectedIds.forEach((photoId) => selectedPhotoIds.add(photoId));
+    primaryPhotoId = previous.primaryPhotoId;
+    selectionAnchorPhotoId = previous.anchorPhotoId;
+    selectionRecency = previous.selectionRecency;
+    updateSelection({ scroll: false });
+    setGalleryStatus(error?.message || "Could not resolve burst candidates.");
+    return false;
+  }
+};
+
+const openSelectedDetail = (photo = selectedShortcutPhoto()) => {
+  if (!photo?.id) return false;
+  syncSelectionDetailContext();
+  window.location.assign(versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}${isSharedGallery ? `&gallery=${sharedGalleryKey}` : ""}`));
+  return true;
+};
+
+const quickLookContext = (photo) => ({ surface: "quick-look", currentPhoto: photo });
+
+const openGalleryPreview = () => {
+  const selected = selectedShortcutPhoto();
+  if (!selected) return false;
+  const returnCommandId = document.activeElement?.dataset?.galleryCommand || "";
+  const selectedItems = selectedPhotosInOrder();
+  const selectedNavigation = selectedItems.length > 1;
+  const items = selectedNavigation ? selectedItems : [...renderedGalleryPhotos];
+  const index = Math.max(0, items.findIndex((photo) => photo.id === selected.id));
+  window.photosByElieOpenFinderPreview?.(selected, {
+    owner: ownerCullingEnabled,
+    items,
+    index,
+    wrapNavigation: selectedNavigation,
+    navigationKind: selectedNavigation ? "selected" : "loaded",
+    quickLookCommands: (photo) => galleryCommandRegistry?.list({ context: quickLookContext(photo) })
+      .filter((command) => command.quickLookLegend && command.enabled)
+      .map((command) => ({
+        id: command.id,
+        label: command.label,
+        shortcutLabel: command.shortcutLabel,
+        selectionEffect: command.selectionEffect,
+      })),
+    dispatchQuickLookCommand: (commandId, photo, event) => galleryCommandRegistry?.dispatch(commandId, {
+      source: "quick-look",
+      event,
+      context: quickLookContext(photo),
+    }),
+    restoreFocus: () => {
+      const commandButton = returnCommandId
+        ? galleryCommandBar?.querySelector(`[data-gallery-command="${CSS.escape(returnCommandId)}"]`)
+        : null;
+      const cardButton = galleryRoot?.querySelector(
+        `[data-gallery-select-photo][data-photo-id="${CSS.escape(selected.id)}"]`
+      );
+      (commandButton || cardButton)?.focus({ preventScroll: true });
+    },
+  });
+  return true;
+};
+
+const commandShortcut = (key, options = {}) => ({ key, ...options });
+const ownerCapabilityState = (methodName, activeReason = "Requires the active Backstage fixture session.") => ({
+  enabled: Boolean(ownerAdapterMethod(methodName)) && selectedPhotoIds.size > 0,
+  disabledReason: selectedPhotoIds.size ? activeReason : "Select at least one photo.",
+});
+
+const galleryCommands = [
+  {
+    id: "select-all", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "selection", order: 10,
+    label: "Select All", icon: "☑", shortcut: commandShortcut("a", { primary: true }),
+    shortcutLabel: () => `${primaryShortcutLabel()}A`, selectionEffect: "add-loaded", executionScope: "loaded",
+    state: () => ({
+      enabled: renderedGalleryPhotos.some((photo) => !selectedPhotoIds.has(photo.id)) && selectedPhotoIds.size < selectionLimit,
+      disabledReason: selectedPhotoIds.size >= selectionLimit ? `Selection is limited to ${selectionLimit} photos.` : "All loaded photos are selected.",
+    }),
+    execute: selectAllLoadedPhotos,
+  },
+  {
+    id: "clear-selection", roles: ["visitor"], surfaces: ["gallery"], group: "selection", order: 20,
+    label: "Clear Selection", icon: "×", shortcut: "Escape", shortcutLabel: "Esc", selectionEffect: "clear",
+    state: () => ({ enabled: selectedPhotoIds.size > 0, disabledReason: "No photos are selected." }),
+    execute: clearVisitorSelection,
+  },
+  {
+    id: "keep-primary", roles: ["owner"], surfaces: ["gallery"], group: "selection", order: 20,
+    label: "Keep Primary", icon: "◎", shortcut: "Escape", shortcutLabel: "Esc", selectionEffect: "keep-primary",
+    state: () => ({ enabled: selectedPhotoIds.size > 1, disabledReason: "Only the primary photo is selected." }),
+    execute: keepOwnerPrimary,
+  },
+  {
+    id: "toggle-selection", roles: ["visitor", "owner"], surfaces: ["quick-look"], group: "selection", order: 30,
+    label: (context) => selectedPhotoIds.has(context.currentPhoto?.id) ? "Deselect" : "Select",
+    icon: "✓", shortcut: "s", shortcutLabel: "S", quickLookLegend: true, selectionEffect: "toggle-current",
+    state: (context) => ({ enabled: Boolean(context.currentPhoto?.id), disabledReason: "No current photo." }),
+    execute: (context) => toggleGalleryPhotoSelection(context.currentPhoto?.id),
+  },
+  {
+    id: "undo", roles: ["owner"], surfaces: ["gallery"], group: "selection", order: 40,
+    label: "Undo", icon: "↶", shortcut: commandShortcut("z", { primary: true }),
+    shortcutLabel: () => `${primaryShortcutLabel()}Z`, selectionEffect: "restore-snapshot",
+    state: () => ({ hidden: !lastUndoableOwnerAction, enabled: Boolean(lastUndoableOwnerAction), disabledReason: "No undoable command." }),
+    execute: undoLastOwnerCommand,
+  },
+  {
+    id: "preview", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 10,
+    label: "Preview", icon: "◉", shortcut: " ", shortcutLabel: "Space", executionScope: "explicit-primary",
+    state: () => ({ enabled: Boolean(selectedShortcutPhoto()), disabledReason: "Select a photo to preview." }),
+    execute: openGalleryPreview,
+  },
+  {
+    id: "detail", roles: ["owner"], surfaces: ["gallery"], group: "view", order: 20,
+    label: "Detail", icon: "↗", shortcut: "Enter", shortcutLabel: "Enter", executionScope: "primary",
+    state: () => ({ enabled: Boolean(selectedShortcutPhoto()), disabledReason: "No primary photo." }),
+    execute: () => openSelectedDetail(),
+  },
+  {
+    id: "density-more", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 30,
+    label: "More Photos", icon: "−", shortcut: commandShortcut("G", { caseSensitive: true }), shortcutLabel: "G",
+    state: () => ({ enabled: preferredDensityColumns() < maxDensityColumns(), disabledReason: "Already showing the most columns." }),
+    execute: () => {
+      const columns = stepGalleryDensity(1);
+      setGalleryStatus(`Grid ${columns}.`);
+    },
+  },
+  {
+    id: "density-less", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 40,
+    label: "Fewer Photos", icon: "+", shortcut: commandShortcut("g", { caseSensitive: true }), shortcutLabel: "g",
+    state: () => ({ enabled: preferredDensityColumns() > 1, disabledReason: "Already showing the fewest columns." }),
+    execute: () => {
+      const columns = stepGalleryDensity(-1);
+      setGalleryStatus(`Grid ${columns}.`);
+    },
+  },
+  {
+    id: "fit-fill", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 50,
+    label: () => preferredFitMode() === "fill" ? "Fit" : "Fill", icon: "↔", shortcut: "z", shortcutLabel: "Z",
+    execute: () => {
+      const mode = toggleGalleryFitMode();
+      setGalleryStatus(galleryFitModeStatus(mode));
+    },
+  },
+  ...[0, 1, 2, 3, 4, 5].map((rating) => ({
+    id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: rating,
+    label: rating ? `Rating ${rating}` : "Clear Rating", icon: rating ? "★" : "☆", shortcut: String(rating), shortcutLabel: String(rating),
+    quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    state: () => ownerCapabilityState("setRating"),
+    execute: (context) => runOwnerAdapterCommand("setRating", { value: rating, currentPhoto: context.currentPhoto }),
+  })),
+  ...[[6, "red"], [7, "yellow"], [8, "green"], [9, "blue"]].map(([key, color], index) => ({
+    id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: 10 + index,
+    label: `${color[0].toUpperCase()}${color.slice(1)}`, icon: "●", shortcut: String(key), shortcutLabel: String(key),
+    quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    state: () => ownerCapabilityState("setColor"),
+    execute: (context) => runOwnerAdapterCommand("setColor", { value: color, currentPhoto: context.currentPhoto }),
+  })),
+  {
+    id: "like", roles: ["visitor", "owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 10,
+    label: "Like", icon: "♥", shortcut: "l", shortcutLabel: "L", quickLookLegend: true,
+    selectionEffect: (context) => context.role === "visitor" ? "clear-successes" : "preserve",
+    state: (context) => ({
+      enabled: context.surface === "quick-look" ? Boolean(context.currentPhoto?.id) : selectedPhotoIds.size > 0,
+      disabledReason: "Select at least one photo.",
+    }),
+    execute: (context) => context.surface === "quick-look" ? toggleGalleryLike(context.currentPhoto) : likeSelectedPhotos(),
+  },
+  {
+    id: "pick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 20,
+    label: "Pick", icon: "P", shortcut: "p", shortcutLabel: "P", quickLookLegend: true, selectionEffect: "preserve",
+    state: () => ownerWorkflowContext() === "review"
+      ? { enabled: false, disabledReason: "Already picked." }
+      : ownerCapabilityState("pick"),
+    execute: (context) => runOwnerAdapterCommand("pick", { currentPhoto: context.currentPhoto }),
+  },
+  {
+    id: "hide", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 30,
+    label: "Hide", icon: "H", shortcut: "h", shortcutLabel: "H", quickLookLegend: true,
+    tooltip: "Fixture-local Hide; never a global tombstone.", selectionEffect: "remove-successes",
+    state: () => ownerCapabilityState("hide"),
+    execute: (context) => runOwnerAdapterCommand("hide", { removes: true, currentPhoto: context.currentPhoto }),
+  },
+  {
+    id: "review", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 40,
+    label: "Review", icon: "R", shortcut: "r", shortcutLabel: "R", quickLookLegend: true, selectionEffect: "remove-successes",
+    state: () => ownerWorkflowContext() === "review"
+      ? { enabled: false, disabledReason: "Already in Review." }
+      : ownerCapabilityState("review"),
+    execute: (context) => runOwnerAdapterCommand("review", { removes: true, currentPhoto: context.currentPhoto }),
+  },
+  {
+    id: "waste-basket", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 50,
+    label: "Waste Basket", icon: "X", shortcut: "x", shortcutLabel: "X",
+    tooltip: "Recoverable Waste Basket through the PBB-79 lifecycle gateway.", selectionEffect: "remove-successes", quickLookLegend: true,
+    state: (context) => ({
+      enabled: context.surface === "quick-look" ? Boolean(context.currentPhoto?.id) : selectedPhotoIds.size > 0,
+      disabledReason: "Select at least one photo.",
+    }),
+    execute: (context) => moveOwnerSelectionToWasteBasket(context.currentPhoto?.id ? [context.currentPhoto.id] : null),
+  },
+  {
+    id: "unpick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 60,
+    label: "Unpick", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
+    tooltip: "Clear the active fixture decision; this is not Undo.", selectionEffect: "preserve",
+    state: () => ownerCapabilityState("unpick"),
+    execute: (context) => runOwnerAdapterCommand("unpick", { currentPhoto: context.currentPhoto }),
+  },
+  {
+    id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "workflow", order: 70,
+    label: () => `Burst ${burstCandidateIds()?.length || 0}`, icon: "B", shortcut: "b", shortcutLabel: "B", selectionEffect: "replace",
+    state: () => {
+      const candidates = burstCandidateIds();
+      const current = new Set(selectedPhotoIds);
+      const same = candidates?.length === current.size && candidates.every((photoId) => current.has(photoId));
+      const count = candidates?.length || 0;
+      return {
+        enabled: Boolean(count) && !same,
+        disabledReason: !candidates ? "Canonical Backstage burst detection is unavailable." : same
+          ? `These ${count} burst candidates are already selected.`
+          : "No loaded burst candidates.",
+        tooltip: `Selects ${count} burst candidate${count === 1 ? "" : "s"}, losing the current ${selectedPhotoIds.size}-item selection.`,
+      };
+    },
+    execute: selectBurstCandidates,
+  },
+  {
+    id: "approve", roles: ["owner"], surfaces: ["gallery", "quick-look"], workflows: ["review"], group: "workflow", order: 80,
+    label: "Approve", icon: "A", shortcut: "a", shortcutLabel: "A", quickLookLegend: true, selectionEffect: "remove-successes",
+    state: () => ownerCapabilityState("approve"),
+    execute: (context) => runOwnerAdapterCommand("approve", { removes: true, currentPhoto: context.currentPhoto }),
+  },
+  {
+    id: "needs-ai", roles: ["owner"], surfaces: ["gallery", "quick-look"], workflows: ["review"], group: "workflow", order: 90,
+    label: "Needs AI", icon: "N", shortcut: "n", shortcutLabel: "N", quickLookLegend: true, selectionEffect: "remove-successes",
+    state: () => ownerCapabilityState("needsAi"),
+    execute: (context) => runOwnerAdapterCommand("needsAi", { removes: true, currentPhoto: context.currentPhoto }),
+  },
+];
+
+const galleryCommandContext = () => ({
+  role: galleryRole,
+  surface: "gallery",
+  workflow: ownerWorkflowContext(),
+  selectedIds: [...selectedPhotoIds],
+  selectionCount: selectedPhotoIds.size,
+  primaryPhotoId,
+  loadedIds: renderedGalleryPhotos.map((photo) => photo.id),
+  selectionLimit,
+});
+
+const readActionLabelSetting = () => {
+  try {
+    return localStorage.getItem(galleryActionLabelsKey) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const applyActionLabelSetting = (enabled = readActionLabelSetting()) => {
+  document.documentElement.dataset.galleryActionLabels = String(Boolean(enabled));
+};
+
+const ensureActionLabelSetting = () => {
+  applyActionLabelSetting();
+  const settingsDialog = document.querySelector("[data-settings-modal] .site-settings-dialog");
+  if (!settingsDialog || settingsDialog.querySelector("[data-gallery-action-label-setting]")) return;
+  const label = document.createElement("label");
+  label.className = "site-settings-check gallery-action-label-setting";
+  label.innerHTML = `
+    <input type="checkbox" data-gallery-action-label-setting${readActionLabelSetting() ? " checked" : ""}>
+    <span>Show action labels</span>
+  `;
+  label.querySelector("input")?.addEventListener("change", (event) => {
+    const enabled = Boolean(event.target.checked);
+    try {
+      localStorage.setItem(galleryActionLabelsKey, String(enabled));
+    } catch {}
+    applyActionLabelSetting(enabled);
+  });
+  settingsDialog.append(label);
+};
+
+const commandButtonHtml = (command) => {
+  const title = command.enabled ? command.tooltip : command.disabledReason;
+  return `
+    <button class="gallery-command-button" type="button" data-gallery-command="${escapeHtml(command.id)}"
+      ${command.enabled ? "" : "disabled"} title="${escapeHtml(title)}" aria-label="${escapeHtml(`${command.label}${command.shortcutLabel ? ` (${command.shortcutLabel})` : ""}${command.enabled ? "" : `. ${command.disabledReason}`}`)}">
+      <span class="gallery-command-icon" aria-hidden="true">${escapeHtml(command.icon)}</span>
+      <span class="gallery-command-label">${escapeHtml(command.label)}</span>
+      ${command.shortcutLabel ? `<span class="gallery-command-shortcut" aria-hidden="true">(${escapeHtml(command.shortcutLabel)})</span>` : ""}
+    </button>
+  `;
+};
+
+const renderGalleryCommandBar = () => {
+  if (!galleryCommandBar || !galleryCommandRegistry) return;
+  const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
+  const commands = galleryCommandRegistry.list();
+  const groups = galleryCommandModel.GROUP_ORDER
+    .map((group) => ({ group, commands: commands.filter((command) => command.group === group) }))
+    .filter((entry) => entry.commands.length);
+  galleryCommandBar.innerHTML = `
+    <div class="gallery-command-scroll" data-gallery-command-scroll>
+      <span class="gallery-command-count-slot" data-gallery-command-count-slot></span>
+      ${groups.map((entry) => `
+        <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replace("-", " "))}">
+          ${entry.commands.map(commandButtonHtml).join("")}
+        </span>
+      `).join("")}
+    </div>
+  `;
+  const countSlot = galleryCommandBar.querySelector("[data-gallery-command-count-slot]");
+  if (countSlot && gallerySelectionCount) countSlot.append(gallerySelectionCount);
+  galleryCommandBar.querySelectorAll("[data-gallery-command]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await galleryCommandRegistry.dispatch(button.dataset.galleryCommand, { source: "button" });
+      renderGalleryCommandBar();
+    });
+  });
+  if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
+  const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
+  if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);
+};
+
+const ensureGalleryCommandBar = () => {
+  if (galleryCommandBar) return;
+  galleryCommandRegistry = galleryCommandModel.createRegistry({
+    commands: galleryCommands,
+    getContext: galleryCommandContext,
+    onDisabled: (command) => setGalleryStatus(command.disabledReason),
+  });
+  galleryCommandBar = document.createElement("nav");
+  galleryCommandBar.className = "gallery-command-bar";
+  galleryCommandBar.dataset.galleryCommandBar = "";
+  galleryCommandBar.setAttribute("aria-label", `${galleryRole === "owner" ? "Owner" : "Visitor"} gallery actions`);
+  document.querySelector(".topbar")?.after(galleryCommandBar);
+  syncGalleryCommandBar = renderGalleryCommandBar;
+  renderGalleryCommandBar();
+  ensureActionLabelSetting();
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(() => {
+      const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
+      if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);
+    }).observe(galleryCommandBar);
+  }
 };
 
 const renderGallery = ({ scrollSelection = true } = {}) => {
   const allPhotos = visiblePhotos();
   const photos = filteredVisiblePhotos(allPhotos);
+  ensureOwnerSelection(photos);
   const likedIds = likedPhotoIds();
   if (isSelectionGallery && !activeFilterCount()) {
     writeDetailSequenceContext([]);
@@ -1412,8 +1919,17 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
     const href = versionedHref(`./photo.html?${detailParams.toString()}`);
     const isLiked = likedIds.has(photo.id);
-    const actionButtons = [];
-    if (likedStore) actionButtons.push(`
+    const selectButton = `
+          <button
+            class="gallery-action-toggle gallery-select-toggle${selectedPhotoIds.has(photo.id) ? " is-selected" : ""}"
+            type="button"
+            data-gallery-select-photo
+            data-photo-id="${escapeHtml(photo.id)}"
+            aria-label="${selectedPhotoIds.has(photo.id) ? "Remove from selection" : "Add to selection"}"
+            aria-pressed="${selectedPhotoIds.has(photo.id) ? "true" : "false"}"
+          >${selectedPhotoIds.has(photo.id) ? "✓" : "+"}</button>
+    `;
+    const likeButton = likedStore ? `
           <button
             class="gallery-action-toggle gallery-like-toggle${isLiked ? " is-liked" : ""}"
             type="button"
@@ -1424,25 +1940,18 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
           >
             ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
           </button>
-      `);
-    if (ownerCullingEnabled) actionButtons.push(`
-          <button
-            class="gallery-action-toggle gallery-select-toggle${selectedPhotoIds.has(photo.id) ? " is-selected" : ""}"
-            type="button"
-            data-owner-select-photo
-            data-photo-id="${escapeHtml(photo.id)}"
-            aria-label="${selectedPhotoIds.has(photo.id) ? "Remove from selection" : "Add to selection"}"
-            aria-pressed="${selectedPhotoIds.has(photo.id) ? "true" : "false"}"
-          >${selectedPhotoIds.has(photo.id) ? "✓" : "+"}</button>
-      `);
-    const actionHtml = actionButtons.length ? `<div class="gallery-card-actions">${actionButtons.join("")}</div>` : "";
+      ` : "";
+    const actionHtml = `
+      <div class="gallery-card-selection">${selectButton}</div>
+      ${likeButton ? `<div class="gallery-card-actions">${likeButton}</div>` : ""}
+    `;
     return renderSharedPhotoCard({
       photo,
       index,
       href,
       collectionKey: galleryKey,
       actionHtml,
-      ownerEditable: ownerCullingEnabled && fullOwnerToolsEnabled,
+      ownerEditable: false,
     });
   }).join("");
   galleryRoot.querySelectorAll("[data-gallery-like]").forEach((button) => {
@@ -1453,11 +1962,11 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       toggleGalleryLike(photo);
     });
   });
-  galleryRoot.querySelectorAll("[data-owner-select-photo]").forEach((button) => {
+  galleryRoot.querySelectorAll("[data-gallery-select-photo]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      selectOwnerPhotoFromPointer(button.dataset.photoId, visibleSubset, event);
+      toggleGalleryPhotoSelection(button.dataset.photoId, visibleSubset);
     });
   });
   galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
@@ -1473,23 +1982,13 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       });
     });
   });
-  if (ownerCullingEnabled && fullOwnerToolsEnabled) {
-    galleryRoot.querySelectorAll("[data-owner-title-edit]").forEach((caption) => {
-      caption.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const card = caption.closest("[data-photo-index]");
-        selectedIndex = Number(card?.dataset.photoIndex || 0);
-        updateSelection({ scroll: false });
-        const selected = visibleSubset[selectedIndex];
-        if (selected) openOwnerMetadataModal(selected, "title");
-      });
-    });
-  }
+  galleryRoot.querySelectorAll("[data-photo-link]").forEach((link) => {
+    link.addEventListener("click", syncSelectionDetailContext);
+  });
   if (ownerCullingEnabled) {
     galleryRoot.querySelectorAll("[data-photo-index]").forEach((card) => {
       card.addEventListener("click", (event) => {
-        if (event.target.closest("button, [data-owner-title-edit]")) return;
+        if (event.target.closest("button")) return;
         event.preventDefault();
         const index = Number(card.dataset.photoIndex || 0);
         const photo = visibleSubset[index];
@@ -1524,7 +2023,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     showAllButton.hidden = remaining <= 0;
     showAllButton.textContent = seeAllLabel(remaining);
   }
-  syncOwnerCullToolbar();
+  syncGallerySelectionToolbar();
   const paginated = photos.length > visibleSubset.length;
   const mediaNoun = photoFilter.statusNoun(filterState, t);
   const filterStatus = activeFilterCount() || paginated
@@ -1579,221 +2078,71 @@ if (galleryRoot && gallery) {
   galleryRoot.classList.add(gallery.accent);
   galleryRoot.setAttribute("aria-label", `${localizedCollectionTitle()} ${t("nav.photos").toLowerCase()}`);
   ensureGalleryFilterControls();
-  ensureOwnerCullToolbar();
+  ensureGallerySelectionToolbar();
   ensureGalleryMoreButton();
-  ensureGalleryKeyboardHint();
+  ensureGalleryCommandBar();
   renderGallery({ scrollSelection: false });
   startOwnerSuperSearch();
 
-  if (!viewControls) {
-    viewControls = document.createElement("div");
-    viewControls.className = "gallery-view-controls is-header-mounted";
-    viewControls.setAttribute("aria-label", t("a11y.gallery_view_controls"));
-    viewControls.dataset.i18nAriaLabel = "a11y.gallery_view_controls";
-    const densityControl = document.createElement("div");
-    densityControl.className = "gallery-density-control gallery-density-stepper";
-    densityControl.setAttribute("role", "group");
-    densityControl.setAttribute("aria-label", t("a11y.gallery_density"));
-    densityControl.innerHTML = `
-      <button type="button" data-gallery-density-step="1" data-i18n-aria-label="a11y.gallery_density_decrease" aria-label="${t("a11y.gallery_density_decrease")}"><span aria-hidden="true">−</span></button>
-      <button type="button" data-gallery-density-step="-1" data-i18n-aria-label="a11y.gallery_density_increase" aria-label="${t("a11y.gallery_density_increase")}"><span aria-hidden="true">+</span></button>
-    `;
-    const fitControl = document.createElement("div");
-    fitControl.className = "gallery-fit-control gallery-fit-split";
-    fitControl.setAttribute("role", "group");
-    fitControl.setAttribute("aria-label", t("a11y.gallery_image_fit"));
-    fitControl.dataset.i18nAriaLabel = "a11y.gallery_image_fit";
-    fitControl.innerHTML = `
-      <button type="button" data-gallery-fit-mode="fit" aria-pressed="true" data-i18n="gallery.fit">Fit</button>
-      <button type="button" data-gallery-fit-mode="fill" aria-pressed="false" data-i18n="gallery.fill">Fill</button>
-    `;
-    const topButton = document.createElement("button");
-    topButton.className = "gallery-top-button";
-    topButton.type = "button";
-    topButton.dataset.galleryBackToTop = "";
-    topButton.setAttribute("aria-label", t("a11y.back_to_top"));
-    topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
-    viewControls.append(densityControl, fitControl);
-    const headerControls = document.querySelector(".header-controls");
-    if (headerControls) headerControls.prepend(viewControls);
-    else document.body.append(viewControls);
-    document.body.append(topButton);
-    densityButtons = [...densityControl.querySelectorAll("[data-gallery-density-step]")];
-    fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
-    topButton.addEventListener("click", () => {
-      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
-    });
-    densityControl.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-gallery-density-step]");
-      if (!button || button.disabled) return;
-      const nextColumns = stepGalleryDensity(Number(button.dataset.galleryDensityStep || 0));
-      setGalleryStatus(`${t("gallery.grid")} ${nextColumns}.`);
-    });
-    fitControl.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-gallery-fit-mode]");
-      if (!button) return;
-      setGalleryFitMode(button.dataset.galleryFitMode);
-    });
-    window.addEventListener("resize", () => {
-      applyGalleryDensity();
-      applyGalleryPreviewLayout();
-      if (!viewControls?.classList.contains("is-header-mounted")) positionGalleryViewControls();
-      updateSelection({ scroll: false });
-    });
-    if (!viewControls.classList.contains("is-header-mounted")) {
-      window.addEventListener("scroll", positionGalleryViewControls, { passive: true });
-    }
-    window.addEventListener("load", () => {
-      applyGalleryPreviewLayout();
-      updateSelection({ scroll: false });
-    }, { once: true });
-    if (document.fonts?.ready) {
-      document.fonts.ready.then(() => {
-        applyGalleryPreviewLayout();
-        updateSelection({ scroll: false });
-      }).catch(() => {});
-    }
+  const topButton = document.createElement("button");
+  topButton.className = "gallery-top-button";
+  topButton.type = "button";
+  topButton.dataset.galleryBackToTop = "";
+  topButton.setAttribute("aria-label", t("a11y.back_to_top"));
+  topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
+  document.body.append(topButton);
+  topButton.addEventListener("click", () => {
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+  });
+  window.addEventListener("resize", () => {
     applyGalleryDensity();
-    applyGalleryFitMode();
-    if (!viewControls.classList.contains("is-header-mounted")) positionGalleryViewControls();
-    window.photosByElieI18n?.apply?.();
+    applyGalleryPreviewLayout();
+    updateSelection({ scroll: false });
+    renderGalleryCommandBar();
+  });
+  window.addEventListener("load", () => {
+    applyGalleryPreviewLayout();
+    updateSelection({ scroll: false });
+  }, { once: true });
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      applyGalleryPreviewLayout();
+      updateSelection({ scroll: false });
+      renderGalleryCommandBar();
+    }).catch(() => {});
   }
+  applyGalleryDensity();
+  applyGalleryFitMode();
 
-  window.addEventListener("keydown", (event) => {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+  window.addEventListener("keydown", async (event) => {
+    if (event.defaultPrevented) return;
     const target = event.target;
     if (target instanceof HTMLElement) {
       if (target.isContentEditable) return;
       if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
     }
-    if (event.key === " ") {
-      const selected = selectedShortcutPhoto();
-      if (!selected) return;
+    if (ownerCullingEnabled && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const photos = filteredVisiblePhotos();
-      window.photosByElieOpenFinderPreview?.(selected, {
-        owner: localModerationEnabled,
-        items: photos,
-        index: Math.max(0, photos.findIndex((item) => item.id === selected.id)),
-      });
-      event.preventDefault();
-      return;
-    }
-    if (event.key === "g" || event.key === "G") {
-      const nextColumns = stepGalleryDensity(event.key === "G" ? 1 : -1);
-      setGalleryStatus(`Grid ${nextColumns}.`);
-      event.preventDefault();
-      return;
-    }
-    if (event.key.toLowerCase() === "l") {
-      const selected = selectedShortcutPhoto();
-      const liked = toggleGalleryLike(selected);
-      if (selected && liked !== null) {
-        setGalleryStatus(t(liked ? "detail.added_liked" : "detail.removed_liked", { title: selected.title }));
+      if (photos.length && ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(event.key)) {
+        const horizontal = event.key === "ArrowRight" || event.key === "ArrowLeft";
+        const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+        stepGallerySelection(delta, !horizontal, { extend: event.shiftKey });
         event.preventDefault();
+        return;
       }
-      return;
     }
-    if (event.key.toLowerCase() === "z") {
-      const nextMode = toggleGalleryFitMode();
-      setGalleryStatus(galleryFitModeStatus(nextMode));
-      event.preventDefault();
-    }
+    const command = galleryCommandRegistry.commandForKeyboard(event);
+    if (!command) return;
+    event.preventDefault();
+    await galleryCommandRegistry.dispatch(command.id, { source: "keyboard", event });
+    renderGalleryCommandBar();
   });
   window.addEventListener("photosbyelie:owneractionerror", (event) => {
     setGalleryStatus(event.detail?.message || "Owner action failed.");
   });
 
   if (ownerCullingEnabled) {
-    window.addEventListener("keydown", async (event) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (target instanceof HTMLElement) {
-        if (target.isContentEditable) return;
-        if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
-      }
-      const photos = filteredVisiblePhotos();
-      if (!photos.length) return;
-      if (event.key === "ArrowRight") {
-        stepGallerySelection(1, false, { extend: event.shiftKey });
-        event.preventDefault();
-        return;
-      }
-      if (event.key === "ArrowLeft") {
-        stepGallerySelection(-1, false, { extend: event.shiftKey });
-        event.preventDefault();
-        return;
-      }
-      if (event.key === "ArrowDown") {
-        stepGallerySelection(1, true, { extend: event.shiftKey });
-        event.preventDefault();
-        return;
-      }
-      if (event.key === "ArrowUp") {
-        stepGallerySelection(-1, true, { extend: event.shiftKey });
-        event.preventDefault();
-        return;
-      }
-      if (event.key === "Enter") {
-        const selected = photos[selectedIndex];
-        if (!selected) return;
-        const detailParams = new URLSearchParams({ id: selected.id });
-        if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
-        window.location.assign(versionedHref(`./photo.html?${detailParams.toString()}`));
-        event.preventDefault();
-        return;
-      }
-      if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
-        if (!fullOwnerToolsEnabled) return;
-        const selected = photos[selectedIndex];
-        if (!selected) return;
-        openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
-        event.preventDefault();
-        return;
-      }
-      if (event.key.toLowerCase() === "r") {
-        if (!fullOwnerToolsEnabled) return;
-        const selected = photos[selectedIndex];
-        if (!selected) return;
-        try {
-          const result = await queuePhotoForTitleKeywordReview(selected, "owner-gallery-r");
-          setGalleryStatus(`${selected.title}: ${reviewQueueResultText(result, 1)}`);
-        } catch (error) {
-          setGalleryStatus(error?.message || "Could not send photo to title/keyword review.");
-        }
-        event.preventDefault();
-        return;
-      }
-      if (event.key.toLowerCase() === "x" || event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
-        await moveOwnerSelectionToWasteBasket();
-        event.preventDefault();
-        return;
-      }
-      if (event.key.toLowerCase() === "d") {
-        if (!fullOwnerToolsEnabled) return;
-        const selected = photos[selectedIndex];
-        if (!selected) return;
-        const confirmed = window.confirm(`Move "${selected.title}" to the recoverable Waste Basket?\n\nThis preserves the exact prior state for restore. Only an explicit Empty Waste Basket action activates a global tombstone.`);
-        if (!confirmed) {
-          event.preventDefault();
-          return;
-        }
-        try {
-          await hiddenActions.discard?.(selected.id);
-          selectedIndex = Math.min(selectedIndex, Math.max(0, photos.length - 2));
-          renderGallery();
-          setGalleryStatus(`${selected.title} moved to the recoverable Waste Basket.`);
-        } catch (error) {
-          setGalleryStatus(error?.message || "Could not move photo to the Waste Basket.");
-        }
-        event.preventDefault();
-        return;
-      }
-      if (event.key.toLowerCase() !== "u") return;
-      await undoLastOwnerCull();
-      event.preventDefault();
-    });
-
     window.addEventListener("photosbyelie:hiddenchange", () => {
       gallery = galleryForKey(galleryKey);
       renderGallery();

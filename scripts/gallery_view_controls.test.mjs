@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -10,46 +11,101 @@ const galleryJs = read("photo-gallery.js");
 const photosCss = read("photos.css");
 const galleryHtml = read("gallery.html");
 const photosJs = read("photos.js");
+const detailJs = read("photo-detail.js");
+const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
 
-test("gallery density uses a two-button stepper instead of a range slider", () => {
-  assert.match(galleryJs, /data-gallery-density-step="1"[^\n]*>\s*<span aria-hidden="true">−<\/span>/);
-  assert.match(galleryJs, /data-gallery-density-step="-1"[^\n]*>\s*<span aria-hidden="true">\+<\/span>/);
-  assert.match(galleryJs, /stepGalleryDensity\(Number\(button\.dataset\.galleryDensityStep/);
-  assert.doesNotMatch(galleryJs, /data-gallery-density\/>/);
-  assert.match(photosCss, /\.gallery-density-stepper button \+ button/);
+test("command registry keeps role gating, stable group order, and disabled positions", () => {
+  let role = "visitor";
+  let selected = 0;
+  const registry = createRegistry({
+    getContext: () => ({ role, surface: "gallery", workflow: "gallery", selected }),
+    commands: [
+      { id: "workflow", roles: ["owner"], surfaces: ["gallery"], group: "workflow", order: 1, label: "Owner workflow" },
+      { id: "preview", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "view", order: 1, label: "Preview" },
+      {
+        id: "clear", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "selection", order: 1, label: "Clear",
+        state: (context) => ({ enabled: context.selected > 0, disabledReason: "Nothing selected." }),
+      },
+    ],
+  });
+
+  assert.deepEqual(GROUP_ORDER, ["selection", "view", "rating-color", "workflow"]);
+  assert.equal(MAX_SELECTION, 500);
+  assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview"]);
+  assert.equal(registry.command("clear").enabled, false);
+  assert.equal(registry.command("clear").disabledReason, "Nothing selected.");
+
+  role = "owner";
+  selected = 1;
+  assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview", "workflow"]);
 });
 
-test("fit and fill remain standard actions in one segmented pill", () => {
-  assert.match(galleryJs, /gallery-fit-control gallery-fit-split/);
-  assert.match(galleryJs, /data-gallery-fit-mode="fit"/);
-  assert.match(galleryJs, /data-gallery-fit-mode="fill"/);
-  assert.match(photosCss, /\.gallery-fit-control\.gallery-fit-split button \+ button/);
-  assert.match(photosCss, /\.gallery-fit-control\.gallery-fit-split button\[aria-pressed="true"\]/);
+test("buttons and keyboard dispatch the same command execution path", async () => {
+  const sources = [];
+  const registry = createRegistry({
+    commands: [{
+      id: "like", roles: ["visitor"], surfaces: ["gallery"], group: "workflow", label: "Like", shortcut: "l",
+      execute: (_context, metadata) => sources.push(metadata.source),
+    }],
+  });
+  await registry.dispatch("like", { source: "button" });
+  await registry.dispatchKeyboard({ key: "l", metaKey: false, ctrlKey: false, altKey: false, shiftKey: false });
+  assert.deepEqual(sources, ["button", "keyboard"]);
+  assert.equal(matchesKeyboardShortcut(
+    { key: "a", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false },
+    { key: "a", primary: true },
+  ), true);
+  assert.equal(matchesKeyboardShortcut(
+    { key: "a", metaKey: false, ctrlKey: false, altKey: false, shiftKey: false },
+    { key: "a", primary: true },
+  ), false);
 });
 
-test("gallery view and buyer actions share a dedicated row below content-width breadcrumbs", () => {
-  assert.match(galleryJs, /gallery-view-controls is-header-mounted/);
-  assert.match(galleryJs, /headerControls\.prepend\(viewControls\)/);
+test("contextual gallery bar replaces the passive hint and owns view commands", () => {
+  assert.ok(galleryHtml.indexOf("gallery-commands.js") < galleryHtml.indexOf("photo-gallery.js"));
+  assert.match(galleryJs, /galleryCommandModel\.createRegistry/);
+  assert.match(galleryJs, /data-gallery-command=/);
+  assert.match(galleryJs, /galleryCommandRegistry\.dispatch\(button\.dataset\.galleryCommand/);
+  assert.match(galleryJs, /galleryCommandRegistry\.commandForKeyboard\(event\)/);
+  assert.match(galleryJs, /id: "density-more"/);
+  assert.match(galleryJs, /id: "density-less"/);
+  assert.match(galleryJs, /id: "fit-fill"/);
+  assert.doesNotMatch(galleryJs, /data-gallery-shortcut-hint/);
+  assert.doesNotMatch(galleryHtml, /data-owner-cull-touch-actions/);
+  assert.match(photosCss, /\.gallery-command-bar\{[\s\S]*position:fixed;[\s\S]*var\(--fixed-header-offset/);
+  assert.match(photosCss, /\.gallery-command-scroll\{[\s\S]*overflow-x:auto;/);
+  assert.match(photosCss, /html\[data-gallery-action-labels="true"\] \.gallery-command-label/);
+  assert.match(photosCss, /html\.is-tap-first \.gallery-command-shortcut/);
   assert.match(galleryJs, /document\.body\.append\(topButton\)/);
-  assert.match(photosCss, /body\[data-gallery\] \.version-switch,[\s\S]*?width:max-content;/);
-  assert.match(photosCss, /body\[data-gallery\] \.header-controls,[\s\S]*?flex:1 1 100%;[\s\S]*?width:100%;/);
-  assert.match(photosCss, /header-controls > \.gallery-view-controls\.is-header-mounted[\s\S]*?order:1;[\s\S]*?width:auto;/);
-  assert.match(photosCss, /header-controls > \.header-action-links[\s\S]*?order:2;/);
-  assert.match(photosCss, /grid-template-areas:\s*"back brand breadcrumbs spacer utilities"\s*"\. \. \. actions actions"/);
-  assert.match(photosCss, /grid-template-areas:\s*"back brand utilities"\s*"breadcrumbs breadcrumbs breadcrumbs"\s*"\. actions actions"/);
-  assert.match(photosCss, /\.version-switch,[\s\S]*?grid-area:breadcrumbs;/);
-  assert.match(photosCss, /\.header-controls,[\s\S]*?grid-area:actions;/);
-  assert.match(photosCss, /\.header-utility-controls,[\s\S]*?grid-area:utilities;/);
-  assert.match(photosCss, /@media \(max-width:480px\)[\s\S]*?data-account-entry-signup[\s\S]*?display:none;/);
 });
 
-test("density buttons expose localized accessible names and boundary states", () => {
-  assert.match(galleryJs, /a11y\.gallery_density_decrease/);
-  assert.match(galleryJs, /a11y\.gallery_density_increase/);
-  assert.match(photosJs, /'a11y\.gallery_density_decrease': 'Zoom out'/);
-  assert.match(photosJs, /'a11y\.gallery_density_increase': 'Zoom in'/);
-  assert.match(galleryJs, /columns <= 1/);
-  assert.match(galleryJs, /columns >= maxDensityColumns\(\)/);
+test("selection, round-trip state, and Quick Look follow the integrated contract", () => {
+  assert.match(galleryJs, /data-gallery-select-photo/);
+  assert.match(galleryJs, /class="gallery-card-selection"/);
+  assert.match(galleryJs, /const selectionLimit = galleryCommandModel\.MAX_SELECTION/);
+  assert.match(galleryJs, /id: "clear-selection"[\s\S]*roles: \["visitor"\]/);
+  assert.match(galleryJs, /id: "keep-primary"[\s\S]*roles: \["owner"\]/);
+  assert.match(galleryJs, /ownerCullingEnabled && selectedPhotoIds\.size === 1/);
+  assert.match(galleryJs, /navigationNonce: detailRoundTripNonce/);
+  assert.match(galleryJs, /selectionIds: \[\.\.\.selectedPhotoIds\]/);
+  assert.match(galleryJs, /const selectedNavigation = selectedItems\.length > 1/);
+  assert.match(galleryJs, /wrapNavigation: selectedNavigation/);
+  assert.match(galleryJs, /navigationKind: selectedNavigation \? "selected" : "loaded"/);
+  assert.match(galleryJs, /restoreFocus: \(\) =>/);
+  assert.match(galleryJs, /commandButton \|\| cardButton/);
+  assert.match(galleryJs, /id: "toggle-selection"[\s\S]*shortcut: "s"/);
+  assert.match(detailJs, /selectionIds: Array\.isArray\(payload\?\.selectionIds\)/);
+  assert.match(detailJs, /navigationNonce: payload\?\.navigationNonce/);
+  assert.match(photosJs, /data-finder-preview-key-legend/);
+  assert.match(photosJs, /data-finder-preview-fit/);
+  assert.match(photosJs, /wrapNavigation/);
+  assert.match(photosJs, /window\.setTimeout\(\(\) => keyLegend\.classList\.remove\("is-visible"\), 4000\)/);
+  assert.match(photosJs, /dispatchQuickLookCommand/);
+  assert.match(photosJs, /close\(\{ restoreFocus: false \}\)/);
+  assert.match(photosJs, /returnFocus\?\.isConnected/);
+  assert.match(photosJs, /showQuickLookKeyLegend/);
+  assert.match(photosCss, /\.finder-preview-key-legend/);
+  assert.match(photosCss, /\.detail-fullscreen-preview\.is-fill-preview/);
 });
 
 test("search and filter changes keep the filter controls in view", () => {

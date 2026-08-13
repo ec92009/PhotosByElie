@@ -514,6 +514,10 @@ const writeGalleryReturnState = () => {
       collectionKey: galleryReturnCollectionKey(),
       photoId: photo.id,
       photoIds: payload?.photoIds || [photo.id],
+      selectionIds: Array.isArray(payload?.selectionIds) ? payload.selectionIds.slice(0, 500) : [],
+      primaryPhotoId: payload?.primaryPhotoId || "",
+      selectionRecency: Array.isArray(payload?.selectionRecency) ? payload.selectionRecency.slice(-500) : [],
+      navigationNonce: payload?.navigationNonce || "",
       filterState: payload?.filterState || null,
       visibleLimit: payload?.visibleLimit || null,
       createdAt: Date.now()

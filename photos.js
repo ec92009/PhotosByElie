@@ -2952,7 +2952,10 @@ window.photosByElieVideoDurationLabel = (photo) => (
     }
     const targetPhoto = previewItems[currentIndex] || initialPhoto;
     if (!targetPhoto?.id) return false;
+    const wrapNavigation = options.wrapNavigation !== false;
+    const navigationKind = options.navigationKind === "selected" ? "selected" : "loaded";
     const owner = Boolean(options.owner);
+    const showQuickLookKeyLegend = !(window.photosByElieInputMode?.isTapFirst?.() ?? false);
     const isVideo = window.photosByElieIsVideo?.(targetPhoto) === true;
     const isPanoramaPreview = !isVideo && Boolean(window.photosByEliePhotoIsPanorama?.(targetPhoto));
     const title = String(targetPhoto.title || targetPhoto.id || "Preview");
@@ -2966,6 +2969,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     }[char] || char));
     const existing = document.querySelector(".detail-fullscreen-preview");
     existing?.remove();
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const modal = document.createElement("div");
     modal.className = `detail-fullscreen-preview finder-media-preview has-info-panel${owner ? " is-owner-preview" : ""}${isPanoramaPreview ? " is-panorama-preview" : ""}`;
@@ -2976,6 +2980,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
     modal.dataset.mediaType = isVideo ? "video" : "photo";
     modal.innerHTML = `
       <button class="finder-preview-close" type="button" data-finder-preview-close aria-label="${translate("preview.close")}">&times;</button>
+      <button class="finder-preview-fit" type="button" data-finder-preview-fit aria-label="Fill Screen" title="Fill Screen (F)" aria-pressed="false"><span aria-hidden="true">↔</span></button>
       <div class="finder-preview-stage" data-finder-preview-stage>
         <div class="finder-preview-loading">Loading preview</div>
         ${isPanoramaPreview ? `<button class="finder-preview-pano-toggle" type="button" data-finder-preview-pano-toggle aria-pressed="false">${translate("preview.full_height")}</button>` : ""}
@@ -2988,10 +2993,13 @@ window.photosByElieVideoDurationLabel = (photo) => (
         <p class="eyebrow">${owner ? "Owner source preview" : "Preview"}</p>
         <h2>${escapePreviewHtml(title)}</h2>
       </section>
+      <div class="finder-preview-key-legend is-visible" data-finder-preview-key-legend aria-live="polite"${showQuickLookKeyLegend ? "" : " hidden"}></div>
     `;
     const stage = modal.querySelector("[data-finder-preview-stage]");
     const infoPanel = modal.querySelector("[data-finder-preview-info]");
     const panoToggle = modal.querySelector("[data-finder-preview-pano-toggle]");
+    const fitToggle = modal.querySelector("[data-finder-preview-fit]");
+    const keyLegend = modal.querySelector("[data-finder-preview-key-legend]");
     const contextDetailUrl = window.photosByElieMediaUrl(targetPhoto, "detail") || "";
     const contextGalleryUrl = window.photosByElieMediaUrl(targetPhoto, "gallery") || "";
     const contextUrl = contextDetailUrl || contextGalleryUrl;
@@ -3022,18 +3030,54 @@ window.photosByElieVideoDurationLabel = (photo) => (
       ? window.photosByElieEnableHorizontalPan?.(stage, { interactiveSelector: "a,button,input,select,textarea,label,video,[contenteditable='true'],[role='button']" })
       : null;
 
-    const close = () => {
+    let legendTimer = 0;
+    const quickLookCommands = () => typeof options.quickLookCommands === "function"
+      ? options.quickLookCommands(targetPhoto) || []
+      : [];
+    const positionLabel = previewItems.length
+      ? `${currentIndex + 1} of ${previewItems.length} ${navigationKind}`
+      : "";
+    const renderKeyLegend = () => {
+      if (!keyLegend) return;
+      const commands = quickLookCommands();
+      keyLegend.innerHTML = `
+        ${positionLabel ? `<strong>${escapePreviewHtml(positionLabel)}</strong>` : ""}
+        <span><kbd>Esc</kbd> Close</span>
+        <span><kbd>F</kbd> Fit/Fill</span>
+        ${commands.map((command) => `<span><kbd>${escapePreviewHtml(command.shortcutLabel || "")}</kbd> ${escapePreviewHtml(command.label || command.id)}</span>`).join("")}
+      `;
+    };
+    const revealKeyLegend = () => {
+      if (!keyLegend || !showQuickLookKeyLegend) return;
+      keyLegend.classList.add("is-visible");
+      window.clearTimeout(legendTimer);
+      legendTimer = window.setTimeout(() => keyLegend.classList.remove("is-visible"), 4000);
+    };
+    const onPointerMove = () => revealKeyLegend();
+    const close = ({ restoreFocus = true } = {}) => {
       document.body.classList.remove("detail-fullscreen-active");
       panoPan?.destroy?.();
+      window.clearTimeout(legendTimer);
       modal.remove();
       window.removeEventListener("keydown", onKeydown, true);
+      window.removeEventListener("pointermove", onPointerMove, { passive: true });
+      if (!restoreFocus) return;
+      if (typeof options.restoreFocus === "function") {
+        options.restoreFocus(targetPhoto);
+      } else if (returnFocus?.isConnected) {
+        returnFocus.focus({ preventScroll: true });
+      }
     };
     const openAdjacent = (delta) => {
       if (previewItems.length < 2) return false;
-      const nextIndex = (currentIndex + delta + previewItems.length) % previewItems.length;
+      const candidateIndex = currentIndex + delta;
+      if (!wrapNavigation && (candidateIndex < 0 || candidateIndex >= previewItems.length)) return false;
+      const nextIndex = wrapNavigation
+        ? (candidateIndex + previewItems.length) % previewItems.length
+        : candidateIndex;
       const nextPhoto = previewItems[nextIndex];
       if (!nextPhoto?.id) return false;
-      close();
+      close({ restoreFocus: false });
       window.photosByElieOpenFinderPreview?.(nextPhoto, {
         ...options,
         items: previewItems,
@@ -3091,7 +3135,8 @@ window.photosByElieVideoDurationLabel = (photo) => (
         ${note ? `<p class="finder-preview-note">${escapePreviewHtml(note)}</p>` : ""}
       `;
     };
-    function onKeydown(event) {
+    async function onKeydown(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) revealKeyLegend();
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         if (event.target instanceof HTMLElement && event.target.closest("video")) return;
         if (isPanoramaPreview && modal.classList.contains("is-pano-scroll")) {
@@ -3104,6 +3149,29 @@ window.photosByElieVideoDurationLabel = (photo) => (
           return;
         }
         if (openAdjacent(event.key === "ArrowRight" ? 1 : -1)) event.preventDefault();
+        return;
+      }
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        const fill = !modal.classList.contains("is-fill-preview");
+        modal.classList.toggle("is-fill-preview", fill);
+        fitToggle?.setAttribute("aria-pressed", String(fill));
+        fitToggle?.setAttribute("aria-label", fill ? "Fit Entire Image" : "Fill Screen");
+        fitToggle?.setAttribute("title", `${fill ? "Fit Entire Image" : "Fill Screen"} (F)`);
+        revealKeyLegend();
+        return;
+      }
+      const quickCommand = quickLookCommands().find((command) => (
+        String(command.shortcutLabel || "").toLowerCase() === String(event.key || "").toLowerCase()
+      ));
+      if (quickCommand && typeof options.dispatchQuickLookCommand === "function") {
+        event.preventDefault();
+        const result = await options.dispatchQuickLookCommand(quickCommand.id, targetPhoto, event);
+        renderKeyLegend();
+        revealKeyLegend();
+        if (quickCommand.selectionEffect === "remove-successes" && result?.value?.succeeded?.includes?.(targetPhoto.id)) {
+          if (!openAdjacent(1)) close();
+        }
         return;
       }
       if (event.key !== "Escape" && event.key !== " ") return;
@@ -3248,12 +3316,25 @@ window.photosByElieVideoDurationLabel = (photo) => (
       event.stopPropagation();
       openAdjacent(1);
     });
+    fitToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void onKeydown({ key: "f", preventDefault() {}, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false });
+    });
     panoToggle?.addEventListener("click", (event) => {
       event.stopPropagation();
       setPanoPreviewMode(!modal.classList.contains("is-pano-scroll"));
     });
     setPanoPreviewMode(false);
+    const previousButton = modal.querySelector("[data-finder-preview-prev]");
+    const nextButton = modal.querySelector("[data-finder-preview-next]");
+    if (!wrapNavigation) {
+      if (previousButton) previousButton.disabled = currentIndex <= 0;
+      if (nextButton) nextButton.disabled = currentIndex >= previewItems.length - 1;
+    }
+    renderKeyLegend();
+    revealKeyLegend();
     window.addEventListener("keydown", onKeydown, true);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
     modal.focus({ preventScroll: true });
 
     if (owner) {

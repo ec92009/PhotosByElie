@@ -8,8 +8,11 @@ enum ReviewPreviewFixtures {
     static func loaded(refreshing: Bool = false) -> BackstageViewModel {
         let model = BackstageViewModel()
         let items = sampleItems
-        model.fixtures = [FixtureNode(id: "fixture-expo", name: "Expo")]
-        model.reviewFixtureID = "fixture-expo"
+        model.installFixtureTree(
+            [FixtureNode(id: "fixture-expo", name: "Expo")],
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
         model.reviewMode = .full
         model.reviewStateFilters = [.picked]
         model.fixtureReviewWindow = FixtureReviewWindow(
@@ -58,8 +61,11 @@ enum ReviewPreviewFixtures {
 
     static func loading() -> BackstageViewModel {
         let model = BackstageViewModel()
-        model.fixtures = [FixtureNode(id: "fixture-expo", name: "Expo")]
-        model.reviewFixtureID = "fixture-expo"
+        model.installFixtureTree(
+            [FixtureNode(id: "fixture-expo", name: "Expo")],
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
         model.fixtureReviewWindow = nil
         model.isRunningReview = true
         model.reviewStatus = "Loading the oldest unresolved picked photos…"
@@ -69,8 +75,11 @@ enum ReviewPreviewFixtures {
 
     static func empty() -> BackstageViewModel {
         let model = BackstageViewModel()
-        model.fixtures = [FixtureNode(id: "fixture-expo", name: "Expo")]
-        model.reviewFixtureID = "fixture-expo"
+        model.installFixtureTree(
+            [FixtureNode(id: "fixture-expo", name: "Expo")],
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
         model.fixtureReviewWindow = FixtureReviewWindow(
             fixtureID: "fixture-expo",
             mode: .full,

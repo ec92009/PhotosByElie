@@ -32,7 +32,7 @@ let package = Package(
         ),
         .testTarget(
             name: "OwnerCoreTests",
-            dependencies: ["OwnerCore"],
+            dependencies: ["OwnerCore", "BackstageUI"],
             resources: [.copy("Fixtures")]
         ),
     ]

@@ -10,9 +10,15 @@ struct UploadHeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Upload & publish").font(.largeTitle.bold())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Upload & publish").font(.largeTitle.bold())
+                    Text(model.selectedFixtureBreadcrumb.isEmpty
+                        ? "Fixture unavailable"
+                        : model.selectedFixtureBreadcrumb)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                FixturePicker(model: model, isPreviewMode: isPreviewMode)
                 if let plan = model.nativeUploadPlan,
                    plan.needsUploadCount > plan.items.count {
                     Button(plan.order.alternateLabel) {

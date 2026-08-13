@@ -13,12 +13,19 @@ public struct BackstageApplication: App {
     public var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {
             NavigationSplitView(columnVisibility: navigationColumnVisibility) {
-                List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
-                    Label(section.rawValue, systemImage: icon(for: section))
-                        .tag(section)
+                VStack(spacing: 0) {
+                    FixturePicker(model: model)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 12)
+                        .padding(.bottom, 10)
+                    Divider()
+                    List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
+                        Label(section.rawValue, systemImage: icon(for: section))
+                            .tag(section)
+                    }
                 }
                 .navigationTitle("Backstage")
-                .frame(minWidth: 210)
+                .frame(minWidth: 230, idealWidth: 260)
             } detail: {
                 detail
                     .frame(
@@ -67,6 +74,10 @@ public struct BackstageApplication: App {
             .frame(minWidth: 1_120, minHeight: 720)
             .task { await model.bootstrapAuthentication() }
             .task { await model.runPhotosSyncLoop() }
+            .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in
+                guard oldFixtureID != newFixtureID, !newFixtureID.isEmpty else { return }
+                Task { await model.refreshVisibleFixtureSurface() }
+            }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
                 Task { await model.syncPhotosIncrementally() }
@@ -248,9 +259,15 @@ private struct DeliverablesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Delivery & share links").font(.largeTitle.bold())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Delivery & share links").font(.largeTitle.bold())
+                    Text(model.selectedFixtureBreadcrumb.isEmpty
+                        ? "Fixture unavailable"
+                        : model.selectedFixtureBreadcrumb)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                FixturePicker(model: model)
                 Button("Load") { Task { await model.loadDeliverables() } }
                     .backstageHelp("Load the selected fixture's existing PDF, video, originals, and share-link delivery records.")
             }
@@ -535,7 +552,15 @@ private struct FixtureWorkflowView: View {
             }
             HSplitView {
                 VStack(alignment: .leading, spacing: 10) {
-                    List(selection: $model.selectedFixtureID) {
+                    List(selection: Binding<String?>(
+                        get: {
+                            model.selectedFixtureID.isEmpty ? nil : model.selectedFixtureID
+                        },
+                        set: { fixtureID in
+                            guard let fixtureID else { return }
+                            _ = model.selectFixture(fixtureID)
+                        }
+                    )) {
                         OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in
                             HStack {
                                 Image(systemName: fixture.isArchived ? "archivebox" : "folder")
@@ -559,13 +584,20 @@ private struct FixtureWorkflowView: View {
                             .frame(width: 130)
                     }
                     HStack {
-                        Button(model.selectedFixtureID.isEmpty ? "Create root" : "Create child") {
+                        Button("Create child") {
                             Task { await model.createFixture() }
                         }
+                        .disabled(
+                            model.fixtureName.isEmpty
+                                || model.selectedFixtureID.isEmpty
+                                || model.isRunningFixture
+                        )
+                        .backstageHelp("Create a child fixture beneath the current fixture using the entered name and optional template.")
+                        Button("Create root") {
+                            Task { await model.createFixture(atRoot: true) }
+                        }
                         .disabled(model.fixtureName.isEmpty || model.isRunningFixture)
-                        .backstageHelp(model.selectedFixtureID.isEmpty
-                            ? "Create a new top-level fixture using the entered name and optional template."
-                            : "Create a child fixture beneath the selected fixture using the entered name and optional template.")
+                        .backstageHelp("Create a new top-level fixture using the entered name and optional template.")
                         Button("Rename") { Task { await model.renameFixture() } }
                             .disabled(model.selectedFixtureID.isEmpty || model.fixtureName.isEmpty)
                             .backstageHelp("Rename the selected fixture to the value entered in the name field.")
@@ -876,9 +908,7 @@ private struct FixtureWorkflowView: View {
         }
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
-        }
-        .onChange(of: model.selectedFixtureID) { _, _ in
-            Task {
+            if !model.selectedFixtureID.isEmpty {
                 await model.loadFixturePools()
                 await model.loadFixtureConfiguration()
             }
@@ -1246,7 +1276,12 @@ private struct MetadataGiveBackView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Verified Apple Photos give-back") {
-                TextField("Optional fixture filter", text: $model.fixtureID)
+                LabeledContent(
+                    "Current fixture",
+                    value: model.selectedFixtureBreadcrumb.isEmpty
+                        ? "Unavailable"
+                        : model.selectedFixtureBreadcrumb
+                )
                 Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
                     .foregroundStyle(.secondary)
                 HStack {

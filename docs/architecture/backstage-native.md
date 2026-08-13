@@ -55,6 +55,22 @@ adapter.
 
 ## Native fixture, ACS, culling, and metadata workflows
 
+Backstage has one global **Current fixture** at the top of its navigation
+sidebar. The chooser presents the recursive hierarchy using stable fixture
+IDs, restores the last-used active ID, and reports any missing or archived
+preference before explicitly falling back to `fixture-expo`. If the tree or
+that safe fallback is unavailable, every fixture-scoped action fails closed.
+The chooser and its current breadcrumb preserve the leaf at narrow widths,
+and the same selection drives Fixtures, Culling, Review, Metadata, Uploads,
+Delivery, and Publication. Switching it resets transient windows and
+selections only; it does not write Owner workflow state or change the active
+section.
+
+An actionable PBE Owner session freezes both the stable fixture ID and exact
+breadcrumb for its lifetime. The chooser remains disabled until that session
+is explicitly closed or expires, so no browser-hosted action can silently
+drift to a different fixture.
+
 The PBB-16 screens are real workflow surfaces rather than navigation
 placeholders:
 

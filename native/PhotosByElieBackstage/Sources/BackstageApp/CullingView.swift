@@ -178,7 +178,7 @@ struct CullingView: View {
             if model.libraryItems.isEmpty {
                 await model.refreshPhotos()
             }
-            if !model.cullingFixtureID.isEmpty {
+            if !model.selectedFixtureID.isEmpty {
                 await model.loadFixtureCullingWindow()
             } else {
                 await model.refreshCullingDecisions()
@@ -654,7 +654,9 @@ struct CullingView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(
                 model.cullingPool?.name
-                    ?? model.flatFixtures.first(where: { $0.id == model.cullingFixtureID })?.name
+                    ?? (model.selectedFixtureBreadcrumb.isEmpty
+                        ? nil
+                        : model.selectedFixtureBreadcrumb)
                     ?? "Fixture Culling"
             )
             .font(.largeTitle.bold())
@@ -668,7 +670,7 @@ struct CullingView: View {
 
     private var cullingViewportIdentity: String {
         [
-            model.cullingFixtureID,
+            model.selectedFixtureID,
             model.cullingViews.map(\.rawValue).sorted().joined(separator: ","),
             String(model.cullingWorkspace.offset),
             model.visibleCullingAssets.first?.id ?? "empty",
@@ -690,7 +692,7 @@ struct CullingView: View {
             Button("Refresh previews") {
                 Task {
                     await model.refreshPhotos()
-                    if !model.cullingFixtureID.isEmpty {
+                    if !model.selectedFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
                 }

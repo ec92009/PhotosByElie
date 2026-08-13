@@ -60,6 +60,10 @@ targets:
     platform: macOS
     sources:
       - path: Tests/OwnerCoreTests
+        excludes:
+          # This integration suite imports the SwiftPM BackstageUI module;
+          # the Canvas Xcode host compiles those sources directly into the app.
+          - BackstageFixtureSelectionTests.swift
     dependencies:
       - target: OwnerCore
     settings:

@@ -118,12 +118,15 @@ final class BackstageViewModel: ObservableObject {
     @Published var isLoadingPhotos = false
     @Published var isReconcilingPhotosIndex = false
     private var hasReconciledRecentPhotosIndex = false
-    @Published var fixtureID = ""
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
     @Published var isRunningMetadata = false
-    @Published var fixtures: [FixtureNode] = []
-    @Published var selectedFixtureID = ""
+    @Published private(set) var fixtures: [FixtureNode] = []
+    @Published private(set) var selectedFixtureID = ""
+    @Published private(set) var selectedFixtureBreadcrumb = ""
+    @Published private(set) var fixtureSelectionAvailability: FixtureSelectionAvailability = .loading
+    @Published private(set) var fixtureSelectionNotice: String?
+    @Published private(set) var pbeOwnerFixtureSession: PBEOwnerFixtureSession?
     @Published var fixtureName = ""
     @Published var fixtureTemplate = ""
     @Published var fixtureSearch = ""
@@ -160,7 +163,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixturePolicyStatus = ""
     @Published var isLoadingFixturePolicy = false
     @Published var cullingPool: FixturePool?
-    @Published var cullingFixtureID = ""
     @Published var fixtureCullingWindow: FixtureCullingWindow?
     @Published var cullingViews: Set<FixtureCullingView> = Set(FixtureCullingView.selectableCases)
     @Published var isLoadingFixtureCulling = false
@@ -199,7 +201,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingDecisionTotal = 0
     @Published var isApplyingCullingDecision = false
     @Published var cullingCancellationRequested = false
-    @Published var reviewFixtureID = ""
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
     @Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]
@@ -309,8 +310,11 @@ final class BackstageViewModel: ObservableObject {
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
     private let preferences: UserDefaults
+    private var fixtureSelectionCoordinator: FixtureSelectionCoordinator
     private static let selectedSectionPreferenceKey =
         "PhotosByElieBackstage.selectedSection"
+    static let selectedFixturePreferenceKey =
+        "PhotosByElieBackstage.selectedFixtureID"
     private static let legacyPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.previewPanelVisible"
     private static let cullingPreviewPanelVisibilityPreferenceKey =
@@ -340,6 +344,28 @@ final class BackstageViewModel: ObservableObject {
         fixtures.path(to: selectedFixtureID)
     }
 
+    var fixtureScopedActionsAllowed: Bool {
+        fixtureSelectionCoordinator.fixtureScopedActionsAllowed
+    }
+
+    var isFixtureChooserDisabled: Bool {
+        fixtureSelectionCoordinator.chooserDisabled || fixtureSelectionOperationInFlight
+    }
+
+    var isFixtureRefreshDisabled: Bool {
+        fixtureSelectionOperationInFlight || pbeOwnerFixtureSession != nil
+    }
+
+    var fixtureChooserExplanation: String? {
+        if fixtureSelectionCoordinator.chooserDisabled {
+            return fixtureSelectionCoordinator.chooserExplanation
+        }
+        if fixtureSelectionOperationInFlight {
+            return "Finish the current fixture operation before changing fixtures."
+        }
+        return nil
+    }
+
     var fixtureEffectivePolicySummary: String {
         let policy = fixtureEffectivePolicy
         return [
@@ -362,6 +388,9 @@ final class BackstageViewModel: ObservableObject {
         preferences: UserDefaults = .standard
     ) {
         self.preferences = preferences
+        self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
+            lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
+        )
         self.selection = preferences.string(forKey: Self.selectedSectionPreferenceKey)
             .flatMap(Section.init(rawValue:)) ?? .overview
         let legacyPreviewVisibility =
@@ -394,6 +423,166 @@ final class BackstageViewModel: ObservableObject {
         self.photosBridgeHealthService = PhotosBridgeHealthService()
     }
 
+    @discardableResult
+    func selectFixture(_ fixtureID: String, now: Date = Date()) -> Bool {
+        guard !fixtureSelectionOperationInFlight else {
+            fixtureSelectionNotice = "Finish the current fixture operation before changing fixtures."
+            return false
+        }
+        do {
+            try fixtureSelectionCoordinator.selectFixture(fixtureID, now: now)
+            publishFixtureSelection(persist: true)
+            return true
+        } catch {
+            fixtureSelectionNotice = userFacingMessage(for: error)
+            return false
+        }
+    }
+
+    @discardableResult
+    func beginPBEOwnerSession(
+        expiresAt: Date,
+        now: Date = Date()
+    ) throws -> PBEOwnerFixtureSession {
+        guard !fixtureSelectionOperationInFlight else {
+            throw FixtureSelectionError.unavailable(
+                "Finish the current fixture operation before starting PBE Owner."
+            )
+        }
+        let session = try fixtureSelectionCoordinator.beginPBEOwnerSession(
+            expiresAt: expiresAt,
+            now: now
+        )
+        publishFixtureSelection(persist: false)
+        return session
+    }
+
+    func closePBEOwnerSession() {
+        fixtureSelectionCoordinator.closePBEOwnerSession()
+        publishFixtureSelection(persist: false)
+    }
+
+    func expirePBEOwnerSessionIfNeeded(now: Date = Date()) {
+        guard fixtureSelectionCoordinator.expireOwnerSessionIfNeeded(at: now) else { return }
+        publishFixtureSelection(persist: false)
+    }
+
+    func installFixtureTree(
+        _ loadedFixtures: [FixtureNode],
+        preferredFixtureID: String? = nil,
+        persistSelection: Bool = true,
+        now: Date = Date()
+    ) {
+        if let preferredFixtureID {
+            fixtureSelectionCoordinator = FixtureSelectionCoordinator(
+                lastUsedFixtureID: preferredFixtureID
+            )
+        }
+        fixtures = loadedFixtures
+        fixtureSelectionCoordinator.restore(from: loadedFixtures, now: now)
+        publishFixtureSelection(persist: persistSelection)
+    }
+
+    func markFixtureSelectionUnavailable(_ reason: String) {
+        fixtureSelectionCoordinator.markUnavailable(reason)
+        publishFixtureSelection(persist: false)
+    }
+
+    private var fixtureSelectionOperationInFlight: Bool {
+        isRunningFixture
+            || isApplyingCullingDecision
+            || isRunningReview
+            || isRunningDelivery
+            || isRunningNativePublication
+    }
+
+    private func publishFixtureSelection(persist: Bool) {
+        let previousFixtureID = selectedFixtureID
+        selectedFixtureID = fixtureSelectionCoordinator.selectedFixtureID ?? ""
+        selectedFixtureBreadcrumb = fixtureSelectionCoordinator.selectedFixtureBreadcrumb ?? ""
+        fixtureSelectionAvailability = fixtureSelectionCoordinator.availability
+        fixtureSelectionNotice = fixtureSelectionCoordinator.notice
+        pbeOwnerFixtureSession = fixtureSelectionCoordinator.ownerSession
+        if persist, let preferredFixtureID = fixtureSelectionCoordinator.preferredFixtureID {
+            preferences.set(preferredFixtureID, forKey: Self.selectedFixturePreferenceKey)
+        }
+        if previousFixtureID != selectedFixtureID {
+            resetFixtureScopedViewState()
+        }
+    }
+
+    /// Clears only transient views when scope changes. Durable workflow state
+    /// remains untouched until the user invokes an explicit audited action.
+    private func resetFixtureScopedViewState() {
+        cullingFilterTask?.cancel()
+        cullingBackfillTask?.cancel()
+        cullingWindowRequestSerial += 1
+        cullingPool = nil
+        fixtureCullingWindow = nil
+        cullingWindowOffset = 0
+        cullingSelection.clear()
+        selectedPhotoIDs = []
+        photoPreview = nil
+        cullingThumbnails = [:]
+        cullingStatus = selectedFixtureID.isEmpty
+            ? "Fixture-scoped Culling is unavailable."
+            : "Loading \(selectedFixtureBreadcrumb) for Culling…"
+
+        preserveCurrentReviewDraft()
+        reviewMetadataAutosaveTask?.cancel()
+        reviewWindowRequestSerial += 1
+        fixtureReviewWindow = nil
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        reviewThumbnails = [:]
+        clearReviewDraft()
+        reviewStatus = selectedFixtureID.isEmpty
+            ? "Fixture-scoped Review is unavailable."
+            : "Loading \(selectedFixtureBreadcrumb) for Review…"
+
+        fixtureAssets = []
+        selectedFixtureAssetIDs = []
+        fixturePool = nil
+        fixturePools = []
+        selectedFixturePoolID = ""
+        fixturePlacements = []
+        deliveryPlan = nil
+        selectedDeliveryIDs = []
+        uploadHealth = nil
+        uploadAdoptionPlan = nil
+        nativeUploadPlan = nil
+        nativeUploadRun = nil
+        nativeUploadThumbnails = [:]
+        nativeUploadPreviewImage = nil
+        nativeUploadPreviewItemID = ""
+        deliverables = []
+        publicationPlan = nil
+    }
+
+    func refreshVisibleFixtureSurface() async {
+        guard fixtureScopedActionsAllowed else { return }
+        switch selection ?? .overview {
+        case .culling:
+            await loadFixtureCullingWindow()
+        case .review:
+            await loadFixtureReviewWindow()
+            await restoreLoadedAIProposalDrafts()
+            await refreshAIStatus()
+        case .fixtures:
+            await loadFixturePools()
+            await loadFixtureConfiguration()
+        case .uploads:
+            await loadNativeUploadPlan()
+        case .delivery:
+            await loadDeliveryPlan()
+            await loadDeliverables()
+        case .publication:
+            await loadPublicationPlan()
+        case .overview, .activity, .access, .metadata, .wasteBasket:
+            break
+        }
+    }
+
     func bootstrapAuthentication() async {
         photosBridgeHealth = await photosBridgeHealthService.probe()
         isAuthenticating = true
@@ -403,13 +592,20 @@ final class BackstageViewModel: ObservableObject {
         case .authenticated:
             authenticationStatus = "Authenticated with this Mac's revocable device credential."
             await refreshActions()
+            await loadFixtures()
             await syncPhotosIncrementally()
         case .needsEnrollment:
             authenticationStatus = "Enroll Backstage from a signed-in Owner browser session."
             status = "Enrollment required"
+            markFixtureSelectionUnavailable(
+                "Fixtures are unavailable until this Mac is enrolled. Fixture-scoped actions are disabled."
+            )
         case .signedOut:
             authenticationStatus = "Signed out on this Mac."
             status = "Signed out"
+            markFixtureSelectionUnavailable(
+                "Fixtures are unavailable while Backstage is signed out. Fixture-scoped actions are disabled."
+            )
         }
     }
 
@@ -430,6 +626,7 @@ final class BackstageViewModel: ObservableObject {
             enrollmentCode = ""
             authenticationStatus = "Enrollment verified and stored in this Mac's Keychain."
             await refreshActions()
+            await loadFixtures()
         } catch {
             authenticationStatus = "Enrollment failed: \(error)"
             status = "Enrollment failed"
@@ -442,6 +639,10 @@ final class BackstageViewModel: ObservableObject {
         do {
             authentication = try await authenticationService.signOut()
             actions = []
+            fixtures = []
+            markFixtureSelectionUnavailable(
+                "Fixtures are unavailable while Backstage is signed out. Fixture-scoped actions are disabled."
+            )
             authenticationStatus = "Signed out; local tokens were removed from Keychain."
             status = "Signed out"
         } catch {
@@ -652,12 +853,16 @@ final class BackstageViewModel: ObservableObject {
 
     func retryMetadataFailures() async {
         guard let metadataReport else { return }
+        guard fixtureScopedActionsAllowed else {
+            metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
+            return
+        }
         isRunningMetadata = true
         defer { isRunningMetadata = false }
         do {
             let retried = try await metadataService.retryFailures(
                 from: metadataReport,
-                fixtureID: fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
+                fixtureID: selectedFixtureID
             )
             self.metadataReport = retried
             metadataStatus = reportStatus(retried)
@@ -843,7 +1048,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var hasCurrentCullingFixture: Bool {
-        !cullingFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !selectedFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var isBlockingFixtureCullingLoad: Bool {
@@ -901,7 +1106,7 @@ final class BackstageViewModel: ObservableObject {
         cullingWindowOffset = 0
         cullingBackfillTask?.cancel()
         cullingFilterTask?.cancel()
-        if !cullingFixtureID.isEmpty, cullingPool == nil {
+        if !selectedFixtureID.isEmpty, cullingPool == nil {
             // Invalidate the old response immediately. Until the audited
             // fixture query completes, the grid must not fall back to the
             // unrelated recent-Photos preview cache or show stale results.
@@ -943,7 +1148,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func showPickedReview() {
-        if !cullingFixtureID.isEmpty, cullingPool == nil {
+        if !selectedFixtureID.isEmpty, cullingPool == nil {
             if cullingViews == [.picked] {
                 applyCullingFilters()
             } else {
@@ -965,7 +1170,7 @@ final class BackstageViewModel: ObservableObject {
         }
         replaceCullingItems()
         photoPreview = nil
-        if !cullingFixtureID.isEmpty, cullingPool == nil {
+        if !selectedFixtureID.isEmpty, cullingPool == nil {
             Task { await loadFixtureCullingWindow() }
         }
     }
@@ -1088,28 +1293,11 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
-        if cullingFixtureID.isEmpty {
-            cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
-                ?? flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
-                ?? ""
-        }
-        Task { await loadFixtureCullingWindow() }
-    }
-
-    func selectCullingFixture(_ fixtureID: String) {
-        cullingFixtureID = fixtureID
-        cullingPool = nil
-        cullingViews = Set(FixtureCullingView.selectableCases)
-        cullingWindowOffset = 0
-        cullingSearch = ""
-        clearCullingSelection()
-        photoPreview = nil
-        cullingThumbnails = [:]
         Task { await loadFixtureCullingWindow() }
     }
 
     func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false) async {
-        guard !cullingFixtureID.isEmpty else {
+        guard !selectedFixtureID.isEmpty else {
             cullingStatus = "Choose a fixture to begin culling."
             return
         }
@@ -1137,7 +1325,7 @@ final class BackstageViewModel: ObservableObject {
             let colors = cullingColorFilters.map(\.rawValue).sorted()
             let views = cullingViews.sorted(by: { $0.rawValue < $1.rawValue })
             let window = try await fixtureService.cullingWindow(
-                fixtureID: cullingFixtureID,
+                fixtureID: selectedFixtureID,
                 view: views.count == 1 ? views[0] : .allActive,
                 views: views,
                 offset: cullingWindowOffset,
@@ -1189,34 +1377,49 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixtures() async {
+        guard !isLoadingFixtureTree else { return }
         isLoadingFixtureTree = true
-        defer { isLoadingFixtureTree = false }
-        await fixtureOperation {
-            fixtures = try await fixtureService.tree()
-            if cullingFixtureID.isEmpty {
-                cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
-                    ?? flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
-                    ?? ""
-            }
-            if reviewFixtureID.isEmpty {
-                reviewFixtureID = cullingFixtureID
-            }
+        isRunningFixture = true
+        fixtureSelectionCoordinator.beginLoading()
+        publishFixtureSelection(persist: false)
+        defer {
+            isLoadingFixtureTree = false
+            isRunningFixture = false
+        }
+        guard await prepareAuthenticatedOperation() else {
+            let reason = "Backstage could not load fixtures because this Mac needs enrollment. Fixture-scoped actions are disabled."
+            fixtureStatus = reason
+            markFixtureSelectionUnavailable(reason)
+            return
+        }
+        do {
+            let loadedFixtures = try await fixtureService.tree()
+            installFixtureTree(loadedFixtures)
             fixtureStatus = "\(flatFixtures.count) fixture nodes loaded."
+            authentication = await authenticationService.currentSnapshot()
+            status = "Connected"
+        } catch {
+            guard !(error is CancellationError), !Task.isCancelled else { return }
+            await presentAuthenticationFailureIfNeeded(error)
+            let reason = "Fixtures could not load: \(userFacingMessage(for: error)) Fixture-scoped actions are disabled."
+            fixtureStatus = reason
+            markFixtureSelectionUnavailable(reason)
         }
     }
 
-    func createFixture() async {
+    func createFixture(atRoot: Bool = false) async {
         let name = fixtureName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
             fixtureStatus = "Enter a fixture name."
             return
         }
         await fixtureOperation {
-            fixtures = try await fixtureService.create(
+            let loadedFixtures = try await fixtureService.create(
                 name: name,
-                parentID: selectedFixtureID.isEmpty ? nil : selectedFixtureID,
+                parentID: atRoot ? nil : selectedFixtureID,
                 templateKey: fixtureTemplate
             )
+            installFixtureTree(loadedFixtures)
             fixtureName = ""
             fixtureStatus = "Fixture created through an audited Max action."
         }
@@ -1225,7 +1428,8 @@ final class BackstageViewModel: ObservableObject {
     func renameFixture() async {
         guard !selectedFixtureID.isEmpty, !fixtureName.isEmpty else { return }
         await fixtureOperation {
-            fixtures = try await fixtureService.rename(id: selectedFixtureID, name: fixtureName)
+            let loadedFixtures = try await fixtureService.rename(id: selectedFixtureID, name: fixtureName)
+            installFixtureTree(loadedFixtures)
             fixtureStatus = "Fixture renamed; its stable ID and relationships were preserved."
         }
     }
@@ -1233,7 +1437,11 @@ final class BackstageViewModel: ObservableObject {
     func toggleFixtureArchive() async {
         guard let fixture = flatFixtures.first(where: { $0.id == selectedFixtureID }) else { return }
         await fixtureOperation {
-            fixtures = try await fixtureService.setArchived(id: fixture.id, archived: !fixture.isArchived)
+            let loadedFixtures = try await fixtureService.setArchived(
+                id: fixture.id,
+                archived: !fixture.isArchived
+            )
+            installFixtureTree(loadedFixtures)
             fixtureStatus = fixture.isArchived ? "Fixture reopened." : "Fixture archived without deleting attached state."
         }
     }
@@ -1574,7 +1782,7 @@ final class BackstageViewModel: ObservableObject {
         }
         switch FixtureCullingSemantics.mutation(
             for: semanticAction,
-            currentFixtureID: cullingFixtureID
+            currentFixtureID: selectedFixtureID
         ) {
         case .unavailable:
             cullingStatus = "Choose a current fixture before using P, H, or U. X still moves the asset to the recoverable Waste Basket."
@@ -1599,14 +1807,14 @@ final class BackstageViewModel: ObservableObject {
         do {
             let action = try await lifecycleService.moveToWasteBasket(
                 mediaIDs: ids,
-                fixtureID: cullingFixtureID,
+                fixtureID: selectedFixtureID,
                 source: "backstage-culling"
             )
             cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
         } catch {
             cullingStatus = "Waste Basket move failed: \(userFacingMessage(for: error))"
         }
-        if !cullingFixtureID.isEmpty, cullingPool == nil {
+        if !selectedFixtureID.isEmpty, cullingPool == nil {
             await loadFixtureCullingWindow()
         }
     }
@@ -1629,9 +1837,6 @@ final class BackstageViewModel: ObservableObject {
         }
         selectedPhotoIDs = Set(ids)
         if destination == .review {
-            if reviewFixtureID.isEmpty {
-                reviewFixtureID = cullingFixtureID
-            }
             reviewStatus = "\(ids.count) picked item\(ids.count == 1 ? "" : "s") handed to Review."
             Task { await loadFixtureReviewWindow(preferredAssetID: ids.first) }
         } else if destination == .metadata {
@@ -1641,17 +1846,6 @@ final class BackstageViewModel: ObservableObject {
             uploadRecoveryStatus = "\(ids.count) picked item\(ids.count == 1 ? "" : "s") retained for the fixture-scoped Uploads workflow."
         }
         selection = destination
-    }
-
-    func selectReviewFixture(_ fixtureID: String) {
-        preserveCurrentReviewDraft()
-        reviewFixtureID = fixtureID
-        reviewWindowOffset = 0
-        reviewSearch = ""
-        reviewSelection.clear()
-        reviewThumbnails = [:]
-        clearReviewDraft()
-        Task { await loadFixtureReviewWindow() }
     }
 
     func selectReviewMode(_ mode: FixtureReviewMode) {
@@ -1712,7 +1906,7 @@ final class BackstageViewModel: ObservableObject {
         preferredAssetID: String? = nil,
         retryOnCancellation: Bool = true
     ) async {
-        guard !reviewFixtureID.isEmpty else {
+        guard !selectedFixtureID.isEmpty else {
             reviewStatus = "Choose a fixture to load its Review queue."
             return
         }
@@ -1731,7 +1925,7 @@ final class BackstageViewModel: ObservableObject {
         }
         do {
             let window = try await fixtureService.reviewWindow(
-                fixtureID: reviewFixtureID,
+                fixtureID: selectedFixtureID,
                 mode: reviewMode,
                 stateFilters: reviewStateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: reviewProposalAvailableOnly,
@@ -1846,7 +2040,7 @@ final class BackstageViewModel: ObservableObject {
         reviewMetadataAutosaveTask?.cancel()
         reviewMetadataAutosaveTask = nil
         let ids = selectedReviewAssetIDs
-        guard !reviewFixtureID.isEmpty, !ids.isEmpty else {
+        guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             reviewStatus = "Choose a fixture and select one or more Review items."
             return
         }
@@ -1855,11 +2049,10 @@ final class BackstageViewModel: ObservableObject {
         let oldIndex = focusedID.flatMap { focusedID in
             oldItems.firstIndex(where: { $0.id == focusedID })
         } ?? oldItems.firstIndex(where: { ids.contains($0.id) }) ?? 0
-        let fixtureLabel = flatFixtures.first(where: { $0.id == reviewFixtureID })?.name
-            ?? reviewFixtureID
+        let fixtureLabel = selectedFixtureBreadcrumb
         let historyEntry = ReviewHistoryEntry(
             label: "Unpick",
-            fixtureID: reviewFixtureID,
+            fixtureID: selectedFixtureID,
             mode: reviewMode,
             stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
@@ -1877,7 +2070,7 @@ final class BackstageViewModel: ObservableObject {
             let changes = try await fixtureService.applyState(
                 .undecided,
                 assetIDs: ids,
-                fixtureID: reviewFixtureID,
+                fixtureID: selectedFixtureID,
                 reason: "Native Review unpick"
             )
             reviewHistory.append(
@@ -1923,7 +2116,7 @@ final class BackstageViewModel: ObservableObject {
         do {
             let action = try await lifecycleService.moveToWasteBasket(
                 mediaIDs: ids,
-                fixtureID: reviewFixtureID,
+                fixtureID: selectedFixtureID,
                 source: "backstage-review"
             )
             guard var window = fixtureReviewWindow else {
@@ -1993,7 +2186,7 @@ final class BackstageViewModel: ObservableObject {
         let historyEntry = ReviewHistoryEntry(
             operationID: "",
             label: reviewActionLabel(action),
-            fixtureID: reviewFixtureID,
+            fixtureID: selectedFixtureID,
             mode: reviewMode,
             stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
@@ -2015,7 +2208,7 @@ final class BackstageViewModel: ObservableObject {
         do {
             let result = try await fixtureService.applyReview(
                 action,
-                fixtureID: reviewFixtureID,
+                fixtureID: selectedFixtureID,
                 assetIDs: ids,
                 anchorAssetID: anchor,
                 propagate: propagate,
@@ -2271,63 +2464,69 @@ final class BackstageViewModel: ObservableObject {
                     )
                 }
                 reviewHistory.removeLast()
-                reviewFixtureID = entry.fixtureID
-                reviewMode = entry.mode
-                reviewStateFilters = entry.stateFilters
-                reviewProposalAvailableOnly = entry.proposalAvailableOnly
-                reviewMediaFilters = entry.mediaFilters
-                reviewSearch = entry.search
-                reviewWindowOffset = entry.offset
-                await loadFixtureReviewWindow(
-                    preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
-                )
-                reviewStatus = "Undid \(entry.label.lowercased()) for \(entry.fixtureChanges.count.formatted()) item\(entry.fixtureChanges.count == 1 ? "" : "s")."
+                if selectedFixtureID == entry.fixtureID {
+                    reviewMode = entry.mode
+                    reviewStateFilters = entry.stateFilters
+                    reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                    reviewMediaFilters = entry.mediaFilters
+                    reviewSearch = entry.search
+                    reviewWindowOffset = entry.offset
+                    await loadFixtureReviewWindow(
+                        preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
+                    )
+                } else if !selectedFixtureID.isEmpty {
+                    await loadFixtureReviewWindow()
+                }
+                reviewStatus = "Undid \(entry.label.lowercased()) for \(entry.fixtureChanges.count.formatted()) item\(entry.fixtureChanges.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb)."
                 return
             }
             let result = try await fixtureService.undoReview(
                 operationID: entry.operationID
             )
             reviewHistory.removeLast()
-            reviewFixtureID = entry.fixtureID
-            reviewMode = entry.mode
-            reviewStateFilters = entry.stateFilters
-            reviewProposalAvailableOnly = entry.proposalAvailableOnly
-            reviewMediaFilters = entry.mediaFilters
-            reviewSearch = entry.search
-            reviewWindowOffset = entry.offset
-            let window = try await fixtureService.reviewWindow(
-                fixtureID: entry.fixtureID,
-                mode: entry.mode,
-                stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
-                proposalAvailableOnly: entry.proposalAvailableOnly,
-                mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
-                offset: entry.offset,
-                limit: reviewWindowLimit,
-                search: entry.search
-            )
-            hydrateReviewProposalDrafts(from: window.items)
-            fixtureReviewWindow = window
-            let orderedIDs = window.items.map(\.id)
-            let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
-            let restoredFocusedID = entry.focusedID.flatMap {
-                orderedIDs.contains($0) ? $0 : nil
-            } ?? restoredSelectedIDs.first ?? orderedIDs.first
-            let restoredAnchorID = entry.anchorID.flatMap {
-                orderedIDs.contains($0) ? $0 : nil
-            } ?? restoredFocusedID
-            reviewSelection = OwnerSelectionModel(
-                orderedIDs: orderedIDs,
-                selectedIDs: restoredSelectedIDs.isEmpty
-                    ? Set(restoredFocusedID.map { [$0] } ?? [])
-                    : restoredSelectedIDs,
-                anchorID: restoredAnchorID,
-                focusedID: restoredFocusedID
-            )
-            reviewScrollTargetID = restoredFocusedID
-            syncReviewDraft()
+            if selectedFixtureID == entry.fixtureID {
+                reviewMode = entry.mode
+                reviewStateFilters = entry.stateFilters
+                reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                reviewMediaFilters = entry.mediaFilters
+                reviewSearch = entry.search
+                reviewWindowOffset = entry.offset
+                let window = try await fixtureService.reviewWindow(
+                    fixtureID: entry.fixtureID,
+                    mode: entry.mode,
+                    stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
+                    proposalAvailableOnly: entry.proposalAvailableOnly,
+                    mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
+                    offset: entry.offset,
+                    limit: reviewWindowLimit,
+                    search: entry.search
+                )
+                hydrateReviewProposalDrafts(from: window.items)
+                fixtureReviewWindow = window
+                let orderedIDs = window.items.map(\.id)
+                let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
+                let restoredFocusedID = entry.focusedID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? restoredSelectedIDs.first ?? orderedIDs.first
+                let restoredAnchorID = entry.anchorID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? restoredFocusedID
+                reviewSelection = OwnerSelectionModel(
+                    orderedIDs: orderedIDs,
+                    selectedIDs: restoredSelectedIDs.isEmpty
+                        ? Set(restoredFocusedID.map { [$0] } ?? [])
+                        : restoredSelectedIDs,
+                    anchorID: restoredAnchorID,
+                    focusedID: restoredFocusedID
+                )
+                reviewScrollTargetID = restoredFocusedID
+                syncReviewDraft()
+            } else if !selectedFixtureID.isEmpty {
+                await loadFixtureReviewWindow()
+            }
             reviewStatus = result.alreadyUndone
-                ? "The Review action was already undone; the queue was refreshed."
-                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
+                ? "The Review action was already undone; the current fixture stayed \(selectedFixtureBreadcrumb)."
+                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb)."
             await refreshAIStatus()
         } catch {
             reviewStatus = "Undo failed: \(error)"
@@ -2762,7 +2961,7 @@ final class BackstageViewModel: ObservableObject {
                     _ = try await fixtureService.applyState(
                         state,
                         assetIDs: changes.map(\.assetID),
-                        fixtureID: changes.first?.fixtureID ?? cullingFixtureID,
+                        fixtureID: changes.first?.fixtureID ?? selectedFixtureID,
                         reason: "Undo \(entry.label)"
                     )
                 }
@@ -2952,7 +3151,7 @@ final class BackstageViewModel: ObservableObject {
         label: String
     ) async {
         let ids = selectedCullingAssetIDs
-        guard !cullingFixtureID.isEmpty, !ids.isEmpty else {
+        guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             cullingStatus = "Choose a fixture and select one or more Photos items."
             return
         }
@@ -2992,7 +3191,7 @@ final class BackstageViewModel: ObservableObject {
             let changes = try await fixtureService.applyState(
                 state,
                 assetIDs: ids,
-                fixtureID: cullingFixtureID,
+                fixtureID: selectedFixtureID,
                 reason: "Native culling \(label.lowercased())"
             )
             for change in changes {
@@ -4076,7 +4275,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runMetadata(commit: Bool) async {
-        let fixture = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard fixtureScopedActionsAllowed else {
+            metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
+            return
+        }
         if commit, !(await preparePhotosMutation()) {
             metadataStatus = photosMutationReadinessMessage()
             return
@@ -4085,8 +4287,8 @@ final class BackstageViewModel: ObservableObject {
         defer { isRunningMetadata = false }
         do {
             let report = try await (commit
-                ? metadataService.commit(fixtureID: fixture)
-                : metadataService.plan(fixtureID: fixture))
+                ? metadataService.commit(fixtureID: selectedFixtureID)
+                : metadataService.plan(fixtureID: selectedFixtureID))
             metadataReport = report
             metadataStatus = reportStatus(report)
         } catch {

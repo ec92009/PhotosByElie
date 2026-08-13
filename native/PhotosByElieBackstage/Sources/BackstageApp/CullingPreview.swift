@@ -13,7 +13,7 @@ enum CullingPreviewFixtures {
         let model = BackstageViewModel()
         let assets = sampleAssets
 
-        model.fixtures = [
+        model.installFixtureTree([
             FixtureNode(
                 id: "fixture-expo",
                 name: "Expo",
@@ -26,8 +26,7 @@ enum CullingPreviewFixtures {
                 ]
             ),
             FixtureNode(id: "fixture-re", name: "RE"),
-        ]
-        model.cullingFixtureID = "fixture-expo"
+        ], preferredFixtureID: "fixture-expo", persistSelection: false)
         model.cullingPool = FixturePool(
             id: "pool-preview",
             name: "Expo",

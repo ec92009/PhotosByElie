@@ -375,9 +375,6 @@ struct ReviewView: View {
             if model.fixtures.isEmpty {
                 await model.loadFixtures()
             }
-            if model.reviewFixtureID.isEmpty {
-                model.reviewFixtureID = model.cullingFixtureID
-            }
             await model.loadFixtureReviewWindow()
             await model.restoreLoadedAIProposalDrafts()
             await model.refreshAIStatus()
@@ -393,7 +390,11 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Review")
                 .font(.largeTitle.bold())
-            Text("Oldest picked photos first")
+            Text(
+                model.selectedFixtureBreadcrumb.isEmpty
+                    ? "Fixture unavailable"
+                    : "\(model.selectedFixtureBreadcrumb) • Oldest picked photos first"
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -401,20 +402,6 @@ struct ReviewView: View {
 
     private var reviewScopeControls: some View {
         FlowLayout(spacing: 10) {
-            Picker(
-                "Fixture",
-                selection: Binding(
-                    get: { model.reviewFixtureID },
-                    set: { model.selectReviewFixture($0) }
-                )
-            ) {
-                ForEach(model.flatFixtures.filter { !$0.isArchived }) { fixture in
-                    let depth = max(0, model.fixtures.path(to: fixture.id).count - 1)
-                    Text("\(String(repeating: "  ", count: depth))\(fixture.name)")
-                        .tag(fixture.id)
-                }
-            }
-            .frame(width: 180)
             Text("State")
                 .font(.callout.weight(.semibold))
             ForEach(FixtureReviewStateFilter.allCases) { filter in

@@ -275,15 +275,9 @@ struct UploadView: View {
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty { await model.loadFixtures() }
-            if model.selectedFixtureID.isEmpty {
-                model.selectedFixtureID = model.flatFixtures.first(where: { $0.id == "fixture-expo" })?.id
-                    ?? model.flatFixtures.first(where: { $0.parentID == nil && !$0.isArchived })?.id
-                    ?? ""
+            if !model.selectedFixtureID.isEmpty {
+                await model.loadNativeUploadPlan()
             }
-        }
-        .task(id: model.selectedFixtureID) {
-            guard !isPreviewMode, !model.selectedFixtureID.isEmpty else { return }
-            await model.loadNativeUploadPlan()
         }
         .confirmationDialog(
             "Return the selected approved assets to Review?",

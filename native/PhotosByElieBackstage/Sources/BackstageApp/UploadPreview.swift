@@ -8,8 +8,11 @@ enum UploadPreviewFixtures {
     static func ready() -> BackstageViewModel {
         let model = BackstageViewModel()
         let items = sampleItems
-        model.fixtures = [FixtureNode(id: "fixture-expo", name: "Expo")]
-        model.selectedFixtureID = "fixture-expo"
+        model.installFixtureTree(
+            [FixtureNode(id: "fixture-expo", name: "Expo")],
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
         model.nativeUploadPlan = NativeUploadPlan(
             fixtureID: "fixture-expo",
             fixtureName: "Expo",
@@ -36,8 +39,11 @@ enum UploadPreviewFixtures {
 
     static func empty() -> BackstageViewModel {
         let model = BackstageViewModel()
-        model.fixtures = [FixtureNode(id: "fixture-expo", name: "Expo")]
-        model.selectedFixtureID = "fixture-expo"
+        model.installFixtureTree(
+            [FixtureNode(id: "fixture-expo", name: "Expo")],
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
         model.nativeUploadPlan = NativeUploadPlan(
             fixtureID: "fixture-expo",
             fixtureName: "Expo",

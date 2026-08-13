@@ -178,6 +178,7 @@ const translations = {
     'gallery.orientation': 'Orientation',
     'gallery.origin': 'Origin',
     'gallery.search': 'Search',
+    'gallery.filters': 'Filters',
     'gallery.search_placeholder': 'Title or keyword',
     'gallery.date_from': 'Date from',
     'gallery.date_to': 'Date to',
@@ -195,8 +196,6 @@ const translations = {
     'gallery.date_close': 'Close date picker',
     'gallery.date_range_swapped': 'The date range was reordered from earliest to latest.',
     'gallery.any_date': 'Any date',
-    'gallery.media': 'Media',
-    'gallery.all_media': 'All media',
     'gallery.photos': 'Photos',
     'gallery.videos': 'Videos',
     'gallery.color_mood': 'Color mood',
@@ -830,6 +829,7 @@ const translations = {
     'gallery.orientation': 'Orientation',
     'gallery.origin': 'Origine',
     'gallery.search': 'Recherche',
+    'gallery.filters': 'Filtres',
     'gallery.search_placeholder': 'Titre ou mot-cle',
     'gallery.date_from': 'Date debut',
     'gallery.date_to': 'Date fin',
@@ -847,8 +847,6 @@ const translations = {
     'gallery.date_close': 'Fermer le selecteur de dates',
     'gallery.date_range_swapped': 'La plage a ete remise dans l ordre chronologique.',
     'gallery.any_date': 'Toute date',
-    'gallery.media': 'Media',
-    'gallery.all_media': 'Tous medias',
     'gallery.photos': 'Photos',
     'gallery.videos': 'Videos',
     'gallery.color_mood': 'Ambiance couleur',
@@ -1482,6 +1480,7 @@ const translations = {
     'gallery.orientation': 'Orientacion',
     'gallery.origin': 'Origen',
     'gallery.search': 'Buscar',
+    'gallery.filters': 'Filtros',
     'gallery.search_placeholder': 'Titulo o palabra clave',
     'gallery.date_from': 'Desde',
     'gallery.date_to': 'Hasta',
@@ -1499,8 +1498,6 @@ const translations = {
     'gallery.date_close': 'Cerrar selector de fechas',
     'gallery.date_range_swapped': 'El rango se ordeno de la fecha mas antigua a la mas reciente.',
     'gallery.any_date': 'Cualquier fecha',
-    'gallery.media': 'Medios',
-    'gallery.all_media': 'Todos',
     'gallery.photos': 'Fotos',
     'gallery.videos': 'Videos',
     'gallery.color_mood': 'Color',
@@ -5123,6 +5120,13 @@ ensureHeaderActionLinks();
 ensureSiteAccount();
 ensureSiteSettings();
 
+const backToTopButtons = [...document.querySelectorAll("[data-header-back-to-top]")];
+if (document.body?.matches?.("[data-fixed-header]")) {
+  backToTopButtons.forEach((button) => {
+    if (button.parentElement !== document.body) document.body.append(button);
+  });
+}
+
 const syncFixedHeaderOffset = () => {
   if (!document.body?.matches?.("[data-gallery], [data-fixed-header]")) return;
   const topbar = document.querySelector(".topbar");
@@ -5141,7 +5145,7 @@ if (document.body?.matches?.("[data-gallery], [data-fixed-header]")) {
   }
 }
 
-document.querySelectorAll("[data-header-back-to-top]").forEach((button) => {
+backToTopButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });

@@ -508,6 +508,11 @@ const writeGalleryReturnState = () => {
   if (ownerReviewReturnContext) return;
   const payload = readGallerySequencePayload();
   if (payload?.source === "home") return;
+  const publicFilterState = payload?.filterState && typeof payload.filterState === "object"
+    ? Object.fromEntries(
+      Object.entries(payload.filterState).filter(([key]) => !["mediaType", "media_type"].includes(key)),
+    )
+    : null;
   try {
     sessionStorage.setItem(galleryReturnStateKey, JSON.stringify({
       source: "detail",
@@ -518,7 +523,7 @@ const writeGalleryReturnState = () => {
       primaryPhotoId: payload?.primaryPhotoId || "",
       selectionRecency: Array.isArray(payload?.selectionRecency) ? payload.selectionRecency.slice(-500) : [],
       navigationNonce: payload?.navigationNonce || "",
-      filterState: payload?.filterState || null,
+      filterState: publicFilterState,
       visibleLimit: payload?.visibleLimit || null,
       createdAt: Date.now()
     }));

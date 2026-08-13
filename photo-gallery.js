@@ -117,6 +117,10 @@ let moreButton = null;
 let moreDoubleButton = null;
 let showAllButton = null;
 let showAllRenderToken = 0;
+let paginationAnchorState = null;
+let paginationAnchorObserver = null;
+let paginationAnchorRaf = 0;
+let paginationAnchorCleanupTimer = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
@@ -130,13 +134,17 @@ const defaultFilterState = {
   query: "",
   orientation: "all",
   sort: "newest",
-  mediaType: "all",
   dateFrom: galleryDateRange.dateFrom,
   dateTo: galleryDateRange.dateTo
 };
-const persistedFilterKeys = ["orientation", "mediaType", "dateFrom", "dateTo"];
+const persistedFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
+const publicFilterState = (state = {}) => Object.fromEntries(
+  Object.keys(defaultFilterState).map((key) => [key, state[key] ?? defaultFilterState[key]])
+);
+const galleryFilterCollapseBreakpoint = 760;
 let filterBar = null;
 let filterToggle = null;
+let lastGalleryFilterFocus = null;
 let ownerSuperSearchIndex = new Map();
 let ownerSuperSearchPromise = null;
 
@@ -225,9 +233,20 @@ const syncDatePickerControls = () => {
 const syncDateFilterUrl = (state) => {
   if (!window.history?.replaceState || !window.location?.href) return;
   const url = new URL(window.location.href);
-  ["dateFrom", "date_from", "from", "dateTo", "date_to", "to"].forEach((key) => url.searchParams.delete(key));
+  ["q", "search", "mediaType", "media_type", "dateFrom", "date_from", "from", "dateTo", "date_to", "to"]
+    .forEach((key) => url.searchParams.delete(key));
+  const query = String(state.query || "");
+  if (query.trim()) url.searchParams.set("q", query);
   if (state.dateFrom) url.searchParams.set("dateFrom", state.dateFrom);
   if (state.dateTo) url.searchParams.set("dateTo", state.dateTo);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+};
+const syncSearchFilterUrl = (state) => {
+  if (!window.history?.replaceState || !window.location?.href) return;
+  const url = new URL(window.location.href);
+  ["q", "search", "mediaType", "media_type"].forEach((key) => url.searchParams.delete(key));
+  const query = String(state.query || "");
+  if (query.trim()) url.searchParams.set("q", query);
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 };
 
@@ -335,6 +354,7 @@ const commitInlineDatePickerControl = (control) => {
   writeFilterState();
   syncDateFilterUrl(filterState);
   syncFilterControls();
+  cancelPaginationSequence();
   visibleLimit = pageSize;
   selectedIndex = 0;
   renderGallery({ scrollSelection: false });
@@ -359,7 +379,9 @@ const primaryShortcutLabel = () => /Mac|iPhone|iPad|iPod/i.test(navigator.platfo
 
 const readFilterState = () => {
   const params = new URLSearchParams(window.location.search);
-  const urlQuery = params.get("q") || params.get("search") || "";
+  const urlQueryKey = ["q", "search"].find((key) => params.has(key));
+  const urlQueryPresent = Boolean(urlQueryKey);
+  const urlQuery = urlQueryPresent ? params.get(urlQueryKey) || "" : "";
   const queryDate = (keys) => {
     const key = keys.find((candidate) => params.has(candidate));
     return key ? { present: true, value: validDateFilterValue(params.get(key)) } : { present: false, value: "" };
@@ -376,12 +398,12 @@ const readFilterState = () => {
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
-      persistedFilterKeys.map((key) => [key, savedState[key] || defaultFilterState[key]])
+      persistedFilterKeys.map((key) => [key, savedState[key] ?? defaultFilterState[key]])
     );
     return normalizeDateFilterState({
       ...defaultFilterState,
       ...persistedState,
-      query: urlQuery,
+      query: urlQueryPresent ? urlQuery : persistedState.query,
       dateFrom: urlDateFrom.present ? urlDateFrom.value : persistedState.dateFrom,
       dateTo: urlDateTo.present ? urlDateTo.value : persistedState.dateTo,
     });
@@ -414,7 +436,7 @@ try {
       .filter((photoId, index, items) => photoId && items.indexOf(photoId) === index)
       .slice(-selectionLimit);
     if (payload.filterState && typeof payload.filterState === "object") {
-      filterState = normalizeDateFilterState({ ...defaultFilterState, ...payload.filterState });
+      filterState = normalizeDateFilterState(publicFilterState(payload.filterState));
     }
   }
 } catch {
@@ -442,7 +464,7 @@ const writeDetailSequenceContext = (photos) => {
       primaryPhotoId,
       selectionRecency,
       navigationNonce: detailRoundTripNonce,
-      filterState,
+      filterState: publicFilterState(filterState),
       visibleLimit: visibleLimit >= photos.length ? "all" : visibleLimit,
       createdAt: Date.now()
     }));
@@ -480,7 +502,7 @@ const metadataValue = (photo, label) => (
 );
 
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
-const galleryFilterKeys = ["query", "orientation", "mediaType", "dateFrom", "dateTo"];
+const galleryFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
 const ownerSuperSearchText = (photo) => {
   if (!localModerationEnabled) return "";
   return ownerSuperSearchIndex.get(photo?.id)?.text || "";
@@ -491,7 +513,7 @@ const filterContext = () => ({
   extraSearchText: ownerSuperSearchText,
 });
 const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys);
-const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, filterState, filterContext());
+const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext());
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
@@ -529,8 +551,10 @@ const startOwnerSuperSearch = () => {
 const syncFilterToggle = () => {
   if (!filterToggle || !filterBar) return;
   const count = activeFilterCount();
-  const label = t("gallery.search");
-  filterToggle.textContent = count > 0 ? `${label} (${count})` : label;
+  const label = t("gallery.filters");
+  const text = count > 0 ? `${label} (${count})` : label;
+  filterToggle.textContent = text;
+  filterToggle.setAttribute("aria-label", text);
   filterToggle.setAttribute("aria-expanded", filterBar.classList.contains("is-open") ? "true" : "false");
 };
 
@@ -557,6 +581,30 @@ const syncFilterControls = () => {
   const searchInput = filterBar.querySelector("[data-gallery-search]");
   if (searchInput) searchInput.value = filterState.query || "";
   syncFilterToggle();
+};
+const syncFilterResponsiveFocus = () => {
+  if (!filterBar) return;
+  const searchInput = filterBar.querySelector("[data-gallery-search]");
+  if (!searchInput) return;
+  const activeElement = document.activeElement;
+  const previousFilterFocus = lastGalleryFilterFocus;
+  const isNarrow = window.matchMedia?.(`(max-width:${galleryFilterCollapseBreakpoint}px)`).matches ?? false;
+  const secondaryControlHidden = isNarrow
+    && !filterBar.classList.contains("is-open")
+    && (
+      (activeElement && activeElement !== searchInput && filterBar.contains(activeElement))
+      || (activeElement === document.body && previousFilterFocus && previousFilterFocus !== searchInput && filterBar.contains(previousFilterFocus))
+    );
+  const toggleHidden = !isNarrow && (
+    activeElement === filterToggle
+    || (activeElement === document.body && previousFilterFocus === filterToggle)
+  );
+  if (!secondaryControlHidden && !toggleHidden) return;
+  try {
+    searchInput.focus({ preventScroll: true });
+  } catch {
+    searchInput.focus();
+  }
 };
 
 const datePickerControlMarkup = (key, labelKey) => `
@@ -594,11 +642,6 @@ const ensureGalleryFilterControls = () => {
     <label class="gallery-search-label"><span data-i18n="gallery.search">Search</span><input type="search" data-gallery-search placeholder="${escapeHtml(t("gallery.search_placeholder"))}"/></label>
     ${datePickerControlMarkup("dateFrom", "gallery.date_from")}
     ${datePickerControlMarkup("dateTo", "gallery.date_to")}
-    <label><span data-i18n="gallery.media">Media</span><select data-gallery-filter="mediaType">
-      <option value="all" data-i18n="gallery.all_media">All media</option>
-      <option value="photo" data-i18n="gallery.photos">Photos</option>
-      <option value="video" data-i18n="gallery.videos">Videos</option>
-    </select></label>
     <label><span data-i18n="gallery.orientation">Orientation</span><select data-gallery-filter="orientation">
       <option value="all" data-i18n="gallery.all">All</option>
       <option value="pano" data-i18n="gallery.pano">Pano</option>
@@ -628,13 +671,22 @@ const ensureGalleryFilterControls = () => {
     filterToggle.after(filterBar);
   }
   window.photosByElieI18n?.apply?.();
+  writeFilterState();
   syncFilterControls();
+  syncSearchFilterUrl(filterState);
   if (!isSelectionGallery) {
     filterToggle.addEventListener("click", () => {
       filterBar.classList.toggle("is-open");
       syncFilterToggle();
     });
   }
+  filterBar.addEventListener("focusin", (event) => {
+    if (event.target instanceof HTMLElement) lastGalleryFilterFocus = event.target;
+  });
+  filterToggle.addEventListener("focusin", () => {
+    lastGalleryFilterFocus = filterToggle;
+  });
+  window.addEventListener("resize", syncFilterResponsiveFocus);
   filterBar.addEventListener("submit", (event) => {
     event.preventDefault();
   });
@@ -653,13 +705,17 @@ const ensureGalleryFilterControls = () => {
     filterState = { ...filterState, [control.dataset.galleryFilter]: value };
     syncFilterControls();
     writeFilterState();
+    cancelPaginationSequence();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
   });
   filterBar.querySelector("[data-gallery-search]")?.addEventListener("input", (event) => {
     filterState = { ...filterState, query: event.target.value };
+    writeFilterState();
+    syncSearchFilterUrl(filterState);
     syncFilterToggle();
+    cancelPaginationSequence();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
@@ -670,6 +726,7 @@ const ensureGalleryFilterControls = () => {
     writeFilterState();
     syncDateFilterUrl(filterState);
     syncFilterControls();
+    cancelPaginationSequence();
     visibleLimit = pageSize;
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
@@ -700,52 +757,47 @@ const ensureGalleryMoreButton = () => {
   showAllButton.hidden = true;
   controls.append(moreButton, moreDoubleButton, showAllButton);
   galleryRoot.after(controls);
-  const preserveScrollAfterRender = (token = showAllRenderToken) => {
-    const left = window.scrollX || 0;
-    const top = window.scrollY || 0;
-    return () => {
-      window.requestAnimationFrame(() => {
-        if (token !== showAllRenderToken) return;
-        window.scrollTo({ left, top, behavior: "auto" });
-        window.requestAnimationFrame(() => {
-          if (token === showAllRenderToken) window.scrollTo({ left, top, behavior: "auto" });
-        });
-      });
-    };
-  };
   moreButton.addEventListener("click", () => {
+    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
     showAllRenderToken += 1;
     if (showAllButton) showAllButton.disabled = false;
-    const restoreScroll = preserveScrollAfterRender(showAllRenderToken);
+    beginPaginationAnchor(anchorPhotoId);
     visibleLimit += pageSize;
     renderGallery({ scrollSelection: false });
-    restoreScroll();
+    schedulePaginationAnchorRestore();
   });
   moreDoubleButton.addEventListener("click", () => {
+    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
     showAllRenderToken += 1;
     if (showAllButton) showAllButton.disabled = false;
-    const restoreScroll = preserveScrollAfterRender(showAllRenderToken);
+    beginPaginationAnchor(anchorPhotoId);
     visibleLimit += pageSize * 2;
     renderGallery({ scrollSelection: false });
-    restoreScroll();
+    schedulePaginationAnchorRestore();
   });
   showAllButton.addEventListener("click", () => {
+    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
     const token = showAllRenderToken + 1;
     showAllRenderToken = token;
-    showAllButton.blur();
+    setPaginationBusy(true);
+    beginPaginationAnchor(anchorPhotoId, { focusEachRender: true });
     const addNextChunk = () => {
       if (token !== showAllRenderToken) return;
       const total = filteredVisiblePhotos().length;
       if (visibleLimit >= total) {
-        if (showAllButton) showAllButton.disabled = false;
+        setPaginationBusy(false);
+        schedulePaginationAnchorRestore();
+        releasePaginationAnchor();
         return;
       }
       visibleLimit = Math.min(total, visibleLimit + showAllChunkSize);
       renderGallery({ scrollSelection: false });
-      if (showAllButton) {
-        showAllButton.disabled = visibleLimit < total;
-      }
+      schedulePaginationAnchorRestore();
       if (visibleLimit < total) window.setTimeout(addNextChunk, showAllChunkDelayMs);
+      else {
+        setPaginationBusy(false);
+        releasePaginationAnchor();
+      }
     };
     addNextChunk();
   });
@@ -965,6 +1017,112 @@ const visibleColumnCount = () => {
 
 const setGalleryStatus = (message) => {
   if (galleryStatus) galleryStatus.textContent = message;
+};
+
+const setPaginationBusy = (busy) => {
+  const controls = moreButton?.closest(".gallery-pagination-controls");
+  if (!controls) return;
+  controls.toggleAttribute("aria-busy", busy);
+  controls.querySelectorAll("button").forEach((button) => {
+    button.disabled = busy;
+  });
+};
+
+const clearPaginationAnchor = () => {
+  if (paginationAnchorRaf) window.cancelAnimationFrame(paginationAnchorRaf);
+  paginationAnchorRaf = 0;
+  if (paginationAnchorObserver) paginationAnchorObserver.disconnect();
+  paginationAnchorObserver = null;
+  if (paginationAnchorCleanupTimer) window.clearTimeout(paginationAnchorCleanupTimer);
+  paginationAnchorCleanupTimer = 0;
+  paginationAnchorState = null;
+};
+
+const paginationPhotoIdAtCurrentLimit = () => {
+  const photos = filteredVisiblePhotos();
+  return photos[visibleLimit]?.id || "";
+};
+
+const paginationAnchorCard = (photoId) => {
+  if (!photoId || !galleryRoot) return null;
+  return [...galleryRoot.querySelectorAll("[data-photo-index]")]
+    .find((card) => card.dataset.photoId === photoId) || null;
+};
+
+const restorePaginationAnchor = () => {
+  const anchor = paginationAnchorState;
+  if (!anchor) return;
+  if (anchor.token !== showAllRenderToken) {
+    clearPaginationAnchor();
+    return;
+  }
+  const card = paginationAnchorCard(anchor.photoId);
+  if (!card) return;
+  const cardTop = card.getBoundingClientRect().top;
+  const delta = cardTop - anchor.targetTop;
+  if (Math.abs(delta) > 0.5) {
+    window.scrollTo({
+      left: anchor.left,
+      top: Math.max(0, (window.scrollY || 0) + delta),
+      behavior: "auto",
+    });
+  }
+  const link = card.querySelector("[data-photo-link]");
+  if (link && (anchor.focusEachRender || !anchor.focused)) {
+    link.focus({ preventScroll: true });
+    if (!anchor.focusEachRender) anchor.focused = true;
+  }
+};
+
+const schedulePaginationAnchorRestore = () => {
+  if (!paginationAnchorState || paginationAnchorRaf) return;
+  const anchor = paginationAnchorState;
+  anchor.framePass = 0;
+  const restoreFrame = () => {
+    paginationAnchorRaf = 0;
+    if (paginationAnchorState !== anchor) return;
+    restorePaginationAnchor();
+    if (paginationAnchorState === anchor && anchor.framePass < 2) {
+      anchor.framePass += 1;
+      paginationAnchorRaf = window.requestAnimationFrame(restoreFrame);
+    }
+  };
+  paginationAnchorRaf = window.requestAnimationFrame(restoreFrame);
+};
+
+const releasePaginationAnchor = () => {
+  if (!paginationAnchorState) return;
+  schedulePaginationAnchorRestore();
+  if (paginationAnchorCleanupTimer) window.clearTimeout(paginationAnchorCleanupTimer);
+  paginationAnchorCleanupTimer = window.setTimeout(clearPaginationAnchor, 750);
+};
+
+const cancelPaginationSequence = () => {
+  showAllRenderToken += 1;
+  setPaginationBusy(false);
+  clearPaginationAnchor();
+};
+
+const beginPaginationAnchor = (photoId, { focusEachRender = false } = {}) => {
+  clearPaginationAnchor();
+  if (!photoId || !galleryRoot) return null;
+  const controls = moreButton?.closest(".gallery-pagination-controls");
+  if (!controls) return null;
+  paginationAnchorState = {
+    photoId,
+    targetTop: controls.getBoundingClientRect().top,
+    left: window.scrollX || 0,
+    token: showAllRenderToken,
+    focusEachRender,
+    focused: false,
+    framePass: 0,
+  };
+  if (typeof window.ResizeObserver === "function") {
+    paginationAnchorObserver = new window.ResizeObserver(schedulePaginationAnchorRestore);
+    paginationAnchorObserver.observe(galleryRoot);
+  }
+  if (!focusEachRender) paginationAnchorCleanupTimer = window.setTimeout(clearPaginationAnchor, 1500);
+  return paginationAnchorState;
 };
 
 const galleryCardForPhotoId = (photoId) => {
@@ -1893,7 +2051,9 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       filterState = { ...defaultFilterState };
       seedInlineDatePickerSelections();
       writeFilterState();
+      syncDateFilterUrl(filterState);
       syncFilterControls();
+      cancelPaginationSequence();
       visibleLimit = pageSize;
       selectedIndex = 0;
       renderGallery({ scrollSelection: false });
@@ -2040,7 +2200,7 @@ if (galleryRoot && gallery) {
   }));
   const seoImage = seoPhotos.find((item) => item.image)?.image || window.photosByElieSeo?.defaultImage;
   const seoDescription = isSelectionGallery
-    ? "Search the Photos By Elie public archive by title, place, date, orientation, and media type."
+    ? "Search the Photos By Elie public archive by title, place, date, and orientation."
     : gallery.description || `Browse ${localizedCollectionTitle()} travel photography and digital wall-art downloads by Photos By Elie.`;
   window.photosByElieSeo?.applyPageMeta({
     title: `Photos By Elie | ${localizedCollectionTitle()} Gallery`,
@@ -2079,7 +2239,7 @@ if (galleryRoot && gallery) {
   startOwnerSuperSearch();
 
   const topButton = document.createElement("button");
-  topButton.className = "gallery-top-button";
+  topButton.className = "gallery-top-button floating-back-to-top";
   topButton.type = "button";
   topButton.dataset.galleryBackToTop = "";
   topButton.setAttribute("aria-label", t("a11y.back_to_top"));

@@ -10,6 +10,7 @@ const read = (name) => fs.readFileSync(path.join(root, name), "utf8");
 const galleryJs = read("photo-gallery.js");
 const photosCss = read("photos.css");
 const galleryHtml = read("gallery.html");
+const photoHtml = read("photo.html");
 const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
 const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
@@ -143,6 +144,38 @@ test("search and filter changes keep the filter controls in view", () => {
   assert.match(emptyFilterReset, /renderGallery\(\{ scrollSelection: false \}\);/);
 });
 
+test("pagination anchors every append to the first new card and keeps it keyboard-reachable", () => {
+  assert.match(galleryJs, /const paginationPhotoIdAtCurrentLimit = \(\) =>/);
+  assert.match(galleryJs, /return photos\[visibleLimit\]\?\.id \|\| "";/);
+  assert.match(galleryJs, /targetTop: controls\.getBoundingClientRect\(\)\.top/);
+  assert.match(galleryJs, /top: Math\.max\(0, \(window\.scrollY \|\| 0\) \+ delta\)/);
+  assert.match(galleryJs, /link\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(galleryJs, /new window\.ResizeObserver\(schedulePaginationAnchorRestore\)/);
+  assert.doesNotMatch(galleryJs, /preserveScrollAfterRender/);
+
+  const moreHandler = galleryJs.slice(
+    galleryJs.indexOf('moreButton.addEventListener("click"'),
+    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
+  );
+  const remainingHandler = galleryJs.slice(
+    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
+    galleryJs.indexOf('showAllButton.addEventListener("click"'),
+  );
+  for (const handler of [moreHandler, remainingHandler]) {
+    assert.match(handler, /paginationPhotoIdAtCurrentLimit\(\)/);
+    assert.match(handler, /beginPaginationAnchor\(anchorPhotoId\)/);
+    assert.match(handler, /renderGallery\(\{ scrollSelection: false \}\);/);
+    assert.match(handler, /schedulePaginationAnchorRestore\(\);/);
+  }
+
+  const showAllHandler = galleryJs.slice(galleryJs.indexOf('showAllButton.addEventListener("click"'));
+  assert.match(showAllHandler, /setPaginationBusy\(true\)/);
+  assert.match(showAllHandler, /beginPaginationAnchor\(anchorPhotoId, \{ focusEachRender: true \}\)/);
+  assert.match(showAllHandler, /setPaginationBusy\(false\)/);
+  assert.doesNotMatch(showAllHandler, /showAllButton\.blur\(\)/);
+  assert.match(galleryHtml, /data-gallery-status aria-live="polite"/);
+});
+
 test("public gallery filter bar compacts every control without changing its markup contract", () => {
   const filterMarkupStart = galleryJs.indexOf("filterBar.innerHTML = `");
   const filterMarkupEnd = galleryJs.indexOf("`;", filterMarkupStart);
@@ -156,7 +189,9 @@ test("public gallery filter bar compacts every control without changing its mark
   const dateMarkup = galleryJs.slice(dateMarkupStart, dateMarkupEnd);
   assert.match(dateMarkup, /gallery-date-label/);
   assert.match(dateMarkup, /gallery-date-control/);
-  assert.match(filterMarkup, /data-gallery-filter="mediaType"/);
+  assert.doesNotMatch(filterMarkup, /data-gallery-filter="mediaType"/);
+  assert.doesNotMatch(filterMarkup, />Media</);
+  assert.doesNotMatch(filterMarkup, />All media</);
   assert.match(filterMarkup, /data-gallery-filter="orientation"/);
   assert.match(filterMarkup, /gallery-sort-label/);
   assert.match(filterMarkup, /data-gallery-filter="sort"/);
@@ -180,12 +215,84 @@ test("public gallery filter bar compacts every control without changing its mark
 
   const responsiveStart = photosCss.indexOf("  .gallery-filter-toggle{\n    display:inline-flex;");
   const responsiveCss = photosCss.slice(responsiveStart);
-  assert.match(responsiveCss, /\.gallery-filter-bar\{\n    display:none;\n  \}/);
+  assert.match(responsiveCss, /\.gallery-filter-bar\{\n    display:flex;\n  \}/);
   assert.match(responsiveCss, /\.gallery-filter-bar\.is-open\{\n    display:flex;\n  \}/);
+  assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) > :not\(\.gallery-search-label\)\{\n    display:none;\n  \}/);
+  assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) \.gallery-search-label\{\n    flex-basis:100%;[\s\S]*?\n  \}/);
+  assert.doesNotMatch(responsiveCss, /\.gallery-filter-bar\{\n    display:none;\n  \}/);
   assert.match(responsiveCss, /\.gallery-filter-bar label,[\s\S]*?flex:1 1 calc\(50% - 6px\);/);
   assert.match(responsiveCss, /\.gallery-filter-bar label:has\(\.gallery-date-control\)[\s\S]*?flex-basis:100%;/);
   assert.match(responsiveCss, /\.gallery-filter-bar \.gallery-search-label,[\s\S]*?\.gallery-sort-label\{[\s\S]*?flex-basis:100%;/);
   assert.match(responsiveCss, /\.gallery-filter-clear\{\n    flex:1 1 100%;/);
+});
+
+test("primary search stays visible at and below the 760px secondary-filter breakpoint", () => {
+  assert.match(galleryJs, /galleryFilterCollapseBreakpoint = 760;/);
+  const toggleRuleStart = photosCss.indexOf("  .gallery-filter-toggle{\n    display:inline-flex;");
+  const responsiveStart = photosCss.lastIndexOf("@media (max-width:760px){", toggleRuleStart);
+  const responsiveEnd = photosCss.indexOf("@media ", responsiveStart + 10);
+  const responsiveCss = photosCss.slice(responsiveStart, responsiveEnd === -1 ? undefined : responsiveEnd);
+  assert.match(responsiveCss, /\.gallery-filter-toggle\{\n    display:inline-flex;/);
+  assert.match(responsiveCss, /\.gallery-filter-bar\{\n    display:flex;/);
+  assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) > :not\(\.gallery-search-label\)/);
+  assert.match(responsiveCss, /\.gallery-filter-bar:not\(\.is-open\) \.gallery-search-label/);
+});
+
+test("filter disclosure keeps one canonical search state through URL, storage, clear, reload, and focus", () => {
+  assert.match(galleryJs, /const persistedFilterKeys = \["query", "orientation", "dateFrom", "dateTo"\];/);
+  assert.match(galleryJs, /const urlQueryKey = \["q", "search"\]\.find\(\(key\) => params\.has\(key\)\);/);
+  assert.match(galleryJs, /query: urlQueryPresent \? urlQuery : persistedState\.query/);
+  assert.match(galleryJs, /const syncSearchFilterUrl = \(state\) =>/);
+  assert.match(galleryJs, /writeFilterState\(\);\n    syncSearchFilterUrl\(filterState\);\n    syncFilterToggle\(\);/);
+  assert.match(galleryJs, /const label = t\("gallery\.filters"\);/);
+  assert.match(galleryJs, /window\.addEventListener\("resize", syncFilterResponsiveFocus\);/);
+  assert.match(galleryJs, /searchInput\.focus\(\{ preventScroll: true \}\)/);
+  const filterMarkupStart = galleryJs.indexOf("filterBar.innerHTML = `");
+  const filterMarkupEnd = galleryJs.indexOf("`;", filterMarkupStart);
+  const filterMarkup = galleryJs.slice(filterMarkupStart, filterMarkupEnd);
+  assert.equal((filterMarkup.match(/data-gallery-search/g) || []).length, 1);
+  assert.equal((photosJs.match(/['"]gallery\.filters['"]\s*:/g) || []).length, 3);
+});
+
+test("public gallery retires Media state without changing the private generic filter engine", () => {
+  assert.doesNotMatch(galleryJs, /data-gallery-filter="mediaType"/);
+  assert.doesNotMatch(galleryJs, /persistedFilterKeys[^\n]*mediaType/);
+  assert.doesNotMatch(galleryJs, /galleryFilterKeys[^\n]*mediaType/);
+  assert.match(galleryJs, /window\.photosByElieI18n\?\.apply\?\.\(\);\n  writeFilterState\(\);\n  syncFilterControls\(\);/);
+  assert.match(galleryJs, /matchesPhoto\(photo, \{ \.\.\.filterState, mediaType: "all" \}/);
+  assert.match(detailJs, /Object\.entries\(payload\.filterState\)\.filter\(\(\[key\]\) => !\["mediaType", "media_type"\]\.includes\(key\)\)/);
+  assert.match(detailJs, /filterState: publicFilterState/);
+  assert.match(photosJs, /window\.photosByEliePhotoFilter = \(\(\) => \{[\s\S]*const defaultState = \{[\s\S]*mediaType: 'all'/);
+  assert.match(photosJs, /if \(filterState\.mediaType !== 'all'/);
+  for (const key of ["gallery.media", "gallery.all_media"]) {
+    const escaped = key.replaceAll(".", "\\.");
+    assert.equal((photosJs.match(new RegExp(`['"]${escaped}['"]\\s*:`, "g")) || []).length, 0);
+  }
+});
+
+test("detail round trips restore the loaded boundary and focus after click or double-click navigation", () => {
+  assert.match(galleryJs, /visibleLimit: visibleLimit >= photos\.length \? "all" : visibleLimit/);
+  assert.match(galleryJs, /pendingGalleryReturnState\?\.visibleLimit === "all"/);
+  assert.match(galleryJs, /expandGalleryToIncludeIndex\(returnIndex\)/);
+  assert.match(galleryJs, /restorePendingGalleryReturn\(\)/);
+  assert.match(galleryJs, /card\.querySelector\("\[data-photo-link\]"\)\?\.focus\?\.\(\{ preventScroll: true \}\)/);
+  assert.match(galleryJs, /card\.addEventListener\("dblclick"[\s\S]*window\.location\.assign/);
+  assert.match(detailJs, /link\.addEventListener\("click", writeGalleryReturnState\)/);
+  assert.match(detailJs, /visibleLimit: payload\?\.visibleLimit \|\| null/);
+});
+
+test("Back to top is body-mounted above the version pill with safe-area and reduced-motion support", () => {
+  const headerControlsStart = photoHtml.indexOf('<div class="header-controls">');
+  const headerControlsEnd = photoHtml.indexOf("</div>", headerControlsStart);
+  assert.doesNotMatch(photoHtml.slice(headerControlsStart, headerControlsEnd), /data-header-back-to-top/);
+  assert.match(photoHtml, /<\/header>\s*<button class="gallery-top-button floating-back-to-top"[^>]*data-header-back-to-top/);
+  assert.match(galleryJs, /topButton\.className = "gallery-top-button floating-back-to-top"/);
+  assert.match(galleryJs, /document\.body\.append\(topButton\)/);
+  assert.match(photosCss, /\.floating-back-to-top\{[\s\S]*right:max\(12px,calc\(env\(safe-area-inset-right\) \+ 8px\)\);[\s\S]*safe-area-inset-bottom/);
+  assert.match(photosCss, /main\.detail-main\.has-basket-rail > \.basket-rail\{\n    margin-bottom:62px;/);
+  assert.ok(photosJs.indexOf("const backToTopButtons") < photosJs.indexOf("const syncFixedHeaderOffset"));
+  assert.match(photosJs, /if \(button\.parentElement !== document\.body\) document\.body\.append\(button\)/);
+  assert.match(photosJs, /backToTopButtons\.forEach[\s\S]*prefers-reduced-motion: reduce[\s\S]*behavior: prefersReducedMotion \? "auto" : "smooth"/);
 });
 
 test("gallery date filters use inline DD MMM YYYY controls", () => {

@@ -2,9 +2,9 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.0.0"
-    public static let specSHA256 = "74afe01be06895d5f0e6b5dcf4aad6c3913ec7818c9f832be08310000790e246"
-    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerTokenBundle", "Page", "Progress"]
+    public static let openAPIVersion = "1.1.0"
+    public static let specSHA256 = "8e03d84390b84c374138213e5f4fd151200e7a8796c20082fe774dc253d0ec56"
+    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
     public enum Operation: String, CaseIterable, Sendable {
@@ -12,9 +12,11 @@ public enum OwnerContract {
         case applySidecarDecisionBatch = "applySidecarDecisionBatch"
         case archiveGroup = "archiveGroup"
         case beginGoogleLogin = "beginGoogleLogin"
+        case closePBEOwnerSession = "closePBEOwnerSession"
         case createAction = "createAction"
         case createDeliveryLinks = "createDeliveryLinks"
         case createOwnerTokens = "createOwnerTokens"
+        case createPBEOwnerSession = "createPBEOwnerSession"
         case disablePerson = "disablePerson"
         case enrollOwnerDevice = "enrollOwnerDevice"
         case getAccessState = "getAccessState"
@@ -25,6 +27,7 @@ public enum OwnerContract {
         case getGalleryAccess = "getGalleryAccess"
         case getHealth = "getHealth"
         case getOwnerSession = "getOwnerSession"
+        case getPBEOwnerSession = "getPBEOwnerSession"
         case getRenderJob = "getRenderJob"
         case heartbeatConnector = "heartbeatConnector"
         case listActions = "listActions"
@@ -61,9 +64,11 @@ public enum OwnerContract {
         .applySidecarDecisionBatch: Endpoint(method: "POST", path: "/sidecar/decisions/apply-batch"),
         .archiveGroup: Endpoint(method: "POST", path: "/acs/groups/{groupId}/archive"),
         .beginGoogleLogin: Endpoint(method: "GET", path: "/auth/google/login"),
+        .closePBEOwnerSession: Endpoint(method: "POST", path: "/pbe-owner/sessions/{sessionId}/close"),
         .createAction: Endpoint(method: "POST", path: "/actions"),
         .createDeliveryLinks: Endpoint(method: "POST", path: "/delivery-links"),
         .createOwnerTokens: Endpoint(method: "POST", path: "/auth/tokens"),
+        .createPBEOwnerSession: Endpoint(method: "POST", path: "/pbe-owner/sessions"),
         .disablePerson: Endpoint(method: "POST", path: "/acs/people/{personId}/disable"),
         .enrollOwnerDevice: Endpoint(method: "POST", path: "/devices"),
         .getAccessState: Endpoint(method: "GET", path: "/acs/state"),
@@ -74,6 +79,7 @@ public enum OwnerContract {
         .getGalleryAccess: Endpoint(method: "GET", path: "/acs/gallery-access"),
         .getHealth: Endpoint(method: "GET", path: "/health"),
         .getOwnerSession: Endpoint(method: "GET", path: "/owner/session"),
+        .getPBEOwnerSession: Endpoint(method: "GET", path: "/pbe-owner/session"),
         .getRenderJob: Endpoint(method: "GET", path: "/jobs/{jobId}"),
         .heartbeatConnector: Endpoint(method: "POST", path: "/connectors/heartbeat"),
         .listActions: Endpoint(method: "GET", path: "/actions"),

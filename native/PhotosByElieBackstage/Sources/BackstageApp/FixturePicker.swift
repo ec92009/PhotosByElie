@@ -187,14 +187,60 @@ struct FixturePicker: View {
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Divider()
+
+            HStack(alignment: .center, spacing: 8) {
+                Label("PBE Owner", systemImage: "safari")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 4)
+                if model.pbeOwnerFixtureSession == nil {
+                    Button("Open") {
+                        Task { await model.launchPBEOwner() }
+                    }
+                    .disabled(!model.canLaunchPBEOwner || isPreviewMode)
+                    .accessibilityLabel("Open PBE Owner for current fixture")
+                    .backstageHelp("Start or attach the local PBE host, mint a short-lived session, freeze this fixture, and open the actionable gallery in the browser.")
+                } else {
+                    Button("End", role: .destructive) {
+                        Task { await model.endPBEOwnerSession() }
+                    }
+                    .disabled(model.isLaunchingPBEOwner || isPreviewMode)
+                    .accessibilityLabel("End PBE Owner session")
+                    .backstageHelp("Close the browser Owner lease, re-enable fixture selection, and stop a host launched by Backstage.")
+                }
+            }
+
+            HStack(alignment: .top, spacing: 6) {
+                if model.isLaunchingPBEOwner {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Circle()
+                        .fill(model.pbeOwnerFixtureSession == nil ? Color.secondary : Color.green)
+                        .frame(width: 7, height: 7)
+                        .padding(.top, 4)
+                        .accessibilityHidden(true)
+                }
+                Text(model.pbeOwnerSessionStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("PBE Owner status: \(model.pbeOwnerSessionStatus)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .task(id: model.pbeOwnerFixtureSession?.expiresAt) {
-            guard let session = model.pbeOwnerFixtureSession else { return }
-            let delay = max(0, session.expiresAt.timeIntervalSinceNow)
-            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            model.expirePBEOwnerSessionIfNeeded()
+        .task(id: model.pbeOwnerFixtureSession?.sessionID) {
+            while let session = model.pbeOwnerFixtureSession, !Task.isCancelled {
+                let remaining = session.expiresAt.timeIntervalSinceNow
+                if remaining <= 0 {
+                    await model.endPBEOwnerSession(reason: "PBE Owner session expired.")
+                    return
+                }
+                try? await Task.sleep(for: .seconds(min(15, remaining)))
+                guard !Task.isCancelled else { return }
+                await model.refreshPBEOwnerSessionStatus()
+            }
         }
     }
 

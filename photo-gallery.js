@@ -7,6 +7,7 @@ const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
 const panoramaGalleryKey = "panoramas";
 const sharedGalleryKey = "shared";
+const pbeOwnerGalleryKey = "pbe-owner";
 const panoramaGalleryAliases = new Set([panoramaGalleryKey, "pano", "panos", "panorama"]);
 const baseGalleryCollections = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
 const selectionGalleryCollections = baseGalleryCollections;
@@ -66,8 +67,9 @@ const galleryKey = galleryKeyFromPage();
 const isSelectionGallery = galleryKey === selectionGalleryKey;
 const isPanoramaGallery = galleryKey === panoramaGalleryKey;
 const isSharedGallery = galleryKey === sharedGalleryKey;
+const isPBEOwnerGallery = galleryKey === pbeOwnerGalleryKey;
 document.body.dataset.gallery = galleryKey;
-if (isSharedGallery) {
+if (isSharedGallery || isPBEOwnerGallery) {
   const robots = document.createElement("meta");
   robots.name = "robots";
   robots.content = "noindex,nofollow";
@@ -81,6 +83,7 @@ const reserveStore = window.photosByElieReserve;
 const likedStore = window.photosByElieLiked;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const ownerCullingEnabled = Boolean(hiddenActions?.cullingEnabled);
+const fullOwnerToolsEnabled = localModerationEnabled && !isPBEOwnerGallery;
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
@@ -362,7 +365,7 @@ const ensureGalleryKeyboardHint = () => {
     `${shortcutKey("X")} block`,
     `${shortcutKey("L")} like`,
     `${shortcutKey("U")} undo`,
-    ...(localModerationEnabled ? [
+    ...(fullOwnerToolsEnabled ? [
       `${shortcutKey("D")} Waste Basket`,
       `${shortcutKey("T")} title`,
       `${shortcutKey("K")} keywords`,
@@ -1406,6 +1409,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
     const detailParams = new URLSearchParams({ id: photo.id });
     if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
+    if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
     const href = versionedHref(`./photo.html?${detailParams.toString()}`);
     const isLiked = likedIds.has(photo.id);
     const actionButtons = [];
@@ -1438,7 +1442,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       href,
       collectionKey: galleryKey,
       actionHtml,
-      ownerEditable: ownerCullingEnabled,
+      ownerEditable: ownerCullingEnabled && fullOwnerToolsEnabled,
     });
   }).join("");
   galleryRoot.querySelectorAll("[data-gallery-like]").forEach((button) => {
@@ -1462,14 +1466,14 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       const photo = visibleSubset[index];
       if (!photo) return;
       window.photosByElieShowMediaContextMenu?.(photo, event, {
-        owner: localModerationEnabled,
+        owner: fullOwnerToolsEnabled,
         previewItems: visibleSubset,
         previewIndex: index,
         onOpenDetail: () => window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href"))),
       });
     });
   });
-  if (ownerCullingEnabled) {
+  if (ownerCullingEnabled && fullOwnerToolsEnabled) {
     galleryRoot.querySelectorAll("[data-owner-title-edit]").forEach((caption) => {
       caption.addEventListener("click", (event) => {
         event.preventDefault();
@@ -1578,7 +1582,7 @@ if (galleryRoot && gallery) {
   ensureOwnerCullToolbar();
   ensureGalleryMoreButton();
   ensureGalleryKeyboardHint();
-  renderGallery();
+  renderGallery({ scrollSelection: false });
   startOwnerSuperSearch();
 
   if (!viewControls) {
@@ -1733,11 +1737,14 @@ if (galleryRoot && gallery) {
       if (event.key === "Enter") {
         const selected = photos[selectedIndex];
         if (!selected) return;
-        window.location.assign(versionedHref(`./photo.html?id=${selected.id}`));
+        const detailParams = new URLSearchParams({ id: selected.id });
+        if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
+        window.location.assign(versionedHref(`./photo.html?${detailParams.toString()}`));
         event.preventDefault();
         return;
       }
       if (event.key.toLowerCase() === "t" || event.key.toLowerCase() === "k") {
+        if (!fullOwnerToolsEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         openOwnerMetadataModal(selected, event.key.toLowerCase() === "k" ? "keywords" : "title");
@@ -1745,7 +1752,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "r") {
-        if (!localModerationEnabled) return;
+        if (!fullOwnerToolsEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         try {
@@ -1763,7 +1770,7 @@ if (galleryRoot && gallery) {
         return;
       }
       if (event.key.toLowerCase() === "d") {
-        if (!localModerationEnabled) return;
+        if (!fullOwnerToolsEnabled) return;
         const selected = photos[selectedIndex];
         if (!selected) return;
         const confirmed = window.confirm(`Move "${selected.title}" to the recoverable Waste Basket?\n\nThis preserves the exact prior state for restore. Only an explicit Empty Waste Basket action activates a global tombstone.`);
@@ -1810,7 +1817,7 @@ if (galleryRoot && gallery) {
       document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
       document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
       syncFilterControls();
-      renderGallery();
+      renderGallery({ scrollSelection: false });
       applyGalleryDensity();
     }
   });

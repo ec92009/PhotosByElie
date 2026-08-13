@@ -114,7 +114,12 @@ const likedStore = window.photosByElieLiked;
 const hiddenActions = window.photosByElieHiddenActions;
 const localModerationEnabled = Boolean(hiddenActions?.enabled);
 const ownerCullingEnabled = Boolean(hiddenActions?.cullingEnabled);
-const ownerDetailPurchaseHidden = isOwnerCollection || isHiddenCollection || isOwnerReviewSyntheticCollection;
+const isPBEOwnerCollection = collectionKey === "pbe-owner";
+const fullOwnerToolsEnabled = localModerationEnabled && !isPBEOwnerCollection;
+const ownerDetailPurchaseHidden = isOwnerCollection
+  || isHiddenCollection
+  || isOwnerReviewSyntheticCollection
+  || isPBEOwnerCollection;
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
@@ -220,7 +225,7 @@ const renderDetailShortcutHint = () => {
     ? [
       `${detailShortcutKey("X")} block`,
       `${detailShortcutKey("U")} undo`,
-      ...(localModerationEnabled ? [
+      ...(fullOwnerToolsEnabled ? [
         `${detailShortcutKey("T")} title`,
         `${detailShortcutKey("K")} keywords`,
         `${detailShortcutKey("R")} review`
@@ -543,7 +548,9 @@ let previousPhotoHref = "";
 let nextPhotoHref = "";
 const detailPhotoHref = (targetPhotoId) => {
   const detailParams = new URLSearchParams({ id: targetPhotoId });
-  if (galleryReturnCollectionKey() === "shared") detailParams.set("gallery", "shared");
+  const returnCollectionKey = galleryReturnCollectionKey();
+  if (returnCollectionKey === "shared") detailParams.set("gallery", "shared");
+  if (returnCollectionKey === "pbe-owner") detailParams.set("gallery", "pbe-owner");
   if (ownerReviewReturnContext) {
     detailParams.set("from", "owner-review");
     detailParams.set("returnView", ownerReviewReturnContext.view);
@@ -645,7 +652,7 @@ const syncTitleUi = () => {
 };
 
 const openOwnerMetadataModal = (field) => {
-  if (!ownerCullingEnabled || !photo) return;
+  if (!ownerCullingEnabled || !fullOwnerToolsEnabled || !photo) return;
   const isKeywords = field === "keywords";
   const dialog = document.createElement("dialog");
   dialog.className = "owner-metadata-modal";
@@ -978,12 +985,13 @@ if (ownerCullingEnabled) {
     if (shouldIgnoreShortcut(event)) return;
     const key = event.key.toLowerCase();
     if (key === "t" || key === "k") {
+      if (!fullOwnerToolsEnabled) return;
       openOwnerMetadataModal(key === "k" ? "keywords" : "title");
       event.preventDefault();
       return;
     }
     if (key === "r") {
-      if (!localModerationEnabled) return;
+      if (!fullOwnerToolsEnabled) return;
       event.preventDefault();
       try {
         if (!hiddenActions.queueTitleKeywordReview) {

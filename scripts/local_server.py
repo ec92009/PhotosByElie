@@ -22,15 +22,39 @@ import threading
 import time
 import uuid
 from http import HTTPStatus
+from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
+try:
+    from .pbe_owner_session import (
+        CloudPBEOwnerSessionVerifier,
+        PBEOwnerSessionError,
+        PBEOwnerSessionStore,
+        repository_readiness,
+    )
+except ImportError:
+    from pbe_owner_session import (  # type: ignore
+        CloudPBEOwnerSessionVerifier,
+        PBEOwnerSessionError,
+        PBEOwnerSessionStore,
+        repository_readiness,
+    )
+
 
 PHOTO_ACTION_PATH = "/__photosbyelie/photo-action"
 PHOTO_ACTION_PROGRESS_PATH = "/__photosbyelie/photo-action-progress"
+PBE_OWNER_READINESS_PATH = "/__photosbyelie/pbe-owner/readiness"
+PBE_OWNER_SESSION_PATH = "/__photosbyelie/pbe-owner/session"
+PBE_OWNER_SESSION_START_PATH = "/__photosbyelie/pbe-owner/session/start"
+PBE_OWNER_BROWSER_BOOTSTRAP_PATH = "/__photosbyelie/pbe-owner/browser/bootstrap"
+PBE_OWNER_SESSION_HEARTBEAT_PATH = "/__photosbyelie/pbe-owner/session/heartbeat"
+PBE_OWNER_SESSION_CLOSE_PATH = "/__photosbyelie/pbe-owner/session/close"
+PBE_OWNER_GALLERY_PATH = "/__photosbyelie/pbe-owner/gallery"
+PBE_OWNER_ACTION_PATH = "/__photosbyelie/pbe-owner/action"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
@@ -74,10 +98,19 @@ VISIBLE_VERSION_EPOCH = date(2025, 12, 31)
 DERIVATIVES = (("gallery", "gallerySrc"), ("detail", "imageSrc"))
 COUNTRY_ASSIGNMENT_TARGETS = {"france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"}
 OWNER_SESSION_COOKIE = "pbe_owner_session"
+PBE_OWNER_BROWSER_COOKIE = "pbe_owner_browser"
 OWNER_ADMIN_EMAIL = os.environ.get("ACCESS_ADMIN_EMAIL", os.environ.get("PBE_OWNER_ADMIN_EMAIL", "ec92009@gmail.com")).strip().lower()
 ACCESS_USER_KV_BINDING = os.environ.get("PBE_ACCESS_USERS_KV_BINDING", "ORDERS_KV")
 ACCESS_USER_KV_PREFIX = os.environ.get("PBE_ACCESS_USERS_KV_PREFIX", os.environ.get("KV_PREFIX", "pbe"))
 OWNER_ACTION_ROOT = Path("assets/owner-actions")
+PBE_AUTH_WORKER_BASE_URL = os.environ.get(
+    "PBE_AUTH_WORKER_BASE_URL",
+    "https://auth.photos-by-elie.com",
+).strip().rstrip("/")
+PBE_OWNER_SESSION_STORE = PBEOwnerSessionStore()
+PBE_OWNER_SESSION_VERIFIER = CloudPBEOwnerSessionVerifier(
+    f"{PBE_AUTH_WORKER_BASE_URL}/api/v1/pbe-owner/session"
+)
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -356,6 +389,8 @@ from sidecar_state_db import summary as sidecar_summary_db  # noqa: E402
 from sidecar_state_db import upload_bridge_plan as upload_bridge_plan_db  # noqa: E402
 from waste_basket_gateway import (  # noqa: E402
     EMPTY_CONFIRMATION_TOKEN,
+    WasteBasketError,
+    assert_recoverable_entries_in_fixture,
     empty_waste_basket as empty_waste_basket_gateway,
     move_to_waste_basket as move_to_waste_basket_gateway,
     restore_from_waste_basket as restore_from_waste_basket_gateway,
@@ -468,6 +503,123 @@ BURST_CULL_KEEP_MARKERS = {
 }
 
 
+def pbe_owner_action_payload(payload: dict, session: dict, request_key: str = "") -> dict:
+    """Build the only trusted hosted-gallery write payload.
+
+    Browser authorization fields are deliberately ignored. The validated
+    in-memory lease supplies fixture, actor, and PBB-79 gateway authorization.
+    """
+
+    action = str(payload.get("action") or "").strip().lower()
+    allowed = {"waste-basket-x", "waste-basket-x-many", "waste-basket-restore"}
+    if action not in allowed:
+        raise PBEOwnerSessionError(
+            "Hosted PBE Owner may only use the recoverable Waste Basket X/restore contract.",
+            code="pbe_owner_action_forbidden",
+            status=403,
+        )
+    requested_fixture = str(payload.get("fixtureId") or payload.get("fixture_id") or "").strip()
+    if requested_fixture and requested_fixture != session["fixtureId"]:
+        raise PBEOwnerSessionError(
+            "The requested action fixture does not match the frozen PBE Owner fixture.",
+            code="pbe_owner_session_mismatch",
+            status=409,
+        )
+    return {
+        "action": action,
+        "photo_id": str(payload.get("photo_id") or payload.get("photoId") or "").strip(),
+        "photo_ids": payload.get("photo_ids") or payload.get("photoIds") or [],
+        "fixture_id": session["fixtureId"],
+        "gallery_id": session["fixtureId"],
+        "source": "owner-gallery",
+        "actor": f"backstage-pbe:{session['id']}",
+        "owner_mode": True,
+        "owner_authorized": True,
+        "request_key": str(
+            request_key
+            or payload.get("request_key")
+            or payload.get("requestKey")
+            or f"pbe-owner-{uuid.uuid4()}"
+        ).strip(),
+        "reason": str(payload.get("reason") or "Hosted PBE Owner gallery X").strip(),
+    }
+
+
+def pbe_owner_fixture_gallery(repo_root: Path, session: dict) -> dict:
+    """Return the bounded gallery window for the session's frozen fixture."""
+
+    try:
+        window = fixture_culling_window(
+            repo_root,
+            str(session["fixtureId"]),
+            view="picked",
+            offset=0,
+            limit=500,
+        )
+    except (KeyError, ValueError, sqlite3.Error) as error:
+        raise PBEOwnerSessionError(
+            "The frozen fixture gallery is unavailable; Owner actions are disabled.",
+            code="pbe_owner_fixture_unavailable",
+            status=409,
+        ) from error
+    return {
+        **window,
+        "fixtureBreadcrumb": str(session.get("fixtureBreadcrumb") or session["fixtureId"]),
+        "truncated": bool(window.get("hasNext")),
+    }
+
+
+def assert_pbe_owner_x_scope(repo_root: Path, session: dict, payload: dict) -> None:
+    """Fail closed unless every requested X target is in the displayed fixture window."""
+
+    if payload.get("action") not in {"waste-basket-x", "waste-basket-x-many"}:
+        return
+    raw_photo_ids = payload.get("photo_ids")
+    requested = {
+        str(value or "").strip()
+        for value in [
+            payload.get("photo_id"),
+            *(raw_photo_ids if isinstance(raw_photo_ids, list) else []),
+        ]
+        if str(value or "").strip()
+    }
+    allowed = {
+        str(item.get("assetId") or "").strip()
+        for item in pbe_owner_fixture_gallery(repo_root, session).get("items", [])
+    }
+    if not requested or not requested.issubset(allowed):
+        raise PBEOwnerSessionError(
+            "The requested X target is not in the frozen PBE Owner fixture gallery.",
+            code="pbe_owner_fixture_mismatch",
+            status=409,
+        )
+
+
+def assert_pbe_owner_restore_scope(repo_root: Path, session: dict, payload: dict) -> None:
+    """Fail closed unless authoritative recoverable rows match the frozen fixture."""
+
+    if payload.get("action") != "waste-basket-restore":
+        return
+    raw_photo_ids = payload.get("photo_ids")
+    requested = [
+        str(value or "").strip()
+        for value in [payload.get("photo_id"), *(raw_photo_ids if isinstance(raw_photo_ids, list) else [])]
+        if str(value or "").strip()
+    ]
+    try:
+        assert_recoverable_entries_in_fixture(
+            repo_root,
+            requested,
+            fixture_id=str(session["fixtureId"]),
+        )
+    except WasteBasketError as error:
+        raise PBEOwnerSessionError(
+            "The requested restore target is not recoverable in the frozen PBE Owner fixture.",
+            code="pbe_owner_fixture_mismatch",
+            status=409,
+        ) from error
+
+
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
@@ -494,6 +646,15 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == OWNER_SESSION_PATH:
             self._handle_owner_session()
+            return
+        if path == PBE_OWNER_READINESS_PATH:
+            self._handle_pbe_owner_readiness()
+            return
+        if path == PBE_OWNER_SESSION_PATH:
+            self._handle_pbe_owner_session()
+            return
+        if path == PBE_OWNER_GALLERY_PATH:
+            self._handle_pbe_owner_gallery()
             return
         if path == TITLE_KEYWORD_REVIEW_QUEUE_PATH:
             self._handle_title_keyword_review_queue()
@@ -577,6 +738,21 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == PHOTO_ACTION_PATH:
             self._handle_photo_action()
             return
+        if path == PBE_OWNER_SESSION_START_PATH:
+            self._handle_pbe_owner_session_start()
+            return
+        if path == PBE_OWNER_BROWSER_BOOTSTRAP_PATH:
+            self._handle_pbe_owner_browser_bootstrap()
+            return
+        if path == PBE_OWNER_SESSION_HEARTBEAT_PATH:
+            self._handle_pbe_owner_session_heartbeat()
+            return
+        if path == PBE_OWNER_SESSION_CLOSE_PATH:
+            self._handle_pbe_owner_session_close()
+            return
+        if path == PBE_OWNER_ACTION_PATH:
+            self._handle_pbe_owner_action()
+            return
         if path == SOURCE_EDIT_PATH:
             self._handle_source_edit()
             return
@@ -620,6 +796,10 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = self._read_json_body()
+            if str(payload.get("source") or "").strip().lower() == "owner-gallery":
+                raise ValueError(
+                    "Owner gallery actions require a Backstage-minted PBE Owner session endpoint."
+                )
             with OWNER_ACTION_LOCK:
                 result = apply_photo_action(Path.cwd(), payload)
         except ValueError as error:
@@ -630,6 +810,225 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         except OSError as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
+            return
+        self._send_json(HTTPStatus.OK, result)
+
+    def _pbe_bearer_token(self) -> str:
+        match = re.match(
+            r"^Bearer\s+(.+)$",
+            str(self.headers.get("Authorization") or "").strip(),
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            raise PBEOwnerSessionError(
+                "A Backstage-minted PBE Owner session is required.",
+                code="pbe_owner_session_required",
+                status=401,
+            )
+        return match.group(1).strip()
+
+    def _pbe_browser_cookie(self) -> str:
+        cookie = SimpleCookie()
+        cookie.load(str(self.headers.get("Cookie") or ""))
+        value = cookie.get(PBE_OWNER_BROWSER_COOKIE)
+        if value is None or not value.value:
+            raise PBEOwnerSessionError(
+                "A Backstage-launched PBE Owner browser session is required.",
+                code="pbe_owner_session_required",
+                status=401,
+            )
+        return value.value
+
+    def _pbe_cookie_header(self, value: str, *, clear: bool = False) -> str:
+        attributes = [
+            f"{PBE_OWNER_BROWSER_COOKIE}={value}",
+            f"Path={PBE_OWNER_SESSION_PATH.rsplit('/', 1)[0]}",
+            "HttpOnly",
+            "SameSite=Strict",
+        ]
+        if clear:
+            attributes.extend(("Max-Age=0", "Expires=Thu, 01 Jan 1970 00:00:00 GMT"))
+        return "; ".join(attributes)
+
+    def _require_same_origin_browser_post(self) -> None:
+        expected = f"http://127.0.0.1:{self.server.server_port}"
+        if str(self.headers.get("Origin") or "").rstrip("/") != expected:
+            raise PBEOwnerSessionError(
+                "The PBE Owner browser handoff must originate from the Backstage-launched loopback page.",
+                code="pbe_owner_browser_origin_invalid",
+                status=403,
+            )
+
+    def _send_pbe_error(self, error: PBEOwnerSessionError) -> None:
+        self._send_json(
+            HTTPStatus(error.status),
+            {"ok": False, "error": {"code": error.code, "message": str(error)}},
+        )
+
+    def _pbe_readiness(self) -> dict:
+        return repository_readiness(Path.cwd())
+
+    def _pbe_authorized_session(self, *, heartbeat: bool = False) -> tuple[str, dict]:
+        token = self._pbe_bearer_token()
+        cloud_session = PBE_OWNER_SESSION_VERIFIER.verify(token)
+        session = PBE_OWNER_SESSION_STORE.authorize(
+            token,
+            cloud_session,
+            self._pbe_readiness(),
+            heartbeat=heartbeat,
+        )
+        return token, session
+
+    def _pbe_authorized_browser_session(self) -> dict:
+        return PBE_OWNER_SESSION_STORE.authorize_browser(
+            self._pbe_browser_cookie(),
+            self._pbe_readiness(),
+        )
+
+    def _handle_pbe_owner_readiness(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            readiness = self._pbe_readiness()
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, **readiness})
+
+    def _handle_pbe_owner_session_start(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            token = self._pbe_bearer_token()
+            requested = self._read_optional_json_body()
+            cloud_session = PBE_OWNER_SESSION_VERIFIER.verify(token)
+            requested_fixture = str(requested.get("fixtureId") or "").strip()
+            if requested_fixture and requested_fixture != str(cloud_session.get("fixtureId") or "").strip():
+                raise PBEOwnerSessionError(
+                    "Backstage requested a fixture that does not match the minted PBE Owner lease.",
+                    code="pbe_owner_session_mismatch",
+                    status=409,
+                )
+            session = PBE_OWNER_SESSION_STORE.start(token, cloud_session, self._pbe_readiness())
+            browser_ticket = PBE_OWNER_SESSION_STORE.issue_browser_handoff(token)
+            launch_url = (
+                f"http://127.0.0.1:{self.server.server_port}/gallery.html"
+                "?gallery=pbe-owner"
+                f"#pbe_owner_ticket={quote(browser_ticket, safe='')}"
+            )
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "invalid_json", "message": str(error)}})
+            return
+        self._send_json(HTTPStatus.CREATED, {"ok": True, "session": session, "launchUrl": launch_url})
+
+    def _handle_pbe_owner_browser_bootstrap(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            self._require_same_origin_browser_post()
+            ticket = str(self._read_json_body().get("ticket") or "").strip()
+            browser_session, session = PBE_OWNER_SESSION_STORE.bootstrap_browser(
+                ticket,
+                self._pbe_readiness(),
+            )
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "invalid_json", "message": str(error)}})
+            return
+        self._send_json(
+            HTTPStatus.CREATED,
+            {"ok": True, "session": session},
+            {"Set-Cookie": self._pbe_cookie_header(browser_session)},
+        )
+
+    def _handle_pbe_owner_session(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            if str(self.headers.get("Authorization") or "").strip():
+                _, session = self._pbe_authorized_session(heartbeat=True)
+            else:
+                session = self._pbe_authorized_browser_session()
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+
+    def _handle_pbe_owner_gallery(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            session = self._pbe_authorized_browser_session()
+            gallery = pbe_owner_fixture_gallery(Path.cwd(), session)
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "gallery": gallery})
+
+    def _handle_pbe_owner_session_heartbeat(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            session = self._pbe_authorized_browser_session()
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+
+    def _handle_pbe_owner_session_close(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            if str(self.headers.get("Authorization") or "").strip():
+                token = self._pbe_bearer_token()
+                session = PBE_OWNER_SESSION_STORE.close(token)
+            else:
+                session = PBE_OWNER_SESSION_STORE.close_browser(self._pbe_browser_cookie())
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        self._send_json(
+            HTTPStatus.OK,
+            {"ok": True, "session": session},
+            {"Set-Cookie": self._pbe_cookie_header("", clear=True)},
+        )
+
+    def _handle_pbe_owner_action(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            session = self._pbe_authorized_browser_session()
+            payload = self._read_json_body()
+            trusted_payload = pbe_owner_action_payload(
+                payload,
+                session,
+                str(self.headers.get("Idempotency-Key") or ""),
+            )
+            assert_pbe_owner_x_scope(Path.cwd(), session, trusted_payload)
+            assert_pbe_owner_restore_scope(Path.cwd(), session, trusted_payload)
+            with OWNER_ACTION_LOCK:
+                result = apply_photo_action(Path.cwd(), trusted_payload)
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "pbe_owner_action_invalid", "message": str(error)}})
+            return
+        except (sqlite3.Error, subprocess.CalledProcessError, OSError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": {"code": "pbe_owner_action_failed", "message": str(error)}})
             return
         self._send_json(HTTPStatus.OK, result)
 
@@ -12582,6 +12981,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 request_key=payload.get("request_key") or payload.get("requestKey") or "",
                 owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
                 owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+                fixture_id=payload.get("fixture_id") or "",
             )
         if not compatibility_state_available:
             return {

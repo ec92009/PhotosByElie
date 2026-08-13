@@ -55,6 +55,7 @@ struct OwnerCoreTests {
 
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
+        #expect(OwnerContract.openAPIVersion == "1.1.0")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")
         #expect(OwnerContract.endpoints[.refreshOwnerTokens]?.path == "/auth/refresh")
@@ -2704,6 +2705,130 @@ struct OwnerCoreTests {
         let payload = try #require(output.values().last)
         #expect(payload.contains("invalid_arguments"))
         #expect(payload.contains("--items-file"))
+    }
+}
+
+@Suite("PBE Owner host and session contract")
+struct PBEOwnerHostContractTests {
+    private let sessionJSON = """
+    {
+      "ok": true,
+      "tokenType": "Bearer",
+      "sessionToken": "short-lived-pbe-token",
+      "session": {
+        "id": "pbe-owner-session-one",
+        "state": "ready",
+        "fixtureId": "fixture-la-concha",
+        "fixtureBreadcrumb": "RE › La Concha",
+        "sourceIdentity": "owner-sqlite:sha256:abc",
+        "catalogIdentity": "catalog-sqlite:sha256:def",
+        "readinessIdentity": "pbe-readiness:sha256:ghi",
+        "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
+        "lifecycleWriter": "pbb-79-waste-basket",
+        "createdAt": "2030-01-01T11:55:00Z",
+        "expiresAt": "2030-01-01T12:00:00Z",
+        "closedAt": ""
+      }
+    }
+    """
+
+    @Test("Backstage bearer mints a fully bound short-lived session")
+    func mintRequestCarriesEveryBinding() async throws {
+        let transport = RoutingTransport(responses: [
+            "/api/v1/pbe-owner/sessions": sessionJSON,
+        ])
+        let api = OwnerAPIClient(
+            baseURL: URL(string: "https://worker.test/api/v1")!,
+            transport: transport
+        )
+        await api.setAccessToken("backstage-device-access")
+        let response = try await api.mintPBEOwnerSession(.init(
+            fixtureId: "fixture-la-concha",
+            fixtureBreadcrumb: "RE › La Concha",
+            sourceIdentity: "owner-sqlite:sha256:abc",
+            catalogIdentity: "catalog-sqlite:sha256:def",
+            readinessIdentity: "pbe-readiness:sha256:ghi"
+        ))
+        #expect(response.session.lifecycleWriter == "pbb-79-waste-basket")
+        #expect(response.sessionToken == "short-lived-pbe-token")
+        let request = try #require(await transport.requests().first)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer backstage-device-access")
+        let body = try #require(request.httpBody)
+        let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(payload?["fixtureId"] == "fixture-la-concha")
+        #expect(payload?["sourceIdentity"] == "owner-sqlite:sha256:abc")
+        #expect(payload?["catalogIdentity"] == "catalog-sqlite:sha256:def")
+        #expect(payload?["readinessIdentity"] == "pbe-readiness:sha256:ghi")
+    }
+
+    @Test("Local host attach uses authorization header and never a token query")
+    func hostAttachKeepsTokenOutOfURL() async throws {
+        let localSession = sessionJSON
+            .replacingOccurrences(of: "\"tokenType\": \"Bearer\",", with: "")
+            .replacingOccurrences(of: "\"sessionToken\": \"short-lived-pbe-token\",", with: "")
+            .replacingOccurrences(
+                of: "\"createdAt\": \"2030-01-01T11:55:00Z\",",
+                with: "\"leaseExpiresAt\": \"2030-01-01T11:57:00Z\","
+            )
+            .replacingOccurrences(
+                of: "\"closedAt\": \"\"",
+                with: "\"closedAt\": \"\""
+            )
+            .replacingOccurrences(
+                of: "\n    }\n    ",
+                with: "\n    },\n      \"launchUrl\": \"http://127.0.0.1:8000/gallery.html?gallery=pbe-owner#pbe_owner_ticket=one-time-opaque-handoff\"\n    "
+            )
+        let transport = RoutingTransport(responses: [
+            "/__photosbyelie/pbe-owner/session/start": localSession,
+        ])
+        let host = PBEOwnerLocalHostService(
+            transport: transport,
+            repositoryRoot: FileManager.default.temporaryDirectory
+        )
+        let attached = try await host.attach(
+            sessionToken: "short-lived-pbe-token",
+            fixtureID: "fixture-la-concha"
+        )
+        #expect(attached.session.fixtureId == "fixture-la-concha")
+        let request = try #require(await transport.requests().first)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer short-lived-pbe-token")
+        #expect(request.url?.query?.contains("token") != true)
+        #expect(request.url?.fragment == nil)
+    }
+
+    @Test("Actionable fixture lease rejects missing identities and fixture drift")
+    func fixtureLeaseFailsClosed() throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let fixtures = [
+            FixtureNode(id: "fixture-expo", name: "Expo"),
+            FixtureNode(id: "fixture-la-concha", name: "La Concha"),
+        ]
+        var coordinator = FixtureSelectionCoordinator(lastUsedFixtureID: "fixture-la-concha")
+        coordinator.restore(from: fixtures, now: now)
+        let incomplete = PBEOwnerFixtureSession(
+            sessionID: "session-one",
+            fixtureID: "fixture-la-concha",
+            fixtureBreadcrumb: "La Concha",
+            expiresAt: now.addingTimeInterval(300)
+        )
+        #expect(throws: FixtureSelectionError.invalidOwnerSessionContract) {
+            try coordinator.beginPBEOwnerSession(incomplete, now: now)
+        }
+
+        let drifted = PBEOwnerFixtureSession(
+            sessionID: "session-one",
+            fixtureID: "fixture-expo",
+            fixtureBreadcrumb: "Expo",
+            sourceIdentity: "owner-sqlite:sha256:abc",
+            catalogIdentity: "catalog-sqlite:sha256:def",
+            readinessIdentity: "pbe-readiness:sha256:ghi",
+            capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"],
+            lifecycleWriter: "pbb-79-waste-basket",
+            expiresAt: now.addingTimeInterval(300)
+        )
+        #expect(throws: FixtureSelectionError.ownerSessionMismatch) {
+            try coordinator.beginPBEOwnerSession(drifted, now: now)
+        }
     }
 }
 

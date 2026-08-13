@@ -1,17 +1,19 @@
 openapi: 3.1.0
 info:
   title: PhotosByElie Owner API
-  version: 1.0.0
+  version: 1.1.0
   description: >
-    Versioned cloud boundary used by PhotosByElie Backstage. Owner.sqlite and
-    Apple Photos remain behind the Max connector; this API authorizes and
-    audits opaque actions rather than exposing local persistence directly.
+    Versioned cloud boundary used by PhotosByElie Backstage on an enrolled Mac.
+    Google browser login is provisioning-only. Owner.sqlite and Apple Photos
+    remain behind the Mac connector; this API authorizes and audits opaque
+    actions rather than exposing local persistence directly.
 servers:
   - url: https://auth.photos-by-elie.com/api/v1
 security:
   - ownerSession: []
 tags:
   - name: Authentication
+  - name: PBE Owner Session
   - name: Actions
   - name: Connectors
   - name: Access
@@ -57,10 +59,12 @@ paths:
   /auth/tokens:
     post:
       tags: [Authentication]
+      security: []
       operationId: createOwnerTokens
       description: >
-        Issues a short-lived bearer token and rotating refresh token. The
-        initial request uses an Owner session or an enrolled device credential.
+        Issues a short-lived Backstage bearer token and rotating refresh token.
+        The request must include an enrolled device id and its show-once
+        credential; a browser Google session is not sufficient.
       requestBody:
         content:
           application/json:
@@ -116,7 +120,9 @@ paths:
   /devices:
     get:
       tags: [Authentication]
+      security: [{ googleProvisioningSession: [] }]
       operationId: listOwnerDevices
+      description: Available only to a direct Google browser sign-in as ec92009@gmail.com.
       responses:
         "200":
           description: Enrolled native Owner devices
@@ -130,7 +136,9 @@ paths:
                     items: { $ref: "#/components/schemas/OwnerDevice" }
     post:
       tags: [Authentication]
+      security: [{ googleProvisioningSession: [] }]
       operationId: enrollOwnerDevice
+      description: Returns a show-once credential only to ec92009@gmail.com.
       requestBody:
         required: true
         content:
@@ -158,6 +166,7 @@ paths:
         schema: { type: string }
     post:
       tags: [Authentication]
+      security: [{ googleProvisioningSession: [] }]
       operationId: revokeOwnerDevice
       responses:
         "200":
@@ -173,6 +182,9 @@ paths:
   /owner/session:
     get:
       tags: [Authentication]
+      security:
+        - googleProvisioningSession: []
+        - ownerSession: []
       operationId: getOwnerSession
       responses:
         "200":
@@ -183,6 +195,84 @@ paths:
                 type: object
                 additionalProperties: true
         "403":
+          $ref: "#/components/responses/Error"
+  /pbe-owner/sessions:
+    post:
+      tags: [PBE Owner Session]
+      operationId: createPBEOwnerSession
+      description: >
+        Mints a five-minute, fixture-frozen hosted PBE Owner session. Requires
+        an active enrolled Backstage device bearer and exact local readiness
+        identities. Ordinary Google browser sessions are rejected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PBEOwnerSessionCreate" }
+      responses:
+        "201":
+          description: Short-lived hosted PBE session; sessionToken is never a device credential
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, session, sessionToken]
+                properties:
+                  ok: { type: boolean }
+                  session: { $ref: "#/components/schemas/PBEOwnerSession" }
+                  sessionToken: { type: string, writeOnly: true }
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+  /pbe-owner/session:
+    get:
+      tags: [PBE Owner Session]
+      security: [{ pbeOwnerSession: [] }]
+      operationId: getPBEOwnerSession
+      description: Revalidates signature, device, state, expiry, and every frozen identity binding.
+      responses:
+        "200":
+          description: Active hosted PBE Owner session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, session]
+                properties:
+                  ok: { type: boolean }
+                  session: { $ref: "#/components/schemas/PBEOwnerSession" }
+        "401":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /pbe-owner/sessions/{sessionId}/close:
+    parameters:
+      - in: path
+        name: sessionId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [PBE Owner Session]
+      security: [{ pbeOwnerSession: [] }]
+      operationId: closePBEOwnerSession
+      description: Closes only the exact session represented by the bearer.
+      responses:
+        "200":
+          description: Closed hosted PBE Owner session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, session]
+                properties:
+                  ok: { type: boolean }
+                  session: { $ref: "#/components/schemas/PBEOwnerSession" }
+        "401":
+          $ref: "#/components/responses/Error"
+        "409":
           $ref: "#/components/responses/Error"
   /actions:
     get:
@@ -582,7 +672,16 @@ components:
     ownerSession:
       type: http
       scheme: bearer
-      bearerFormat: PBE signed owner session
+      bearerFormat: PBE signed Backstage device session
+    pbeOwnerSession:
+      type: http
+      scheme: bearer
+      bearerFormat: PBE short-lived fixture-frozen session
+    googleProvisioningSession:
+      type: apiKey
+      in: cookie
+      name: pbe_google_session
+      description: Direct Google browser session; only ec92009@gmail.com may manage Backstage credentials.
     connectorCredential:
       type: http
       scheme: bearer
@@ -653,6 +752,39 @@ components:
         createdAt: { type: string, format: date-time }
         lastUsedAt: { type: string }
         revokedAt: { type: string }
+    PBEOwnerSessionCreate:
+      type: object
+      additionalProperties: false
+      required: [fixtureId, fixtureBreadcrumb, sourceIdentity, catalogIdentity, readinessIdentity]
+      properties:
+        fixtureId: { type: string, minLength: 1 }
+        fixtureBreadcrumb: { type: string, minLength: 1 }
+        sourceIdentity: { type: string, minLength: 1 }
+        catalogIdentity: { type: string, minLength: 1 }
+        readinessIdentity: { type: string, minLength: 1 }
+    PBEOwnerSession:
+      type: object
+      additionalProperties: false
+      required:
+        [id, state, fixtureId, fixtureBreadcrumb, sourceIdentity, catalogIdentity,
+         readinessIdentity, capabilities, lifecycleWriter, createdAt, expiresAt]
+      properties:
+        id: { type: string }
+        state: { type: string, enum: [ready, closed] }
+        fixtureId: { type: string }
+        fixtureBreadcrumb: { type: string }
+        sourceIdentity: { type: string }
+        catalogIdentity: { type: string }
+        readinessIdentity: { type: string }
+        capabilities:
+          type: array
+          items:
+            type: string
+            enum: [gallery.read, waste-basket.x, waste-basket.restore]
+        lifecycleWriter: { type: string, const: pbb-79-waste-basket }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        closedAt: { type: string }
     ErrorEnvelope:
       type: object
       required: [error]

@@ -1,20 +1,13 @@
 (() => {
   const localEnabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-  const ownerAuth = window.photosByElieOwnerAuth;
-  const cloudBaseUrl = String(window.photosByElieMediaConfig?.authWorkerBaseUrl || "").trim().replace(/\/+$/, "");
-  const ownerApiBaseUrl = cloudBaseUrl ? `${cloudBaseUrl}/api/v1` : "";
-  const localActionWakeUrls = [
-    "http://localhost:8766/photosbyelie/wake-owner-action",
-    "http://127.0.0.1:8766/photosbyelie/wake-owner-action",
-  ];
-  let remoteCullingEnabled = false;
-  const cullingEnabled = () => localEnabled || remoteCullingEnabled;
+  const pbeOwnerSession = window.photosByEliePBEOwnerSession;
+  const isHostedOwnerSurface = () => new URLSearchParams(window.location.search).get("gallery") === "pbe-owner";
+  const cullingEnabled = () => Boolean(localEnabled && isHostedOwnerSurface() && pbeOwnerSession?.isReady?.());
   const key = "photosbyelie-hidden";
   const historyKey = "photosbyelie-hidden-history";
   const reservePromotionsKey = "photosbyelie-reserve-promotions";
   const reserveOnlyKey = "photosbyelie-reserve-only";
   const countryAssignmentsKey = "photosbyelie-country-assignments";
-  const photoActionEndpoint = "/__photosbyelie/photo-action";
   const countryAssignmentTargets = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
   let ownerBusyCount = 0;
   let ownerBusyMessage = "";
@@ -22,9 +15,6 @@
   let remoteHiddenOverride = null;
   let remoteHiddenMetadata = {};
   const pendingHiddenIds = new Set();
-  const idempotencyKey = (scope) =>
-    `web-${String(scope || "owner").replace(/[^a-z0-9-]+/gi, "-")}-${Date.now().toString(36)}-${crypto.randomUUID()}`;
-
   const ownerActionBusyMessages = {
     hide: "Moving master to Waste Basket...",
     "undo-hide": "Putting master back...",
@@ -52,6 +42,41 @@
     return [...new Set(items.filter((item) => typeof item === "string" && item))];
   };
 
+  const hostedOwnerSessionId = () => {
+    if (!isHostedOwnerSurface()) return "";
+    return String(pbeOwnerSession?.state?.()?.session?.id || "").trim();
+  };
+
+  const ownerStorageKey = (baseKey) => {
+    if (!isHostedOwnerSurface()) return baseKey;
+    const sessionId = hostedOwnerSessionId();
+    return sessionId ? `${baseKey}:pbe-owner:${encodeURIComponent(sessionId)}` : "";
+  };
+
+  const ownerStorage = () => isHostedOwnerSurface() ? window.sessionStorage : window.localStorage;
+
+  const readOwnerIds = (baseKey) => {
+    const storageKey = ownerStorageKey(baseKey);
+    if (!storageKey) return [];
+    try {
+      return normalize(JSON.parse(ownerStorage().getItem(storageKey) || "[]"));
+    } catch {
+      return [];
+    }
+  };
+
+  const writeOwnerIds = (baseKey, items) => {
+    const normalized = normalize(items);
+    const storageKey = ownerStorageKey(baseKey);
+    if (!storageKey) return normalized;
+    try {
+      ownerStorage().setItem(storageKey, JSON.stringify(normalized));
+    } catch {
+      // Hosted history remains memory-only when same-tab storage is unavailable.
+    }
+    return normalized;
+  };
+
   const hiddenIdsFromLoadedData = () => {
     if (!window.photosByElieHiddenData) return null;
     const ids = [];
@@ -63,16 +88,13 @@
     return normalize(ids);
   };
 
-  const readStoredHiddenIds = () => {
-    try {
-      return normalize(JSON.parse(localStorage.getItem(key) || "[]"));
-    } catch {
-      return [];
-    }
-  };
+  const readStoredHiddenIds = () => readOwnerIds(key);
 
   const read = () => {
     if (!cullingEnabled()) return [];
+    if (isHostedOwnerSurface()) {
+      return normalize([...readStoredHiddenIds(), ...pendingHiddenIds]);
+    }
     if (!localEnabled && Array.isArray(remoteHiddenOverride)) {
       return normalize([...remoteHiddenOverride, ...pendingHiddenIds]);
     }
@@ -87,14 +109,11 @@
 
   const readHistory = () => {
     if (!cullingEnabled()) return [];
-    try {
-      return normalize(JSON.parse(localStorage.getItem(historyKey) || "[]"));
-    } catch {
-      return [];
-    }
+    return readOwnerIds(historyKey);
   };
 
   const readReserveOnly = () => {
+    if (isHostedOwnerSurface()) return [];
     if (!localEnabled) return [];
     try {
       return normalize(JSON.parse(localStorage.getItem(reserveOnlyKey) || "[]"));
@@ -122,6 +141,7 @@
   };
 
   const readPromotions = () => {
+    if (isHostedOwnerSurface()) return {};
     if (!localEnabled) return {};
     const fromStore = window.photosByElieReserve?.readPromotions?.();
     if (fromStore) return normalizePromotionState(fromStore);
@@ -134,14 +154,15 @@
 
   const writePromotions = (state) => {
     const normalized = normalizePromotionState(state);
+    if (isHostedOwnerSurface()) return normalized;
     if (localEnabled) localStorage.setItem(reservePromotionsKey, JSON.stringify(normalized));
     return normalized;
   };
 
   const writeLoadedHiddenIds = () => {
-    const ids = hiddenIdsFromLoadedData() || [];
+    const ids = isHostedOwnerSurface() ? readStoredHiddenIds() : (hiddenIdsFromLoadedData() || []);
     const mergedIds = normalize([...ids, ...pendingHiddenIds]);
-    if (cullingEnabled()) localStorage.setItem(key, JSON.stringify(mergedIds));
+    if (cullingEnabled()) writeOwnerIds(key, mergedIds);
     return mergedIds;
   };
 
@@ -208,7 +229,7 @@
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieOwnerData);
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieReserveData);
     window.photosByElieApplyCollectionOrigins?.(window.photosByElieHiddenData);
-    localStorage.removeItem(reservePromotionsKey);
+    if (!isHostedOwnerSurface()) localStorage.removeItem(reservePromotionsKey);
     const items = writeLoadedHiddenIds();
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items, result } }));
     return result;
@@ -217,85 +238,6 @@
   const metadataFor = (photoId) => {
     const metadata = remoteHiddenMetadata?.[photoId];
     return metadata && typeof metadata === "object" ? metadata : null;
-  };
-
-  const tryLocalActionWake = async (actionId) => {
-    if (!actionId || typeof Promise.any !== "function") return null;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 900);
-    try {
-      return await Promise.any(localActionWakeUrls.map(async (url) => {
-        const response = await fetch(url, {
-          method: "POST",
-          cache: "no-store",
-          credentials: "omit",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ actionId }),
-          signal: controller.signal,
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload?.action) throw new Error("Local wake unavailable.");
-        return payload.action;
-      }));
-    } catch {
-      return null;
-    } finally {
-      window.clearTimeout(timer);
-      controller.abort();
-    }
-  };
-
-  const refreshRemoteHiddenMetadata = async () => {
-    if (localEnabled || !remoteCullingEnabled || !cloudBaseUrl) return remoteHiddenMetadata;
-    const photoIds = read().slice(0, 500);
-    if (!photoIds.length) return remoteHiddenMetadata;
-    const response = await fetch(`${ownerApiBaseUrl}/actions`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey("hidden-metadata"),
-      },
-      body: JSON.stringify({
-        actionKind: "owner-hidden-metadata",
-        target: "max",
-        payload: { photoIds, requestedConnector: "max" },
-      }),
-    });
-    const queued = await response.json().catch(() => ({}));
-    if (!response.ok || !queued?.action?.id) return remoteHiddenMetadata;
-    const awakened = await tryLocalActionWake(queued.action.id);
-    if (awakened?.state === "completed") {
-      const result = awakened.result?.result || awakened.result || {};
-      const metadata = result.hiddenMetadata;
-      if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-        remoteHiddenMetadata = metadata;
-        window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read(), metadata: true } }));
-      }
-      return remoteHiddenMetadata;
-    }
-    const deadline = Date.now() + 45000;
-    while (Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const poll = await fetch(`${ownerApiBaseUrl}/actions/${encodeURIComponent(queued.action.id)}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-      const payload = await poll.json().catch(() => ({}));
-      if (!poll.ok) return remoteHiddenMetadata;
-      const state = payload?.action?.state;
-      if (state === "completed") {
-        const result = payload.action.result?.result || payload.action.result || {};
-        const metadata = result.hiddenMetadata;
-        if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-          remoteHiddenMetadata = metadata;
-          window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read(), metadata: true } }));
-        }
-        return remoteHiddenMetadata;
-      }
-      if (state === "failed" || state === "cancelled") return remoteHiddenMetadata;
-    }
-    return remoteHiddenMetadata;
   };
 
   const ensureOwnerBusyIndicator = () => {
@@ -343,109 +285,21 @@
 
   window.photosByElieSetOwnerBusy = setOwnerBusy;
 
-  const remoteOwnerAction = async (operation, photoId, extra = {}) => {
-    if (!cloudBaseUrl) throw new Error("Owner action service is unavailable.");
-    const photoIds = normalize(extra.photo_ids || (photoId ? [photoId] : []));
-    const moderationPayload = {
-      operation,
-      photoId: photoId || photoIds[0] || "",
-      photoIds,
-      requestedConnector: "max",
-    };
-    [
-      "title", "keywords", "mode", "source", "actor", "fixture_id", "fixtureId",
-      "gallery_id", "galleryId", "request_key", "requestKey", "owner_mode", "ownerMode",
-      "owner_authorized", "ownerAuthorized", "confirmed", "confirmation_token",
-      "confirmationToken", "explicit_tombstone_restore", "explicitTombstoneRestore",
-    ].forEach((key) => {
-      if (Object.prototype.hasOwnProperty.call(extra, key)) moderationPayload[key] = extra[key];
-    });
-    const response = await fetch(`${ownerApiBaseUrl}/actions`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey(operation),
-      },
-      body: JSON.stringify({
-        actionKind: "photo-moderation",
-        target: "max",
-        payload: moderationPayload,
-      }),
-    });
-    const queued = await response.json().catch(() => ({}));
-    if (!response.ok || !queued?.action?.id) {
-      if (response.status === 401) ownerAuth?.markSignedOut?.();
-      throw new Error(queued?.error?.message || queued?.error || `Could not queue ${operation}.`);
-    }
-    const awakened = await tryLocalActionWake(queued.action.id);
-    if (awakened?.state === "completed") {
-      const result = awakened.result?.result || awakened.result || {};
-      return applyServerState(result);
-    }
-    if (["failed", "cancelled"].includes(awakened?.state)) {
-      throw new Error(awakened?.error?.message || awakened?.message || `${operation} failed.`);
-    }
-    const deadline = Date.now() + 120000;
-    while (Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const poll = await fetch(`${ownerApiBaseUrl}/actions/${encodeURIComponent(queued.action.id)}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-      const payload = await poll.json().catch(() => ({}));
-      if (!poll.ok) throw new Error(payload?.error?.message || payload?.error || `Could not check ${operation}.`);
-      const state = payload?.action?.state;
-      if (state === "completed") {
-        const result = payload.action.result?.result || payload.action.result || {};
-        return applyServerState(result);
-      }
-      if (state === "failed" || state === "cancelled") {
-        throw new Error(payload?.action?.error?.message || payload?.action?.message || `${operation} failed.`);
-      }
-      updateOwnerBusy(`${ownerActionBusyMessages[operation] || "Owner action is running..."} (${state || "queued"})`);
-    }
-    throw new Error(`${operation} is still queued on Max. Try again in a moment.`);
-  };
-
   const photoAction = async (action, photoId, extra = {}) => {
-    if (!localEnabled && !cullingEnabled()) return null;
-    const authorized = await ownerAuth?.requireAuth?.(`Start the local Photos By Elie server for ${action}.`);
-    if (ownerAuth?.enabled && !authorized) {
-      throw new Error("Owner helper server required.");
+    if (!cullingEnabled()) {
+      throw new Error("Owner actions require a ready, fixture-frozen session opened from Backstage on a Mac.");
+    }
+    if (extra.source !== "owner-gallery") {
+      throw new Error("Hosted PBE Owner can act only through the recoverable gallery Waste Basket contract.");
     }
     const photoOptionalActions = ["sync-country-keywords", "remove-collection-keyword", "publish-hidden-blacklist", "wipe-hidden-r2", "save-keyword-blacklist", "waste-basket-empty"];
     const requestPayload = { action, ...extra };
     if (photoId) requestPayload.photo_id = photoId;
     if (!photoOptionalActions.includes(action) && !requestPayload.photo_id && !normalize(requestPayload.photo_ids).length) return null;
-    if (requestPayload.source === "owner-gallery") {
-      requestPayload.owner_mode = true;
-      requestPayload.owner_authorized = authorized !== false;
-    }
-    const blocksPage = localEnabled || !["hide", "hide-many", "update-photo-metadata"].includes(action);
+    const blocksPage = true;
     if (blocksPage) setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
-      if (!localEnabled) {
-        if (!["hide", "hide-many", "undo-hide", "undo-hide-many", "discard", "waste-basket-x", "waste-basket-x-many", "waste-basket-restore", "waste-basket-empty", "waste-basket-tombstone-restore", "update-photo-metadata", "save-keyword-blacklist"].includes(action)) {
-          throw new Error("This Owner action is available from Sidecar on Max.");
-        }
-        return await remoteOwnerAction(action, photoId, {
-          ...extra,
-          ...(extra.source === "owner-gallery"
-            ? { owner_mode: true, owner_authorized: authorized !== false }
-            : {}),
-        });
-      }
-      const response = await fetch(photoActionEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestPayload),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) {
-        if (response.status === 401) ownerAuth?.markSignedOut?.();
-        throw new Error(payload?.error || `Photo action failed: ${action}`);
-      }
+      const payload = await pbeOwnerSession.action(action, requestPayload);
       if (action === "update-photo-metadata" && !payload.metadata) {
         payload.metadata = {
           photo_id: requestPayload.photo_id,
@@ -520,12 +374,13 @@
 
   const write = (items) => {
     const normalized = normalize(items);
-    if (cullingEnabled()) localStorage.setItem(key, JSON.stringify(normalized));
+    if (cullingEnabled()) writeOwnerIds(key, normalized);
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: normalized } }));
     return normalized;
   };
 
   const syncFromPublishedBlacklist = async () => {
+    if (isHostedOwnerSurface()) return read();
     if (!localEnabled) return read();
     const href = window.photosByElieVersionedHref?.("./assets/hidden/hidden-blacklist.json") || "./assets/hidden/hidden-blacklist.json";
     const response = await fetch(href, { cache: "no-store" });
@@ -535,25 +390,26 @@
   };
 
   const writeHistory = (items) => {
-    const normalized = normalize(items);
-    if (cullingEnabled()) localStorage.setItem(historyKey, JSON.stringify(normalized));
-    return normalized;
+    return cullingEnabled() ? writeOwnerIds(historyKey, items) : normalize(items);
   };
 
   const writeReserveOnly = (items) => {
     const normalized = normalize(items);
+    if (isHostedOwnerSurface()) return normalized;
     if (localEnabled) localStorage.setItem(reserveOnlyKey, JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent("photosbyelie:hiddenchange", { detail: { items: read() } }));
     return normalized;
   };
 
   const forgetReserveOnly = (photoIds = []) => {
+    if (isHostedOwnerSurface()) return [];
     const wanted = new Set(normalize(photoIds));
     if (!wanted.size) return readReserveOnly();
     return writeReserveOnly(readReserveOnly().filter((item) => !wanted.has(item)));
   };
 
   const removePromotionEverywhere = (photoId) => {
+    if (isHostedOwnerSurface()) return;
     const promotions = readPromotions();
     let changed = false;
     for (const [galleryKey, ids] of Object.entries(promotions)) {
@@ -591,8 +447,7 @@
     pendingHiddenIds.add(photoId);
     const nextItems = write([...current, photoId]);
     writeHistory([...readHistory(), photoId]);
-    const queued = queueHideAction({ revertOnError: true });
-    if (!localEnabled) await queued;
+    await queueHideAction({ revertOnError: true });
     return nextItems;
   };
 
@@ -822,17 +677,12 @@
     emptyWasteBasket,
   };
   window.photosByElieHiddenActionsReady = (async () => {
-    if (localEnabled) return syncFromPublishedBlacklist().catch(() => read());
-    const state = ownerAuth?.state?.checked ? ownerAuth.state : await ownerAuth?.refresh?.();
-    remoteCullingEnabled = Boolean(state?.authenticated && (state?.tier === "owner" || state?.roles?.includes?.("owner")));
-    if (remoteCullingEnabled) setTimeout(() => refreshRemoteHiddenMetadata().catch(() => {}), 0);
+    await window.photosByEliePBEOwnerSessionReady;
+    if (cullingEnabled()) return syncFromPublishedBlacklist().catch(() => read());
     return read();
   })();
-  window.addEventListener("photosbyelie:ownerauthchange", (event) => {
-    if (localEnabled) return;
-    const state = event.detail || {};
-    remoteCullingEnabled = Boolean(state.authenticated && (state.tier === "owner" || state.roles?.includes?.("owner")));
-    if (remoteCullingEnabled) refreshRemoteHiddenMetadata().catch(() => {});
-    window.dispatchEvent(new CustomEvent("photosbyelie:moderationchange", { detail: { enabled: remoteCullingEnabled } }));
+  window.addEventListener("photosbyelie:pbeownerchange", (event) => {
+    const enabled = Boolean(event.detail?.ready);
+    window.dispatchEvent(new CustomEvent("photosbyelie:moderationchange", { detail: { enabled } }));
   });
 })();

@@ -127,6 +127,8 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var fixtureSelectionAvailability: FixtureSelectionAvailability = .loading
     @Published private(set) var fixtureSelectionNotice: String?
     @Published private(set) var pbeOwnerFixtureSession: PBEOwnerFixtureSession?
+    @Published private(set) var pbeOwnerSessionStatus = "Choose a fixture, then open PBE Owner from Backstage."
+    @Published private(set) var isLaunchingPBEOwner = false
     @Published var fixtureName = ""
     @Published var fixtureTemplate = ""
     @Published var fixtureSearch = ""
@@ -301,6 +303,9 @@ final class BackstageViewModel: ObservableObject {
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let photosBridgeHealthService: PhotosBridgeHealthService
+    private let pbeOwnerHost: any PBEOwnerHostServing
+    private let openExternalURL: (URL) -> Bool
+    private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
@@ -366,6 +371,14 @@ final class BackstageViewModel: ObservableObject {
         return nil
     }
 
+    var canLaunchPBEOwner: Bool {
+        authentication.phase == .authenticated
+            && fixtureScopedActionsAllowed
+            && !fixtureSelectionOperationInFlight
+            && !isLaunchingPBEOwner
+            && pbeOwnerFixtureSession == nil
+    }
+
     var fixtureEffectivePolicySummary: String {
         let policy = fixtureEffectivePolicy
         return [
@@ -385,7 +398,9 @@ final class BackstageViewModel: ObservableObject {
     init(
         api: OwnerAPIClient = OwnerAPIClient(),
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
-        preferences: UserDefaults = .standard
+        preferences: UserDefaults = .standard,
+        pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
+        openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
     ) {
         self.preferences = preferences
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
@@ -421,6 +436,8 @@ final class BackstageViewModel: ObservableObject {
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.photosBridgeHealthService = PhotosBridgeHealthService()
+        self.pbeOwnerHost = pbeOwnerHost
+        self.openExternalURL = openExternalURL
     }
 
     @discardableResult
@@ -455,6 +472,152 @@ final class BackstageViewModel: ObservableObject {
         )
         publishFixtureSelection(persist: false)
         return session
+    }
+
+    @discardableResult
+    func beginPBEOwnerSession(
+        _ session: PBEOwnerFixtureSession,
+        now: Date = Date()
+    ) throws -> PBEOwnerFixtureSession {
+        guard !fixtureSelectionOperationInFlight else {
+            throw FixtureSelectionError.unavailable(
+                "Finish the current fixture operation before starting PBE Owner."
+            )
+        }
+        let installed = try fixtureSelectionCoordinator.beginPBEOwnerSession(
+            session,
+            now: now
+        )
+        publishFixtureSelection(persist: false)
+        return installed
+    }
+
+    func launchPBEOwner() async {
+        guard canLaunchPBEOwner else {
+            pbeOwnerSessionStatus = authentication.phase == .authenticated
+                ? "Choose an available fixture and finish current work before opening PBE Owner."
+                : "Enroll this Mac before opening PBE Owner."
+            return
+        }
+        isLaunchingPBEOwner = true
+        pbeOwnerSessionStatus = "Checking the local PBE host and frozen fixture identity…"
+        var minted: PBEOwnerSessionMintEnvelope?
+        defer { isLaunchingPBEOwner = false }
+        do {
+            guard await prepareAuthenticatedOperation() else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "backstage_authentication_required",
+                    message: "Backstage authentication is missing or expired."
+                ))
+            }
+            let frozenFixtureID = selectedFixtureID
+            let frozenBreadcrumb = selectedFixtureBreadcrumb
+            guard !frozenFixtureID.isEmpty, !frozenBreadcrumb.isEmpty else {
+                throw FixtureSelectionError.unavailable("Choose an available fixture before opening PBE Owner.")
+            }
+            let readiness = try await pbeOwnerHost.ensureReadiness()
+            pbeOwnerSessionStatus = "Minting a short-lived Owner session for \(frozenBreadcrumb)…"
+            let issued = try await api.mintPBEOwnerSession(PBEOwnerSessionMintRequest(
+                fixtureId: frozenFixtureID,
+                fixtureBreadcrumb: frozenBreadcrumb,
+                sourceIdentity: readiness.sourceIdentity,
+                catalogIdentity: readiness.catalogIdentity,
+                readinessIdentity: readiness.readinessIdentity
+            ))
+            minted = issued
+            guard issued.session.fixtureId == frozenFixtureID,
+                  issued.session.fixtureBreadcrumb == frozenBreadcrumb,
+                  issued.session.sourceIdentity == readiness.sourceIdentity,
+                  issued.session.catalogIdentity == readiness.catalogIdentity,
+                  issued.session.readinessIdentity == readiness.readinessIdentity else {
+                throw FixtureSelectionError.ownerSessionMismatch
+            }
+            let attached = try await pbeOwnerHost.attach(
+                sessionToken: issued.sessionToken,
+                fixtureID: frozenFixtureID
+            )
+            guard let launchURL = attached.launchUrl,
+                  attached.session.id == issued.session.id,
+                  attached.session.fixtureId == issued.session.fixtureId,
+                  attached.session.fixtureBreadcrumb == issued.session.fixtureBreadcrumb,
+                  attached.session.sourceIdentity == issued.session.sourceIdentity,
+                  attached.session.catalogIdentity == issued.session.catalogIdentity,
+                  attached.session.readinessIdentity == issued.session.readinessIdentity,
+                  Set(attached.session.capabilities) == Set(issued.session.capabilities),
+                  attached.session.lifecycleWriter == issued.session.lifecycleWriter else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_host_contract_mismatch",
+                    message: "The local PBE host did not attach the exact Worker-issued session."
+                ))
+            }
+            let fixtureSession = PBEOwnerFixtureSession(
+                sessionID: issued.session.id,
+                fixtureID: issued.session.fixtureId,
+                fixtureBreadcrumb: issued.session.fixtureBreadcrumb,
+                sourceIdentity: issued.session.sourceIdentity,
+                catalogIdentity: issued.session.catalogIdentity,
+                readinessIdentity: issued.session.readinessIdentity,
+                capabilities: Set(issued.session.capabilities),
+                lifecycleWriter: issued.session.lifecycleWriter,
+                expiresAt: issued.session.expiresAt
+            )
+            _ = try beginPBEOwnerSession(fixtureSession)
+            pbeOwnerSessionToken = issued.sessionToken
+            guard openExternalURL(launchURL) else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_browser_launch_failed",
+                    message: "Backstage could not open the hosted PBE Owner page."
+                ))
+            }
+            pbeOwnerSessionStatus = "Ready: \(frozenBreadcrumb) is frozen until \(issued.session.expiresAt.formatted(date: .omitted, time: .shortened))."
+        } catch {
+            if let minted {
+                try? await pbeOwnerHost.close(sessionToken: minted.sessionToken)
+                _ = try? await api.closePBEOwnerSession(
+                    id: minted.session.id,
+                    sessionToken: minted.sessionToken
+                )
+            }
+            pbeOwnerSessionToken = ""
+            closePBEOwnerSession()
+            pbeOwnerSessionStatus = "PBE Owner unavailable: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func refreshPBEOwnerSessionStatus() async {
+        guard let session = pbeOwnerFixtureSession,
+              !pbeOwnerSessionToken.isEmpty else { return }
+        if session.expiresAt <= Date() {
+            await endPBEOwnerSession(reason: "PBE Owner session expired.")
+            return
+        }
+        do {
+            let status = try await pbeOwnerHost.status(sessionToken: pbeOwnerSessionToken)
+            guard status.session.id == session.sessionID,
+                  status.session.fixtureId == session.fixtureID else {
+                throw FixtureSelectionError.ownerSessionMismatch
+            }
+            pbeOwnerSessionStatus = "Ready: \(session.fixtureBreadcrumb) is frozen until \(session.expiresAt.formatted(date: .omitted, time: .shortened))."
+        } catch {
+            await endPBEOwnerSession(
+                reason: "PBE Owner closed or unavailable: \(userFacingMessage(for: error))"
+            )
+        }
+    }
+
+    func endPBEOwnerSession(reason: String = "PBE Owner session closed.") async {
+        let token = pbeOwnerSessionToken
+        let sessionID = pbeOwnerFixtureSession?.sessionID ?? ""
+        pbeOwnerSessionToken = ""
+        if !token.isEmpty {
+            try? await pbeOwnerHost.close(sessionToken: token)
+            if !sessionID.isEmpty {
+                _ = try? await api.closePBEOwnerSession(id: sessionID, sessionToken: token)
+            }
+        }
+        await pbeOwnerHost.stopIfLaunched()
+        closePBEOwnerSession()
+        pbeOwnerSessionStatus = reason
     }
 
     func closePBEOwnerSession() {
@@ -634,6 +797,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func signOut() async {
+        if pbeOwnerFixtureSession != nil {
+            await endPBEOwnerSession(reason: "PBE Owner closed before sign-out.")
+        }
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {

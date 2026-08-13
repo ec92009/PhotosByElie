@@ -13,6 +13,7 @@
   const RE_PROJECT_STORAGE_KEY = "pbe-new-owner-re-project";
   const RE_NEW_PROJECT_VALUE = "__new__";
   const nativeOwnerCutover = document.body.dataset.ownerWriter === "backstage";
+  const provisioningOnly = document.body.hasAttribute("data-owner-provisioning-only");
   const state = {
     session: null,
     access: null,
@@ -88,6 +89,8 @@
   const backstageEnrollCodeWrap = $("[data-backstage-enroll-code-wrap]");
   const backstageEnrollCode = $("[data-backstage-enroll-code]");
   const backstageEnrollStatus = $("[data-backstage-enroll-status]");
+  const backstageDevicesRefreshButton = $("[data-backstage-devices-refresh]");
+  const backstageDeviceList = $("[data-backstage-device-list]");
   const wasteBasketLink = $("[data-new-owner-waste-basket]");
   const wasteBasketStatus = $("[data-new-owner-waste-basket-status]");
   const requestedUploadRunId = new URLSearchParams(window.location.search).get("uploadRun") || "";
@@ -234,6 +237,8 @@
     return state.session?.admin === true || state.session?.tier === "owner" || roles.includes("owner") || roles.includes("admin");
   };
 
+  const canProvisionBackstage = () => state.session?.canProvisionBackstage === true;
+
   const cleanConnectorId = (value) => String(value || "")
     .trim()
     .toLowerCase()
@@ -344,7 +349,7 @@
     const result = action?.result || {};
     const chips = [];
     if (result.readOnly) chips.push(chip("read-only", "local"));
-    if (result.workspace?.launched) chips.push(chip("Sidecar opened on Mac", "live"));
+    if (result.workspace?.launched) chips.push(chip("Legacy compatibility action completed", "live"));
     if (Number.isFinite(result.recordsPrepared)) chips.push(chip(`${result.recordsPrepared} prepared`, "live"));
     if (Number.isFinite(result.candidateCount)) chips.push(chip(`${result.candidateCount} candidates`));
     if (result.local?.machineNames?.length) chips.push(chip(result.local.machineNames[0], "planned"));
@@ -814,11 +819,11 @@
     if (workerBaseRoot) workerBaseRoot.textContent = workerBase || "same-origin Worker";
     setStatus("Loading cloud Owner state...");
     root?.classList.add("is-loading");
-    const localConnectorPromise = detectLocalConnector();
+    const localConnectorPromise = provisioningOnly ? Promise.resolve(null) : detectLocalConnector();
     try {
       const session = await apiFetch(ownerApiPath("/owner/session"));
       state.session = session;
-      if (ownerAllowed()) {
+      if (ownerAllowed() && !provisioningOnly) {
         try {
           state.access = await apiFetch("/access-console/state");
         } catch {
@@ -837,12 +842,16 @@
       }
       await localConnectorPromise;
       forgetLegacyConnectorPreference();
-      setStatus(ownerAllowed()
-        ? (nativeOwnerCutover
-          ? "Backstage is the active writer. Browser Owner is read-only."
-          : "Cloud Owner session verified.")
-        : "Owner role is required.");
-      if (connectorDownload && ownerAllowed() && workerBase) {
+      setStatus(provisioningOnly
+        ? (canProvisionBackstage()
+          ? "Provisioning identity verified. This browser can manage Backstage credentials only."
+          : "Sign in directly with ec92009@gmail.com to provision Backstage.")
+        : (ownerAllowed()
+          ? (nativeOwnerCutover
+            ? "Backstage is the active writer. Browser Owner is read-only."
+            : "Cloud Owner session verified.")
+          : "Owner role is required."));
+      if (connectorDownload && ownerAllowed() && workerBase && !provisioningOnly) {
         connectorDownload.href = `${workerBase}${ownerApiPath("/owner/connector/download/mac")}`;
         connectorDownload.hidden = false;
       }
@@ -1434,8 +1443,8 @@
   };
 
   const createBackstageEnrollment = async () => {
-    if (!ownerAllowed()) {
-      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Sign in as Owner before enrolling a native device.";
+    if (!canProvisionBackstage()) {
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Sign in directly with ec92009@gmail.com before provisioning Backstage.";
       return;
     }
     if (!window.confirm("Create a revocable Backstage credential for this Mac? The secret is shown once and must be pasted into the native app.")) return;
@@ -1461,6 +1470,7 @@
       if (backstageEnrollCodeWrap) backstageEnrollCodeWrap.hidden = false;
       if (backstageEnrollCopyButton) backstageEnrollCopyButton.disabled = false;
       if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Code created once. Paste it into Backstage, then clear the clipboard.";
+      await loadBackstageDevices();
     } catch (error) {
       if (backstageEnrollStatus) backstageEnrollStatus.textContent = error.message || "Could not create the Backstage enrollment code.";
     } finally {
@@ -1478,6 +1488,65 @@
       backstageEnrollCode?.focus();
       backstageEnrollCode?.select();
       if (backstageEnrollStatus) backstageEnrollStatus.textContent = "Clipboard access was blocked. The code is selected for a manual copy.";
+    }
+  };
+
+  const renderBackstageDevices = (devices = []) => {
+    if (!backstageDeviceList) return;
+    backstageDeviceList.replaceChildren();
+    if (!devices.length) {
+      backstageDeviceList.textContent = "No Backstage devices are enrolled.";
+      return;
+    }
+    devices.forEach((device) => {
+      const row = document.createElement("div");
+      row.className = "backstage-device-row";
+      const copy = document.createElement("span");
+      const revoked = Boolean(device.revokedAt);
+      const created = device.createdAt ? new Date(device.createdAt).toLocaleString() : "date unavailable";
+      copy.textContent = `${device.name || "Backstage Mac"} · ${device.platform || "macOS"} · created ${created}${revoked ? " · revoked" : ""}`;
+      row.append(copy);
+      if (!revoked) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn secondary";
+        button.textContent = "Revoke";
+        button.setAttribute("aria-label", `Revoke ${device.name || "Backstage device"}`);
+        button.addEventListener("click", () => revokeBackstageDevice(device));
+        row.append(button);
+      }
+      backstageDeviceList.append(row);
+    });
+  };
+
+  const loadBackstageDevices = async () => {
+    if (!canProvisionBackstage()) {
+      renderBackstageDevices([]);
+      return;
+    }
+    if (backstageDevicesRefreshButton) backstageDevicesRefreshButton.disabled = true;
+    try {
+      const body = await apiFetch(ownerApiPath("/devices"));
+      renderBackstageDevices(Array.isArray(body.devices) ? body.devices : []);
+    } catch (error) {
+      if (backstageDeviceList) backstageDeviceList.textContent = error.message || "Could not load Backstage devices.";
+    } finally {
+      if (backstageDevicesRefreshButton) backstageDevicesRefreshButton.disabled = false;
+    }
+  };
+
+  const revokeBackstageDevice = async (device) => {
+    if (!canProvisionBackstage() || !device?.id) return;
+    if (!window.confirm(`Revoke ${device.name || "this Backstage device"}? Its sessions and refresh tokens will stop working.`)) return;
+    try {
+      await apiFetch(ownerApiPath(`/devices/${encodeURIComponent(device.id)}/revoke`), {
+        method: "POST",
+        body: "{}",
+      });
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = `${device.name || "Backstage device"} revoked.`;
+      await loadBackstageDevices();
+    } catch (error) {
+      if (backstageEnrollStatus) backstageEnrollStatus.textContent = error.message || "Could not revoke the Backstage device.";
     }
   };
 
@@ -1510,6 +1579,7 @@
   $("[data-new-owner-logout]")?.addEventListener("click", logout);
   backstageEnrollCreateButton?.addEventListener("click", createBackstageEnrollment);
   backstageEnrollCopyButton?.addEventListener("click", copyBackstageEnrollment);
+  backstageDevicesRefreshButton?.addEventListener("click", loadBackstageDevices);
   if (!nativeOwnerCutover) {
     $("[data-new-owner-queue-check]")?.addEventListener("click", queueCheck);
     $("[data-new-owner-sync-photos]")?.addEventListener("click", queuePhotosIndexSync);

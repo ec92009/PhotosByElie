@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Owner</title>
-  <meta name="description" content="Authenticated cloud Owner controls for Photos By Elie."/>
+  <title>Photos By Elie | Backstage provisioning</title>
+  <meta name="description" content="Provision or revoke a PhotosByElie Backstage credential. Owner workflows run only in the macOS app."/>
   <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=224.0"/>
@@ -20,15 +20,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="new-owner" data-owner-writer="backstage">
+<body data-gallery="new-owner" data-owner-writer="backstage" data-owner-provisioning-only>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <a class="header-back-button mobile-header-back" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
     <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
     <nav class="version-switch" aria-label="Site navigation">
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" href="./owner.html">Owner</a> <span>|</span>
-      <a href="./access-console.html">ACS</a>
+      <a class="is-active" href="./owner.html" aria-current="page">Backstage provisioning</a>
     </nav>
     <span class="site-version-badge">v224.0</span>
   </header>
@@ -36,9 +35,9 @@
   <main id="main-content" class="shell new-owner-shell">
     <section class="panel new-owner-hero">
       <div>
-        <p class="eyebrow">Cloud workspace</p>
-        <h1>Owner</h1>
-        <p class="gallery-status" data-new-owner-status aria-live="polite">Connecting to cloud Owner state...</p>
+        <p class="eyebrow">Credential provisioning</p>
+        <h1>Backstage</h1>
+        <p class="gallery-status" data-new-owner-status aria-live="polite">Checking the provisioning identity…</p>
       </div>
       <div class="new-owner-session" data-new-owner-session></div>
     </section>
@@ -47,14 +46,13 @@
       <div class="new-owner-toolbar">
         <div>
           <strong data-new-owner-worker-base>Worker pending</strong>
-          <span>authenticated cloud control</span>
+          <span>Backstage credential service</span>
         </div>
         <div class="new-owner-toolbar-actions">
-          <button class="btn secondary" type="button" data-new-owner-refresh>Refresh</button>
+          <button class="btn secondary" type="button" data-new-owner-refresh data-owner-workflow-control>Refresh</button>
           <button class="btn secondary" type="button" data-new-owner-login>Google sign-in</button>
           <button class="btn secondary" type="button" data-new-owner-logout>Sign out</button>
-          <a class="btn secondary" href="#" data-new-owner-download-connector hidden>Download Mac connector</a>
-          <a class="btn secondary" href="./access-console.html">ACS</a>
+          <a class="btn secondary" href="#" data-new-owner-download-connector data-owner-workflow-control hidden>Download Mac connector</a>
         </div>
       </div>
 
@@ -69,11 +67,11 @@
 
       <section class="new-owner-cutover-notice" aria-label="Backstage writer status">
         <div>
-          <p class="eyebrow">Native single writer</p>
-          <h2>Backstage is the active Owner workspace</h2>
-          <p>Browser Owner remains available for authentication, enrollment, access review, connector health, and audit. Catalog and workflow mutations now run only through the signed Backstage app on this Mac.</p>
+          <p class="eyebrow">Provisioning only</p>
+          <h2>Backstage is the only Owner workspace</h2>
+          <p>A normal PBE browser login never grants Owner actions. A direct Google sign-in as <strong>ec92009@gmail.com</strong> may only create or revoke the show-once credential that Backstage stores in macOS Keychain.</p>
         </div>
-        <span class="new-owner-chip is-live">Reversible cutover</span>
+        <span class="new-owner-chip is-live">Provisioning only</span>
       </section>
 
       <div class="new-owner-grid">
@@ -260,16 +258,18 @@
               <h2>Backstage enrollment</h2>
             </div>
           </div>
-          <p class="new-owner-card-note">Create a one-time, independently revocable device code for the PhotosByElie Backstage app on this Mac. Creating a code does not grant Photos access or change any catalog data.</p>
+          <p class="new-owner-card-note">Create a show-once, independently revocable API credential for PhotosByElie Backstage on any Mac. It can be created only after a direct Google sign-in as ec92009@gmail.com. It does not unlock Owner actions in this browser.</p>
           <div class="new-owner-action-controls new-owner-action-controls-start">
             <button class="btn secondary" type="button" data-backstage-enroll-create>Create one-time code…</button>
             <button class="btn secondary" type="button" data-backstage-enroll-copy disabled>Copy code</button>
+            <button class="btn secondary" type="button" data-backstage-devices-refresh>Refresh devices</button>
           </div>
           <label class="backstage-enrollment-code" hidden data-backstage-enroll-code-wrap>
             One-time code
             <textarea rows="3" readonly spellcheck="false" data-backstage-enroll-code></textarea>
           </label>
           <p class="new-owner-card-note" data-backstage-enroll-status aria-live="polite">No device credential has been created in this browser session.</p>
+          <div class="backstage-device-list" data-backstage-device-list aria-live="polite"></div>
         </section>
       </div>
 
@@ -279,7 +279,6 @@
   <script src="./media-config.js?v=224.0"></script>
   <script src="./owner-account.js?v=224.0"></script>
   <script src="./owner-settings.js?v=224.0"></script>
-  <script src="./owner-activity.js?v=224.0"></script>
   <script src="./new-owner.js?v=224.0"></script>
 </body>
 </html>

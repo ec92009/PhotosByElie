@@ -7,14 +7,47 @@ public enum FixtureSelectionAvailability: Sendable, Equatable {
 }
 
 public struct PBEOwnerFixtureSession: Sendable, Equatable {
+    public let sessionID: String
     public let fixtureID: String
     public let fixtureBreadcrumb: String
+    public let sourceIdentity: String
+    public let catalogIdentity: String
+    public let readinessIdentity: String
+    public let capabilities: Set<String>
+    public let lifecycleWriter: String
     public let expiresAt: Date
 
-    public init(fixtureID: String, fixtureBreadcrumb: String, expiresAt: Date) {
+    public init(
+        sessionID: String = "",
+        fixtureID: String,
+        fixtureBreadcrumb: String,
+        sourceIdentity: String = "",
+        catalogIdentity: String = "",
+        readinessIdentity: String = "",
+        capabilities: Set<String> = [],
+        lifecycleWriter: String = "",
+        expiresAt: Date
+    ) {
+        self.sessionID = sessionID
         self.fixtureID = fixtureID
         self.fixtureBreadcrumb = fixtureBreadcrumb
+        self.sourceIdentity = sourceIdentity
+        self.catalogIdentity = catalogIdentity
+        self.readinessIdentity = readinessIdentity
+        self.capabilities = capabilities
+        self.lifecycleWriter = lifecycleWriter
         self.expiresAt = expiresAt
+    }
+
+    public var isActionable: Bool {
+        !sessionID.isEmpty
+            && !sourceIdentity.isEmpty
+            && !catalogIdentity.isEmpty
+            && !readinessIdentity.isEmpty
+            && capabilities.isSuperset(
+                of: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+            )
+            && lifecycleWriter == "pbb-79-waste-basket"
     }
 }
 
@@ -24,6 +57,8 @@ public enum FixtureSelectionError: Error, Sendable, Equatable, LocalizedError {
     case archivedFixture
     case ownerSessionActive(PBEOwnerFixtureSession)
     case invalidSessionExpiry
+    case ownerSessionMismatch
+    case invalidOwnerSessionContract
 
     public var errorDescription: String? {
         switch self {
@@ -37,6 +72,10 @@ public enum FixtureSelectionError: Error, Sendable, Equatable, LocalizedError {
             "The PBE Owner session is using \(session.fixtureBreadcrumb). Close it or let it expire before changing fixtures."
         case .invalidSessionExpiry:
             "A PBE Owner session needs a future expiry time."
+        case .ownerSessionMismatch:
+            "The PBE Owner session does not match Backstage's current frozen fixture."
+        case .invalidOwnerSessionContract:
+            "PBE Owner did not return the required authentication, identity, readiness, and Waste Basket capabilities."
         }
     }
 }
@@ -196,6 +235,30 @@ public struct FixtureSelectionCoordinator: Sendable, Equatable {
             fixtureBreadcrumb: breadcrumb,
             expiresAt: expiresAt
         )
+        ownerSession = session
+        notice = nil
+        return session
+    }
+
+    public mutating func beginPBEOwnerSession(
+        _ session: PBEOwnerFixtureSession,
+        now: Date = Date()
+    ) throws -> PBEOwnerFixtureSession {
+        expireOwnerSessionIfNeeded(at: now)
+        if let ownerSession {
+            throw FixtureSelectionError.ownerSessionActive(ownerSession)
+        }
+        guard session.expiresAt > now else {
+            throw FixtureSelectionError.invalidSessionExpiry
+        }
+        guard session.isActionable else {
+            throw FixtureSelectionError.invalidOwnerSessionContract
+        }
+        guard fixtureScopedActionsAllowed,
+              session.fixtureID == selectedFixtureID,
+              session.fixtureBreadcrumb == selectedFixtureBreadcrumb else {
+            throw FixtureSelectionError.ownerSessionMismatch
+        }
         ownerSession = session
         notice = nil
         return session

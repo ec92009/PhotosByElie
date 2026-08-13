@@ -76,3 +76,29 @@ test("Google OAuth rejects callback state from another origin and expired state"
     (error) => error.code === "google_oauth_state_expired" && error.status === 401,
   );
 });
+
+test("signed non-browser sessions preserve trusted purpose and fixture claims", async () => {
+  const auth = createGoogleOAuthAuth(authOptions());
+  const token = await auth.issueSessionToken({
+    email: "ec92009@gmail.com",
+    provider: "backstage-device",
+    purpose: "pbe-owner-session",
+    deviceId: "owner-device-max",
+    sessionId: "pbe-session-one",
+    fixtureId: "fixture-la-concha",
+    fixtureBreadcrumb: "RE › La Concha",
+    sourceIdentity: "owner-sqlite:abc",
+    catalogIdentity: "catalog-sqlite:def",
+    capabilities: ["gallery.read", "waste-basket.x"],
+  }, 300);
+
+  const session = await auth.optionalSession(new Request("https://auth.photos-by-elie.com/api/v1/pbe-owner/session", {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  assert.equal(session.provider, "backstage-device");
+  assert.equal(session.purpose, "pbe-owner-session");
+  assert.equal(session.deviceId, "owner-device-max");
+  assert.equal(session.sessionId, "pbe-session-one");
+  assert.equal(session.fixtureId, "fixture-la-concha");
+  assert.deepEqual(session.capabilities, ["gallery.read", "waste-basket.x"]);
+});

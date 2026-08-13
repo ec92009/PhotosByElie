@@ -4,22 +4,22 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("public Owner culling waits for cloud auth and uses the Max connector queue", () => {
+test("hosted PBE culling waits for Backstage and uses only the local Waste Basket gateway", () => {
   const hidden = read("hidden-actions.js");
   const gallery = read("photo-gallery.js");
   const detail = read("photo-detail.js");
-  assert.match(hidden, /actionKind:\s*"photo-moderation"/);
-  assert.match(hidden, /requestedConnector:\s*"max"/);
+  assert.match(hidden, /pbeOwnerSession\?\.isReady\?\.\(\)/);
+  assert.match(hidden, /pbeOwnerSession\.action\(action, requestPayload\)/);
+  assert.match(hidden, /source: "owner-gallery"/);
   assert.match(hidden, /const markMany = async/);
   assert.match(hidden, /const undoMany = async/);
-  assert.match(hidden, /"update-photo-metadata", "save-keyword-blacklist"/);
-  assert.match(hidden, /const saveKeywordBlacklist = async/);
-  assert.match(hidden, /moderationPayload\[key\] = extra\[key\]/);
-  assert.match(hidden, /"owner_authorized", "ownerAuthorized"/);
-  assert.doesNotMatch(hidden, /moderationPayload\["restoreTitles"\]/);
-  assert.match(hidden, /\/photosbyelie\/wake-owner-action/);
-  assert.match(hidden, /body: JSON\.stringify\(\{ actionId \}\)/);
-  assert.match(hidden, /const awakened = await tryLocalActionWake\(queued\.action\.id\)/);
+  assert.match(hidden, /"waste-basket-x"/);
+  assert.match(hidden, /"waste-basket-x-many"/);
+  assert.match(hidden, /"waste-basket-restore"/);
+  assert.doesNotMatch(hidden, /actionKind:\s*"photo-moderation"/);
+  assert.doesNotMatch(hidden, /\/photosbyelie\/wake-owner-action/);
+  assert.doesNotMatch(hidden, /owner_authorized|ownerAuthorized/);
+  assert.match(hidden, /await queueHideAction\(\{ revertOnError: true \}\)/);
   assert.match(hidden, /throw error;\s*\n\s*\}\);/);
   assert.match(gallery, /ownerEditable: ownerCullingEnabled/);
   assert.match(gallery, /const selectOwnerPhotoFromPointer =/);
@@ -107,7 +107,7 @@ test("panorama full-height mode stays escapable and yields autoplay to the visit
   assert.match(styles, /\.finder-preview-close\{/);
 });
 
-test("Owner exposes a contained fixture builder and recoverable Waste Basket manager", () => {
+test("browser Owner is provisioning-only while hosted PBE keeps the recoverable Waste Basket", () => {
   const owner = read("owner.html");
   const ownerStyles = read("new-owner.css");
   const ownerScript = read("new-owner.js");
@@ -128,10 +128,16 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerScript, /wasteBasketLink\.classList\.remove\("is-disabled"\)/);
   assert.doesNotMatch(ownerScript, /wasteBasketLink\.classList\.toggle\("is-disabled"/);
   assert.match(ownerScript, /wasteBasketLink\?\.addEventListener\("click", openWasteBasket\)/);
-  assert.match(hiddenActions, /\["hide", "hide-many", "undo-hide", "undo-hide-many", "discard",/);
+  assert.match(owner, /data-owner-provisioning-only(?:[\s>])/);
+  assert.match(owner, /ec92009@gmail\.com/);
+  assert.match(owner, /provisioning only/i);
+  assert.match(owner, /macOS Keychain/);
+  assert.match(ownerStyles, /body\[data-owner-provisioning-only\][\s\S]*\.new-owner-card:not\(\[aria-label="Backstage enrollment"\]\)[\s\S]*display:\s*none !important/);
+  assert.match(ownerScript, /const provisioningOnly = document\.body\.hasAttribute\("data-owner-provisioning-only"\)/);
+  assert.match(ownerScript, /session\?\.canProvisionBackstage/);
   assert.match(hiddenActions, /get enabled\(\) \{[\s\S]*return cullingEnabled\(\)/);
-  assert.match(hiddenActions, /actionKind: "owner-hidden-metadata"/);
-  assert.match(hiddenActions, /if \(remoteCullingEnabled\) refreshRemoteHiddenMetadata\(\)\.catch/);
+  assert.match(hiddenActions, /Boolean\(localEnabled && isHostedOwnerSurface\(\) && pbeOwnerSession\?\.isReady\?\.\(\)\)/);
+  assert.doesNotMatch(hiddenActions, /actionKind: "owner-hidden-metadata"/);
   assert.match(hiddenActions, /metadataFor/);
   assert.doesNotMatch(hiddenActions, /restoreTitles = Object\.fromEntries/);
   assert.match(hiddenActions, /photoAction\("waste-basket-restore", ids\[0\], \{ photo_ids: ids/);
@@ -152,7 +158,7 @@ test("Owner exposes a contained fixture builder and recoverable Waste Basket man
   assert.match(ownerActivity, /document\.visibilityState === "hidden"/);
   assert.match(ownerActivity, /\/api\/v1\/owner\/interactive/);
   assert.match(ownerActivity, /setInterval\(touch, 10000\)/);
-  assert.match(owner, /owner-activity\.js/);
+  assert.doesNotMatch(owner, /owner-activity\.js/);
   assert.match(reviewHtml, /owner-activity\.js/);
   assert.match(hidden, /galleryKey: `expo\/\$\{photoId\}_900\.jpg`/);
   assert.match(hidden, /detailKey: `expo\/\$\{photoId\}_1800\.jpg`/);

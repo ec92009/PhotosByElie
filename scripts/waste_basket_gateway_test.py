@@ -341,6 +341,40 @@ class WasteBasketGatewayTests(unittest.TestCase):
         )
         self.assertEqual(gallery["items"][0]["source"], "owner-gallery")
 
+    def test_hosted_restore_is_transactionally_bound_to_its_fixture(self) -> None:
+        gateway.move_to_waste_basket(
+            self.root,
+            ["asset-2"],
+            source="owner-gallery",
+            fixture_id="fixture-current",
+            gallery_id="fixture-current",
+            owner_mode=True,
+            owner_authorized=True,
+            request_key="fixture-bound-x",
+            db_path=self.db,
+        )
+
+        with self.assertRaisesRegex(gateway.WasteBasketError, "outside the frozen fixture"):
+            gateway.restore_from_waste_basket(
+                self.root,
+                ["asset-2"],
+                fixture_id="fixture-other",
+                request_key="fixture-bound-restore-denied",
+                db_path=self.db,
+            )
+        self.assertTrue(gateway.is_globally_ineligible(self.root, "asset-2", self.db))
+
+        restored = gateway.restore_from_waste_basket(
+            self.root,
+            ["asset-2"],
+            fixture_id="fixture-current",
+            request_key="fixture-bound-restore-allowed",
+            db_path=self.db,
+        )
+        self.assertEqual(restored["state"], "restored")
+        self.assertEqual(restored["assetIds"], ["asset-2"])
+        self.assertFalse(gateway.is_globally_ineligible(self.root, "asset-2", self.db))
+
     def test_exact_provenance_restore_preserves_relationships_and_state(self) -> None:
         before = self._lifecycle_snapshot()
         moved = gateway.move_to_waste_basket(

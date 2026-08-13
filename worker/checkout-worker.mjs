@@ -15,6 +15,9 @@ const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const OWNER_ACCESS_TOKEN_SECONDS = 15 * 60;
 const OWNER_REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
+const PBE_OWNER_SESSION_SECONDS = 5 * 60;
+const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail.com";
+const PBE_OWNER_CAPABILITIES = Object.freeze(["gallery.read", "waste-basket.x", "waste-basket.restore"]);
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;
@@ -297,6 +300,14 @@ const sessionForAccessIdentity = async (identity, { accessUserRegistry, adminEma
     authenticated: Boolean(email),
     email,
     provider: identity?.provider || "",
+    purpose: identity?.purpose || "browser",
+    deviceId: identity?.deviceId || "",
+    sessionId: identity?.sessionId || "",
+    fixtureId: identity?.fixtureId || "",
+    fixtureBreadcrumb: identity?.fixtureBreadcrumb || "",
+    sourceIdentity: identity?.sourceIdentity || "",
+    catalogIdentity: identity?.catalogIdentity || "",
+    capabilities: Array.isArray(identity?.capabilities) ? identity.capabilities : [],
     roles,
     tier,
     admin,
@@ -2203,7 +2214,15 @@ export const createPhotosByElieWorker = ({
 
   const getOwnerSession = async (request) => {
     const session = await authSessionFor(request, { requiredRole: "owner" });
-    return credentialedJson(request, authSessionPayload(session));
+    return credentialedJson(request, {
+      ...authSessionPayload(session),
+      provisioningOnly: session.provider === "google-oauth",
+      canProvisionBackstage: session.provider === "google-oauth"
+        && session.purpose === "browser"
+        && session.email === PBE_OWNER_PROVISIONER_EMAIL,
+      workflowActionable: session.provider === "backstage-device"
+        && session.purpose === "backstage-api",
+    });
   };
 
   const publicOwnerDevice = (device) => device ? {
@@ -2231,6 +2250,50 @@ export const createPhotosByElieWorker = ({
     return session;
   };
 
+  const requireBackstageProvisioner = async (request) => {
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const origin = String(request.headers.get("origin") || "").trim();
+    const allowedOrigins = new Set(["https://photos-by-elie.com", ...authReturnOrigins]);
+    if (!allowedOrigins.has(origin)) {
+      throw Object.assign(new Error("Backstage credentials may be provisioned only from the trusted PBE browser surface."), {
+        status: 403,
+        code: "backstage_provisioning_origin_required",
+      });
+    }
+    if (session.email !== PBE_OWNER_PROVISIONER_EMAIL
+        || session.provider !== "google-oauth"
+        || session.purpose !== "browser") {
+      throw Object.assign(new Error("Only ec92009@gmail.com may provision Backstage credentials after a direct Google sign-in."), {
+        status: 403,
+        code: "backstage_provisioner_required",
+      });
+    }
+    return session;
+  };
+
+  const requireActiveBackstageDeviceSession = async (request) => {
+    const identity = await googleIdentityFor(request, { required: true });
+    if (identity?.provider !== "backstage-device"
+        || identity?.purpose !== "backstage-api"
+        || !identity?.deviceId) {
+      throw Object.assign(new Error("This Owner operation must be started by enrolled Backstage on a Mac."), {
+        status: 403,
+        code: "backstage_device_session_required",
+      });
+    }
+    const device = ownerDeviceAuthStore?.getDevice
+      ? await ownerDeviceAuthStore.getDevice(identity.deviceId)
+      : null;
+    if (!device || device.email !== String(identity.email || "").trim().toLowerCase()) {
+      throw Object.assign(new Error("The Backstage device credential is missing, invalid or revoked."), {
+        status: 401,
+        code: "backstage_device_revoked",
+      });
+    }
+    const session = await ownerSessionForEmail(device.email);
+    return { ...session, purpose: identity.purpose, deviceId: identity.deviceId, device };
+  };
+
   const issueOwnerTokenBundle = async ({ email, deviceId = "" }) => {
     if (!googleOAuthAuth?.issueSessionToken || !ownerDeviceAuthStore?.putRefreshToken) {
       throw Object.assign(new Error("Native Owner token issuance is not configured."), {
@@ -2243,7 +2306,12 @@ export const createPhotosByElieWorker = ({
     const refreshExpiresAt = new Date(issuedAt.getTime() + OWNER_REFRESH_TOKEN_SECONDS * 1000).toISOString();
     const refreshToken = opaqueToken();
     const accessToken = await googleOAuthAuth.issueSessionToken(
-      { email },
+      {
+        email,
+        provider: "backstage-device",
+        purpose: "backstage-api",
+        deviceId: String(deviceId || "").trim(),
+      },
       OWNER_ACCESS_TOKEN_SECONDS
     );
     await ownerDeviceAuthStore.putRefreshToken({
@@ -2265,23 +2333,18 @@ export const createPhotosByElieWorker = ({
 
   const createOwnerTokens = async (request) => {
     const payload = await request.clone().json().catch(() => ({}));
-    let session;
-    let deviceId = String(payload.deviceId || "").trim();
-    if (deviceId || payload.deviceCredential) {
-      if (!deviceId || !payload.deviceCredential || !ownerDeviceAuthStore?.authenticateDevice) {
-        return credentialedErrorJson(request, 401, "owner_device_credential_required", "A valid device id and credential are required.");
-      }
-      const device = await ownerDeviceAuthStore.authenticateDevice({
-        deviceId,
-        credential: String(payload.deviceCredential),
-      });
-      if (!device) {
-        return credentialedErrorJson(request, 401, "owner_device_credential_invalid", "The device credential is invalid or revoked.");
-      }
-      session = await ownerSessionForEmail(device.email);
-    } else {
-      session = await authSessionFor(request, { requiredRole: "owner" });
+    const deviceId = String(payload.deviceId || "").trim();
+    if (!deviceId || !payload.deviceCredential || !ownerDeviceAuthStore?.authenticateDevice) {
+      return credentialedErrorJson(request, 401, "owner_device_credential_required", "A valid Backstage device id and credential are required.");
     }
+    const device = await ownerDeviceAuthStore.authenticateDevice({
+      deviceId,
+      credential: String(payload.deviceCredential),
+    });
+    if (!device) {
+      return credentialedErrorJson(request, 401, "owner_device_credential_invalid", "The Backstage device credential is invalid or revoked.");
+    }
+    const session = await ownerSessionForEmail(device.email);
     return credentialedJson(request, {
       ok: true,
       ...await issueOwnerTokenBundle({ email: session.email, deviceId }),
@@ -2299,6 +2362,12 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 401, "owner_refresh_token_invalid", "The refresh token is invalid, expired or revoked.");
     }
     const session = await ownerSessionForEmail(record.email);
+    const device = ownerDeviceAuthStore?.getDevice && record.deviceId
+      ? await ownerDeviceAuthStore.getDevice(record.deviceId)
+      : null;
+    if (!device || device.email !== session.email) {
+      return credentialedErrorJson(request, 401, "owner_refresh_token_invalid", "The refresh token's Backstage device is invalid or revoked.");
+    }
     await ownerDeviceAuthStore.revokeRefreshToken(refreshToken, now().toISOString());
     return credentialedJson(request, {
       ok: true,
@@ -2322,7 +2391,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const listOwnerDevices = async (request) => {
-    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const session = await requireBackstageProvisioner(request);
     const devices = ownerDeviceAuthStore?.listDevices
       ? await ownerDeviceAuthStore.listDevices(session.email)
       : [];
@@ -2333,7 +2402,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const enrollOwnerDevice = async (request) => {
-    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const session = await requireBackstageProvisioner(request);
     if (!ownerDeviceAuthStore?.putDevice) {
       return credentialedErrorJson(request, 503, "owner_device_auth_unavailable", "Owner device enrollment is not configured.");
     }
@@ -2357,7 +2426,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const revokeOwnerDevice = async (request, deviceId) => {
-    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const session = await requireBackstageProvisioner(request);
     const device = ownerDeviceAuthStore?.revokeDevice
       ? await ownerDeviceAuthStore.revokeDevice({
         email: session.email,
@@ -2369,6 +2438,147 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 404, "owner_device_not_found", "Owner device was not found.");
     }
     return credentialedJson(request, { ok: true, device: publicOwnerDevice(device) });
+  };
+
+  const cleanPBESessionBinding = (value, label, maximum = 256) => {
+    const cleaned = String(value || "").trim();
+    if (!cleaned || cleaned.length > maximum || /[\u0000-\u001f\u007f]/.test(cleaned)) {
+      throw Object.assign(new Error(`${label} is required and must be at most ${maximum} printable characters.`), {
+        status: 400,
+        code: "pbe_owner_session_binding_invalid",
+      });
+    }
+    return cleaned;
+  };
+
+  const publicPBEOwnerSession = (record) => ({
+    id: record.id,
+    state: record.closedAt ? "closed" : "ready",
+    fixtureId: record.fixtureId,
+    fixtureBreadcrumb: record.fixtureBreadcrumb,
+    sourceIdentity: record.sourceIdentity,
+    catalogIdentity: record.catalogIdentity,
+    readinessIdentity: record.readinessIdentity,
+    capabilities: Array.isArray(record.capabilities) ? [...record.capabilities] : [...PBE_OWNER_CAPABILITIES],
+    lifecycleWriter: record.lifecycleWriter || "pbb-79-waste-basket",
+    createdAt: record.createdAt,
+    expiresAt: record.expiresAt,
+    closedAt: record.closedAt || "",
+  });
+
+  const mintPBEOwnerSession = async (request) => {
+    const backstage = await requireActiveBackstageDeviceSession(request);
+    if (!googleOAuthAuth?.issueSessionToken
+        || !ownerDeviceAuthStore?.putPBEOwnerSession) {
+      return credentialedErrorJson(request, 503, "pbe_owner_session_unavailable", "PBE Owner session issuance is not configured.");
+    }
+    const payload = await parseJson(request);
+    const fixtureId = cleanPBESessionBinding(payload.fixtureId, "fixtureId", 160);
+    const fixtureBreadcrumb = cleanPBESessionBinding(payload.fixtureBreadcrumb, "fixtureBreadcrumb", 512);
+    const sourceIdentity = cleanPBESessionBinding(payload.sourceIdentity, "sourceIdentity");
+    const catalogIdentity = cleanPBESessionBinding(payload.catalogIdentity, "catalogIdentity");
+    const readinessIdentity = cleanPBESessionBinding(payload.readinessIdentity, "readinessIdentity");
+    const createdAt = now();
+    const expiresAt = new Date(createdAt.getTime() + PBE_OWNER_SESSION_SECONDS * 1000).toISOString();
+    const id = `pbe-owner-session-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
+    const record = await ownerDeviceAuthStore.putPBEOwnerSession({
+      id,
+      email: backstage.email,
+      deviceId: backstage.deviceId,
+      fixtureId,
+      fixtureBreadcrumb,
+      sourceIdentity,
+      catalogIdentity,
+      readinessIdentity,
+      capabilities: [...PBE_OWNER_CAPABILITIES],
+      lifecycleWriter: "pbb-79-waste-basket",
+      createdAt: createdAt.toISOString(),
+      expiresAt,
+      closedAt: "",
+    });
+    const sessionToken = await googleOAuthAuth.issueSessionToken({
+      email: backstage.email,
+      provider: "backstage-device",
+      purpose: "pbe-owner-session",
+      deviceId: backstage.deviceId,
+      sessionId: id,
+      fixtureId,
+      fixtureBreadcrumb,
+      sourceIdentity,
+      catalogIdentity,
+      readinessIdentity,
+      capabilities: [...PBE_OWNER_CAPABILITIES],
+      lifecycleWriter: "pbb-79-waste-basket",
+    }, PBE_OWNER_SESSION_SECONDS);
+    return credentialedJson(request, {
+      ok: true,
+      tokenType: "Bearer",
+      sessionToken,
+      session: publicPBEOwnerSession(record),
+    }, 201);
+  };
+
+  const requirePBEOwnerSession = async (request) => {
+    const identity = await googleIdentityFor(request, { required: true });
+    if (identity?.provider !== "backstage-device"
+        || identity?.purpose !== "pbe-owner-session"
+        || !identity?.deviceId
+        || !identity?.sessionId) {
+      throw Object.assign(new Error("A Backstage-minted PBE Owner session is required."), {
+        status: 403,
+        code: "pbe_owner_session_required",
+      });
+    }
+    const [device, record] = await Promise.all([
+      ownerDeviceAuthStore?.getDevice?.(identity.deviceId),
+      ownerDeviceAuthStore?.getPBEOwnerSession?.(identity.sessionId),
+    ]);
+    if (!device
+        || !record
+        || device.email !== identity.email
+        || record.email !== identity.email
+        || record.deviceId !== identity.deviceId) {
+      throw Object.assign(new Error("The PBE Owner session is expired, closed or its Backstage device was revoked."), {
+        status: 401,
+        code: "pbe_owner_session_inactive",
+      });
+    }
+    for (const field of ["fixtureId", "fixtureBreadcrumb", "sourceIdentity", "catalogIdentity", "readinessIdentity", "lifecycleWriter"]) {
+      if (String(identity[field] || "") !== String(record[field] || "")) {
+        throw Object.assign(new Error("The PBE Owner session binding no longer matches its issued lease."), {
+          status: 409,
+          code: "pbe_owner_session_mismatch",
+        });
+      }
+    }
+    const identityCapabilities = [...new Set(identity.capabilities || [])].sort();
+    const recordCapabilities = [...new Set(record.capabilities || [])].sort();
+    if (JSON.stringify(identityCapabilities) !== JSON.stringify(recordCapabilities)
+        || JSON.stringify(recordCapabilities) !== JSON.stringify([...PBE_OWNER_CAPABILITIES].sort())) {
+      throw Object.assign(new Error("The PBE Owner session capabilities no longer match the guarded gallery contract."), {
+        status: 409,
+        code: "pbe_owner_session_mismatch",
+      });
+    }
+    return { identity, record };
+  };
+
+  const getPBEOwnerSession = async (request) => {
+    const { record } = await requirePBEOwnerSession(request);
+    return credentialedJson(request, { ok: true, session: publicPBEOwnerSession(record) });
+  };
+
+  const closePBEOwnerSession = async (request, sessionId) => {
+    const { identity, record } = await requirePBEOwnerSession(request);
+    if (record.id !== sessionId) {
+      return credentialedErrorJson(request, 409, "pbe_owner_session_mismatch", "The requested session does not match the active PBE Owner lease.");
+    }
+    const closed = await ownerDeviceAuthStore.closePBEOwnerSession({
+      sessionId,
+      deviceId: identity.deviceId,
+      closedAt: now().toISOString(),
+    });
+    return credentialedJson(request, { ok: true, session: publicPBEOwnerSession(closed) });
   };
 
   const ownerActionId = () => `owner-action-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
@@ -2411,7 +2621,7 @@ export const createPhotosByElieWorker = ({
       }
     }
     try {
-      const session = await authSessionFor(request, { requiredRole: "owner" });
+      const session = await requireActiveBackstageDeviceSession(request);
       return { actorKind: "owner", actorId: session.email, session };
     } catch (ownerError) {
       if (ownerConnectorAuth?.requireConnector) {
@@ -2427,7 +2637,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const createOwnerAction = async (request) => {
-    const session = await authSessionFor(request, { requiredRole: "owner" });
+    const session = await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.putAction !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
     }
@@ -2616,7 +2826,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const listOwnerActions = async (request) => {
-    await authSessionFor(request, { requiredRole: "owner" });
+    await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.listActions !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue listing is not configured.");
     }
@@ -2657,7 +2867,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const listOwnerConnectors = async (request) => {
-    await authSessionFor(request, { requiredRole: "owner" });
+    await requireActiveBackstageDeviceSession(request);
     const connectors = typeof ownerActionStore?.listConnectors === "function"
       ? await ownerActionStore.listConnectors()
       : [];
@@ -2665,7 +2875,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const touchOwnerInteractiveLease = async (request) => {
-    await authSessionFor(request, { requiredRole: "owner" });
+    await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.putInteractiveLease !== "function") {
       return credentialedErrorJson(request, 503, "owner_interactive_unavailable", "Interactive Owner polling is not configured.");
     }
@@ -2693,7 +2903,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const downloadOwnerConnector = async (request) => {
-    await authSessionFor(request, { requiredRole: "owner" });
+    await requireActiveBackstageDeviceSession(request);
     if (!ownerConnectorPackage || typeof ownerConnectorPackage.getMacPackage !== "function") {
       return credentialedErrorJson(request, 503, "owner_connector_package_unavailable", "Mac connector download is not configured.");
     }
@@ -2763,7 +2973,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const getOwnerAction = async (request, actionId) => {
-    await authSessionFor(request, { requiredRole: "owner" });
+    await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.getAction !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
     }
@@ -2773,7 +2983,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const transitionOwnerAction = async (request, actionId, transition, connectorSession = null) => {
-    const session = connectorSession || await authSessionFor(request, { requiredRole: "owner" });
+    const session = connectorSession || await requireActiveBackstageDeviceSession(request);
     if (!ownerActionStore || typeof ownerActionStore.getAction !== "function" || typeof ownerActionStore.putAction !== "function") {
       return credentialedErrorJson(request, 503, "owner_actions_unavailable", "Owner action queue is not configured.");
     }
@@ -2965,7 +3175,16 @@ export const createPhotosByElieWorker = ({
     return accessUserRegistry;
   };
 
-  const requireAccessConsoleAdmin = async (request) => authSessionFor(request, { requiredRole: "admin" });
+  const requireAccessConsoleAdmin = async (request) => {
+    const session = await requireActiveBackstageDeviceSession(request);
+    if (!session.roles.includes("admin")) {
+      throw Object.assign(new Error("This Google account is not authorized for admin access."), {
+        status: 403,
+        code: "admin_role_required",
+      });
+    }
+    return session;
+  };
 
   const accessConsoleState = async (request) => {
     const session = await requireAccessConsoleAdmin(request);
@@ -3215,14 +3434,15 @@ export const createPhotosByElieWorker = ({
     });
   };
 
-  const canUseRealEstateGallery = (session, galleryKey) =>
-    Boolean(
-      session?.roles?.includes("admin")
-      || session?.roles?.includes("owner")
-      || session?.realEstateClients?.some((key) =>
-        canonicalRealEstateGalleryKey(key) === canonicalRealEstateGalleryKey(galleryKey)
-      )
+  const canUseRealEstateGallery = (session, galleryKey) => {
+    const backstageOwner = session?.provider === "backstage-device"
+      && session?.purpose === "backstage-api"
+      && (session?.roles?.includes("admin") || session?.roles?.includes("owner"));
+    const explicitlyGranted = session?.realEstateClients?.some((key) =>
+      canonicalRealEstateGalleryKey(key) === canonicalRealEstateGalleryKey(galleryKey)
     );
+    return Boolean(backstageOwner || explicitlyGranted);
+  };
 
   const requireRealEstateSession = async (request, payload) => {
     if (!realEstateAuth || typeof realEstateAuth.requireSession !== "function") {
@@ -3239,7 +3459,7 @@ export const createPhotosByElieWorker = ({
     if (!/^Bearer\s+/i.test(authorization)) {
       return requireRealEstateSession(request, payload);
     }
-    const ownerSession = await authSessionFor(request, { requiredRole: "owner" });
+    const ownerSession = await requireActiveBackstageDeviceSession(request);
     if (!canUseRealEstateGallery(ownerSession, payload.galleryKey)) {
       throw Object.assign(new Error("This Owner account is not authorized for this photo pool."), {
         status: 403,
@@ -3561,6 +3781,12 @@ export const createPhotosByElieWorker = ({
       const ownerDeviceRevokeMatch = path.match(/^\/owner\/devices\/([^/]+)\/revoke$/);
       if (request.method === "POST" && ownerDeviceRevokeMatch) {
         return await revokeOwnerDevice(request, decodeURIComponent(ownerDeviceRevokeMatch[1]));
+      }
+      if (request.method === "POST" && path === "/owner/pbe-sessions") return await mintPBEOwnerSession(request);
+      if (request.method === "GET" && path === "/owner/pbe-session") return await getPBEOwnerSession(request);
+      const pbeOwnerSessionCloseMatch = path.match(/^\/owner\/pbe-sessions\/([^/]+)\/close$/);
+      if (request.method === "POST" && pbeOwnerSessionCloseMatch) {
+        return await closePBEOwnerSession(request, decodeURIComponent(pbeOwnerSessionCloseMatch[1]));
       }
       if (request.method === "GET" && path === "/owner/session") return await getOwnerSession(request);
       if (request.method === "GET" && path === "/owner/connectors") return await listOwnerConnectors(request);

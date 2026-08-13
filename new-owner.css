@@ -48,6 +48,47 @@ body[data-owner-writer="backstage"] [data-web-owner-mutation-surface] {
   display: none !important;
 }
 
+body[data-owner-provisioning-only] .owner-counts,
+body[data-owner-provisioning-only] [data-owner-workflow-control],
+body[data-owner-provisioning-only] .new-owner-grid > .new-owner-card:not([aria-label="Backstage enrollment"]) {
+  display: none !important;
+}
+
+body[data-owner-provisioning-only] .new-owner-grid {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+
+.backstage-device-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.backstage-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 12px;
+}
+
+.backstage-device-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.backstage-device-row .btn { flex: 0 0 auto; }
+
+@media (max-width: 680px) {
+  .backstage-device-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .new-owner-hero {
   display: flex;
   min-height: auto;

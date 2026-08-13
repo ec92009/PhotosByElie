@@ -106,7 +106,19 @@ const sessionFromPayload = (payload, now) => {
   if (!email || !expiresAt || Date.parse(expiresAt) <= now().getTime()) throw signedJsonError("Google login has expired.");
   return {
     email,
-    provider: "google-oauth",
+    provider: String(payload?.provider || "google-oauth").trim() || "google-oauth",
+    purpose: String(payload?.purpose || "browser").trim() || "browser",
+    deviceId: String(payload?.deviceId || "").trim(),
+    sessionId: String(payload?.sessionId || "").trim(),
+    fixtureId: String(payload?.fixtureId || "").trim(),
+    fixtureBreadcrumb: String(payload?.fixtureBreadcrumb || "").trim(),
+    sourceIdentity: String(payload?.sourceIdentity || "").trim(),
+    catalogIdentity: String(payload?.catalogIdentity || "").trim(),
+    readinessIdentity: String(payload?.readinessIdentity || "").trim(),
+    lifecycleWriter: String(payload?.lifecycleWriter || "").trim(),
+    capabilities: Array.isArray(payload?.capabilities)
+      ? payload.capabilities.map((value) => String(value || "").trim()).filter(Boolean)
+      : [],
     expiresAt,
     sessionSeconds: Math.max(0, Math.floor((Date.parse(expiresAt) - now().getTime()) / 1000)),
   };
@@ -280,10 +292,29 @@ export const createGoogleOAuthAuth = ({
     const expiresAt = new Date(createdAt.getTime() + boundedTokenSeconds * 1000).toISOString();
     const session = {
       email: String(identity?.email || "").trim().toLowerCase(),
-      provider: "google-oauth",
+      provider: String(identity?.provider || "google-oauth").trim() || "google-oauth",
+      purpose: String(identity?.purpose || "browser").trim() || "browser",
       createdAt: createdAt.toISOString(),
       expiresAt,
     };
+    [
+      "deviceId",
+      "sessionId",
+      "fixtureId",
+      "fixtureBreadcrumb",
+      "sourceIdentity",
+      "catalogIdentity",
+      "readinessIdentity",
+      "lifecycleWriter",
+    ].forEach((key) => {
+      const value = String(identity?.[key] || "").trim();
+      if (value) session[key] = value;
+    });
+    if (Array.isArray(identity?.capabilities)) {
+      session.capabilities = identity.capabilities
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+    }
     return encodeSignedJson(cleanSessionSecret, session);
   };
 

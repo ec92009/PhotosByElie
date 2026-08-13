@@ -850,6 +850,54 @@ def _resolve_entries(connection: sqlite3.Connection, asset_ids: list[str]) -> li
     return result
 
 
+def _assert_recoverable_fixture_scope(
+    entries: list[sqlite3.Row],
+    asset_ids: list[str],
+    fixture_id: str,
+) -> None:
+    expected_fixture = str(fixture_id or "").strip()
+    if not expected_fixture:
+        raise WasteBasketError("Waste Basket restore fixture is required")
+    resolved = {
+        value
+        for entry in entries
+        for value in (str(entry["asset_id"]), str(entry["entry_id"]))
+    }
+    missing = sorted(set(asset_ids) - resolved)
+    if missing:
+        raise WasteBasketError(f"No recoverable Waste Basket entry for: {', '.join(missing)}")
+    mismatched = sorted({
+        str(entry["asset_id"])
+        for entry in entries
+        if str(entry["state"]) != "recoverable"
+        or str(entry["fixture_id"] or "").strip() != expected_fixture
+    })
+    if mismatched:
+        raise WasteBasketError(
+            "Recoverable Waste Basket entries are outside the frozen fixture: "
+            + ", ".join(mismatched)
+        )
+
+
+def assert_recoverable_entries_in_fixture(
+    repo_root: Path,
+    asset_ids: Iterable[Any],
+    *,
+    fixture_id: str,
+    db_path: Path | None = None,
+) -> None:
+    """Verify authoritative recoverable rows before a hosted-session restore."""
+
+    ids = _unique_ids(asset_ids)
+    if not ids:
+        raise WasteBasketError("Waste Basket restore requires at least one asset")
+    connection = _connect(repo_root, db_path)
+    try:
+        _assert_recoverable_fixture_scope(_resolve_entries(connection, ids), ids, fixture_id)
+    finally:
+        connection.close()
+
+
 def _restore_operation(
     repo_root: Path,
     asset_ids: Iterable[Any],
@@ -860,11 +908,12 @@ def _restore_operation(
     request_key: str | None,
     owner_mode: bool,
     owner_authorized: bool,
-    db_path: Path | None,
+    fixture_id: str = "",
+    db_path: Path | None = None,
 ) -> dict[str, Any]:
     ids = _unique_ids(asset_ids)
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
-    context = {"operation": operation}
+    context = {"operation": operation, "fixtureId": str(fixture_id or "")}
     key = _normalize_request_key(operation, ids, normalized_source, request_key, context)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
@@ -872,6 +921,8 @@ def _restore_operation(
         if ids and len(entries) != len(ids):
             missing = sorted(set(ids) - {str(row["asset_id"]) for row in entries} - {str(row["entry_id"]) for row in entries})
             raise WasteBasketError(f"No recoverable Waste Basket entry for: {', '.join(missing)}")
+        if fixture_id:
+            _assert_recoverable_fixture_scope(entries, ids, fixture_id)
         items: list[dict[str, Any]] = []
         for entry in entries:
             state = str(entry["state"])
@@ -926,7 +977,11 @@ def _restore_operation(
         source=normalized_source,
         actor=actor,
         request_key=key,
-        authorization={"ownerMode": owner_mode, "ownerAuthorized": owner_authorized},
+        authorization={
+            "ownerMode": owner_mode,
+            "ownerAuthorized": owner_authorized,
+            "fixtureId": str(fixture_id or ""),
+        },
         confirmed=False,
         db_path=db_path,
         mutate=mutate,
@@ -942,6 +997,7 @@ def restore_from_waste_basket(
     request_key: str | None = None,
     owner_mode: bool = False,
     owner_authorized: bool = False,
+    fixture_id: str = "",
     db_path: Path | None = None,
 ) -> dict[str, Any]:
     return _restore_operation(
@@ -953,6 +1009,7 @@ def restore_from_waste_basket(
         request_key=request_key,
         owner_mode=owner_mode,
         owner_authorized=owner_authorized,
+        fixture_id=fixture_id,
         db_path=db_path,
     )
 

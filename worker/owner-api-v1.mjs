@@ -11,6 +11,8 @@ const exactRoutes = new Map([
   ["/auth/refresh", "/api/owner/auth/refresh"],
   ["/auth/logout", "/api/owner/auth/logout"],
   ["/devices", "/api/owner/devices"],
+  ["/pbe-owner/sessions", "/api/owner/pbe-sessions"],
+  ["/pbe-owner/session", "/api/owner/pbe-session"],
   ["/owner/session", "/api/owner/session"],
   ["/owner/connectors", "/api/owner/connectors"],
   ["/owner/interactive", "/api/owner/interactive"],
@@ -50,6 +52,10 @@ const dynamicRoutes = [
   {
     pattern: /^\/devices\/([^/]+)\/revoke$/,
     destination: (match) => `/api/owner/devices/${match[1]}/revoke`,
+  },
+  {
+    pattern: /^\/pbe-owner\/sessions\/([^/]+)\/close$/,
+    destination: (match) => `/api/owner/pbe-sessions/${match[1]}/close`,
   },
   {
     pattern: /^\/connectors\/actions\/([^/]+)(?:\/(claim|complete|fail))?$/,

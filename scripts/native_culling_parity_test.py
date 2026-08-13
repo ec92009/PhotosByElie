@@ -543,24 +543,34 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("VStack(alignment: .leading, spacing: 12)", header)
         self.assertIn(".layoutPriority(3)", header)
         self.assertIn(
-            ".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)",
+            ".frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)",
             grid,
         )
         self.assertIn(".clipped()", grid)
         self.assertIn(".id(cullingViewportIdentity)", grid)
         self.assertIn(".padding(.top, 12)", grid)
+        self.assertIn(".safeAreaInset(edge: .bottom, spacing: 0)", culling)
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
         self.assertIn(".layoutPriority(2)", culling)
+        self.assertNotIn(".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)", culling)
         self.assertNotIn("GeometryReader { paneGeometry in", culling)
+        workspace = culling.split("private var cullingWorkspacePane", 1)[1].split(
+            "private var cullingHeader", 1
+        )[0]
+        self.assertIn("cullingActions", workspace)
+        self.assertNotIn(".clipped()", workspace)
         self.assertIn(".frame(minWidth: 480)", culling)
         self.assertIn(
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
         )
         self.assertIn("GeometryReader { viewport in", culling)
-        self.assertIn(".padding(.top, viewport.safeAreaInsets.top)", culling)
+        self.assertIn("let topInset = viewport.safeAreaInsets.top", culling)
+        self.assertIn("let bottomInset = viewport.safeAreaInsets.bottom", culling)
+        self.assertIn(".padding(.top, topInset)", culling)
+        self.assertIn(".padding(.bottom, bottomInset)", culling)
         self.assertIn(
-            "height: max(0, viewport.size.height - viewport.safeAreaInsets.top)",
+            "height: max(0, viewport.size.height - topInset - bottomInset)",
             culling,
         )
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)

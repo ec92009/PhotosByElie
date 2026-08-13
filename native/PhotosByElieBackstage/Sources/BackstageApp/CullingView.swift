@@ -156,15 +156,19 @@ struct CullingView: View {
 
     var body: some View {
         GeometryReader { viewport in
+            let topInset = viewport.safeAreaInsets.top
+            let bottomInset = viewport.safeAreaInsets.bottom
+
             HSplitView {
                 cullingWorkspacePane
                 cullingPreviewPane
             }
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
-            .padding(.top, viewport.safeAreaInsets.top)
+            .padding(.top, topInset)
+            .padding(.bottom, bottomInset)
             .frame(
                 width: viewport.size.width,
-                height: max(0, viewport.size.height - viewport.safeAreaInsets.top),
+                height: max(0, viewport.size.height - topInset - bottomInset),
                 alignment: .top
             )
         }
@@ -190,12 +194,19 @@ struct CullingView: View {
         VStack(alignment: .leading, spacing: 12) {
             cullingHeader
             cullingGrid
-            cullingActions
         }
         .padding()
         .frame(minWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
+        // The footer owns the action, status, and keyboard-help copy. The inset
+        // reserves its height from the grid so resizing cannot cover it.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                cullingActions
+            }
+            .padding(.top, 8)
+        }
     }
 
     private var cullingHeader: some View {
@@ -360,7 +371,7 @@ struct CullingView: View {
                 )
                 .modifier(CullingDisplayKeyCommands(model: model))
         }
-        .frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
         .layoutPriority(1)
     }

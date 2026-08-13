@@ -534,8 +534,7 @@ export const createD1SidecarStateStore = ({
       const result = applyDecisionAction(currentByAssetId.get(assetId) || null, payload, timestamp);
       const decisionPayload = {
         assetId: result.assetId,
-        state: result.state,
-        legacyMigration: payload.legacyMigration,
+        state: withoutTombstoneFamily(result.state),
       };
       assertTombstoneWriteAllowed(decisionPayload);
       const decision = normalizeDecision(decisionPayload, currentByAssetId.get(assetId) || null, timestamp);

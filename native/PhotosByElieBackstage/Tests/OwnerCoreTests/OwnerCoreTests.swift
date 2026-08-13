@@ -58,7 +58,7 @@ struct OwnerCoreTests {
         #expect(OwnerContract.openAPIVersion == "1.1.0")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")
-        #expect(OwnerContract.endpoints[.refreshOwnerTokens]?.path == "/auth/refresh")
+        #expect(OwnerContract.endpoints[.createOwnerTokens]?.path == "/auth/tokens")
         #expect(OwnerContract.schemaNames.contains("ErrorEnvelope"))
         #expect(Set(OwnerContract.exampleSections) == [
             "authentication", "pagination", "error", "idempotency", "progress",
@@ -431,9 +431,7 @@ struct OwnerCoreTests {
             deviceId: "max-native",
             deviceCredential: "one-time-device-secret",
             accessToken: "short-lived",
-            accessExpiresAt: Date(timeIntervalSince1970: 1_800_000_000),
-            refreshToken: "rotating",
-            refreshExpiresAt: Date(timeIntervalSince1970: 1_802_592_000)
+            accessExpiresAt: Date(timeIntervalSince1970: 1_800_000_000)
         )
         try await session.save(credentials)
         #expect(try await session.load() == credentials)
@@ -441,7 +439,7 @@ struct OwnerCoreTests {
         #expect(try await session.load() == nil)
     }
 
-    @Test("One-time enrollment exchanges the device secret and persists rotating tokens")
+    @Test("One-time enrollment stores the device credential and a short-lived access token")
     func credentialEnrollment() async throws {
         let vault = MemoryCredentialVault()
         let session = OwnerCredentialSession(vault: vault)
@@ -451,9 +449,7 @@ struct OwnerCoreTests {
               "tokenType":"Bearer",
               "accessToken":"access-one",
               "expiresIn":900,
-              "accessExpiresAt":"2026-07-25T10:15:00Z",
-              "refreshToken":"refresh-one",
-              "refreshExpiresAt":"2026-08-24T10:00:00Z"
+              "accessExpiresAt":"2026-07-25T10:15:00Z"
             }
             """,
         ])
@@ -478,13 +474,12 @@ struct OwnerCoreTests {
         let saved = try #require(try await session.load())
         #expect(saved.deviceCredential == String(repeating: "s", count: 48))
         #expect(saved.accessToken == "access-one")
-        #expect(saved.refreshToken == "refresh-one")
         let request = try #require(await transport.requests().first)
         #expect(request.url?.path == "/api/v1/auth/tokens")
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
     }
 
-    @Test("Launch bootstrap rotates an expiring Keychain session")
+    @Test("Launch bootstrap re-authenticates the Keychain device credential")
     func credentialBootstrapRefresh() async throws {
         let vault = MemoryCredentialVault()
         let session = OwnerCredentialSession(vault: vault)
@@ -492,19 +487,15 @@ struct OwnerCoreTests {
             deviceId: "owner-device-max",
             deviceCredential: String(repeating: "d", count: 48),
             accessToken: "expired-access",
-            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000),
-            refreshToken: "refresh-old",
-            refreshExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
         ))
         let transport = RoutingTransport(responses: [
-            "/api/v1/auth/refresh": """
+            "/api/v1/auth/tokens": """
             {
               "tokenType":"Bearer",
               "accessToken":"access-two",
               "expiresIn":900,
-              "accessExpiresAt":"2026-07-25T10:15:00Z",
-              "refreshToken":"refresh-two",
-              "refreshExpiresAt":"2026-08-24T10:00:00Z"
+              "accessExpiresAt":"2026-07-25T10:15:00Z"
             }
             """,
         ])
@@ -518,8 +509,7 @@ struct OwnerCoreTests {
         #expect(snapshot.phase == .authenticated)
         let saved = try #require(try await session.load())
         #expect(saved.accessToken == "access-two")
-        #expect(saved.refreshToken == "refresh-two")
-        #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/refresh"])
+        #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/tokens"])
     }
 
     @Test("Expired native access recovers once and retries the original request")
@@ -530,9 +520,7 @@ struct OwnerCoreTests {
             deviceId: "owner-device-max",
             deviceCredential: String(repeating: "d", count: 48),
             accessToken: "access-one",
-            accessExpiresAt: Date(timeIntervalSince1970: 1_900_000_000),
-            refreshToken: "refresh-one",
-            refreshExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+            accessExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
         ))
         let transport = SequencedRoutingTransport(responses: [
             "/api/v1/actions": [
@@ -543,15 +531,13 @@ struct OwnerCoreTests {
                 {"actions":[],"page":{"hasMore":false}}
                 """),
             ],
-            "/api/v1/auth/refresh": [
+            "/api/v1/auth/tokens": [
                 .init(status: 200, body: """
                 {
                   "tokenType":"Bearer",
                   "accessToken":"access-two",
                   "expiresIn":900,
-                  "accessExpiresAt":"2030-03-17T17:46:40Z",
-                  "refreshToken":"refresh-two",
-                  "refreshExpiresAt":"2030-03-17T17:46:40Z"
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
                 }
                 """),
             ],
@@ -569,7 +555,7 @@ struct OwnerCoreTests {
         let requests = await transport.requests()
         #expect(requests.map(\.url?.path) == [
             "/api/v1/actions",
-            "/api/v1/auth/refresh",
+            "/api/v1/auth/tokens",
             "/api/v1/actions",
         ])
         #expect(requests[0].value(forHTTPHeaderField: "Authorization") == "Bearer access-one")
@@ -577,7 +563,6 @@ struct OwnerCoreTests {
         #expect(requests[2].value(forHTTPHeaderField: "Authorization") == "Bearer access-two")
         let saved = try #require(try await session.load())
         #expect(saved.accessToken == "access-two")
-        #expect(saved.refreshToken == "refresh-two")
     }
 
     @Test("Metadata give-back uses Worker action, dry-run gate, and verified receipts")
@@ -2738,6 +2723,7 @@ struct PBEOwnerHostContractTests {
         "sourceIdentity": "owner-sqlite:sha256:abc",
         "catalogIdentity": "catalog-sqlite:sha256:def",
         "readinessIdentity": "pbe-readiness:sha256:ghi",
+        "fixtureRevision": "fixture-revision:sha256:jkl",
         "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
         "lifecycleWriter": "pbb-79-waste-basket",
         "createdAt": "2030-01-01T11:55:00Z",
@@ -2762,7 +2748,8 @@ struct PBEOwnerHostContractTests {
             fixtureBreadcrumb: "RE › La Concha",
             sourceIdentity: "owner-sqlite:sha256:abc",
             catalogIdentity: "catalog-sqlite:sha256:def",
-            readinessIdentity: "pbe-readiness:sha256:ghi"
+            readinessIdentity: "pbe-readiness:sha256:ghi",
+            fixtureRevision: "fixture-revision:sha256:jkl"
         ))
         #expect(response.session.lifecycleWriter == "pbb-79-waste-basket")
         #expect(response.sessionToken == "short-lived-pbe-token")
@@ -2774,6 +2761,7 @@ struct PBEOwnerHostContractTests {
         #expect(payload?["sourceIdentity"] == "owner-sqlite:sha256:abc")
         #expect(payload?["catalogIdentity"] == "catalog-sqlite:sha256:def")
         #expect(payload?["readinessIdentity"] == "pbe-readiness:sha256:ghi")
+        #expect(payload?["fixtureRevision"] == "fixture-revision:sha256:jkl")
     }
 
     @Test("Local host attach uses authorization header and never a token query")
@@ -2797,8 +2785,10 @@ struct PBEOwnerHostContractTests {
             "/__photosbyelie/pbe-owner/session/start": localSession,
         ])
         let host = PBEOwnerLocalHostService(
+            baseURL: URL(string: "http://127.0.0.1:43119/__photosbyelie/pbe-owner")!,
             transport: transport,
-            repositoryRoot: FileManager.default.temporaryDirectory
+            repositoryRoot: FileManager.default.temporaryDirectory,
+            hostAuthorization: "preauthenticated-test-host"
         )
         let attached = try await host.attach(
             sessionToken: "short-lived-pbe-token",
@@ -2807,6 +2797,7 @@ struct PBEOwnerHostContractTests {
         #expect(attached.session.fixtureId == "fixture-la-concha")
         let request = try #require(await transport.requests().first)
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer short-lived-pbe-token")
+        #expect(request.value(forHTTPHeaderField: "X-PBE-Host-Authorization") == "preauthenticated-test-host")
         #expect(request.url?.query?.contains("token") != true)
         #expect(request.url?.fragment == nil)
     }
@@ -2837,6 +2828,7 @@ struct PBEOwnerHostContractTests {
             sourceIdentity: "owner-sqlite:sha256:abc",
             catalogIdentity: "catalog-sqlite:sha256:def",
             readinessIdentity: "pbe-readiness:sha256:ghi",
+            fixtureRevision: "fixture-revision:sha256:jkl",
             capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"],
             lifecycleWriter: "pbb-79-waste-basket",
             expiresAt: now.addingTimeInterval(300)

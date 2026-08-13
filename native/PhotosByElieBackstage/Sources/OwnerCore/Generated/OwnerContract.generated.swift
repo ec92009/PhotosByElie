@@ -3,7 +3,7 @@ import Foundation
 
 public enum OwnerContract {
     public static let openAPIVersion = "1.1.0"
-    public static let specSHA256 = "8e03d84390b84c374138213e5f4fd151200e7a8796c20082fe774dc253d0ec56"
+    public static let specSHA256 = "363b267723ad34994447baedff15ff41257d1617b3490e76ea93039500905c21"
     public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
@@ -38,7 +38,6 @@ public enum OwnerContract {
         case logout = "logout"
         case preflightRealEstateOriginals = "preflightRealEstateOriginals"
         case querySidecarDecisions = "querySidecarDecisions"
-        case refreshOwnerTokens = "refreshOwnerTokens"
         case revokeOwnerDevice = "revokeOwnerDevice"
         case saveDeliverable = "saveDeliverable"
         case saveGroup = "saveGroup"
@@ -90,7 +89,6 @@ public enum OwnerContract {
         .logout: Endpoint(method: "POST", path: "/auth/logout"),
         .preflightRealEstateOriginals: Endpoint(method: "POST", path: "/real-estate/originals/preflight"),
         .querySidecarDecisions: Endpoint(method: "POST", path: "/sidecar/decisions/query"),
-        .refreshOwnerTokens: Endpoint(method: "POST", path: "/auth/refresh"),
         .revokeOwnerDevice: Endpoint(method: "POST", path: "/devices/{deviceId}/revoke"),
         .saveDeliverable: Endpoint(method: "POST", path: "/deliverables"),
         .saveGroup: Endpoint(method: "POST", path: "/acs/groups"),

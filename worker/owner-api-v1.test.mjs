@@ -15,7 +15,7 @@ test("Owner API v1 exposes explicit compatibility routes", () => {
   assert.ok(ownerApiV1RouteCount >= 30);
   assert.equal(resolveOwnerApiV1Route("/api/v1/health"), "/api/health");
   assert.equal(resolveOwnerApiV1Route("/api/v1/auth/tokens"), "/api/owner/auth/tokens");
-  assert.equal(resolveOwnerApiV1Route("/api/v1/auth/refresh"), "/api/owner/auth/refresh");
+  assert.equal(resolveOwnerApiV1Route("/api/v1/auth/refresh"), "");
   assert.equal(resolveOwnerApiV1Route("/api/v1/devices"), "/api/owner/devices");
   assert.equal(resolveOwnerApiV1Route("/api/v1/pbe-owner/sessions"), "/api/owner/pbe-sessions");
   assert.equal(resolveOwnerApiV1Route("/api/v1/pbe-owner/session"), "/api/owner/pbe-session");

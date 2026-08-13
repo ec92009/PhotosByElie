@@ -137,11 +137,11 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 - A device credential is returned once and stored by Backstage in macOS
   Keychain. It is never stored in a URL, log, repo, fixture, test vector, or
   durable browser storage.
-- OwnerCore exchanges it for a 15-minute bearer token and rotating 30-day
-  refresh token.
-- Refresh tokens and connector credentials are different security classes.
-- Sign-out deletes the local Keychain items and revokes the refresh token.
-- Device revocation is independent and invalidates its indexed refresh tokens.
+- OwnerCore re-presents it whenever it needs a fresh 15-minute bearer token;
+  no long-lived refresh token is issued.
+- Device and connector credentials remain different security classes.
+- Sign-out deletes the local Keychain items.
+- Device revocation independently blocks subsequent bearer minting.
 - Cookies, OAuth secrets, connector credentials, and permanent R2 credentials
   are never embedded in the app.
 
@@ -171,7 +171,7 @@ contract.
 | Threat | Control |
 | --- | --- |
 | A compromised web view or browser sends a raw SQLite operation | Local wake accepts only an opaque action ID; connector claims and validates it through the Worker |
-| A stolen device token remains useful | Short-lived access token, rotating refresh token, per-device revocation, Keychain storage |
+| A stolen access token remains useful | 15-minute lifetime, per-request device revocation check, no refresh token, device credential in Keychain |
 | A connector acts for another Mac | Target and claim ownership are checked on every exact action |
 | A crash partially mutates private state | Connector and migration writes use transactions; action is completed only after receipts are durable |
 | A retry duplicates work | Mutation idempotency keys and durable action IDs |

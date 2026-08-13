@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 
 from scripts.pbe_owner_session import (
     PBEOwnerSessionError,
+    PBEOwnerHostAuthenticator,
     PBEOwnerSessionStore,
     repository_readiness,
 )
@@ -34,6 +35,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
             "sourceIdentity": "owner-sqlite:sha256:abc",
             "catalogIdentity": "catalog-sqlite:sha256:def",
             "readinessIdentity": "pbe-readiness:sha256:ghi",
+            "fixtureRevision": "fixture-revision:sha256:jkl",
             "lifecycleWriter": "pbb-79-waste-basket",
         }
         self.session = {
@@ -97,6 +99,10 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 return self.session
 
         server = ThreadingHTTPServer(("127.0.0.1", 0), PhotosByElieLocalHandler)
+        server.pbe_host_authenticator = PBEOwnerHostAuthenticator(
+            "one-use-bootstrap-secret",
+            "git:" + "a" * 40,
+        )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         base = f"http://127.0.0.1:{server.server_port}/__photosbyelie/pbe-owner"
@@ -105,13 +111,40 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 patch("scripts.local_server.PBE_OWNER_SESSION_STORE", store),
                 patch("scripts.local_server.PBE_OWNER_SESSION_VERIFIER", Verifier()),
                 patch("scripts.local_server.repository_readiness", return_value=self.readiness),
+                patch("scripts.local_server.apply_photo_action") as legacy_apply,
             ):
+                host_bootstrap = Request(
+                    f"{base}/host/bootstrap",
+                    data=json.dumps({"expectedCheckoutIdentity": "git:" + "a" * 40}).encode(),
+                    method="POST",
+                    headers={
+                        "X-PBE-Host-Bootstrap": "one-use-bootstrap-secret",
+                        "Content-Type": "application/json",
+                    },
+                )
+                with urlopen(host_bootstrap) as response:
+                    host_authorization = json.loads(response.read())["hostAuthorization"]
+                self.assertNotIn("one-use-bootstrap-secret", repr(server.pbe_host_authenticator.__dict__))
+                with self.assertRaises(HTTPError) as replayed_host_bootstrap:
+                    urlopen(host_bootstrap)
+                self.assertEqual(replayed_host_bootstrap.exception.code, 401)
+                replayed_host_bootstrap.exception.close()
+
+                unauthenticated_readiness = Request(
+                    f"{base}/readiness?fixtureId=fixture-la-concha"
+                )
+                with self.assertRaises(HTTPError) as untrusted_host:
+                    urlopen(unauthenticated_readiness)
+                self.assertEqual(untrusted_host.exception.code, 401)
+                untrusted_host.exception.close()
+
                 start = Request(
                     f"{base}/session/start",
                     data=json.dumps({"fixtureId": "fixture-la-concha"}).encode(),
                     method="POST",
                     headers={
                         "Authorization": "Bearer raw-secret-session-token",
+                        "X-PBE-Host-Authorization": host_authorization,
                         "Content-Type": "application/json",
                     },
                 )
@@ -143,6 +176,92 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 with urlopen(status) as response:
                     active = json.loads(response.read())
                 self.assertEqual(active["session"]["id"], "pbe-owner-session-one")
+
+                heartbeat = Request(
+                    f"{base}/session/heartbeat",
+                    data=b"{}",
+                    method="POST",
+                    headers={
+                        "Cookie": cookie.split(";", 1)[0],
+                        "Content-Type": "application/json",
+                        "Origin": f"http://127.0.0.1:{server.server_port}",
+                    },
+                )
+                with urlopen(heartbeat) as response:
+                    self.assertEqual(json.loads(response.read())["session"]["state"], "ready")
+
+                for headers, expected_status in (
+                    ({
+                        "Cookie": cookie.split(";", 1)[0],
+                        "Content-Type": "application/json",
+                        "Origin": f"http://127.0.0.1:{server.server_port + 1}",
+                    }, 403),
+                    ({
+                        "Cookie": cookie.split(";", 1)[0],
+                        "Content-Type": "text/plain",
+                        "Origin": f"http://127.0.0.1:{server.server_port}",
+                    }, 415),
+                ):
+                    rejected = Request(
+                        f"{base}/session/heartbeat",
+                        data=b"{}",
+                        method="POST",
+                        headers=headers,
+                    )
+                    with self.assertRaises(HTTPError) as blocked:
+                        urlopen(rejected)
+                    self.assertEqual(blocked.exception.code, expected_status)
+                    blocked.exception.close()
+
+                for endpoint in ("action", "session/close"):
+                    for headers, expected_status in (
+                        ({
+                            "Cookie": cookie.split(";", 1)[0],
+                            "Content-Type": "application/json",
+                            "Origin": f"http://127.0.0.1:{server.server_port + 1}",
+                        }, 403),
+                        ({
+                            "Cookie": cookie.split(";", 1)[0],
+                            "Content-Type": "text/plain",
+                            "Origin": f"http://127.0.0.1:{server.server_port}",
+                        }, 415),
+                    ):
+                        rejected = Request(
+                            f"{base}/{endpoint}",
+                            data=json.dumps({
+                                "action": "waste-basket-x",
+                                "photo_id": "photo-one",
+                            }).encode(),
+                            method="POST",
+                            headers=headers,
+                        )
+                        with self.assertRaises(HTTPError) as blocked:
+                            urlopen(rejected)
+                        self.assertEqual(blocked.exception.code, expected_status)
+                        blocked.exception.close()
+
+                with urlopen(status) as response:
+                    self.assertEqual(json.loads(response.read())["session"]["state"], "ready")
+
+                legacy = Request(
+                    f"http://127.0.0.1:{server.server_port}/__photosbyelie/photo-action",
+                    data=json.dumps({
+                        "action": "waste-basket-x",
+                        "photo_id": "photo-one",
+                        "source": "owner-web",
+                        "actor": "owner",
+                        "fixture_id": "fixture-la-concha",
+                        "owner_mode": True,
+                        "owner_authorized": True,
+                    }).encode(),
+                    method="POST",
+                    headers={"Content-Type": "application/json"},
+                )
+                with self.assertRaises(HTTPError) as blocked:
+                    urlopen(legacy)
+                self.assertEqual(blocked.exception.code, 403)
+                blocked.exception.close()
+                legacy_apply.assert_not_called()
 
                 with self.assertRaises(HTTPError) as replay:
                     urlopen(bootstrap)
@@ -178,6 +297,14 @@ class PBEOwnerSessionTests(unittest.TestCase):
             self.store.start("token", self.session, drifted)
         self.assertEqual(caught.exception.code, "pbe_owner_identity_mismatch")
 
+        fixture_drift = {
+            **self.readiness,
+            "fixtureRevision": "fixture-revision:sha256:changed",
+        }
+        with self.assertRaises(PBEOwnerSessionError) as caught:
+            self.store.start("token", self.session, fixture_drift)
+        self.assertEqual(caught.exception.code, "pbe_owner_identity_mismatch")
+
     def test_local_lease_expiry_and_close_disable_actions(self) -> None:
         self.store.start("token", self.session, self.readiness)
         self.now += 61
@@ -199,13 +326,53 @@ class PBEOwnerSessionTests(unittest.TestCase):
             (root / "assets/catalog").mkdir(parents=True)
             owner_path = root / "assets/owner-actions/Owner.sqlite"
             catalog_path = root / "assets/catalog/photosbyelie.sqlite"
-            with sqlite3.connect(owner_path) as connection:
-                connection.executescript(
-                    """
+            def write_owner(path: Path) -> None:
+                with sqlite3.connect(path) as connection:
+                    connection.executescript(
+                        """
                     CREATE TABLE owner_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
                     CREATE TABLE media_lifecycle (media_id TEXT PRIMARY KEY, lifecycle_state TEXT);
+                    CREATE TABLE fixtures (
+                      fixture_id TEXT PRIMARY KEY, parent_fixture_id TEXT, name TEXT,
+                      slug TEXT, template_key TEXT, tags_json TEXT,
+                      destination_defaults_json TEXT, access_gallery_key TEXT,
+                      archived_at TEXT
+                    );
+                    CREATE TABLE sidecar_assets (
+                      asset_id TEXT PRIMARY KEY, source_anchor TEXT, media_type TEXT,
+                      filename TEXT, captured_at TEXT, modified_at TEXT,
+                      pixel_width INTEGER, pixel_height INTEGER, duration REAL,
+                      photos_title TEXT, photos_keywords_json TEXT,
+                      location_label TEXT, location_keywords_json TEXT,
+                      metadata_seed_title TEXT, metadata_seed_keywords_json TEXT,
+                      missing_at TEXT
+                    );
+                    CREATE TABLE fixture_asset_decisions (
+                      fixture_id TEXT, asset_id TEXT, placement_state TEXT,
+                      eligibility_state TEXT, source TEXT
+                    );
+                    CREATE TABLE asset_source_versions (
+                      asset_id TEXT, version_id TEXT, metadata_fingerprint TEXT,
+                      rendered_fingerprint TEXT, source_exists INTEGER, state TEXT
+                    );
+                    INSERT INTO fixtures VALUES (
+                      'fixture-la-concha', NULL, 'La Concha', 'la-concha', '', '[]',
+                      '["r2"]', '', NULL
+                    );
+                    INSERT INTO sidecar_assets VALUES (
+                      'asset-one', 'apple-photos://asset-one', 'photo', 'one.jpg',
+                      '2026-08-13T12:00:00Z', '', 6000, 4000, 0, 'One', '["Spain"]',
+                      'Malaga', '["Spain"]', 'One', '["Spain"]', NULL
+                    );
+                    INSERT INTO fixture_asset_decisions VALUES (
+                      'fixture-la-concha', 'asset-one', 'picked', 'active', 'native'
+                    );
+                    INSERT INTO asset_source_versions VALUES (
+                      'asset-one', 'version-one', 'meta-one', 'render-one', 1, 'live'
+                    );
                     """
-                )
+                    )
+            write_owner(owner_path)
             with sqlite3.connect(catalog_path) as connection:
                 connection.executescript(
                     """
@@ -213,7 +380,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     CREATE TABLE media_items (media_id TEXT PRIMARY KEY, collection_id INTEGER);
                     """
                 )
-            readiness = repository_readiness(root)
+            readiness = repository_readiness(root, "fixture-la-concha")
             self.assertTrue(readiness["ready"])
             self.assertRegex(readiness["sourceIdentity"], r"^owner-sqlite:sha256:[0-9a-f]{64}$")
             self.assertNotIn(str(root), json.dumps(readiness))
@@ -222,20 +389,48 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 connection.execute(
                     "INSERT INTO owner_settings VALUES ('last_action', 'recoverable X')"
                 )
-            after_write = repository_readiness(root)
+            after_write = repository_readiness(root, "fixture-la-concha")
             self.assertEqual(after_write["sourceIdentity"], readiness["sourceIdentity"])
             self.assertEqual(after_write["readinessIdentity"], readiness["readinessIdentity"])
 
-            replacement = owner_path.with_suffix(".replacement")
-            with sqlite3.connect(replacement) as connection:
-                connection.executescript(
+            with sqlite3.connect(owner_path) as connection:
+                connection.execute(
+                    "INSERT INTO media_lifecycle VALUES ('asset-one', 'hidden')"
+                )
+            lifecycle_changed = repository_readiness(root, "fixture-la-concha")
+            self.assertEqual(
+                lifecycle_changed["fixtureRevision"],
+                readiness["fixtureRevision"],
+            )
+
+            with sqlite3.connect(owner_path) as connection:
+                connection.execute(
                     """
-                    CREATE TABLE owner_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
-                    CREATE TABLE media_lifecycle (media_id TEXT PRIMARY KEY, lifecycle_state TEXT);
+                    INSERT INTO sidecar_assets VALUES (
+                      'asset-two', 'apple-photos://asset-two', 'photo', 'two.jpg',
+                      '2026-08-13T12:01:00Z', '', 4000, 3000, 0, 'Two', '[]',
+                      '', '[]', 'Two', '[]', NULL
+                    )
                     """
                 )
+                connection.execute(
+                    "INSERT INTO fixture_asset_decisions VALUES (?, ?, ?, ?, ?)",
+                    ("fixture-la-concha", "asset-two", "picked", "active", "native"),
+                )
+            membership_changed = repository_readiness(root, "fixture-la-concha")
+            self.assertNotEqual(
+                membership_changed["fixtureRevision"],
+                readiness["fixtureRevision"],
+            )
+            self.assertNotEqual(
+                membership_changed["readinessIdentity"],
+                readiness["readinessIdentity"],
+            )
+
+            replacement = owner_path.with_suffix(".replacement")
+            write_owner(replacement)
             replacement.replace(owner_path)
-            after_replacement = repository_readiness(root)
+            after_replacement = repository_readiness(root, "fixture-la-concha")
             self.assertNotEqual(after_replacement["sourceIdentity"], readiness["sourceIdentity"])
             self.assertNotEqual(after_replacement["readinessIdentity"], readiness["readinessIdentity"])
 
@@ -248,7 +443,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     """
                 )
             catalog_rebuild.replace(catalog_path)
-            after_catalog_rebuild = repository_readiness(root)
+            after_catalog_rebuild = repository_readiness(root, "fixture-la-concha")
             self.assertEqual(
                 after_catalog_rebuild["catalogIdentity"],
                 after_replacement["catalogIdentity"],
@@ -256,7 +451,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
 
             owner_path.unlink()
             with self.assertRaises(PBEOwnerSessionError) as caught:
-                repository_readiness(root)
+                repository_readiness(root, "fixture-la-concha")
             self.assertEqual(caught.exception.code, "pbe_owner_host_not_ready")
 
     def test_hosted_x_and_restore_derive_guarded_writer_context(self) -> None:

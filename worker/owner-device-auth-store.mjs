@@ -25,7 +25,6 @@ const activeRecord = (record, now = () => new Date()) =>
 
 export const createMemoryOwnerDeviceAuthStore = ({ now = () => new Date() } = {}) => {
   const devices = new Map();
-  const refreshTokens = new Map();
   const pbeOwnerSessions = new Map();
 
   return {
@@ -61,29 +60,6 @@ export const createMemoryOwnerDeviceAuthStore = ({ now = () => new Date() } = {}
       if (!device || device.email !== normalizeEmail(email)) return null;
       const updated = { ...device, revokedAt: clean(revokedAt) || now().toISOString() };
       devices.set(updated.id, updated);
-      for (const [tokenHash, token] of refreshTokens.entries()) {
-        if (token.deviceId === updated.id && !token.revokedAt) {
-          refreshTokens.set(tokenHash, { ...token, revokedAt: updated.revokedAt });
-        }
-      }
-      return clone(updated);
-    },
-    putRefreshToken: async (record, token) => {
-      if (!token || !normalizeEmail(record?.email)) throw new Error("Owner refresh token requires token and email.");
-      const stored = { ...clone(record), email: normalizeEmail(record.email) };
-      refreshTokens.set(await sha256Hex(token), stored);
-      return clone(stored);
-    },
-    getRefreshToken: async (token) => {
-      const record = refreshTokens.get(await sha256Hex(token));
-      return activeRecord(record, now) ? clone(record) : null;
-    },
-    revokeRefreshToken: async (token, revokedAt = now().toISOString()) => {
-      const tokenHash = await sha256Hex(token);
-      const record = refreshTokens.get(tokenHash);
-      if (!record) return null;
-      const updated = { ...record, revokedAt };
-      refreshTokens.set(tokenHash, updated);
       return clone(updated);
     },
     putPBEOwnerSession: async (record) => {
@@ -107,7 +83,7 @@ export const createMemoryOwnerDeviceAuthStore = ({ now = () => new Date() } = {}
       pbeOwnerSessions.set(id, updated);
       return clone(updated);
     },
-    _debug: { devices, refreshTokens, pbeOwnerSessions },
+    _debug: { devices, pbeOwnerSessions },
   };
 };
 
@@ -119,13 +95,9 @@ export const createKvOwnerDeviceAuthStore = ({
   if (!namespace) throw new Error("createKvOwnerDeviceAuthStore requires a KV namespace binding.");
   const devicePrefix = `${prefix}:owner-device:`;
   const deviceIndexPrefix = `${prefix}:owner-device-index:`;
-  const refreshPrefix = `${prefix}:owner-refresh:`;
-  const deviceRefreshIndexPrefix = `${prefix}:owner-device-refresh-index:`;
   const pbeOwnerSessionPrefix = `${prefix}:pbe-owner-session:`;
   const deviceKey = (id) => `${devicePrefix}${clean(id)}`;
   const deviceIndexKey = async (email) => `${deviceIndexPrefix}${await sha256Hex(normalizeEmail(email))}`;
-  const refreshKey = async (token) => `${refreshPrefix}${await sha256Hex(token)}`;
-  const deviceRefreshIndexKey = (deviceId) => `${deviceRefreshIndexPrefix}${clean(deviceId)}`;
   const pbeOwnerSessionKey = (sessionId) => `${pbeOwnerSessionPrefix}${clean(sessionId)}`;
 
   const readDeviceIds = async (email) => {
@@ -175,46 +147,6 @@ export const createKvOwnerDeviceAuthStore = ({
       if (!device || normalizeEmail(device.email) !== normalizeEmail(email)) return null;
       const updated = { ...device, revokedAt: clean(revokedAt) || now().toISOString() };
       await namespace.put(deviceKey(deviceId), JSON.stringify(updated));
-      const refreshIndex = await namespace.get(deviceRefreshIndexKey(deviceId), { type: "json" });
-      for (const key of Array.isArray(refreshIndex?.keys) ? refreshIndex.keys : []) {
-        const record = await namespace.get(key, { type: "json" });
-        if (record && !record.revokedAt) {
-          await namespace.put(key, JSON.stringify({ ...record, revokedAt: updated.revokedAt }), {
-            expirationTtl: 24 * 60 * 60,
-          });
-        }
-      }
-      return clone(updated);
-    },
-    putRefreshToken: async (record, token) => {
-      if (!token || !normalizeEmail(record?.email)) throw new Error("Owner refresh token requires token and email.");
-      const expiresAt = Date.parse(record.expiresAt || "");
-      const expirationTtl = Number.isFinite(expiresAt)
-        ? Math.max(60, Math.ceil((expiresAt - now().getTime()) / 1000))
-        : 30 * 24 * 60 * 60;
-      const stored = { ...clone(record), email: normalizeEmail(record.email) };
-      const key = await refreshKey(token);
-      await namespace.put(key, JSON.stringify(stored), { expirationTtl });
-      if (stored.deviceId) {
-        const indexKey = deviceRefreshIndexKey(stored.deviceId);
-        const index = await namespace.get(indexKey, { type: "json" });
-        const keys = Array.isArray(index?.keys) ? index.keys : [];
-        await namespace.put(indexKey, JSON.stringify({
-          keys: [key, ...keys.filter((item) => item !== key)].slice(0, 100),
-        }), { expirationTtl });
-      }
-      return clone(stored);
-    },
-    getRefreshToken: async (token) => {
-      const record = await namespace.get(await refreshKey(token), { type: "json" });
-      return activeRecord(record, now) ? record : null;
-    },
-    revokeRefreshToken: async (token, revokedAt = now().toISOString()) => {
-      const key = await refreshKey(token);
-      const record = await namespace.get(key, { type: "json" });
-      if (!record) return null;
-      const updated = { ...record, revokedAt };
-      await namespace.put(key, JSON.stringify(updated), { expirationTtl: 24 * 60 * 60 });
       return clone(updated);
     },
     putPBEOwnerSession: async (record) => {

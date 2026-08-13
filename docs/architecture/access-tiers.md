@@ -292,12 +292,13 @@ maps the verified email through the same Admin/Owner/RE/User registry. The
 direct OAuth cookie is host-only to the auth Worker and is used by credentialed
 fetches from the public site.
 
-For local and Tailscale previews listed in `AUTH_ALLOWED_RETURN_ORIGINS`, the
-Worker also accepts the same signed Google session as a Bearer token. Owner
-and ACS consume `#pbe_auth_token=...` from the OAuth return URL, remove it from
-the address bar, keep it in tab-scoped `sessionStorage`, and send it in the
-`Authorization` header. This path is intended for local Owner tooling where
-Safari blocks cross-site cookies from an IP-origin page.
+Direct Google Owner sign-in is restricted to the official deployed PBE origin
+and is provisioning-only: it can create, list, and revoke Backstage device
+credentials, but cannot launch or act in Owner workflows. Local and Tailscale
+origins are not credentialed OAuth surfaces. No browser bearer is transferred
+through a URL or JavaScript storage. Backstage instead re-presents its
+revocable device credential from macOS Keychain whenever it needs a fresh
+15-minute access token; no long-lived refresh token is issued.
 
 ## Cloudflare Access Legacy Setup
 

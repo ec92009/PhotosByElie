@@ -290,8 +290,6 @@ public struct OwnerTokenBundle: Codable, Sendable, Equatable {
     public var accessToken: String
     public var expiresIn: Int
     public var accessExpiresAt: Date
-    public var refreshToken: String
-    public var refreshExpiresAt: Date
 }
 
 public struct OwnerDevice: Codable, Identifiable, Sendable, Equatable {

@@ -275,7 +275,9 @@ test("Google browser Owner is credential provisioning only", () => {
   assert.doesNotMatch(owner, /owner-activity\.js/);
   assert.doesNotMatch(owner, /access-console\.html/);
   assert.match(ownerScript, /session\?\.canProvisionBackstage/);
+  assert.doesNotMatch(ownerScript, /pbe_auth_(?:token|code)|sessionStorage/);
   assert.match(worker, /const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail\.com"/);
+  assert.doesNotMatch(worker, /\/owner\/auth\/refresh|pbe_auth_(?:token|code)/);
   assert.match(worker, /session\.provider !== "google-oauth"/);
   assert.match(worker, /session\.purpose !== "browser"/);
   assert.match(worker, /backstage_device_session_required/);

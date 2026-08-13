@@ -14,7 +14,6 @@ const RAW_SOURCE_TYPES = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF
 const DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const OWNER_ACCESS_TOKEN_SECONDS = 15 * 60;
-const OWNER_REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
 const PBE_OWNER_SESSION_SECONDS = 5 * 60;
 const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail.com";
 const PBE_OWNER_CAPABILITIES = Object.freeze(["gallery.read", "waste-basket.x", "waste-basket.restore"]);
@@ -65,10 +64,24 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
 
 const errorJson = (status, code, message, details = undefined) => json({ error: { code, message, details } }, status);
 
+const credentialedOriginPolicies = new WeakMap();
+const BUILTIN_CREDENTIALED_ORIGINS = Object.freeze([
+  "https://photos-by-elie.com",
+  "https://www.photos-by-elie.com",
+]);
+
+const isCredentialedOriginAllowed = (request) => {
+  const origin = request.headers.get("origin") || "";
+  if (!origin) return true;
+  if (origin === new URL(request.url).origin) return true;
+  return credentialedOriginPolicies.get(request)?.has(origin) === true;
+};
+
 const credentialedCorsHeaders = (request, extraHeaders = {}) => {
-  const origin = request.headers.get("origin") || "*";
+  const origin = request.headers.get("origin") || "";
+  const allowedOrigin = isCredentialedOriginAllowed(request) ? origin : "";
   return {
-    "access-control-allow-origin": origin,
+    "access-control-allow-origin": allowedOrigin || "null",
     "access-control-allow-methods": "GET,POST,PUT,PATCH,OPTIONS",
     "access-control-allow-headers": "authorization,content-type,idempotency-key,x-idempotency-key,stripe-signature,x-mock-stripe-signature",
     "access-control-allow-credentials": "true",
@@ -1357,7 +1370,10 @@ export const createPhotosByElieWorker = ({
   const deliveryClient = delivery || defaultDelivery({ now, randomUUID });
   const stripeProvider = stripe.provider || "stripe";
   const discountDefinitions = discountDefinitionsByCode(discountCodes);
-  const authReturnOrigins = normalizeOriginList(authAllowedReturnOrigins);
+  const authReturnOrigins = normalizeOriginList([
+    ...BUILTIN_CREDENTIALED_ORIGINS,
+    ...authAllowedReturnOrigins,
+  ]);
   const adminEmail = normalizeAdminEmail(accessAdminEmail);
   const downloadPolicy = () => {
     const nowDate = now();
@@ -1985,42 +2001,6 @@ export const createPhotosByElieWorker = ({
     }
   };
 
-  const isTailscaleHostname = (hostname) => {
-    const parts = String(hostname || "").split(".").map((part) => Number(part));
-    return parts.length === 4
-      && parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
-      && parts[0] === 100
-      && parts[1] >= 64
-      && parts[1] <= 127;
-  };
-
-  const isLocalAuthTransferReturn = (returnTo) => {
-    try {
-      const candidate = new URL(returnTo);
-      const hostname = candidate.hostname.replace(/^\[|\]$/g, "");
-      return candidate.protocol === "http:"
-        && (
-          hostname === "localhost"
-          || hostname === "127.0.0.1"
-          || hostname === "::1"
-          || isTailscaleHostname(hostname)
-        );
-    } catch {
-      return false;
-    }
-  };
-
-  const returnUrlWithLocalAuthTransfer = (returnTo, sessionToken = "") => {
-    if (!sessionToken || !isLocalAuthTransferReturn(returnTo)) return returnTo;
-    const url = new URL(returnTo);
-    const hash = url.hash ? url.hash.slice(1) : "";
-    const params = new URLSearchParams(hash.includes("=") ? hash : "");
-    if (hash && !hash.includes("=")) params.set("pbe_return_hash", hash);
-    params.set("pbe_auth_token", sessionToken);
-    url.hash = params.toString();
-    return url.href;
-  };
-
   const accessIdentityFor = async (request, { required = false } = {}) => {
     if (!accessAuth) {
       if (required) {
@@ -2191,7 +2171,7 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
     }
     const result = await googleOAuthAuth.handleCallback(request);
-    return redirect(returnUrlWithLocalAuthTransfer(result.returnTo, result.sessionToken), 302, { "set-cookie": result.cookie });
+    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
   };
 
   const logoutAuth = async (request) => {
@@ -2295,7 +2275,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const issueOwnerTokenBundle = async ({ email, deviceId = "" }) => {
-    if (!googleOAuthAuth?.issueSessionToken || !ownerDeviceAuthStore?.putRefreshToken) {
+    if (!googleOAuthAuth?.issueSessionToken) {
       throw Object.assign(new Error("Native Owner token issuance is not configured."), {
         status: 503,
         code: "owner_token_auth_unavailable",
@@ -2303,8 +2283,6 @@ export const createPhotosByElieWorker = ({
     }
     const issuedAt = now();
     const accessExpiresAt = new Date(issuedAt.getTime() + OWNER_ACCESS_TOKEN_SECONDS * 1000).toISOString();
-    const refreshExpiresAt = new Date(issuedAt.getTime() + OWNER_REFRESH_TOKEN_SECONDS * 1000).toISOString();
-    const refreshToken = opaqueToken();
     const accessToken = await googleOAuthAuth.issueSessionToken(
       {
         email,
@@ -2314,20 +2292,11 @@ export const createPhotosByElieWorker = ({
       },
       OWNER_ACCESS_TOKEN_SECONDS
     );
-    await ownerDeviceAuthStore.putRefreshToken({
-      id: `owner-refresh-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
-      email,
-      deviceId: String(deviceId || "").trim(),
-      createdAt: issuedAt.toISOString(),
-      expiresAt: refreshExpiresAt,
-    }, refreshToken);
     return {
       tokenType: "Bearer",
       accessToken,
       expiresIn: OWNER_ACCESS_TOKEN_SECONDS,
       accessExpiresAt,
-      refreshToken,
-      refreshExpiresAt,
     };
   };
 
@@ -2351,35 +2320,7 @@ export const createPhotosByElieWorker = ({
     }, 201);
   };
 
-  const refreshOwnerTokens = async (request) => {
-    const payload = await parseJson(request);
-    const refreshToken = String(payload.refreshToken || "").trim();
-    if (!refreshToken || !ownerDeviceAuthStore?.getRefreshToken) {
-      return credentialedErrorJson(request, 401, "owner_refresh_token_required", "A refresh token is required.");
-    }
-    const record = await ownerDeviceAuthStore.getRefreshToken(refreshToken);
-    if (!record) {
-      return credentialedErrorJson(request, 401, "owner_refresh_token_invalid", "The refresh token is invalid, expired or revoked.");
-    }
-    const session = await ownerSessionForEmail(record.email);
-    const device = ownerDeviceAuthStore?.getDevice && record.deviceId
-      ? await ownerDeviceAuthStore.getDevice(record.deviceId)
-      : null;
-    if (!device || device.email !== session.email) {
-      return credentialedErrorJson(request, 401, "owner_refresh_token_invalid", "The refresh token's Backstage device is invalid or revoked.");
-    }
-    await ownerDeviceAuthStore.revokeRefreshToken(refreshToken, now().toISOString());
-    return credentialedJson(request, {
-      ok: true,
-      ...await issueOwnerTokenBundle({ email: session.email, deviceId: record.deviceId }),
-    });
-  };
-
   const logoutOwnerTokens = async (request) => {
-    const payload = await request.clone().json().catch(() => ({}));
-    if (payload.refreshToken && ownerDeviceAuthStore?.revokeRefreshToken) {
-      await ownerDeviceAuthStore.revokeRefreshToken(String(payload.refreshToken), now().toISOString());
-    }
     const headers = new Headers(credentialedCorsHeaders(request));
     if (googleOAuthAuth?.clearCookieFor) headers.append("set-cookie", googleOAuthAuth.clearCookieFor(request));
     if (realEstateAuth?.clearCookieFor) headers.append("set-cookie", realEstateAuth.clearCookieFor());
@@ -2459,6 +2400,7 @@ export const createPhotosByElieWorker = ({
     sourceIdentity: record.sourceIdentity,
     catalogIdentity: record.catalogIdentity,
     readinessIdentity: record.readinessIdentity,
+    fixtureRevision: record.fixtureRevision,
     capabilities: Array.isArray(record.capabilities) ? [...record.capabilities] : [...PBE_OWNER_CAPABILITIES],
     lifecycleWriter: record.lifecycleWriter || "pbb-79-waste-basket",
     createdAt: record.createdAt,
@@ -2478,6 +2420,7 @@ export const createPhotosByElieWorker = ({
     const sourceIdentity = cleanPBESessionBinding(payload.sourceIdentity, "sourceIdentity");
     const catalogIdentity = cleanPBESessionBinding(payload.catalogIdentity, "catalogIdentity");
     const readinessIdentity = cleanPBESessionBinding(payload.readinessIdentity, "readinessIdentity");
+    const fixtureRevision = cleanPBESessionBinding(payload.fixtureRevision, "fixtureRevision");
     const createdAt = now();
     const expiresAt = new Date(createdAt.getTime() + PBE_OWNER_SESSION_SECONDS * 1000).toISOString();
     const id = `pbe-owner-session-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
@@ -2490,6 +2433,7 @@ export const createPhotosByElieWorker = ({
       sourceIdentity,
       catalogIdentity,
       readinessIdentity,
+      fixtureRevision,
       capabilities: [...PBE_OWNER_CAPABILITIES],
       lifecycleWriter: "pbb-79-waste-basket",
       createdAt: createdAt.toISOString(),
@@ -2507,6 +2451,7 @@ export const createPhotosByElieWorker = ({
       sourceIdentity,
       catalogIdentity,
       readinessIdentity,
+      fixtureRevision,
       capabilities: [...PBE_OWNER_CAPABILITIES],
       lifecycleWriter: "pbb-79-waste-basket",
     }, PBE_OWNER_SESSION_SECONDS);
@@ -2543,7 +2488,7 @@ export const createPhotosByElieWorker = ({
         code: "pbe_owner_session_inactive",
       });
     }
-    for (const field of ["fixtureId", "fixtureBreadcrumb", "sourceIdentity", "catalogIdentity", "readinessIdentity", "lifecycleWriter"]) {
+    for (const field of ["fixtureId", "fixtureBreadcrumb", "sourceIdentity", "catalogIdentity", "readinessIdentity", "fixtureRevision", "lifecycleWriter"]) {
       if (String(identity[field] || "") !== String(record[field] || "")) {
         throw Object.assign(new Error("The PBE Owner session binding no longer matches its issued lease."), {
           status: 409,
@@ -3732,6 +3677,7 @@ export const createPhotosByElieWorker = ({
 
   const fetch = async (request) => {
     const url = new URL(request.url);
+    credentialedOriginPolicies.set(request, new Set(authReturnOrigins));
     const compatibilityPath = resolveOwnerApiV1Route(url.pathname);
     if (compatibilityPath !== null) {
       if (!compatibilityPath) {
@@ -3757,6 +3703,9 @@ export const createPhotosByElieWorker = ({
       || path.startsWith("/access-console/")
       || path === "/shared-galleries"
       || path === "/checkout/account";
+    if (usesCredentialedCors && !isCredentialedOriginAllowed(request)) {
+      return credentialedErrorJson(request, 403, "cors_origin_forbidden", "This browser origin is not allowed for credentialed requests.");
+    }
     if (request.method === "OPTIONS") {
       return usesCredentialedCors
         ? credentialedJson(request, { ok: true })
@@ -3774,7 +3723,6 @@ export const createPhotosByElieWorker = ({
       if (request.method === "GET" && path === "/auth/google/callback") return await callbackGoogleAuth(request);
       if ((request.method === "GET" || request.method === "POST") && path === "/auth/logout") return await logoutAuth(request);
       if (request.method === "POST" && path === "/owner/auth/tokens") return await createOwnerTokens(request);
-      if (request.method === "POST" && path === "/owner/auth/refresh") return await refreshOwnerTokens(request);
       if (request.method === "POST" && path === "/owner/auth/logout") return await logoutOwnerTokens(request);
       if (request.method === "GET" && path === "/owner/devices") return await listOwnerDevices(request);
       if (request.method === "POST" && path === "/owner/devices") return await enrollOwnerDevice(request);

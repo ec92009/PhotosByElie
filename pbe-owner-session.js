@@ -101,14 +101,16 @@
   };
 
   const request = async (path, { method = "GET", body = null } = {}) => {
+    const isPost = method === "POST";
+    const requestBody = isPost ? (body || {}) : body;
     const response = await fetch(`${localBase}${path}`, {
       method,
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(isPost ? { "Content-Type": "application/json" } : {}),
       },
-      body: body ? JSON.stringify(body) : null,
+      body: requestBody ? JSON.stringify(requestBody) : null,
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.ok) {

@@ -32,7 +32,6 @@ REQUIRED_EXAMPLE_SECTIONS = {
 }
 REQUIRED_OPERATIONS = {
     "createOwnerTokens",
-    "refreshOwnerTokens",
     "listActions",
     "createAction",
     "transitionAction",

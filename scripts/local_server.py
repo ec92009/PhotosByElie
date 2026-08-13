@@ -32,15 +32,19 @@ from urllib.request import Request, urlopen
 try:
     from .pbe_owner_session import (
         CloudPBEOwnerSessionVerifier,
+        PBEOwnerHostAuthenticator,
         PBEOwnerSessionError,
         PBEOwnerSessionStore,
+        checkout_identity,
         repository_readiness,
     )
 except ImportError:
     from pbe_owner_session import (  # type: ignore
         CloudPBEOwnerSessionVerifier,
+        PBEOwnerHostAuthenticator,
         PBEOwnerSessionError,
         PBEOwnerSessionStore,
+        checkout_identity,
         repository_readiness,
     )
 
@@ -55,6 +59,7 @@ PBE_OWNER_SESSION_HEARTBEAT_PATH = "/__photosbyelie/pbe-owner/session/heartbeat"
 PBE_OWNER_SESSION_CLOSE_PATH = "/__photosbyelie/pbe-owner/session/close"
 PBE_OWNER_GALLERY_PATH = "/__photosbyelie/pbe-owner/gallery"
 PBE_OWNER_ACTION_PATH = "/__photosbyelie/pbe-owner/action"
+PBE_OWNER_HOST_BOOTSTRAP_PATH = "/__photosbyelie/pbe-owner/host/bootstrap"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
 R2_FIX_PATH = "/__photosbyelie/r2-fix"
@@ -111,6 +116,12 @@ PBE_OWNER_SESSION_STORE = PBEOwnerSessionStore()
 PBE_OWNER_SESSION_VERIFIER = CloudPBEOwnerSessionVerifier(
     f"{PBE_AUTH_WORKER_BASE_URL}/api/v1/pbe-owner/session"
 )
+LIFECYCLE_WRITING_ACTIONS = frozenset({
+    "discard", "hide", "hide-many", "undo-hide", "undo-hide-many",
+    "promote-hidden", "return-to-reserve", "restore",
+    "waste-basket-x", "waste-basket-x-many", "waste-basket-restore",
+    "waste-basket-empty", "waste-basket-tombstone-restore",
+})
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -741,6 +752,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if path == PBE_OWNER_SESSION_START_PATH:
             self._handle_pbe_owner_session_start()
             return
+        if path == PBE_OWNER_HOST_BOOTSTRAP_PATH:
+            self._handle_pbe_owner_host_bootstrap()
+            return
         if path == PBE_OWNER_BROWSER_BOOTSTRAP_PATH:
             self._handle_pbe_owner_browser_bootstrap()
             return
@@ -795,13 +809,20 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
+            self._require_json_content_type()
             payload = self._read_json_body()
-            if str(payload.get("source") or "").strip().lower() == "owner-gallery":
-                raise ValueError(
-                    "Owner gallery actions require a Backstage-minted PBE Owner session endpoint."
+            action = str(payload.get("action") or "").strip().lower()
+            if action in LIFECYCLE_WRITING_ACTIONS:
+                raise PBEOwnerSessionError(
+                    "Lifecycle actions require an authenticated, fixture-frozen PBE Owner session.",
+                    code="pbe_owner_session_required",
+                    status=403,
                 )
             with OWNER_ACTION_LOCK:
                 result = apply_photo_action(Path.cwd(), payload)
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
             return
@@ -826,6 +847,45 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 status=401,
             )
         return match.group(1).strip()
+
+    def _pbe_host_authenticator(self) -> PBEOwnerHostAuthenticator:
+        authenticator = getattr(self.server, "pbe_host_authenticator", None)
+        if not isinstance(authenticator, PBEOwnerHostAuthenticator):
+            raise PBEOwnerSessionError(
+                "PBE Owner is available only from a Backstage-launched host.",
+                code="pbe_owner_host_authorization_required",
+                status=401,
+            )
+        return authenticator
+
+    def _require_pbe_host_authorization(self) -> None:
+        self._pbe_host_authenticator().authorize(
+            str(self.headers.get("X-PBE-Host-Authorization") or "")
+        )
+
+    def _handle_pbe_owner_host_bootstrap(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            self._require_json_content_type()
+            payload = self._read_json_body()
+            authenticator = self._pbe_host_authenticator()
+            host_authorization = authenticator.bootstrap(
+                str(self.headers.get("X-PBE-Host-Bootstrap") or ""),
+                str(payload.get("expectedCheckoutIdentity") or ""),
+            )
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "invalid_json", "message": str(error)}})
+            return
+        self._send_json(HTTPStatus.CREATED, {
+            "ok": True,
+            "checkoutIdentity": authenticator.checkout_identity,
+            "hostAuthorization": host_authorization,
+        })
 
     def _pbe_browser_cookie(self) -> str:
         cookie = SimpleCookie()
@@ -858,6 +918,16 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 code="pbe_owner_browser_origin_invalid",
                 status=403,
             )
+        self._require_json_content_type()
+
+    def _require_json_content_type(self) -> None:
+        media_type = str(self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if media_type != "application/json":
+            raise PBEOwnerSessionError(
+                "PBE Owner POST requests require application/json.",
+                code="pbe_owner_content_type_invalid",
+                status=415,
+            )
 
     def _send_pbe_error(self, error: PBEOwnerSessionError) -> None:
         self._send_json(
@@ -865,8 +935,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             {"ok": False, "error": {"code": error.code, "message": str(error)}},
         )
 
-    def _pbe_readiness(self) -> dict:
-        return repository_readiness(Path.cwd())
+    def _pbe_readiness(self, fixture_id: str = "") -> dict:
+        derived_fixture_id = str(fixture_id or PBE_OWNER_SESSION_STORE.active_fixture_id()).strip()
+        return repository_readiness(Path.cwd(), derived_fixture_id)
 
     def _pbe_authorized_session(self, *, heartbeat: bool = False) -> tuple[str, dict]:
         token = self._pbe_bearer_token()
@@ -874,7 +945,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         session = PBE_OWNER_SESSION_STORE.authorize(
             token,
             cloud_session,
-            self._pbe_readiness(),
+            self._pbe_readiness(str(cloud_session.get("fixtureId") or "")),
             heartbeat=heartbeat,
         )
         return token, session
@@ -890,7 +961,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
-            readiness = self._pbe_readiness()
+            self._require_pbe_host_authorization()
+            fixture_id = str(parse_qs(urlparse(self.path).query).get("fixtureId", [""])[0]).strip()
+            readiness = self._pbe_readiness(fixture_id)
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
@@ -901,6 +974,8 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
+            self._require_pbe_host_authorization()
+            self._require_json_content_type()
             token = self._pbe_bearer_token()
             requested = self._read_optional_json_body()
             cloud_session = PBE_OWNER_SESSION_VERIFIER.verify(token)
@@ -911,7 +986,11 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                     code="pbe_owner_session_mismatch",
                     status=409,
                 )
-            session = PBE_OWNER_SESSION_STORE.start(token, cloud_session, self._pbe_readiness())
+            session = PBE_OWNER_SESSION_STORE.start(
+                token,
+                cloud_session,
+                self._pbe_readiness(str(cloud_session.get("fixtureId") or "")),
+            )
             browser_ticket = PBE_OWNER_SESSION_STORE.issue_browser_handoff(token)
             launch_url = (
                 f"http://127.0.0.1:{self.server.server_port}/gallery.html"
@@ -955,6 +1034,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             if str(self.headers.get("Authorization") or "").strip():
+                self._require_pbe_host_authorization()
                 _, session = self._pbe_authorized_session(heartbeat=True)
             else:
                 session = self._pbe_authorized_browser_session()
@@ -980,7 +1060,13 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
-            session = self._pbe_authorized_browser_session()
+            if str(self.headers.get("Authorization") or "").strip():
+                self._require_pbe_host_authorization()
+                self._require_json_content_type()
+                _, session = self._pbe_authorized_session(heartbeat=True)
+            else:
+                self._require_same_origin_browser_post()
+                session = self._pbe_authorized_browser_session()
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
@@ -992,9 +1078,12 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         try:
             if str(self.headers.get("Authorization") or "").strip():
+                self._require_pbe_host_authorization()
+                self._require_json_content_type()
                 token = self._pbe_bearer_token()
                 session = PBE_OWNER_SESSION_STORE.close(token)
             else:
+                self._require_same_origin_browser_post()
                 session = PBE_OWNER_SESSION_STORE.close_browser(self._pbe_browser_cookie())
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
@@ -1010,6 +1099,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
         try:
+            self._require_same_origin_browser_post()
             session = self._pbe_authorized_browser_session()
             payload = self._read_json_body()
             trusted_payload = pbe_owner_action_payload(
@@ -3756,13 +3846,34 @@ def main() -> int:
     parser.add_argument("port", nargs="?", type=int, default=8000)
     parser.add_argument("--bind", default="127.0.0.1", help="Address to bind. Defaults to 127.0.0.1.")
     parser.add_argument("--allow-lan-owner", action="store_true", help="Allow owner helper endpoints from private LAN clients.")
+    parser.add_argument("--backstage-bootstrap-file", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
     _bootstrap_local_tool_path()
 
     server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
     server.allow_lan_owner = args.allow_lan_owner
+    bootstrap_secret = os.environ.pop("PBE_BACKSTAGE_BOOTSTRAP_SECRET", "")
+    checkout = checkout_identity(Path.cwd()) if bootstrap_secret else ""
+    server.pbe_host_authenticator = PBEOwnerHostAuthenticator(bootstrap_secret, checkout)
+    if args.backstage_bootstrap_file:
+        if not bootstrap_secret or args.bind != "127.0.0.1":
+            raise SystemExit("Backstage bootstrap requires a loopback bind and an injected secret.")
+        descriptor_path = Path(args.backstage_bootstrap_file)
+        descriptor_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_descriptor = descriptor_path.with_name(f".{descriptor_path.name}.{uuid.uuid4().hex}.tmp")
+        descriptor_payload = json.dumps({
+            "port": server.server_port,
+            "checkoutIdentity": checkout,
+            "protocolVersion": 1,
+        }, sort_keys=True).encode("utf-8")
+        descriptor_fd = os.open(temporary_descriptor, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor_fd, "wb") as descriptor:
+            descriptor.write(descriptor_payload)
+            descriptor.flush()
+            os.fsync(descriptor.fileno())
+        os.replace(temporary_descriptor, descriptor_path)
     url_host = "localhost" if args.bind in {"127.0.0.1", "::1"} else args.bind
-    print(f"Serving Photos By Elie at http://{url_host}:{args.port}/")
+    print(f"Serving Photos By Elie at http://{url_host}:{server.server_port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
     print(f"Real Estate owner endpoint: {REAL_ESTATE_OWNER_PATH}")
     print("Owner helper endpoints are enabled on loopback without a password.")

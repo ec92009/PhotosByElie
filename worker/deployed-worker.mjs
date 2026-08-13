@@ -92,10 +92,7 @@ const googleOAuthAuthFor = (env = {}) => {
   });
 };
 
-const authAllowedReturnOriginsFor = (env = {}, publicSiteUrl = "") => [
-  publicSiteUrl,
-  ...(String(env.AUTH_ALLOWED_RETURN_ORIGINS || "").split(/[\s,;]+/).filter(Boolean)),
-];
+const authAllowedReturnOriginsFor = (_env = {}, publicSiteUrl = "") => [publicSiteUrl];
 
 const accessUserRegistryFor = (env = {}) => env.ACCESS_DB
   ? createD1AccessUserRegistry({ database: env.ACCESS_DB })

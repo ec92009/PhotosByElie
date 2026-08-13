@@ -65,8 +65,6 @@ public struct OwnerCredentialSet: Codable, Sendable, Equatable {
     public var deviceCredential: String?
     public var accessToken: String?
     public var accessExpiresAt: Date?
-    public var refreshToken: String?
-    public var refreshExpiresAt: Date?
 }
 
 public actor OwnerCredentialSession {
@@ -93,4 +91,3 @@ public actor OwnerCredentialSession {
         try vault.delete(account: Self.account)
     }
 }
-

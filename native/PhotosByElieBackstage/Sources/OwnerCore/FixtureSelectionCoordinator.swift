@@ -13,6 +13,7 @@ public struct PBEOwnerFixtureSession: Sendable, Equatable {
     public let sourceIdentity: String
     public let catalogIdentity: String
     public let readinessIdentity: String
+    public let fixtureRevision: String
     public let capabilities: Set<String>
     public let lifecycleWriter: String
     public let expiresAt: Date
@@ -24,6 +25,7 @@ public struct PBEOwnerFixtureSession: Sendable, Equatable {
         sourceIdentity: String = "",
         catalogIdentity: String = "",
         readinessIdentity: String = "",
+        fixtureRevision: String = "",
         capabilities: Set<String> = [],
         lifecycleWriter: String = "",
         expiresAt: Date
@@ -34,6 +36,7 @@ public struct PBEOwnerFixtureSession: Sendable, Equatable {
         self.sourceIdentity = sourceIdentity
         self.catalogIdentity = catalogIdentity
         self.readinessIdentity = readinessIdentity
+        self.fixtureRevision = fixtureRevision
         self.capabilities = capabilities
         self.lifecycleWriter = lifecycleWriter
         self.expiresAt = expiresAt
@@ -44,6 +47,7 @@ public struct PBEOwnerFixtureSession: Sendable, Equatable {
             && !sourceIdentity.isEmpty
             && !catalogIdentity.isEmpty
             && !readinessIdentity.isEmpty
+            && !fixtureRevision.isEmpty
             && capabilities.isSuperset(
                 of: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
             )

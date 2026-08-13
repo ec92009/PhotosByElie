@@ -62,7 +62,9 @@ paths:
       security: []
       operationId: createOwnerTokens
       description: >
-        Issues a short-lived Backstage bearer token and rotating refresh token.
+        Issues a short-lived Backstage bearer token. Backstage re-presents its
+        Keychain device credential whenever another token is needed; no
+        long-lived browser or refresh credential is issued.
         The request must include an enrolled device id and its show-once
         credential; a browser Google session is not sufficient.
       requestBody:
@@ -75,29 +77,7 @@ paths:
                 deviceCredential: { type: string, writeOnly: true }
       responses:
         "201":
-          description: Native Owner token pair
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/OwnerTokenBundle" }
-        "401":
-          $ref: "#/components/responses/Error"
-  /auth/refresh:
-    post:
-      tags: [Authentication]
-      security: []
-      operationId: refreshOwnerTokens
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken: { type: string, writeOnly: true }
-      responses:
-        "200":
-          description: Rotated native Owner token pair
+          description: Short-lived native Owner token
           content:
             application/json:
               schema: { $ref: "#/components/schemas/OwnerTokenBundle" }
@@ -107,13 +87,6 @@ paths:
     post:
       tags: [Authentication]
       operationId: logout
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refreshToken: { type: string, writeOnly: true }
       responses:
         "200":
           description: Signed out
@@ -170,7 +143,7 @@ paths:
       operationId: revokeOwnerDevice
       responses:
         "200":
-          description: Device and its refresh tokens revoked
+          description: Device revoked; subsequent access-token minting is denied
           content:
             application/json:
               schema:
@@ -733,15 +706,13 @@ components:
     OwnerTokenBundle:
       type: object
       required:
-        [ok, tokenType, accessToken, expiresIn, accessExpiresAt, refreshToken, refreshExpiresAt]
+        [ok, tokenType, accessToken, expiresIn, accessExpiresAt]
       properties:
         ok: { type: boolean }
         tokenType: { type: string, const: Bearer }
         accessToken: { type: string, writeOnly: true }
         expiresIn: { type: integer, const: 900 }
         accessExpiresAt: { type: string, format: date-time }
-        refreshToken: { type: string, writeOnly: true }
-        refreshExpiresAt: { type: string, format: date-time }
     OwnerDevice:
       type: object
       required: [id, name, platform, createdAt]
@@ -755,19 +726,20 @@ components:
     PBEOwnerSessionCreate:
       type: object
       additionalProperties: false
-      required: [fixtureId, fixtureBreadcrumb, sourceIdentity, catalogIdentity, readinessIdentity]
+      required: [fixtureId, fixtureBreadcrumb, sourceIdentity, catalogIdentity, readinessIdentity, fixtureRevision]
       properties:
         fixtureId: { type: string, minLength: 1 }
         fixtureBreadcrumb: { type: string, minLength: 1 }
         sourceIdentity: { type: string, minLength: 1 }
         catalogIdentity: { type: string, minLength: 1 }
         readinessIdentity: { type: string, minLength: 1 }
+        fixtureRevision: { type: string, minLength: 1 }
     PBEOwnerSession:
       type: object
       additionalProperties: false
       required:
         [id, state, fixtureId, fixtureBreadcrumb, sourceIdentity, catalogIdentity,
-         readinessIdentity, capabilities, lifecycleWriter, createdAt, expiresAt]
+         readinessIdentity, fixtureRevision, capabilities, lifecycleWriter, createdAt, expiresAt]
       properties:
         id: { type: string }
         state: { type: string, enum: [ready, closed] }
@@ -776,6 +748,7 @@ components:
         sourceIdentity: { type: string }
         catalogIdentity: { type: string }
         readinessIdentity: { type: string }
+        fixtureRevision: { type: string }
         capabilities:
           type: array
           items:

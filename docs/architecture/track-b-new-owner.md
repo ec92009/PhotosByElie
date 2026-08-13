@@ -33,13 +33,15 @@ developer tools does not restore authority.
 
 Backstage exchanges its enrolled device id and Keychain credential at
 `POST /api/v1/auth/tokens`. The Worker validates the credential hash and device
-revocation state, then issues a 15-minute bearer and rotating refresh token.
-Raw issued device credentials are never placed in git, URL query parameters,
+revocation state, then issues a 15-minute bearer.
+Backstage re-presents that same Keychain credential whenever the bearer expires;
+no long-lived refresh token exists. Raw issued device credentials are never
+placed in git, URL query parameters,
 logs, fixtures, checked-in test vectors, or browser storage.
 
-Device revocation invalidates indexed refresh tokens. Every sensitive Owner
-request also resolves the device record, so revocation fails closed before the
-current bearer naturally expires.
+Device revocation blocks subsequent token minting. Every sensitive Owner request
+also resolves the device record, so revocation fails closed before the current
+bearer naturally expires.
 
 ## Hosted PBE Owner mode
 

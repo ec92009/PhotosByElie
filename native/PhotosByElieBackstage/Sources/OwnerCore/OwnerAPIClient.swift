@@ -25,6 +25,7 @@ public struct PBEOwnerHostReadiness: Codable, Sendable, Equatable {
     public var sourceIdentity: String
     public var catalogIdentity: String
     public var readinessIdentity: String
+    public var fixtureRevision: String
     public var lifecycleWriter: String
     public var capabilities: [String]
 }
@@ -37,6 +38,7 @@ public struct PBEOwnerSessionContract: Codable, Sendable, Equatable {
     public var sourceIdentity: String
     public var catalogIdentity: String
     public var readinessIdentity: String
+    public var fixtureRevision: String
     public var capabilities: [String]
     public var lifecycleWriter: String
     public var createdAt: Date?
@@ -51,19 +53,22 @@ public struct PBEOwnerSessionMintRequest: Codable, Sendable, Equatable {
     public var sourceIdentity: String
     public var catalogIdentity: String
     public var readinessIdentity: String
+    public var fixtureRevision: String
 
     public init(
         fixtureId: String,
         fixtureBreadcrumb: String,
         sourceIdentity: String,
         catalogIdentity: String,
-        readinessIdentity: String
+        readinessIdentity: String,
+        fixtureRevision: String
     ) {
         self.fixtureId = fixtureId
         self.fixtureBreadcrumb = fixtureBreadcrumb
         self.sourceIdentity = sourceIdentity
         self.catalogIdentity = catalogIdentity
         self.readinessIdentity = readinessIdentity
+        self.fixtureRevision = fixtureRevision
     }
 }
 
@@ -81,7 +86,7 @@ public struct PBEOwnerHostSessionEnvelope: Codable, Sendable, Equatable {
 }
 
 public protocol PBEOwnerHostServing: Sendable {
-    func ensureReadiness() async throws -> PBEOwnerHostReadiness
+    func ensureReadiness(fixtureID: String) async throws -> PBEOwnerHostReadiness
     func attach(sessionToken: String, fixtureID: String) async throws -> PBEOwnerHostSessionEnvelope
     func status(sessionToken: String) async throws -> PBEOwnerHostSessionEnvelope
     func heartbeat(sessionToken: String) async throws -> PBEOwnerHostSessionEnvelope
@@ -96,35 +101,54 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         var sourceIdentity: String
         var catalogIdentity: String
         var readinessIdentity: String
+        var fixtureRevision: String
         var lifecycleWriter: String
         var capabilities: [String]
     }
 
     private struct FixtureRequest: Codable { var fixtureId: String }
 
-    private let baseURL: URL
+    private struct HostDescriptor: Codable {
+        var port: Int
+        var checkoutIdentity: String
+        var protocolVersion: Int
+    }
+
+    private struct HostBootstrapRequest: Codable { var expectedCheckoutIdentity: String }
+    private struct HostBootstrapEnvelope: Codable {
+        var ok: Bool
+        var checkoutIdentity: String
+        var hostAuthorization: String
+    }
+
+    private var baseURL: URL
     private let transport: OwnerAPITransport
     private let decoder = JSONDecoder.ownerAPI
     private let encoder = JSONEncoder.ownerAPI
     private let repositoryRoot: URL?
     private var launchedProcess: Process?
+    private var hostAuthorization: String
+    private var bootstrapDescriptorURL: URL?
 
     public init(
-        baseURL: URL = URL(string: "http://127.0.0.1:8000/__photosbyelie/pbe-owner")!,
+        baseURL: URL? = nil,
         transport: OwnerAPITransport = URLSessionOwnerTransport(),
-        repositoryRoot: URL? = nil
+        repositoryRoot: URL? = nil,
+        hostAuthorization: String = ""
     ) {
-        self.baseURL = baseURL
+        self.baseURL = baseURL ?? URL(string: "http://127.0.0.1:0/__photosbyelie/pbe-owner")!
         self.transport = transport
         self.repositoryRoot = repositoryRoot ?? Self.defaultRepositoryRoot()
+        self.hostAuthorization = hostAuthorization
     }
 
-    public func ensureReadiness() async throws -> PBEOwnerHostReadiness {
-        if let readiness = try? await readiness() { return readiness }
-        try launchHost()
+    public func ensureReadiness(fixtureID: String) async throws -> PBEOwnerHostReadiness {
+        if hostAuthorization.isEmpty {
+            try await launchHostAndBootstrap()
+        }
         for _ in 0..<12 {
+            if let readiness = try? await readiness(fixtureID: fixtureID) { return readiness }
             try await Task.sleep(for: .milliseconds(250))
-            if let readiness = try? await readiness() { return readiness }
         }
         throw APIErrorEnvelope(error: .init(
             code: "pbe_owner_host_unavailable",
@@ -162,19 +186,26 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         guard let launchedProcess else { return }
         if launchedProcess.isRunning { launchedProcess.terminate() }
         self.launchedProcess = nil
+        if let bootstrapDescriptorURL {
+            try? FileManager.default.removeItem(at: bootstrapDescriptorURL)
+        }
+        self.bootstrapDescriptorURL = nil
+        hostAuthorization = ""
     }
 
-    private func readiness() async throws -> PBEOwnerHostReadiness {
+    private func readiness(fixtureID: String) async throws -> PBEOwnerHostReadiness {
         let envelope: ReadinessEnvelope = try await send(
             path: "/readiness",
             method: "GET",
             token: "",
-            body: Optional<String>.none
+            body: Optional<String>.none,
+            query: [URLQueryItem(name: "fixtureId", value: fixtureID)]
         )
         guard envelope.ok, envelope.ready,
               !envelope.sourceIdentity.isEmpty,
               !envelope.catalogIdentity.isEmpty,
               !envelope.readinessIdentity.isEmpty,
+              !envelope.fixtureRevision.isEmpty,
               envelope.lifecycleWriter == "pbb-79-waste-basket",
               Set(envelope.capabilities).isSuperset(
                 of: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
@@ -190,12 +221,13 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
             sourceIdentity: envelope.sourceIdentity,
             catalogIdentity: envelope.catalogIdentity,
             readinessIdentity: envelope.readinessIdentity,
+            fixtureRevision: envelope.fixtureRevision,
             lifecycleWriter: envelope.lifecycleWriter,
             capabilities: envelope.capabilities
         )
     }
 
-    private func launchHost() throws {
+    private func launchHostAndBootstrap() async throws {
         if launchedProcess?.isRunning == true { return }
         guard let repositoryRoot,
               FileManager.default.fileExists(
@@ -206,28 +238,117 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
                 message: "Backstage cannot find a PhotosByElie checkout on this Mac. Set PBE_REPO_ROOT to its path."
             ))
         }
+        let expectedCheckoutIdentity = try Self.checkoutIdentity(repositoryRoot: repositoryRoot)
+        let bootstrapSecret = "\(UUID().uuidString)\(UUID().uuidString)"
+        let descriptorURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-host-\(UUID().uuidString).json")
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "scripts/local_server.py", "8000", "--bind", "127.0.0.1"]
+        process.arguments = [
+            "python3", "scripts/local_server.py", "0", "--bind", "127.0.0.1",
+            "--backstage-bootstrap-file", descriptorURL.path,
+        ]
         process.currentDirectoryURL = repositoryRoot
+        var environment = ProcessInfo.processInfo.environment
+        environment["PBE_BACKSTAGE_BOOTSTRAP_SECRET"] = bootstrapSecret
+        process.environment = environment
         process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
         process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        try process.run()
-        launchedProcess = process
+        do {
+            try process.run()
+            launchedProcess = process
+            bootstrapDescriptorURL = descriptorURL
+            var descriptor: HostDescriptor?
+            for _ in 0..<30 {
+                if let data = try? Data(contentsOf: descriptorURL),
+                   let decoded = try? decoder.decode(HostDescriptor.self, from: data) {
+                    descriptor = decoded
+                    break
+                }
+                if !process.isRunning { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard let descriptor,
+                  descriptor.protocolVersion == 1,
+                  (1...65_535).contains(descriptor.port),
+                  descriptor.checkoutIdentity == expectedCheckoutIdentity else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_host_identity_mismatch",
+                    message: "The launched PBE host did not prove the expected checkout identity."
+                ))
+            }
+            baseURL = URL(string: "http://127.0.0.1:\(descriptor.port)/__photosbyelie/pbe-owner")!
+            let bootstrap: HostBootstrapEnvelope = try await sendBootstrap(
+                secret: bootstrapSecret,
+                expectedCheckoutIdentity: expectedCheckoutIdentity
+            )
+            guard bootstrap.ok,
+                  bootstrap.checkoutIdentity == expectedCheckoutIdentity,
+                  !bootstrap.hostAuthorization.isEmpty else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_host_bootstrap_invalid",
+                    message: "The launched PBE host bootstrap contract was invalid."
+                ))
+            }
+            hostAuthorization = bootstrap.hostAuthorization
+            try? FileManager.default.removeItem(at: descriptorURL)
+            bootstrapDescriptorURL = nil
+        } catch {
+            if process.isRunning { process.terminate() }
+            launchedProcess = nil
+            try? FileManager.default.removeItem(at: descriptorURL)
+            bootstrapDescriptorURL = nil
+            throw error
+        }
+    }
+
+    private func sendBootstrap(
+        secret: String,
+        expectedCheckoutIdentity: String
+    ) async throws -> HostBootstrapEnvelope {
+        let endpoint = baseURL.appendingPathComponent("host/bootstrap")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(secret, forHTTPHeaderField: "X-PBE-Host-Bootstrap")
+        request.httpBody = try encoder.encode(HostBootstrapRequest(
+            expectedCheckoutIdentity: expectedCheckoutIdentity
+        ))
+        let (data, response) = try await transport.data(for: request)
+        guard (200..<300).contains(response.statusCode) else {
+            if let envelope = try? decoder.decode(APIErrorEnvelope.self, from: data) { throw envelope }
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_host_bootstrap_failed",
+                message: "Backstage could not authenticate the launched PBE host."
+            ))
+        }
+        return try decoder.decode(HostBootstrapEnvelope.self, from: data)
     }
 
     private func send<Body: Encodable, Response: Decodable>(
         path: String,
         method: String,
         token: String,
-        body: Body?
+        body: Body?,
+        query: [URLQueryItem] = []
     ) async throws -> Response {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))))
+        let endpoint = baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+        components?.queryItems = query.isEmpty ? nil : query
+        guard let requestURL = components?.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: requestURL)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if !hostAuthorization.isEmpty {
+            request.setValue(hostAuthorization, forHTTPHeaderField: "X-PBE-Host-Authorization")
+        }
         if !token.isEmpty { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         if let body {
             request.httpBody = try encoder.encode(body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        } else if method == "POST" {
+            request.httpBody = Data("{}".utf8)
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
         let (data, response) = try await transport.data(for: request)
@@ -252,6 +373,33 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         return candidates.first(where: {
             fileManager.fileExists(atPath: $0.appendingPathComponent("scripts/local_server.py").path)
         })
+    }
+
+    private static func checkoutIdentity(repositoryRoot: URL) throws -> String {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["-C", repositoryRoot.path, "rev-parse", "HEAD"]
+        process.standardOutput = output
+        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_checkout_identity_unavailable",
+                message: "Backstage could not verify the PhotosByElie checkout revision."
+            ))
+        }
+        let revision = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard revision.range(of: "^[0-9a-f]{40,64}$", options: .regularExpression) != nil else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_checkout_identity_unavailable",
+                message: "Backstage received an invalid checkout revision."
+            ))
+        }
+        return "git:\(revision)"
     }
 }
 
@@ -330,16 +478,6 @@ public actor OwnerAPIClient {
         return envelope.action
     }
 
-    public func refresh(refreshToken: String) async throws -> OwnerTokenBundle {
-        struct Refresh: Codable { let refreshToken: String }
-        return try await send(
-            path: "/auth/refresh",
-            method: "POST",
-            body: Refresh(refreshToken: refreshToken),
-            authenticated: false
-        )
-    }
-
     public func exchangeDeviceCredential(
         deviceId: String,
         deviceCredential: String
@@ -359,12 +497,12 @@ public actor OwnerAPIClient {
         )
     }
 
-    public func logout(refreshToken: String?) async throws {
-        struct Logout: Codable { let refreshToken: String? }
+    public func logout() async throws {
+        struct Logout: Codable {}
         let _: EmptyResponse = try await send(
             path: "/auth/logout",
             method: "POST",
-            body: Logout(refreshToken: refreshToken),
+            body: Logout(),
             authenticated: false
         )
         accessToken = nil

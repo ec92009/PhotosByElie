@@ -17,9 +17,11 @@ actions.
    once.
 3. Backstage stores the device id and credential in macOS Keychain.
 4. `POST /api/v1/auth/tokens` accepts only that pair and issues a 15-minute
-   `backstage-device` / `backstage-api` bearer plus a rotating refresh token.
-5. Revocation invalidates indexed refresh tokens; every Owner request also
-   checks that the device record still exists and is not revoked.
+   `backstage-device` / `backstage-api` bearer. Backstage re-presents the
+   Keychain credential whenever another bearer is needed; there is no refresh
+   token.
+5. Revocation blocks all later bearer minting; every Owner request also checks
+   that the device record still exists and is not revoked.
 
 Raw issued device or Worker session credential material must not enter query
 strings, fragments, logs, repo files, browser storage, fixtures, or checked-in
@@ -58,14 +60,18 @@ matching session.
 
 ## Local host readiness and lease
 
-Backstage attaches to `127.0.0.1:8000` or launches the existing
-`scripts/local_server.py`; it does not start Expo or a competing writer.
+Backstage launches the existing `scripts/local_server.py` on a random loopback
+port; it never trusts or attaches credentials to an arbitrary fixed-port
+process. A one-use bootstrap secret and an independently computed git checkout
+identity authenticate the launched host before Backstage sends any bearer.
+It does not start Expo or a competing writer.
 `GET /__photosbyelie/pbe-owner/readiness` requires the local Owner database and
 public catalog and returns only opaque SHA-256 identities, capabilities, and
 the lifecycle writer. Local paths never leave the host.
 
-Both identities validate required SQLite tables and hash their resolved local
-slot and stable schema without exposing a path. The mutable Owner source also
+The identities validate required SQLite tables without exposing a path. The
+fixture revision hashes canonical fixture membership and stable actionable
+content while excluding only intended lifecycle fields. The mutable Owner source also
 binds the file object's device and inode: authorized row writes survive, while
 database replacement ends the lease. The public catalog is an expected generated
 derivative of X/restore, so its identity deliberately survives an atomic rebuild

@@ -10,18 +10,15 @@ public struct OwnerAuthenticationSnapshot: Sendable, Equatable {
     public var phase: OwnerAuthenticationPhase
     public var deviceId: String?
     public var accessExpiresAt: Date?
-    public var refreshExpiresAt: Date?
 
     public init(
         phase: OwnerAuthenticationPhase,
         deviceId: String? = nil,
-        accessExpiresAt: Date? = nil,
-        refreshExpiresAt: Date? = nil
+        accessExpiresAt: Date? = nil
     ) {
         self.phase = phase
         self.deviceId = deviceId
         self.accessExpiresAt = accessExpiresAt
-        self.refreshExpiresAt = refreshExpiresAt
     }
 }
 
@@ -142,15 +139,6 @@ public actor OwnerAuthenticationService {
             await api.setAccessToken(accessToken)
             return snapshot(for: credentials)
         }
-        if let refreshToken = credentials.refreshToken,
-           let refreshExpiresAt = credentials.refreshExpiresAt,
-           refreshExpiresAt > now,
-           let tokens = try? await api.refresh(refreshToken: refreshToken) {
-            credentials = applying(tokens, to: credentials)
-            try? await session.save(credentials)
-            await api.setAccessToken(tokens.accessToken)
-            return snapshot(for: credentials)
-        }
         if let deviceCredential = credentials.deviceCredential,
            let tokens = try? await api.exchangeDeviceCredential(
                deviceId: credentials.deviceId,
@@ -163,8 +151,6 @@ public actor OwnerAuthenticationService {
         }
         credentials.accessToken = nil
         credentials.accessExpiresAt = nil
-        credentials.refreshToken = nil
-        credentials.refreshExpiresAt = nil
         try? await session.save(credentials)
         await api.setAccessToken(nil)
         return OwnerAuthenticationSnapshot(
@@ -183,9 +169,7 @@ public actor OwnerAuthenticationService {
             deviceId: enrollment.deviceId,
             deviceCredential: enrollment.deviceCredential,
             accessToken: nil,
-            accessExpiresAt: nil,
-            refreshToken: nil,
-            refreshExpiresAt: nil
+            accessExpiresAt: nil
         ))
         try await session.save(credentials)
         await api.setAccessToken(tokens.accessToken)
@@ -193,8 +177,7 @@ public actor OwnerAuthenticationService {
     }
 
     public func signOut() async throws -> OwnerAuthenticationSnapshot {
-        let credentials = try await session.load()
-        try await api.logout(refreshToken: credentials?.refreshToken)
+        try await api.logout()
         try await session.clear()
         await api.setAccessToken(nil)
         return OwnerAuthenticationSnapshot(phase: .signedOut)
@@ -207,8 +190,6 @@ public actor OwnerAuthenticationService {
         var updated = credentials
         updated.accessToken = tokens.accessToken
         updated.accessExpiresAt = tokens.accessExpiresAt
-        updated.refreshToken = tokens.refreshToken
-        updated.refreshExpiresAt = tokens.refreshExpiresAt
         return updated
     }
 
@@ -216,8 +197,7 @@ public actor OwnerAuthenticationService {
         OwnerAuthenticationSnapshot(
             phase: .authenticated,
             deviceId: credentials.deviceId,
-            accessExpiresAt: credentials.accessExpiresAt,
-            refreshExpiresAt: credentials.refreshExpiresAt
+            accessExpiresAt: credentials.accessExpiresAt
         )
     }
 }

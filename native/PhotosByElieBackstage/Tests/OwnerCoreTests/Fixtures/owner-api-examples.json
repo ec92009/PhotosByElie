@@ -9,8 +9,6 @@
       "accessToken": "<short-lived-access-token>",
       "expiresIn": 900,
       "ok": true,
-      "refreshExpiresAt": "2026-08-24T15:00:00Z",
-      "refreshToken": "<rotating-refresh-token>",
       "tokenType": "Bearer"
     }
   },

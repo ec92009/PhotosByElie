@@ -8,7 +8,6 @@ const exactRoutes = new Map([
   ["/auth/google/login", "/api/auth/google/login"],
   ["/auth/google/callback", "/api/auth/google/callback"],
   ["/auth/tokens", "/api/owner/auth/tokens"],
-  ["/auth/refresh", "/api/owner/auth/refresh"],
   ["/auth/logout", "/api/owner/auth/logout"],
   ["/devices", "/api/owner/devices"],
   ["/pbe-owner/sessions", "/api/owner/pbe-sessions"],

@@ -310,7 +310,7 @@ const createFakeKv = () => {
   };
 };
 
-test("KV owner device store revokes credentials and indexed refresh tokens together", async () => {
+test("KV owner device store revokes its durable device credential", async () => {
   const now = () => new Date("2026-07-25T12:00:00.000Z");
   const store = createKvOwnerDeviceAuthStore({
     namespace: createFakeKv(),
@@ -332,13 +332,6 @@ test("KV owner device store revokes credentials and indexed refresh tokens toget
     credential: "device-secret",
   }));
 
-  await store.putRefreshToken({
-    email: device.email,
-    deviceId: device.id,
-    expiresAt: "2026-08-24T12:00:00.000Z",
-  }, "refresh-secret");
-  assert.ok(await store.getRefreshToken("refresh-secret"));
-
   await store.revokeDevice({
     email: "OWNER@example.com",
     deviceId: device.id,
@@ -348,7 +341,6 @@ test("KV owner device store revokes credentials and indexed refresh tokens toget
     deviceId: device.id,
     credential: "device-secret",
   }), null);
-  assert.equal(await store.getRefreshToken("refresh-secret"), null);
 });
 
 test("analytics endpoint stores sanitized public funnel events", async () => {
@@ -904,7 +896,7 @@ test("Owner API v1 preserves action behavior behind Backstage authorization", as
   assert.equal((await unknown.json()).error.code, "not_found");
 });
 
-test("Owner API v1 enrolls, refreshes and independently revokes native devices", async () => {
+test("Owner API v1 re-authenticates Keychain device credentials and independently revokes devices", async () => {
   const now = () => new Date("2026-07-25T09:00:00.000Z");
   const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
   let accessTokenCount = 0;
@@ -967,30 +959,25 @@ test("Owner API v1 enrolls, refreshes and independently revokes native devices",
   assert.equal(tokens.tokenType, "Bearer");
   assert.equal(tokens.expiresIn, 15 * 60);
   assert.match(tokens.accessToken, /^access-ec92009@gmail\.com-900-1$/);
-  assert.match(tokens.refreshToken, /^[A-Za-z0-9_-]{40,}$/);
+  assert.equal(tokens.refreshToken, undefined);
 
-  const refreshResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
-    refreshToken: tokens.refreshToken,
+  const secondTokenResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/tokens", {
+    deviceId: enrollment.device.id,
+    deviceCredential: enrollment.deviceCredential,
   }, { origin: "https://photos-by-elie.com" }));
-  assert.equal(refreshResponse.status, 200);
-  const refreshed = await refreshResponse.json();
-  assert.notEqual(refreshed.refreshToken, tokens.refreshToken);
-  assert.match(refreshed.accessToken, /^access-ec92009@gmail\.com-900-2$/);
+  assert.equal(secondTokenResponse.status, 201);
+  assert.match((await secondTokenResponse.json()).accessToken, /^access-ec92009@gmail\.com-900-2$/);
 
-  const replayRefresh = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
-    refreshToken: tokens.refreshToken,
-  }, { origin: "https://photos-by-elie.com" }));
-  assert.equal(replayRefresh.status, 401);
+  const removedRefreshRoute = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
+  assert.equal(removedRefreshRoute.status, 404);
 
-  const logoutResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/logout", {
-    refreshToken: refreshed.refreshToken,
-  }, { origin: "https://photos-by-elie.com" }));
+  const logoutResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/logout", {}, {
+    origin: "https://photos-by-elie.com",
+  }));
   assert.equal(logoutResponse.status, 200);
   assert.match(logoutResponse.headers.get("set-cookie") || "", /Max-Age=0/);
-  const loggedOutRefresh = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/refresh", {
-    refreshToken: refreshed.refreshToken,
-  }, { origin: "https://photos-by-elie.com" }));
-  assert.equal(loggedOutRefresh.status, 401);
 
   const revokeResponse = await worker.fetch(jsonRequest(
     `https://worker.test/api/v1/devices/${encodeURIComponent(enrollment.device.id)}/revoke`,
@@ -1055,7 +1042,8 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     origin: "https://untrusted.example",
   }));
   assert.equal(wrongOrigin.status, 403);
-  assert.equal((await wrongOrigin.json()).error.code, "backstage_provisioning_origin_required");
+  assert.equal((await wrongOrigin.json()).error.code, "cors_origin_forbidden");
+  assert.equal(wrongOrigin.headers.get("access-control-allow-origin"), "null");
 
   const enrollmentResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/devices", {
     name: "Max Backstage",
@@ -1077,6 +1065,7 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     sourceIdentity: "owner-sqlite:abc",
     catalogIdentity: "catalog-sqlite:def",
     readinessIdentity: "ready:one",
+    fixtureRevision: "fixture-revision:one",
   }, bearer(browserToken)));
   assert.equal(browserMint.status, 403);
   assert.equal((await browserMint.json()).error.code, "backstage_device_session_required");
@@ -1100,12 +1089,14 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     sourceIdentity: "owner-sqlite:abc",
     catalogIdentity: "catalog-sqlite:def",
     readinessIdentity: "ready:one",
+    fixtureRevision: "fixture-revision:one",
   }, bearer(backstageTokens.accessToken)));
   assert.equal(mintResponse.status, 201);
   const minted = await mintResponse.json();
   assert.match(minted.session.id, /^pbe-owner-session-/);
   assert.equal(minted.session.fixtureId, "fixture-la-concha");
   assert.equal(minted.session.lifecycleWriter, "pbb-79-waste-basket");
+  assert.equal(minted.session.fixtureRevision, "fixture-revision:one");
   assert.deepEqual(minted.session.capabilities, ["gallery.read", "waste-basket.x", "waste-basket.restore"]);
 
   const statusResponse = await worker.fetch(new Request("https://worker.test/api/v1/pbe-owner/session", {
@@ -1134,6 +1125,7 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     sourceIdentity: "owner-sqlite:abc",
     catalogIdentity: "catalog-sqlite:def",
     readinessIdentity: "ready:two",
+    fixtureRevision: "fixture-revision:two",
   }, bearer(backstageTokens.accessToken)));
   const secondMint = await secondMintResponse.json();
   const revokeResponse = await worker.fetch(jsonRequest(
@@ -2097,7 +2089,7 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.match(logoutCookies[1], /Path=\/real-estate/);
 });
 
-test("direct Google OAuth returns a local transfer token for Tailscale Owner previews", async () => {
+test("direct Google OAuth rejects local and Tailscale provisioning origins", async () => {
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   const googleAuth = createGoogleOAuthAuth({
     clientId: "google-client-id",
@@ -2120,7 +2112,6 @@ test("direct Google OAuth returns a local transfer token for Tailscale Owner pre
     googleOAuthAuth: googleAuth,
     accessUserRegistry: createMemoryAccessUserRegistry([]),
     accessAdminEmail: "ec92009@gmail.com",
-    authAllowedReturnOrigins: ["http://100.111.30.109:8000"],
   });
   const localOrigin = "http://100.111.30.109:8000";
   const returnTo = `${localOrigin}/owner.html`;
@@ -2129,46 +2120,9 @@ test("direct Google OAuth returns a local transfer token for Tailscale Owner pre
     `https://worker.test/auth/google/login?returnTo=${encodeURIComponent(returnTo)}`,
     { headers: { origin: localOrigin } }
   ));
-  assert.equal(loginResponse.status, 302);
-  const googleLoginUrl = new URL(loginResponse.headers.get("location"));
-
-  const callbackResponse = await worker.fetch(new Request(
-    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
-    { headers: { origin: localOrigin } }
-  ));
-  assert.equal(callbackResponse.status, 302);
-  const localReturnUrl = new URL(callbackResponse.headers.get("location"));
-  assert.equal(localReturnUrl.origin, localOrigin);
-  assert.equal(localReturnUrl.pathname, "/owner.html");
-  assert.equal(localReturnUrl.searchParams.has("pbe_auth_token"), false);
-  const hashParams = new URLSearchParams(localReturnUrl.hash.slice(1));
-  const transferToken = hashParams.get("pbe_auth_token") || "";
-  assert.match(transferToken, /^[^.]+\.[^.]+$/);
-
-  const preflightResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
-    method: "OPTIONS",
-    headers: {
-      origin: localOrigin,
-      "access-control-request-method": "GET",
-      "access-control-request-headers": "authorization",
-    },
-  }));
-  assert.equal(preflightResponse.status, 200);
-  assert.match(preflightResponse.headers.get("access-control-allow-headers") || "", /authorization/);
-
-  const sessionResponse = await worker.fetch(new Request("https://worker.test/owner/session", {
-    headers: {
-      authorization: `Bearer ${transferToken}`,
-      origin: localOrigin,
-    },
-  }));
-  assert.equal(sessionResponse.status, 200);
-  const session = await sessionResponse.json();
-  assert.equal(session.authenticated, true);
-  assert.equal(session.admin, true);
-  assert.equal(session.user.email, "ec92009@gmail.com");
-  assert.equal(session.user.provider, "google-oauth");
-  assert.ok(session.roles.includes("owner"));
+  assert.equal(loginResponse.status, 403);
+  assert.equal(loginResponse.headers.get("access-control-allow-origin"), "null");
+  assert.equal((await loginResponse.json()).error.code, "cors_origin_forbidden");
 });
 
 test("checkout and download milestones record analytics without buyer identifiers", async () => {

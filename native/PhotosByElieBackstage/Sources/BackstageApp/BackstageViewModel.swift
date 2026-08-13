@@ -523,21 +523,23 @@ final class BackstageViewModel: ObservableObject {
                     message: "Backstage authentication is missing or expired."
                 ))
             }
-            let readiness = try await pbeOwnerHost.ensureReadiness()
+            let readiness = try await pbeOwnerHost.ensureReadiness(fixtureID: frozenFixtureID)
             pbeOwnerSessionStatus = "Minting a short-lived Owner session for \(frozenBreadcrumb)…"
             let issued = try await api.mintPBEOwnerSession(PBEOwnerSessionMintRequest(
                 fixtureId: frozenFixtureID,
                 fixtureBreadcrumb: frozenBreadcrumb,
                 sourceIdentity: readiness.sourceIdentity,
                 catalogIdentity: readiness.catalogIdentity,
-                readinessIdentity: readiness.readinessIdentity
+                readinessIdentity: readiness.readinessIdentity,
+                fixtureRevision: readiness.fixtureRevision
             ))
             minted = issued
             guard issued.session.fixtureId == frozenFixtureID,
                   issued.session.fixtureBreadcrumb == frozenBreadcrumb,
                   issued.session.sourceIdentity == readiness.sourceIdentity,
                   issued.session.catalogIdentity == readiness.catalogIdentity,
-                  issued.session.readinessIdentity == readiness.readinessIdentity else {
+                  issued.session.readinessIdentity == readiness.readinessIdentity,
+                  issued.session.fixtureRevision == readiness.fixtureRevision else {
                 throw FixtureSelectionError.ownerSessionMismatch
             }
             let attached = try await pbeOwnerHost.attach(
@@ -551,6 +553,7 @@ final class BackstageViewModel: ObservableObject {
                   attached.session.sourceIdentity == issued.session.sourceIdentity,
                   attached.session.catalogIdentity == issued.session.catalogIdentity,
                   attached.session.readinessIdentity == issued.session.readinessIdentity,
+                  attached.session.fixtureRevision == issued.session.fixtureRevision,
                   Set(attached.session.capabilities) == Set(issued.session.capabilities),
                   attached.session.lifecycleWriter == issued.session.lifecycleWriter else {
                 throw APIErrorEnvelope(error: .init(
@@ -565,6 +568,7 @@ final class BackstageViewModel: ObservableObject {
                 sourceIdentity: issued.session.sourceIdentity,
                 catalogIdentity: issued.session.catalogIdentity,
                 readinessIdentity: issued.session.readinessIdentity,
+                fixtureRevision: issued.session.fixtureRevision,
                 capabilities: Set(issued.session.capabilities),
                 lifecycleWriter: issued.session.lifecycleWriter,
                 expiresAt: issued.session.expiresAt

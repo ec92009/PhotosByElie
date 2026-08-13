@@ -2,8 +2,6 @@
   const cleanBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const mediaConfig = window.photosByElieMediaConfig || {};
   const workerBase = cleanBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");
-  const AUTH_TOKEN_HASH_PARAM = "pbe_auth_token";
-  const AUTH_TOKEN_STORAGE_KEY = "pbe-new-owner-auth-token";
   const LEGACY_CONNECTOR_STORAGE_KEY = "pbe-new-owner-connector";
   const LOCAL_CONNECTOR_STATUS_URLS = [
     "http://localhost:8766/photosbyelie/connector-status",
@@ -170,47 +168,13 @@
       .replace(/=+$/g, "");
   };
 
-  const storedAuthToken = () => {
-    try {
-      return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
-    } catch {
-      return "";
-    }
-  };
-
-  const storeAuthToken = (token) => {
-    try {
-      if (token) sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-      else sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    } catch {
-      // Session transfer is a Safari/local convenience; cookie auth can still work.
-    }
-  };
-
-  const absorbAuthTokenFromHash = () => {
-    const hash = window.location.hash ? window.location.hash.slice(1) : "";
-    if (!hash) return;
-    const params = new URLSearchParams(hash);
-    const token = params.get(AUTH_TOKEN_HASH_PARAM) || "";
-    if (!token) return;
-    storeAuthToken(token);
-    params.delete(AUTH_TOKEN_HASH_PARAM);
-    const preservedHash = params.get("pbe_return_hash") || "";
-    params.delete("pbe_return_hash");
-    const nextHash = params.toString() || preservedHash;
-    const nextUrl = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ""}`;
-    window.history.replaceState(null, "", nextUrl);
-  };
-
   const apiFetch = async (path, options = {}) => {
-    const token = storedAuthToken();
     const method = String(options.method || "GET").toUpperCase();
     const response = await fetch(apiUrl(path), {
       credentials: "include",
       cache: "no-store",
       ...options,
       headers: {
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...(options.body ? { "content-type": "application/json" } : {}),
         ...(method !== "GET" && method !== "HEAD" && method !== "OPTIONS"
           ? { "idempotency-key": options.idempotencyKey || idempotencyKey(path) }
@@ -1537,7 +1501,7 @@
 
   const revokeBackstageDevice = async (device) => {
     if (!canProvisionBackstage() || !device?.id) return;
-    if (!window.confirm(`Revoke ${device.name || "this Backstage device"}? Its sessions and refresh tokens will stop working.`)) return;
+    if (!window.confirm(`Revoke ${device.name || "this Backstage device"}? Its sessions will stop working and it cannot mint another access token.`)) return;
     try {
       await apiFetch(ownerApiPath(`/devices/${encodeURIComponent(device.id)}/revoke`), {
         method: "POST",
@@ -1697,7 +1661,6 @@
     });
   }
   window.addEventListener("resize", queueMasonryLayout);
-  absorbAuthTokenFromHash();
   forgetLegacyConnectorPreference();
   renderLanes();
   load();

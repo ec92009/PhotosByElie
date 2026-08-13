@@ -115,6 +115,7 @@ const sessionFromPayload = (payload, now) => {
     sourceIdentity: String(payload?.sourceIdentity || "").trim(),
     catalogIdentity: String(payload?.catalogIdentity || "").trim(),
     readinessIdentity: String(payload?.readinessIdentity || "").trim(),
+    fixtureRevision: String(payload?.fixtureRevision || "").trim(),
     lifecycleWriter: String(payload?.lifecycleWriter || "").trim(),
     capabilities: Array.isArray(payload?.capabilities)
       ? payload.capabilities.map((value) => String(value || "").trim()).filter(Boolean)
@@ -305,6 +306,7 @@ export const createGoogleOAuthAuth = ({
       "sourceIdentity",
       "catalogIdentity",
       "readinessIdentity",
+      "fixtureRevision",
       "lifecycleWriter",
     ].forEach((key) => {
       const value = String(identity?.[key] || "").trim();

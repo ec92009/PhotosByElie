@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import secrets
 import sqlite3
+import subprocess
 import threading
 import time
 from typing import Callable
@@ -24,6 +25,85 @@ DEFAULT_LOCAL_LEASE_SECONDS = 90
 REQUIRED_CAPABILITIES = frozenset(
     {"gallery.read", "waste-basket.x", "waste-basket.restore"}
 )
+
+
+def checkout_identity(repo_root: Path) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root.resolve()), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise PBEOwnerSessionError(
+            "PBE Owner host cannot verify the checkout identity.",
+            code="pbe_owner_checkout_identity_unavailable",
+            status=503,
+        ) from error
+    revision = completed.stdout.strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+        raise PBEOwnerSessionError(
+            "PBE Owner host returned an invalid checkout identity.",
+            code="pbe_owner_checkout_identity_unavailable",
+            status=503,
+        )
+    return f"git:{revision}"
+
+
+class PBEOwnerHostAuthenticator:
+    """One-use Backstage bootstrap followed by a memory-only host capability."""
+
+    def __init__(self, bootstrap_secret: str, checkout: str) -> None:
+        self._lock = threading.Lock()
+        self._bootstrap_hash = self._hash(_clean(bootstrap_secret)) if _clean(bootstrap_secret) else ""
+        self._host_hash = ""
+        self.checkout_identity = _clean(checkout)
+
+    @staticmethod
+    def _hash(value: str) -> str:
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    @property
+    def configured(self) -> bool:
+        return bool(self._bootstrap_hash and self.checkout_identity)
+
+    def bootstrap(self, secret: str, expected_checkout_identity: str) -> str:
+        host_authorization = secrets.token_urlsafe(32)
+        with self._lock:
+            if not self._bootstrap_hash:
+                raise PBEOwnerSessionError(
+                    "The Backstage host bootstrap is unavailable or already consumed.",
+                    code="pbe_owner_host_bootstrap_invalid",
+                    status=401,
+                )
+            if not hmac.compare_digest(self._bootstrap_hash, self._hash(_clean(secret))):
+                raise PBEOwnerSessionError(
+                    "The Backstage host bootstrap secret is invalid.",
+                    code="pbe_owner_host_bootstrap_invalid",
+                    status=401,
+                )
+            if not hmac.compare_digest(self.checkout_identity, _clean(expected_checkout_identity)):
+                raise PBEOwnerSessionError(
+                    "The launched PBE host checkout does not match Backstage.",
+                    code="pbe_owner_checkout_identity_mismatch",
+                    status=409,
+                )
+            self._bootstrap_hash = ""
+            self._host_hash = self._hash(host_authorization)
+        return host_authorization
+
+    def authorize(self, host_authorization: str) -> None:
+        with self._lock:
+            if not self._host_hash or not hmac.compare_digest(
+                self._host_hash,
+                self._hash(_clean(host_authorization)),
+            ):
+                raise PBEOwnerSessionError(
+                    "This PBE host was not authenticated by Backstage.",
+                    code="pbe_owner_host_authorization_required",
+                    status=401,
+                )
 
 
 class PBEOwnerSessionError(ValueError):
@@ -91,7 +171,83 @@ def _sqlite_identity(
     return hashlib.sha256(payload).hexdigest()
 
 
-def repository_readiness(repo_root: Path) -> dict:
+def _fixture_revision(owner_path: Path, fixture_id: str) -> str:
+    """Hash canonical fixture membership/content, excluding lifecycle fields."""
+
+    clean_fixture_id = _clean(fixture_id)
+    if not clean_fixture_id:
+        raise PBEOwnerSessionError(
+            "PBE Owner readiness requires an explicit fixture.",
+            code="pbe_owner_fixture_required",
+            status=400,
+        )
+    try:
+        connection = sqlite3.connect(f"file:{quote(str(owner_path.resolve()), safe='/')}?mode=ro", uri=True)
+        connection.row_factory = sqlite3.Row
+        try:
+            fixture = connection.execute(
+                """
+                SELECT fixture_id, parent_fixture_id, name, slug, template_key,
+                       tags_json, destination_defaults_json, access_gallery_key,
+                       archived_at
+                FROM fixtures WHERE fixture_id = ?
+                """,
+                (clean_fixture_id,),
+            ).fetchone()
+            if not fixture or _clean(fixture["archived_at"]):
+                raise PBEOwnerSessionError(
+                    "The requested PBE Owner fixture is missing or archived.",
+                    code="pbe_owner_fixture_unavailable",
+                    status=409,
+                )
+            rows = connection.execute(
+                """
+                SELECT d.asset_id, d.placement_state, d.eligibility_state, d.source,
+                       a.source_anchor, a.media_type, a.filename, a.captured_at,
+                       a.modified_at, a.pixel_width, a.pixel_height, a.duration,
+                       a.photos_title, a.photos_keywords_json, a.location_label,
+                       a.location_keywords_json, a.metadata_seed_title,
+                       a.metadata_seed_keywords_json, a.missing_at
+                FROM fixture_asset_decisions AS d
+                JOIN sidecar_assets AS a ON a.asset_id = d.asset_id
+                WHERE d.fixture_id = ?
+                ORDER BY d.asset_id
+                """,
+                (clean_fixture_id,),
+            ).fetchall()
+            versions = connection.execute(
+                """
+                SELECT v.asset_id, v.version_id, v.metadata_fingerprint,
+                       v.rendered_fingerprint, v.source_exists, v.state
+                FROM asset_source_versions AS v
+                JOIN fixture_asset_decisions AS d ON d.asset_id = v.asset_id
+                WHERE d.fixture_id = ?
+                ORDER BY v.asset_id, v.version_id
+                """,
+                (clean_fixture_id,),
+            ).fetchall()
+        finally:
+            connection.close()
+    except PBEOwnerSessionError:
+        raise
+    except sqlite3.Error as error:
+        raise PBEOwnerSessionError(
+            "PBE Owner host cannot verify the selected fixture revision.",
+            code="pbe_owner_host_not_ready",
+            status=503,
+        ) from error
+    payload = {
+        "fixture": dict(fixture),
+        "members": [dict(row) for row in rows],
+        "sourceVersions": [dict(row) for row in versions],
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return f"fixture-revision:sha256:{digest}"
+
+
+def repository_readiness(repo_root: Path, fixture_id: str) -> dict:
     """Return opaque source/catalog identities without disclosing local paths."""
 
     owner_path = repo_root / "assets/owner-actions/Owner.sqlite"
@@ -118,14 +274,16 @@ def repository_readiness(repo_root: Path) -> dict:
         required_tables=("collections", "media_items"),
         bind_file_object=False,
     )
+    fixture_revision = _fixture_revision(owner_path, fixture_id)
     readiness_identity = "pbe-readiness:sha256:" + hashlib.sha256(
-        f"{source_identity}\n{catalog_identity}".encode("utf-8")
+        f"{source_identity}\n{catalog_identity}\n{fixture_revision}".encode("utf-8")
     ).hexdigest()
     return {
         "ready": True,
         "sourceIdentity": source_identity,
         "catalogIdentity": catalog_identity,
         "readinessIdentity": readiness_identity,
+        "fixtureRevision": fixture_revision,
         "lifecycleWriter": "pbb-79-waste-basket",
         "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
     }
@@ -197,6 +355,7 @@ class _Lease:
     source_identity: str
     catalog_identity: str
     readiness_identity: str
+    fixture_revision: str
     capabilities: tuple[str, ...]
     cloud_expires_at: float
     lease_expires_at: float
@@ -243,6 +402,7 @@ class PBEOwnerSessionStore:
                 "sourceIdentity",
                 "catalogIdentity",
                 "readinessIdentity",
+                "fixtureRevision",
                 "expiresAt",
             )
         }
@@ -275,7 +435,7 @@ class PBEOwnerSessionStore:
                 code="pbe_owner_capability_missing",
                 status=403,
             )
-        for field in ("sourceIdentity", "catalogIdentity", "readinessIdentity"):
+        for field in ("sourceIdentity", "catalogIdentity", "readinessIdentity", "fixtureRevision"):
             if fields[field] != _clean(readiness.get(field)):
                 raise PBEOwnerSessionError(
                     "The local PBE host no longer matches the source/catalog lease minted by Backstage.",
@@ -302,6 +462,7 @@ class PBEOwnerSessionStore:
             source_identity=fields["sourceIdentity"],
             catalog_identity=fields["catalogIdentity"],
             readiness_identity=fields["readinessIdentity"],
+            fixture_revision=fields["fixtureRevision"],
             capabilities=capabilities,
             cloud_expires_at=cloud_expires_at,
             lease_expires_at=min(cloud_expires_at, now + self._lease_seconds),
@@ -402,12 +563,14 @@ class PBEOwnerSessionStore:
             _clean(readiness.get("sourceIdentity")),
             _clean(readiness.get("catalogIdentity")),
             _clean(readiness.get("readinessIdentity")),
+            _clean(readiness.get("fixtureRevision")),
             _clean(readiness.get("lifecycleWriter")),
         )
         actual = (
             lease.source_identity,
             lease.catalog_identity,
             lease.readiness_identity,
+            lease.fixture_revision,
             "pbb-79-waste-basket",
         )
         if expected != actual:
@@ -516,8 +679,13 @@ class PBEOwnerSessionStore:
             "sourceIdentity": lease.source_identity,
             "catalogIdentity": lease.catalog_identity,
             "readinessIdentity": lease.readiness_identity,
+            "fixtureRevision": lease.fixture_revision,
             "capabilities": list(lease.capabilities),
             "lifecycleWriter": "pbb-79-waste-basket",
             "expiresAt": datetime.fromtimestamp(lease.cloud_expires_at, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
             "leaseExpiresAt": datetime.fromtimestamp(lease.lease_expires_at, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         }
+
+    def active_fixture_id(self) -> str:
+        with self._lock:
+            return self._lease.fixture_id if self._lease else ""

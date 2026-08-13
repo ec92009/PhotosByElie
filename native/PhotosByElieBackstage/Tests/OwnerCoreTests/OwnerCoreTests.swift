@@ -2733,6 +2733,73 @@ struct PBEOwnerHostContractTests {
     }
     """
 
+    @Test("Host checkout identity rejects dirty and assume-unchanged tracked code")
+    func checkoutIdentityFailsClosed() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-checkout-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("scripts", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try "node_modules/\n".write(
+            to: root.appendingPathComponent(".gitignore"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try ":(glob)scripts/**/*.py\n".write(
+            to: root.appendingPathComponent("scripts/pbe_owner_host_tracked_paths.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        for name in ["local_server.py", "pbe_owner_session.py", "waste_basket_gateway.py"] {
+            try "# \(name)\n".write(
+                to: root.appendingPathComponent("scripts/\(name)"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+        try runGit(root, ["init", "-q"])
+        try runGit(root, ["config", "user.name", "PBE Test"])
+        try runGit(root, ["config", "user.email", "pbe-test@example.invalid"])
+        try runGit(root, ["add", "."])
+        try runGit(root, ["commit", "-qm", "fixture"])
+
+        let cleanIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root)
+        #expect(cleanIdentity.range(
+            of: "^git:[0-9a-f]{40,64}:pbe-host-sha256:[0-9a-f]{64}$",
+            options: .regularExpression
+        ) != nil)
+
+        let ignored = root.appendingPathComponent("node_modules/example/index.js")
+        try FileManager.default.createDirectory(
+            at: ignored.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "ignored dependency\n".write(to: ignored, atomically: true, encoding: .utf8)
+        #expect(try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root) == cleanIdentity)
+
+        let host = root.appendingPathComponent("scripts/local_server.py")
+        try "# dirty tracked host\n".write(to: host, atomically: true, encoding: .utf8)
+        do {
+            _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root)
+            Issue.record("A dirty tracked host checkout was accepted")
+        } catch let error as APIErrorEnvelope {
+            #expect(error.error.code == "pbe_owner_checkout_dirty")
+        }
+
+        try runGit(root, ["checkout", "--", "scripts/local_server.py"])
+        try runGit(root, ["update-index", "--assume-unchanged", "scripts/local_server.py"])
+        try "# hidden tracked host change\n".write(to: host, atomically: true, encoding: .utf8)
+        do {
+            _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root)
+            Issue.record("An assume-unchanged tracked host mutation was accepted")
+        } catch let error as APIErrorEnvelope {
+            #expect(error.error.code == "pbe_owner_checkout_content_mismatch")
+        }
+    }
+
     @Test("Backstage bearer mints a fully bound short-lived session")
     func mintRequestCarriesEveryBinding() async throws {
         let transport = RoutingTransport(responses: [
@@ -2836,6 +2903,19 @@ struct PBEOwnerHostContractTests {
         #expect(throws: FixtureSelectionError.ownerSessionMismatch) {
             try coordinator.beginPBEOwnerSession(drifted, now: now)
         }
+    }
+}
+
+private func runGit(_ root: URL, _ arguments: [String]) throws {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+    process.arguments = ["-C", root.path] + arguments
+    process.standardOutput = FileHandle.nullDevice
+    process.standardError = FileHandle.nullDevice
+    try process.run()
+    process.waitUntilExit()
+    guard process.terminationStatus == 0 else {
+        throw CocoaError(.fileWriteUnknown)
     }
 }
 

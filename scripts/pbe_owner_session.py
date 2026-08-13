@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 from pathlib import Path
+import re
 import secrets
 import sqlite3
 import subprocess
@@ -25,30 +26,119 @@ DEFAULT_LOCAL_LEASE_SECONDS = 90
 REQUIRED_CAPABILITIES = frozenset(
     {"gallery.read", "waste-basket.x", "waste-basket.restore"}
 )
+PBE_OWNER_HOST_SCOPE_MANIFEST = "scripts/pbe_owner_host_tracked_paths.txt"
+PBE_OWNER_HOST_REQUIRED_PATHS = (
+    PBE_OWNER_HOST_SCOPE_MANIFEST,
+    "scripts/local_server.py",
+    "scripts/pbe_owner_session.py",
+    "scripts/waste_basket_gateway.py",
+)
 
 
-def checkout_identity(repo_root: Path) -> str:
+def _git(repo_root: Path, *arguments: str, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", str(repo_root), *arguments],
+        check=check,
+        capture_output=True,
+    )
+
+
+def _host_scope_pathspecs(repo_root: Path) -> tuple[str, ...]:
+    manifest_path = repo_root / PBE_OWNER_HOST_SCOPE_MANIFEST
     try:
-        completed = subprocess.run(
-            ["git", "-C", str(repo_root.resolve()), "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as error:
+        lines = manifest_path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
         raise PBEOwnerSessionError(
-            "PBE Owner host cannot verify the checkout identity.",
+            "PBE Owner host cannot read its tracked checkout scope.",
             code="pbe_owner_checkout_identity_unavailable",
             status=503,
         ) from error
-    revision = completed.stdout.strip().lower()
-    if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+    pathspecs = list(PBE_OWNER_HOST_REQUIRED_PATHS)
+    for line in lines:
+        value = line.strip()
+        if value and not value.startswith("#") and value not in pathspecs:
+            pathspecs.append(value)
+    return tuple(pathspecs)
+
+
+def _verified_host_tree(repo_root: Path, pathspecs: tuple[str, ...]) -> tuple[str, str]:
+    try:
+        top_level = _git(repo_root, "rev-parse", "--show-toplevel").stdout.decode("utf-8").strip()
+        if Path(top_level).resolve() != repo_root:
+            raise ValueError("repository root mismatch")
+        revision = _git(repo_root, "rev-parse", "--verify", "HEAD^{commit}").stdout.decode("ascii").strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+            raise ValueError("invalid revision")
+        tracked = {
+            value.decode("utf-8")
+            for value in _git(repo_root, "ls-files", "-z", "--", *pathspecs).stdout.split(b"\0")
+            if value
+        }
+        if not set(PBE_OWNER_HOST_REQUIRED_PATHS).issubset(tracked):
+            raise ValueError("required host files are not tracked")
+        dirty = _git(
+            repo_root,
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=no",
+            "--",
+            *pathspecs,
+        ).stdout
+        if dirty:
+            raise PBEOwnerSessionError(
+                "PBE Owner requires a clean tracked host checkout.",
+                code="pbe_owner_checkout_dirty",
+                status=409,
+            )
+        tree_output = _git(repo_root, "ls-tree", "-r", "-z", "HEAD", "--", *sorted(tracked)).stdout
+        entries: dict[str, tuple[str, str]] = {}
+        for raw_entry in tree_output.split(b"\0"):
+            if not raw_entry:
+                continue
+            metadata, raw_path = raw_entry.split(b"\t", 1)
+            mode, object_type, object_id = metadata.decode("ascii").split(" ", 2)
+            path = raw_path.decode("utf-8")
+            if object_type != "blob":
+                raise ValueError("host scope contains a non-blob entry")
+            entries[path] = (mode, object_id)
+        if not set(PBE_OWNER_HOST_REQUIRED_PATHS).issubset(entries):
+            raise ValueError("required host files are absent from HEAD")
+        paths = sorted(entries)
+        actual_hashes = _git(repo_root, "hash-object", "--", *paths).stdout.decode("ascii").splitlines()
+        if len(actual_hashes) != len(paths):
+            raise ValueError("host content hash count mismatch")
+        for path, actual_hash in zip(paths, actual_hashes, strict=True):
+            if not hmac.compare_digest(entries[path][1], actual_hash.strip().lower()):
+                raise PBEOwnerSessionError(
+                    "PBE Owner host files do not match the verified commit.",
+                    code="pbe_owner_checkout_content_mismatch",
+                    status=409,
+                )
+    except PBEOwnerSessionError:
+        raise
+    except (OSError, UnicodeError, ValueError, subprocess.CalledProcessError) as error:
         raise PBEOwnerSessionError(
-            "PBE Owner host returned an invalid checkout identity.",
+            "PBE Owner host cannot verify the tracked checkout.",
             code="pbe_owner_checkout_identity_unavailable",
             status=503,
-        )
-    return f"git:{revision}"
+        ) from error
+    digest = hashlib.sha256()
+    for path in sorted(entries):
+        mode, object_id = entries[path]
+        digest.update(path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(mode.encode("ascii"))
+        digest.update(b"\0")
+        digest.update(object_id.encode("ascii"))
+        digest.update(b"\n")
+    return revision, digest.hexdigest()
+
+
+def checkout_identity(repo_root: Path) -> str:
+    root = repo_root.resolve()
+    revision, tree_digest = _verified_host_tree(root, _host_scope_pathspecs(root))
+    return f"git:{revision}:pbe-host-sha256:{tree_digest}"
 
 
 class PBEOwnerHostAuthenticator:

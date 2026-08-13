@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public protocol OwnerAPITransport: Sendable {
@@ -92,6 +93,139 @@ public protocol PBEOwnerHostServing: Sendable {
     func heartbeat(sessionToken: String) async throws -> PBEOwnerHostSessionEnvelope
     func close(sessionToken: String) async throws
     func stopIfLaunched() async
+}
+
+enum PBEOwnerCheckoutIdentity {
+    private static let scopeManifest = "scripts/pbe_owner_host_tracked_paths.txt"
+    private static let requiredPaths = [
+        scopeManifest,
+        "scripts/local_server.py",
+        "scripts/pbe_owner_session.py",
+        "scripts/waste_basket_gateway.py",
+    ]
+
+    static func verified(repositoryRoot: URL) throws -> String {
+        let root = repositoryRoot.standardizedFileURL.resolvingSymlinksInPath()
+        let pathspecs = try hostPathspecs(repositoryRoot: root)
+        do {
+            let topLevel = try git(root, ["rev-parse", "--show-toplevel"]).text
+            guard URL(fileURLWithPath: topLevel, isDirectory: true)
+                .standardizedFileURL.resolvingSymlinksInPath() == root else {
+                throw VerificationFailure.invalidRepository
+            }
+            let revision = try git(root, ["rev-parse", "--verify", "HEAD^{commit}"]).text.lowercased()
+            guard revision.range(of: "^[0-9a-f]{40,64}$", options: .regularExpression) != nil else {
+                throw VerificationFailure.invalidRepository
+            }
+
+            let tracked = Set(try git(root, ["ls-files", "-z", "--"] + pathspecs).nulStrings)
+            guard Set(requiredPaths).isSubset(of: tracked) else {
+                throw VerificationFailure.invalidRepository
+            }
+            let status = try git(root, [
+                "status", "--porcelain=v1", "-z", "--untracked-files=no", "--",
+            ] + pathspecs).data
+            guard status.isEmpty else {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_checkout_dirty",
+                    message: "PBE Owner requires a clean tracked host checkout."
+                ))
+            }
+
+            let tree = try git(root, ["ls-tree", "-r", "-z", "HEAD", "--"] + tracked.sorted()).nulStrings
+            var entries: [String: (mode: String, objectID: String)] = [:]
+            for entry in tree {
+                let fields = entry.split(separator: "\t", maxSplits: 1).map(String.init)
+                guard fields.count == 2 else { throw VerificationFailure.invalidRepository }
+                let metadata = fields[0].split(separator: " ", maxSplits: 2).map(String.init)
+                guard metadata.count == 3, metadata[1] == "blob" else {
+                    throw VerificationFailure.invalidRepository
+                }
+                entries[fields[1]] = (metadata[0], metadata[2])
+            }
+            guard Set(requiredPaths).isSubset(of: Set(entries.keys)) else {
+                throw VerificationFailure.invalidRepository
+            }
+            let paths = entries.keys.sorted()
+            let actualHashes = try git(root, ["hash-object", "--"] + paths).textLines
+            guard actualHashes.count == paths.count else {
+                throw VerificationFailure.invalidRepository
+            }
+            for (path, actualHash) in zip(paths, actualHashes) {
+                guard entries[path]?.objectID == actualHash.lowercased() else {
+                    throw APIErrorEnvelope(error: .init(
+                        code: "pbe_owner_checkout_content_mismatch",
+                        message: "PBE Owner host files do not match the verified commit."
+                    ))
+                }
+            }
+
+            var hasher = SHA256()
+            for path in paths {
+                guard let entry = entries[path] else { throw VerificationFailure.invalidRepository }
+                hasher.update(data: Data(path.utf8))
+                hasher.update(data: Data([0]))
+                hasher.update(data: Data(entry.mode.utf8))
+                hasher.update(data: Data([0]))
+                hasher.update(data: Data(entry.objectID.utf8))
+                hasher.update(data: Data([10]))
+            }
+            let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            return "git:\(revision):pbe-host-sha256:\(digest)"
+        } catch let error as APIErrorEnvelope {
+            throw error
+        } catch {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_checkout_identity_unavailable",
+                message: "Backstage could not verify the tracked PBE Owner host checkout."
+            ))
+        }
+    }
+
+    private static func hostPathspecs(repositoryRoot: URL) throws -> [String] {
+        let manifest = repositoryRoot.appendingPathComponent(scopeManifest)
+        let contents = try String(contentsOf: manifest, encoding: .utf8)
+        var pathspecs = requiredPaths
+        for line in contents.split(whereSeparator: { $0.isNewline }) {
+            let value = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty, !value.hasPrefix("#"), !pathspecs.contains(value) {
+                pathspecs.append(value)
+            }
+        }
+        return pathspecs
+    }
+
+    private static func git(_ root: URL, _ arguments: [String]) throws -> GitOutput {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["-C", root.path] + arguments
+        process.standardOutput = output
+        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
+        try process.run()
+        process.waitUntilExit()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        guard process.terminationStatus == 0 else { throw VerificationFailure.gitFailed }
+        return GitOutput(data: data)
+    }
+
+    private struct GitOutput {
+        var data: Data
+        var text: String {
+            String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        var textLines: [String] {
+            text.split(whereSeparator: { $0.isNewline }).map(String.init)
+        }
+        var nulStrings: [String] {
+            data.split(separator: 0).map { String(decoding: $0, as: UTF8.self) }
+        }
+    }
+
+    private enum VerificationFailure: Error {
+        case gitFailed
+        case invalidRepository
+    }
 }
 
 public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
@@ -238,7 +372,7 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
                 message: "Backstage cannot find a PhotosByElie checkout on this Mac. Set PBE_REPO_ROOT to its path."
             ))
         }
-        let expectedCheckoutIdentity = try Self.checkoutIdentity(repositoryRoot: repositoryRoot)
+        let expectedCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: repositoryRoot)
         let bootstrapSecret = "\(UUID().uuidString)\(UUID().uuidString)"
         let descriptorURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-owner-host-\(UUID().uuidString).json")
@@ -375,32 +509,6 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         })
     }
 
-    private static func checkoutIdentity(repositoryRoot: URL) throws -> String {
-        let process = Process()
-        let output = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["-C", repositoryRoot.path, "rev-parse", "HEAD"]
-        process.standardOutput = output
-        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw APIErrorEnvelope(error: .init(
-                code: "pbe_owner_checkout_identity_unavailable",
-                message: "Backstage could not verify the PhotosByElie checkout revision."
-            ))
-        }
-        let revision = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        guard revision.range(of: "^[0-9a-f]{40,64}$", options: .regularExpression) != nil else {
-            throw APIErrorEnvelope(error: .init(
-                code: "pbe_owner_checkout_identity_unavailable",
-                message: "Backstage received an invalid checkout revision."
-            ))
-        }
-        return "git:\(revision)"
-    }
 }
 
 public actor OwnerAPIClient {

@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -13,6 +14,7 @@ from scripts.pbe_owner_session import (
     PBEOwnerSessionError,
     PBEOwnerHostAuthenticator,
     PBEOwnerSessionStore,
+    checkout_identity,
     repository_readiness,
 )
 from unittest.mock import patch
@@ -47,6 +49,54 @@ class PBEOwnerSessionTests(unittest.TestCase):
             "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
             "expiresAt": "2033-05-18T03:35:00Z",
         }
+
+    def test_checkout_identity_rejects_dirty_or_hidden_host_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "scripts").mkdir()
+            (root / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+            (root / "scripts/pbe_owner_host_tracked_paths.txt").write_text(
+                ":(glob)scripts/**/*.py\n",
+                encoding="utf-8",
+            )
+            for name in ("local_server.py", "pbe_owner_session.py", "waste_basket_gateway.py"):
+                (root / "scripts" / name).write_text(f"# {name}\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "PBE Test"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "pbe-test@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "fixture"], check=True)
+
+            clean_identity = checkout_identity(root)
+            self.assertRegex(
+                clean_identity,
+                r"^git:[0-9a-f]{40,64}:pbe-host-sha256:[0-9a-f]{64}$",
+            )
+
+            ignored = root / "node_modules/example/index.js"
+            ignored.parent.mkdir(parents=True)
+            ignored.write_text("ignored dependency\n", encoding="utf-8")
+            (root / "unrelated-untracked.txt").write_text("not host code\n", encoding="utf-8")
+            self.assertEqual(checkout_identity(root), clean_identity)
+
+            host = root / "scripts/local_server.py"
+            host.write_text("# dirty tracked host\n", encoding="utf-8")
+            with self.assertRaises(PBEOwnerSessionError) as dirty:
+                checkout_identity(root)
+            self.assertEqual(dirty.exception.code, "pbe_owner_checkout_dirty")
+
+            subprocess.run(
+                ["git", "-C", str(root), "checkout", "--", "scripts/local_server.py"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "update-index", "--assume-unchanged", "scripts/local_server.py"],
+                check=True,
+            )
+            host.write_text("# hidden tracked host change\n", encoding="utf-8")
+            with self.assertRaises(PBEOwnerSessionError) as hidden:
+                checkout_identity(root)
+            self.assertEqual(hidden.exception.code, "pbe_owner_checkout_content_mismatch")
 
     def test_freezes_fixture_and_retains_only_token_digest(self) -> None:
         started = self.store.start("raw-secret-session-token", self.session, self.readiness)

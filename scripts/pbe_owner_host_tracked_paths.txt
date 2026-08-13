@@ -1,0 +1,34 @@
+# Tracked executable scope for a Backstage-launched PBE Owner host.
+# Git pathspecs are evaluated from the repository root. Keep this list limited
+# to Python host code and scripts executed by the actionable gallery/detail UI.
+:(glob)scripts/**/*.py
+gallery.html
+photo.html
+shared.css
+styles.css
+photos.css
+media-config.js
+photos.js
+owner-auth.js
+owner-tools.js
+site-version.js
+analytics.js
+catalog-sqlite.js
+photos-data.js
+shared-gallery-store.js
+:(glob)assets/**/app-context.js
+pbe-owner-session.js
+hidden-actions.js
+reserve-store.js
+hidden-store.js
+basket-store.js
+liked-store.js
+gallery-card.js
+gallery-layout.js
+gallery-hero.js
+gallery-date-picker.js
+photo-gallery.js
+photo-detail.js
+basket-rail.js
+shared-gallery-visibility.mjs
+assets/apple-photos/2025-2026-app-contexts.js

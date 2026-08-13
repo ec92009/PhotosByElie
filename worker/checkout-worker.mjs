@@ -1398,9 +1398,9 @@ export const createPhotosByElieWorker = ({
       // Analytics must never block checkout, fulfillment, or downloads.
     }
   };
-  const assertLifecycleAllowed = async (assetIds, context) => {
+  const assertLifecycleAllowed = async (assetIds, context, expectedFence = null) => {
     if (!lifecycleDenyStore?.assertAllowed) return true;
-    return lifecycleDenyStore.assertAllowed(assetIds, context);
+    return lifecycleDenyStore.assertAllowed(assetIds, context, expectedFence);
   };
   const orderMediaIds = (order) => [...new Set((order?.items || []).map((item) => String(item?.photoId || "").trim()).filter(Boolean))];
   const filterVisibleMediaIds = async (mediaIds) => {
@@ -1554,7 +1554,7 @@ export const createPhotosByElieWorker = ({
     }
     await assertLifecycleAllowed(orderMediaIds(order), "order-email-resend");
     const sent = await maybeSendReadyEmail(order, { force: true, throwOnFailure: true });
-    return json({ order: publicOrder(sent), deliveryEmail: publicOrder(sent).deliveryEmail });
+    return json({ order: publicOrder(sent), deliveryEmail: publicOrder(sent).deliveryEmail }, 200, PRIVATE_NO_STORE_HEADERS);
   };
 
   const checkRecentPurchases = async (request) => {
@@ -1847,8 +1847,9 @@ export const createPhotosByElieWorker = ({
       throw Object.assign(new Error("Stripe paid amount/currency does not match the order."), { status: 409, code: "amount_mismatch" });
     }
 
+    let fulfillmentFence;
     try {
-      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-prepare");
+      fulfillmentFence = await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-prepare");
     } catch (error) {
       await manualRefundReview(order, error);
       throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
@@ -1871,9 +1872,9 @@ export const createPhotosByElieWorker = ({
     let deliveryResult;
     try {
       deliveryResult = await deliveryClient.createDelivery(preparing);
-      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:after-render");
+      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:after-render", fulfillmentFence);
     } catch (error) {
-      if (error?.code === "asset_lifecycle_denied") {
+      if (["asset_lifecycle_denied", "lifecycle_fence_changed"].includes(error?.code)) {
         await manualRefundReview(preparing, error);
         throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
       }
@@ -1908,6 +1909,15 @@ export const createPhotosByElieWorker = ({
       },
       updatedAt: readyAt,
     };
+    try {
+      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-ready-commit", fulfillmentFence);
+    } catch (error) {
+      if (["asset_lifecycle_denied", "lifecycle_fence_changed"].includes(error?.code)) {
+        await manualRefundReview(preparing, error);
+        throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
+      }
+      throw error;
+    }
     await store.putOrder(ready);
     if (deliveryFiles.length) {
       await Promise.all(deliveryFiles.map((file) => store.putDownload({

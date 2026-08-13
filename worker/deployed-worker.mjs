@@ -190,14 +190,20 @@ export const realEstateGalleriesFor = (env = {}) => {
   return legacy?.username ? withScopedRealEstateGalleries([legacy]).map(withVerifiedRealEstateRelease) : [];
 };
 
-export const realEstateDeliverablesFor = (env = {}, { assemblyDispatcher = null } = {}) => createRealEstateDeliverables({
-  privateBucket: requiredBinding(env, "PRIVATE_MEDIA"),
-  galleries: realEstateGalleriesFor(env),
-  emailClient: null,
-  publicSiteUrl: String(env.PUBLIC_SITE_URL || "https://photos-by-elie.com").replace(/\/+$/, ""),
-  assemblyDispatcher,
-  videoTranscoder: createCloudflareMediaVideoTranscoder({ media: env.MEDIA }),
-});
+export const realEstateDeliverablesFor = (env = {}, { assemblyDispatcher = null } = {}) => {
+  const lifecycleDenyStore = createD1LifecycleDenyStore({
+    database: requiredBinding(env, "ACCESS_DB"),
+  });
+  return createRealEstateDeliverables({
+    privateBucket: requiredBinding(env, "PRIVATE_MEDIA"),
+    galleries: realEstateGalleriesFor(env),
+    emailClient: null,
+    publicSiteUrl: String(env.PUBLIC_SITE_URL || "https://photos-by-elie.com").replace(/\/+$/, ""),
+    assemblyDispatcher,
+    videoTranscoder: createCloudflareMediaVideoTranscoder({ media: env.MEDIA }),
+    assertAssetsAllowed: (mediaIds, context, expectedFence) => lifecycleDenyStore.assertAllowed(mediaIds, context, expectedFence),
+  });
+};
 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({
   "access-control-allow-origin": "*",
@@ -247,7 +253,15 @@ const publicMediaResponse = async (request, env) => {
   }
 
   const url = new URL(request.url);
-  const key = decodeURIComponent(url.pathname.replace(/^\/media\/?/, "")).replace(/^\/+/, "");
+  let key = "";
+  try {
+    key = decodeURIComponent(url.pathname.replace(/^\/media\/?/, "")).replace(/^\/+/, "");
+  } catch {
+    return new Response("Malformed media key", {
+      status: 400,
+      headers: unavailableHeaders(),
+    });
+  }
   if (!key) {
     return new Response("Missing media key", {
       status: 400,
@@ -418,7 +432,7 @@ export default {
         renderer: createCloudflareImagesRenderer({
           images: env.IMAGES,
         }),
-        assertAssetsAllowed: (mediaIds, context) => lifecycleDenyStore.assertAllowed(mediaIds, context),
+        assertAssetsAllowed: (mediaIds, context, expectedFence) => lifecycleDenyStore.assertAllowed(mediaIds, context, expectedFence),
       }),
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,
@@ -426,6 +440,7 @@ export default {
         galleries: realEstateGalleries,
         emailClient,
         downloadBaseUrl: workerPublicUrl,
+        assertAssetsAllowed: (mediaIds, context, expectedFence) => lifecycleDenyStore.assertAllowed(mediaIds, context, expectedFence),
       }),
       realEstateAuth: realEstateGalleries.length && env.REAL_ESTATE_SESSION_SECRET ? createRealEstateAuth({
         galleries: realEstateGalleries,
@@ -449,6 +464,7 @@ export default {
           }),
         } : null,
         videoTranscoder: createCloudflareMediaVideoTranscoder({ media: env.MEDIA }),
+        assertAssetsAllowed: (mediaIds, context) => lifecycleDenyStore.assertAllowed(mediaIds, context),
       }),
       googleOAuthAuth: googleOAuthAuthFor(env),
       accessAuth: ownerAccessAuthFor(env),

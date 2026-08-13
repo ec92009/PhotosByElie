@@ -139,6 +139,7 @@ export const createRealEstateDeliverables = ({
   deliveryLinkMaxDownloads = 100,
   assemblyDispatcher = null,
   videoTranscoder = null,
+  assertAssetsAllowed = null,
   renderTokenTtlSeconds = 20 * 60,
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
@@ -478,14 +479,7 @@ export const createRealEstateDeliverables = ({
       });
     }
 
-    const createdAtDate = now();
-    const createdAt = createdAtDate.toISOString();
-    const ttlSeconds = Math.max(60, Math.floor(Number(deliveryLinkTtlSeconds) || (60 * 60 * 24 * 30)));
-    const expiresAt = new Date(createdAtDate.getTime() + (ttlSeconds * 1000)).toISOString();
-    const downloadLimit = Math.max(1, Math.floor(Number(deliveryLinkMaxDownloads) || 100));
-    const deliveryId = `RE-LINK-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
-    const links = [];
-
+    const selectedMediaIds = [];
     for (const record of selected) {
       const canonicalMediaIds = canonicalMediaIdsFor(record);
       if (!canonicalMediaIds.length) {
@@ -495,6 +489,27 @@ export const createRealEstateDeliverables = ({
           details: { id: record.id },
         });
       }
+      selectedMediaIds.push(...canonicalMediaIds);
+    }
+    if (typeof assertAssetsAllowed !== "function") {
+      throw Object.assign(new Error("Real-estate lifecycle authority is unavailable."), {
+        status: 503,
+        code: "lifecycle_authority_unavailable",
+      });
+    }
+    const uniqueMediaIds = [...new Set(selectedMediaIds)];
+    const lifecycleFence = await assertAssetsAllowed(uniqueMediaIds, "real-estate-delivery-links");
+
+    const createdAtDate = now();
+    const createdAt = createdAtDate.toISOString();
+    const ttlSeconds = Math.max(60, Math.floor(Number(deliveryLinkTtlSeconds) || (60 * 60 * 24 * 30)));
+    const expiresAt = new Date(createdAtDate.getTime() + (ttlSeconds * 1000)).toISOString();
+    const downloadLimit = Math.max(1, Math.floor(Number(deliveryLinkMaxDownloads) || 100));
+    const deliveryId = `RE-LINK-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+    const pendingLinks = [];
+
+    for (const record of selected) {
+      const canonicalMediaIds = canonicalMediaIdsFor(record);
       const output = record.outputs?.[record.type] || record.output || {};
       const objectKey = String(output.key || record.outputKey || "").replace(/^\/+/, "");
       if (!objectKey) {
@@ -517,32 +532,37 @@ export const createRealEstateDeliverables = ({
       const type = String(record.type || "").toLowerCase();
       const contentType = output.contentType || object.httpMetadata?.contentType || contentTypeFor(type, filename);
       const bytes = Number(record.bytes || object.size || 0) || 0;
-      await store.putDownload({
-        token,
-        orderId: deliveryId,
-        bucket: "private",
-        objectKey,
-        filename,
-        contentType,
-        bytes,
-        productId: `real-estate-${type}`,
-        realEstateGalleryKey: gallery.key,
-        realEstateDeliverableId: record.id,
-        canonicalMediaIds,
-        createdAt,
-        expiresAt,
-        downloadLimit,
-        downloadCount: 0,
-      });
-      links.push({
-        id: record.id,
-        type,
-        label: type === "pdf" ? "PDF" : type === "video" ? "Video" : "Originals",
-        filename,
-        bytes,
-        url: deliveryUrlFor(token),
+      pendingLinks.push({
+        download: {
+          token,
+          orderId: deliveryId,
+          bucket: "private",
+          objectKey,
+          filename,
+          contentType,
+          bytes,
+          productId: `real-estate-${type}`,
+          realEstateGalleryKey: gallery.key,
+          realEstateDeliverableId: record.id,
+          canonicalMediaIds,
+          createdAt,
+          expiresAt,
+          downloadLimit,
+          downloadCount: 0,
+        },
+        link: {
+          id: record.id,
+          type,
+          label: type === "pdf" ? "PDF" : type === "video" ? "Video" : "Originals",
+          filename,
+          bytes,
+          url: deliveryUrlFor(token),
+        },
       });
     }
+    await assertAssetsAllowed(uniqueMediaIds, "real-estate-delivery-links:before-token-persistence", lifecycleFence);
+    await Promise.all(pendingLinks.map(({ download }) => store.putDownload(download)));
+    const links = pendingLinks.map(({ link }) => link);
 
     return {
       deliveryId,

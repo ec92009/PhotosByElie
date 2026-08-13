@@ -4126,7 +4126,9 @@ const normalizedAccountWorkerBase = (value) => {
 
 const accountWorkerBaseUrl = () => {
   const params = new URLSearchParams(window.location.search);
-  const override = normalizedAccountWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
+  const override = window.photosByElieInputMode.isLocalhost()
+    ? normalizedAccountWorkerBase(params.get("authWorkerBase") || params.get("workerBase"))
+    : "";
   if (override) return override;
   const mediaConfig = window.photosByElieMediaConfig || {};
   const configured = normalizedAccountWorkerBase(mediaConfig.authWorkerBaseUrl || mediaConfig.checkoutWorkerBaseUrl || "");

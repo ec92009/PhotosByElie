@@ -307,10 +307,26 @@ test("local commit, deploy apply, duplicate apply, and ACK are monotonic", async
   const replay = await store.applyBatch({ ...arm, receipts: [receiptFor(arm, "one", true, "recoverable")] });
   assert.equal(applied.state, "deployed_applied");
   assert.equal(replay.receipts.length, 1);
+  await assert.rejects(store.applyBatch({
+    ...arm,
+    receipts: [{ ...receiptFor(arm, "one", true, "recoverable"), receiptId: "conflicting-receipt" }],
+  }), { code: "lifecycle_receipt_conflict" });
   assert.equal((await store.markLocallyCommitted(arm)).state, "deployed_applied");
   assert.equal((await store.acknowledge(arm)).state, "locally_acked");
   assert.equal((await store.markLocallyCommitted(arm)).state, "locally_acked");
   await assert.rejects(store.assertAllowed(["media-one"]), { code: "asset_lifecycle_denied" });
+});
+
+test("allowed fences reject a lifecycle revision change during a protected operation", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  const restore = await store.armBatch({ operationId: "op-fence-restore", operation: "restore", denied: false, items: [member()] });
+  await store.markLocallyCommitted(restore);
+  await store.applyBatch({ ...restore, receipts: [receiptFor(restore, "one", false, "restored")] });
+  await assert.rejects(store.assertAllowed(["media-one"], "fulfillment:commit", fence), {
+    code: "lifecycle_fence_changed",
+  });
 });
 
 test("late deny cannot override higher restore and restore requires its applied higher revision", async () => {

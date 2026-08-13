@@ -97,12 +97,15 @@ and broad verification evidence is recorded only after parent-side integration
 and audit.
 
 Retained release-topology blocker: the production storefront is still static
-GitHub Pages and directly serves `assets/catalog/photosbyelie.sqlite`. A caller
-can fetch that artifact without traversing the Worker deny plane, so hiding a
-row in browser JavaScript cannot prove immediate metadata/search revocation.
+GitHub Pages and directly serves `assets/catalog/photosbyelie.sqlite` plus
+generated app-context scripts such as
+`assets/apple-photos/2025-2026-app-contexts.js`. A caller can fetch those
+artifacts, including embedded metadata and exact object keys, without traversing
+the Worker deny plane, so hiding a row in browser JavaScript cannot prove
+immediate metadata/search revocation.
 PBE-158/PBB-79 cannot close until the Public Web Release train either places the
-catalog behind an authoritative filtered route or publishes a topology with no
-direct stale-catalog bypass. The release must also apply and activate the exact
+catalog and app-context data behind an authoritative filtered route or publishes
+a topology with no direct stale-data bypass. The release must also apply and activate the exact
 ACCESS_DB migration/manifest before traffic, prove every production Worker
 binding, and invalidate or version every previously cacheable denied media
 response. Static brand/marketing images must be explicitly classified as
@@ -206,10 +209,10 @@ signing state, or ticket was changed.
 The integrated deny-plane source candidate passed these local checks on
 2026-08-13:
 
-- focused deployed deny-plane/browser coverage: 131 Node tests;
+- focused deployed deny-plane/browser coverage: 107 Node tests;
 - focused hosted relay, lifecycle journal, session, and local-server coverage:
-  88 Python tests;
-- complete `npm test`: 22/22 pretests, 213/213 Node tests, and 262/262 Python
+  89 Python tests;
+- complete `npm test`: 25/25 pretests, 219/219 Node tests, and 263/263 Python
   tests;
 - full Swift package: 73 tests across four suites;
 - `python3 scripts/generate_owner_swift_contract.py --check`: 38 operations
@@ -226,4 +229,4 @@ Owner-applied title/keyword visibility gate (it reports catalog media IDs whose
 metadata is not Owner-applied). This train changed no catalog artifact,
 approval row, or real Owner state and did not bypass or simulate that gate.
 The Python runs also emitted existing SQLite `ResourceWarning` diagnostics from
-fixture/performance and mocked-connection tests, but all 262 broad tests passed.
+fixture/performance and mocked-connection tests, but all 263 broad tests passed.

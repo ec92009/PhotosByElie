@@ -496,17 +496,6 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         409,
       );
     }
-    if (["deployed_applied", "locally_acked"].includes(operationRow.state)) {
-      const existing = await rowsFrom(database.prepare(`SELECT receipt_id, canonical_media_id, revision, outcome
-        FROM pbe_lifecycle_receipts WHERE operation_id = ? ORDER BY canonical_media_id`).bind(id));
-      if (existing.length === Number(operationRow.member_count)) {
-        return { operationId: id, operationDigest: digest, state: operationRow.state, receipts: existing };
-      }
-      throw lifecycleError("lifecycle_receipt_partial", "Applied lifecycle receipt membership is incomplete; access remains denied.", 503);
-    }
-    if (operationRow.state !== "locally_committed") {
-      throw lifecycleError("lifecycle_local_commit_required", "Lifecycle apply requires durable local commit evidence.", 409);
-    }
     const normalized = (Array.isArray(receipts) ? receipts : []).map((receipt) => ({
       receiptId: clean(receipt.receiptId),
       canonicalMediaId: clean(receipt.canonicalMediaId || receipt.mediaId),
@@ -520,6 +509,29 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
           || item.revision !== Number(operationRow.revision) || item.denied !== Boolean(operationRow.intended_denied)
           || !["recoverable", "tombstoned", "restored"].includes(item.lifecycleState))) {
       throw lifecycleError("lifecycle_receipt_partial", "Lifecycle receipts must exactly cover the armed batch.", 409);
+    }
+    if (["deployed_applied", "locally_acked"].includes(operationRow.state)) {
+      const existing = await rowsFrom(database.prepare(`SELECT receipt_id, canonical_media_id, canonical_asset_id,
+          revision, denied, lifecycle_state, outcome
+        FROM pbe_lifecycle_receipts WHERE operation_id = ? ORDER BY canonical_media_id`).bind(id));
+      if (existing.length !== Number(operationRow.member_count)) {
+        throw lifecycleError("lifecycle_receipt_partial", "Applied lifecycle receipt membership is incomplete; access remains denied.", 503);
+      }
+      const conflicts = existing.some((item, index) => (
+        clean(item.receipt_id) !== normalized[index].receiptId
+        || clean(item.canonical_media_id) !== normalized[index].canonicalMediaId
+        || clean(item.canonical_asset_id) !== normalized[index].canonicalAssetId
+        || Number(item.revision) !== normalized[index].revision
+        || Boolean(item.denied) !== normalized[index].denied
+        || clean(item.lifecycle_state) !== normalized[index].lifecycleState
+      ));
+      if (conflicts) {
+        throw lifecycleError("lifecycle_receipt_conflict", "Lifecycle receipt replay conflicts with the durable applied receipt set.", 409);
+      }
+      return { operationId: id, operationDigest: digest, state: operationRow.state, receipts: existing };
+    }
+    if (operationRow.state !== "locally_committed") {
+      throw lifecycleError("lifecycle_local_commit_required", "Lifecycle apply requires durable local commit evidence.", 409);
     }
     const barriers = await rowsFrom(database.prepare(`SELECT canonical_media_id, canonical_asset_id, revision
       FROM pbe_lifecycle_barriers WHERE operation_id = ? ORDER BY canonical_media_id`).bind(id));
@@ -746,7 +758,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     return result;
   };
 
-  const assertAllowed = async (mediaIds, context = "access") => {
+  const assertAllowed = async (mediaIds, context = "access", expectedFence = null) => {
     let decisions;
     try {
       decisions = await decisionsFor(mediaIds);
@@ -760,7 +772,20 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
       mediaIds: denied.map((item) => item.canonicalMediaId),
       reasons: denied.map((item) => item.reason),
     });
-    return true;
+    const fence = {
+      media: [...decisions.values()].map((decision) => ({
+        canonicalMediaId: decision.canonicalMediaId,
+        revision: decision.revision,
+        receiptId: decision.receiptId || "",
+      })).sort((left, right) => left.canonicalMediaId.localeCompare(right.canonicalMediaId)),
+    };
+    fence.digest = await canonicalDigestFor(fence.media);
+    if (expectedFence?.digest && clean(expectedFence.digest) !== fence.digest) {
+      throw lifecycleError("lifecycle_fence_changed", "Lifecycle state changed during the protected operation; access is denied.", 409, {
+        context,
+      });
+    }
+    return fence;
   };
 
   const assertObjectAllowed = async ({ bucket, objectKey, context = "media" }) => {

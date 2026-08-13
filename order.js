@@ -57,7 +57,7 @@ const isUnsafePublicWorkerBase = (value) => {
 };
 
 const workerBaseUrl = () => {
-  const fromQuery = normalizedWorkerBase(params.get("workerBase"));
+  const fromQuery = isLocalPage() ? normalizedWorkerBase(params.get("workerBase")) : "";
   if (fromQuery) {
     if (isUnsafePublicWorkerBase(fromQuery)) {
       localStorage.removeItem(workerBaseKey);
@@ -69,7 +69,7 @@ const workerBaseUrl = () => {
   const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
   if (!isLocalPage()) {
     localStorage.removeItem(workerBaseKey);
-    return configured || "http://localhost:8787";
+    return configured;
   }
   const stored = normalizedWorkerBase(localStorage.getItem(workerBaseKey));
   if (stored && !isUnsafePublicWorkerBase(stored)) return stored;
@@ -77,7 +77,9 @@ const workerBaseUrl = () => {
   return configured || "http://localhost:8787";
 };
 const orderAccountWorkerBaseUrl = () => {
-  const fromQuery = normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"));
+  const fromQuery = isLocalPage()
+    ? normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"))
+    : "";
   if (fromQuery && !isUnsafePublicWorkerBase(fromQuery)) return fromQuery;
   const configured = normalizedWorkerBase(window.photosByElieMediaConfig?.authWorkerBaseUrl || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl || "");
   return configured || workerBaseUrl();

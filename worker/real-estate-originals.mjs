@@ -112,6 +112,7 @@ export const createRealEstateOriginals = ({
   galleries = defaultGalleries,
   emailClient = null,
   downloadBaseUrl = "",
+  assertAssetsAllowed = null,
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
@@ -315,9 +316,22 @@ export const createRealEstateOriginals = ({
     };
   }));
 
+  const assertRequestedAllowed = async (requested, context, expectedFence = null) => {
+    const mediaIds = requested.map((item) => item.photoId);
+    if (!mediaIds.length || typeof assertAssetsAllowed !== "function") {
+      throw Object.assign(new Error("Real-estate lifecycle authority is unavailable."), {
+        status: 503,
+        code: "lifecycle_authority_unavailable",
+      });
+    }
+    return assertAssetsAllowed(mediaIds, context, expectedFence);
+  };
+
   const preflight = async (payload = {}) => {
     const { galleryKey, requested } = prepareRequest(payload);
+    const lifecycleFence = await assertRequestedAllowed(requested, "real-estate-originals-preflight");
     const metadata = await metadataFor(requested);
+    await assertRequestedAllowed(requested, "real-estate-originals-preflight:before-response", lifecycleFence);
     const items = metadata.map(({ item, object, verificationMethod }) => ({
       photoId: item.photoId,
       name: item.name,
@@ -350,6 +364,8 @@ export const createRealEstateOriginals = ({
   const createSession = async (payload = {}) => {
     const { gallery, galleryKey, requested } = prepareRequest(payload);
 
+    const lifecycleFence = await assertRequestedAllowed(requested, "real-estate-originals-session");
+
     const metadata = await metadataFor(requested);
     const missing = metadata
       .filter(({ object }) => !object)
@@ -365,6 +381,7 @@ export const createRealEstateOriginals = ({
         details: { missing },
       });
     }
+    await assertRequestedAllowed(requested, "real-estate-originals-session:before-token-persistence", lifecycleFence);
 
     const createdAt = now().toISOString();
     const sessionId = `RE-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
@@ -402,6 +419,7 @@ export const createRealEstateOriginals = ({
       zipFilename: `${safeName(galleryKey, "real-estate")}-originals-${createdAt.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}.zip`,
       files,
     };
+    await assertRequestedAllowed(requested, "real-estate-originals-session:before-email", lifecycleFence);
     const deliveryEmail = await sendOriginalsEmail({ gallery, payload, session, files });
     const withEmail = { ...session, deliveryEmail };
     if (typeof store.putOrder === "function") {

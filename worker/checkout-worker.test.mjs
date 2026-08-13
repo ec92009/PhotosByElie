@@ -3279,6 +3279,48 @@ test("payment received after lifecycle revocation is retained for manual refund 
   assert.equal(retained.deliveryError.lifecycleCode, "asset_lifecycle_denied");
 });
 
+test("revocation racing the final ready commit enters manual refund review", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const photoId = firstDeliverablePhotoId(catalog);
+  let denied = false;
+  const lifecycleDenyStore = {
+    ensureSchema: async () => ({ state: "ready" }),
+    visibilityFor: async (ids) => ids.map((id) => ({ canonicalMediaId: id, visible: !denied, revision: 1 })),
+    assertAllowed: async (ids, context) => {
+      if (denied && ids.includes(photoId)) throw Object.assign(new Error("One or more assets are unavailable."), {
+        status: 410,
+        code: "asset_lifecycle_denied",
+      });
+      if (context === "fulfillment:after-render") denied = true;
+      return { digest: "fence-one" };
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    randomUUID,
+    lifecycleDenyStore,
+    delivery: createPerFileTestDelivery(() => new Date("2026-05-07T12:00:00.000Z")),
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 409);
+  assert.equal((await payResponse.json()).error.code, "paid_asset_revoked");
+  const retained = await store.getOrder(checkout.order.id);
+  assert.equal(retained.status, "manual_refund_review");
+  assert.equal(retained.delivery, null);
+});
+
 test("paid checkout sends per-purchased-item delivery email links", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();
@@ -3345,6 +3387,8 @@ test("paid checkout sends per-purchased-item delivery email links", async () => 
     email: "buyer@example.com",
   }));
   assert.equal(resendResponse.status, 200);
+  assert.equal(resendResponse.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(resendResponse.headers.get("cdn-cache-control"), "no-store");
   const resent = await resendResponse.json();
   assert.equal(resent.deliveryEmail.status, "sent");
   assert.equal(resent.deliveryEmail.resendCount, 1);
@@ -3680,6 +3724,7 @@ test("real-estate originals preflight is authenticated, read-only, and storage-s
       now: () => new Date("2026-08-07T00:00:00.000Z"),
       galleries,
       emailClient,
+      assertAssetsAllowed: allowLifecycleFor().assertAllowed,
     }),
     realEstateAuth: createRealEstateAuth({
       galleries,
@@ -3778,6 +3823,7 @@ test("receipt-backed real-estate release allows only its flat canonical master I
       allowedPhotoIds: [allowedPhotoId],
     }],
     now: () => new Date("2026-08-07T08:00:00.000Z"),
+    assertAssetsAllowed: allowLifecycleFor().assertAllowed,
   });
   const realEstateSession = { galleryKey: "corine-real-estate", username: "Corine" };
 
@@ -3828,6 +3874,7 @@ test("real-estate preflight falls back to a one-byte read without creating deliv
       privateMasterLayout: "flat",
       allowedPhotoIds: [photoId],
     }],
+    assertAssetsAllowed: allowLifecycleFor().assertAllowed,
   });
 
   const preflight = await originals.preflight({
@@ -3841,6 +3888,84 @@ test("real-estate preflight falls back to a one-byte read without creating deliv
   assert.equal(preflight.items[0].verificationMethod, "range-read");
   assert.equal(store._debug.downloads.size, 0);
   assert.equal(store._debug.orders.size, 0);
+});
+
+test("real-estate originals deny before metadata reads, tokens, orders, or email", async () => {
+  const photoId = "001-revoked-original";
+  let metadataReads = 0;
+  const privateR2 = {
+    head: async () => { metadataReads += 1; return { size: 42 }; },
+    get: async () => { metadataReads += 1; return null; },
+  };
+  const store = createMemoryStore();
+  const emailClient = createFakeEmailClient();
+  const originals = createRealEstateOriginals({
+    privateBucket: privateR2,
+    store,
+    emailClient,
+    galleries: [{
+      key: "corine-real-estate",
+      username: "Corine",
+      privateMasterPrefix: "masters",
+      privateMasterLayout: "flat",
+      allowedPhotoIds: [photoId],
+    }],
+    assertAssetsAllowed: allowLifecycleFor([photoId]).assertAllowed,
+  });
+  const payload = {
+    galleryKey: "corine-real-estate",
+    realEstateSession: { galleryKey: "corine-real-estate", username: "Corine" },
+    items: [{ photoId, sourceFile: "revoked.jpg" }],
+  };
+
+  await assert.rejects(originals.preflight(payload), { code: "asset_lifecycle_denied" });
+  await assert.rejects(originals.createSession(payload), { code: "asset_lifecycle_denied" });
+  assert.equal(metadataReads, 0);
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+  assert.equal(emailClient.sent.length, 0);
+});
+
+test("real-estate originals recheck their lifecycle fence before token persistence", async () => {
+  const photoId = "001-raced-original";
+  let metadataReads = 0;
+  let lifecycleChecks = 0;
+  const store = createMemoryStore();
+  const emailClient = createFakeEmailClient();
+  const originals = createRealEstateOriginals({
+    privateBucket: {
+      head: async () => { metadataReads += 1; return { size: 42 }; },
+      get: async () => null,
+    },
+    store,
+    emailClient,
+    galleries: [{
+      key: "corine-real-estate",
+      username: "Corine",
+      privateMasterPrefix: "masters",
+      privateMasterLayout: "flat",
+      allowedPhotoIds: [photoId],
+    }],
+    assertAssetsAllowed: async (_ids, _context, expectedFence) => {
+      lifecycleChecks += 1;
+      if (expectedFence) throw Object.assign(new Error("Lifecycle changed."), {
+        status: 409,
+        code: "lifecycle_fence_changed",
+      });
+      return { digest: "originals-fence" };
+    },
+  });
+
+  await assert.rejects(originals.createSession({
+    galleryKey: "corine-real-estate",
+    realEstateSession: { galleryKey: "corine-real-estate", username: "Corine" },
+    items: [{ photoId, sourceFile: "raced.jpg" }],
+  }), { code: "lifecycle_fence_changed" });
+  assert.equal(lifecycleChecks, 2);
+  assert.equal(metadataReads, 1);
+  assert.equal(store._debug.downloads.size, 0);
+  assert.equal(store._debug.orders.size, 0);
+  assert.equal(emailClient.sent.length, 0);
 });
 
 test("real-estate originals endpoint creates private download tokens", async () => {
@@ -3889,6 +4014,7 @@ test("real-estate originals endpoint creates private download tokens", async () 
       galleries,
       emailClient,
       downloadBaseUrl: "https://worker.test",
+      assertAssetsAllowed: allowLifecycleFor().assertAllowed,
     }),
     realEstateAuth: createRealEstateAuth({
       galleries,
@@ -4359,6 +4485,7 @@ test("real-estate delivery links provide expiring no-login access to private fin
       downloadBaseUrl: "https://worker.test",
       deliveryLinkTtlSeconds: 7 * 24 * 60 * 60,
       deliveryLinkMaxDownloads: 12,
+      assertAssetsAllowed: allowLifecycleFor().assertAllowed,
     }),
     realEstateAuth: createRealEstateAuth({
       galleries,
@@ -4444,6 +4571,88 @@ test("real-estate delivery links provide expiring no-login access to private fin
   assert.equal(stored.realEstateDeliverableId, "corine-pdf-ready");
   assert.deepEqual(stored.canonicalMediaIds, ["photo-1"]);
   assert.equal(stored.downloadCount, 1);
+});
+
+test("real-estate delivery links deny the full batch before object reads or token persistence", async () => {
+  const privateR2 = createFakeR2();
+  const store = createMemoryStore();
+  const galleries = [{ key: "corine-real-estate", username: "Corine" }];
+  const deliverables = createRealEstateDeliverables({
+    privateBucket: privateR2,
+    store,
+    galleries,
+    assertAssetsAllowed: allowLifecycleFor(["photo-denied"]).assertAllowed,
+  });
+  const session = { galleryKey: "corine-real-estate", username: "Corine" };
+  const record = await deliverables.putDeliverable({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverable: {
+      id: "denied-pdf",
+      type: "pdf",
+      status: "ready",
+      filename: "denied.pdf",
+      outputs: { pdf: { key: "outputs/denied.pdf", contentType: "application/pdf" } },
+      batch: { batchId: "denied-batch", projects: [{ items: [{ photoId: "photo-denied" }] }] },
+    },
+  });
+  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+  let outputReads = 0;
+  const originalGet = privateR2.get;
+  privateR2.get = async (key, options) => {
+    if (key === record.outputs.pdf.key) outputReads += 1;
+    return originalGet(key, options);
+  };
+
+  await assert.rejects(deliverables.createDeliveryLinks({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverableIds: [record.id],
+  }), { code: "asset_lifecycle_denied" });
+  assert.equal(outputReads, 0);
+  assert.equal(store._debug.downloads.size, 0);
+});
+
+test("real-estate delivery links recheck their lifecycle fence before token persistence", async () => {
+  const privateR2 = createFakeR2();
+  const store = createMemoryStore();
+  const galleries = [{ key: "corine-real-estate", username: "Corine" }];
+  let lifecycleChecks = 0;
+  const deliverables = createRealEstateDeliverables({
+    privateBucket: privateR2,
+    store,
+    galleries,
+    assertAssetsAllowed: async (_ids, _context, expectedFence) => {
+      lifecycleChecks += 1;
+      if (expectedFence) throw Object.assign(new Error("Lifecycle changed."), {
+        status: 409,
+        code: "lifecycle_fence_changed",
+      });
+      return { digest: "delivery-link-fence" };
+    },
+  });
+  const session = { galleryKey: "corine-real-estate", username: "Corine" };
+  const record = await deliverables.putDeliverable({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverable: {
+      id: "raced-pdf",
+      type: "pdf",
+      status: "ready",
+      filename: "raced.pdf",
+      outputs: { pdf: { key: "outputs/raced.pdf", contentType: "application/pdf" } },
+      batch: { batchId: "raced-batch", projects: [{ items: [{ photoId: "photo-raced" }] }] },
+    },
+  });
+  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+
+  await assert.rejects(deliverables.createDeliveryLinks({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverableIds: [record.id],
+  }), { code: "lifecycle_fence_changed" });
+  assert.equal(lifecycleChecks, 2);
+  assert.equal(store._debug.downloads.size, 0);
 });
 
 test("Cloudflare video transcoder forces a real iPhone-compatible transform", async () => {
@@ -4884,6 +5093,21 @@ test("deployed Worker serves public R2 media byte ranges", async () => {
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "010203");
   assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+});
+
+test("deployed Worker returns a no-store 400 for malformed media percent encoding", async () => {
+  let bucketReads = 0;
+  const response = await deployedWorker.fetch(new Request("https://worker.test/media/%E0%A4%A"), {
+    PUBLIC_MEDIA: {
+      head: async () => { bucketReads += 1; return null; },
+      get: async () => { bucketReads += 1; return null; },
+    },
+  });
+  assert.equal(response.status, 400);
+  assert.equal(await response.text(), "Malformed media key");
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+  assert.equal(bucketReads, 0);
 });
 
 test("Worker health fails while lifecycle authority is blocked and succeeds only when ready", async () => {

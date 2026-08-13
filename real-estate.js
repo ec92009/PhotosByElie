@@ -274,7 +274,9 @@
   };
 
   const workerBaseUrl = () => {
-    const override = normalizedWorkerBase(pageParams.get("authWorkerBase") || pageParams.get("workerBase"));
+    const override = isLocalHost
+      ? normalizedWorkerBase(pageParams.get("authWorkerBase") || pageParams.get("workerBase"))
+      : "";
     if (override) return override;
     const configured = normalizedWorkerBase(
       window.photosByElieMediaConfig?.authWorkerBaseUrl

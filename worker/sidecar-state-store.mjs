@@ -59,34 +59,29 @@ const normalizeMetadataState = (value, fallback = "unreviewed") => {
   return VALID_METADATA_STATES.has(state) ? state : fallback;
 };
 
-const legacyMigrationFrom = (payload = {}) => {
-  if (payload.legacyMigration && typeof payload.legacyMigration === "object") return payload.legacyMigration;
-  if (payload.state?.legacyMigration && typeof payload.state.legacyMigration === "object") return payload.state.legacyMigration;
-  if (payload.decision?.legacyMigration && typeof payload.decision.legacyMigration === "object") return payload.decision.legacyMigration;
-  return null;
-};
-
-const hasAuditedLegacyMigration = (payload = {}) => {
-  const legacyMigration = legacyMigrationFrom(payload);
-  return Boolean(
-    legacyMigration
-      && legacyMigration.kind === "PBB-78-legacy-expo-hidden"
-      && cleanText(legacyMigration.auditReceipt, 500)
-      && cleanText(legacyMigration.planDigest, 500)
-  );
-};
-
 const assertTombstoneWriteAllowed = (payload = {}) => {
   const source = payload.state && typeof payload.state === "object"
     ? payload.state
     : (payload.decision && typeof payload.decision === "object" ? payload.decision : payload);
-  const tombstoneState = cleanText(source.tombstoneState ?? source.tombstone_state, 32).toLowerCase();
-  if (tombstoneState === "active" && !hasAuditedLegacyMigration(payload)) {
-    throw Object.assign(new Error("Direct global tombstone writes are disabled; use the Waste Basket gateway."), {
+  const tombstoneFields = [
+    "tombstoneState", "tombstone_state", "tombstoneReason", "tombstone_reason",
+    "tombstonedAt", "tombstoned_at",
+  ];
+  if (tombstoneFields.some((field) => Object.hasOwn(source, field))) {
+    throw Object.assign(new Error("Sidecar tombstone-family writes are disabled; use the PBB-79 Waste Basket gateway."), {
       status: 409,
       code: "waste_basket_gateway_required",
     });
   }
+};
+
+const withoutTombstoneFamily = (state = {}) => {
+  const clean = { ...state };
+  for (const field of [
+    "tombstoneState", "tombstone_state", "tombstoneReason", "tombstone_reason",
+    "tombstonedAt", "tombstoned_at",
+  ]) delete clean[field];
+  return clean;
 };
 
 const defaultDecision = (assetId = "") => ({
@@ -162,13 +157,11 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
     throw Object.assign(new Error("assetId is required."), { status: 400, code: "sidecar_asset_id_required" });
   }
   const action = cleanText(payload.action || payload.decision, 80).toLowerCase();
-  if (action === "tombstone") {
-    if (!hasAuditedLegacyMigration(payload)) {
-      throw Object.assign(new Error("Direct global tombstone writes are disabled; use the Waste Basket gateway."), {
-        status: 409,
-        code: "waste_basket_gateway_required",
-      });
-    }
+  if (["restore", "tombstone"].includes(action)) {
+    throw Object.assign(new Error("Sidecar lifecycle writes are disabled; use the PBB-79 Waste Basket gateway."), {
+      status: 409,
+      code: "waste_basket_gateway_required",
+    });
   }
   const before = normalizeDecision({ assetId, state: current || {} }, null, timestamp);
   const after = { ...before, keywords: cleanKeywords(before.keywords), metadataAiEvidence: cleanKeywords(before.metadataAiEvidence) };
@@ -188,40 +181,12 @@ const applyDecisionAction = (current, payload = {}, timestamp = "") => {
   } else if (action === "unpick") {
     after.pickState = "undecided";
     changedFamilies.add("pick_state");
-  } else if (action === "restore") {
-    after.pickState = "undecided";
-    if (after.metadataState === "blocked") {
-      after.metadataState = "unreviewed";
-      changedFamilies.add("metadata");
-    }
-    if (after.tombstoneState === "active") {
-      after.tombstoneState = "restored";
-      changedFamilies.add("tombstone");
-    }
-    changedFamilies.add("pick_state");
   } else if (action === "reject") {
     after.pickState = "rejected";
     changedFamilies.add("pick_state");
   } else if (action === "hide") {
     after.pickState = "hidden";
     changedFamilies.add("pick_state");
-  } else if (action === "tombstone") {
-    after.pickState = "rejected";
-    after.metadataState = "blocked";
-    after.reworkCategory = "";
-    after.reworkComment = "";
-    after.metadataAiRung = "";
-    after.metadataAiEvidence = [];
-    after.metadataAiNote = "";
-    after.metadataAiAttemptCount = 0;
-    after.metadataAiLastError = "";
-    after.metadataAiLastAttemptAt = "";
-    after.tombstoneState = "active";
-    after.tombstoneReason = cleanText(payload.reason, 500);
-    after.tombstonedAt = timestamp;
-    changedFamilies.add("metadata");
-    changedFamilies.add("pick_state");
-    changedFamilies.add("tombstone");
   } else if (action === "approve") {
     const metadata = metadataValuesFromPayload(payload, after);
     after.pickState = "picked";
@@ -337,9 +302,6 @@ const DECISION_UPSERT_SQL = `
     metadata_ai_attempt_count = excluded.metadata_ai_attempt_count,
     metadata_ai_last_error = excluded.metadata_ai_last_error,
     metadata_ai_last_attempt_at = excluded.metadata_ai_last_attempt_at,
-    tombstone_state = excluded.tombstone_state,
-    tombstone_reason = excluded.tombstone_reason,
-    tombstoned_at = excluded.tombstoned_at,
     pending_sync_count = excluded.pending_sync_count,
     last_action = excluded.last_action,
     updated_at = excluded.updated_at
@@ -400,6 +362,11 @@ export const createMemorySidecarStateStore = ({
     const assetId = cleanAssetId(payload.assetId || payload.asset_id || payload.state?.assetId || payload.state?.asset_id);
     const current = assetId ? decisions.get(assetId) : null;
     const decision = normalizeDecision(payload, current, timestamp);
+    if (current) {
+      decision.tombstoneState = current.tombstoneState;
+      decision.tombstoneReason = current.tombstoneReason;
+      decision.tombstonedAt = current.tombstonedAt;
+    }
     decisions.set(decision.assetId, clone(decision));
     return clone(decision);
   };
@@ -425,8 +392,7 @@ export const createMemorySidecarStateStore = ({
     const result = applyDecisionAction(current, payload, timestamp);
     const decision = await putDecision({
       assetId: result.assetId,
-      state: result.state,
-      legacyMigration: payload.legacyMigration,
+      state: withoutTombstoneFamily(result.state),
     }, context);
     const actor = actorForEvent(context);
     events.unshift({
@@ -529,8 +495,7 @@ export const createD1SidecarStateStore = ({
     const result = applyDecisionAction(current, payload, timestamp);
     const decision = await putDecision({
       assetId: result.assetId,
-      state: result.state,
-      legacyMigration: payload.legacyMigration,
+      state: withoutTombstoneFamily(result.state),
     }, { ...context, timestamp });
     const actor = actorForEvent(context);
     await database.prepare(`

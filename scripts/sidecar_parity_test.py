@@ -1,5 +1,8 @@
 import unittest
 from pathlib import Path
+import tempfile
+
+from scripts.sidecar_state_db import connect, mirror_cloud_decisions, record_decision
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +91,51 @@ class SidecarParityInventoryTest(unittest.TestCase):
         self.assertNotIn("Open scoped Sidecar", owner_html)
         self.assertNotIn("Open Sidecar on this Mac", owner_html)
         self.assertNotIn("LOCAL_SIDECAR_OPEN_URL", owner_js)
+
+    def test_sidecar_restore_and_cloud_mirror_cannot_change_tombstones(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            with connect(repo_root) as connection:
+                now = "2026-08-13T12:00:00+00:00"
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_assets (asset_id, source_anchor, indexed_at, updated_at)
+                    VALUES ('asset-one', 'apple-photos://asset-one', ?, ?)
+                    """,
+                    (now, now),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_tombstones (
+                      asset_id, tombstone_state, reason, tombstoned_at, updated_at
+                    ) VALUES ('asset-one', 'active', 'gateway tombstone', ?, ?)
+                    """,
+                    (now, now),
+                )
+
+            with self.assertRaisesRegex(ValueError, "Sidecar lifecycle writes are disabled"):
+                record_decision(repo_root, {"assetId": "asset-one", "action": "restore"})
+
+            mirrored = mirror_cloud_decisions(repo_root, [{
+                "assetId": "asset-one",
+                "state": {
+                    "rating": 4,
+                    "tombstoneState": "restored",
+                    "tombstoneReason": "cloud bypass",
+                },
+            }])
+            self.assertEqual(mirrored["mirroredCount"], 1)
+            with connect(repo_root) as connection:
+                tombstone = connection.execute(
+                    "SELECT tombstone_state, reason FROM sidecar_tombstones WHERE asset_id = ?",
+                    ("asset-one",),
+                ).fetchone()
+                rating = connection.execute(
+                    "SELECT rating FROM sidecar_decisions WHERE asset_id = ?",
+                    ("asset-one",),
+                ).fetchone()
+            self.assertEqual(tuple(tombstone), ("active", "gateway tombstone"))
+            self.assertEqual(rating["rating"], 4)
 
 
 if __name__ == "__main__":

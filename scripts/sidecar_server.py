@@ -783,11 +783,18 @@ def _sync_ai_proposal_states_to_cloud(repo_root: Path, result: dict) -> dict:
     if not asset_ids:
         return {"ok": True, "configured": True, "count": 0}
     local_rows = merge_state(repo_root, [{"assetId": asset_id} for asset_id in asset_ids])
-    decisions = [
-        {"assetId": str(row.get("assetId") or ""), "state": row.get("sidecarState") or {}}
-        for row in local_rows
-        if str(row.get("assetId") or "").strip()
-    ]
+    decisions = []
+    for row in local_rows:
+        asset_id = str(row.get("assetId") or "").strip()
+        if not asset_id:
+            continue
+        state = dict(row.get("sidecarState") or {})
+        for field in (
+            "tombstoneState", "tombstone_state", "tombstoneReason",
+            "tombstone_reason", "tombstonedAt", "tombstoned_at",
+        ):
+            state.pop(field, None)
+        decisions.append({"assetId": asset_id, "state": state})
     if not decisions:
         return {"ok": True, "configured": True, "count": 0}
     try:

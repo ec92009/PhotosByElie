@@ -1208,7 +1208,7 @@ def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]])
                   metadata_ai_rung, metadata_ai_evidence_json, metadata_ai_note,
                   metadata_ai_attempt_count, metadata_ai_last_error, metadata_ai_last_attempt_at,
                   last_action, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(asset_id) DO UPDATE SET
                   rating = excluded.rating,
                   color = excluded.color,
@@ -1248,28 +1248,9 @@ def mirror_cloud_decisions(repo_root: Path, decisions: Iterable[dict[str, Any]])
                     updated_at,
                 ),
             )
-            if state["tombstoneState"] == "active":
-                conn.execute(
-                    """
-                    INSERT INTO sidecar_tombstones (asset_id, tombstone_state, reason, tombstoned_at, updated_at)
-                    VALUES (?, 'active', ?, ?, ?)
-                    ON CONFLICT(asset_id) DO UPDATE SET
-                      tombstone_state = 'active',
-                      reason = excluded.reason,
-                      tombstoned_at = excluded.tombstoned_at,
-                      updated_at = excluded.updated_at
-                    """,
-                    (asset_id, state["tombstoneReason"], state["tombstonedAt"] or updated_at, updated_at),
-                )
-            elif state["tombstoneState"] in {"", "restored"}:
-                conn.execute(
-                    """
-                    UPDATE sidecar_tombstones
-                    SET tombstone_state = 'restored', updated_at = ?
-                    WHERE asset_id = ? AND tombstone_state = 'active'
-                    """,
-                    (updated_at, asset_id),
-                )
+            # Cloud Sidecar state is a read-through cache for editorial fields,
+            # never a lifecycle authority. Tombstones are written only by the
+            # PBB-79 Waste Basket gateway in Owner.sqlite.
             mirrored += 1
     return {"ok": True, "mirroredCount": mirrored, "skippedCount": skipped}
 
@@ -1523,16 +1504,10 @@ def record_decision(
     if not asset_id:
         raise ValueError("assetId is required")
     action = str(payload.get("action") or payload.get("decision") or "").strip().casefold()
-    if action == "tombstone":
-        legacy_migration = payload.get("legacyMigration")
-        audited_legacy_path = (
-            isinstance(legacy_migration, dict)
-            and legacy_migration.get("kind") == "PBB-78-legacy-expo-hidden"
-            and str(legacy_migration.get("auditReceipt") or "").strip()
-            and str(legacy_migration.get("planDigest") or "").strip()
+    if action in {"restore", "tombstone"}:
+        raise ValueError(
+            "Sidecar lifecycle writes are disabled; use the PBB-79 Waste Basket gateway."
         )
-        if not audited_legacy_path:
-            raise ValueError("Direct global tombstone writes are disabled; use the Waste Basket gateway.")
     now = now_iso()
     connection_context = nullcontext(conn) if conn is not None else connect(repo_root)
     with connection_context as conn:
@@ -1587,32 +1562,12 @@ def record_decision(
         elif action == "unpick":
             pick_state = "undecided"
             changed_families.add("pick_state")
-        elif action == "restore":
-            pick_state = "undecided"
-            if metadata_state == "blocked":
-                metadata_state = "unreviewed"
-                changed_families.add("metadata")
-            if before_tombstone_state == "active":
-                changed_families.add("tombstone")
-            changed_families.add("pick_state")
         elif action == "reject":
             pick_state = "rejected"
             changed_families.add("pick_state")
         elif action == "hide":
             pick_state = "hidden"
             changed_families.add("pick_state")
-        elif action == "tombstone":
-            pick_state = "rejected"
-            metadata_state = "blocked"
-            rework_category = ""
-            rework_comment = ""
-            metadata_ai_rung = ""
-            metadata_ai_evidence = []
-            metadata_ai_note = ""
-            metadata_ai_attempt_count = 0
-            metadata_ai_last_error = ""
-            metadata_ai_last_attempt_at = ""
-            changed_families.update({"metadata", "pick_state", "tombstone"})
         elif action == "approve":
             pick_state = "picked"
             metadata_state = "approved"
@@ -1703,28 +1658,6 @@ def record_decision(
                 asset_id,
             ),
         )
-        if action == "restore":
-            conn.execute(
-                """
-                UPDATE sidecar_tombstones
-                SET tombstone_state = 'restored', updated_at = ?
-                WHERE asset_id = ? AND tombstone_state = 'active'
-                """,
-                (now, asset_id),
-            )
-        elif action == "tombstone":
-            conn.execute(
-                """
-                INSERT INTO sidecar_tombstones (asset_id, tombstone_state, reason, tombstoned_at, updated_at)
-                VALUES (?, 'active', ?, ?, ?)
-                ON CONFLICT(asset_id) DO UPDATE SET
-                  tombstone_state = 'active',
-                  reason = excluded.reason,
-                  tombstoned_at = excluded.tombstoned_at,
-                  updated_at = excluded.updated_at
-                """,
-                (asset_id, str(payload.get("reason") or "").strip(), now, now),
-            )
         after = _current_decision(conn, asset_id)
         after["tombstoneState"] = _active_tombstone_state(conn, asset_id)
         for family in sorted(changed_families):

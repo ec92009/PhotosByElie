@@ -84,16 +84,16 @@ class SidecarReworkQueueTest(unittest.TestCase):
             sidecar_state_db.record_decision(root, {"assetId": "unpicked", "action": "unpick"})
             sidecar_state_db.record_decision(root, {"assetId": "rejected", "action": "reject"})
             sidecar_state_db.record_decision(root, {"assetId": "hidden", "action": "hide"})
-            sidecar_state_db.record_decision(root, {
-                "assetId": "tombstoned",
-                "action": "tombstone",
-                "reason": "test",
-                "legacyMigration": {
-                    "kind": "PBB-78-legacy-expo-hidden",
-                    "planDigest": "test-plan",
-                    "auditReceipt": "test-receipt",
-                },
-            })
+            with sidecar_state_db.connect(root) as connection:
+                now = sidecar_state_db.now_iso()
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_tombstones (
+                      asset_id, tombstone_state, reason, tombstoned_at, updated_at
+                    ) VALUES ('tombstoned', 'active', 'gateway fixture', ?, ?)
+                    """,
+                    (now, now),
+                )
             sidecar_state_db.record_decision(
                 root,
                 {"assetId": "unreviewed", "action": "metadata", "metadataState": "unreviewed"},

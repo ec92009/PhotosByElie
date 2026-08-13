@@ -53,6 +53,28 @@ from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
 from sidecar_state_db import connect, record_decision, upsert_assets
 
 
+def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:
+    now = "2026-08-13T12:00:00+00:00"
+    with connect(repo_root) as connection:
+        connection.execute(
+            """
+            UPDATE sidecar_decisions
+            SET pick_state = 'rejected', metadata_state = 'blocked',
+                last_action = 'waste-basket-empty', updated_at = ?
+            WHERE asset_id = ?
+            """,
+            (now, asset_id),
+        )
+        connection.execute(
+            """
+            INSERT INTO sidecar_tombstones (
+              asset_id, tombstone_state, reason, tombstoned_at, updated_at
+            ) VALUES (?, 'active', 'gateway fixture', ?, ?)
+            """,
+            (asset_id, now, now),
+        )
+
+
 class FixturePipelineTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -825,16 +847,7 @@ class FixturePipelineTest(unittest.TestCase):
             "title": "Approved title",
             "keywords": ["approved"],
         })
-        record_decision(self.root, {
-            "assetId": "asset-2",
-            "action": "tombstone",
-            "reason": "Owner rejected",
-            "legacyMigration": {
-                "kind": "PBB-78-legacy-expo-hidden",
-                "planDigest": "test-plan",
-                "auditReceipt": "test-receipt",
-            },
-        })
+        seed_active_tombstone(self.root, "asset-2")
 
         upsert_assets(self.root, [
             {

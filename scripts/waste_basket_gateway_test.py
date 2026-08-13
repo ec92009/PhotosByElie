@@ -535,7 +535,7 @@ class WasteBasketGatewayTests(unittest.TestCase):
         self.assertEqual(restored["operation"], "tombstone-restore")
         self.assertFalse(gateway.is_globally_blocked(self.root, "asset-1", self.db))
 
-    def test_direct_bypasses_require_audited_legacy_marker(self) -> None:
+    def test_direct_bypasses_are_rejected_even_with_legacy_marker(self) -> None:
         with self.assertRaises(ValueError):
             owner_state_db.record_media_lifecycle_discarded(
                 self.root,
@@ -549,16 +549,13 @@ class WasteBasketGatewayTests(unittest.TestCase):
             )
         with self.assertRaises(gateway.WasteBasketError):
             sidecar_state_db.empty_wastebasket(self.root)
-        legacy = sidecar_state_db.record_decision(
-            self.root,
-            {
+        with self.assertRaisesRegex(ValueError, "Sidecar lifecycle writes are disabled"):
+            sidecar_state_db.record_decision(self.root, {
                 "assetId": "asset-1",
                 "action": "tombstone",
                 "reason": "PBB-78 synthetic compatibility",
                 "legacyMigration": AUDITED_LEGACY_MARKER,
-            },
-        )
-        self.assertEqual(legacy["state"]["tombstoneState"], "active")
+            })
 
     def test_legacy_json_lifecycle_import_is_read_only_and_audited(self) -> None:
         legacy_path = self.root / "assets" / "discarded" / "discarded-photo-ids.json"

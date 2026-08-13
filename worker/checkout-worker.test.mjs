@@ -1403,11 +1403,34 @@ test("sidecar cloud decisions are stored behind Backstage or connector auth", as
   assert.equal(rework.state.reworkCategory, "generic");
   assert.equal(rework.state.metadataAiAttemptCount, 0);
 
+  const restoreBypass = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/apply", {
+    assetId: "apple-cloud-id-1",
+    action: "restore",
+  }, connectorHeaders));
+  assert.equal(restoreBypass.status, 409);
+  assert.equal((await restoreBypass.json()).error.code, "waste_basket_gateway_required");
+
+  const mirrorBypass = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/upsert", {
+    decisions: [{
+      assetId: "apple-cloud-id-1",
+      state: { tombstoneState: "restored" },
+    }],
+  }, connectorHeaders));
+  assert.equal(mirrorBypass.status, 409);
+  assert.equal((await mirrorBypass.json()).error.code, "waste_basket_gateway_required");
+
   const auditedRetryResponse = await worker.fetch(jsonRequest("https://worker.test/owner/sidecar/decisions/upsert", {
     decisions: [{
       assetId: "apple-cloud-id-1",
       state: {
-        ...rework.state,
+        rating: rework.state.rating,
+        color: rework.state.color,
+        pickState: rework.state.pickState,
+        metadataState: rework.state.metadataState,
+        title: rework.state.title,
+        keywords: rework.state.keywords,
+        reworkCategory: rework.state.reworkCategory,
+        reworkComment: rework.state.reworkComment,
         metadataAiAttemptCount: 2,
         metadataAiLastError: "missing preview manifest",
         metadataAiLastAttemptAt: "2026-07-11T10:01:00.000Z",

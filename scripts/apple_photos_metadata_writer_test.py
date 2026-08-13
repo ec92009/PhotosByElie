@@ -22,6 +22,28 @@ from fixture_pipeline import (
 from sidecar_state_db import connect, record_decision, upsert_assets
 
 
+def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:
+    now = "2026-08-13T12:00:00+00:00"
+    with connect(repo_root) as connection:
+        connection.execute(
+            """
+            UPDATE sidecar_decisions
+            SET pick_state = 'rejected', metadata_state = 'blocked',
+                last_action = 'waste-basket-empty', updated_at = ?
+            WHERE asset_id = ?
+            """,
+            (now, asset_id),
+        )
+        connection.execute(
+            """
+            INSERT INTO sidecar_tombstones (
+              asset_id, tombstone_state, reason, tombstoned_at, updated_at
+            ) VALUES (?, 'active', 'gateway fixture', ?, ?)
+            """,
+            (asset_id, now, now),
+        )
+
+
 class FakePhotos:
     def __init__(self):
         self.values = {"asset-1": {"title": "Old", "caption": "Old caption", "keywords": ["Family", "PBE-Rating-2"]}}
@@ -125,19 +147,7 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
             self.root,
             [{"localIdentifier": "asset-2", "filename": "two.jpg", "mediaType": "photo"}],
         )
-        record_decision(
-            self.root,
-            {
-                "assetId": "asset-2",
-                "action": "tombstone",
-                "reason": "owner rejected",
-                "legacyMigration": {
-                    "kind": "PBB-78-legacy-expo-hidden",
-                    "planDigest": "test-plan",
-                    "auditReceipt": "test-receipt",
-                },
-            },
-        )
+        seed_active_tombstone(self.root, "asset-2")
         adapter = FastFakePhotos()
         adapter.values["asset-2"] = {
             "title": "Keep Photos title",
@@ -157,19 +167,7 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
         )
 
     def test_tombstone_precedes_stale_approved_editorial_state(self):
-        record_decision(
-            self.root,
-            {
-                "assetId": "asset-1",
-                "action": "tombstone",
-                "reason": "superseded after approval",
-                "legacyMigration": {
-                    "kind": "PBB-78-legacy-expo-hidden",
-                    "planDigest": "test-plan",
-                    "auditReceipt": "test-receipt",
-                },
-            },
-        )
+        seed_active_tombstone(self.root, "asset-1")
         adapter = FastFakePhotos()
         adapter.values["asset-1"] = {
             "title": "Keep Photos title",

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import local_server
 import owner_state_db
+import waste_basket_gateway
 
 
 @contextmanager
@@ -1251,6 +1252,124 @@ class TitleReviewUndoTests(unittest.TestCase):
                 self.assertEqual(lifecycle["lifecycle_state"], "active")
             finally:
                 conn.close()
+
+    def test_restore_acknowledges_authority_and_retries_failed_projection(self):
+        photo_id = "pbe-restore-projection-retry"
+        fallback_photo = {
+            "id": photo_id,
+            "title": "Projection Retry",
+            "caption": "France",
+            "full": "JPG master",
+            "megapixels": 12,
+            "gallerySrc": "",
+            "imageSrc": "",
+            "metadata": [{"label": "Keywords", "value": "France, Travel"}],
+            "media": {"type": "photo", "publicPreview": {"allowed": True}},
+            "sourceFiles": [{"path": "Camera/projection-retry.jpg", "type": "JPG"}],
+        }
+        state = {
+            "expo": {slug: [] for slug in local_server.ORDER},
+            "reserve": {slug: [] for slug in local_server.ORDER},
+            "hidden": {slug: [] for slug in local_server.ORDER},
+        }
+        state["expo"]["france"].append(copy.deepcopy(fallback_photo))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            owner_db = repo_root / "assets/owner-actions/Owner.sqlite"
+            waste_basket_gateway.ensure_schema(repo_root, owner_db)
+            with sqlite3.connect(owner_db) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_assets
+                      (asset_id, source_anchor, media_type, filename, captured_at,
+                       favorite, hidden, raw_json, indexed_at, updated_at)
+                    VALUES (?, ?, 'photo', ?, ?, 0, 0, '{}', ?, ?)
+                    """,
+                    (
+                        photo_id,
+                        f"synthetic://{photo_id}",
+                        f"{photo_id}.jpg",
+                        "2026-08-13T12:00:00Z",
+                        "2026-08-13T12:00:00Z",
+                        "2026-08-13T12:00:00Z",
+                    ),
+                )
+            with patched_server_state(state, fallback_photo):
+                moved = local_server.apply_photo_action(repo_root, {
+                    "action": "waste-basket-x",
+                    "photo_id": photo_id,
+                    "fixture_id": "fixture-current",
+                    "gallery_id": "fixture-current",
+                    "source": "owner-gallery",
+                    "actor": "backstage-pbe:session-current",
+                    "owner_mode": True,
+                    "owner_authorized": True,
+                    "request_key": "projection-retry-x",
+                })
+                self.assertEqual(moved["moved_ids"], [photo_id])
+                projected_hidden = copy.deepcopy(state)
+                successful_writer = local_server._write_catalog_state
+                attempts = 0
+
+                def fail_once(_repo_root, expo_groups, reserve_groups, hidden_groups):
+                    nonlocal attempts
+                    attempts += 1
+                    if attempts == 1:
+                        state["expo"] = copy.deepcopy(projected_hidden["expo"])
+                        state["reserve"] = copy.deepcopy(projected_hidden["reserve"])
+                        state["hidden"] = copy.deepcopy(projected_hidden["hidden"])
+                        raise OSError("synthetic static projection failure")
+                    return successful_writer(_repo_root, expo_groups, reserve_groups, hidden_groups)
+
+                local_server._write_catalog_state = fail_once
+                try:
+                    first = local_server.apply_photo_action(repo_root, {
+                        "action": "waste-basket-restore",
+                        "photo_id": photo_id,
+                        "fixture_id": "fixture-current",
+                        "source": "owner-gallery",
+                        "actor": "backstage-pbe:session-current",
+                        "owner_mode": True,
+                        "owner_authorized": True,
+                        "request_key": "projection-retry-restore-first",
+                    })
+                    self.assertTrue(first["ok"])
+                    self.assertTrue(first["authoritative_committed"])
+                    self.assertEqual(first["restored_ids"], [photo_id])
+                    self.assertEqual(first["projected_ids"], [])
+                    self.assertEqual(first["projection"], {
+                        "state": "pending",
+                        "retryable": True,
+                        "error_code": "catalog_projection_failed",
+                    })
+                    self.assertEqual([photo["id"] for photo in state["hidden"]["france"]], [photo_id])
+
+                    retry_payload = {
+                        "action": "waste-basket-restore",
+                        "photo_id": photo_id,
+                        "fixture_id": "fixture-current",
+                        "source": "owner-gallery",
+                        "actor": "backstage-pbe:session-current",
+                        "owner_mode": True,
+                        "owner_authorized": True,
+                        "request_key": "projection-retry-restore-second",
+                    }
+                    local_server.assert_pbe_owner_restore_scope(
+                        repo_root,
+                        {"id": "session-current", "fixtureId": "fixture-current"},
+                        retry_payload,
+                    )
+                    retried = local_server.apply_photo_action(repo_root, retry_payload)
+                finally:
+                    local_server._write_catalog_state = successful_writer
+
+                self.assertEqual(retried["items"][0]["status"], "already-restored")
+                self.assertEqual(retried["restored_ids"], [photo_id])
+                self.assertEqual(retried["projected_ids"], [photo_id])
+                self.assertEqual(retried["projection"], {"state": "applied", "retryable": False})
+                self.assertEqual(state["hidden"]["france"], [])
+                self.assertEqual([photo["id"] for photo in state["expo"]["france"]], [photo_id])
 
     def test_public_waste_basket_restore_preserves_private_title(self):
         photo_id = "pbe-private-title-restore"

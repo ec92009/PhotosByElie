@@ -375,6 +375,27 @@ class WasteBasketGatewayTests(unittest.TestCase):
         self.assertEqual(restored["assetIds"], ["asset-2"])
         self.assertFalse(gateway.is_globally_ineligible(self.root, "asset-2", self.db))
 
+        retried = gateway.restore_from_waste_basket(
+            self.root,
+            ["asset-2"],
+            fixture_id="fixture-current",
+            request_key="fixture-bound-restore-new-request-after-ack-loss",
+            db_path=self.db,
+        )
+        self.assertEqual(retried["assetIds"], ["asset-2"])
+        self.assertEqual(retried["items"][0]["status"], "already-restored")
+        with sqlite3.connect(self.db) as connection:
+            receipt = connection.execute(
+                """
+                SELECT r.receipt_state
+                FROM owner_waste_basket_receipts AS r
+                JOIN owner_waste_basket_operations AS o ON o.operation_id = r.operation_id
+                WHERE o.request_key = ? AND r.asset_id = ?
+                """,
+                ("fixture-bound-restore-new-request-after-ack-loss", "asset-2"),
+            ).fetchone()
+        self.assertEqual(receipt, ("already-applied",))
+
     def test_exact_provenance_restore_preserves_relationships_and_state(self) -> None:
         before = self._lifecycle_snapshot()
         moved = gateway.move_to_waste_basket(

@@ -825,7 +825,12 @@ def _restore_rows(connection: sqlite3.Connection, entry_id: str, asset_id: str, 
     )
 
 
-def _resolve_entries(connection: sqlite3.Connection, asset_ids: list[str]) -> list[sqlite3.Row]:
+def _resolve_entries(
+    connection: sqlite3.Connection,
+    asset_ids: list[str],
+    *,
+    include_restored: bool = False,
+) -> list[sqlite3.Row]:
     if not asset_ids:
         return connection.execute(
             """
@@ -835,11 +840,12 @@ def _resolve_entries(connection: sqlite3.Connection, asset_ids: list[str]) -> li
             """
         ).fetchall()
     result: list[sqlite3.Row] = []
+    states = "'recoverable', 'tombstoned', 'restored'" if include_restored else "'recoverable', 'tombstoned'"
     for value in asset_ids:
         row = connection.execute(
-            """
+            f"""
             SELECT * FROM owner_waste_basket_entries
-            WHERE (entry_id = ? OR asset_id = ?) AND state IN ('recoverable', 'tombstoned')
+            WHERE (entry_id = ? OR asset_id = ?) AND state IN ({states})
             ORDER BY created_at DESC
             LIMIT 1
             """,
@@ -854,6 +860,8 @@ def _assert_recoverable_fixture_scope(
     entries: list[sqlite3.Row],
     asset_ids: list[str],
     fixture_id: str,
+    *,
+    allow_restored: bool = False,
 ) -> None:
     expected_fixture = str(fixture_id or "").strip()
     if not expected_fixture:
@@ -866,10 +874,11 @@ def _assert_recoverable_fixture_scope(
     missing = sorted(set(asset_ids) - resolved)
     if missing:
         raise WasteBasketError(f"No recoverable Waste Basket entry for: {', '.join(missing)}")
+    allowed_states = {"recoverable", "restored"} if allow_restored else {"recoverable"}
     mismatched = sorted({
         str(entry["asset_id"])
         for entry in entries
-        if str(entry["state"]) != "recoverable"
+        if str(entry["state"]) not in allowed_states
         or str(entry["fixture_id"] or "").strip() != expected_fixture
     })
     if mismatched:
@@ -884,16 +893,26 @@ def assert_recoverable_entries_in_fixture(
     asset_ids: Iterable[Any],
     *,
     fixture_id: str,
+    allow_restored: bool = False,
     db_path: Path | None = None,
 ) -> None:
-    """Verify authoritative recoverable rows before a hosted-session restore."""
+    """Verify fixture-bound authoritative rows before a hosted-session restore.
+
+    ``allow_restored`` is reserved for idempotent retry after an authoritative
+    restore committed but its static projection or HTTP acknowledgement did not.
+    """
 
     ids = _unique_ids(asset_ids)
     if not ids:
         raise WasteBasketError("Waste Basket restore requires at least one asset")
     connection = _connect(repo_root, db_path)
     try:
-        _assert_recoverable_fixture_scope(_resolve_entries(connection, ids), ids, fixture_id)
+        _assert_recoverable_fixture_scope(
+            _resolve_entries(connection, ids, include_restored=allow_restored),
+            ids,
+            fixture_id,
+            allow_restored=allow_restored,
+        )
     finally:
         connection.close()
 
@@ -917,12 +936,21 @@ def _restore_operation(
     key = _normalize_request_key(operation, ids, normalized_source, request_key, context)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
-        entries = _resolve_entries(connection, ids)
+        entries = _resolve_entries(
+            connection,
+            ids,
+            include_restored=operation == "restore",
+        )
         if ids and len(entries) != len(ids):
             missing = sorted(set(ids) - {str(row["asset_id"]) for row in entries} - {str(row["entry_id"]) for row in entries})
             raise WasteBasketError(f"No recoverable Waste Basket entry for: {', '.join(missing)}")
         if fixture_id:
-            _assert_recoverable_fixture_scope(entries, ids, fixture_id)
+            _assert_recoverable_fixture_scope(
+                entries,
+                ids,
+                fixture_id,
+                allow_restored=operation == "restore",
+            )
         items: list[dict[str, Any]] = []
         for entry in entries:
             state = str(entry["state"])
@@ -932,6 +960,15 @@ def _restore_operation(
                 )
             if state == "restored":
                 item = _entry_payload(entry, "already-restored")
+                _receipt(
+                    connection,
+                    operation_id=operation_id,
+                    entry=entry,
+                    before=item,
+                    after=item,
+                    state="already-applied",
+                    now=now,
+                )
                 items.append(item)
                 continue
             before = {"state": state, "entryId": str(entry["entry_id"])}

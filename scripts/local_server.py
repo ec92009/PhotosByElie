@@ -622,6 +622,7 @@ def assert_pbe_owner_restore_scope(repo_root: Path, session: dict, payload: dict
             repo_root,
             requested,
             fixture_id=str(session["fixtureId"]),
+            allow_restored=True,
         )
     except WasteBasketError as error:
         raise PBEOwnerSessionError(
@@ -13100,8 +13101,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 "action": action,
                 "photo_ids": photo_ids,
                 "restored_ids": photo_ids,
+                "projected_ids": [],
                 "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
                 "catalog_publish_pending": True,
+                "authoritative_committed": True,
+                "projection": {
+                    "state": "skipped-no-static-catalog",
+                    "retryable": False,
+                },
                 "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
                 "site": {"ok": False, "state": "skipped-no-static-catalog"},
             }
@@ -13122,14 +13129,41 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             )
             if restored:
                 restored_ids.append(current_photo_id)
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
+        try:
+            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        except Exception:  # noqa: BLE001 - the authoritative transaction has already committed.
+            return {
+                **gateway_result,
+                "action": action,
+                "photo_ids": photo_ids,
+                "restored_ids": authoritative_ids,
+                "projected_ids": [],
+                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+                "catalog_publish_pending": True,
+                "authoritative_committed": True,
+                "projection": {
+                    "state": "pending",
+                    "retryable": True,
+                    "error_code": "catalog_projection_failed",
+                },
+                "worker_catalog": {"ok": False, "state": "pending"},
+            }
+        projection_complete = bool(worker_catalog.get("ok"))
         return {
             **gateway_result,
             "action": action,
             "photo_ids": photo_ids,
-            "restored_ids": restored_ids,
+            "restored_ids": authoritative_ids,
+            "projected_ids": restored_ids,
             "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
             "catalog_publish_pending": True,
+            "authoritative_committed": True,
+            "projection": {
+                "state": "applied" if projection_complete else "partial",
+                "retryable": not projection_complete,
+                **({"error_code": "worker_catalog_projection_failed"} if not projection_complete else {}),
+            },
             "worker_catalog": worker_catalog,
             "site": site_state,
         }

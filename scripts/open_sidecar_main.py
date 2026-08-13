@@ -15,8 +15,9 @@ import urllib.request
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-HELPER = REPO_ROOT / "scripts" / "sidecar_server.py"
+RUNTIME_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(os.environ.get("PBE_CONNECTOR_DATA_ROOT", str(RUNTIME_ROOT))).expanduser().resolve()
+HELPER = RUNTIME_ROOT / "scripts" / "sidecar_server.py"
 LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "sidecar-helper.log"
 PORT_START = 8011
@@ -41,7 +42,13 @@ def notify(title: str, message: str) -> None:
 
 
 def helper_env() -> dict[str, str]:
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    env = {
+        **os.environ,
+        "PBE_CONNECTOR_DATA_ROOT": str(REPO_ROOT),
+        "PBE_CONNECTOR_RUNTIME_ROOT": str(RUNTIME_ROOT),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+    }
     current_path = env.get("PATH", "")
     parts = [part for part in (*PATH_PREFIXES, *current_path.split(os.pathsep)) if part]
     env["PATH"] = os.pathsep.join(dict.fromkeys(part for part in parts if part))

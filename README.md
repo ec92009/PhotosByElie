@@ -250,7 +250,7 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `scripts/build_photo_state_db.py`: builds ignored SQLite state database at `tmp/photo-state.sqlite` from the catalog, import cache, blocked/discarded tombstones, owner actions, sidecars, and R2 logs
 - `scripts/watch_photo_state_db.zsh`: optional local background refresher for the SQLite state database
 - `scripts/new_owner_connector.py`: background Mac connector that polls authenticated cloud Owner actions and performs PhotoKit/Owner SQLite work without serving a localhost web UI; full action scans back off to one per minute while idle. A visible Waste Basket or actively monitored Owner job publishes a short-lived authenticated cloud lease, checked through a lightweight five-second endpoint, so full polling stays responsive only during interactive work. The Worker maintains a pending-action KV index so active polling does not scan historical actions.
-- `scripts/install_new_owner_connector.zsh`: per-Mac connector and LaunchAgent installer; credentials stay in a mode-600 user config outside git
+- `scripts/install_new_owner_connector.zsh`: per-Mac connector and LaunchAgent installer; credentials stay in a mode-600 user config outside git, while tracked code is copied into a symlink-free, read-only, manifest-verified runtime independent of the installer checkout
 - `scripts/build_new_owner_connector_package.zsh`: builds the Owner-only downloadable Mac connector ZIP with the permission-bearing Photos Bridge app and credential-free installer
 - `AGENTS.md`: repo-level working preferences, versioning SOP, and timelog SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow

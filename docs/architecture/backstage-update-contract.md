@@ -68,3 +68,26 @@ Verification checks, in order:
 
 Only after all five checks does Backstage show `verified` and offer to reveal
 the isolated artifact for a separately reviewed manual action.
+
+## Connector runtime installation
+
+The connector installer is a separate local mechanism; the Backstage updater
+does not invoke it. Before writing connector configuration or a LaunchAgent,
+the installer materializes every Git-tracked file below `scripts/` into a new
+versioned directory below `~/Library/Application Support/PhotosByElie`. It
+copies file bytes rather than preserving links, refuses any tracked symlink or
+non-regular source entry, records exact paths, sizes, modes, and SHA-256 hashes
+in a runtime manifest, and makes the complete snapshot read-only.
+
+Mutable project data remains under the stable configured `repoRoot`. Executable
+code, imports, and helper launches use the separate `runtimeRoot`; neither the
+mode-600 connector config nor the LaunchAgent records the source checkout used
+to create that snapshot. The installer runs the runtime's local `--status`
+check before activation, and every connector start validates manifest coverage,
+hashes, modes, required files, and the absence of symlinks or unmanifested
+files. Status validation performs no Worker request and exposes no credential.
+
+Replacing an already running production connector remains an explicit operator
+gate: stop, install, restart, and compare live connector health only under the
+approved deployment procedure. The installer does not silently migrate or
+delete an older runtime.

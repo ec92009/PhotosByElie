@@ -60,6 +60,15 @@ sidebar it:
    session-only loopback cookie while Backstage heartbeats the Worker-backed
    lease.
 
+It runs as `com.photosbyelie.owner-connector`, keeps its per-Mac token in
+`~/.config/photosbyelie/connector.json` with mode 600, and does not serve a
+localhost Owner UI. Installation copies tracked connector code into a
+versioned, read-only, manifest-verified runtime below
+`~/Library/Application Support/PhotosByElie`; tracked source symlinks fail
+closed. The LaunchAgent uses that runtime for code and a separately configured
+stable repository root for mutable Owner data, so deleting the installer source
+checkout cannot break a later connector restart.
+
 The active fixture is frozen for the session. Backstage disables fixture drift;
 the Worker, loopback host, and browser independently reject missing, changed, or
 expired bindings. Closing the browser banner or Backstage control closes the

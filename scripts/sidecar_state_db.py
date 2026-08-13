@@ -2239,7 +2239,10 @@ def _run_apple_photos_materialize_one(
             "materialize-one",
         ]
     else:
-        bridge = repo_root / "scripts/apple_photos_bridge.swift"
+        runtime_root = Path(
+            os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(repo_root))
+        ).expanduser().resolve()
+        bridge = runtime_root / "scripts" / "apple_photos_bridge.swift"
         if not bridge.exists():
             raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
         command = ["swift", str(bridge), "materialize-one"]

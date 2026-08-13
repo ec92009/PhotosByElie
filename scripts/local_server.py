@@ -123,6 +123,9 @@ LIFECYCLE_WRITING_ACTIONS = frozenset({
     "waste-basket-x", "waste-basket-x-many", "waste-basket-restore",
     "waste-basket-empty", "waste-basket-tombstone-restore",
 })
+CONNECTOR_RUNTIME_ROOT = Path(
+    os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
+).expanduser().resolve()
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -233,6 +236,18 @@ R2_SWEEP_PHASES = {
 }
 
 ADMIN_MACHINE_NAMES_CACHE: list[str] | None = None
+
+
+def _connector_runtime_script(name: str, fallback_root: Path | None = None) -> Path:
+    root = (
+        CONNECTOR_RUNTIME_ROOT
+        if os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", "").strip() or fallback_root is None
+        else fallback_root
+    )
+    candidate = root / "scripts" / name
+    if candidate.is_symlink() or not candidate.is_file():
+        raise RuntimeError(f"Connector runtime script is missing or unsafe: {name}")
+    return candidate
 
 
 def _local_machine_names() -> list[str]:
@@ -2789,7 +2804,7 @@ def _start_requested_ai_pass(repo_root: Path) -> dict:
         process = subprocess.Popen(
             [
                 sys.executable,
-                str(repo_root / "scripts" / "requested_ai_proposal_pass.py"),
+                str(_connector_runtime_script("requested_ai_proposal_pass.py")),
                 "--repo-root",
                 str(repo_root),
                 "--trigger",
@@ -2822,7 +2837,7 @@ def _start_native_publication_run(repo_root: Path, run_id: str) -> dict:
         process = subprocess.Popen(
             [
                 sys.executable,
-                str(repo_root / "scripts" / "native_asset_publication.py"),
+                str(_connector_runtime_script("native_asset_publication.py")),
                 "--repo-root",
                 str(repo_root),
                 "--run-id",
@@ -10294,8 +10309,8 @@ def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], prog
 
 
 def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
-    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    installer = _connector_runtime_script(APPLE_PHOTOS_BRIDGE_APP_INSTALLER.name, repo_root)
+    bridge_source = _connector_runtime_script(APPLE_PHOTOS_BRIDGE.name, repo_root)
     if not installer.exists():
         raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
     if not bridge_source.exists():

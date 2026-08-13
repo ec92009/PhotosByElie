@@ -35,6 +35,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+try:
+    from .owner_connector_runtime import ConnectorRuntimeError, validate_runtime
+except ImportError:
+    from owner_connector_runtime import ConnectorRuntimeError, validate_runtime
+
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 CONNECTOR_VERSION = "1.5"
@@ -109,6 +114,14 @@ class ConnectorConfig:
     repo_root: Path
     interval_seconds: int = DEFAULT_INTERVAL_SECONDS
     local_status_port: int = DEFAULT_LOCAL_STATUS_PORT
+    runtime_root: Path | None = None
+    runtime_revision: str = ""
+    runtime_file_count: int = 0
+    runtime_manifest_sha256: str = ""
+
+    @property
+    def code_root(self) -> Path:
+        return self.runtime_root or self.repo_root
 
 
 class InteractivePollingLease:
@@ -182,6 +195,7 @@ def load_config(path: Path) -> ConnectorConfig:
     connector_id = _clean_connector_id(payload.get("connectorId"))
     token = str(payload.get("token") or "").strip()
     repo_root = Path(str(payload.get("repoRoot") or "")).expanduser().resolve()
+    runtime_value = str(payload.get("runtimeRoot") or "").strip()
     interval = max(2, min(300, int(payload.get("intervalSeconds") or DEFAULT_INTERVAL_SECONDS)))
     local_status_port = max(0, min(65535, int(payload.get("localStatusPort") or DEFAULT_LOCAL_STATUS_PORT)))
     if not worker_base.startswith("https://"):
@@ -190,9 +204,37 @@ def load_config(path: Path) -> ConnectorConfig:
         raise RuntimeError("Connector connectorId is required.")
     if len(token) < 24:
         raise RuntimeError("Connector token is missing or too short.")
-    if not (repo_root / "scripts" / "sidecar_state_db.py").exists():
+    if not repo_root.is_dir():
         raise RuntimeError(f"PhotosByElie repoRoot is invalid: {repo_root}")
-    return ConnectorConfig(worker_base, connector_id, token, repo_root, interval, local_status_port)
+
+    runtime_root: Path | None = None
+    runtime_revision = ""
+    runtime_file_count = 0
+    runtime_manifest_sha256 = ""
+    if runtime_value:
+        runtime_root = Path(runtime_value).expanduser()
+        try:
+            verification = validate_runtime(runtime_root)
+        except ConnectorRuntimeError as error:
+            raise RuntimeError(f"Installed connector runtime is invalid: {error}") from error
+        runtime_root = runtime_root.resolve(strict=True)
+        runtime_revision = verification.revision
+        runtime_file_count = verification.file_count
+        runtime_manifest_sha256 = verification.manifest_sha256
+    elif not (repo_root / "scripts" / "sidecar_state_db.py").exists():
+        raise RuntimeError(f"PhotosByElie repoRoot is invalid: {repo_root}")
+    return ConnectorConfig(
+        worker_base,
+        connector_id,
+        token,
+        repo_root,
+        interval,
+        local_status_port,
+        runtime_root,
+        runtime_revision,
+        runtime_file_count,
+        runtime_manifest_sha256,
+    )
 
 
 def _local_status_payload(config: ConnectorConfig) -> dict:
@@ -203,7 +245,24 @@ def _local_status_payload(config: ConnectorConfig) -> dict:
         "hostname": socket.gethostname(),
         "platform": f"{platform.system()} {platform.machine()}",
         "version": CONNECTOR_VERSION,
+        "runtime": {
+            "selfContained": bool(config.runtime_root),
+            "verified": bool(config.runtime_manifest_sha256),
+            "revision": config.runtime_revision,
+            "fileCount": config.runtime_file_count,
+            "manifestSHA256": config.runtime_manifest_sha256,
+        },
     }
+
+
+def _runtime_file(config: ConnectorConfig, relative_path: str) -> Path:
+    relative = Path(relative_path)
+    if relative.is_absolute() or not relative.parts or relative.parts[0] != "scripts" or ".." in relative.parts:
+        raise RuntimeError(f"Unsafe connector runtime path: {relative_path}")
+    candidate = config.code_root.joinpath(*relative.parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise RuntimeError(f"Connector runtime file is missing or unsafe: {relative_path}")
+    return candidate
 
 
 def _local_sidecar_open_action(config: ConnectorConfig, job_id: str) -> dict:
@@ -274,7 +333,7 @@ def _running_sidecar_helper() -> dict:
 
 
 def _sidecar_helper_env(config: ConnectorConfig | None = None) -> dict[str, str]:
-    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1"}
     current_path = env.get("PATH", "")
     parts = [part for part in (*PATH_PREFIXES, *current_path.split(os.pathsep)) if part]
     env["PATH"] = os.pathsep.join(dict.fromkeys(part for part in parts if part))
@@ -282,6 +341,8 @@ def _sidecar_helper_env(config: ConnectorConfig | None = None) -> dict[str, str]
         env["PBE_OWNER_WORKER_BASE"] = config.worker_base
         env["PBE_OWNER_CONNECTOR_ID"] = config.connector_id
         env["PBE_OWNER_CONNECTOR_TOKEN"] = config.token
+        env["PBE_CONNECTOR_DATA_ROOT"] = str(config.repo_root)
+        env["PBE_CONNECTOR_RUNTIME_ROOT"] = str(config.code_root)
     return env
 
 
@@ -296,9 +357,7 @@ def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
     if existing:
         return existing
 
-    helper = config.repo_root / "scripts" / "sidecar_server.py"
-    if not helper.exists():
-        raise RuntimeError(f"Sidecar helper is missing: {helper}")
+    helper = _runtime_file(config, "scripts/sidecar_server.py")
 
     log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -341,9 +400,7 @@ def _launch_waste_basket_for_browser(config: ConnectorConfig) -> dict:
     if existing:
         return existing
 
-    helper = config.repo_root / "scripts" / "local_server.py"
-    if not helper.exists():
-        raise RuntimeError(f"Owner helper is missing: {helper}")
+    helper = _runtime_file(config, "scripts/local_server.py")
 
     log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -721,7 +778,7 @@ def start_local_status_server(
                 return
             if parsed.path == LOCAL_TITLE_KEYWORD_REVIEW_PATH:
                 try:
-                    scripts_path = str(config.repo_root / "scripts")
+                    scripts_path = str(config.code_root / "scripts")
                     if scripts_path not in sys.path:
                         sys.path.insert(0, scripts_path)
                     from local_server import title_keyword_review_queue_payload
@@ -874,8 +931,8 @@ class WorkerClient:
         )
 
 
-def _load_local_modules(repo_root: Path):
-    scripts_path = str(repo_root / "scripts")
+def _load_local_modules(runtime_root: Path):
+    scripts_path = str(runtime_root / "scripts")
     if scripts_path not in sys.path:
         sys.path.insert(0, scripts_path)
     from local_server import apply_public_photo_moderation, new_owner_connector_result, new_owner_sidecar_decision_result
@@ -1317,13 +1374,19 @@ def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run
 
 
 def _run_repo_json(config: ConnectorConfig, arguments: list[str], timeout: int = 3600) -> dict:
-    command = "cd " + shlex.quote(str(config.repo_root)) + " && " + " ".join(shlex.quote(item) for item in arguments)
+    runtime_arguments = list(arguments)
+    if len(runtime_arguments) > 1 and runtime_arguments[1].startswith("scripts/"):
+        runtime_arguments[1] = str(_runtime_file(config, runtime_arguments[1]))
+    command = "cd " + shlex.quote(str(config.repo_root)) + " && " + " ".join(
+        shlex.quote(item) for item in runtime_arguments
+    )
     completed = subprocess.run(
         ["/bin/zsh", "-lic", command],
         text=True,
         capture_output=True,
         timeout=timeout,
         check=False,
+        env=_sidecar_helper_env(config),
     )
     output = (completed.stdout or "").strip()
     if completed.returncode != 0:
@@ -1431,9 +1494,7 @@ def _launch_sidecar_workspace(config: ConnectorConfig) -> dict:
             "Legacy Sidecar is disabled. Use native PhotosByElie Backstage, "
             "or set PBE_ENABLE_LEGACY_SIDECAR=1 for a deliberate rehearsal rollback."
         )
-    launcher = config.repo_root / "scripts" / "open_sidecar_main.py"
-    if not launcher.exists():
-        raise RuntimeError(f"Sidecar launcher is missing: {launcher}")
+    launcher = _runtime_file(config, "scripts/open_sidecar_main.py")
     log_dir = Path.home() / "Library" / "Logs" / "PhotosByElie"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "new-owner-sidecar-launch.log"
@@ -1512,7 +1573,7 @@ def execute_action(
             "hiddenMetadata": _owner_hidden_metadata(config.repo_root, photo_ids),
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.repo_root)
+    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.code_root)
     if action_type == "photo-moderation":
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         operation = str(payload.get("operation") or "").strip().lower()
@@ -1758,12 +1819,32 @@ def next_poll_interval(base_interval: int, current_interval: int, processed: int
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the PhotosByElie background Mac connector.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
-    parser.add_argument("--once", action="store_true", help="Poll once and exit.")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--once", action="store_true", help="Poll once and exit.")
+    mode.add_argument(
+        "--status",
+        action="store_true",
+        help="Verify config and installed runtime locally, print redacted JSON, and exit without network access.",
+    )
     args = parser.parse_args()
     # launchd starts with a deliberately small PATH. Keep the normal local
     # toolchain discoverable to child Sidecar and maintenance processes.
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]
     config = load_config(args.config.expanduser())
+    if args.status:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "schema": "photosbyelie.localOwnerConnectorStatus.v1",
+                    "connector": _local_status_payload(config),
+                    "dataRootAvailable": config.repo_root.is_dir(),
+                    "networkAttempted": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     client = WorkerClient(config)
     polling_lease = InteractivePollingLease()
     if not args.once:

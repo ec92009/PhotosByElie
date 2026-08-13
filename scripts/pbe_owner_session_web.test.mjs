@@ -147,7 +147,8 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   assert.match(actions, /Boolean\(localEnabled && isHostedOwnerSurface\(\) && pbeOwnerSession\?\.isReady\?\.\(\)\)/);
   assert.match(actions, /const wasteBasketContext = \{ source: "owner-gallery"/);
   assert.match(actions, /pbeOwnerSession\.action\(action, requestPayload\)/);
-  assert.match(gallery, /ensureGalleryKeyboardHint\(\);\s*renderGallery\(\{ scrollSelection: false \}\);/);
+  assert.match(gallery, /ensureGalleryCommandBar\(\);\s*renderGallery\(\{ scrollSelection: false \}\);/);
+  assert.doesNotMatch(gallery, /ensureGalleryKeyboardHint/);
   assert.doesNotMatch(actions, /credentials:\s*"include"/);
   assert.match(localHost, /"waste-basket-x"/);
   assert.match(localHost, /"waste-basket-x-many"/);

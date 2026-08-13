@@ -84,8 +84,20 @@ independently read `scripts/pbe_owner_host_tracked_paths.txt`, require every
 declared host/gallery file to be tracked at `HEAD`, reject tracked status
 changes, and hash each working-tree blob against the commit before calculating
 the same digest. This also detects `assume-unchanged` content changes. Ignored
-`node_modules` and unrelated untracked files are intentionally outside the
-host-code attestation.
+root `node_modules` and unrelated untracked files outside the Python import
+scope are intentionally outside the host-code attestation.
+
+Before creating the bootstrap secret or starting Python, Backstage also walks
+the `scripts/` execution/import scope and compares it with Git's tracked set.
+Any untracked or ignored Python/extension module, symlink, special file, or
+executable fails closed with `pbe_owner_checkout_stray_import`; this includes
+an untracked `scripts/json.py` that could shadow the standard library before
+Python's in-process attestation. Ordinary `__pycache__` bytecode remains a
+non-blocking local artifact because Backstage launches Python with inherited
+`PYTHON*` settings disabled and an empty per-launch bytecode-cache prefix, so
+checkout caches are not loaded. Python repeats the stray-scope check during
+identity evaluation as defense in depth, but the native pre-launch check is
+the controlling boundary because Python imports occur first.
 
 After cloud minting, Backstage calls
 `POST /__photosbyelie/pbe-owner/session/start` with the short-lived session token

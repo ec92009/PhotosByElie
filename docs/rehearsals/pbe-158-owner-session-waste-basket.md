@@ -28,7 +28,9 @@ Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
   `sidecar-*` names are compatibility identifiers only.
 - Backstage sends no bearer until both Backstage and Python independently
   attest the same clean tracked host tree at the exact git commit. Ignored
-  `node_modules` remains non-blocking.
+  root `node_modules` remains non-blocking, while native pre-launch rejects
+  stray executable/import-shadow content under `scripts/` before a bootstrap
+  secret exists.
 
 ## Exact-commit audit remediation
 
@@ -47,6 +49,13 @@ Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
   launch capture through mint/attach, with release on failure.
 - Curie P3: README now states that public browser Owner is
   provisioning/list/revoke only; actionable PBE Owner is Backstage-launched.
+- Curie P2 final hardening: native Backstage now rejects untracked and ignored
+  Python/import-extension files, symlinks, special files, and executables in
+  the `scripts/` import scope before creating the bootstrap secret. The exact
+  `scripts/json.py` attack fails at launch with
+  `pbe_owner_checkout_stray_import`; inherited Python configuration and local
+  bytecode caches are neutralized. Python applies the same scope rule as
+  defense in depth, while ignored root `node_modules` remains accepted.
 
 ## PBB-79 independent acceptance evidence
 
@@ -130,15 +139,18 @@ transfer routes, session mint/introspection/close, fixture and identity binding,
 expiry, exact CORS allowlists, and rejection of direct Google Owner actions.
 Python tests prove opaque local identities, fixture-membership revisions, random
 loopback host launch with one-use bootstrap and independently checked checkout
-identity, clean tracked host content (including an `assume-unchanged` adversary),
+identity, clean tracked host content (including `assume-unchanged`, untracked
+`scripts/json.py`, ignored Python shadow, and executable-file adversaries),
 one active in-memory lease, exact Origin/JSON CSRF checks, one-use browser
 handoff, HttpOnly browser session, expiry/close, exact fixture gallery scope,
-and guarded X/restore derivation. JavaScript tests prove page boot order,
-fail-closed actions, stale-heartbeat rejection after close, session-scoped
-transient history, absence of browser credential storage, and narrow/desktop
-status styling. Swift tests independently prove checkout attestation plus the
-Backstage device re-authentication and random-port mint/attach/freeze/close
-transport contract.
+and guarded X/restore derivation. Swift tests prove the native launch rejects
+those stray import-scope files before starting Python while allowing ignored
+root `node_modules` and neutralized `__pycache__`. JavaScript tests prove page
+boot order, fail-closed actions, stale-heartbeat rejection after close,
+session-scoped transient history, absence of browser credential storage, and
+narrow/desktop status styling. Swift tests independently prove checkout
+attestation plus the Backstage device re-authentication and random-port
+mint/attach/freeze/close transport contract.
 
 Focused proof:
 
@@ -175,6 +187,8 @@ The committed source candidate passed these local checks on 2026-08-13:
 
 - focused lifecycle/session/migration: 13 Node tests, 45 Python tests, and 15
   Swift tests;
+- final pre-launch import-scope hardening: 8 browser-session Node tests, 11
+  Python host/session tests, and 4 Swift host-contract tests;
 - broad `npm test`: 207 Node tests plus 246 Python tests;
 - retired PBB-78 migration: 2 focused Python tests (including fail-before-input
   `--apply`);

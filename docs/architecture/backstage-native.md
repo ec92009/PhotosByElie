@@ -166,8 +166,15 @@ host and hosted gallery code declared in
 `scripts/pbe_owner_host_tracked_paths.txt`. Both sides require those tracked
 files to match `HEAD`, including direct blob checks that defeat
 `assume-unchanged`; dirty host code fails before a bearer is sent. Ignored
-dependencies such as `node_modules` and unrelated untracked files do not alter
-the identity.
+root dependencies such as `node_modules` and unrelated untracked files outside
+the Python import scope do not alter the identity. Before it creates the
+bootstrap secret, Backstage separately rejects untracked or ignored import
+modules, symlinks, special files, and executables under `scripts/`, including a
+standard-library shadow such as `scripts/json.py`. The host starts with
+inherited Python configuration disabled and a clean per-launch bytecode-cache
+prefix; ordinary ignored `__pycache__` files therefore remain non-blocking.
+Python repeats the scope check as defense in depth, while native preflight is
+the required pre-import control.
 
 Open PBE Owner captures the exact fixture synchronously. Both chooser and
 fixture refresh remain disabled through the asynchronous readiness/mint/attach

@@ -11,7 +11,7 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 from export_photos_data import dedupe_rows_by_source_anchor
-from import_source_anchor import photo_id_for_source_path, source_paths_from_row
+from import_source_anchor import photo_id_for_source_path, source_identity_from_row, source_paths_from_row
 from build_lightroom_thumbnails import (
     infer_gallery_country,
     infer_gallery_country_from_gps,
@@ -69,6 +69,39 @@ class ImportSourceAnchorTest(unittest.TestCase):
         }
 
         self.assertEqual(dedupe_rows_by_source_anchor([old, new]), [new])
+
+    def test_source_identity_prefers_stable_anchor_over_transient_path(self) -> None:
+        row = {
+            "source_anchor": {"path": "apple-photos://DD02402E-FBD9-4602-A4D6-8379A0AF7CAA/L0/001"},
+            "source_path_hint": "/tmp/apple-photos-export/FullSizeRender.jpg",
+            "source_file": {"path": "Apple Photos Sidecar Uploads/FullSizeRender.jpg"},
+        }
+
+        self.assertEqual(
+            source_identity_from_row(row),
+            "apple-photos://DD02402E-FBD9-4602-A4D6-8379A0AF7CAA/L0/001",
+        )
+
+    def test_dedupe_preserves_colliding_assets_with_distinct_stable_anchors(self) -> None:
+        shared_metadata = {
+            "title": "RE 2026 La Concha 2 Apt 8A5",
+            "relative_path": "Apple Photos Sidecar Uploads/FullSizeRender.jpg",
+            "source_path_hint": "/tmp/apple-photos-export/FullSizeRender.jpg",
+            "source_file": {"path": "Apple Photos Sidecar Uploads/FullSizeRender.jpg"},
+            "capture": {"date": "2026:05:13 13:49:44", "sort": "2026-05-13T13:49:44"},
+        }
+        first = {
+            **shared_metadata,
+            "id": "001-10325afd73",
+            "source_anchor": {"path": "apple-photos://DD02402E-FBD9-4602-A4D6-8379A0AF7CAA/L0/001"},
+        }
+        second = {
+            **shared_metadata,
+            "id": "001-b32659c9f5",
+            "source_anchor": {"path": "apple-photos://1FC0479F-34D3-481A-9FFE-92A615AB71FE/L0/001"},
+        }
+
+        self.assertEqual(dedupe_rows_by_source_anchor([first, second]), [first, second])
 
     def test_manifest_source_index_reuses_existing_id_for_new_relative_path(self) -> None:
         source_path = "/Volumes/Saturn/Pictures/LR/Apple Photo Albums/Shoot/IMG_1234.jpg"

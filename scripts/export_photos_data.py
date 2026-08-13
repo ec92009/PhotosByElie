@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 from media_keys import DEFAULT_PUBLIC_PREFIX, public_preview_key, public_preview_key_for_reference
 from media_policy import media_source_policy, public_preview_allowed, source_file_entries
 from import_eligibility import row_import_eligible
-from import_source_anchor import row_freshness_key, source_paths_from_row
+from import_source_anchor import row_freshness_key, source_identity_from_row
 from owner_state_db import connect as owner_db_connect, keyword_blacklist_terms as owner_keyword_blacklist_terms, media_lifecycle_snapshot
 
 LABELS = {
@@ -784,11 +784,10 @@ def dedupe_rows_by_source_anchor(rows: list[dict]) -> list[dict]:
     keyed: dict[str, dict] = {}
     output: list[dict] = []
     for row in rows:
-        paths = sorted(source_paths_from_row(row))
-        if not paths:
+        key = source_identity_from_row(row)
+        if not key:
             output.append(row)
             continue
-        key = paths[0]
         previous = keyed.get(key)
         if previous is None:
             keyed[key] = row

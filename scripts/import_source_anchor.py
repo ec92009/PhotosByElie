@@ -88,6 +88,17 @@ def source_paths_from_row(row: dict[str, Any]) -> set[str]:
     return paths
 
 
+def source_identity_from_row(row: dict[str, Any]) -> str | None:
+    """Return the stable source anchor, falling back to legacy path hints."""
+    anchor = row.get("source_anchor")
+    if isinstance(anchor, dict):
+        normalized = normalize_import_source_path(anchor.get("path"))
+        if normalized:
+            return normalized
+    paths = sorted(source_paths_from_row(row))
+    return paths[0] if paths else None
+
+
 def row_source_modified_ns(row: dict[str, Any]) -> int | None:
     anchor = row.get("source_anchor")
     if isinstance(anchor, dict):

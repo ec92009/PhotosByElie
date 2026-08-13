@@ -22,6 +22,7 @@ public struct MetadataGiveBackBlockedItem: Sendable, Equatable, Identifiable {
 
 public struct MetadataGiveBackReport: Sendable, Equatable {
     public var actionID: String
+    public var fixtureID: String
     public var isDryRun: Bool
     public var readyCount: Int
     public var written: [MetadataGiveBackWrittenItem]
@@ -39,6 +40,7 @@ public enum MetadataGiveBackError: Error, Sendable, Equatable {
     case missingResult
     case malformedResult
     case noFailedItemsToRetry
+    case fixtureMismatch
 }
 
 public actor MetadataGiveBackService {
@@ -70,6 +72,9 @@ public actor MetadataGiveBackService {
     ) async throws -> MetadataGiveBackReport {
         guard !report.failedAssetIDs.isEmpty else {
             throw MetadataGiveBackError.noFailedItemsToRetry
+        }
+        guard !report.fixtureID.isEmpty, report.fixtureID == fixtureID else {
+            throw MetadataGiveBackError.fixtureMismatch
         }
         return try await commit(fixtureID: fixtureID, assetIDs: report.failedAssetIDs)
     }
@@ -111,11 +116,16 @@ public actor MetadataGiveBackService {
             UUID().uuidString,
         ].joined(separator: ":")
         let action = try await runner.submit(request, idempotencyKey: idempotency)
-        return try decodeReport(from: action, dryRun: mode.hasSuffix("-plan"))
+        return try decodeReport(
+            from: action,
+            fixtureID: fixtureID,
+            dryRun: mode.hasSuffix("-plan")
+        )
     }
 
     private func decodeReport(
         from action: OwnerAction,
+        fixtureID: String,
         dryRun: Bool
     ) throws -> MetadataGiveBackReport {
         guard let result = action.result,
@@ -152,6 +162,7 @@ public actor MetadataGiveBackService {
 
         return MetadataGiveBackReport(
             actionID: action.id,
+            fixtureID: fixtureID,
             isDryRun: dryRun,
             readyCount: writeback["count"]?.intValue ?? written.count,
             written: written,

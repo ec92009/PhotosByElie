@@ -129,9 +129,21 @@ public struct FixtureSelectionCoordinator: Sendable, Equatable {
 
     public mutating func beginLoading() {
         availability = .loading
-        selectedFixtureID = nil
-        selectedFixtureBreadcrumb = nil
         notice = nil
+    }
+
+    public mutating func cancelLoading() {
+        guard let selectedFixtureID,
+              activeFixtureIDs.contains(selectedFixtureID),
+              breadcrumbsByFixtureID[selectedFixtureID] != nil else {
+            markUnavailable(
+                "Fixture loading was cancelled before a safe current fixture was available. Fixture-scoped actions are disabled."
+            )
+            return
+        }
+        selectedFixtureBreadcrumb = breadcrumbsByFixtureID[selectedFixtureID]
+        availability = .ready
+        notice = "Fixture refresh was cancelled. Backstage kept the previous current fixture."
     }
 
     @discardableResult

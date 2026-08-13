@@ -610,9 +610,10 @@ struct OwnerCoreTests {
         )
         let service = MetadataGiveBackService(runner: runner)
 
-        let report = try await service.plan()
+        let report = try await service.plan(fixtureID: "fixture-family")
 
         #expect(report.isDryRun)
+        #expect(report.fixtureID == "fixture-family")
         #expect(report.readyCount == 2)
         #expect(report.blocked.map(\.assetID) == ["asset-3"])
         let request = try #require(await api.requests().first)
@@ -627,7 +628,10 @@ struct OwnerCoreTests {
             request.payload["manifest"]?.objectValue?["includePreviews"]?.boolValue
                 == false
         )
-        #expect(request.payload["manifest"]?.objectValue?["fixtureId"] == nil)
+        #expect(
+            request.payload["manifest"]?.objectValue?["fixtureId"]?.stringValue
+                == "fixture-family"
+        )
     }
 
     @Test("Metadata give-back retries only independently failed asset IDs")
@@ -685,6 +689,7 @@ struct OwnerCoreTests {
         let service = MetadataGiveBackService(runner: runner)
 
         let initial = try await service.commit(fixtureID: "fixture-family")
+        #expect(initial.fixtureID == "fixture-family")
         #expect(initial.verifiedCount == 1)
         #expect(initial.failedAssetIDs == ["asset-retry"])
         let retried = try await service.retryFailures(
@@ -693,6 +698,16 @@ struct OwnerCoreTests {
         )
         #expect(retried.verifiedCount == 1)
         #expect(retried.failed.isEmpty)
+
+        do {
+            _ = try await service.retryFailures(
+                from: initial,
+                fixtureID: "fixture-other"
+            )
+            Issue.record("Expected a fixture-bound retry failure")
+        } catch let error as MetadataGiveBackError {
+            #expect(error == .fixtureMismatch)
+        }
 
         let requests = await api.requests()
         #expect(requests.count == 2)

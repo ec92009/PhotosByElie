@@ -354,7 +354,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isFixtureChooserDisabled: Bool {
-        fixtureSelectionCoordinator.chooserDisabled || fixtureSelectionOperationInFlight
+        fixtureSelectionCoordinator.chooserDisabled
+            || fixtureSelectionOperationInFlight
+            || isLaunchingPBEOwner
     }
 
     var isFixtureRefreshDisabled: Bool {
@@ -367,6 +369,9 @@ final class BackstageViewModel: ObservableObject {
         }
         if fixtureSelectionOperationInFlight {
             return "Finish the current fixture operation before changing fixtures."
+        }
+        if isLaunchingPBEOwner {
+            return "PBE Owner is opening with the captured current fixture."
         }
         return nil
     }
@@ -442,7 +447,7 @@ final class BackstageViewModel: ObservableObject {
 
     @discardableResult
     func selectFixture(_ fixtureID: String, now: Date = Date()) -> Bool {
-        guard !fixtureSelectionOperationInFlight else {
+        guard !fixtureSelectionOperationInFlight, !isLaunchingPBEOwner else {
             fixtureSelectionNotice = "Finish the current fixture operation before changing fixtures."
             return false
         }
@@ -499,21 +504,24 @@ final class BackstageViewModel: ObservableObject {
                 : "Enroll this Mac before opening PBE Owner."
             return
         }
-        isLaunchingPBEOwner = true
+        let captured: (fixtureID: String, breadcrumb: String)
+        do {
+            captured = try beginPBEOwnerLaunch()
+        } catch {
+            pbeOwnerSessionStatus = userFacingMessage(for: error)
+            return
+        }
+        let frozenFixtureID = captured.fixtureID
+        let frozenBreadcrumb = captured.breadcrumb
         pbeOwnerSessionStatus = "Checking the local PBE host and frozen fixture identity…"
         var minted: PBEOwnerSessionMintEnvelope?
-        defer { isLaunchingPBEOwner = false }
+        defer { finishPBEOwnerLaunch() }
         do {
             guard await prepareAuthenticatedOperation() else {
                 throw APIErrorEnvelope(error: .init(
                     code: "backstage_authentication_required",
                     message: "Backstage authentication is missing or expired."
                 ))
-            }
-            let frozenFixtureID = selectedFixtureID
-            let frozenBreadcrumb = selectedFixtureBreadcrumb
-            guard !frozenFixtureID.isEmpty, !frozenBreadcrumb.isEmpty else {
-                throw FixtureSelectionError.unavailable("Choose an available fixture before opening PBE Owner.")
             }
             let readiness = try await pbeOwnerHost.ensureReadiness()
             pbeOwnerSessionStatus = "Minting a short-lived Owner session for \(frozenBreadcrumb)…"
@@ -582,6 +590,26 @@ final class BackstageViewModel: ObservableObject {
             closePBEOwnerSession()
             pbeOwnerSessionStatus = "PBE Owner unavailable: \(userFacingMessage(for: error))"
         }
+    }
+
+    /// Captures the exact current fixture synchronously, before authentication,
+    /// readiness, or session minting can suspend the launch task.
+    func beginPBEOwnerLaunch() throws -> (fixtureID: String, breadcrumb: String) {
+        guard !isLaunchingPBEOwner,
+              fixtureScopedActionsAllowed,
+              !fixtureSelectionOperationInFlight,
+              !selectedFixtureID.isEmpty,
+              !selectedFixtureBreadcrumb.isEmpty else {
+            throw FixtureSelectionError.unavailable(
+                "Choose an available fixture and finish current work before opening PBE Owner."
+            )
+        }
+        isLaunchingPBEOwner = true
+        return (selectedFixtureID, selectedFixtureBreadcrumb)
+    }
+
+    func finishPBEOwnerLaunch() {
+        isLaunchingPBEOwner = false
     }
 
     func refreshPBEOwnerSessionStatus() async {
@@ -656,6 +684,7 @@ final class BackstageViewModel: ObservableObject {
             || isApplyingCullingDecision
             || isRunningReview
             || isRunningDelivery
+            || isRunningMetadata
             || isRunningNativePublication
     }
 
@@ -677,6 +706,10 @@ final class BackstageViewModel: ObservableObject {
     /// Clears only transient views when scope changes. Durable workflow state
     /// remains untouched until the user invokes an explicit audited action.
     private func resetFixtureScopedViewState() {
+        metadataReport = nil
+        metadataStatus = selectedFixtureID.isEmpty
+            ? "Fixture-scoped metadata give-back is unavailable."
+            : "Run a metadata plan for \(selectedFixtureBreadcrumb)."
         cullingFilterTask?.cancel()
         cullingBackfillTask?.cancel()
         cullingWindowRequestSerial += 1
@@ -1021,6 +1054,11 @@ final class BackstageViewModel: ObservableObject {
         guard let metadataReport else { return }
         guard fixtureScopedActionsAllowed else {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
+            return
+        }
+        guard metadataReport.fixtureID == selectedFixtureID else {
+            self.metadataReport = nil
+            metadataStatus = "The prior metadata report belongs to another fixture. Run a new plan for the current fixture."
             return
         }
         isRunningMetadata = true
@@ -1553,6 +1591,12 @@ final class BackstageViewModel: ObservableObject {
             isRunningFixture = false
         }
         guard await prepareAuthenticatedOperation() else {
+            if Task.isCancelled {
+                fixtureSelectionCoordinator.cancelLoading()
+                publishFixtureSelection(persist: false)
+                fixtureStatus = "Fixture refresh cancelled; the previous current fixture was preserved."
+                return
+            }
             let reason = "Backstage could not load fixtures because this Mac needs enrollment. Fixture-scoped actions are disabled."
             fixtureStatus = reason
             markFixtureSelectionUnavailable(reason)
@@ -1565,7 +1609,12 @@ final class BackstageViewModel: ObservableObject {
             authentication = await authenticationService.currentSnapshot()
             status = "Connected"
         } catch {
-            guard !(error is CancellationError), !Task.isCancelled else { return }
+            guard !(error is CancellationError), !Task.isCancelled else {
+                fixtureSelectionCoordinator.cancelLoading()
+                publishFixtureSelection(persist: false)
+                fixtureStatus = "Fixture refresh cancelled; the previous current fixture was preserved."
+                return
+            }
             await presentAuthenticationFailureIfNeeded(error)
             let reason = "Fixtures could not load: \(userFacingMessage(for: error)) Fixture-scoped actions are disabled."
             fixtureStatus = reason
@@ -4445,16 +4494,22 @@ final class BackstageViewModel: ObservableObject {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
             return
         }
+        let operationFixtureID = selectedFixtureID
+        isRunningMetadata = true
+        defer { isRunningMetadata = false }
         if commit, !(await preparePhotosMutation()) {
             metadataStatus = photosMutationReadinessMessage()
             return
         }
-        isRunningMetadata = true
-        defer { isRunningMetadata = false }
         do {
             let report = try await (commit
-                ? metadataService.commit(fixtureID: selectedFixtureID)
-                : metadataService.plan(fixtureID: selectedFixtureID))
+                ? metadataService.commit(fixtureID: operationFixtureID)
+                : metadataService.plan(fixtureID: operationFixtureID))
+            guard selectedFixtureID == operationFixtureID else {
+                metadataReport = nil
+                metadataStatus = "The current fixture changed before metadata completed; the stale report was discarded."
+                return
+            }
             metadataReport = report
             metadataStatus = reportStatus(report)
         } catch {

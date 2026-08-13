@@ -102,6 +102,26 @@ struct FixtureSelectionCoordinatorTests {
         #expect(fixtureTree == originalTree)
     }
 
+    @Test("Cancelled fixture reload restores the prior explicit selection")
+    func cancelledReloadPreservesSelection() {
+        var coordinator = FixtureSelectionCoordinator(
+            lastUsedFixtureID: "fixture-re-la-concha-pool"
+        )
+        coordinator.restore(from: fixtureTree)
+
+        coordinator.beginLoading()
+        #expect(coordinator.availability == .loading)
+        #expect(coordinator.selectedFixtureID == "fixture-re-la-concha-pool")
+        #expect(coordinator.fixtureScopedActionsAllowed == false)
+
+        coordinator.cancelLoading()
+        #expect(coordinator.availability == .ready)
+        #expect(coordinator.selectedFixtureID == "fixture-re-la-concha-pool")
+        #expect(coordinator.selectedFixtureBreadcrumb == "RE › La Concha › Commons › Pool")
+        #expect(coordinator.fixtureScopedActionsAllowed)
+        #expect(coordinator.notice?.contains("previous current fixture") == true)
+    }
+
     private var fixtureTree: [FixtureNode] {
         [
             FixtureNode(id: "fixture-expo", name: "Expo"),

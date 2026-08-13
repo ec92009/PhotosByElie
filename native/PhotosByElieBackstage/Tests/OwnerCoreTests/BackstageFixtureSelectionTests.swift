@@ -93,6 +93,51 @@ struct BackstageFixtureSelectionTests {
         #expect(model.isFixtureChooserDisabled)
     }
 
+    @Test("PBE launch captures fixture synchronously and releases provisional freeze")
+    @MainActor
+    func pbeLaunchProvisionalFreeze() throws {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-pool",
+            persistSelection: false
+        )
+
+        let captured = try model.beginPBEOwnerLaunch()
+        #expect(captured.fixtureID == "fixture-pool")
+        #expect(captured.breadcrumb == "RE › La Concha › Pool")
+        #expect(model.isFixtureChooserDisabled)
+        #expect(model.selectFixture("fixture-expo") == false)
+        #expect(model.selectedFixtureID == "fixture-pool")
+
+        model.finishPBEOwnerLaunch()
+        #expect(model.selectFixture("fixture-expo"))
+    }
+
+    @Test("Fixture switch invalidates a stale metadata failure report")
+    @MainActor
+    func fixtureSwitchClearsMetadataReport() {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-pool",
+            persistSelection: false
+        )
+        model.metadataReport = MetadataGiveBackReport(
+            actionID: "action-fixture-pool",
+            fixtureID: "fixture-pool",
+            isDryRun: false,
+            readyCount: 0,
+            written: [],
+            failed: [MetadataGiveBackFailedItem(assetID: "asset-a", message: "synthetic")],
+            blocked: []
+        )
+
+        #expect(model.selectFixture("fixture-expo"))
+        #expect(model.metadataReport == nil)
+        #expect(model.metadataStatus.contains("Expo"))
+    }
+
     private var fixtureTree: [FixtureNode] {
         [
             FixtureNode(id: "fixture-expo", name: "Expo"),

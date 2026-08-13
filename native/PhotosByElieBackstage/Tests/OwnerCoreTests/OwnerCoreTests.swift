@@ -15,6 +15,259 @@ struct OwnerCoreTests {
         #expect(page.page.hasMore)
     }
 
+    @Test("Backstage updater compares a signed release manifest without inventing an endpoint")
+    func backstageUpdateManifestAndVersionComparison() throws {
+        let manifest = try backstageUpdateManifestFixture()
+        try manifest.validate()
+        let current = BackstageReleaseIdentity(
+            bundleIdentifier: "com.photosbyelie.backstage",
+            version: "219.1",
+            build: "77"
+        )
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data()),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier()
+        )
+        #expect(try service.makeCheck(current: current, manifest: manifest).availability == .updateAvailable)
+
+        var same = manifest
+        same.version = "219.1"
+        same.build = "77"
+        #expect(try service.makeCheck(current: current, manifest: same).availability == .current)
+
+        var older = manifest
+        older.version = "219.0"
+        older.build = "76"
+        #expect(try service.makeCheck(current: current, manifest: older).availability == .downgradeRejected)
+
+        var futureOS = manifest
+        futureOS.minimumOSVersion = "999.0"
+        #expect(try service.makeCheck(current: current, manifest: futureOS).availability == .incompatible)
+
+        let wrongIdentity = BackstageReleaseIdentity(
+            bundleIdentifier: "com.photosbyelie.backstage.canvas",
+            version: "219.1",
+            build: "77"
+        )
+        #expect(try service.makeCheck(current: wrongIdentity, manifest: manifest).availability == .incompatible)
+    }
+
+    @Test("Backstage updater rejects ambiguous manifest values")
+    func backstageUpdateManifestValidationFailsClosed() throws {
+        let manifest = try backstageUpdateManifestFixture()
+        var invalidManifests: [BackstageReleaseManifest] = []
+
+        var negativeVersion = manifest
+        negativeVersion.version = "-1.0"
+        invalidManifests.append(negativeVersion)
+
+        var negativeBuild = manifest
+        negativeBuild.build = "-1"
+        invalidManifests.append(negativeBuild)
+
+        var missingNotes = manifest
+        missingNotes.releaseNotes = "  \n"
+        invalidManifests.append(missingNotes)
+
+        var insecureDownload = manifest
+        insecureDownload.downloadURL = try #require(URL(string: "http://updates.test/backstage.zip"))
+        invalidManifests.append(insecureDownload)
+
+        var paddedTrust = manifest
+        paddedTrust.trust.teamIdentifier += " "
+        invalidManifests.append(paddedTrust)
+
+        for invalidManifest in invalidManifests {
+            #expect(throws: BackstageUpdateError.self) {
+                try invalidManifest.validate()
+            }
+        }
+    }
+
+    @Test("Backstage updater fetches and validates the configured manifest")
+    func backstageUpdateChecksConfiguredManifest() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: Data()
+            ),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            currentBundleURL: nil
+        )
+        let result = try await service.check(
+            current: BackstageReleaseIdentity(
+                bundleIdentifier: "com.photosbyelie.backstage",
+                version: "219.1",
+                build: "77"
+            )
+        )
+        #expect(result.availability == .updateAvailable)
+        #expect(result.manifest == manifest)
+    }
+
+    @Test("Backstage updater blocks a signer change before offering a download")
+    func backstageUpdateRejectsChangedCurrentSigner() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        var differentTrust = manifest.trust
+        differentTrust.teamIdentifier = "OTHERTEAM"
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: Data()
+            ),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            currentTrustReader: StubBackstageCurrentTrustReader(trust: differentTrust),
+            currentBundleURL: URL(fileURLWithPath: "/tmp/PhotosByElie Backstage.app")
+        )
+
+        do {
+            _ = try await service.check(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                )
+            )
+            Issue.record("A changed signing team unexpectedly passed the update check.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("signing contract differs"))
+            #expect(error.recoveryGuidance.contains("Keep this installation"))
+        }
+    }
+
+    @Test("Backstage updater verifies cache bytes and bundle metadata before offering an update")
+    func backstageUpdateDownloadAndVerify() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let progress = LockedProgress()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: Data("fixture-zip-bytes".utf8)
+            ),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        let verified = try await service.downloadAndVerify(
+            current: BackstageReleaseIdentity(
+                bundleIdentifier: "com.photosbyelie.backstage",
+                version: "219.1",
+                build: "77"
+            ),
+            manifest: manifest
+        ) { received, total in
+            progress.append(received: received, total: total)
+        }
+
+        #expect(FileManager.default.fileExists(atPath: verified.archiveURL.path))
+        #expect(FileManager.default.fileExists(atPath: verified.bundleURL.path))
+        #expect(progress.values.last?.received == 17)
+        #expect(progress.values.last?.total == 17)
+    }
+
+    @Test("Backstage updater blocks checksum and signature failures with recovery guidance")
+    func backstageUpdateVerificationFailuresAreSafe() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-failure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var badChecksum = manifest
+        badChecksum.sha256 = String(repeating: "0", count: 64)
+        let checksumService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data("fixture-zip-bytes".utf8)),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await checksumService.downloadAndVerify(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77"),
+                manifest: badChecksum
+            )
+            Issue.record("Checksum mismatch unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.recoveryGuidance.contains("running app"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+
+        let signatureService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data("fixture-zip-bytes".utf8)),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await signatureService.downloadAndVerify(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77"),
+                manifest: manifest
+            )
+            Issue.record("Signature mismatch unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("signature"))
+            #expect(error.recoveryGuidance.contains("temporary archive was removed"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+
+        let escapingExtractorService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: Data("fixture-zip-bytes".utf8)
+            ),
+            extractor: EscapingBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await escapingExtractorService.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An extracted bundle outside the update directory unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("outside the isolated update directory"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater reports the missing authoritative endpoint as a safe blocker")
+    func backstageUpdateEndpointIsExplicit() async throws {
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data()),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier()
+        )
+        do {
+            _ = try await service.check(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77")
+            )
+            Issue.record("Missing release endpoint unexpectedly proceeded.")
+        } catch let error as BackstageUpdateError {
+            #expect(error == .configurationMissing)
+            #expect(error.recoveryGuidance.contains("approved HTTPS manifest"))
+        }
+    }
+
     @Test("Decodes legacy queued actions without canonical v1 aliases")
     func decodesLegacyActionPage() throws {
         let page = try JSONDecoder.ownerAPI.decode(
@@ -2990,6 +3243,96 @@ private final class LockedStringOutput: @unchecked Sendable {
 
     func values() -> [String] {
         lock.withLock { storage }
+    }
+}
+
+private func backstageUpdateManifestFixture() throws -> BackstageReleaseManifest {
+    let url = try #require(Bundle.module.url(
+        forResource: "backstage-release-update",
+        withExtension: "json",
+        subdirectory: "Fixtures"
+    ))
+    return try JSONDecoder().decode(BackstageReleaseManifest.self, from: Data(contentsOf: url))
+}
+
+private struct StubBackstageUpdateTransport: BackstageUpdateTransport {
+    let manifestData: Data
+    let artifactData: Data
+
+    func fetchManifest(from url: URL) async throws -> Data { manifestData }
+
+    func download(
+        from url: URL,
+        to destination: URL,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws {
+        progress(0, Int64(artifactData.count))
+        try artifactData.write(to: destination, options: .atomic)
+        progress(Int64(artifactData.count), Int64(artifactData.count))
+    }
+}
+
+private struct StubBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    var version = "219.2"
+    var build = "78"
+
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        let app = directoryURL.appendingPathComponent("PhotosByElie Backstage.app", isDirectory: true)
+        let contents = app.appendingPathComponent("Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "com.photosbyelie.backstage",
+            "CFBundleShortVersionString": version,
+            "CFBundleVersion": build,
+            "CFBundlePackageType": "APPL",
+        ]
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try data.write(to: contents.appendingPathComponent("Info.plist"))
+        return app
+    }
+}
+
+private struct EscapingBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        URL(fileURLWithPath: "/tmp/PhotosByElie Outside.app", isDirectory: true)
+    }
+}
+
+private struct StubBackstageSignatureVerifier: BackstageCodeSignatureVerifying {
+    func verify(
+        bundleURL: URL,
+        expectedBundleIdentifier: String,
+        trust: BackstageReleaseTrust
+    ) throws {}
+}
+
+private struct StubBackstageCurrentTrustReader: BackstageCurrentReleaseTrustReading {
+    let trust: BackstageReleaseTrust
+
+    func readTrust(bundleURL: URL) throws -> BackstageReleaseTrust { trust }
+}
+
+private struct FailingBackstageSignatureVerifier: BackstageCodeSignatureVerifying {
+    func verify(
+        bundleURL: URL,
+        expectedBundleIdentifier: String,
+        trust: BackstageReleaseTrust
+    ) throws {
+        throw BackstageUpdateError.signatureMismatch("Synthetic signature mismatch.")
+    }
+}
+
+private struct ProgressSample: Sendable {
+    let received: Int64
+    let total: Int64
+}
+
+private final class LockedProgress: @unchecked Sendable {
+    private let lock = NSLock()
+    private(set) var values: [ProgressSample] = []
+
+    func append(received: Int64, total: Int64) {
+        lock.withLock { values.append(ProgressSample(received: received, total: total)) }
     }
 }
 

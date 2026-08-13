@@ -136,6 +136,8 @@ public struct BackstageApplication: App {
             DeliverablesView(model: model)
         case .publication:
             PublicationView(model: model)
+        case .updates:
+            BackstageUpdatesView(model: model)
         }
     }
 
@@ -152,6 +154,7 @@ public struct BackstageApplication: App {
         case .uploads: "arrow.up.circle"
         case .delivery: "shippingbox"
         case .publication: "globe"
+        case .updates: "arrow.triangle.2.circlepath"
         }
     }
 }
@@ -250,6 +253,119 @@ private struct OverviewView: View {
     private func abbreviatedDeviceID(_ deviceID: String) -> String {
         guard deviceID.count > 18 else { return deviceID }
         return "\(deviceID.prefix(18))…"
+    }
+}
+
+private struct BackstageUpdatesView: View {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    Label("Backstage updates", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.largeTitle.bold())
+                    Spacer()
+                    Button("Check for updates") {
+                        Task { await model.checkForUpdates() }
+                    }
+                    .disabled(isBusy)
+                    .backstageHelp("Check the configured authoritative HTTPS release manifest without changing Photos, Owner, connector, fixture, or running-app state.")
+                }
+                Text("Backstage downloads only a compatible, checksum- and signature-verified archive. Installation and rollback remain separate manual actions.")
+                    .foregroundStyle(.secondary)
+
+                GroupBox("Installed build") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        LabeledContent("Bundle identifier", value: model.installedRelease.bundleIdentifier.isEmpty ? "Unavailable" : model.installedRelease.bundleIdentifier)
+                        LabeledContent("Version", value: model.installedRelease.version.isEmpty ? "Unavailable" : model.installedRelease.version)
+                        LabeledContent("Build", value: model.installedRelease.build.isEmpty ? "Unavailable" : model.installedRelease.build)
+                    }
+                    .padding(6)
+                }
+
+                GroupBox("Release status") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        stateContent
+                    }
+                    .padding(6)
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    @ViewBuilder
+    private var stateContent: some View {
+        switch model.updateState {
+        case .idle:
+            Label("Ready to check", systemImage: "questionmark.circle")
+            Text("No cloud release check has run yet. If the signed app has no approved manifest endpoint, the check will explain that blocker without attempting a download.")
+                .foregroundStyle(.secondary)
+        case .checking:
+            ProgressView("Checking authoritative release metadata…")
+        case let .current(manifest):
+            statusLabel("Current", systemImage: "checkmark.circle.fill", color: .green)
+            releaseSummary(manifest)
+        case let .updateAvailable(manifest):
+            statusLabel("Update available", systemImage: "arrow.down.circle.fill", color: .orange)
+            releaseSummary(manifest)
+            Button("Download and verify") {
+                Task { await model.downloadVerifiedUpdate() }
+            }
+            .backstageHelp("Download the compatible archive into Backstage's cache, verify exact bytes and macOS signing trust, and leave the running app untouched.")
+        case let .downloading(manifest, receivedBytes, totalBytes):
+            statusLabel("Downloading", systemImage: "arrow.down.circle", color: .orange)
+            releaseSummary(manifest)
+            if totalBytes > 0 {
+                ProgressView(value: Double(receivedBytes), total: Double(totalBytes))
+                Text("\(receivedBytes.formatted()) / \(totalBytes.formatted()) bytes")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            } else {
+                ProgressView()
+                Text("The release server did not provide a total size; the manifest size will still be checked before verification.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        case let .verified(update):
+            statusLabel("Verified and ready for review", systemImage: "checkmark.shield.fill", color: .green)
+            releaseSummary(update.manifest)
+            Text("The archive passed exact-size, SHA-256, bundle-identity, and macOS code-signature checks. No install or launch was performed.")
+                .foregroundStyle(.secondary)
+            Button("Reveal verified update in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([update.bundleURL])
+            }
+            .backstageHelp("Reveal the isolated verified app bundle for a separately confirmed manual installation or rollback decision.")
+        case let .failed(message, recovery):
+            statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
+            Text(message)
+            Text(recovery)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var isBusy: Bool {
+        if case .checking = model.updateState { return true }
+        if case .downloading = model.updateState { return true }
+        return false
+    }
+
+    private func statusLabel(_ title: String, systemImage: String, color: Color) -> some View {
+        Label(title, systemImage: systemImage)
+            .foregroundStyle(color)
+            .font(.headline)
+    }
+
+    private func releaseSummary(_ manifest: BackstageReleaseManifest) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent("Available version", value: "\(manifest.version) (\(manifest.build))")
+            LabeledContent("Minimum macOS", value: manifest.minimumOSVersion)
+            LabeledContent("Archive size", value: "\(manifest.fileSize.formatted()) bytes")
+            Text(manifest.releaseNotes)
+                .font(.callout)
+                .textSelection(.enabled)
+        }
     }
 }
 

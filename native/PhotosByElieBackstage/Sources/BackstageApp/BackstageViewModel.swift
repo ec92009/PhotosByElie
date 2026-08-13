@@ -67,6 +67,7 @@ final class BackstageViewModel: ObservableObject {
         case uploads = "Uploads"
         case delivery = "Delivery"
         case publication = "Publication"
+        case updates = "Updates"
         var id: String { rawValue }
     }
 
@@ -278,6 +279,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var deliverableShareLink = ""
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
+    @Published var updateState: BackstageUpdateState = .idle
     @Published var photosBridgeHealth = PhotosBridgeHealth(
         installed: false,
         headless: false,
@@ -303,6 +305,8 @@ final class BackstageViewModel: ObservableObject {
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let photosBridgeHealthService: PhotosBridgeHealthService
+    let updateService: BackstageUpdateService
+    let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
@@ -407,9 +411,12 @@ final class BackstageViewModel: ObservableObject {
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         preferences: UserDefaults = .standard,
         pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
-        openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
+        openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+        updateService: BackstageUpdateService = BackstageUpdateService()
     ) {
         self.preferences = preferences
+        self.updateService = updateService
+        self.installedRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
         )
@@ -782,6 +789,66 @@ final class BackstageViewModel: ObservableObject {
             await loadPublicationPlan()
         case .overview, .activity, .access, .metadata, .wasteBasket:
             break
+        }
+    }
+
+    func checkForUpdates() async {
+        updateState = .checking
+        do {
+            let check = try await updateService.check(current: installedRelease)
+            switch check.availability {
+            case .current:
+                updateState = .current(check.manifest)
+            case .updateAvailable:
+                updateState = .updateAvailable(check.manifest)
+            case .downgradeRejected:
+                updateState = .failed(
+                    message: BackstageUpdateError.downgradeRejected.localizedDescription,
+                    recovery: BackstageUpdateError.downgradeRejected.recoveryGuidance
+                )
+            case .incompatible:
+                let error = BackstageUpdateError.incompatible(
+                    "The cloud release is not compatible with this Backstage installation or Mac."
+                )
+                updateState = .failed(message: error.localizedDescription, recovery: error.recoveryGuidance)
+            }
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.network(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
+        }
+    }
+
+    func downloadVerifiedUpdate() async {
+        guard case let .updateAvailable(manifest) = updateState else { return }
+        updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)
+        do {
+            let verified = try await updateService.downloadAndVerify(
+                current: installedRelease,
+                manifest: manifest
+            ) { [weak self] received, total in
+                Task { @MainActor in
+                    guard let self,
+                          case let .downloading(activeManifest, _, _) = self.updateState,
+                          activeManifest == manifest else { return }
+                    self.updateState = .downloading(
+                        manifest,
+                        receivedBytes: received,
+                        totalBytes: total > 0 ? total : manifest.fileSize
+                    )
+                }
+            }
+            updateState = .verified(verified)
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.downloadFailed(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
         }
     }
 

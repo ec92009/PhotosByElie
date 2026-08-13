@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
+import { createMemoryStore } from "./memory-store.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
 import { createStripeClient } from "./stripe-client.mjs";
@@ -275,11 +276,30 @@ const deliverableKeyFor = (gallery, id) => `${normalizeKeyPrefix(gallery.deliver
 
 const assetUrlFor = (id, action) => `/real-estate/deliverables/${encodeURIComponent(id)}/${action}`;
 
-const createLocalRealEstateDeliverables = ({ privateBucket, galleries }) => {
+const createLocalRehearsalLifecycleGuard = () => async (mediaIds, _context, expectedFence = null) => {
+  const canonicalMediaIds = [...new Set((Array.isArray(mediaIds) ? mediaIds : [])
+    .map((id) => String(id || "").trim())
+    .filter(Boolean))].sort();
+  const fence = {
+    digest: `local-rehearsal:${canonicalMediaIds.map(encodeURIComponent).join(",")}`,
+    mediaIds: canonicalMediaIds,
+  };
+  if (expectedFence?.digest && expectedFence.digest !== fence.digest) {
+    throw Object.assign(new Error("Local rehearsal lifecycle state changed during the protected operation."), {
+      status: 409,
+      code: "lifecycle_fence_changed",
+    });
+  }
+  return fence;
+};
+
+const createLocalRealEstateDeliverables = ({ privateBucket, galleries, store }) => {
   const base = createRealEstateDeliverables({
     privateBucket,
+    store,
     galleries,
     publicSiteUrl: "http://localhost:8000",
+    assertAssetsAllowed: createLocalRehearsalLifecycleGuard(),
   });
   const galleriesByKey = new Map(galleries.map((gallery) => [gallery.key, gallery]));
   return {
@@ -369,6 +389,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : undefined;
 
 const realEstateGalleries = loadLocalRealEstateGalleries();
+const store = createMemoryStore();
 const realEstatePrivateBucket = realEstateGalleries.length
   ? createLocalR2Bucket(path.resolve(repoRoot, process.env.PBE_REAL_ESTATE_LOCAL_BUCKET_DIR || "tmp/real-estate-worker-r2"))
   : null;
@@ -383,11 +404,13 @@ const realEstateDeliverables = realEstatePrivateBucket
   ? createLocalRealEstateDeliverables({
     privateBucket: realEstatePrivateBucket,
     galleries: realEstateGalleries,
+    store,
   })
   : null;
 
 const worker = createPhotosByElieWorker({
   catalog: loadCatalog(),
+  store,
   delivery,
   stripe,
   realEstateAuth,

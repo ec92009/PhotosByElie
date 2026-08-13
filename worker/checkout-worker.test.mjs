@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import jpeg from "jpeg-js";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import catalogTsv from "../scripts/catalog_tsv.cjs";
 import { createMemoryAccessUserRegistry } from "./access-user-registry.mjs";
 import { createAnalyticsStore } from "./analytics-store.mjs";
@@ -14,6 +15,8 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createKvOwnerActionStore, createMemoryOwnerActionStore } from "./owner-action-store.mjs";
+import { createD1LifecycleDenyStore, summarizeLifecycleManifest } from "./lifecycle-deny-store.mjs";
+import { NON_REVOCABLE_PUBLIC_ASSET_KEYS } from "./non-revocable-public-assets.mjs";
 import {
   createKvOwnerDeviceAuthStore,
   createMemoryOwnerDeviceAuthStore,
@@ -53,6 +56,85 @@ const jsonRequest = (url, body, headers = {}) => new Request(url, {
   headers: { "content-type": "application/json", ...headers },
   body: JSON.stringify(body),
 });
+
+const allowLifecycleFor = (deniedIds = []) => {
+  const denied = new Set(deniedIds);
+  return {
+    ensureSchema: async () => ({ state: "ready" }),
+    visibilityFor: async (ids) => ids.map((id) => ({ canonicalMediaId: id, visible: !denied.has(id), revision: 0 })),
+    assertAllowed: async (ids) => {
+      const blocked = ids.filter((id) => denied.has(id));
+      if (blocked.length) throw Object.assign(new Error("One or more assets are unavailable."), {
+        status: 410, code: "asset_lifecycle_denied", details: { mediaIds: blocked },
+      });
+      return true;
+    },
+  };
+};
+
+class TestD1Statement {
+  constructor(database, sql, values = []) { this.database = database; this.sql = sql; this.values = values; }
+  bind(...values) { return new TestD1Statement(this.database, this.sql, values); }
+  first() { return this.database.prepare(this.sql).get(...this.values) || null; }
+  all() { return { success: true, results: this.database.prepare(this.sql).all(...this.values) }; }
+  run() { const result = this.database.prepare(this.sql).run(...this.values); return { success: true, meta: { changes: Number(result.changes) } }; }
+}
+
+class TestD1 {
+  constructor() {
+    this.sqlite = new DatabaseSync(":memory:");
+    this.sqlite.exec(fs.readFileSync(new URL("../migrations/0012_lifecycle_deny_plane.sql", import.meta.url), "utf8"));
+  }
+  prepare(sql) { return new TestD1Statement(this.sqlite, sql); }
+  batch(statements) {
+    this.sqlite.exec("BEGIN IMMEDIATE");
+    try {
+      const results = statements.map((statement) => statement.run());
+      this.sqlite.exec("COMMIT");
+      return results;
+    } catch (error) {
+      this.sqlite.exec("ROLLBACK");
+      throw error;
+    }
+  }
+}
+
+const readyLifecycleD1 = async (mediaIds, bindings = new Map()) => {
+  const database = new TestD1();
+  const store = createD1LifecycleDenyStore({ database });
+  const members = [...new Set(mediaIds)].map((id) => ({
+    canonicalAssetId: `asset:${id}`,
+    canonicalMediaId: id,
+    bindings: bindings.get(id) || [{ bucket: "public", objectKey: `test/${id}.jpg` }],
+  }));
+  for (let index = 0; index < members.length; index += 100) {
+    await store.seedVisibleBatch({ seedId: `test-seed-${index / 100}`, items: members.slice(index, index + 100) });
+  }
+  await store.activate({ activationId: "test-activation", ...await summarizeLifecycleManifest(members) });
+  return database;
+};
+
+const denyLifecycleMedia = async (database, mediaId, bindings) => {
+  const store = createD1LifecycleDenyStore({ database });
+  const arm = await store.armBatch({
+    operationId: `deny:${mediaId}`,
+    operation: "x",
+    denied: true,
+    items: [{ canonicalAssetId: `asset:${mediaId}`, canonicalMediaId: mediaId, bindings }],
+  });
+  await store.markLocallyCommitted(arm);
+  await store.applyBatch({
+    ...arm,
+    receipts: [{
+      receiptId: `receipt:${mediaId}`,
+      canonicalAssetId: `asset:${mediaId}`,
+      canonicalMediaId: mediaId,
+      revision: arm.revision,
+      denied: true,
+      lifecycleState: "recoverable",
+    }],
+  });
+};
 
 const realEstateSessionCookie = async (worker, galleryKey = "corine-real-estate") => {
   const response = await worker.fetch(jsonRequest("https://worker.test/real-estate/login", {
@@ -567,6 +649,7 @@ test("shared galleries expose only assigned watermarked catalog previews", async
     catalog,
     accessAuth: fakeAccessAuthFor("ec92009pt@gmail.com"),
     accessUserRegistry: registry,
+    lifecycleDenyStore: allowLifecycleFor(),
   });
   const response = await worker.fetch(new Request("https://worker.test/shared-galleries", {
     headers: { origin: "https://photos-by-elie.com" },
@@ -586,11 +669,34 @@ test("shared galleries expose only assigned watermarked catalog previews", async
     catalog,
     accessAuth: fakeAccessAuthFor(""),
     accessUserRegistry: registry,
+    lifecycleDenyStore: allowLifecycleFor(),
   });
   const denied = await anonymous.fetch(new Request("https://worker.test/shared-galleries", {
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(denied.status, 401);
+});
+
+test("shared galleries omit lifecycle-denied photos", async () => {
+  const catalog = loadCatalog();
+  const photoIds = [...catalog.photos.keys()].slice(0, 3);
+  const worker = createPhotosByElieWorker({
+    catalog,
+    accessAuth: fakeAccessAuthFor("viewer@example.com"),
+    accessUserRegistry: {
+      getUser: async (email) => ({ email, displayName: "Viewer", groups: [], effectiveAccess: { scopes: [] } }),
+      listSharedFixturesForUser: async () => photoIds.map((photoId, index) => ({
+        id: "shared", label: "Shared", parentId: "", groupId: "shared-group", photoId, ordinal: index + 1,
+      })),
+    },
+    lifecycleDenyStore: allowLifecycleFor([photoIds[1]]),
+  });
+  const response = await worker.fetch(new Request("https://worker.test/shared-galleries", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(body.fixtures[0].photos.map((photo) => photo.id), [photoIds[0], photoIds[2]]);
 });
 
 test("shared galleries retain a nested fixture when it adds photos not present in its ancestor", async () => {
@@ -637,6 +743,7 @@ test("shared galleries retain a nested fixture when it adds photos not present i
     catalog,
     accessAuth: fakeAccessAuthFor("ec92009pt@gmail.com"),
     accessUserRegistry: registry,
+    lifecycleDenyStore: allowLifecycleFor(),
   });
 
   const response = await worker.fetch(new Request("https://worker.test/shared-galleries", {
@@ -2461,6 +2568,41 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(forbiddenOrderResponse.headers.get("cache-control"), "private, no-store");
 });
 
+test("account profile lifecycle visibility is queried in at most 100-ID chunks", async () => {
+  const catalog = loadCatalog();
+  const photoIds = [...catalog.photos.keys()].slice(0, 150);
+  const store = createMemoryStore();
+  await store.putAccountProfile({
+    email: "buyer@example.com",
+    liked: photoIds.map((photoId) => ({ photoId })),
+    basket: [],
+    language: "en",
+    theme: "auto",
+    updatedAt: "2026-08-13T10:00:00.000Z",
+  });
+  const calls = [];
+  const lifecycleDenyStore = allowLifecycleFor([photoIds[149]]);
+  const visibilityFor = lifecycleDenyStore.visibilityFor;
+  lifecycleDenyStore.visibilityFor = async (ids) => {
+    calls.push([...ids]);
+    return visibilityFor(ids);
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    accessAuth: fakeAccessAuthFor("buyer@example.com"),
+    lifecycleDenyStore,
+  });
+  const response = await worker.fetch(new Request("https://worker.test/account/profile", {
+    headers: { origin: "https://photos-by-elie.com" },
+  }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(calls.map((ids) => ids.length), [100, 50]);
+  assert.equal(body.profile.liked.length, 149);
+  assert.equal(body.profile.liked.some((item) => item.photoId === photoIds[149]), false);
+});
+
 test("signed-in account claims previous guest purchases by checkout email", async () => {
   const catalog = loadCatalog();
   const photoId = firstDeliverablePhotoId(catalog);
@@ -3060,17 +3202,81 @@ test("public paid order exposes capability links but not internal delivery or St
 
   const wrongEmailResponse = await worker.fetch(new Request(`https://worker.test/orders/${paid.order.id}?email=attacker@example.com`));
   assert.equal(wrongEmailResponse.status, 403);
+  assert.equal(wrongEmailResponse.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(wrongEmailResponse.headers.get("cdn-cache-control"), "no-store");
 
   const lookupResponse = await worker.fetch(new Request(`https://worker.test/orders/${paid.order.id}?email=buyer@example.com`));
   assert.equal(lookupResponse.status, 200);
+  assert.equal(lookupResponse.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(lookupResponse.headers.get("cdn-cache-control"), "no-store");
   const lookup = await lookupResponse.json();
   assert.equal(lookup.order.status, "ready");
 
-  const sessionLookupResponse = await worker.fetch(new Request(`https://worker.test/orders/by-session/${checkout.checkout.sessionId}`));
+  const missingEmailResponse = await worker.fetch(new Request(`https://worker.test/orders/by-session/${checkout.checkout.sessionId}`));
+  assert.equal(missingEmailResponse.status, 403);
+  assert.equal(missingEmailResponse.headers.get("cache-control"), "private, no-store, max-age=0");
+  const sessionLookupResponse = await worker.fetch(new Request(
+    `https://worker.test/orders/by-session/${checkout.checkout.sessionId}?email=buyer%40example.com`
+  ));
   assert.equal(sessionLookupResponse.status, 200);
+  assert.equal(sessionLookupResponse.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(sessionLookupResponse.headers.get("cdn-cache-control"), "no-store");
   const sessionLookup = await sessionLookupResponse.json();
   assert.equal(sessionLookup.order.id, paid.order.id);
   assert.equal(sessionLookup.order.status, "ready");
+});
+
+test("payment received after lifecycle revocation is retained for manual refund review without fulfillment", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const photoId = firstDeliverablePhotoId(catalog);
+  let denied = false;
+  let deliveryCalls = 0;
+  const lifecycleDenyStore = {
+    ensureSchema: async () => ({ state: "ready" }),
+    visibilityFor: async (ids) => ids.map((id) => ({ canonicalMediaId: id, visible: !denied, revision: 1 })),
+    assertAllowed: async (ids) => {
+      if (denied && ids.includes(photoId)) throw Object.assign(new Error("One or more assets are unavailable."), {
+        status: 410,
+        code: "asset_lifecycle_denied",
+      });
+      return true;
+    },
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    randomUUID,
+    lifecycleDenyStore,
+    delivery: {
+      validateOrder: async () => ({ ok: true }),
+      createDelivery: async () => {
+        deliveryCalls += 1;
+        throw new Error("delivery must not start after revocation");
+      },
+    },
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  assert.equal(checkoutResponse.status, 201);
+  const checkout = await checkoutResponse.json();
+
+  denied = true;
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 409);
+  assert.equal((await payResponse.json()).error.code, "paid_asset_revoked");
+  assert.equal(deliveryCalls, 0);
+  const retained = await store.getOrder(checkout.order.id);
+  assert.equal(retained.status, "manual_refund_review");
+  assert.equal(retained.delivery, null);
+  assert.equal(retained.deliveryError.lifecycleCode, "asset_lifecycle_denied");
 });
 
 test("paid checkout sends per-purchased-item delivery email links", async () => {
@@ -3366,6 +3572,7 @@ test("deployed Worker mock checkout writes and downloads private R2 files", asyn
     DELIVERY_MEDIA: privateR2,
     PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
+  env.ACCESS_DB = await readyLifecycleD1([photoId]);
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
@@ -3410,6 +3617,7 @@ test("deployed Worker renders missing JPG products with Cloudflare Images and ca
     PUBLIC_SITE_URL: "https://photos-by-elie.com",
     IMAGES: images,
   };
+  env.ACCESS_DB = await readyLifecycleD1([photoId]);
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
@@ -3797,6 +4005,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
       now: () => new Date("2026-05-17T12:00:00.000Z"),
       galleries,
     }),
+    lifecycleDenyStore: allowLifecycleFor(),
     realEstateAuth: createRealEstateAuth({
       galleries,
       sessionSecret: "test-real-estate-session-secret",
@@ -4156,6 +4365,7 @@ test("real-estate delivery links provide expiring no-login access to private fin
       sessionSecret: "test-real-estate-session-secret",
       now,
     }),
+    lifecycleDenyStore: allowLifecycleFor(),
   });
   const cookie = await realEstateSessionCookie(worker);
   const batch = {
@@ -4222,6 +4432,8 @@ test("real-estate delivery links provide expiring no-login access to private fin
   const pdfLink = delivery.links.find((link) => link.type === "pdf");
   const publicDownload = await worker.fetch(new Request(pdfLink.url));
   assert.equal(publicDownload.status, 200);
+  assert.equal(publicDownload.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(publicDownload.headers.get("cdn-cache-control"), "no-store");
   assert.equal(publicDownload.headers.get("content-type"), "application/pdf");
   assert.match(publicDownload.headers.get("content-disposition"), /la-concha\.pdf/);
   assert.equal(Buffer.from(await publicDownload.arrayBuffer()).toString(), "%PDF-link-test");
@@ -4230,6 +4442,7 @@ test("real-estate delivery links provide expiring no-login access to private fin
   const stored = await store.getDownload(token);
   assert.equal(stored.realEstateGalleryKey, "corine-real-estate");
   assert.equal(stored.realEstateDeliverableId, "corine-pdf-ready");
+  assert.deepEqual(stored.canonicalMediaIds, ["photo-1"]);
   assert.equal(stored.downloadCount, 1);
 });
 
@@ -4409,6 +4622,7 @@ test("deployed Worker blocks checkout when private delivery files are missing", 
     DELIVERY_MEDIA: createFakeR2(),
     PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
+  env.ACCESS_DB = await readyLifecycleD1([photoId]);
 
   const checkoutResponse = await deployedWorker.fetch(jsonRequest("https://worker.test/checkout/guest", {
     email: "buyer@example.com",
@@ -4596,13 +4810,42 @@ test("deployed Worker serves public R2 previews through the media route", async 
     DELIVERY_MEDIA: createFakeR2(),
     PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
+  env.ACCESS_DB = await readyLifecycleD1(["media-preview"], new Map([
+    ["media-preview", [{ bucket: "public", objectKey: "expo/france/sample_900.jpg" }]],
+  ]));
 
   const response = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/jpeg");
   assert.equal(response.headers.get("accept-ranges"), "bytes");
-  assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "ffd8ffd9");
+
+  const unbound = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/unbound.jpg"), env);
+  assert.equal(unbound.status, 503);
+  assert.equal(unbound.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(unbound.headers.get("cdn-cache-control"), "no-store");
+
+  await denyLifecycleMedia(env.ACCESS_DB, "media-preview", [
+    { bucket: "public", objectKey: "expo/france/sample_900.jpg" },
+  ]);
+  const denied = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), env);
+  assert.equal(denied.status, 410);
+  assert.equal(denied.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(denied.headers.get("cdn-cache-control"), "no-store");
+
+  const missingEnv = {
+    ...env,
+    ACCESS_DB: await readyLifecycleD1(["media-preview"], new Map([
+      ["media-preview", [{ bucket: "public", objectKey: "expo/france/sample_900.jpg" }]],
+    ])),
+    PUBLIC_MEDIA: createFakeR2(),
+  };
+  const missing = await deployedWorker.fetch(new Request("https://worker.test/media/expo/france/sample_900.jpg"), missingEnv);
+  assert.equal(missing.status, 404);
+  assert.equal(missing.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(missing.headers.get("cdn-cache-control"), "no-store");
 });
 
 test("deployed Worker root redirects direct auth-domain visits to Account", async () => {
@@ -4614,8 +4857,9 @@ test("deployed Worker root redirects direct auth-domain visits to Account", asyn
 });
 
 test("deployed Worker serves public R2 media byte ranges", async () => {
+  const reviewedMusicKey = NON_REVOCABLE_PUBLIC_ASSET_KEYS[0];
   const publicR2 = createFakeR2({
-    "assets/music/slideshow-guitar/pixabay/sample.mp3": {
+    [reviewedMusicKey]: {
       body: new Uint8Array([0, 1, 2, 3, 4, 5]),
       httpMetadata: { contentType: "audio/mpeg" },
     },
@@ -4628,7 +4872,7 @@ test("deployed Worker serves public R2 media byte ranges", async () => {
     PUBLIC_SITE_URL: "https://photos-by-elie.com",
   };
 
-  const response = await deployedWorker.fetch(new Request("https://worker.test/media/assets/music/slideshow-guitar/pixabay/sample.mp3", {
+  const response = await deployedWorker.fetch(new Request(`https://worker.test/media/${reviewedMusicKey}`, {
     headers: { range: "bytes=1-3" },
   }), env);
 
@@ -4638,4 +4882,56 @@ test("deployed Worker serves public R2 media byte ranges", async () => {
   assert.equal(response.headers.get("content-length"), "3");
   assert.equal(response.headers.get("content-range"), "bytes 1-3/6");
   assert.equal(Buffer.from(await response.arrayBuffer()).toString("hex"), "010203");
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+});
+
+test("Worker health fails while lifecycle authority is blocked and succeeds only when ready", async () => {
+  const blocked = new TestD1();
+  const base = {
+    ORDERS_KV: createFakeKv(),
+    PRIVATE_MEDIA: createFakeR2(),
+    DELIVERY_MEDIA: createFakeR2(),
+    PUBLIC_SITE_URL: "https://photos-by-elie.com",
+  };
+  const blockedResponse = await deployedWorker.fetch(new Request("https://worker.test/health"), {
+    ...base,
+    ACCESS_DB: blocked,
+  });
+  assert.equal(blockedResponse.status, 503);
+  const readyResponse = await deployedWorker.fetch(new Request("https://worker.test/health"), {
+    ...base,
+    ACCESS_DB: await readyLifecycleD1(["health-media"]),
+  });
+  assert.equal(readyResponse.status, 200);
+  assert.equal((await readyResponse.json()).lifecycle, "ready");
+  assert.equal(readyResponse.headers.get("cache-control"), "no-store");
+});
+
+test("real-estate delivery links fail closed when their batch has no canonical media identity", async () => {
+  const privateR2 = createFakeR2();
+  const store = createMemoryStore();
+  const galleries = [{ key: "corine-real-estate", username: "Corine", accessCode: "LaConcha" }];
+  const deliverables = createRealEstateDeliverables({ privateBucket: privateR2, store, galleries });
+  const session = { galleryKey: "corine-real-estate", username: "Corine" };
+  const record = await deliverables.putDeliverable({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverable: {
+      id: "identityless-pdf",
+      type: "pdf",
+      status: "ready",
+      filename: "identityless.pdf",
+      outputs: { pdf: { key: "outputs/identityless.pdf", contentType: "application/pdf" } },
+      batch: { batchId: "identityless", projects: [{ items: [] }] },
+    },
+  });
+  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"), {
+    httpMetadata: { contentType: "application/pdf" },
+  });
+  await assert.rejects(deliverables.createDeliveryLinks({
+    galleryKey: "corine-real-estate",
+    realEstateSession: session,
+    deliverableIds: [record.id],
+  }), { code: "lifecycle_identity_unavailable" });
 });

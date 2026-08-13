@@ -209,6 +209,78 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
         );
         CREATE INDEX IF NOT EXISTS idx_owner_waste_basket_receipts_entry
           ON owner_waste_basket_receipts(entry_id, updated_at);
+
+        CREATE TABLE IF NOT EXISTS owner_lifecycle_operations (
+          operation_id         TEXT PRIMARY KEY,
+          operation_digest     TEXT NOT NULL UNIQUE,
+          operation            TEXT NOT NULL,
+          revision             INTEGER NOT NULL CHECK (revision > 0),
+          state                TEXT NOT NULL CHECK (state IN ('armed', 'locally_committed', 'deployed_applied', 'locally_acked', 'conflict', 'aborted')),
+          member_count         INTEGER NOT NULL CHECK (member_count > 0),
+          arm_receipt_json     TEXT NOT NULL,
+          created_at           TEXT NOT NULL,
+          updated_at           TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS owner_lifecycle_outbox (
+          operation_id         TEXT NOT NULL,
+          operation_digest     TEXT NOT NULL,
+          canonical_media_id   TEXT NOT NULL,
+          canonical_asset_id   TEXT NOT NULL,
+          revision             INTEGER NOT NULL CHECK (revision > 0),
+          denied               INTEGER NOT NULL CHECK (denied IN (0, 1)),
+          lifecycle_state      TEXT NOT NULL,
+          receipt_id           TEXT NOT NULL UNIQUE,
+          payload_json         TEXT NOT NULL,
+          state                TEXT NOT NULL CHECK (state IN ('locally_committed', 'deployed_applied', 'locally_acked', 'conflict')),
+          created_at           TEXT NOT NULL,
+          updated_at           TEXT NOT NULL,
+          PRIMARY KEY (operation_id, canonical_media_id),
+          FOREIGN KEY (operation_id) REFERENCES owner_lifecycle_operations(operation_id)
+        );
+        CREATE TRIGGER IF NOT EXISTS owner_lifecycle_outbox_immutable_payload
+          BEFORE UPDATE ON owner_lifecycle_outbox
+          WHEN OLD.operation_id <> NEW.operation_id
+            OR OLD.operation_digest <> NEW.operation_digest
+            OR OLD.canonical_media_id <> NEW.canonical_media_id
+            OR OLD.canonical_asset_id <> NEW.canonical_asset_id
+            OR OLD.revision <> NEW.revision
+            OR OLD.denied <> NEW.denied
+            OR OLD.lifecycle_state <> NEW.lifecycle_state
+            OR OLD.receipt_id <> NEW.receipt_id
+            OR OLD.payload_json <> NEW.payload_json
+          BEGIN
+            SELECT RAISE(ABORT, 'Lifecycle outbox payload is immutable');
+          END;
+
+        CREATE TABLE IF NOT EXISTS owner_hosted_lifecycle_requests (
+          request_id           TEXT PRIMARY KEY CHECK (trim(request_id) <> ''),
+          request_key_digest   TEXT NOT NULL UNIQUE CHECK (length(request_key_digest) = 64),
+          session_id           TEXT NOT NULL CHECK (trim(session_id) <> ''),
+          fixture_id           TEXT NOT NULL CHECK (trim(fixture_id) <> ''),
+          operation            TEXT NOT NULL CHECK (operation IN ('waste-basket-x', 'waste-basket-x-many', 'waste-basket-restore')),
+          asset_ids_json       TEXT NOT NULL,
+          state                TEXT NOT NULL CHECK (state IN ('queued', 'running', 'completed', 'failed')),
+          result_json          TEXT NOT NULL DEFAULT '{}',
+          error_text           TEXT NOT NULL DEFAULT '',
+          attempt_count        INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+          created_at           TEXT NOT NULL,
+          updated_at           TEXT NOT NULL,
+          completed_at         TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_state
+          ON owner_hosted_lifecycle_requests(state, created_at, request_id);
+        CREATE TRIGGER IF NOT EXISTS owner_hosted_lifecycle_request_identity_immutable
+          BEFORE UPDATE ON owner_hosted_lifecycle_requests
+          WHEN OLD.request_id <> NEW.request_id
+            OR OLD.request_key_digest <> NEW.request_key_digest
+            OR OLD.session_id <> NEW.session_id
+            OR OLD.fixture_id <> NEW.fixture_id
+            OR OLD.operation <> NEW.operation
+            OR OLD.asset_ids_json <> NEW.asset_ids_json
+          BEGIN
+            SELECT RAISE(ABORT, 'Hosted lifecycle request identity is immutable');
+          END;
         """
     )
     connection.commit()
@@ -218,6 +290,232 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
 def ensure_schema(repo_root: Path, db_path: Path | None = None) -> None:
     connection = _connect(repo_root, db_path)
     connection.close()
+
+
+def _hosted_request_payload(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "requestId": str(row["request_id"]),
+        "sessionId": str(row["session_id"]),
+        "fixtureId": str(row["fixture_id"]),
+        "operation": str(row["operation"]),
+        "assetIds": json.loads(str(row["asset_ids_json"])),
+        "state": str(row["state"]),
+        "result": json.loads(str(row["result_json"] or "{}")),
+        "error": str(row["error_text"] or ""),
+        "attemptCount": int(row["attempt_count"] or 0),
+        "createdAt": str(row["created_at"]),
+        "updatedAt": str(row["updated_at"]),
+        "completedAt": str(row["completed_at"] or ""),
+    }
+
+
+def queue_hosted_lifecycle_request(
+    repo_root: Path,
+    *,
+    operation: str,
+    asset_ids: Iterable[Any],
+    session_id: str,
+    fixture_id: str,
+    request_key: str,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Persist a browser-authorized intent without performing lifecycle work.
+
+    The caller's idempotency key is retained only as a digest. Browser payload
+    authorization, cloud credentials, lifecycle members, and fixture overrides
+    have no representation in this durable queue.
+    """
+    normalized_operation = str(operation or "").strip().lower()
+    if normalized_operation not in {
+        "waste-basket-x", "waste-basket-x-many", "waste-basket-restore"
+    }:
+        raise WasteBasketError("unsupported hosted lifecycle operation")
+    ids = _unique_ids(asset_ids)
+    if not ids or len(ids) > MAX_ASSET_IDS:
+        raise WasteBasketError("hosted lifecycle request requires 1 to 500 assets")
+    clean_session = str(session_id or "").strip()
+    clean_fixture = str(fixture_id or "").strip()
+    clean_key = str(request_key or "").strip()
+    if not clean_session or not clean_fixture or not clean_key:
+        raise WasteBasketError("hosted lifecycle request identity is incomplete")
+    key_digest = hashlib.sha256(clean_key.encode("utf-8")).hexdigest()
+    ids_json = _json(ids)
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        existing = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_key_digest = ?",
+            (key_digest,),
+        ).fetchone()
+        if existing is not None:
+            if (
+                str(existing["session_id"]) != clean_session
+                or str(existing["fixture_id"]) != clean_fixture
+                or str(existing["operation"]) != normalized_operation
+                or str(existing["asset_ids_json"]) != ids_json
+            ):
+                raise WasteBasketError("hosted lifecycle idempotency key conflicts with its durable intent")
+            connection.rollback()
+            return _hosted_request_payload(existing)
+        now = _now()
+        request_id = f"hlr-{uuid.uuid4().hex}"
+        connection.execute(
+            """INSERT INTO owner_hosted_lifecycle_requests
+              (request_id, request_key_digest, session_id, fixture_id, operation,
+               asset_ids_json, state, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)""",
+            (request_id, key_digest, clean_session, clean_fixture, normalized_operation, ids_json, now, now),
+        )
+        row = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
+        ).fetchone()
+        connection.commit()
+        return _hosted_request_payload(row)
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def hosted_lifecycle_request_status(
+    repo_root: Path,
+    request_id: str,
+    *,
+    session_id: str,
+    fixture_id: str,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE request_id = ? AND session_id = ? AND fixture_id = ?""",
+            (str(request_id or "").strip(), str(session_id or "").strip(), str(fixture_id or "").strip()),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request is unavailable for this Owner session")
+        return _hosted_request_payload(row)
+    finally:
+        connection.close()
+
+
+def hosted_lifecycle_request_state_for_operation(
+    repo_root: Path,
+    operation_id: str,
+    db_path: Path | None = None,
+) -> str:
+    """Return the durable hosted relay state associated with an operation ID."""
+    prefix = "owner-action:hosted-lifecycle:"
+    normalized = str(operation_id or "").strip()
+    if not normalized.startswith(prefix):
+        return ""
+    request_id = normalized[len(prefix):]
+    if not request_id:
+        return ""
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            "SELECT state FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (request_id,),
+        ).fetchone()
+        return str(row["state"]) if row else ""
+    finally:
+        connection.close()
+
+
+def pending_hosted_lifecycle_requests(
+    repo_root: Path,
+    *,
+    limit: int = 20,
+    db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    connection = _connect(repo_root, db_path)
+    try:
+        rows = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE state IN ('queued', 'running')
+               ORDER BY created_at, request_id LIMIT ?""",
+            (max(1, min(int(limit), 100)),),
+        ).fetchall()
+        return [_hosted_request_payload(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def claim_hosted_lifecycle_request(
+    repo_root: Path,
+    request_id: str,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            """UPDATE owner_hosted_lifecycle_requests
+               SET state = 'running', attempt_count = attempt_count + 1,
+                   error_text = '', updated_at = ?
+               WHERE request_id = ? AND state IN ('queued', 'running')""",
+            (_now(), str(request_id or "").strip()),
+        )
+        row = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (str(request_id or "").strip(),),
+        ).fetchone()
+        if row is None or str(row["state"]) not in {"running", "completed"}:
+            raise WasteBasketError("hosted lifecycle request is not claimable")
+        connection.commit()
+        return _hosted_request_payload(row)
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def finish_hosted_lifecycle_request(
+    repo_root: Path,
+    request_id: str,
+    *,
+    result: dict[str, Any] | None = None,
+    error: str = "",
+    retryable: bool = False,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT state FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (str(request_id or "").strip(),),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request does not exist")
+        if str(row["state"]) == "completed":
+            completed = connection.execute(
+                "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
+            ).fetchone()
+            connection.rollback()
+            return _hosted_request_payload(completed)
+        now = _now()
+        state = "queued" if error and retryable else "failed" if error else "completed"
+        connection.execute(
+            """UPDATE owner_hosted_lifecycle_requests
+               SET state = ?, result_json = ?, error_text = ?, updated_at = ?, completed_at = ?
+               WHERE request_id = ?""",
+            (state, _json(result or {}), str(error or "")[:1000], now,
+             now if state in {"completed", "failed"} else None, str(request_id or "").strip()),
+        )
+        completed = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
+        ).fetchone()
+        connection.commit()
+        return _hosted_request_payload(completed)
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
@@ -355,9 +653,13 @@ def _run_operation(
     confirmed: bool,
     db_path: Path | None,
     mutate: Callable[[sqlite3.Connection, str, str], dict[str, Any]],
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     connection = _connect(repo_root, db_path)
-    operation_id = f"wbo-{uuid.uuid4().hex}"
+    operation_id = str((deployed_lifecycle or {}).get("operationId") or f"wbo-{uuid.uuid4().hex}")
+    if deployed_lifecycle and request_key != operation_id:
+        connection.close()
+        raise WasteBasketError("deployed lifecycle request key must equal its stable operation ID")
     now = _now()
     try:
         connection.execute("BEGIN IMMEDIATE")
@@ -386,6 +688,8 @@ def _run_operation(
             ),
         )
         result = mutate(connection, operation_id, now)
+        if deployed_lifecycle:
+            _record_deployed_lifecycle_outbox(connection, operation, asset_ids, deployed_lifecycle, now)
         connection.execute(
             """
             UPDATE owner_waste_basket_operations
@@ -430,6 +734,438 @@ def _run_operation(
                 connection.close()
             except sqlite3.Error:
                 pass
+
+
+def _record_deployed_lifecycle_outbox(
+    connection: sqlite3.Connection,
+    operation: str,
+    asset_ids: list[str],
+    arm: dict[str, Any],
+    now: str,
+) -> None:
+    operation_id = str(arm.get("operationId") or "").strip()
+    operation_digest = str(arm.get("operationDigest") or "").strip()
+    revision = int(arm.get("revision") or 0)
+    denied = bool(arm.get("denied"))
+    members = sorted(arm.get("members") or [], key=lambda item: str(item.get("canonicalMediaId") or ""))
+    if not operation_id or not operation_digest or revision < 1 or len(members) != len(asset_ids):
+        raise WasteBasketError("deployed lifecycle arm receipt is incomplete")
+    member_assets = sorted(str(item.get("canonicalAssetId") or "").strip() for item in members)
+    if member_assets != sorted(asset_ids) or any(int(item.get("revision") or 0) != revision for item in members):
+        raise WasteBasketError("deployed lifecycle arm membership does not match the local mutation")
+    expected_denied = operation not in {"restore", "tombstone-restore"}
+    if denied != expected_denied:
+        raise WasteBasketError("deployed lifecycle arm intent conflicts with the local operation")
+    lifecycle_state = "restored" if not denied else "tombstoned" if operation == "empty" else "recoverable"
+    existing = connection.execute(
+        "SELECT operation_digest, revision, member_count FROM owner_lifecycle_operations WHERE operation_id = ?",
+        (operation_id,),
+    ).fetchone()
+    if existing:
+        if str(existing["operation_digest"]) != operation_digest or int(existing["revision"]) != revision or int(existing["member_count"]) != len(members):
+            raise WasteBasketError("deployed lifecycle operation replay conflicts with the durable outbox")
+        state = str(connection.execute(
+            "SELECT state FROM owner_lifecycle_operations WHERE operation_id = ?", (operation_id,)
+        ).fetchone()["state"])
+        if state not in {"armed", "locally_committed"}:
+            raise WasteBasketError("deployed lifecycle operation is not eligible for local commit")
+        connection.execute(
+            "UPDATE owner_lifecycle_operations SET state = 'locally_committed', updated_at = ? WHERE operation_id = ? AND state = 'armed'",
+            (now, operation_id),
+        )
+    else:
+        raise WasteBasketError("deployed lifecycle arm was not persisted before local mutation")
+    for member in members:
+        media_id = str(member.get("canonicalMediaId") or "").strip()
+        asset_id = str(member.get("canonicalAssetId") or "").strip()
+        receipt_id = f"lifecycle:{operation_id}:{media_id}:{revision}"
+        payload = {
+            "receiptId": receipt_id,
+            "canonicalMediaId": media_id,
+            "canonicalAssetId": asset_id,
+            "revision": revision,
+            "denied": denied,
+            "lifecycleState": lifecycle_state,
+        }
+        connection.execute(
+            """INSERT OR IGNORE INTO owner_lifecycle_outbox
+              (operation_id, operation_digest, canonical_media_id, canonical_asset_id, revision,
+               denied, lifecycle_state, receipt_id, payload_json, state, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'locally_committed', ?, ?)""",
+            (operation_id, operation_digest, media_id, asset_id, revision, int(denied), lifecycle_state,
+             receipt_id, _json(payload), now, now),
+        )
+
+
+def derive_deployed_lifecycle_members(
+    repo_root: Path,
+    asset_ids: Iterable[Any],
+    db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Derive canonical members only from durable Owner.sqlite R2 mappings."""
+    ids = _unique_ids(asset_ids)
+    if not ids:
+        raise WasteBasketError("lifecycle member derivation requires at least one asset")
+    connection = _connect(repo_root, db_path)
+    bucket_names = {
+        "photosbyelie-public": "public",
+        "photosbyelie-private": "private",
+        "public": "public",
+        "private": "private",
+    }
+    try:
+        members = []
+        for asset_id in ids:
+            rows = connection.execute(
+                """SELECT bucket, object_key FROM r2_objects
+                   WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
+                   ORDER BY bucket, object_key""",
+                (asset_id,),
+            ).fetchall()
+            bindings: set[tuple[str, str]] = set()
+            for row in rows:
+                bucket = bucket_names.get(str(row["bucket"] or "").strip())
+                object_key = str(row["object_key"] or "").strip()
+                if not bucket or not object_key:
+                    raise WasteBasketError(f"unsupported or incomplete R2 mapping for {asset_id}")
+                bindings.add((bucket, object_key))
+            if not bindings:
+                provenance = connection.execute(
+                    """SELECT p.row_json FROM owner_waste_basket_provenance p
+                       JOIN owner_waste_basket_entries e ON e.entry_id = p.entry_id
+                      WHERE e.asset_id = ? AND p.relation_name = 'r2_objects'
+                      ORDER BY p.captured_at DESC""",
+                    (asset_id,),
+                ).fetchall()
+                for row in provenance:
+                    payload = json.loads(str(row["row_json"] or "{}"))
+                    if str(payload.get("lifecycle_state") or "").strip() == "deleted_confirmed":
+                        continue
+                    bucket = bucket_names.get(str(payload.get("bucket") or "").strip())
+                    object_key = str(payload.get("object_key") or "").strip()
+                    if bucket and object_key:
+                        bindings.add((bucket, object_key))
+            if not bindings:
+                raise WasteBasketError(f"canonical R2 mapping is missing for {asset_id}")
+            members.append({
+                "canonicalAssetId": asset_id,
+                "canonicalMediaId": asset_id,
+                "bindings": [{"bucket": bucket, "objectKey": key} for bucket, key in sorted(bindings)],
+            })
+        return sorted(members, key=lambda item: item["canonicalMediaId"])
+    finally:
+        connection.close()
+
+
+def resolve_deployed_lifecycle_asset_ids(
+    repo_root: Path,
+    operation: str,
+    requested_ids: Iterable[Any] = (),
+    db_path: Path | None = None,
+) -> list[str]:
+    """Resolve lifecycle targets to canonical local asset IDs from Owner.sqlite."""
+    normalized_operation = str(operation or "").strip().lower()
+    requested = _unique_ids(requested_ids)
+    if normalized_operation == "empty" and not requested:
+        connection = _connect(repo_root, db_path)
+        try:
+            requested = [
+                str(row["asset_id"])
+                for row in connection.execute(
+                    "SELECT asset_id FROM owner_waste_basket_entries WHERE state = 'recoverable' ORDER BY asset_id"
+                ).fetchall()
+            ]
+        finally:
+            connection.close()
+    if not requested:
+        raise WasteBasketError("lifecycle operation has no authoritative local assets")
+    if len(requested) > MAX_ASSET_IDS:
+        raise WasteBasketError(f"lifecycle operation accepts at most {MAX_ASSET_IDS} assets")
+    if normalized_operation == "x":
+        return requested
+
+    connection = _connect(repo_root, db_path)
+    try:
+        resolved: list[str] = []
+        for identifier in requested:
+            row = connection.execute(
+                """SELECT asset_id FROM owner_waste_basket_entries
+                   WHERE asset_id = ? OR entry_id = ?
+                   ORDER BY created_at DESC LIMIT 1""",
+                (identifier, identifier),
+            ).fetchone()
+            asset_id = str(row["asset_id"] if row else identifier).strip()
+            if asset_id and asset_id not in resolved:
+                resolved.append(asset_id)
+        return sorted(resolved)
+    finally:
+        connection.close()
+
+
+def record_deployed_lifecycle_arm(
+    repo_root: Path,
+    operation: str,
+    asset_ids: Iterable[Any],
+    arm: dict[str, Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Persist a remote arm before any authoritative local mutation."""
+    ids = _unique_ids(asset_ids)
+    operation_id = str(arm.get("operationId") or "").strip()
+    digest = str(arm.get("operationDigest") or "").strip()
+    revision = int(arm.get("revision") or 0)
+    members = sorted(arm.get("members") or [], key=lambda item: str(item.get("canonicalMediaId") or ""))
+    expected_operation = str(operation or "").strip().lower()
+    if not operation_id or not digest or revision < 1 or len(members) != len(ids):
+        raise WasteBasketError("remote lifecycle arm receipt is incomplete")
+    if str(arm.get("operation") or "").strip().lower() != expected_operation:
+        raise WasteBasketError("remote lifecycle arm operation does not match the local mutation")
+    expected_denied = expected_operation not in {"restore", "tombstone-restore"}
+    if bool(arm.get("denied")) != expected_denied:
+        raise WasteBasketError("remote lifecycle arm intent does not match the local mutation")
+    authoritative = derive_deployed_lifecycle_members(repo_root, ids, db_path)
+    envelope = {
+        "operationId": operation_id,
+        "operation": expected_operation,
+        "denied": expected_denied,
+        "members": authoritative,
+    }
+    expected_digest = hashlib.sha256(
+        json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if digest != expected_digest:
+        raise WasteBasketError("remote lifecycle arm digest does not match authoritative local membership")
+    expected_pairs = sorted(
+        (str(item["canonicalAssetId"]), str(item["canonicalMediaId"]))
+        for item in authoritative
+    )
+    received_pairs = sorted(
+        (str(item.get("canonicalAssetId") or ""), str(item.get("canonicalMediaId") or ""))
+        for item in members
+    )
+    if received_pairs != expected_pairs:
+        raise WasteBasketError("remote lifecycle arm does not match authoritative local assets")
+    if any(int(item.get("revision") or 0) != revision for item in members):
+        raise WasteBasketError("remote lifecycle arm revisions are inconsistent")
+    connection = _connect(repo_root, db_path)
+    now = _now()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        existing = connection.execute(
+            "SELECT operation_digest, revision, state FROM owner_lifecycle_operations WHERE operation_id = ?",
+            (operation_id,),
+        ).fetchone()
+        if existing:
+            if str(existing["operation_digest"]) != digest or int(existing["revision"]) != revision:
+                raise WasteBasketError("remote lifecycle arm conflicts with durable local state")
+        else:
+            connection.execute(
+                """INSERT INTO owner_lifecycle_operations
+                  (operation_id, operation_digest, operation, revision, state, member_count, arm_receipt_json, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, 'armed', ?, ?, ?, ?)""",
+                (operation_id, digest, operation, revision, len(members), _json(arm), now, now),
+            )
+        connection.commit()
+        return {"operationId": operation_id, "operationDigest": digest, "state": str(existing["state"]) if existing else "armed"}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def pending_deployed_lifecycle_operations(repo_root: Path, db_path: Path | None = None) -> list[dict[str, Any]]:
+    connection = _connect(repo_root, db_path)
+    try:
+        rows = connection.execute(
+            "SELECT operation_id, operation_digest, operation, state, arm_receipt_json FROM owner_lifecycle_operations WHERE state IN ('armed', 'locally_committed', 'deployed_applied') ORDER BY created_at"
+        ).fetchall()
+        return [{
+            "operationId": str(row["operation_id"]),
+            "operationDigest": str(row["operation_digest"]),
+            "operation": str(row["operation"]),
+            "state": str(row["state"]),
+            "arm": json.loads(str(row["arm_receipt_json"])),
+        } for row in rows]
+    finally:
+        connection.close()
+
+
+def deployed_lifecycle_operation_state(
+    repo_root: Path,
+    operation_id: str,
+    db_path: Path | None = None,
+) -> str:
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            "SELECT state FROM owner_lifecycle_operations WHERE operation_id = ?",
+            (str(operation_id or "").strip(),),
+        ).fetchone()
+        return str(row["state"]) if row else ""
+    finally:
+        connection.close()
+
+
+def deployed_lifecycle_local_result(
+    repo_root: Path,
+    operation_id: str,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return the already-committed local gateway result for crash recovery."""
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            """SELECT status, result_json FROM owner_waste_basket_operations
+               WHERE operation_id = ?""",
+            (str(operation_id or "").strip(),),
+        ).fetchone()
+        if row is None or str(row["status"]) != "completed":
+            return None
+        return json.loads(str(row["result_json"] or "{}"))
+    finally:
+        connection.close()
+
+
+def abort_deployed_lifecycle_arm_locally(
+    repo_root: Path,
+    operation_id: str,
+    operation_digest: str,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        mutation = connection.execute(
+            "SELECT status FROM owner_waste_basket_operations WHERE operation_id = ?",
+            (operation_id,),
+        ).fetchone()
+        if mutation and str(mutation["status"]) != "failed":
+            raise WasteBasketError("cannot abort lifecycle arm while local mutation commit is possible")
+        changed = connection.execute(
+            "UPDATE owner_lifecycle_operations SET state = 'aborted', updated_at = ? WHERE operation_id = ? AND operation_digest = ? AND state = 'armed'",
+            (_now(), operation_id, operation_digest),
+        ).rowcount
+        if changed != 1:
+            raise WasteBasketError("local lifecycle arm is not abortable")
+        connection.commit()
+        return {"operationId": operation_id, "operationDigest": operation_digest, "state": "aborted"}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def deployed_lifecycle_abort_proof(
+    repo_root: Path,
+    operation_id: str,
+    operation_digest: str,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return deterministic durable proof only when local commit is unambiguous."""
+    connection = _connect(repo_root, db_path)
+    try:
+        operation = connection.execute(
+            """SELECT operation_id, operation_digest, operation, state, arm_receipt_json
+                 FROM owner_lifecycle_operations WHERE operation_id = ?""",
+            (operation_id,),
+        ).fetchone()
+        if not operation or str(operation["operation_digest"]) != operation_digest:
+            raise WasteBasketError("local lifecycle abort proof conflicts with durable arm state")
+        if str(operation["state"]) != "armed":
+            return None
+        mutation = connection.execute(
+            "SELECT status FROM owner_waste_basket_operations WHERE operation_id = ?",
+            (operation_id,),
+        ).fetchone()
+        mutation_status = str(mutation["status"]) if mutation else "absent"
+        if mutation_status not in {"absent", "failed"}:
+            return None
+        proof_body = {
+            "operationId": operation_id,
+            "operationDigest": operation_digest,
+            "operation": str(operation["operation"]),
+            "localLifecycleState": "armed",
+            "localMutationStatus": mutation_status,
+            "armReceiptDigest": _hash(json.loads(str(operation["arm_receipt_json"]))),
+            "localMutationCommitted": False,
+        }
+        return {
+            **proof_body,
+            "kind": "owner-sqlite-no-local-commit-v1",
+            "proofDigest": _hash(proof_body),
+        }
+    finally:
+        connection.close()
+
+
+def deployed_lifecycle_outbox(repo_root: Path, operation_id: str, db_path: Path | None = None) -> dict[str, Any]:
+    connection = _connect(repo_root, db_path)
+    try:
+        operation = connection.execute(
+            "SELECT * FROM owner_lifecycle_operations WHERE operation_id = ?", (operation_id,)
+        ).fetchone()
+        if not operation:
+            raise WasteBasketError("local lifecycle outbox operation was not found")
+        receipts = [
+            json.loads(str(row["payload_json"]))
+            for row in connection.execute(
+                "SELECT payload_json FROM owner_lifecycle_outbox WHERE operation_id = ? ORDER BY canonical_media_id",
+                (operation_id,),
+            ).fetchall()
+        ]
+        if len(receipts) != int(operation["member_count"]):
+            raise WasteBasketError("local lifecycle outbox membership is incomplete")
+        return {
+            "operationId": str(operation["operation_id"]),
+            "operationDigest": str(operation["operation_digest"]),
+            "revision": int(operation["revision"]),
+            "state": str(operation["state"]),
+            "receipts": receipts,
+        }
+    finally:
+        connection.close()
+
+
+def acknowledge_deployed_lifecycle(
+    repo_root: Path,
+    operation_id: str,
+    operation_digest: str,
+    *,
+    state: str,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    if state not in {"deployed_applied", "locally_acked"}:
+        raise WasteBasketError("invalid local lifecycle acknowledgement state")
+    connection = _connect(repo_root, db_path)
+    now = _now()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        operation = connection.execute(
+            "SELECT operation_digest, state FROM owner_lifecycle_operations WHERE operation_id = ?",
+            (operation_id,),
+        ).fetchone()
+        if not operation or str(operation["operation_digest"]) != operation_digest:
+            raise WasteBasketError("local lifecycle acknowledgement conflicts with durable outbox")
+        allowed = {"deployed_applied": {"locally_committed", "deployed_applied"}, "locally_acked": {"deployed_applied", "locally_acked"}}
+        if str(operation["state"]) not in allowed[state]:
+            raise WasteBasketError("local lifecycle acknowledgement is out of order")
+        connection.execute(
+            "UPDATE owner_lifecycle_operations SET state = ?, updated_at = ? WHERE operation_id = ?",
+            (state, now, operation_id),
+        )
+        connection.execute(
+            "UPDATE owner_lifecycle_outbox SET state = ?, updated_at = ? WHERE operation_id = ?",
+            (state, now, operation_id),
+        )
+        connection.commit()
+        return {"operationId": operation_id, "operationDigest": operation_digest, "state": state}
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _ensure_asset_rows(connection: sqlite3.Connection, asset_id: str, now: str) -> None:
@@ -723,6 +1459,7 @@ def move_to_waste_basket(
     owner_mode: bool = False,
     owner_authorized: bool = False,
     db_path: Path | None = None,
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ids = _unique_ids(asset_ids)
     if not ids:
@@ -772,6 +1509,7 @@ def move_to_waste_basket(
         confirmed=False,
         db_path=db_path,
         mutate=mutate,
+        deployed_lifecycle=deployed_lifecycle,
     )
 
 
@@ -929,6 +1667,7 @@ def _restore_operation(
     owner_authorized: bool,
     fixture_id: str = "",
     db_path: Path | None = None,
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ids = _unique_ids(asset_ids)
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
@@ -1022,6 +1761,7 @@ def _restore_operation(
         confirmed=False,
         db_path=db_path,
         mutate=mutate,
+        deployed_lifecycle=deployed_lifecycle,
     )
 
 
@@ -1036,6 +1776,7 @@ def restore_from_waste_basket(
     owner_authorized: bool = False,
     fixture_id: str = "",
     db_path: Path | None = None,
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _restore_operation(
         repo_root,
@@ -1048,6 +1789,7 @@ def restore_from_waste_basket(
         owner_authorized=owner_authorized,
         fixture_id=fixture_id,
         db_path=db_path,
+        deployed_lifecycle=deployed_lifecycle,
     )
 
 
@@ -1130,6 +1872,7 @@ def empty_waste_basket(
     owner_mode: bool = False,
     owner_authorized: bool = False,
     db_path: Path | None = None,
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if confirmed is not True or str(confirmation_token or "") != EMPTY_CONFIRMATION_TOKEN:
         raise WasteBasketError(
@@ -1175,6 +1918,7 @@ def empty_waste_basket(
         confirmed=True,
         db_path=db_path,
         mutate=mutate,
+        deployed_lifecycle=deployed_lifecycle,
     )
 
 
@@ -1189,6 +1933,7 @@ def restore_tombstone(
     owner_authorized: bool = False,
     explicit_tombstone_restore: bool = False,
     db_path: Path | None = None,
+    deployed_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if explicit_tombstone_restore is not True:
         raise WasteBasketError("Global tombstone restore requires explicit tombstone-restore authorization")
@@ -1202,6 +1947,7 @@ def restore_tombstone(
         owner_mode=owner_mode,
         owner_authorized=owner_authorized,
         db_path=db_path,
+        deployed_lifecycle=deployed_lifecycle,
     )
 
 

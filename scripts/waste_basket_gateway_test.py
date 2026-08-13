@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+import hashlib
 from pathlib import Path
 import sqlite3
 import sys
@@ -258,6 +259,31 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 (f"expo/{asset_id}_900.jpg", asset_id, NOW, NOW, NOW),
             )
 
+    def _arm(self, operation_id: str, *, operation: str = "x", revision: int = 17) -> dict:
+        members = gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
+        denied = operation not in {"restore", "tombstone-restore"}
+        envelope = {
+            "operationId": operation_id,
+            "operation": operation,
+            "denied": denied,
+            "members": members,
+        }
+        digest = hashlib.sha256(
+            json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        return {
+            "operationId": operation_id,
+            "operationDigest": digest,
+            "operation": operation,
+            "denied": denied,
+            "revision": revision,
+            "members": [{
+                "canonicalAssetId": item["canonicalAssetId"],
+                "canonicalMediaId": item["canonicalMediaId"],
+                "revision": revision,
+            } for item in members],
+        }
+
     def _rows(self, table: str, column: str, value: str) -> list[dict[str, object]]:
         with sidecar_state_db.connect(self.root, self.db) as connection:
             rows = [
@@ -295,6 +321,57 @@ class WasteBasketGatewayTests(unittest.TestCase):
             table: self._rows(table, column, "asset-1")
             for table, column in identities.items()
         }
+
+    def test_hosted_lifecycle_queue_is_durable_sanitized_and_idempotent(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="browser-secret-idempotency-key", db_path=self.db,
+        )
+        replay = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="browser-secret-idempotency-key", db_path=self.db,
+        )
+        self.assertEqual(replay["requestId"], queued["requestId"])
+        self.assertEqual(queued["state"], "queued")
+        with sqlite3.connect(self.db) as connection:
+            row = connection.execute("SELECT * FROM owner_hosted_lifecycle_requests").fetchone()
+            columns = [item[1] for item in connection.execute(
+                "PRAGMA table_info(owner_hosted_lifecycle_requests)"
+            )]
+        self.assertNotIn("browser-secret-idempotency-key", repr(row))
+        self.assertFalse(any(fragment in column.casefold() for column in columns for fragment in ("token", "auth", "member")))
+        with self.assertRaisesRegex(gateway.WasteBasketError, "conflicts"):
+            gateway.queue_hosted_lifecycle_request(
+                self.root, operation="waste-basket-restore", asset_ids=["asset-1"],
+                session_id="session-one", fixture_id="fixture-1",
+                request_key="browser-secret-idempotency-key", db_path=self.db,
+            )
+
+    def test_hosted_lifecycle_status_is_session_bound_and_restart_replayable(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="restore-one", db_path=self.db,
+        )
+        with self.assertRaises(gateway.WasteBasketError):
+            gateway.hosted_lifecycle_request_status(
+                self.root, queued["requestId"], session_id="attacker",
+                fixture_id="fixture-1", db_path=self.db,
+            )
+        gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        restarted = gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        self.assertEqual(restarted["attemptCount"], 2)
+        completed = gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"],
+            result={"ok": True, "restored": ["asset-1"]}, db_path=self.db,
+        )
+        self.assertEqual(completed["state"], "completed")
+        replay = gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"], result={"attacker": True}, db_path=self.db,
+        )
+        self.assertEqual(replay["result"], {"ok": True, "restored": ["asset-1"]})
 
     def test_culling_review_and_owner_gallery_share_authorized_gateway(self) -> None:
         culling = gateway.move_to_waste_basket(
@@ -395,6 +472,99 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 ("fixture-bound-restore-new-request-after-ack-loss", "asset-2"),
             ).fetchone()
         self.assertEqual(receipt, ("already-applied",))
+
+    def test_local_mutation_and_deployed_outbox_commit_atomically_and_resume(self) -> None:
+        arm = self._arm("cloud-op-1")
+        gateway.record_deployed_lifecycle_arm(self.root, "x", ["asset-1"], arm, self.db)
+        result = gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key="cloud-op-1",
+            deployed_lifecycle=arm,
+            db_path=self.db,
+        )
+        self.assertEqual(result["operationId"], "cloud-op-1")
+        outbox = gateway.deployed_lifecycle_outbox(self.root, "cloud-op-1", self.db)
+        self.assertEqual(outbox["revision"], 17)
+        self.assertEqual(outbox["state"], "locally_committed")
+        self.assertEqual(outbox["receipts"][0]["canonicalMediaId"], "asset-1")
+        self.assertTrue(outbox["receipts"][0]["denied"])
+
+        replay = gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key="cloud-op-1",
+            deployed_lifecycle=arm,
+            db_path=self.db,
+        )
+        self.assertEqual(replay, result)
+        gateway.acknowledge_deployed_lifecycle(
+            self.root, "cloud-op-1", arm["operationDigest"], state="deployed_applied", db_path=self.db
+        )
+        acked = gateway.acknowledge_deployed_lifecycle(
+            self.root, "cloud-op-1", arm["operationDigest"], state="locally_acked", db_path=self.db
+        )
+        self.assertEqual(acked["state"], "locally_acked")
+
+    def test_bad_arm_receipt_rolls_back_local_mutation_and_outbox(self) -> None:
+        arm = self._arm("cloud-op-bad", revision=18)
+        arm["members"][0]["canonicalAssetId"] = "another-asset"
+        with self.assertRaisesRegex(gateway.WasteBasketError, "authoritative"):
+            gateway.record_deployed_lifecycle_arm(self.root, "x", ["asset-1"], arm, self.db)
+        self.assertFalse(gateway.is_globally_ineligible(self.root, "asset-1", self.db))
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM owner_lifecycle_outbox").fetchone()[0], 0)
+
+    def test_missing_pre_persisted_arm_rolls_back_local_mutation(self) -> None:
+        arm = self._arm("cloud-op-not-persisted", revision=19)
+        with self.assertRaisesRegex(gateway.WasteBasketError, "not persisted"):
+            gateway.move_to_waste_basket(
+                self.root,
+                ["asset-1"],
+                source="backstage-culling",
+                request_key="cloud-op-not-persisted",
+                deployed_lifecycle=arm,
+                db_path=self.db,
+            )
+        self.assertFalse(gateway.is_globally_ineligible(self.root, "asset-1", self.db))
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT state FROM owner_lifecycle_operations WHERE operation_id = ?",
+                    ("cloud-op-not-persisted",),
+                ).fetchone(),
+                None,
+            )
+
+    def test_armed_state_yields_deterministic_abort_proof_until_local_commit(self) -> None:
+        arm = self._arm("cloud-op-abort")
+        gateway.record_deployed_lifecycle_arm(self.root, "x", ["asset-1"], arm, self.db)
+        first = gateway.deployed_lifecycle_abort_proof(
+            self.root, "cloud-op-abort", arm["operationDigest"], self.db
+        )
+        second = gateway.deployed_lifecycle_abort_proof(
+            self.root, "cloud-op-abort", arm["operationDigest"], self.db
+        )
+        self.assertEqual(first, second)
+        self.assertFalse(first["localMutationCommitted"])
+        self.assertEqual(first["kind"], "owner-sqlite-no-local-commit-v1")
+        self.assertEqual(
+            first["proofDigest"],
+            "e2125d2819062d75a7cf4b9421b99756c2a61f06af15975dfbd503831fd6c477",
+        )
+        gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key="cloud-op-abort",
+            deployed_lifecycle=arm,
+            db_path=self.db,
+        )
+        self.assertIsNone(gateway.deployed_lifecycle_abort_proof(
+            self.root, "cloud-op-abort", arm["operationDigest"], self.db
+        ))
 
     def test_exact_provenance_restore_preserves_relationships_and_state(self) -> None:
         before = self._lifecycle_snapshot()

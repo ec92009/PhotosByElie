@@ -1,10 +1,12 @@
 # PBE-158 Owner session and Waste Basket train evidence
 
-Status: source/test candidate with one retained P1 architecture blocker. This
-record does not assert deployment, installation, credential enrollment, live
-database acceptance, or ticket completion.
+Status: source/test candidate with retained release-topology and live-acceptance
+gates. This record does not assert deployment, installation, credential
+enrollment, live database acceptance, cache invalidation, or ticket completion.
 
 Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
+
+Deployed deny-plane cycle base: `a6393947fa9a35ff574006c2fce8b914d2dd0a25`
 
 ## Train invariants
 
@@ -83,19 +85,37 @@ lifecycle preservation, atomic hosted batch restore, rejection even with a
 legacy marker, transactional hosted-fixture restore, and projection failure /
 acknowledgement-loss retry.
 
-Retained P1 blocker: immediate deployed revocation is not implemented. There is
-no dedicated ACCESS_DB lifecycle deny projection/control/receipt schema, no
-pre-mutation fail-closed barrier plus authoritative Owner outbox receipt, and no
-idempotent connector that applies a higher-revision receipt before clearing the
-barrier. Consequently the public search overlay and Worker checkout,
-fulfillment, ZIP, old/new download-token, and media GET/HEAD/Range paths do not
-yet consult an authoritative runtime deny projection. Local
-`catalog_publish_pending` and a later catalog publish are insufficient. This
-candidate deliberately does not reuse `pbe_sidecar_decisions` or claim that
-recoverable/tombstoned assets are immediately denied in deployed commerce.
-PBB-79 and PBE-158 therefore remain uncloseable until that complete slice has
-replay, stale-revision, duplicate, partial-batch, barrier-persistence, race, and
-canonical-ID proof.
+The deployed deny-plane cycle adds a source candidate for the retained blocker:
+a dedicated ACCESS_DB control/projection/barrier/receipt authority, explicit
+blocked-to-ready activation over a deterministic durable manifest, and a
+connector-only arm/local-commit/apply/ack lifecycle. Public Worker media,
+checkout, fulfillment, order, token, ZIP, and Real Estate delivery paths are
+expected to deny through canonical IDs or exact R2 bindings and fail closed
+when the authority is absent or unready. Browser catalog filtering is a
+defense-in-depth display projection, not the security boundary. Exact focused
+and broad verification evidence is recorded only after parent-side integration
+and audit.
+
+Retained release-topology blocker: the production storefront is still static
+GitHub Pages and directly serves `assets/catalog/photosbyelie.sqlite`. A caller
+can fetch that artifact without traversing the Worker deny plane, so hiding a
+row in browser JavaScript cannot prove immediate metadata/search revocation.
+PBE-158/PBB-79 cannot close until the Public Web Release train either places the
+catalog behind an authoritative filtered route or publishes a topology with no
+direct stale-catalog bypass. The release must also apply and activate the exact
+ACCESS_DB migration/manifest before traffic, prove every production Worker
+binding, and invalidate or version every previously cacheable denied media
+response. Static brand/marketing images must be explicitly classified as
+non-revocable or bound to canonical media IDs; they cannot remain an implicit
+exception.
+
+No source-only test can satisfy those deployment gates. Local
+`catalog_publish_pending`, client-side filtering, and a later catalog rebuild
+remain insufficient by themselves. PBB-79 and PBE-158 therefore remain
+nonterminal until the deployed topology has direct-URL, stale-cache,
+GET/HEAD/Range, checkout/order/download, Real Estate delivery, activation,
+replay, stale-revision, duplicate, partial-batch, barrier-persistence, race,
+and canonical-ID proof.
 
 Remaining human/live gate: use an approved disposable copy of a real
 `Owner.sqlite` through the signed installed Backstage build; confirm X, Put
@@ -183,24 +203,27 @@ signing state, or ticket was changed.
 
 ## Candidate verification
 
-The committed source candidate passed these local checks on 2026-08-13:
+The integrated deny-plane source candidate passed these local checks on
+2026-08-13:
 
-- focused lifecycle/session/migration: 13 Node tests, 45 Python tests, and 15
-  Swift tests;
-- final pre-launch import-scope hardening: 8 browser-session Node tests, 11
-  Python host/session tests, and 4 Swift host-contract tests;
-- broad `npm test`: 207 Node tests plus 246 Python tests;
-- retired PBB-78 migration: 2 focused Python tests (including fail-before-input
-  `--apply`);
+- focused deployed deny-plane/browser coverage: 131 Node tests;
+- focused hosted relay, lifecycle journal, session, and local-server coverage:
+  88 Python tests;
+- complete `npm test`: 22/22 pretests, 213/213 Node tests, and 262/262 Python
+  tests;
 - full Swift package: 73 tests across four suites;
 - `python3 scripts/generate_owner_swift_contract.py --check`: 38 operations
   and 12 schemas current;
 - unsigned macOS Xcode build with `CODE_SIGNING_ALLOWED=NO`: succeeded; and
 - `git diff --check`: clean.
 
+The standard pretest now includes both the D1 lifecycle authority suite and the
+exact non-revocable public-asset allowlist suite, so the reviewed static music
+exception cannot silently broaden.
+
 `npm run validate` remains blocked by the existing public catalog's
 Owner-applied title/keyword visibility gate (it reports catalog media IDs whose
 metadata is not Owner-applied). This train changed no catalog artifact,
 approval row, or real Owner state and did not bypass or simulate that gate.
-The Python run also emitted pre-existing SQLite `ResourceWarning` diagnostics
-from fixture/performance tests, but all 246 broad tests passed.
+The Python runs also emitted existing SQLite `ResourceWarning` diagnostics from
+fixture/performance and mocked-connection tests, but all 262 broad tests passed.

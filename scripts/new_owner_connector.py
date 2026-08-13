@@ -799,10 +799,17 @@ class WorkerClient:
     def __init__(self, config: ConnectorConfig):
         self.config = config
 
-    def request(self, method: str, path: str, payload: dict | None = None) -> dict:
+    def request(
+        self,
+        method: str,
+        path: str,
+        payload: dict | None = None,
+        *,
+        idempotency_key: str = "",
+    ) -> dict:
         data = None if payload is None else json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         mutation_headers = (
-            {"Idempotency-Key": f"connector-{self.config.connector_id}-{uuid.uuid4().hex}"}
+            {"Idempotency-Key": idempotency_key or f"connector-{self.config.connector_id}-{uuid.uuid4().hex}"}
             if method.upper() not in {"GET", "HEAD", "OPTIONS"} and path.startswith("/api/v1/")
             else {}
         )
@@ -875,6 +882,165 @@ def _load_local_modules(repo_root: Path):
     from sidecar_server import _preview_cache_path, _run_apple_photos_bridge_app_task
 
     return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_public_photo_moderation
+
+
+def _load_lifecycle_gateway(repo_root: Path):
+    scripts_path = str(repo_root / "scripts")
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    import waste_basket_gateway
+
+    return waste_basket_gateway
+
+
+def _lifecycle_phase_key(operation_id: str, phase: str) -> str:
+    return f"connector-lifecycle:{operation_id}:{phase}"
+
+
+def _lifecycle_request(
+    client: WorkerClient,
+    phase: str,
+    operation_id: str,
+    payload: dict[str, Any],
+) -> dict:
+    """Send one replay-safe lifecycle phase under a stable idempotency key."""
+    return client.request(
+        "POST",
+        f"/api/v1/lifecycle/{phase}",
+        payload,
+        idempotency_key=_lifecycle_phase_key(operation_id, phase),
+    )
+
+
+def drain_deployed_lifecycle_outbox(
+    config: ConnectorConfig,
+    client: WorkerClient,
+) -> list[dict[str, Any]]:
+    """Replay durable lifecycle phases independently of cloud action state."""
+    gateway = _load_lifecycle_gateway(config.repo_root)
+    drained: list[dict[str, Any]] = []
+    for pending in gateway.pending_deployed_lifecycle_operations(config.repo_root):
+        operation_id = pending["operationId"]
+        digest = pending["operationDigest"]
+        state = pending["state"]
+        if state == "armed":
+            hosted_state = gateway.hosted_lifecycle_request_state_for_operation(
+                config.repo_root, operation_id
+            )
+            if hosted_state in {"queued", "running"}:
+                drained.append({
+                    "operationId": operation_id,
+                    "state": "armed",
+                    "hostedRequestState": hosted_state,
+                })
+                continue
+            proof = gateway.deployed_lifecycle_abort_proof(
+                config.repo_root, operation_id, digest
+            )
+            if proof is None:
+                continue
+            remote = _lifecycle_request(client, "abort", operation_id, {
+                "operationId": operation_id,
+                "operationDigest": digest,
+                "proof": proof,
+            })
+            gateway.abort_deployed_lifecycle_arm_locally(
+                config.repo_root, operation_id, digest
+            )
+            drained.append({"operationId": operation_id, "state": "aborted", "remote": remote})
+            continue
+        durable = gateway.deployed_lifecycle_outbox(config.repo_root, operation_id)
+        if state == "locally_committed":
+            _lifecycle_request(client, "local-commit", operation_id, {
+                "operationId": operation_id,
+                "operationDigest": digest,
+            })
+            remote = _lifecycle_request(client, "apply", operation_id, durable)
+            gateway.acknowledge_deployed_lifecycle(
+                config.repo_root,
+                operation_id,
+                digest,
+                state="deployed_applied",
+            )
+            state = "deployed_applied"
+            drained.append({"operationId": operation_id, "state": state, "remote": remote})
+        if state == "deployed_applied":
+            remote = _lifecycle_request(client, "ack", operation_id, {
+                "operationId": operation_id,
+                "operationDigest": digest,
+            })
+            gateway.acknowledge_deployed_lifecycle(
+                config.repo_root,
+                operation_id,
+                digest,
+                state="locally_acked",
+            )
+            drained.append({"operationId": operation_id, "state": "locally_acked", "remote": remote})
+    return drained
+
+
+def drain_hosted_lifecycle_requests(
+    config: ConnectorConfig,
+    client: WorkerClient,
+) -> list[dict[str, Any]]:
+    """Execute durable hosted-browser intents through the trusted connector.
+
+    This routine must be called while ``ACTION_MUTATION_LOCK`` is held. The
+    browser-authenticated queue contains only fixture-bound intent; trusted
+    actor/source/authorization context is synthesized here on the Mac.
+    """
+    gateway = _load_lifecycle_gateway(config.repo_root)
+    drained: list[dict[str, Any]] = []
+    for pending in gateway.pending_hosted_lifecycle_requests(config.repo_root):
+        request_id = str(pending["requestId"])
+        claimed = gateway.claim_hosted_lifecycle_request(config.repo_root, request_id)
+        operation_id = f"owner-action:hosted-lifecycle:{request_id}"
+        prior_result = gateway.deployed_lifecycle_local_result(
+            config.repo_root, operation_id
+        )
+        if prior_result is not None:
+            drain_deployed_lifecycle_outbox(config, client)
+            completed = gateway.finish_hosted_lifecycle_request(
+                config.repo_root, request_id, result=prior_result
+            )
+            drained.append({"requestId": request_id, "state": completed["state"]})
+            continue
+        action = {
+            "id": f"hosted-lifecycle:{request_id}",
+            "type": "photo-moderation",
+            "payload": {
+                "operation": claimed["operation"],
+                "photoIds": list(claimed["assetIds"]),
+                "source": "owner-gallery",
+                "actor": f"backstage-pbe:{claimed['sessionId']}",
+                "fixture_id": claimed["fixtureId"],
+                "gallery_id": claimed["fixtureId"],
+                "owner_mode": True,
+                "owner_authorized": True,
+            },
+        }
+        try:
+            result = execute_action(config, action, lifecycle_client=client)
+        except Exception as error:  # noqa: BLE001 - durable status must survive connector failures.
+            local_state = gateway.deployed_lifecycle_operation_state(
+                config.repo_root, operation_id
+            )
+            retryable = local_state not in {"armed", "aborted"}
+            current = gateway.finish_hosted_lifecycle_request(
+                config.repo_root,
+                request_id,
+                error=str(error),
+                retryable=retryable,
+            )
+            drained.append({"requestId": request_id, "state": current["state"], "error": str(error)})
+            continue
+        completed = gateway.finish_hosted_lifecycle_request(
+            config.repo_root,
+            request_id,
+            result=dict(result.get("result") or result),
+        )
+        drained.append({"requestId": request_id, "state": completed["state"]})
+    return drained
 
 
 def _owner_hidden_metadata(repo_root: Path, photo_ids: list[str]) -> dict[str, dict[str, str]]:
@@ -1154,7 +1320,12 @@ def _launch_sidecar_workspace(config: ConnectorConfig) -> dict:
     }
 
 
-def execute_action(config: ConnectorConfig, action: dict) -> dict:
+def execute_action(
+    config: ConnectorConfig,
+    action: dict,
+    *,
+    lifecycle_client: WorkerClient | None = None,
+) -> dict:
     action_type = str(action.get("type") or "").strip()
     if action_type == "owner-connector-check":
         return {
@@ -1232,6 +1403,45 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
             "operation": operation,
             "photo_ids": photo_ids,
         }
+        lifecycle_operations = {
+            "waste-basket-x": ("x", True),
+            "waste-basket-x-many": ("x", True),
+            "waste-basket-empty": ("empty", True),
+            "waste-basket-restore": ("restore", False),
+            "waste-basket-tombstone-restore": ("tombstone-restore", False),
+        }
+        lifecycle_arm = None
+        active_lifecycle_client = lifecycle_client
+        if operation in lifecycle_operations:
+            lifecycle_operation, denied = lifecycle_operations[operation]
+            gateway = _load_lifecycle_gateway(config.repo_root)
+            authoritative_ids = gateway.resolve_deployed_lifecycle_asset_ids(
+                config.repo_root, lifecycle_operation, photo_ids
+            )
+            if len(authoritative_ids) > 100:
+                raise RuntimeError("Lifecycle moderation accepts at most 100 authoritative assets per Owner action")
+            authoritative_members = gateway.derive_deployed_lifecycle_members(
+                config.repo_root, authoritative_ids
+            )
+            operation_id = f"owner-action:{str(action.get('id') or '').strip()}"
+            if operation_id == "owner-action:":
+                raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
+            active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
+            lifecycle_arm = _lifecycle_request(active_lifecycle_client, "arm", operation_id, {
+                "operationId": operation_id,
+                "operation": lifecycle_operation,
+                "denied": denied,
+                "items": authoritative_members,
+            })
+            gateway.record_deployed_lifecycle_arm(
+                config.repo_root,
+                lifecycle_operation,
+                authoritative_ids,
+                lifecycle_arm,
+            )
+            photo_ids = authoritative_ids
+            moderation_payload["photo_ids"] = authoritative_ids
+            moderation_payload["request_key"] = operation_id
         for key in (
             "title",
             "caption",
@@ -1264,16 +1474,28 @@ def execute_action(config: ConnectorConfig, action: dict) -> dict:
         ):
             if key in payload:
                 moderation_payload[key] = payload[key]
-        result = apply_public_photo_moderation(
-            config.repo_root,
-            moderation_payload,
-        )
+        if lifecycle_arm:
+            moderation_payload.pop("requestKey", None)
+            moderation_payload["request_key"] = lifecycle_arm["operationId"]
+        if lifecycle_arm:
+            result = apply_public_photo_moderation(
+                config.repo_root,
+                moderation_payload,
+                trusted_deployed_lifecycle=lifecycle_arm,
+            )
+        else:
+            result = apply_public_photo_moderation(config.repo_root, moderation_payload)
+        lifecycle_result = None
+        if lifecycle_arm and active_lifecycle_client:
+            replay = drain_deployed_lifecycle_outbox(config, active_lifecycle_client)
+            lifecycle_result = {"arm": lifecycle_arm, "replay": replay}
         return {
             "connectorId": config.connector_id,
             "type": action_type,
             "operation": operation,
             "photoIds": photo_ids,
             "result": result,
+            "lifecycle": lifecycle_result,
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
     if action_type == "sidecar-culling-review":
@@ -1363,6 +1585,9 @@ def process_exact_action(
 
 
 def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
+    with ACTION_MUTATION_LOCK:
+        drain_deployed_lifecycle_outbox(config, client)
+        hosted_before = drain_hosted_lifecycle_requests(config, client)
     client.heartbeat()
     processed = 0
     for action in client.actions():
@@ -1374,7 +1599,12 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
             processed += int(did_process)
         except Exception:
             continue
-    return processed
+    with ACTION_MUTATION_LOCK:
+        drain_deployed_lifecycle_outbox(config, client)
+        hosted_after = drain_hosted_lifecycle_requests(config, client)
+    return processed + len([
+        item for item in [*hosted_before, *hosted_after] if item.get("state") == "completed"
+    ])
 
 
 def next_poll_interval(base_interval: int, current_interval: int, processed: int, *, interactive: bool = False) -> int:

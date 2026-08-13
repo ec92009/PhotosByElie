@@ -192,6 +192,13 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 patch("scripts.local_server.PBE_OWNER_SESSION_VERIFIER", Verifier()),
                 patch("scripts.local_server.repository_readiness", return_value=self.readiness),
                 patch("scripts.local_server.apply_photo_action") as legacy_apply,
+                patch("scripts.local_server.assert_pbe_owner_x_scope"),
+                patch("scripts.local_server.queue_hosted_lifecycle_request", return_value={
+                    "requestId": "hlr-opaque-one", "state": "queued",
+                }) as queue_lifecycle,
+                patch("scripts.local_server.hosted_lifecycle_request_status", return_value={
+                    "requestId": "hlr-opaque-one", "state": "queued", "error": "",
+                }),
             ):
                 host_bootstrap = Request(
                     f"{base}/host/bootstrap",
@@ -322,6 +329,49 @@ class PBEOwnerSessionTests(unittest.TestCase):
 
                 with urlopen(status) as response:
                     self.assertEqual(json.loads(response.read())["session"]["state"], "ready")
+
+                lifecycle_action = Request(
+                    f"{base}/action",
+                    data=json.dumps({
+                        "action": "waste-basket-x",
+                        "photo_id": "photo-one",
+                    }).encode(),
+                    method="POST",
+                    headers={
+                        "Cookie": cookie.split(";", 1)[0],
+                        "Content-Type": "application/json",
+                        "Origin": f"http://127.0.0.1:{server.server_port}",
+                        "Idempotency-Key": "browser-action-one",
+                    },
+                )
+                with urlopen(lifecycle_action) as response:
+                    self.assertEqual(response.status, 202)
+                    queued = json.loads(response.read())
+                self.assertEqual(queued, {
+                    "ok": True, "requestId": "hlr-opaque-one", "state": "queued",
+                })
+                queue_lifecycle.assert_called_once_with(
+                    Path.cwd(),
+                    operation="waste-basket-x",
+                    asset_ids=["photo-one"],
+                    session_id="pbe-owner-session-one",
+                    fixture_id="fixture-la-concha",
+                    request_key="browser-action-one",
+                )
+                queued_arguments = queue_lifecycle.call_args.kwargs
+                self.assertNotIn("raw-secret-session-token", repr(queued_arguments))
+                self.assertFalse(any(key in queued_arguments for key in (
+                    "members", "owner_mode", "owner_authorized", "requestKey",
+                )))
+
+                queued_status = Request(
+                    f"{base}/action/status?requestId=hlr-opaque-one",
+                    headers={"Cookie": cookie.split(";", 1)[0]},
+                )
+                with urlopen(queued_status) as response:
+                    pending = json.loads(response.read())
+                self.assertEqual(pending["state"], "queued")
+                legacy_apply.assert_not_called()
 
                 legacy = Request(
                     f"http://127.0.0.1:{server.server_port}/__photosbyelie/photo-action",
@@ -548,6 +598,15 @@ class PBEOwnerSessionTests(unittest.TestCase):
         self.assertTrue(trusted["owner_mode"])
         self.assertTrue(trusted["owner_authorized"])
         self.assertEqual(trusted["fixture_id"], "fixture-la-concha")
+        self.assertEqual(trusted["request_key"], "request-key-one")
+
+        overridden = pbe_owner_action_payload({
+            "action": "waste-basket-x",
+            "photoId": "photo-one",
+            "request_key": "attacker-key",
+            "requestKey": "attacker-camel-key",
+        }, lease, "trusted-header-key")
+        self.assertEqual(overridden["request_key"], "trusted-header-key")
 
         restored = pbe_owner_action_payload({
             "action": "waste-basket-restore",

@@ -1487,6 +1487,18 @@ class TitleReviewUndoTests(unittest.TestCase):
             finally:
                 conn.close()
 
+    def test_public_moderation_rejects_untrusted_deployed_lifecycle_payload(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "trusted connector call path"):
+                local_server.apply_public_photo_moderation(Path(temp_dir), {
+                    "operation": "waste-basket-x",
+                    "photo_ids": ["asset-1"],
+                    "deployedLifecycle": {
+                        "operationId": "attacker-controlled",
+                        "operationDigest": "not-trusted",
+                    },
+                })
+
 
 if __name__ == "__main__":
     unittest.main()

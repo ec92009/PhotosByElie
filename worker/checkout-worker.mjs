@@ -51,6 +51,11 @@ const ACCESS_CONSOLE_ROLE_OPTIONS = [
   },
 ];
 
+const PRIVATE_NO_STORE_HEADERS = Object.freeze({
+  "cache-control": "private, no-store, max-age=0",
+  "cdn-cache-control": "no-store",
+});
+
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body, null, 2), {
   status,
   headers: {
@@ -62,7 +67,8 @@ const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(b
   },
 });
 
-const errorJson = (status, code, message, details = undefined) => json({ error: { code, message, details } }, status);
+const errorJson = (status, code, message, details = undefined) =>
+  json({ error: { code, message, details } }, status, PRIVATE_NO_STORE_HEADERS);
 
 const credentialedOriginPolicies = new WeakMap();
 const BUILTIN_CREDENTIALED_ORIGINS = Object.freeze([
@@ -1350,6 +1356,7 @@ export const createPhotosByElieWorker = ({
   googleOAuthAuth = null,
   accessAuth = null,
   accessUserRegistry = createMemoryAccessUserRegistry(),
+  lifecycleDenyStore = null,
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
   ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now }),
@@ -1391,6 +1398,49 @@ export const createPhotosByElieWorker = ({
       // Analytics must never block checkout, fulfillment, or downloads.
     }
   };
+  const assertLifecycleAllowed = async (assetIds, context) => {
+    if (!lifecycleDenyStore?.assertAllowed) return true;
+    return lifecycleDenyStore.assertAllowed(assetIds, context);
+  };
+  const orderMediaIds = (order) => [...new Set((order?.items || []).map((item) => String(item?.photoId || "").trim()).filter(Boolean))];
+  const filterVisibleMediaIds = async (mediaIds) => {
+    const ids = [...new Set((mediaIds || []).map((value) => String(value || "").trim()).filter(Boolean))];
+    if (!ids.length || !lifecycleDenyStore?.visibilityFor) return ids;
+    const visible = [];
+    for (let index = 0; index < ids.length; index += 100) {
+      const visibility = await lifecycleDenyStore.visibilityFor(ids.slice(index, index + 100));
+      visible.push(...visibility.filter((item) => item.visible).map((item) => item.canonicalMediaId));
+    }
+    return visible;
+  };
+  const profileWithoutDenied = async (profile) => {
+    const visible = new Set(await filterVisibleMediaIds([
+      ...(profile?.liked || []).map((item) => item.photoId || item.id || item),
+      ...(profile?.basket || []).map((item) => item.photoId || item.id),
+    ]));
+    return {
+      ...profile,
+      liked: (profile?.liked || []).filter((item) => visible.has(String(item.photoId || item.id || item))),
+      basket: (profile?.basket || []).filter((item) => visible.has(String(item.photoId || item.id))),
+    };
+  };
+  const manualRefundReview = async (order, error) => {
+    const updatedAt = now().toISOString();
+    const blocked = {
+      ...order,
+      status: "manual_refund_review",
+      delivery: null,
+      deliveryError: {
+        code: "paid_asset_revoked",
+        message: "Payment was received after an asset became unavailable. Fulfillment is blocked pending manual refund review.",
+        failedAt: updatedAt,
+        lifecycleCode: error?.code || "asset_lifecycle_denied",
+      },
+      updatedAt,
+    };
+    await store.putOrder(blocked);
+    return blocked;
+  };
 
   const recordAnalyticsEvents = async (request) => {
     const payload = await parseJson(request);
@@ -1405,6 +1455,7 @@ export const createPhotosByElieWorker = ({
   const maybeSendReadyEmail = async (order, { force = false, throwOnFailure = false } = {}) => {
     if (!emailClient || typeof emailClient.send !== "function") return order;
     if (!force && order.deliveryEmail?.status === "sent") return order;
+    await assertLifecycleAllowed(orderMediaIds(order), force ? "order-email-resend" : "order-email");
     const requestedAt = now().toISOString();
     const email = buildOrderReadyEmail({
       order,
@@ -1501,6 +1552,7 @@ export const createPhotosByElieWorker = ({
     if (order.status !== "ready" || !order.delivery) {
       return errorJson(409, "order_not_ready", "Delivery email can be resent only after the order files are ready.");
     }
+    await assertLifecycleAllowed(orderMediaIds(order), "order-email-resend");
     const sent = await maybeSendReadyEmail(order, { force: true, throwOnFailure: true });
     return json({ order: publicOrder(sent), deliveryEmail: publicOrder(sent).deliveryEmail });
   };
@@ -1512,6 +1564,7 @@ export const createPhotosByElieWorker = ({
       return errorJson(400, "invalid_email", "Recent purchase checks require the checkout email.");
     }
     const items = normalizeProductLookupItems(payload.items || payload.basket || []);
+    if (items.length) await assertLifecycleAllowed(items.map((item) => item.photoId), "recent-purchase-allowance");
     if (!items.length) {
       const nowDate = now();
       const allowanceSeconds = boundedPositiveInteger(purchaseAllowanceSeconds, DEFAULT_DOWNLOAD_TOKEN_TTL_SECONDS);
@@ -1564,10 +1617,19 @@ export const createPhotosByElieWorker = ({
     const normalizedEmail = String(email || "").trim().toLowerCase();
     if (!normalizedEmail || typeof store.listOrders !== "function") return [];
     const orders = await store.listOrders();
-    return orders
+    const matching = orders
       .filter((order) => String(order?.buyerEmail || "").trim().toLowerCase() === normalizedEmail)
-      .sort((left, right) => orderTime(right) - orderTime(left))
-      .map(publicOrder);
+      .sort((left, right) => orderTime(right) - orderTime(left));
+    const visible = [];
+    for (const order of matching) {
+      try {
+        await assertLifecycleAllowed(orderMediaIds(order), "account-order-list");
+        visible.push(publicOrder(order));
+      } catch (error) {
+        if (error?.code !== "asset_lifecycle_denied") throw error;
+      }
+    }
+    return visible;
   };
 
   const storedAccountProfileFor = async (email) => {
@@ -1575,7 +1637,7 @@ export const createPhotosByElieWorker = ({
     const existing = typeof store.getAccountProfile === "function"
       ? await store.getAccountProfile(normalizedEmail)
       : null;
-    return normalizeAccountProfilePayload(catalog, {}, existing || {}, normalizedEmail, existing?.updatedAt || now().toISOString());
+    return profileWithoutDenied(normalizeAccountProfilePayload(catalog, {}, existing || {}, normalizedEmail, existing?.updatedAt || now().toISOString()));
   };
 
   const getAccountProfile = async (request) => {
@@ -1595,7 +1657,7 @@ export const createPhotosByElieWorker = ({
       ? await store.getAccountProfile(session.email)
       : null;
     const updatedAt = now().toISOString();
-    const profile = normalizeAccountProfilePayload(catalog, payload, existing || {}, session.email, updatedAt);
+    const profile = await profileWithoutDenied(normalizeAccountProfilePayload(catalog, payload, existing || {}, session.email, updatedAt));
     const saved = await store.putAccountProfile(profile);
     const orders = await accountOrdersFor(session.email);
     return credentialedJson(request, { ok: true, profile: saved || profile, orders });
@@ -1608,6 +1670,7 @@ export const createPhotosByElieWorker = ({
     if (String(order.buyerEmail || "").trim().toLowerCase() !== String(session.email || "").trim().toLowerCase()) {
       return credentialedErrorJson(request, 403, "account_order_forbidden", "This order is not attached to the signed-in account.");
     }
+    await assertLifecycleAllowed(orderMediaIds(order), "account-order-recovery");
     return credentialedJson(request, { order: publicOrder(order) });
   };
 
@@ -1629,6 +1692,7 @@ export const createPhotosByElieWorker = ({
     }
 
     const items = normalizeOrderItems(catalog, payload.items || payload.basket || []);
+    await assertLifecycleAllowed(items.map((item) => item.photoId), `checkout:${checkoutMode}`);
     const subtotalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
     const expectedSubtotalAmount = Number(payload.expectedSubtotalAmount);
     if (Number.isFinite(expectedSubtotalAmount) && Math.round(expectedSubtotalAmount) !== subtotalAmount) {
@@ -1704,6 +1768,7 @@ export const createPhotosByElieWorker = ({
       });
     }
 
+    await assertLifecycleAllowed(items.map((item) => item.photoId), `checkout:${checkoutMode}:before-stripe`);
     const checkoutSession = await stripe.createCheckoutSession({
       orderId,
       buyerEmail,
@@ -1782,6 +1847,13 @@ export const createPhotosByElieWorker = ({
       throw Object.assign(new Error("Stripe paid amount/currency does not match the order."), { status: 409, code: "amount_mismatch" });
     }
 
+    try {
+      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-prepare");
+    } catch (error) {
+      await manualRefundReview(order, error);
+      throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
+    }
+
     if (order.status === "ready") return await maybeSendReadyEmail(order);
 
     const paidAt = now().toISOString();
@@ -1799,7 +1871,12 @@ export const createPhotosByElieWorker = ({
     let deliveryResult;
     try {
       deliveryResult = await deliveryClient.createDelivery(preparing);
+      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:after-render");
     } catch (error) {
+      if (error?.code === "asset_lifecycle_denied") {
+        await manualRefundReview(preparing, error);
+        throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
+      }
       const failedAt = now().toISOString();
       const failed = {
         ...preparing,
@@ -1843,6 +1920,7 @@ export const createPhotosByElieWorker = ({
         bytes: file.bytes || 0,
         photoId: file.photoId,
         productId: file.productId,
+        canonicalMediaIds: [file.photoId],
         createdAt: readyAt,
         expiresAt: file.expiresAt,
         downloadLimit: file.downloadLimit,
@@ -1853,6 +1931,7 @@ export const createPhotosByElieWorker = ({
         token: deliveryResult.token,
         orderId: ready.id,
         zipKey: deliveryResult.zipKey,
+        canonicalMediaIds: orderMediaIds(ready),
         createdAt: readyAt,
         expiresAt: policy.expiresAt,
         downloadLimit: policy.downloadLimit,
@@ -1939,25 +2018,47 @@ export const createPhotosByElieWorker = ({
     if (email !== order.buyerEmail) {
       return errorJson(403, "order_email_required", "Enter the email used at checkout to view this order.");
     }
-    return json({ order: publicOrder(order) });
+    await assertLifecycleAllowed(orderMediaIds(order), "order-recovery");
+    return json({ order: publicOrder(order) }, 200, PRIVATE_NO_STORE_HEADERS);
   };
 
-  const getOrderByCheckoutSession = async (_request, sessionId) => {
+  const getOrderByCheckoutSession = async (request, sessionId) => {
     if (!sessionId) return errorJson(400, "missing_session_id", "Checkout session id is required.");
     const order = await store.getOrderByCheckoutSessionId?.(sessionId);
     if (!order) return errorJson(404, "unknown_order", "Order was not found for this checkout session.");
-    return json({ order: publicOrder(order) });
+    const email = String(new URL(request.url).searchParams.get("email") || "").trim().toLowerCase();
+    if (!email || email !== String(order.buyerEmail || "").trim().toLowerCase()) {
+      return errorJson(403, "order_email_required", "Enter the email used at checkout to view this order.");
+    }
+    await assertLifecycleAllowed(orderMediaIds(order), "checkout-session-recovery");
+    return json({ order: publicOrder(order) }, 200, PRIVATE_NO_STORE_HEADERS);
   };
 
   const download = async (_request, token) => {
+    const noStore = (response) => {
+      const headers = new Headers(response.headers);
+      headers.set("cache-control", "private, no-store, max-age=0");
+      headers.set("cdn-cache-control", "no-store");
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    };
     const downloadRecord = await store.getDownload(token);
-    if (!downloadRecord) return errorJson(404, "unknown_download", "Download link was not found.");
+    if (!downloadRecord) return noStore(errorJson(404, "unknown_download", "Download link was not found."));
+    const order = downloadRecord.orderId ? await store.getOrder(downloadRecord.orderId) : null;
+    const downloadAssetIds = Array.isArray(downloadRecord.canonicalMediaIds) && downloadRecord.canonicalMediaIds.length
+      ? downloadRecord.canonicalMediaIds
+      : downloadRecord.photoId
+        ? [downloadRecord.photoId]
+      : (order?.items || []).map((item) => item.photoId);
+    if (!downloadAssetIds.length) {
+      return noStore(errorJson(503, "lifecycle_identity_unavailable", "Download identity is unavailable; access is denied."));
+    }
+    await assertLifecycleAllowed(downloadAssetIds, downloadRecord.photoId ? "download-token" : "download-archive");
     const nowDate = now();
     if (isExpiredAt(downloadRecord.expiresAt, nowDate)) {
-      return errorJson(410, "download_expired", "This download link has expired. Use your order email and order number to request a fresh delivery link.");
+      return noStore(errorJson(410, "download_expired", "This download link has expired. Use your order email and order number to request a fresh delivery link."));
     }
     if (downloadLimitReached(downloadRecord)) {
-      return errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order.");
+      return noStore(errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order."));
     }
     let response;
     if (typeof deliveryClient.getDownloadResponse === "function") {
@@ -1972,6 +2073,7 @@ export const createPhotosByElieWorker = ({
         },
       });
     }
+    await assertLifecycleAllowed(downloadAssetIds, downloadRecord.photoId ? "download-token:before-read" : "download-archive:before-read");
     if (response.status < 400) {
       const downloadedAt = nowDate.toISOString();
       const updatedDownload = await store.recordDownload(token, downloadedAt);
@@ -1985,7 +2087,7 @@ export const createPhotosByElieWorker = ({
         productId: downloadRecord.productId || "",
       });
     }
-    return response;
+    return noStore(response);
   };
 
   const safeAuthReturnUrl = (request) => {
@@ -2127,7 +2229,19 @@ export const createPhotosByElieWorker = ({
         previewUrl: `https://download.photos-by-elie.com/media/${preview.detailKey}`,
       });
     }
-    const fixtures = collapseSharedFixtureSubsets([...fixturesById.values()]);
+    const sharedIds = [...new Set([...fixturesById.values()].flatMap((fixture) => fixture.photos.map((photo) => photo.id)))];
+    const visibleIds = new Set();
+    if (!lifecycleDenyStore?.visibilityFor) throw Object.assign(new Error("Lifecycle authority is unavailable; shared galleries are denied."), {
+      status: 503, code: "lifecycle_authority_unavailable",
+    });
+    for (let index = 0; index < sharedIds.length; index += 100) {
+      const visibility = await lifecycleDenyStore.visibilityFor(sharedIds.slice(index, index + 100));
+      visibility.filter((item) => item.visible).forEach((item) => visibleIds.add(item.canonicalMediaId));
+    }
+    const fixtures = collapseSharedFixtureSubsets([...fixturesById.values()].map((fixture) => ({
+      ...fixture,
+      photos: fixture.photos.filter((photo) => visibleIds.has(photo.id)),
+    })).filter((fixture) => fixture.photos.length));
     return credentialedJson(request, {
       ok: true,
       user: {
@@ -2579,6 +2693,30 @@ export const createPhotosByElieWorker = ({
       }
       throw ownerError;
     }
+  };
+
+  const lifecycleVisibility = async (request) => {
+    if (!lifecycleDenyStore?.visibilityFor) {
+      return errorJson(503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable; visibility is denied.");
+    }
+    const payload = await parseJson(request);
+    const mediaIds = Array.isArray(payload.mediaIds) ? payload.mediaIds : [];
+    const visibility = await lifecycleDenyStore.visibilityFor(mediaIds);
+    return json({
+      ok: true,
+      visibility,
+      visibleMediaIds: visibility.filter((item) => item.visible).map((item) => item.canonicalMediaId),
+    }, 200, { "cache-control": "private, no-store, max-age=0", "cdn-cache-control": "no-store" });
+  };
+
+  const lifecycleOwnerCommand = async (request, command) => {
+    await requireOwnerConnector(request);
+    if (!lifecycleDenyStore?.[command]) {
+      return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable.");
+    }
+    const payload = await parseJson(request);
+    const result = await lifecycleDenyStore[command](payload);
+    return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
   };
 
   const createOwnerAction = async (request) => {
@@ -3594,6 +3732,16 @@ export const createPhotosByElieWorker = ({
     payload.realEstateSession = await requireRealEstateSession(request, payload);
     payload.galleryKey = payload.realEstateSession.galleryKey;
     const asset = await realEstateDeliverables.getDeliverableAsset(payload);
+    const canonicalMediaIds = [...new Set(
+      (Array.isArray(asset?.record?.batch?.projects) ? asset.record.batch.projects : [])
+        .flatMap((project) => Array.isArray(project?.items) ? project.items : [])
+        .map((item) => String(item?.canonicalMediaId || item?.photoId || "").trim())
+        .filter(Boolean)
+    )];
+    if (!canonicalMediaIds.length) {
+      return credentialedErrorJson(request, 503, "lifecycle_identity_unavailable", "Deliverable identity is unavailable; access is denied.");
+    }
+    await assertLifecycleAllowed(canonicalMediaIds, "real-estate-deliverable-read");
     return new Response(action === "head" ? null : asset.object.body, {
       headers: credentialedCorsHeaders(request, asset.headers),
     });
@@ -3714,8 +3862,14 @@ export const createPhotosByElieWorker = ({
 
     try {
       if (request.method === "GET" && path === "/health") {
-        return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY });
+        if (!lifecycleDenyStore?.ensureSchema) {
+          return errorJson(503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable; service is not ready.");
+        }
+        await lifecycleDenyStore.ensureSchema();
+        return json({ ok: true, service: "photosbyelie-worker", stripe: stripeProvider, currency: ORDER_CURRENCY,
+          lifecycle: "ready" }, 200, { "cache-control": "no-store" });
       }
+      if (request.method === "POST" && path === "/lifecycle/visibility") return await lifecycleVisibility(request);
       if (request.method === "GET" && path === "/auth/session") return await getAuthSession(request);
       if (request.method === "GET" && path === "/shared-galleries") return await getSharedGalleries(request);
       if (request.method === "GET" && path === "/auth/login") return await loginAuth(request);
@@ -3744,6 +3898,13 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/sidecar/decisions/apply") return await applySidecarDecision(request);
       if (request.method === "POST" && path === "/owner/sidecar/decisions/apply-batch") return await applySidecarDecisions(request);
       if (request.method === "POST" && path === "/owner/sidecar/decisions/upsert") return await upsertSidecarDecisions(request);
+      if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
+      if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
+      if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
+      if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");
+      if (request.method === "POST" && path === "/owner/lifecycle/apply") return await lifecycleOwnerCommand(request, "applyBatch");
+      if (request.method === "POST" && path === "/owner/lifecycle/ack") return await lifecycleOwnerCommand(request, "acknowledge");
+      if (request.method === "POST" && path === "/owner/lifecycle/abort") return await lifecycleOwnerCommand(request, "abort");
       if (request.method === "GET" && path === "/owner/actions") return await listOwnerActions(request);
       if (request.method === "POST" && path === "/owner/actions") return await createOwnerAction(request);
       const ownerActionTransitionMatch = path.match(/^\/owner\/actions\/([^/]+)\/(claim|complete|fail|cancel)$/);

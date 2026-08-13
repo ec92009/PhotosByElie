@@ -1,8 +1,10 @@
 import unittest
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
 import socket
+import sys
 import threading
 import time
 from tempfile import TemporaryDirectory
@@ -22,11 +24,17 @@ from scripts.new_owner_connector import (
     _owner_waste_basket_url,
     _sidecar_job_public_payload,
     _upload_and_register,
+    drain_deployed_lifecycle_outbox,
+    drain_hosted_lifecycle_requests,
     execute_action,
     next_poll_interval,
     process_exact_action,
+    process_once,
     start_local_status_server,
 )
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import waste_basket_gateway as lifecycle_gateway
 
 
 class UploadRegistrationScopeTest(unittest.TestCase):
@@ -621,6 +629,415 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             "keywords": ["camera photo", "travel photography"],
             "mode": "replace",
         }])
+
+
+class ConnectorLifecycleProtocolTest(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = TemporaryDirectory()
+        self.root = Path(self.temp_dir.name)
+        self.db = self.root / "assets" / "owner-actions" / "Owner.sqlite"
+        lifecycle_gateway.ensure_schema(self.root, self.db)
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                """INSERT INTO sidecar_assets
+                  (asset_id, source_anchor, media_type, filename, indexed_at, updated_at)
+                  VALUES ('asset-2', 'synthetic://asset-2', 'photo', 'asset-2.jpg',
+                          '2026-08-13T00:00:00Z', '2026-08-13T00:00:00Z')"""
+            )
+            connection.execute(
+                """INSERT INTO r2_objects
+                  (bucket, object_key, photo_id, object_kind, lifecycle_state,
+                   first_seen_at, last_seen_at, source, bytes, updated_at)
+                  VALUES ('public', 'expo/asset-1_900.jpg', 'asset-1', 'preview', 'current',
+                          '2026-08-13T00:00:00Z', '2026-08-13T00:00:00Z', 'synthetic', 12,
+                          '2026-08-13T00:00:00Z')"""
+            )
+            connection.commit()
+        self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, self.root)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    @staticmethod
+    def _arm(payload):
+        members = payload["items"]
+        envelope = {
+            "operationId": payload["operationId"],
+            "operation": payload["operation"],
+            "denied": payload["denied"],
+            "members": members,
+        }
+        digest = hashlib.sha256(
+            json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        return {
+            "operationId": payload["operationId"],
+            "operationDigest": digest,
+            "operation": payload["operation"],
+            "denied": payload["denied"],
+            "revision": 23,
+            "state": "armed",
+            "members": [{
+                "canonicalAssetId": item["canonicalAssetId"],
+                "canonicalMediaId": item["canonicalMediaId"],
+                "revision": 23,
+            } for item in members],
+        }
+
+    class FakeWorker:
+        def __init__(self, owner, *, fail_once_at=""):
+            self.owner = owner
+            self.fail_once_at = fail_once_at
+            self.failed = False
+            self.calls = []
+
+        def request(self, method, path, payload=None, *, idempotency_key=""):
+            phase = path.rsplit("/", 1)[-1]
+            self.calls.append((phase, payload, idempotency_key))
+            if phase == self.fail_once_at and not self.failed:
+                self.failed = True
+                raise RuntimeError(f"synthetic {phase} crash")
+            if phase == "arm":
+                return self.owner._arm(payload)
+            return {"ok": True, "state": phase}
+
+    def _persist_local_commit(self, operation_id="owner-action:action-1"):
+        members = lifecycle_gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
+        arm = self._arm({
+            "operationId": operation_id,
+            "operation": "x",
+            "denied": True,
+            "items": members,
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(self.root, "x", ["asset-1"], arm, self.db)
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key=operation_id,
+            deployed_lifecycle=arm,
+            db_path=self.db,
+        )
+        return arm
+
+    def test_connector_ignores_untrusted_members_and_threads_only_trusted_arm(self):
+        worker = self.FakeWorker(self)
+        calls = []
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((payload, trusted_deployed_lifecycle))
+            return lifecycle_gateway.move_to_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                source="backstage-culling",
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient", return_value=worker), patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "action-1",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-x",
+                    "photoIds": ["asset-1"],
+                    "lifecycleMembers": [{"canonicalAssetId": "attacker", "bindings": []}],
+                    "requestKey": "attacker-request-key",
+                    "source": "backstage-culling",
+                },
+            })
+
+        arm_call = worker.calls[0]
+        self.assertEqual(arm_call[0], "arm")
+        self.assertEqual(arm_call[1]["items"][0]["canonicalAssetId"], "asset-1")
+        self.assertEqual(
+            arm_call[1]["items"][0]["bindings"],
+            [{"bucket": "public", "objectKey": "expo/asset-1_900.jpg"}],
+        )
+        self.assertNotIn("deployed_lifecycle", calls[0][0])
+        self.assertEqual(calls[0][0]["request_key"], "owner-action:action-1")
+        self.assertNotIn("requestKey", calls[0][0])
+        self.assertEqual(calls[0][1]["operationId"], "owner-action:action-1")
+        self.assertEqual(result["lifecycle"]["replay"][-1]["state"], "locally_acked")
+        self.assertEqual(
+            [item[2] for item in worker.calls],
+            [
+                "connector-lifecycle:owner-action:action-1:arm",
+                "connector-lifecycle:owner-action:action-1:local-commit",
+                "connector-lifecycle:owner-action:action-1:apply",
+                "connector-lifecycle:owner-action:action-1:ack",
+            ],
+        )
+
+    def test_drain_replays_from_each_committed_phase_after_crash(self):
+        arm = self._persist_local_commit()
+        crashed = self.FakeWorker(self, fail_once_at="apply")
+        with self.assertRaisesRegex(RuntimeError, "synthetic apply crash"):
+            drain_deployed_lifecycle_outbox(self.config, crashed)
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_outbox(self.root, arm["operationId"], self.db)["state"],
+            "locally_committed",
+        )
+
+        replay = self.FakeWorker(self)
+        result = drain_deployed_lifecycle_outbox(self.config, replay)
+        self.assertEqual([item[0] for item in replay.calls], ["local-commit", "apply", "ack"])
+        self.assertEqual(result[-1]["state"], "locally_acked")
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_outbox(self.root, arm["operationId"], self.db)["state"],
+            "locally_acked",
+        )
+
+    def test_drain_replays_after_local_commit_call_crash(self):
+        arm = self._persist_local_commit()
+        crashed = self.FakeWorker(self, fail_once_at="local-commit")
+        with self.assertRaisesRegex(RuntimeError, "synthetic local-commit crash"):
+            drain_deployed_lifecycle_outbox(self.config, crashed)
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_outbox(self.root, arm["operationId"], self.db)["state"],
+            "locally_committed",
+        )
+        replay = self.FakeWorker(self)
+        drain_deployed_lifecycle_outbox(self.config, replay)
+        self.assertEqual([item[0] for item in replay.calls], ["local-commit", "apply", "ack"])
+
+    def test_drain_replays_ack_without_reapplying_and_aborts_uncommitted_arm(self):
+        arm = self._persist_local_commit()
+        crashed = self.FakeWorker(self, fail_once_at="ack")
+        with self.assertRaisesRegex(RuntimeError, "synthetic ack crash"):
+            drain_deployed_lifecycle_outbox(self.config, crashed)
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_outbox(self.root, arm["operationId"], self.db)["state"],
+            "deployed_applied",
+        )
+        replay = self.FakeWorker(self)
+        drain_deployed_lifecycle_outbox(self.config, replay)
+        self.assertEqual([item[0] for item in replay.calls], ["ack"])
+
+        members = lifecycle_gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
+        second = self._arm({
+            "operationId": "owner-action:action-abort",
+            "operation": "x",
+            "denied": True,
+            "items": members,
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(self.root, "x", ["asset-1"], second, self.db)
+        aborting = self.FakeWorker(self)
+        result = drain_deployed_lifecycle_outbox(self.config, aborting)
+        self.assertEqual([item[0] for item in aborting.calls], ["abort"])
+        self.assertEqual(result[0]["state"], "aborted")
+        self.assertFalse(aborting.calls[0][1]["proof"]["localMutationCommitted"])
+
+    def test_normal_poll_drains_before_and_after_cloud_actions(self):
+        class PollClient:
+            def heartbeat(self):
+                return {"ok": True}
+
+            def actions(self):
+                return []
+
+        client = PollClient()
+        with patch(
+            "scripts.new_owner_connector.drain_deployed_lifecycle_outbox",
+            return_value=[],
+        ) as drain, patch(
+            "scripts.new_owner_connector.drain_hosted_lifecycle_requests",
+            return_value=[],
+        ) as hosted:
+            self.assertEqual(process_once(self.config, client), 0)
+        self.assertEqual(drain.call_count, 2)
+        self.assertEqual(drain.call_args_list[0].args, (self.config, client))
+        self.assertEqual(drain.call_args_list[1].args, (self.config, client))
+        self.assertEqual(hosted.call_count, 2)
+        self.assertEqual(hosted.call_args_list[0].args, (self.config, client))
+        self.assertEqual(hosted.call_args_list[1].args, (self.config, client))
+
+    def test_hosted_armed_crash_is_shielded_until_resume_but_failed_orphan_aborts(self):
+        worker = self.FakeWorker(self)
+        queued = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-armed-crash",
+            db_path=self.db,
+        )
+        operation_id = f"owner-action:hosted-lifecycle:{queued['requestId']}"
+        members = lifecycle_gateway.derive_deployed_lifecycle_members(
+            self.root, ["asset-1"], self.db
+        )
+        arm = self._arm({
+            "operationId": operation_id, "operation": "x", "denied": True,
+            "items": members,
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(
+            self.root, "x", ["asset-1"], arm, self.db
+        )
+
+        queued_shield = drain_deployed_lifecycle_outbox(self.config, worker)
+        self.assertEqual(queued_shield, [{
+            "operationId": operation_id,
+            "state": "armed",
+            "hostedRequestState": "queued",
+        }])
+        lifecycle_gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        running_shield = drain_deployed_lifecycle_outbox(self.config, worker)
+        self.assertEqual(running_shield, [{
+            "operationId": operation_id,
+            "state": "armed",
+            "hostedRequestState": "running",
+        }])
+        self.assertEqual(worker.calls, [])
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_operation_state(
+                self.root, operation_id, self.db
+            ),
+            "armed",
+        )
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            return lifecycle_gateway.move_to_waste_basket(
+                self.root, payload["photo_ids"], source="owner-gallery",
+                actor=payload["actor"], fixture_id=payload["fixture_id"],
+                gallery_id=payload["gallery_id"], request_key=payload["request_key"],
+                owner_mode=True, owner_authorized=True,
+                deployed_lifecycle=trusted_deployed_lifecycle, db_path=self.db,
+            )
+
+        with patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            resumed = drain_hosted_lifecycle_requests(self.config, worker)
+        self.assertEqual(resumed[0]["state"], "completed")
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_operation_state(
+                self.root, operation_id, self.db
+            ),
+            "locally_acked",
+        )
+
+        terminal = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-terminal",
+            db_path=self.db,
+        )
+        terminal_operation_id = f"owner-action:hosted-lifecycle:{terminal['requestId']}"
+        terminal_arm = self._arm({
+            "operationId": terminal_operation_id, "operation": "x", "denied": True,
+            "items": members,
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(
+            self.root, "x", ["asset-1"], terminal_arm, self.db
+        )
+        lifecycle_gateway.finish_hosted_lifecycle_request(
+            self.root, terminal["requestId"], error="terminal synthetic failure",
+            db_path=self.db,
+        )
+        worker.calls.clear()
+        aborted = drain_deployed_lifecycle_outbox(self.config, worker)
+        self.assertEqual(aborted[0]["state"], "aborted")
+        self.assertEqual([call[0] for call in worker.calls], ["abort"])
+
+    def test_hosted_queue_executes_x_and_restore_with_stable_synthetic_action(self):
+        worker = self.FakeWorker(self)
+        calls = []
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append(dict(payload))
+            operation = payload["operation"]
+            keywords = {
+                "source": "owner-gallery", "actor": payload["actor"],
+                "fixture_id": payload["fixture_id"], "request_key": payload["request_key"],
+                "owner_mode": True, "owner_authorized": True,
+                "deployed_lifecycle": trusted_deployed_lifecycle, "db_path": self.db,
+            }
+            if operation == "waste-basket-restore":
+                return lifecycle_gateway.restore_from_waste_basket(
+                    self.root, payload["photo_ids"], **keywords,
+                )
+            return lifecycle_gateway.move_to_waste_basket(
+                self.root, payload["photo_ids"], gallery_id=payload["gallery_id"], **keywords,
+            )
+
+        first = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-x",
+            db_path=self.db,
+        )
+        with patch("scripts.new_owner_connector._load_local_modules", return_value=(None, None, None, None, apply)):
+            result = drain_hosted_lifecycle_requests(self.config, worker)
+        self.assertEqual(result[0]["state"], "completed")
+        self.assertEqual(calls[0]["request_key"], f"owner-action:hosted-lifecycle:{first['requestId']}")
+        self.assertEqual(calls[0]["fixture_id"], "fixture-1")
+
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                """INSERT INTO r2_objects
+                  (bucket, object_key, photo_id, object_kind, lifecycle_state,
+                   first_seen_at, last_seen_at, source, bytes, updated_at)
+                  VALUES ('public', 'expo/asset-2_900.jpg', 'asset-2', 'preview', 'current',
+                          '2026-08-13T00:00:00Z', '2026-08-13T00:00:00Z', 'synthetic', 12,
+                          '2026-08-13T00:00:00Z')"""
+            )
+        lifecycle_gateway.move_to_waste_basket(
+            self.root, ["asset-2"], source="backstage-culling", fixture_id="fixture-1",
+            db_path=self.db,
+        )
+        second = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-2"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-restore",
+            db_path=self.db,
+        )
+        with patch("scripts.new_owner_connector._load_local_modules", return_value=(None, None, None, None, apply)):
+            result = drain_hosted_lifecycle_requests(self.config, worker)
+        self.assertEqual(result[0], {"requestId": second["requestId"], "state": "completed"})
+
+    def test_hosted_queue_survives_connector_failure_and_replays_once(self):
+        queued = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-replay",
+            db_path=self.db,
+        )
+        with patch("scripts.new_owner_connector.execute_action", side_effect=RuntimeError("connector offline")):
+            first = drain_hosted_lifecycle_requests(self.config, self.FakeWorker(self))
+        self.assertEqual(first[0]["state"], "queued")
+        pending = lifecycle_gateway.pending_hosted_lifecycle_requests(self.root, db_path=self.db)
+        self.assertEqual(pending[0]["requestId"], queued["requestId"])
+        with patch("scripts.new_owner_connector.execute_action", return_value={"result": {"ok": True}}) as execute:
+            second = drain_hosted_lifecycle_requests(self.config, self.FakeWorker(self))
+            third = drain_hosted_lifecycle_requests(self.config, self.FakeWorker(self))
+        self.assertEqual(second[0]["state"], "completed")
+        self.assertEqual(third, [])
+        self.assertEqual(execute.call_count, 1)
+
+    def test_hosted_queue_restart_finishes_committed_outbox_without_remutating(self):
+        queued = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="browser-crash",
+            db_path=self.db,
+        )
+        lifecycle_gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        operation_id = f"owner-action:hosted-lifecycle:{queued['requestId']}"
+        arm = self._persist_local_commit(operation_id)
+        worker = self.FakeWorker(self)
+        with patch("scripts.new_owner_connector.execute_action") as execute:
+            result = drain_hosted_lifecycle_requests(self.config, worker)
+        execute.assert_not_called()
+        self.assertEqual(result[0]["state"], "completed")
+        self.assertEqual([call[0] for call in worker.calls], ["local-commit", "apply", "ack"])
+        status = lifecycle_gateway.hosted_lifecycle_request_status(
+            self.root, queued["requestId"], session_id="session-one",
+            fixture_id="fixture-1", db_path=self.db,
+        )
+        self.assertEqual(status["result"]["operationId"], operation_id)
+        self.assertEqual(
+            lifecycle_gateway.deployed_lifecycle_operation_state(
+                self.root, arm["operationId"], self.db
+            ),
+            "locally_acked",
+        )
 
 
 if __name__ == "__main__":

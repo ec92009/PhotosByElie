@@ -430,6 +430,13 @@ export const createRealEstateDeliverables = ({
     }))).filter(Boolean);
   };
 
+  const canonicalMediaIdsFor = (record = {}) => [...new Set(
+    (Array.isArray(record?.batch?.projects) ? record.batch.projects : [])
+      .flatMap((project) => Array.isArray(project?.items) ? project.items : [])
+      .map((item) => String(item?.canonicalMediaId || item?.photoId || "").trim())
+      .filter(Boolean)
+  )];
+
   const createDeliveryLinks = async (payload = {}) => {
     const gallery = galleryFor(payload);
     authorize(gallery, payload);
@@ -480,6 +487,14 @@ export const createRealEstateDeliverables = ({
     const links = [];
 
     for (const record of selected) {
+      const canonicalMediaIds = canonicalMediaIdsFor(record);
+      if (!canonicalMediaIds.length) {
+        throw Object.assign(new Error(`${String(record.type || "Product")} has no canonical media identity; delivery is denied.`), {
+          status: 503,
+          code: "lifecycle_identity_unavailable",
+          details: { id: record.id },
+        });
+      }
       const output = record.outputs?.[record.type] || record.output || {};
       const objectKey = String(output.key || record.outputKey || "").replace(/^\/+/, "");
       if (!objectKey) {
@@ -513,6 +528,7 @@ export const createRealEstateDeliverables = ({
         productId: `real-estate-${type}`,
         realEstateGalleryKey: gallery.key,
         realEstateDeliverableId: record.id,
+        canonicalMediaIds,
         createdAt,
         expiresAt,
         downloadLimit,

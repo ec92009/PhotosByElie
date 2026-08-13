@@ -4,7 +4,9 @@ import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCloudflareImagesRenderer } from "./cloudflare-images-renderer.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import { createKvStore } from "./kv-store.mjs";
+import { createD1LifecycleDenyStore } from "./lifecycle-deny-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
+import { isNonRevocablePublicAsset } from "./non-revocable-public-assets.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
@@ -200,7 +202,8 @@ export const realEstateDeliverablesFor = (env = {}, { assemblyDispatcher = null 
 const mediaHeaders = (object = null, extraHeaders = {}) => ({
   "access-control-allow-origin": "*",
   "accept-ranges": "bytes",
-  "cache-control": "public, max-age=31536000, immutable",
+  "cache-control": "private, no-store, max-age=0",
+  "cdn-cache-control": "no-store",
   "content-type": object?.httpMetadata?.contentType || "image/jpeg",
   ...extraHeaders,
 });
@@ -231,10 +234,15 @@ const parseSingleByteRange = (rangeHeader, size) => {
 };
 
 const publicMediaResponse = async (request, env) => {
+  const unavailableHeaders = () => mediaHeaders(null, { "content-type": "text/plain; charset=utf-8" });
+  const lifecycleUnavailable = (error) => new Response("Media unavailable", {
+    status: error?.code === "asset_lifecycle_denied" ? 410 : 503,
+    headers: unavailableHeaders(),
+  });
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method not allowed", {
       status: 405,
-      headers: { "access-control-allow-origin": "*" },
+      headers: unavailableHeaders(),
     });
   }
 
@@ -243,20 +251,50 @@ const publicMediaResponse = async (request, env) => {
   if (!key) {
     return new Response("Missing media key", {
       status: 400,
-      headers: { "access-control-allow-origin": "*" },
+      headers: unavailableHeaders(),
     });
+  }
+
+  if (key.startsWith("assets/music/") && !isNonRevocablePublicAsset(key)) {
+    return new Response("Media not found", {
+      status: 404,
+      headers: unavailableHeaders(),
+    });
+  }
+  let assertObjectAllowed = null;
+  if (!isNonRevocablePublicAsset(key)) {
+    try {
+      const lifecycleDenyStore = createD1LifecycleDenyStore({
+        database: requiredBinding(env, "ACCESS_DB"),
+      });
+      assertObjectAllowed = () => lifecycleDenyStore.assertObjectAllowed({
+        bucket: "public",
+        objectKey: key,
+        context: `media:${request.method.toLowerCase()}`,
+      });
+      await assertObjectAllowed();
+    } catch (error) {
+      return lifecycleUnavailable(error);
+    }
   }
 
   const bucket = requiredBinding(env, "PUBLIC_MEDIA");
   const rangeHeader = request.headers.get("range");
+  const metadata = typeof bucket.head === "function" ? await bucket.head(key) : null;
 
   if (rangeHeader) {
-    const metadata = typeof bucket.head === "function" ? await bucket.head(key) : await bucket.get(key);
     if (!metadata) {
       return new Response("Media not found", {
         status: 404,
-        headers: { "access-control-allow-origin": "*" },
+        headers: unavailableHeaders(),
       });
+    }
+    if (assertObjectAllowed) {
+      try {
+        await assertObjectAllowed();
+      } catch (error) {
+        return lifecycleUnavailable(error);
+      }
     }
 
     const size = Number(metadata.size);
@@ -274,8 +312,15 @@ const publicMediaResponse = async (request, env) => {
     if (!object) {
       return new Response("Media not found", {
         status: 404,
-        headers: { "access-control-allow-origin": "*" },
+        headers: unavailableHeaders(),
       });
+    }
+    if (assertObjectAllowed) {
+      try {
+        await assertObjectAllowed();
+      } catch (error) {
+        return lifecycleUnavailable(error);
+      }
     }
 
     return new Response(request.method === "HEAD" ? null : object.body, {
@@ -287,12 +332,21 @@ const publicMediaResponse = async (request, env) => {
     });
   }
 
-  const object = await bucket.get(key);
+  const object = request.method === "HEAD"
+    ? metadata || await bucket.get(key)
+    : await bucket.get(key);
   if (!object) {
     return new Response("Media not found", {
       status: 404,
-      headers: { "access-control-allow-origin": "*" },
+      headers: unavailableHeaders(),
     });
+  }
+  if (assertObjectAllowed) {
+    try {
+      await assertObjectAllowed();
+    } catch (error) {
+      return lifecycleUnavailable(error);
+    }
   }
 
   return new Response(request.method === "HEAD" ? null : object.body, {
@@ -351,6 +405,9 @@ export default {
         replyTo: env.ORDER_EMAIL_REPLY_TO || "",
       })
       : null;
+    const lifecycleDenyStore = createD1LifecycleDenyStore({
+      database: requiredBinding(env, "ACCESS_DB"),
+    });
     const worker = createPhotosByElieWorker({
       catalog,
       store,
@@ -361,6 +418,7 @@ export default {
         renderer: createCloudflareImagesRenderer({
           images: env.IMAGES,
         }),
+        assertAssetsAllowed: (mediaIds, context) => lifecycleDenyStore.assertAllowed(mediaIds, context),
       }),
       realEstateOriginals: createRealEstateOriginals({
         privateBucket,
@@ -395,6 +453,7 @@ export default {
       googleOAuthAuth: googleOAuthAuthFor(env),
       accessAuth: ownerAccessAuthFor(env),
       accessUserRegistry,
+      lifecycleDenyStore,
       accessAdminEmail: env.ACCESS_ADMIN_EMAIL || "ec92009@gmail.com",
       ownerActionStore: createKvOwnerActionStore({
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),

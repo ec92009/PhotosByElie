@@ -66,6 +66,7 @@ export const createR2ZipDelivery = ({
   privateBucket,
   deliveryBucket = privateBucket,
   renderer = null,
+  assertAssetsAllowed = null,
   now = () => new Date(),
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
@@ -82,6 +83,7 @@ export const createR2ZipDelivery = ({
   );
 
   const validateOrder = async (order) => {
+    if (assertAssetsAllowed) await assertAssetsAllowed((order.items || []).map((item) => item.photoId), "delivery-validate");
     const missingGroups = await Promise.all((order.items || []).map(async (item) => {
       const itemMissing = [];
       await Promise.all((item.products || []).map(async (product) => {
@@ -141,11 +143,13 @@ export const createR2ZipDelivery = ({
   };
 
   const createDelivery = async (order) => {
+    if (assertAssetsAllowed) await assertAssetsAllowed((order.items || []).map((item) => item.photoId), "delivery-create");
     const files = [];
 
     const getOrCreateRenderedJpg = async ({ item, product, readSourceBytes }) => {
       const [renderKey] = renderedJpgKeys(item, product);
       for (const candidateRenderKey of [renderKey]) {
+        if (assertAssetsAllowed) await assertAssetsAllowed([item.photoId], "delivery-cached-render");
         const cached = await deliveryBucket.get(candidateRenderKey);
         if (cached) {
           return {
@@ -187,6 +191,7 @@ export const createR2ZipDelivery = ({
           watermark: "none",
         },
       });
+      if (assertAssetsAllowed) await assertAssetsAllowed([item.photoId], "delivery-render-complete");
       return {
         objectKey: renderKey,
         renderKey,
@@ -222,6 +227,7 @@ export const createR2ZipDelivery = ({
 
         let file;
         if (isOriginalDelivery) {
+          if (assertAssetsAllowed) await assertAssetsAllowed([item.photoId], "delivery-original-read");
           const found = await firstObject(privateBucket, masterKeysFor(item));
           if (!found) {
             throw Object.assign(new Error(`Private R2 master is missing: ${masterKeysFor(item).join(" or ")}`), {
@@ -280,6 +286,9 @@ export const createR2ZipDelivery = ({
   };
 
   const getDownloadResponse = async (downloadRecord) => {
+    const canonicalMediaIds = Array.isArray(downloadRecord.canonicalMediaIds)
+      ? downloadRecord.canonicalMediaIds : [downloadRecord.photoId].filter(Boolean);
+    if (assertAssetsAllowed) await assertAssetsAllowed(canonicalMediaIds, "delivery-token-read");
     const objectKey = downloadRecord.objectKey || downloadRecord.zipKey;
     const bucket = downloadRecord.bucket === "private" ? privateBucket : deliveryBucket;
     const object = await bucket.get(objectKey);
@@ -294,6 +303,8 @@ export const createR2ZipDelivery = ({
         headers: {
           "content-type": "application/json; charset=utf-8",
           "access-control-allow-origin": "*",
+          "cache-control": "private, no-store, max-age=0",
+          "cdn-cache-control": "no-store",
         },
       });
     }
@@ -302,6 +313,8 @@ export const createR2ZipDelivery = ({
         "access-control-allow-origin": "*",
         "content-type": downloadRecord.contentType || object.httpMetadata?.contentType || "application/octet-stream",
         "content-disposition": `attachment; filename="${downloadRecord.filename || objectKey.split("/").pop() || "photosbyelie-delivery-file"}"`,
+        "cache-control": "private, no-store, max-age=0",
+        "cdn-cache-control": "no-store",
         ...(downloadRecord.bytes ? { "content-length": String(downloadRecord.bytes) } : {}),
       },
     });

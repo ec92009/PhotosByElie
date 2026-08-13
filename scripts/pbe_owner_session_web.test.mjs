@@ -138,7 +138,9 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   const actions = read("hidden-actions.js");
   const gallery = read("photo-gallery.js");
   const localHost = read("scripts/local_server.py");
-  assert.match(session, /fixtureId: state\.session\.fixtureId/);
+  assert.doesNotMatch(session, /fixtureId: state\.session\.fixtureId/);
+  assert.match(session, /action\/status\?requestId=/);
+  assert.match(session, /remains safely queued for the trusted Mac connector/);
   assert.match(session, /request\("\/gallery"\)/);
   assert.match(session, /window\.photosByElieData\[galleryKey\]/);
   assert.match(actions, /isHostedOwnerSurface\(\).*pbeOwnerSession\?\.isReady/s);
@@ -156,7 +158,65 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   assert.match(localHost, /"owner_authorized": True/);
   assert.match(localHost, /\?gallery=pbe-owner/);
   assert.match(localHost, /assert_pbe_owner_x_scope/);
+  assert.match(localHost, /queue_hosted_lifecycle_request/);
   assert.match(gallery, /if \(isPBEOwnerGallery\) detailParams\.set\("gallery", pbeOwnerGalleryKey\)/);
+});
+
+test("hosted action queues sanitized intent and polls its opaque result", async () => {
+  const session = {
+    id: "session-one", state: "ready", fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const calls = [];
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const fetch = async (url, options = {}) => {
+    calls.push([url, options]);
+    if (url.endsWith("/session")) return response({ ok: true, session });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: { fixtureId: session.fixtureId, items: [], summary: { filtered: 0 } },
+    });
+    if (url.endsWith("/action")) {
+      return response({ ok: true, requestId: "hlr-opaque", state: "queued" }, 202);
+    }
+    if (url.includes("/action/status?requestId=hlr-opaque")) {
+      return response({ ok: true, site: { hidden: ["photo-one"] }, hiddenPhotoIds: ["photo-one"] });
+    }
+    throw new Error(`unexpected request ${url}`);
+  };
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: () => null,
+    createElement: () => ({
+      className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+      getBoundingClientRect: () => ({ height: 40 }), querySelector: () => null,
+    }),
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", pathname: "/gallery.html", search: "?gallery=pbe-owner", hash: "" },
+    history: { replaceState: () => {} }, dispatchEvent: () => {},
+    setInterval: () => 1, clearInterval: () => {}, setTimeout: (callback) => { callback(); return 1; },
+  };
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window, document, fetch, URLSearchParams, encodeURIComponent,
+    CustomEvent: class CustomEvent {}, Date,
+    crypto: { randomUUID: () => "browser-random" },
+  });
+  await window.photosByEliePBEOwnerSessionReady;
+  const result = await window.photosByEliePBEOwnerSession.action("waste-basket-x", {
+    photo_id: "photo-one", fixtureId: "fixture-attacker", source: "attacker",
+    owner_mode: true, owner_authorized: true, requestKey: "attacker-key",
+    lifecycleMembers: [{ canonicalAssetId: "attacker" }],
+  });
+  assert.deepEqual(Array.from(result.hiddenPhotoIds), ["photo-one"]);
+  const actionCall = calls.find(([url]) => url.endsWith("/action"));
+  const body = JSON.parse(actionCall[1].body);
+  assert.deepEqual(body, { action: "waste-basket-x", photo_id: "photo-one" });
+  assert.match(actionCall[1].headers["Idempotency-Key"], /^pbe-owner-[a-z0-9]+-browser-random$/);
+  assert.equal(calls.filter(([url]) => url.includes("/action/status?")).length, 1);
 });
 
 test("hosted PBE hidden history ignores stale global and prior-session state", async () => {

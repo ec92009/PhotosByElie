@@ -2585,7 +2585,9 @@ window.photosByElieIsPublicHidden = (photo) => (
   && window.photosByEliePublicHiddenIds.has(photo.id)
 );
 window.photosByElieFilterPublicHidden = (photos = []) => {
-  if (window.photosByElieInputMode.isLocalhost() || !window.photosByEliePublicHiddenIds.size) return photos;
+  if (window.photosByElieInputMode.isLocalhost()) return photos;
+  if (window.photosByElieHiddenBlacklistFailed) return [];
+  if (!window.photosByEliePublicHiddenIds.size) return photos;
   return photos.filter((photo) => !window.photosByEliePublicHiddenIds.has(photo?.id));
 };
 window.photosByElieHiddenBlacklistReady = (async () => {
@@ -2603,6 +2605,7 @@ window.photosByElieHiddenBlacklistReady = (async () => {
     }));
   } catch {
     window.photosByEliePublicHiddenIds = new Set();
+    window.photosByElieHiddenBlacklistFailed = true;
   }
   return window.photosByEliePublicHiddenIds;
 })();
@@ -2619,7 +2622,7 @@ window.photosByElieMediaUrl = (photo, size = 'gallery') => {
   const direct = size === 'detail'
     ? (preview?.detailUrl || preview?.previewUrl)
     : (preview?.galleryUrl || preview?.thumbnailUrl);
-  if (direct) return direct;
+  if (isLocalhostMediaPage && direct) return direct;
   const key = window.photosByElieMediaKey(photo, size);
   const base = normalizePublicMediaBase(window.photosByEliePublicMediaBase);
   if (base && key) return `${base}/${key.replace(/^\/+/, '')}`;
@@ -2677,7 +2680,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
   window.photosByElieFormatVideoDuration(window.photosByElieVideoDurationSeconds(photo))
 );
   window.photosByElieVideoPosterUrl = (photo) => (
-    photo?.media?.publicPreview?.posterUrl
+    (isLocalhostMediaPage ? photo?.media?.publicPreview?.posterUrl : '')
     || window.photosByElieMediaUrl(photo, "gallery")
   );
 

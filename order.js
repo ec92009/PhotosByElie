@@ -452,7 +452,7 @@ const downloadDeliveryFile = async (file, index) => {
   button?.setAttribute("disabled", "");
   setFileProgress(index, 2, t("order.file_downloading"));
   try {
-    const response = await fetch(href);
+    const response = await fetch(href, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const total = Number(response.headers.get("content-length")) || Number(file.bytes || 0);
     if (!response.body?.getReader) {
@@ -490,6 +490,7 @@ const resendDeliveryEmail = async (button) => {
   try {
     const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(order.id)}/resend-email`, {
       method: "POST",
+      cache: "no-store",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: order.buyerEmail }),
     });
@@ -589,6 +590,7 @@ const resendAccountHistoryEmail = async (orderId, button) => {
   try {
     const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(order.id)}/resend-email`, {
       method: "POST",
+      cache: "no-store",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email: order.buyerEmail }),
     });
@@ -640,7 +642,9 @@ const loadOrder = async () => {
     if (sessionId) {
       status.textContent = t("order.refreshing");
       try {
-        const response = await fetch(`${workerBaseUrl()}/orders/by-session/${encodeURIComponent(sessionId)}`);
+        const sessionUrl = new URL(`${workerBaseUrl()}/orders/by-session/${encodeURIComponent(sessionId)}`);
+        if (email) sessionUrl.searchParams.set("email", email);
+        const response = await fetch(sessionUrl.href, { cache: "no-store" });
         const body = await response.json();
         if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
         renderOrder(body.order);
@@ -673,18 +677,14 @@ const loadOrder = async () => {
 
   status.textContent = t("order.refreshing");
   try {
-    const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(id)}?email=${encodeURIComponent(email)}`);
+    const response = await fetch(`${workerBaseUrl()}/orders/${encodeURIComponent(id)}?email=${encodeURIComponent(email)}`, {
+      cache: "no-store",
+    });
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || `Order lookup failed with HTTP ${response.status}.`);
     renderOrder(body.order);
     status.textContent = t("order.refreshed");
   } catch (error) {
-    const cachedOrder = checkoutState().lastResponse?.order;
-    if (cachedOrder?.id === id) {
-      renderOrder(cachedOrder);
-      status.textContent = t("order.cached");
-      return;
-    }
     syncOrderLookup(true);
     heading.textContent = t("order.unavailable");
     message.textContent = error.message;

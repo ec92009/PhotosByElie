@@ -80,6 +80,7 @@ preview_id = "0896fcb030ac4f54b43756707a11a6e0"
 binding = "ACCESS_DB"
 database_name = "photosbyelie-access"
 database_id = "f93ae9cc-ffd4-4e2b-8dbd-bc7f840cb61b"
+migrations_dir = "migrations"
 
 [[r2_buckets]]
 binding = "PRIVATE_MEDIA"

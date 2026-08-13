@@ -59,6 +59,7 @@ PBE_OWNER_SESSION_HEARTBEAT_PATH = "/__photosbyelie/pbe-owner/session/heartbeat"
 PBE_OWNER_SESSION_CLOSE_PATH = "/__photosbyelie/pbe-owner/session/close"
 PBE_OWNER_GALLERY_PATH = "/__photosbyelie/pbe-owner/gallery"
 PBE_OWNER_ACTION_PATH = "/__photosbyelie/pbe-owner/action"
+PBE_OWNER_ACTION_STATUS_PATH = "/__photosbyelie/pbe-owner/action/status"
 PBE_OWNER_HOST_BOOTSTRAP_PATH = "/__photosbyelie/pbe-owner/host/bootstrap"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
@@ -404,6 +405,8 @@ from waste_basket_gateway import (  # noqa: E402
     assert_recoverable_entries_in_fixture,
     empty_waste_basket as empty_waste_basket_gateway,
     move_to_waste_basket as move_to_waste_basket_gateway,
+    hosted_lifecycle_request_status,
+    queue_hosted_lifecycle_request,
     restore_from_waste_basket as restore_from_waste_basket_gateway,
     restore_tombstone as restore_tombstone_gateway,
 )
@@ -546,12 +549,7 @@ def pbe_owner_action_payload(payload: dict, session: dict, request_key: str = ""
         "actor": f"backstage-pbe:{session['id']}",
         "owner_mode": True,
         "owner_authorized": True,
-        "request_key": str(
-            request_key
-            or payload.get("request_key")
-            or payload.get("requestKey")
-            or f"pbe-owner-{uuid.uuid4()}"
-        ).strip(),
+        "request_key": str(request_key or f"pbe-owner-{uuid.uuid4()}").strip(),
         "reason": str(payload.get("reason") or "Hosted PBE Owner gallery X").strip(),
     }
 
@@ -667,6 +665,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == PBE_OWNER_GALLERY_PATH:
             self._handle_pbe_owner_gallery()
+            return
+        if path == PBE_OWNER_ACTION_STATUS_PATH:
+            self._handle_pbe_owner_action_status()
             return
         if path == TITLE_KEYWORD_REVIEW_QUEUE_PATH:
             self._handle_title_keyword_review_queue()
@@ -1103,15 +1104,37 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             self._require_same_origin_browser_post()
             session = self._pbe_authorized_browser_session()
             payload = self._read_json_body()
+            request_key = str(self.headers.get("Idempotency-Key") or "").strip()
+            if not request_key:
+                raise PBEOwnerSessionError(
+                    "Hosted PBE Owner actions require an Idempotency-Key.",
+                    code="pbe_owner_idempotency_required",
+                    status=400,
+                )
             trusted_payload = pbe_owner_action_payload(
                 payload,
                 session,
-                str(self.headers.get("Idempotency-Key") or ""),
+                request_key,
             )
             assert_pbe_owner_x_scope(Path.cwd(), session, trusted_payload)
             assert_pbe_owner_restore_scope(Path.cwd(), session, trusted_payload)
-            with OWNER_ACTION_LOCK:
-                result = apply_photo_action(Path.cwd(), trusted_payload)
+            raw_photo_ids = trusted_payload.get("photo_ids")
+            asset_ids = [
+                str(value or "").strip()
+                for value in [
+                    trusted_payload.get("photo_id"),
+                    *(raw_photo_ids if isinstance(raw_photo_ids, list) else []),
+                ]
+                if str(value or "").strip()
+            ]
+            queued = queue_hosted_lifecycle_request(
+                Path.cwd(),
+                operation=str(trusted_payload["action"]),
+                asset_ids=asset_ids,
+                session_id=str(session["id"]),
+                fixture_id=str(session["fixtureId"]),
+                request_key=request_key,
+            )
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
@@ -1121,7 +1144,60 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         except (sqlite3.Error, subprocess.CalledProcessError, OSError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": {"code": "pbe_owner_action_failed", "message": str(error)}})
             return
-        self._send_json(HTTPStatus.OK, result)
+        self._send_json(HTTPStatus.ACCEPTED, {
+            "ok": True,
+            "requestId": queued["requestId"],
+            "state": queued["state"],
+        })
+
+    def _handle_pbe_owner_action_status(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            session = self._pbe_authorized_browser_session()
+            request_id = str(parse_qs(urlparse(self.path).query).get("requestId", [""])[0]).strip()
+            if not request_id:
+                raise PBEOwnerSessionError(
+                    "Hosted lifecycle status requires an opaque request ID.",
+                    code="pbe_owner_request_required",
+                    status=400,
+                )
+            status = hosted_lifecycle_request_status(
+                Path.cwd(),
+                request_id,
+                session_id=str(session["id"]),
+                fixture_id=str(session["fixtureId"]),
+            )
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except WasteBasketError as error:
+            self._send_json(HTTPStatus.NOT_FOUND, {
+                "ok": False,
+                "error": {"code": "pbe_owner_request_unavailable", "message": str(error)},
+            })
+            return
+        if status["state"] == "completed":
+            result = dict(status.get("result") or {})
+            result["ok"] = True
+            self._send_json(HTTPStatus.OK, result)
+            return
+        if status["state"] == "failed":
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {
+                    "code": "pbe_owner_action_failed",
+                    "message": status.get("error") or "The trusted connector could not complete this action.",
+                },
+            })
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "requestId": request_id,
+            "state": status["state"],
+            **({"error": status["error"]} if status.get("error") else {}),
+        })
 
     def _handle_source_edit_import_all(self) -> None:
         if not self._is_loopback_request():
@@ -12513,7 +12589,12 @@ def apply_real_estate_owner_action(repo_root: Path, payload: dict) -> dict:
     raise ValueError("unsupported real-estate owner action")
 
 
-def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
+def apply_public_photo_moderation(
+    repo_root: Path,
+    payload: dict,
+    *,
+    trusted_deployed_lifecycle: dict | None = None,
+) -> dict:
     """Apply a supported public Owner action through the local connector.
 
     GitHub Pages cannot be mutated by the Max connector. Public Owner culling
@@ -12521,6 +12602,8 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
     catalog publication pipeline consumes that state on its next publish.
     """
     operation = str(payload.get("operation") or payload.get("action") or "").strip().lower()
+    if payload.get("deployed_lifecycle") or payload.get("deployedLifecycle"):
+        raise ValueError("deployed lifecycle receipts are accepted only through the trusted connector call path")
     photo_ids = _normalized_photo_ids(payload.get("photo_ids") or payload.get("photoIds") or payload.get("photo_id"))
     if operation == "save-keyword-blacklist":
         result = apply_photo_action(repo_root, {
@@ -12575,6 +12658,7 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "request_key": payload.get("request_key") or payload.get("requestKey") or "",
             "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
             "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            "_trusted_deployed_lifecycle": trusted_deployed_lifecycle,
         })
         return {**result, "catalog_publish_pending": True}
     if operation in {"waste-basket-restore", "restore"}:
@@ -12589,6 +12673,7 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "request_key": payload.get("request_key") or payload.get("requestKey") or "",
             "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
             "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            "_trusted_deployed_lifecycle": trusted_deployed_lifecycle,
         })
         return {**result, "catalog_publish_pending": True}
     if operation == "waste-basket-empty":
@@ -12603,6 +12688,7 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "request_key": payload.get("request_key") or payload.get("requestKey") or "",
             "owner_mode": bool(payload.get("owner_mode") or payload.get("ownerMode")),
             "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            "_trusted_deployed_lifecycle": trusted_deployed_lifecycle,
         })
         return {**result, "catalog_publish_pending": True}
     if operation == "waste-basket-tombstone-restore":
@@ -12619,6 +12705,7 @@ def apply_public_photo_moderation(repo_root: Path, payload: dict) -> dict:
             "owner_authorized": bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
             "explicit_tombstone_restore": payload.get("explicit_tombstone_restore") is True
             or payload.get("explicitTombstoneRestore") is True,
+            "_trusted_deployed_lifecycle": trusted_deployed_lifecycle,
         })
         return {**result, "catalog_publish_pending": True}
     if operation not in {"hide", "hide-many", "undo-hide", "undo-hide-many"}:
@@ -13026,6 +13113,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             request_key=payload.get("request_key") or payload.get("requestKey") or "",
             owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
         )
         if not compatibility_state_available:
             return {
@@ -13083,6 +13171,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 explicit_tombstone_restore=bool(
                     payload.get("explicit_tombstone_restore") or payload.get("explicitTombstoneRestore")
                 ),
+                deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
             )
         else:
             gateway_result = restore_from_waste_basket_gateway(
@@ -13094,6 +13183,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
                 owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
                 fixture_id=payload.get("fixture_id") or "",
+                deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
             )
         if not compatibility_state_available:
             return {

@@ -239,6 +239,14 @@
     if (!state.ready || !state.session) {
       throw new Error(state.message || "PBE Owner session is not ready.");
     }
+    const actionPayload = { action: operation };
+    const photoId = String(payload?.photo_id || payload?.photoId || "").trim();
+    const photoIds = Array.isArray(payload?.photo_ids || payload?.photoIds)
+      ? (payload.photo_ids || payload.photoIds).map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    if (photoId) actionPayload.photo_id = photoId;
+    if (photoIds.length) actionPayload.photo_ids = photoIds;
+    if (String(payload?.reason || "").trim()) actionPayload.reason = String(payload.reason).trim();
     const response = await fetch(`${localBase}/action`, {
       method: "POST",
       cache: "no-store",
@@ -247,11 +255,7 @@
         "Content-Type": "application/json",
         "Idempotency-Key": `pbe-owner-${Date.now().toString(36)}-${crypto.randomUUID()}`,
       },
-      body: JSON.stringify({
-        ...payload,
-        action: operation,
-        fixtureId: state.session.fixtureId,
-      }),
+      body: JSON.stringify(actionPayload),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result?.ok) {
@@ -259,7 +263,13 @@
       if ([401, 403, 409].includes(response.status)) failClosed(new Error(detail?.message || "PBE Owner authorization ended."));
       throw new Error(detail?.message || detail || `PBE Owner action failed: ${operation}`);
     }
-    return result;
+    if (!["queued", "running"].includes(result.state) || !result.requestId) return result;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      const status = await request(`/action/status?requestId=${encodeURIComponent(result.requestId)}`);
+      if (!["queued", "running"].includes(status.state)) return status;
+    }
+    throw new Error("PBE Owner action remains safely queued for the trusted Mac connector.");
   };
 
   const close = async () => {

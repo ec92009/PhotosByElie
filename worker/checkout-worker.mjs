@@ -1442,6 +1442,29 @@ export const createPhotosByElieWorker = ({
     return blocked;
   };
 
+  const reconcileFulfillmentSettlement = async (order, { throwOnRevocation = false } = {}) => {
+    if (!order || !lifecycleDenyStore?.fulfillmentFor) return order;
+    const settlement = await lifecycleDenyStore.fulfillmentFor(order.id);
+    if (settlement?.state === "blocked_pending_lifecycle") {
+      throw Object.assign(new Error("Paid fulfillment is held behind an armed lifecycle operation."), {
+        status: 409,
+        code: "paid_asset_lifecycle_pending",
+        lifecycleOperationId: settlement.lifecycleOperationId || "",
+      });
+    }
+    if (settlement?.state !== "manual_refund_review") return order;
+    const error = Object.assign(new Error("Paid fulfillment was revoked and requires manual refund review."), {
+      status: 409,
+      code: "paid_asset_revoked",
+      lifecycleOperationId: settlement.lifecycleOperationId || "",
+    });
+    const blocked = order.status === "manual_refund_review"
+      ? order
+      : await manualRefundReview(order, error);
+    if (throwOnRevocation) throw error;
+    return blocked;
+  };
+
   const recordAnalyticsEvents = async (request) => {
     const payload = await parseJson(request);
     const events = Array.isArray(payload.events) ? payload.events : [payload.event || payload];
@@ -1453,6 +1476,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const maybeSendReadyEmail = async (order, { force = false, throwOnFailure = false } = {}) => {
+    order = await reconcileFulfillmentSettlement(order, { throwOnRevocation: true });
     if (!emailClient || typeof emailClient.send !== "function") return order;
     if (!force && order.deliveryEmail?.status === "sent") return order;
     await assertLifecycleAllowed(orderMediaIds(order), force ? "order-email-resend" : "order-email");
@@ -1464,6 +1488,9 @@ export const createPhotosByElieWorker = ({
       includeDirectDownloadLinks,
       idempotencyKey: force ? resendIdempotencyKey(order.id, requestedAt) : undefined,
     });
+    if (order.lifecycleSettlementBound && lifecycleDenyStore?.claimEmailDispatch) {
+      await lifecycleDenyStore.claimEmailDispatch({ orderId: order.id, idempotencyKey: email.idempotencyKey });
+    }
     const sending = {
       ...order,
       deliveryEmail: {
@@ -1492,10 +1519,36 @@ export const createPhotosByElieWorker = ({
         },
         updatedAt: sentAt,
       };
+      if (order.lifecycleSettlementBound && lifecycleDenyStore?.completeEmailDispatch) {
+        try {
+          await lifecycleDenyStore.completeEmailDispatch({
+            orderId: order.id,
+            idempotencyKey: email.idempotencyKey,
+            outcome: "sent",
+            providerMessageId: result.messageId || "",
+          });
+        } catch {
+          // The provider accepted the idempotent send. Preserve the durable
+          // claim for a later audit instead of misclassifying it as failed.
+        }
+      }
       await store.putOrder(sent);
-      return sent;
+      return reconcileFulfillmentSettlement(sent, { throwOnRevocation: true });
     } catch (error) {
+      if (["paid_asset_revoked", "paid_asset_lifecycle_pending"].includes(error?.code)) throw error;
       const failedAt = now().toISOString();
+      if (order.lifecycleSettlementBound && lifecycleDenyStore?.completeEmailDispatch) {
+        try {
+          await lifecycleDenyStore.completeEmailDispatch({
+            orderId: order.id,
+            idempotencyKey: email.idempotencyKey,
+            outcome: "failed",
+          });
+        } catch {
+          // The provider failure remains primary; the D1 claim is retained for
+          // independent reconciliation.
+        }
+      }
       if (throwOnFailure) {
         const restored = {
           ...order,
@@ -1510,6 +1563,7 @@ export const createPhotosByElieWorker = ({
           updatedAt: failedAt,
         };
         await store.putOrder(restored);
+        await reconcileFulfillmentSettlement(restored, { throwOnRevocation: true });
         throw Object.assign(new Error(error?.message || "Delivery email could not be sent."), {
           status: error?.status || 502,
           code: error?.code || "delivery_email_failed",
@@ -1531,7 +1585,7 @@ export const createPhotosByElieWorker = ({
         updatedAt: failedAt,
       };
       await store.putOrder(failed);
-      return failed;
+      return reconcileFulfillmentSettlement(failed, { throwOnRevocation: true });
     }
   };
 
@@ -1544,11 +1598,12 @@ export const createPhotosByElieWorker = ({
     if (!validEmail(email)) {
       return errorJson(400, "invalid_email", "Resending a delivery email requires the checkout email.");
     }
-    const order = await store.getOrder(orderId);
+    let order = await store.getOrder(orderId);
     if (!order) return errorJson(404, "unknown_order", "Order was not found.");
     if (email !== order.buyerEmail) {
       return errorJson(403, "order_email_required", "Enter the email used at checkout to resend this order email.");
     }
+    order = await reconcileFulfillmentSettlement(order);
     if (order.status !== "ready" || !order.delivery) {
       return errorJson(409, "order_not_ready", "Delivery email can be resent only after the order files are ready.");
     }
@@ -1621,7 +1676,12 @@ export const createPhotosByElieWorker = ({
       .filter((order) => String(order?.buyerEmail || "").trim().toLowerCase() === normalizedEmail)
       .sort((left, right) => orderTime(right) - orderTime(left));
     const visible = [];
-    for (const order of matching) {
+    for (let order of matching) {
+      order = await reconcileFulfillmentSettlement(order);
+      if (order.status === "manual_refund_review") {
+        visible.push(publicOrder(order));
+        continue;
+      }
       try {
         await assertLifecycleAllowed(orderMediaIds(order), "account-order-list");
         visible.push(publicOrder(order));
@@ -1665,12 +1725,13 @@ export const createPhotosByElieWorker = ({
 
   const getAccountOrder = async (request, orderId) => {
     const session = await authSessionFor(request, { required: true });
-    const order = await store.getOrder(orderId);
+    let order = await store.getOrder(orderId);
     if (!order) return credentialedErrorJson(request, 404, "unknown_order", "Order was not found.");
     if (String(order.buyerEmail || "").trim().toLowerCase() !== String(session.email || "").trim().toLowerCase()) {
       return credentialedErrorJson(request, 403, "account_order_forbidden", "This order is not attached to the signed-in account.");
     }
-    await assertLifecycleAllowed(orderMediaIds(order), "account-order-recovery");
+    order = await reconcileFulfillmentSettlement(order);
+    if (order.status !== "manual_refund_review") await assertLifecycleAllowed(orderMediaIds(order), "account-order-recovery");
     return credentialedJson(request, { order: publicOrder(order) });
   };
 
@@ -1834,7 +1895,7 @@ export const createPhotosByElieWorker = ({
     const orderId = session.metadata?.order_id || session.client_reference_id;
     if (!orderId) throw Object.assign(new Error("Stripe session did not include an order id."), { status: 400, code: "missing_order_id" });
 
-    const order = await store.getOrder(orderId);
+    let order = await store.getOrder(orderId);
     if (!order) throw Object.assign(new Error(`No order exists for ${orderId}.`), { status: 404, code: "unknown_order" });
 
     if (order.checkoutSessionId !== session.id) {
@@ -1846,6 +1907,7 @@ export const createPhotosByElieWorker = ({
     if (Number(session.amount_total) !== Number(order.amountExpected) || String(session.currency).toLowerCase() !== order.currency) {
       throw Object.assign(new Error("Stripe paid amount/currency does not match the order."), { status: 409, code: "amount_mismatch" });
     }
+    order = await reconcileFulfillmentSettlement(order, { throwOnRevocation: true });
 
     let fulfillmentFence;
     try {
@@ -1900,6 +1962,7 @@ export const createPhotosByElieWorker = ({
     let ready = {
       ...preparing,
       status: "ready",
+      lifecycleSettlementBound: Boolean(lifecycleDenyStore?.commitFulfillmentReady),
       delivery: {
         zipKey: deliveryResult.zipKey,
         downloadUrl: deliveryResult.downloadUrl,
@@ -1911,6 +1974,13 @@ export const createPhotosByElieWorker = ({
     };
     try {
       await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-ready-commit", fulfillmentFence);
+      if (lifecycleDenyStore?.commitFulfillmentReady) {
+        await lifecycleDenyStore.commitFulfillmentReady({
+          orderId: order.id,
+          mediaIds: orderMediaIds(order),
+          fence: fulfillmentFence,
+        });
+      }
     } catch (error) {
       if (["asset_lifecycle_denied", "lifecycle_fence_changed"].includes(error?.code)) {
         await manualRefundReview(preparing, error);
@@ -1918,37 +1988,57 @@ export const createPhotosByElieWorker = ({
       }
       throw error;
     }
-    await store.putOrder(ready);
+    const readyProjection = ready;
+    const capabilityOrder = ready.lifecycleSettlementBound
+      ? { ...ready, status: "preparing", delivery: null, updatedAt: readyAt }
+      : ready;
+    await store.putOrder(capabilityOrder);
+    ready = await reconcileFulfillmentSettlement(readyProjection, { throwOnRevocation: true });
     if (deliveryFiles.length) {
-      await Promise.all(deliveryFiles.map((file) => store.putDownload({
-        token: file.token,
-        orderId: ready.id,
-        bucket: file.bucket,
-        objectKey: file.objectKey,
-        filename: file.name,
-        contentType: file.contentType,
-        bytes: file.bytes || 0,
-        photoId: file.photoId,
-        productId: file.productId,
-        canonicalMediaIds: [file.photoId],
-        createdAt: readyAt,
-        expiresAt: file.expiresAt,
-        downloadLimit: file.downloadLimit,
-        downloadCount: 0,
-      })));
+      for (const file of deliveryFiles) {
+        await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
+        if (ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability) {
+          await lifecycleDenyStore.authorizeDownloadCapability({ orderId: ready.id, token: file.token });
+        }
+        await store.putDownload({
+          token: file.token,
+          orderId: ready.id,
+          bucket: file.bucket,
+          objectKey: file.objectKey,
+          filename: file.name,
+          contentType: file.contentType,
+          bytes: file.bytes || 0,
+          photoId: file.photoId,
+          productId: file.productId,
+          canonicalMediaIds: [file.photoId],
+          lifecycleSettlementBound: Boolean(ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability),
+          createdAt: readyAt,
+          expiresAt: file.expiresAt,
+          downloadLimit: file.downloadLimit,
+          downloadCount: 0,
+        });
+      }
     } else if (deliveryResult.token) {
+      await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
+      if (ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability) {
+        await lifecycleDenyStore.authorizeDownloadCapability({ orderId: ready.id, token: deliveryResult.token });
+      }
       await store.putDownload({
         token: deliveryResult.token,
         orderId: ready.id,
         zipKey: deliveryResult.zipKey,
         canonicalMediaIds: orderMediaIds(ready),
+        lifecycleSettlementBound: Boolean(ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability),
         createdAt: readyAt,
         expiresAt: policy.expiresAt,
         downloadLimit: policy.downloadLimit,
         downloadCount: 0,
       });
     }
+    ready = await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
+    await store.putOrder(ready);
     ready = await maybeSendReadyEmail(ready);
+    ready = await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
     await recordAnalytics({
       event: "payment_completed",
       checkoutMode: ready.checkoutMode,
@@ -2023,24 +2113,26 @@ export const createPhotosByElieWorker = ({
   const getOrder = async (request, orderId) => {
     const url = new URL(request.url);
     const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
-    const order = await store.getOrder(orderId);
+    let order = await store.getOrder(orderId);
     if (!order) return errorJson(404, "unknown_order", "Order was not found.");
     if (email !== order.buyerEmail) {
       return errorJson(403, "order_email_required", "Enter the email used at checkout to view this order.");
     }
-    await assertLifecycleAllowed(orderMediaIds(order), "order-recovery");
+    order = await reconcileFulfillmentSettlement(order);
+    if (order.status !== "manual_refund_review") await assertLifecycleAllowed(orderMediaIds(order), "order-recovery");
     return json({ order: publicOrder(order) }, 200, PRIVATE_NO_STORE_HEADERS);
   };
 
   const getOrderByCheckoutSession = async (request, sessionId) => {
     if (!sessionId) return errorJson(400, "missing_session_id", "Checkout session id is required.");
-    const order = await store.getOrderByCheckoutSessionId?.(sessionId);
+    let order = await store.getOrderByCheckoutSessionId?.(sessionId);
     if (!order) return errorJson(404, "unknown_order", "Order was not found for this checkout session.");
     const email = String(new URL(request.url).searchParams.get("email") || "").trim().toLowerCase();
     if (!email || email !== String(order.buyerEmail || "").trim().toLowerCase()) {
       return errorJson(403, "order_email_required", "Enter the email used at checkout to view this order.");
     }
-    await assertLifecycleAllowed(orderMediaIds(order), "checkout-session-recovery");
+    order = await reconcileFulfillmentSettlement(order);
+    if (order.status !== "manual_refund_review") await assertLifecycleAllowed(orderMediaIds(order), "checkout-session-recovery");
     return json({ order: publicOrder(order) }, 200, PRIVATE_NO_STORE_HEADERS);
   };
 
@@ -2054,6 +2146,9 @@ export const createPhotosByElieWorker = ({
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return noStore(errorJson(404, "unknown_download", "Download link was not found."));
     const order = downloadRecord.orderId ? await store.getOrder(downloadRecord.orderId) : null;
+    if (downloadRecord.orderId && downloadRecord.lifecycleSettlementBound && lifecycleDenyStore?.assertDownloadCapability) {
+      await lifecycleDenyStore.assertDownloadCapability({ orderId: downloadRecord.orderId, token });
+    }
     const downloadAssetIds = Array.isArray(downloadRecord.canonicalMediaIds) && downloadRecord.canonicalMediaIds.length
       ? downloadRecord.canonicalMediaIds
       : downloadRecord.photoId

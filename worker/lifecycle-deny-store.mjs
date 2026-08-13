@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const CONTROL_ID = "global";
 const MAX_BATCH = 100;
 const MAX_BINDINGS_PER_BATCH = 400;
@@ -361,6 +361,208 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     return { activationId: id, activationDigest: expectedDigest, state: "ready", mediaCount: expectedMedia, bindingCount: expectedBindings };
   };
 
+  const fulfillmentFor = async (orderId) => {
+    await assertReady();
+    const id = clean(orderId);
+    if (!id) throw lifecycleError("lifecycle_fulfillment_invalid", "A stable order ID is required.", 400);
+    const row = await database.prepare(`SELECT order_id, fence_digest, state, lifecycle_operation_id,
+      created_at, updated_at FROM pbe_lifecycle_fulfillments WHERE order_id = ?`).bind(id).first();
+    if (!row) return null;
+    return {
+      orderId: clean(row.order_id),
+      fenceDigest: clean(row.fence_digest),
+      state: clean(row.state),
+      lifecycleOperationId: clean(row.lifecycle_operation_id),
+      createdAt: clean(row.created_at),
+      updatedAt: clean(row.updated_at),
+    };
+  };
+
+  const commitFulfillmentReady = async ({ orderId, mediaIds, fence }) => {
+    await assertReady();
+    const id = clean(orderId);
+    const normalizedIds = [...new Set((Array.isArray(mediaIds) ? mediaIds : [mediaIds]).map(clean).filter(Boolean))]
+      .sort(compareText);
+    const fenceMedia = (Array.isArray(fence?.media) ? fence.media : []).map((item) => ({
+      canonicalMediaId: clean(item?.canonicalMediaId),
+      revision: Number(item?.revision),
+      receiptId: clean(item?.receiptId),
+    })).sort((left, right) => compareText(left.canonicalMediaId, right.canonicalMediaId));
+    const fenceDigest = clean(fence?.digest);
+    if (!id || !normalizedIds.length || normalizedIds.length > MAX_BATCH
+        || !/^[a-f0-9]{64}$/.test(fenceDigest)
+        || fenceMedia.length !== normalizedIds.length
+        || fenceMedia.some((item, index) => item.canonicalMediaId !== normalizedIds[index]
+          || !Number.isSafeInteger(item.revision) || item.revision < 0 || !item.receiptId)
+        || await canonicalDigestFor(fenceMedia) !== fenceDigest) {
+      throw lifecycleError("lifecycle_fulfillment_invalid", "Fulfillment requires an exact current lifecycle fence.", 400);
+    }
+    const existing = await fulfillmentFor(id);
+    if (existing) {
+      if (existing.fenceDigest !== fenceDigest) {
+        throw lifecycleError("lifecycle_fulfillment_conflict", "Order fulfillment was already settled against a different lifecycle fence.", 409);
+      }
+      return existing;
+    }
+    const timestamp = now().toISOString();
+    const intentStatements = [database.prepare(`INSERT INTO pbe_lifecycle_fulfillment_intents
+      (order_id, fence_digest, member_count, created_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT(order_id) DO NOTHING`).bind(id, fenceDigest, fenceMedia.length, timestamp)];
+    for (const item of fenceMedia) {
+      intentStatements.push(database.prepare(`INSERT INTO pbe_lifecycle_fulfillment_intent_media
+        (order_id, canonical_media_id, revision, receipt_id)
+        SELECT ?, ?, ?, ? WHERE EXISTS (
+          SELECT 1 FROM pbe_lifecycle_fulfillment_intents WHERE order_id = ? AND fence_digest = ?
+        ) ON CONFLICT(order_id, canonical_media_id) DO NOTHING`).bind(
+        id, item.canonicalMediaId, item.revision, item.receiptId, id, fenceDigest));
+    }
+    await database.batch(intentStatements);
+    const intent = await database.prepare(`SELECT fence_digest, member_count
+      FROM pbe_lifecycle_fulfillment_intents WHERE order_id = ?`).bind(id).first();
+    const intentMedia = await rowsFrom(database.prepare(`SELECT canonical_media_id, revision, receipt_id
+      FROM pbe_lifecycle_fulfillment_intent_media WHERE order_id = ? ORDER BY canonical_media_id`).bind(id));
+    if (clean(intent?.fence_digest) !== fenceDigest || Number(intent?.member_count) !== fenceMedia.length
+        || intentMedia.length !== fenceMedia.length
+        || intentMedia.some((item, index) => clean(item.canonical_media_id) !== fenceMedia[index].canonicalMediaId
+          || Number(item.revision) !== fenceMedia[index].revision
+          || clean(item.receipt_id) !== fenceMedia[index].receiptId)) {
+      throw lifecycleError("lifecycle_fulfillment_conflict", "Order fulfillment intent conflicts with its exact lifecycle fence.", 409);
+    }
+    await database.batch([
+      database.prepare(`INSERT INTO pbe_lifecycle_fulfillments
+        (order_id, fence_digest, state, lifecycle_operation_id, created_at, updated_at)
+        SELECT intent.order_id, intent.fence_digest, 'ready', '', ?, ?
+        FROM pbe_lifecycle_fulfillment_intents intent
+        WHERE intent.order_id = ? AND intent.fence_digest = ?
+          AND intent.member_count = (SELECT COUNT(*) FROM pbe_lifecycle_fulfillment_intent_media WHERE order_id = intent.order_id)
+          AND NOT EXISTS (
+            SELECT 1 FROM pbe_lifecycle_fulfillment_intent_media member
+            LEFT JOIN pbe_lifecycle_projection projection
+              ON projection.canonical_media_id = member.canonical_media_id
+            WHERE member.order_id = intent.order_id
+              AND (projection.canonical_media_id IS NULL OR projection.denied != 0
+                OR projection.revision != member.revision OR projection.receipt_id != member.receipt_id)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM pbe_lifecycle_fulfillment_intent_media member
+            JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = member.canonical_media_id
+            WHERE member.order_id = intent.order_id
+          )
+        ON CONFLICT(order_id) DO NOTHING`).bind(timestamp, timestamp, id, fenceDigest),
+      database.prepare(`INSERT INTO pbe_lifecycle_fulfillment_media
+        (order_id, canonical_media_id, revision, receipt_id)
+        SELECT member.order_id, member.canonical_media_id, member.revision, member.receipt_id
+        FROM pbe_lifecycle_fulfillment_intent_media member
+        WHERE member.order_id = ? AND EXISTS (
+          SELECT 1 FROM pbe_lifecycle_fulfillments fulfillment
+          WHERE fulfillment.order_id = member.order_id AND fulfillment.fence_digest = ? AND fulfillment.state = 'ready'
+        ) ON CONFLICT(order_id, canonical_media_id) DO NOTHING`).bind(id, fenceDigest),
+    ]);
+    const durable = await fulfillmentFor(id);
+    const members = await rowsFrom(database.prepare(`SELECT canonical_media_id, revision, receipt_id
+      FROM pbe_lifecycle_fulfillment_media WHERE order_id = ? ORDER BY canonical_media_id`).bind(id));
+    if (!durable || durable.state !== "ready" || durable.fenceDigest !== fenceDigest
+        || members.length !== fenceMedia.length
+        || members.some((item, index) => clean(item.canonical_media_id) !== fenceMedia[index].canonicalMediaId
+          || Number(item.revision) !== fenceMedia[index].revision
+          || clean(item.receipt_id) !== fenceMedia[index].receiptId)) {
+      throw lifecycleError("lifecycle_fence_changed", "Lifecycle state changed before fulfillment could be settled; access is denied.", 409);
+    }
+    return durable;
+  };
+
+  const authorizeDownloadCapability = async ({ orderId, token }) => {
+    await assertReady();
+    const id = clean(orderId);
+    const rawToken = clean(token);
+    if (!id || !rawToken) throw lifecycleError("lifecycle_download_capability_invalid", "Download capability identity is incomplete.", 400);
+    const tokenDigest = await digestText(rawToken);
+    const timestamp = now().toISOString();
+    await database.batch([database.prepare(`INSERT INTO pbe_lifecycle_download_capabilities
+      (token_digest, order_id, fence_digest, created_at)
+      SELECT ?, fulfillment.order_id, fulfillment.fence_digest, ?
+      FROM pbe_lifecycle_fulfillments fulfillment
+      WHERE fulfillment.order_id = ? AND fulfillment.state = 'ready'
+        AND NOT EXISTS (
+          SELECT 1 FROM pbe_lifecycle_fulfillment_media media
+          JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = media.canonical_media_id
+          WHERE media.order_id = fulfillment.order_id
+        )
+      ON CONFLICT(token_digest) DO NOTHING`).bind(tokenDigest, timestamp, id)]);
+    const row = await database.prepare(`SELECT capability.order_id, capability.fence_digest, fulfillment.state
+      FROM pbe_lifecycle_download_capabilities capability
+      JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id = capability.order_id
+      WHERE capability.token_digest = ?`).bind(tokenDigest).first();
+    if (clean(row?.order_id) !== id || clean(row?.state) !== "ready") {
+      throw lifecycleError("lifecycle_download_capability_denied", "Download capability cannot be authorized by the current fulfillment settlement.", 409);
+    }
+    return { orderId: id, tokenDigest, fenceDigest: clean(row.fence_digest), state: "ready" };
+  };
+
+  const assertDownloadCapability = async ({ orderId, token }) => {
+    await assertReady();
+    const id = clean(orderId);
+    const rawToken = clean(token);
+    if (!id || !rawToken) throw lifecycleError("lifecycle_download_capability_denied", "Download capability identity is incomplete.", 410);
+    const tokenDigest = await digestText(rawToken);
+    const row = await database.prepare(`SELECT capability.order_id, fulfillment.state
+      FROM pbe_lifecycle_download_capabilities capability
+      JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id = capability.order_id
+      WHERE capability.token_digest = ?`).bind(tokenDigest).first();
+    if (clean(row?.order_id) !== id || clean(row?.state) !== "ready") {
+      throw lifecycleError("lifecycle_download_capability_denied", "Download capability is not authorized by a ready fulfillment settlement.", 410);
+    }
+    return { orderId: id, tokenDigest, state: "ready" };
+  };
+
+  const claimEmailDispatch = async ({ orderId, idempotencyKey }) => {
+    await assertReady();
+    const id = clean(orderId);
+    const key = clean(idempotencyKey);
+    if (!id || !key) throw lifecycleError("lifecycle_email_dispatch_invalid", "Email dispatch identity is incomplete.", 400);
+    const dispatchDigest = await digestText(key);
+    const timestamp = now().toISOString();
+    await database.batch([database.prepare(`INSERT INTO pbe_lifecycle_email_dispatches
+      (dispatch_digest, order_id, fence_digest, state, provider_message_id, created_at, updated_at)
+      SELECT ?, fulfillment.order_id, fulfillment.fence_digest, 'claimed', '', ?, ?
+      FROM pbe_lifecycle_fulfillments fulfillment
+      WHERE fulfillment.order_id = ? AND fulfillment.state = 'ready'
+        AND NOT EXISTS (
+          SELECT 1 FROM pbe_lifecycle_fulfillment_media media
+          JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = media.canonical_media_id
+          WHERE media.order_id = fulfillment.order_id
+        ) ON CONFLICT(dispatch_digest) DO NOTHING`).bind(dispatchDigest, timestamp, timestamp, id)]);
+    const row = await database.prepare(`SELECT dispatch.order_id, dispatch.fence_digest, dispatch.state, fulfillment.state AS fulfillment_state
+      FROM pbe_lifecycle_email_dispatches dispatch
+      JOIN pbe_lifecycle_fulfillments fulfillment ON fulfillment.order_id = dispatch.order_id
+      WHERE dispatch.dispatch_digest = ?`).bind(dispatchDigest).first();
+    if (clean(row?.order_id) !== id || clean(row?.fulfillment_state) !== "ready") {
+      throw lifecycleError("lifecycle_email_dispatch_denied", "Email dispatch cannot be claimed by the current fulfillment settlement.", 409);
+    }
+    return { orderId: id, dispatchDigest, fenceDigest: clean(row.fence_digest), state: clean(row.state) };
+  };
+
+  const completeEmailDispatch = async ({ orderId, idempotencyKey, outcome, providerMessageId = "" }) => {
+    await assertReady();
+    const id = clean(orderId);
+    const key = clean(idempotencyKey);
+    const state = clean(outcome);
+    if (!id || !key || !["sent", "failed"].includes(state)) {
+      throw lifecycleError("lifecycle_email_dispatch_invalid", "Email dispatch completion is invalid.", 400);
+    }
+    const dispatchDigest = await digestText(key);
+    const timestamp = now().toISOString();
+    const result = await database.prepare(`UPDATE pbe_lifecycle_email_dispatches
+      SET state = ?, provider_message_id = ?, updated_at = ?
+      WHERE dispatch_digest = ? AND order_id = ?
+        AND (state = 'claimed' OR state = ? OR (? = 'sent' AND state = 'failed'))`)
+      .bind(state, clean(providerMessageId), timestamp, dispatchDigest, id, state, state).run();
+    if (!result?.success || Number(result?.meta?.changes ?? result?.changes ?? 0) < 1) {
+      throw lifecycleError("lifecycle_email_dispatch_conflict", "Email dispatch claim is missing or conflicts with this completion.", 409);
+    }
+    return { orderId: id, dispatchDigest, state };
+  };
+
   const armBatch = async ({ operationId, requestKey, operation, denied, items }) => {
     await assertReady();
     const members = normalizeMembers(items);
@@ -442,6 +644,13 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         envelope.operationId, operationDigest, member.canonicalMediaId, member.canonicalAssetId,
         timestamp, envelope.operationId,
       ));
+      if (envelope.denied) {
+        statements.push(database.prepare(`UPDATE pbe_lifecycle_fulfillments
+          SET state = 'blocked_pending_lifecycle', lifecycle_operation_id = ?, updated_at = ?
+          WHERE state IN ('ready', 'blocked_pending_lifecycle') AND order_id IN (
+            SELECT order_id FROM pbe_lifecycle_fulfillment_media WHERE canonical_media_id = ?
+          )`).bind(envelope.operationId, timestamp, member.canonicalMediaId));
+      }
     }
     try {
       await database.batch(statements);
@@ -584,6 +793,13 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         item.canonicalMediaId, item.canonicalAssetId, item.revision, Number(item.denied), item.lifecycleState,
         id, digest, item.receiptId, timestamp,
       ));
+      if (Boolean(operationRow.intended_denied)) {
+        statements.push(database.prepare(`UPDATE pbe_lifecycle_fulfillments
+          SET state = 'manual_refund_review', lifecycle_operation_id = ?, updated_at = ?
+          WHERE state IN ('ready', 'blocked_pending_lifecycle') AND order_id IN (
+            SELECT order_id FROM pbe_lifecycle_fulfillment_media WHERE canonical_media_id = ?
+          )`).bind(id, timestamp, item.canonicalMediaId));
+      }
     }
     statements.push(database.prepare("DELETE FROM pbe_lifecycle_barriers WHERE operation_id = ? AND operation_digest = ?").bind(id, digest));
     statements.push(database.prepare(`UPDATE pbe_lifecycle_operations SET state = 'deployed_applied', updated_at = ?
@@ -711,6 +927,20 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         AND EXISTS (SELECT 1 FROM pbe_lifecycle_operations WHERE operation_id = ? AND operation_digest = ? AND state = 'armed')`).bind(
         id, digest, id, digest,
       ),
+      database.prepare(`UPDATE pbe_lifecycle_fulfillments
+        SET state = 'ready', lifecycle_operation_id = '', updated_at = ?
+        WHERE state = 'blocked_pending_lifecycle'
+          AND NOT EXISTS (
+            SELECT 1 FROM pbe_lifecycle_fulfillment_media media
+            JOIN pbe_lifecycle_barriers barrier ON barrier.canonical_media_id = media.canonical_media_id
+            WHERE media.order_id = pbe_lifecycle_fulfillments.order_id
+              AND NOT (barrier.operation_id = ? AND barrier.operation_digest = ?)
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM pbe_lifecycle_fulfillment_media media
+            JOIN pbe_lifecycle_projection projection ON projection.canonical_media_id = media.canonical_media_id
+            WHERE media.order_id = pbe_lifecycle_fulfillments.order_id AND projection.denied = 1
+          )`).bind(timestamp, id, digest),
       database.prepare(`UPDATE pbe_lifecycle_operations SET state = 'aborted', updated_at = ?
         WHERE operation_id = ? AND operation_digest = ? AND state = 'armed'`).bind(timestamp, id, digest),
     ]);
@@ -820,6 +1050,12 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     ensureSchema: assertReady,
     seedVisibleBatch,
     activate,
+    commitFulfillmentReady,
+    fulfillmentFor,
+    authorizeDownloadCapability,
+    assertDownloadCapability,
+    claimEmailDispatch,
+    completeEmailDispatch,
     armBatch,
     markLocallyCommitted,
     applyBatch,

@@ -209,10 +209,10 @@ signing state, or ticket was changed.
 The integrated deny-plane source candidate passed these local checks on
 2026-08-13:
 
-- focused deployed deny-plane/browser coverage: 107 Node tests;
+- focused deployed deny-plane/browser/local-rehearsal coverage: 113 Node tests;
 - focused hosted relay, lifecycle journal, session, and local-server coverage:
   89 Python tests;
-- complete `npm test`: 25/25 pretests, 219/219 Node tests, and 263/263 Python
+- complete `npm test`: 31/31 pretests, 221/221 Node tests, and 263/263 Python
   tests;
 - full Swift package: 73 tests across four suites;
 - `python3 scripts/generate_owner_swift_contract.py --check`: 38 operations

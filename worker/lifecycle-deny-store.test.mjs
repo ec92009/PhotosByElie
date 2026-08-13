@@ -242,6 +242,112 @@ test("armed barriers survive response loss and same digest replay returns the sa
   });
 });
 
+test("paid fulfillment settlement and deny arm share one authoritative D1 ordering point", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  const ready = await store.commitFulfillmentReady({
+    orderId: "order-ready-then-denied",
+    mediaIds: ["media-one"],
+    fence,
+  });
+  assert.equal(ready.state, "ready");
+  assert.deepEqual(await store.commitFulfillmentReady({
+    orderId: "order-ready-then-denied",
+    mediaIds: ["media-one"],
+    fence,
+  }), ready);
+
+  const arm = await store.armBatch({ operationId: "op-order-deny", operation: "x", denied: true, items: [member()] });
+  assert.equal((await store.fulfillmentFor("order-ready-then-denied")).state, "blocked_pending_lifecycle");
+  await store.markLocallyCommitted(arm);
+  await store.applyBatch({ ...arm, receipts: [receiptFor(arm, "one", true, "recoverable")] });
+  assert.deepEqual(await store.fulfillmentFor("order-ready-then-denied"), {
+    ...ready,
+    state: "manual_refund_review",
+    lifecycleOperationId: arm.operationId,
+    updatedAt: (await store.fulfillmentFor("order-ready-then-denied")).updatedAt,
+  });
+});
+
+test("aborting an uncommitted deny arm restores a temporarily blocked fulfillment", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  await store.commitFulfillmentReady({ orderId: "order-arm-aborts", mediaIds: ["media-one"], fence });
+  const arm = await store.armBatch({ operationId: "op-order-abort", operation: "x", denied: true, items: [member()] });
+  assert.equal((await store.fulfillmentFor("order-arm-aborts")).state, "blocked_pending_lifecycle");
+  await store.abort({ ...arm, proof: await abortProofFor(arm) });
+  assert.equal((await store.fulfillmentFor("order-arm-aborts")).state, "ready");
+});
+
+test("applied denial keeps manual refund review monotonic across a later restore", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  await store.commitFulfillmentReady({ orderId: "order-denied-restored", mediaIds: ["media-one"], fence });
+  await armCommitApply(store, "op-order-applied-deny", "x", true, [member()]);
+  assert.equal((await store.fulfillmentFor("order-denied-restored")).state, "manual_refund_review");
+  await armCommitApply(store, "op-order-later-restore", "restore", false, [member()]);
+  assert.equal((await store.fulfillmentFor("order-denied-restored")).state, "manual_refund_review");
+});
+
+test("download capabilities are settlement-bound and stop authorizing on an arm", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  await store.commitFulfillmentReady({ orderId: "order-capability", mediaIds: ["media-one"], fence });
+  const authorized = await store.authorizeDownloadCapability({ orderId: "order-capability", token: "secret-token" });
+  assert.match(authorized.tokenDigest, /^[a-f0-9]{64}$/);
+  await store.assertDownloadCapability({ orderId: "order-capability", token: "secret-token" });
+  await assert.rejects(store.assertDownloadCapability({ orderId: "order-capability", token: "other-token" }), {
+    code: "lifecycle_download_capability_denied",
+  });
+  await store.armBatch({ operationId: "op-capability-deny", operation: "x", denied: true, items: [member()] });
+  await assert.rejects(store.assertDownloadCapability({ orderId: "order-capability", token: "secret-token" }), {
+    code: "lifecycle_download_capability_denied",
+  });
+  await assert.rejects(store.authorizeDownloadCapability({ orderId: "order-capability", token: "late-token" }), {
+    code: "lifecycle_download_capability_denied",
+  });
+});
+
+test("email dispatch claims are idempotent and denied after the settlement is armed", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  await store.commitFulfillmentReady({ orderId: "order-email", mediaIds: ["media-one"], fence });
+  const claim = await store.claimEmailDispatch({ orderId: "order-email", idempotencyKey: "email-key" });
+  assert.equal(claim.state, "claimed");
+  assert.equal((await store.claimEmailDispatch({ orderId: "order-email", idempotencyKey: "email-key" })).dispatchDigest, claim.dispatchDigest);
+  assert.equal((await store.completeEmailDispatch({
+    orderId: "order-email", idempotencyKey: "email-key", outcome: "failed",
+  })).state, "failed");
+  assert.equal((await store.completeEmailDispatch({
+    orderId: "order-email", idempotencyKey: "email-key", outcome: "sent", providerMessageId: "provider-one",
+  })).state, "sent");
+  await assert.rejects(store.completeEmailDispatch({
+    orderId: "order-email", idempotencyKey: "email-key", outcome: "failed",
+  }), { code: "lifecycle_email_dispatch_conflict" });
+  await store.armBatch({ operationId: "op-email-deny", operation: "x", denied: true, items: [member()] });
+  await assert.rejects(store.claimEmailDispatch({ orderId: "order-email", idempotencyKey: "late-email-key" }), {
+    code: "lifecycle_email_dispatch_denied",
+  });
+});
+
+test("an already armed deny prevents a paid fulfillment settlement", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const fence = await store.assertAllowed(["media-one"], "fulfillment:start");
+  await store.armBatch({ operationId: "op-before-order", operation: "x", denied: true, items: [member()] });
+  await assert.rejects(store.commitFulfillmentReady({
+    orderId: "order-denied-first",
+    mediaIds: ["media-one"],
+    fence,
+  }), { code: "lifecycle_fence_changed" });
+  assert.equal(await store.fulfillmentFor("order-denied-first"), null);
+});
+
 test("arm rejects operation and denied-state contradictions", async () => {
   const database = new TransactionalD1();
   const store = await readyStore(database);

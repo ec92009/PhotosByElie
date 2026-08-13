@@ -3321,6 +3321,61 @@ test("revocation racing the final ready commit enters manual refund review", asy
   assert.equal(retained.delivery, null);
 });
 
+test("authoritative fulfillment settlement repairs a ready KV projection after a deny arm race", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const baseStore = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const photoId = firstDeliverablePhotoId(catalog);
+  let settlementState = null;
+  let armAfterReadyProjection = false;
+  const store = {
+    ...baseStore,
+    putOrder: async (order) => {
+      const saved = await baseStore.putOrder(order);
+      if (order.lifecycleSettlementBound && order.status === "preparing") armAfterReadyProjection = true;
+      return saved;
+    },
+  };
+  const lifecycleDenyStore = {
+    ensureSchema: async () => ({ state: "ready" }),
+    visibilityFor: async (ids) => ids.map((id) => ({ canonicalMediaId: id, visible: true, revision: 0 })),
+    assertAllowed: async (ids) => ({
+      media: ids.map((id) => ({ canonicalMediaId: id, revision: 0, receiptId: "seed:test" })),
+      digest: "a".repeat(64),
+    }),
+    commitFulfillmentReady: async ({ orderId }) => {
+      settlementState = { orderId, state: "ready", lifecycleOperationId: "" };
+      return settlementState;
+    },
+    fulfillmentFor: async (orderId) => armAfterReadyProjection
+      ? { orderId, state: "manual_refund_review", lifecycleOperationId: "op-raced" }
+      : settlementState,
+  };
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    randomUUID,
+    lifecycleDenyStore,
+    delivery: createPerFileTestDelivery(() => new Date("2026-05-07T12:00:00.000Z")),
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "full" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const payResponse = await worker.fetch(jsonRequest("https://worker.test/mock-stripe/pay", {
+    checkoutSessionId: checkout.checkout.sessionId,
+  }));
+  assert.equal(payResponse.status, 409);
+  assert.equal((await payResponse.json()).error.code, "paid_asset_revoked");
+  const retained = await baseStore.getOrder(checkout.order.id);
+  assert.equal(retained.status, "manual_refund_review");
+  assert.equal(retained.delivery, null);
+  assert.equal(retained.deliveryError.lifecycleCode, "paid_asset_revoked");
+});
+
 test("paid checkout sends per-purchased-item delivery email links", async () => {
   const catalog = loadCatalog();
   const randomUUID = deterministicIds();

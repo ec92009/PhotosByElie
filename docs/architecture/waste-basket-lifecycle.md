@@ -104,6 +104,19 @@ control/barrier, and receipt tables—not `pbe_sidecar_decisions`—and must:
   search, checkout, fulfillment, ZIP, old/new download tokens, and media
   GET/HEAD/Range.
 
+Paid fulfillment is serialized in the same dedicated ACCESS_DB plane. A ready
+settlement records the exact lifecycle fence and canonical media membership;
+an armed deny moves it to a reversible hold in the same D1 transaction, and
+the applied deny makes `manual_refund_review` monotonic. KV order/download
+records are delivery projections only. Checkout rechecks the authoritative
+settlement around token persistence, a D1-bound email dispatch claim, and its
+final response, while every redemption still rechecks current lifecycle
+authority. The dispatch claim is the explicit external temporal boundary: an
+email claimed while the settlement was authoritatively ready may already reach
+the provider, but all of its links become unusable after a later arm. Existing
+pre-migration paid links retain their original lifecycle-checked path; only new
+settlement-marked tokens require the additional capability row.
+
 Failure must over-deny and no timeout may clear the barrier. Until replay,
 stale-revision, duplicate, partial-batch, persistence, race, and canonical-ID
 tests prove this entire path, deployed immediate revocation remains a P1 and

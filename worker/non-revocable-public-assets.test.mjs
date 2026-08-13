@@ -85,7 +85,7 @@ test("deployed media route rechecks the deny plane after the R2 read", async () 
       return {
         bind() { return this; },
         async first() {
-          if (sql.includes("pbe_lifecycle_control")) return { schema_version: 3, state: "ready" };
+          if (sql.includes("pbe_lifecycle_control")) return { schema_version: 4, state: "ready" };
           if (sql.includes("pbe_lifecycle_media_bindings")) return { canonical_media_id: "media-one" };
           return null;
         },

@@ -360,7 +360,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isFixtureRefreshDisabled: Bool {
-        fixtureSelectionOperationInFlight || pbeOwnerFixtureSession != nil
+        fixtureSelectionOperationInFlight
+            || isLaunchingPBEOwner
+            || pbeOwnerFixtureSession != nil
     }
 
     var fixtureChooserExplanation: String? {
@@ -1585,6 +1587,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixtures() async {
+        guard !isLaunchingPBEOwner else {
+            fixtureStatus = "PBE Owner is opening with the captured current fixture; refresh is disabled."
+            return
+        }
         guard !isLoadingFixtureTree else { return }
         isLoadingFixtureTree = true
         isRunningFixture = true

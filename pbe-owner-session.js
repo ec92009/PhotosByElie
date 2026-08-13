@@ -12,6 +12,7 @@
     message: "Owner actions are available only when this page is opened by Backstage on a Mac.",
   };
   let heartbeatTimer = 0;
+  let sessionGeneration = 0;
   let bannerResizeObserver = null;
 
   const consumeFragment = () => {
@@ -172,6 +173,7 @@
   };
 
   const failClosed = (error) => {
+    sessionGeneration += 1;
     window.clearInterval(heartbeatTimer);
     heartbeatTimer = 0;
     browserTicket = "";
@@ -184,8 +186,13 @@
   };
 
   const heartbeat = async () => {
+    const generation = sessionGeneration;
+    if (!state.ready || state.phase !== "ready" || !state.session) return publicState();
     try {
       const payload = await request("/session/heartbeat", { method: "POST" });
+      if (generation !== sessionGeneration || state.phase !== "ready" || !state.session) {
+        return publicState();
+      }
       update({
         phase: "ready",
         ready: true,
@@ -193,12 +200,15 @@
         message: readyMessage(payload.session),
       });
     } catch (error) {
+      if (generation !== sessionGeneration) return publicState();
       failClosed(error);
     }
+    return publicState();
   };
 
   const bootstrap = async () => {
     if (!localHost || !ownerSurface) return publicState();
+    const generation = ++sessionGeneration;
     update({ phase: "checking", ready: false, message: "Validating the Backstage fixture lease…" });
     try {
       if (browserTicket) {
@@ -210,6 +220,7 @@
       }
       const payload = await request("/session");
       await loadFixtureGallery(payload.session);
+      if (generation !== sessionGeneration) return publicState();
       update({
         phase: "ready",
         ready: true,
@@ -218,6 +229,7 @@
       });
       heartbeatTimer = window.setInterval(heartbeat, 30_000);
     } catch (error) {
+      if (generation !== sessionGeneration) return publicState();
       failClosed(error);
     }
     return publicState();
@@ -252,6 +264,9 @@
 
   const close = async () => {
     if (!state.session) return;
+    sessionGeneration += 1;
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = 0;
     update({ phase: "closing", ready: false, message: "Closing the fixture lease…" });
     try {
       await request("/session/close", { method: "POST" }).catch(() => null);

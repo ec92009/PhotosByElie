@@ -38,6 +38,101 @@ test("browser session handoff exchanges an opaque ticket for an HttpOnly session
   assert.match(source, /role="status" aria-live="polite"/);
 });
 
+test("a stale in-flight heartbeat cannot reopen a closed Owner session", async () => {
+  let heartbeatCallback = null;
+  let resolveHeartbeat = null;
+  const session = {
+    id: "session-generation-one",
+    state: "ready",
+    fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture",
+    expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload) => ({ ok: true, json: async () => payload });
+  const fetch = async (url) => {
+    if (url.endsWith("/session")) return response({ ok: true, session });
+    if (url.endsWith("/gallery")) {
+      return response({
+        ok: true,
+        gallery: {
+          fixtureId: session.fixtureId,
+          fixtureBreadcrumb: session.fixtureBreadcrumb,
+          items: [],
+          summary: { filtered: 0 },
+        },
+      });
+    }
+    if (url.endsWith("/session/heartbeat")) {
+      return new Promise((resolve) => { resolveHeartbeat = resolve; });
+    }
+    if (url.endsWith("/session/close")) {
+      return response({ ok: true, session: { ...session, state: "closed" } });
+    }
+    throw new Error(`unexpected request ${url}`);
+  };
+  const children = {
+    title: { textContent: "" },
+    message: { textContent: "" },
+    close: { disabled: false, addEventListener: () => {} },
+  };
+  let banner = null;
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: (selector) => selector === "[data-pbe-owner-session]" ? banner : null,
+    createElement: () => {
+      banner = {
+        className: "",
+        dataset: {},
+        innerHTML: "",
+        setAttribute: () => {},
+        getBoundingClientRect: () => ({ height: 40 }),
+        querySelector: (selector) => ({
+          "[data-pbe-owner-title]": children.title,
+          "[data-pbe-owner-message]": children.message,
+          "[data-pbe-owner-close]": children.close,
+        }[selector] || null),
+      };
+      return banner;
+    },
+  };
+  const window = {
+    location: {
+      hostname: "127.0.0.1",
+      pathname: "/gallery.html",
+      search: "?gallery=pbe-owner",
+      hash: "",
+    },
+    history: { replaceState: () => {} },
+    clearInterval: () => {},
+    setInterval: (callback) => {
+      heartbeatCallback = callback;
+      return 1;
+    },
+    dispatchEvent: () => {},
+  };
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window,
+    document,
+    fetch,
+    URLSearchParams,
+    CustomEvent: class CustomEvent {},
+    Date,
+  });
+
+  await window.photosByEliePBEOwnerSessionReady;
+  assert.equal(window.photosByEliePBEOwnerSession.state().ready, true);
+  const pendingHeartbeat = heartbeatCallback();
+  await window.photosByEliePBEOwnerSession.close();
+  resolveHeartbeat(response({ ok: true, session }));
+  await pendingHeartbeat;
+
+  const finalState = window.photosByEliePBEOwnerSession.state();
+  assert.equal(finalState.phase, "unavailable");
+  assert.equal(finalState.ready, false);
+  assert.equal(finalState.session, null);
+});
+
 test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actions", () => {
   const session = read("pbe-owner-session.js");
   const actions = read("hidden-actions.js");
@@ -216,7 +311,11 @@ test("Undo preserves retry history on failure and batches multi-restore atomical
           failNext = false;
           throw new Error("synthetic gateway rollback");
         }
-        return { ok: true };
+        return {
+          ok: true,
+          authoritative_committed: true,
+          projection: { state: "pending", retryable: true },
+        };
       },
     },
     photosByEliePBEOwnerSessionReady: Promise.resolve(),

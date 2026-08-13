@@ -95,7 +95,7 @@ struct BackstageFixtureSelectionTests {
 
     @Test("PBE launch captures fixture synchronously and releases provisional freeze")
     @MainActor
-    func pbeLaunchProvisionalFreeze() throws {
+    func pbeLaunchProvisionalFreeze() async throws {
         let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
         model.installFixtureTree(
             fixtureTree,
@@ -107,10 +107,15 @@ struct BackstageFixtureSelectionTests {
         #expect(captured.fixtureID == "fixture-pool")
         #expect(captured.breadcrumb == "RE › La Concha › Pool")
         #expect(model.isFixtureChooserDisabled)
+        #expect(model.isFixtureRefreshDisabled)
         #expect(model.selectFixture("fixture-expo") == false)
         #expect(model.selectedFixtureID == "fixture-pool")
+        await model.loadFixtures()
+        #expect(model.selectedFixtureID == "fixture-pool")
+        #expect(model.fixtureStatus.contains("refresh is disabled"))
 
         model.finishPBEOwnerLaunch()
+        #expect(model.isFixtureRefreshDisabled == false)
         #expect(model.selectFixture("fixture-expo"))
     }
 

@@ -12,9 +12,11 @@ compatibility views only.
   sale, upload, and lifecycle context captured in the same transaction.
 - Only an explicitly confirmed **Empty Waste Basket** operation may create an
   active global tombstone. It retains source media, R2 objects, and history.
-- Active tombstones and recoverable basket entries are fail-closed for global
-  eligibility, publication, search, delivery, and commerce. Tombstone restore
-  is a separate explicit and auditable operation.
+- Local catalog generation excludes active tombstones and recoverable basket
+  entries. Immediate deployed search, delivery, and commerce revocation still
+  requires the dedicated ACCESS_DB deny projection described below; a pending
+  catalog publish is not equivalent enforcement. Tombstone restore is a
+  separate explicit and auditable operation.
 - Repeated requests converge by durable `request_key`; the SQLite transaction
   uses `BEGIN IMMEDIATE` and records an operation plus per-asset receipt.
 
@@ -79,6 +81,30 @@ Normal UI, API, import, cleanup, and R2 routes cannot write a tombstone:
 Existing cleanup and migration tools remain separately named legacy/repair
 surfaces. They are not allowed to masquerade as X or Empty Waste Basket.
 Sidecar itself is obsolete as a product, authority, and launch path.
+
+## Retained immediate-revocation blocker
+
+PBB-79 remains the sole authority, but this source candidate does not yet have
+the complete receipt-backed cloud materialization required for immediate
+runtime denial. The retained slice must use dedicated ACCESS_DB lifecycle deny,
+control/barrier, and receipt tables—not `pbe_sidecar_decisions`—and must:
+
+- arm a persistent fail-closed barrier before the local authoritative mutation;
+- commit the Owner transaction, lifecycle revision, receipt, and outbox
+  atomically;
+- project both recoverable and tombstoned rows as denied, idempotently apply
+  only newer canonical-ID revisions, and clear the barrier only after receipt
+  application;
+- keep restore denied until a higher-revision restore receipt applies, without
+  republishing it; and
+- deny generically when projection/barrier state is unavailable across public
+  search, checkout, fulfillment, ZIP, old/new download tokens, and media
+  GET/HEAD/Range.
+
+Failure must over-deny and no timeout may clear the barrier. Until replay,
+stale-revision, duplicate, partial-batch, persistence, race, and canonical-ID
+tests prove this entire path, deployed immediate revocation remains a P1 and
+`catalog_publish_pending` remains evidence of unfinished propagation only.
 
 ## Rollback and operational gate
 

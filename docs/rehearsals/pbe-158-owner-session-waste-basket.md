@@ -1,8 +1,8 @@
 # PBE-158 Owner session and Waste Basket train evidence
 
-Status: source/test candidate only. This record does not assert deployment,
-installation, credential enrollment, live database acceptance, or ticket
-completion.
+Status: source/test candidate with one retained P1 architecture blocker. This
+record does not assert deployment, installation, credential enrollment, live
+database acceptance, or ticket completion.
 
 Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
 
@@ -10,7 +10,9 @@ Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
 
 - Backstage on an enrolled Mac is the sole actionable Owner launch path.
 - Direct Google browser login for `ec92009@gmail.com` can provision, list, and
-  revoke Backstage device credentials only.
+  revoke Backstage device credentials only on official deployed PBE. There is
+  no local/Tailscale browser bearer transfer and no refresh token; Backstage
+  re-presents its Keychain device credential for each short-lived access token.
 - One global, stable fixture identity drives Culling, Review, Metadata, Upload,
   Delivery, and the hosted PBE Owner lease.
 - The hosted lease freezes fixture id, breadcrumb, source identity, catalog
@@ -29,8 +31,10 @@ Base: `a6aea417a2838199c4fa61bfdfbf711f0a98c2a9`
 
 The base already contains the guarded gateway, provenance, operation, receipt,
 restore, explicit-empty, and legacy-bypass controls. This train adds a second
-fixture assertion inside the restore transaction so a hosted PBE request cannot
-restore a recoverable row from another frozen fixture.
+fixture assertion inside the restore transaction, prohibits every retained
+Sidecar local/cloud tombstone-family write, strips lifecycle fields from D1
+editorial batches while preserving existing lifecycle state, and makes hosted
+multi-photo Undo one atomic gateway batch whose history survives failure.
 
 Focused proof:
 
@@ -40,8 +44,23 @@ python3 -m unittest -v scripts.waste_basket_gateway_test
 
 The tests cover recoverable X, exact restore, idempotent/concurrent retry,
 confirmed empty as the sole normal tombstone transition, culling/review/gallery
-gateway convergence, audited legacy markers, and transactional hosted-fixture
-restore.
+gateway convergence, Sidecar restore/mirror rejection, D1 editorial-batch
+lifecycle preservation, atomic hosted batch restore, audited legacy markers,
+and transactional hosted-fixture restore.
+
+Retained P1 blocker: immediate deployed revocation is not implemented. There is
+no dedicated ACCESS_DB lifecycle deny projection/control/receipt schema, no
+pre-mutation fail-closed barrier plus authoritative Owner outbox receipt, and no
+idempotent connector that applies a higher-revision receipt before clearing the
+barrier. Consequently the public search overlay and Worker checkout,
+fulfillment, ZIP, old/new download-token, and media GET/HEAD/Range paths do not
+yet consult an authoritative runtime deny projection. Local
+`catalog_publish_pending` and a later catalog publish are insufficient. This
+candidate deliberately does not reuse `pbe_sidecar_decisions` or claim that
+recoverable/tombstoned assets are immediately denied in deployed commerce.
+PBB-79 and PBE-158 therefore remain uncloseable until that complete slice has
+replay, stale-revision, duplicate, partial-batch, barrier-persistence, race, and
+canonical-ID proof.
 
 Remaining human/live gate: use an approved disposable copy of a real
 `Owner.sqlite` through the signed installed Backstage build; confirm X, Put
@@ -77,15 +96,19 @@ listed surface changes together while an Owner session prevents drift.
 
 ## PBE-122 independent acceptance evidence
 
-Worker tests prove browser provisioning-only authority, device enrollment,
-refresh/revocation, session mint/introspection/close, fixture and identity
-binding, expiry, and rejection of direct Google Owner actions. Python tests
-prove opaque local identities, one active in-memory lease, one-use browser
-handoff, HttpOnly browser session, expiry/close, exact fixture gallery scope,
-and guarded X/restore derivation. JavaScript tests prove page boot order,
+Worker tests prove official-origin browser provisioning-only authority, device
+enrollment/re-authentication/revocation, absence of refresh and local OAuth
+transfer routes, session mint/introspection/close, fixture and identity binding,
+expiry, exact CORS allowlists, and rejection of direct Google Owner actions.
+Python tests prove opaque local identities, fixture-membership revisions, random
+loopback host launch with one-use bootstrap and independently checked checkout
+identity, one active in-memory lease, exact Origin/JSON CSRF checks, one-use
+browser handoff, HttpOnly browser session, expiry/close, exact fixture gallery
+scope, and guarded X/restore derivation. JavaScript tests prove page boot order,
 fail-closed actions, session-scoped transient history, absence of browser
 credential storage, and narrow/desktop status styling. Swift tests prove the
-Backstage mint/attach/freeze/close transport contract.
+Backstage device re-authentication and random-port mint/attach/freeze/close
+transport contract.
 
 Focused proof:
 

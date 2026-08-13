@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import secrets
 import sqlite3
+import stat
 import subprocess
 import threading
 import time
@@ -32,6 +33,9 @@ PBE_OWNER_HOST_REQUIRED_PATHS = (
     "scripts/local_server.py",
     "scripts/pbe_owner_session.py",
     "scripts/waste_basket_gateway.py",
+)
+PBE_OWNER_PYTHON_IMPORT_EXTENSIONS = frozenset(
+    {".bundle", ".dylib", ".pth", ".py", ".pyc", ".pyo", ".so"}
 )
 
 
@@ -61,6 +65,50 @@ def _host_scope_pathspecs(repo_root: Path) -> tuple[str, ...]:
     return tuple(pathspecs)
 
 
+def _assert_no_stray_python_host_content(
+    repo_root: Path,
+    tracked_scripts: set[str],
+) -> None:
+    """Reject untracked content that Python could execute from ``scripts/``."""
+
+    scripts_root = repo_root / "scripts"
+    try:
+        candidates = tuple(scripts_root.rglob("*"))
+        for candidate in candidates:
+            relative = candidate.relative_to(repo_root).as_posix()
+            if relative in tracked_scripts:
+                continue
+            metadata = candidate.lstat()
+            if stat.S_ISDIR(metadata.st_mode):
+                continue
+            suffix = candidate.suffix.lower()
+            cache_bytecode = (
+                "__pycache__" in candidate.relative_to(scripts_root).parts
+                and suffix in {".pyc", ".pyo"}
+                and stat.S_ISREG(metadata.st_mode)
+            )
+            if cache_bytecode:
+                continue
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or suffix in PBE_OWNER_PYTHON_IMPORT_EXTENSIONS
+                or metadata.st_mode & 0o111
+            ):
+                raise PBEOwnerSessionError(
+                    "PBE Owner requires a scripts import scope without stray executable content.",
+                    code="pbe_owner_checkout_stray_import",
+                    status=409,
+                )
+    except PBEOwnerSessionError:
+        raise
+    except (OSError, RuntimeError, ValueError) as error:
+        raise PBEOwnerSessionError(
+            "PBE Owner host cannot verify its Python import scope.",
+            code="pbe_owner_checkout_identity_unavailable",
+            status=503,
+        ) from error
+
+
 def _verified_host_tree(repo_root: Path, pathspecs: tuple[str, ...]) -> tuple[str, str]:
     try:
         top_level = _git(repo_root, "rev-parse", "--show-toplevel").stdout.decode("utf-8").strip()
@@ -76,6 +124,12 @@ def _verified_host_tree(repo_root: Path, pathspecs: tuple[str, ...]) -> tuple[st
         }
         if not set(PBE_OWNER_HOST_REQUIRED_PATHS).issubset(tracked):
             raise ValueError("required host files are not tracked")
+        tracked_scripts = {
+            value.decode("utf-8")
+            for value in _git(repo_root, "ls-files", "-z", "--", "scripts").stdout.split(b"\0")
+            if value
+        }
+        _assert_no_stray_python_host_content(repo_root, tracked_scripts)
         dirty = _git(
             repo_root,
             "status",

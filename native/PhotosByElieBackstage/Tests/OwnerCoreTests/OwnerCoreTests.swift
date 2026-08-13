@@ -2733,8 +2733,8 @@ struct PBEOwnerHostContractTests {
     }
     """
 
-    @Test("Host checkout identity rejects dirty and assume-unchanged tracked code")
-    func checkoutIdentityFailsClosed() throws {
+    @Test("Host launch rejects dirty, hidden, and stray Python code")
+    func checkoutIdentityFailsClosed() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-owner-checkout-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(
@@ -2743,7 +2743,7 @@ struct PBEOwnerHostContractTests {
         )
         defer { try? FileManager.default.removeItem(at: root) }
 
-        try "node_modules/\n".write(
+        try "node_modules/\nscripts/ignored_shadow.py\n".write(
             to: root.appendingPathComponent(".gitignore"),
             atomically: true,
             encoding: .utf8
@@ -2779,6 +2779,67 @@ struct PBEOwnerHostContractTests {
         )
         try "ignored dependency\n".write(to: ignored, atomically: true, encoding: .utf8)
         #expect(try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root) == cleanIdentity)
+
+        let bytecodeCache = root.appendingPathComponent(
+            "scripts/__pycache__/local_server.cpython-314.pyc"
+        )
+        try FileManager.default.createDirectory(
+            at: bytecodeCache.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("isolated launch cache".utf8).write(to: bytecodeCache)
+        #expect(try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root) == cleanIdentity)
+
+        let importShadow = root.appendingPathComponent("scripts/json.py")
+        try "raise RuntimeError('executed before attestation')\n".write(
+            to: importShadow,
+            atomically: true,
+            encoding: .utf8
+        )
+        let localHost = PBEOwnerLocalHostService(
+            transport: RoutingTransport(responses: [:]),
+            repositoryRoot: root
+        )
+        do {
+            _ = try await localHost.ensureReadiness(fixtureID: "fixture-la-concha")
+            Issue.record("Backstage launched a host with an untracked scripts/json.py")
+        } catch let error as APIErrorEnvelope {
+            #expect(error.error.code == "pbe_owner_checkout_stray_import")
+        }
+        await localHost.stopIfLaunched()
+        try FileManager.default.removeItem(at: importShadow)
+
+        let ignoredShadow = root.appendingPathComponent("scripts/ignored_shadow.py")
+        try "raise RuntimeError('ignored shadow')\n".write(
+            to: ignoredShadow,
+            atomically: true,
+            encoding: .utf8
+        )
+        do {
+            _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root)
+            Issue.record("An ignored Python import shadow was accepted")
+        } catch let error as APIErrorEnvelope {
+            #expect(error.error.code == "pbe_owner_checkout_stray_import")
+        }
+        try FileManager.default.removeItem(at: ignoredShadow)
+
+        let strayExecutable = root.appendingPathComponent("scripts/stray-host-helper")
+        try "#!/bin/sh\nexit 0\n".write(
+            to: strayExecutable,
+            atomically: true,
+            encoding: .utf8
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: strayExecutable.path
+        )
+        do {
+            _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: root)
+            Issue.record("An untracked executable in the Python host scope was accepted")
+        } catch let error as APIErrorEnvelope {
+            #expect(error.error.code == "pbe_owner_checkout_stray_import")
+        }
+        try FileManager.default.removeItem(at: strayExecutable)
 
         let host = root.appendingPathComponent("scripts/local_server.py")
         try "# dirty tracked host\n".write(to: host, atomically: true, encoding: .utf8)

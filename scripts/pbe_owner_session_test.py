@@ -50,11 +50,14 @@ class PBEOwnerSessionTests(unittest.TestCase):
             "expiresAt": "2033-05-18T03:35:00Z",
         }
 
-    def test_checkout_identity_rejects_dirty_or_hidden_host_changes(self) -> None:
+    def test_checkout_identity_rejects_dirty_hidden_or_stray_host_code(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "scripts").mkdir()
-            (root / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+            (root / ".gitignore").write_text(
+                "node_modules/\nscripts/ignored_shadow.py\n",
+                encoding="utf-8",
+            )
             (root / "scripts/pbe_owner_host_tracked_paths.txt").write_text(
                 ":(glob)scripts/**/*.py\n",
                 encoding="utf-8",
@@ -78,6 +81,33 @@ class PBEOwnerSessionTests(unittest.TestCase):
             ignored.write_text("ignored dependency\n", encoding="utf-8")
             (root / "unrelated-untracked.txt").write_text("not host code\n", encoding="utf-8")
             self.assertEqual(checkout_identity(root), clean_identity)
+
+            bytecode_cache = root / "scripts/__pycache__/local_server.cpython-314.pyc"
+            bytecode_cache.parent.mkdir()
+            bytecode_cache.write_bytes(b"isolated launch cache")
+            self.assertEqual(checkout_identity(root), clean_identity)
+
+            import_shadow = root / "scripts/json.py"
+            import_shadow.write_text("raise RuntimeError('executed before attestation')\n", encoding="utf-8")
+            with self.assertRaises(PBEOwnerSessionError) as stray:
+                checkout_identity(root)
+            self.assertEqual(stray.exception.code, "pbe_owner_checkout_stray_import")
+            import_shadow.unlink()
+
+            ignored_shadow = root / "scripts/ignored_shadow.py"
+            ignored_shadow.write_text("raise RuntimeError('ignored shadow')\n", encoding="utf-8")
+            with self.assertRaises(PBEOwnerSessionError) as ignored_stray:
+                checkout_identity(root)
+            self.assertEqual(ignored_stray.exception.code, "pbe_owner_checkout_stray_import")
+            ignored_shadow.unlink()
+
+            stray_executable = root / "scripts/stray-host-helper"
+            stray_executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            stray_executable.chmod(0o755)
+            with self.assertRaises(PBEOwnerSessionError) as executable:
+                checkout_identity(root)
+            self.assertEqual(executable.exception.code, "pbe_owner_checkout_stray_import")
+            stray_executable.unlink()
 
             host = root / "scripts/local_server.py"
             host.write_text("# dirty tracked host\n", encoding="utf-8")

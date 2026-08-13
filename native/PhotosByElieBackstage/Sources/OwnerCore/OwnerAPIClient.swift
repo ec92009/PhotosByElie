@@ -97,6 +97,9 @@ public protocol PBEOwnerHostServing: Sendable {
 
 enum PBEOwnerCheckoutIdentity {
     private static let scopeManifest = "scripts/pbe_owner_host_tracked_paths.txt"
+    private static let pythonImportExtensions: Set<String> = [
+        "bundle", "dylib", "pth", "py", "pyc", "pyo", "so",
+    ]
     private static let requiredPaths = [
         scopeManifest,
         "scripts/local_server.py",
@@ -122,6 +125,13 @@ enum PBEOwnerCheckoutIdentity {
             guard Set(requiredPaths).isSubset(of: tracked) else {
                 throw VerificationFailure.invalidRepository
             }
+            let trackedScripts = Set(try git(root, [
+                "ls-files", "-z", "--", "scripts",
+            ]).nulStrings)
+            try assertNoStrayPythonHostContent(
+                repositoryRoot: root,
+                trackedScripts: trackedScripts
+            )
             let status = try git(root, [
                 "status", "--porcelain=v1", "-z", "--untracked-files=no", "--",
             ] + pathspecs).data
@@ -180,6 +190,65 @@ enum PBEOwnerCheckoutIdentity {
                 message: "Backstage could not verify the tracked PBE Owner host checkout."
             ))
         }
+    }
+
+    private static func assertNoStrayPythonHostContent(
+        repositoryRoot: URL,
+        trackedScripts: Set<String>
+    ) throws {
+        let fileManager = FileManager.default
+        let scriptsRoot = repositoryRoot.appendingPathComponent("scripts", isDirectory: true)
+        var enumerationFailed = false
+        guard let enumerator = fileManager.enumerator(
+            at: scriptsRoot,
+            includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
+            options: [],
+            errorHandler: { _, _ in
+                enumerationFailed = true
+                return false
+            }
+        ) else {
+            throw VerificationFailure.invalidRepository
+        }
+
+        while let candidate = enumerator.nextObject() as? URL {
+            let scopedComponents = candidate.pathComponents.suffix(enumerator.level)
+            guard !scopedComponents.isEmpty else {
+                throw VerificationFailure.invalidRepository
+            }
+            let relativePath = (["scripts"] + scopedComponents).joined(separator: "/")
+            if trackedScripts.contains(relativePath) { continue }
+
+            let values = try candidate.resourceValues(forKeys: [
+                .isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey,
+            ])
+            let attributes = try fileManager.attributesOfItem(atPath: candidate.path)
+            let fileType = attributes[.type] as? FileAttributeType
+            let isSymbolicLink = values.isSymbolicLink == true || fileType == .typeSymbolicLink
+            if values.isDirectory == true, !isSymbolicLink { continue }
+
+            let isRegular = values.isRegularFile == true || fileType == .typeRegular
+            let suffix = candidate.pathExtension.lowercased()
+            let relativeComponents = relativePath.split(separator: "/").map(String.init)
+            let isNeutralizedCacheBytecode = relativeComponents.contains("__pycache__")
+                && ["pyc", "pyo"].contains(suffix)
+                && isRegular
+            if isNeutralizedCacheBytecode { continue }
+
+            guard let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue else {
+                throw VerificationFailure.invalidRepository
+            }
+            if isSymbolicLink
+                || !isRegular
+                || pythonImportExtensions.contains(suffix)
+                || permissions & 0o111 != 0 {
+                throw APIErrorEnvelope(error: .init(
+                    code: "pbe_owner_checkout_stray_import",
+                    message: "PBE Owner requires a scripts import scope without stray executable content."
+                ))
+            }
+        }
+        guard !enumerationFailed else { throw VerificationFailure.invalidRepository }
     }
 
     private static func hostPathspecs(repositoryRoot: URL) throws -> [String] {
@@ -373,17 +442,31 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
             ))
         }
         let expectedCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: repositoryRoot)
-        let bootstrapSecret = "\(UUID().uuidString)\(UUID().uuidString)"
         let descriptorURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-owner-host-\(UUID().uuidString).json")
+        let bytecodeCacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-python-cache-\(UUID().uuidString)", isDirectory: true)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [
-            "python3", "scripts/local_server.py", "0", "--bind", "127.0.0.1",
+            "python3", "-E", "-B", "-X", "pycache_prefix=\(bytecodeCacheURL.path)",
+            "scripts/local_server.py", "0", "--bind", "127.0.0.1",
             "--backstage-bootstrap-file", descriptorURL.path,
         ]
         process.currentDirectoryURL = repositoryRoot
         var environment = ProcessInfo.processInfo.environment
+        for key in environment.keys where key.hasPrefix("PYTHON") {
+            environment.removeValue(forKey: key)
+        }
+        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        let launchCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: repositoryRoot)
+        guard launchCheckoutIdentity == expectedCheckoutIdentity else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_checkout_changed",
+                message: "The PBE Owner checkout changed while Backstage prepared the local host."
+            ))
+        }
+        let bootstrapSecret = "\(UUID().uuidString)\(UUID().uuidString)"
         environment["PBE_BACKSTAGE_BOOTSTRAP_SECRET"] = bootstrapSecret
         process.environment = environment
         process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")

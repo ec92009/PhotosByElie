@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sqlite3
 import sys
 import tempfile
@@ -81,6 +82,36 @@ class PublicCatalogPolicyTest(unittest.TestCase):
         self.assertEqual(filtered["photos_count"], 0)
         self.assertEqual(summary["removedBlocked"], 1)
         self.assertEqual(summary["removedRetiredMediaType"], 1)
+
+    def test_explicit_owner_authority_is_read_only_and_fingerprinted(self):
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        before_stat = self.db.stat()
+        snapshot = public_catalog_policy_snapshot(self.root, owner_db_path=self.db.resolve())
+        after = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        after_stat = self.db.stat()
+
+        self.assertEqual(snapshot["ownerAuthority"]["path"], str(self.db.resolve()))
+        self.assertEqual(snapshot["ownerAuthority"]["sha256"], before)
+        self.assertEqual(snapshot["ownerAuthority"]["mode"], "read-only")
+        self.assertEqual(after, before)
+        self.assertEqual(after_stat.st_size, before_stat.st_size)
+        self.assertEqual(after_stat.st_mtime_ns, before_stat.st_mtime_ns)
+
+    def test_explicit_owner_authority_does_not_create_a_missing_database(self):
+        missing = (self.root / "missing.sqlite").resolve()
+        with self.assertRaises(FileNotFoundError):
+            public_catalog_policy_snapshot(self.root, owner_db_path=missing)
+        self.assertFalse(missing.exists())
+
+    def test_explicit_owner_authority_rejects_relative_paths(self):
+        with self.assertRaisesRegex(ValueError, "must be absolute"):
+            public_catalog_policy_snapshot(self.root, owner_db_path=Path("Owner.sqlite"))
+
+    def test_explicit_owner_authority_rejects_uncheckpointed_wal(self):
+        wal = Path(f"{self.db}-wal")
+        wal.write_bytes(b"uncheckpointed")
+        with self.assertRaisesRegex(ValueError, "uncheckpointed WAL"):
+            public_catalog_policy_snapshot(self.root, owner_db_path=self.db.resolve())
 
 
 if __name__ == "__main__":

@@ -358,7 +358,7 @@ Stop it with `Ctrl-C`. The database lives under `tmp/`, so it is disposable and 
 
 ## Publish Validation
 
-`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the SQLite catalog/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys.
+`validate_publish.js` checks the generated public catalog before publishing. It loads `home-data.js` plus the SQLite catalog/bootstrap helpers, verifies homepage counts/samples, duplicate photo IDs, collection page shells, resolution availability metadata, discarded/tombstone exclusions, and either local `*_900.jpg`/`*_1800.jpg` derivative pairs or external public media keys. Publication validation requires an explicit, reviewed Owner authority snapshot: pass its absolute path with `--owner-db` or `PHOTOSBYELIE_OWNER_DB`. The database is opened read-only and is never created or migrated. The validator reports both Owner and catalog SHA-256 fingerprints and fails once with an aggregate authority-coverage error when the snapshot is missing or does not cover the candidate catalog.
 
 ## Social API Scaffolds
 
@@ -393,19 +393,19 @@ The generated product list currently includes digital file options, local-only p
 Run the validator before pushing public site changes:
 
 ```bash
-node scripts/validate_publish.js
+node scripts/validate_publish.js --owner-db /absolute/path/to/reviewed/Owner.sqlite
 ```
 
 When GitHub Pages is serving code and metadata while public previews live in R2/CDN, validate the catalog keys instead of committed local JPG files:
 
 ```bash
-node scripts/validate_publish.js --external-media
+node scripts/validate_publish.js --external-media --owner-db /absolute/path/to/reviewed/Owner.sqlite
 ```
 
 Use `--summary` when preparing a push. The summary prints collection counts, local import-cache/blocked asset sizes, and publish-scope working-tree changes for `photos-data.js`, `assets/catalog/`, and `assets/expo-manifest.json`:
 
 ```bash
-node scripts/validate_publish.js --summary
+node scripts/validate_publish.js --summary --owner-db /absolute/path/to/reviewed/Owner.sqlite
 ```
 
 ## Social Post Packages

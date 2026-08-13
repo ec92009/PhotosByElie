@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -38,10 +39,44 @@ def _first_column(conn: sqlite3.Connection, sql: str) -> set[str]:
     }
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def connect_owner_authority_read_only(owner_db_path: Path) -> tuple[sqlite3.Connection, Path]:
+    """Open an existing Owner authority without creating or migrating it."""
+    if not owner_db_path.is_absolute():
+        raise ValueError("Owner authority path must be absolute")
+    try:
+        resolved = owner_db_path.resolve(strict=True)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(f"Owner authority does not exist: {owner_db_path}") from error
+    if not resolved.is_file():
+        raise ValueError(f"Owner authority is not a file: {resolved}")
+    wal_path = Path(f"{resolved}-wal")
+    if wal_path.exists() and wal_path.stat().st_size:
+        raise ValueError(
+            f"Owner authority has an uncheckpointed WAL: {wal_path}. "
+            "Provide a checkpointed reviewed snapshot."
+        )
+    # immutable=1 keeps validation tied to the exact bytes being fingerprinted;
+    # it neither creates SQLite sidecars nor consumes uncheckpointed WAL state.
+    conn = sqlite3.connect(f"{resolved.as_uri()}?mode=ro&immutable=1", uri=True)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA query_only = ON")
+    conn.execute("SELECT 1").fetchone()
+    return conn, resolved
+
+
 def public_catalog_policy_snapshot(
     repo_root: Path,
     *,
     conn: sqlite3.Connection | None = None,
+    owner_db_path: Path | None = None,
     expo_manifest_path: Path = DEFAULT_EXPO_MANIFEST,
 ) -> dict[str, Any]:
     """Return public eligibility from Owner SQLite plus the tracked legacy baseline.
@@ -51,8 +86,14 @@ def public_catalog_policy_snapshot(
     title/keyword workflow, Sidecar Upload Bridge, or native publication audit.
     Lifecycle blocks always win over every approval source.
     """
+    if conn is not None and owner_db_path is not None:
+        raise ValueError("Pass conn or owner_db_path, not both")
     owns_conn = conn is None
-    conn = conn or connect(repo_root)
+    authority_path: Path | None = None
+    if conn is None and owner_db_path is not None:
+        conn, authority_path = connect_owner_authority_read_only(owner_db_path)
+    else:
+        conn = conn or connect(repo_root)
     try:
         title_keyword_ids = _first_column(conn, """
             SELECT q.media_id
@@ -117,7 +158,7 @@ def public_catalog_policy_snapshot(
             for value in (pricing.get("storefrontPolicy") or {}).get("retiredMediaTypes", [])
             if str(value or "").strip()
         }
-        return {
+        snapshot = {
             "schema": "photosbyelie.public-catalog-policy.v1",
             "eligibleMediaIds": sorted(eligible_ids),
             "blockedMediaIds": sorted(blocked_ids),
@@ -131,6 +172,14 @@ def public_catalog_policy_snapshot(
                 "blocked": len(blocked_ids),
             },
         }
+        if authority_path is not None:
+            snapshot["ownerAuthority"] = {
+                "path": str(authority_path),
+                "sha256": _sha256(authority_path),
+                "bytes": authority_path.stat().st_size,
+                "mode": "read-only",
+            }
+        return snapshot
     finally:
         if owns_conn:
             conn.close()
@@ -139,9 +188,18 @@ def public_catalog_policy_snapshot(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--owner-db",
+        type=Path,
+        required=True,
+        help="Absolute path to the reviewed Owner.sqlite authority snapshot (opened read-only).",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    snapshot = public_catalog_policy_snapshot(args.repo_root.resolve())
+    snapshot = public_catalog_policy_snapshot(
+        args.repo_root.resolve(),
+        owner_db_path=args.owner_db,
+    )
     if args.json:
         print(json.dumps(snapshot, ensure_ascii=False))
     else:

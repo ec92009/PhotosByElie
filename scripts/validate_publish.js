@@ -1,21 +1,40 @@
 #!/usr/bin/env node
 
 const childProcess = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { loadCatalogWindow } = require("./catalog_tsv.cjs");
 
 const repoRoot = path.resolve(__dirname, "..");
-const args = new Set(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const args = new Set(rawArgs);
 const showSummary = args.has("--summary");
 const externalMedia = args.has("--external-media")
   || process.env.PHOTOSBYELIE_EXTERNAL_MEDIA === "1"
   || Boolean(process.env.PHOTOSBYELIE_PUBLIC_MEDIA_BASE);
 const rawSourceTypes = new Set(["DNG", "NEF", "CR2", "CR3", "ARW", "RAF", "ORF", "RW2", "RAW", "PEF", "SRW", "RWL"]);
 
+const optionValue = (name) => {
+  const equalsArg = rawArgs.find((argument) => argument.startsWith(`${name}=`));
+  if (equalsArg) return equalsArg.slice(name.length + 1).trim();
+  const index = rawArgs.indexOf(name);
+  if (index < 0) return "";
+  return String(rawArgs[index + 1] || "").trim();
+};
+
+const ownerDbInput = optionValue("--owner-db") || String(process.env.PHOTOSBYELIE_OWNER_DB || "").trim();
+const ownerDbPath = ownerDbInput ? path.resolve(ownerDbInput) : "";
+
 const toPosix = (value) => value.split(path.sep).join("/");
 const relative = (value) => toPosix(path.relative(repoRoot, value));
+
+const sha256File = (target) => {
+  const digest = crypto.createHash("sha256");
+  digest.update(fs.readFileSync(target));
+  return digest.digest("hex");
+};
 
 const formatBytes = (bytes) => {
   if (!bytes) return "0 B";
@@ -131,7 +150,7 @@ const loadDiscardedIds = () => {
 const loadPublicCatalogPolicy = () => {
   const output = childProcess.execFileSync(
     "python3",
-    ["scripts/public_catalog_policy.py", "--json"],
+    ["scripts/public_catalog_policy.py", "--json", "--owner-db", ownerDbPath],
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   return JSON.parse(output || "{}");
@@ -168,12 +187,14 @@ const validate = () => {
   const dynamicResolutionIds = new Set(["video-original"]);
   let lifecycleBlockedIds = loadDiscardedIds();
   let appliedTitleKeywordIds = new Set();
+  let ownerAuthority = null;
   try {
     const policy = loadPublicCatalogPolicy();
     lifecycleBlockedIds = new Set(policy.blockedMediaIds || []);
     appliedTitleKeywordIds = new Set(policy.eligibleMediaIds || []);
+    ownerAuthority = policy.ownerAuthority || null;
   } catch (error) {
-    errors.push(`Could not load public catalog policy: ${error.message}`);
+    errors.push(`Owner authority missing/stale: could not load the reviewed read-only snapshot (${error.message}).`);
   }
 
   resolutions.forEach((resolution) => {
@@ -216,9 +237,6 @@ const validate = () => {
       }
       if (lifecycleBlockedIds.has(photo.id)) {
         errors.push(`${photo.id} is hidden/discarded and must not be in the public catalog.`);
-      }
-      if (!appliedTitleKeywordIds.has(photo.id)) {
-        errors.push(`${photo.id} is not Owner-applied for public title/keyword visibility.`);
       }
       if (!photo.title) errors.push(`${photo.id} is missing a title.`);
       if (!externalMedia && !photo.gallerySrc) errors.push(`${photo.id} is missing gallerySrc.`);
@@ -389,12 +407,27 @@ const validate = () => {
     if (photoId && lifecycleBlockedIds.has(photoId)) {
       errors.push(`${photoId} is hidden/discarded and must not be in assets/expo-manifest.json.`);
     }
-    if (photoId && !appliedTitleKeywordIds.has(photoId)) {
-      errors.push(`${photoId} is not Owner-applied and must not be in assets/expo-manifest.json.`);
-    }
   });
 
-  return { collections, errors, warnings };
+  if (ownerAuthority) {
+    const isAccountedFor = (photoId) => appliedTitleKeywordIds.has(photoId) || lifecycleBlockedIds.has(photoId);
+    const catalogMissing = [...seenPhotoIds.keys()].filter((photoId) => !isAccountedFor(photoId));
+    const expoIds = new Set((Array.isArray(expoManifest.photos) ? expoManifest.photos : [])
+      .map((photo) => String(photo?.id || "").trim())
+      .filter(Boolean));
+    const expoMissing = [...expoIds].filter((photoId) => !isAccountedFor(photoId));
+    const allMissing = [...new Set([...catalogMissing, ...expoMissing])].sort();
+    if (allMissing.length) {
+      const sample = allMissing.slice(0, 5).join(", ");
+      errors.push(
+        `Owner authority missing/stale: ${allMissing.length} public media IDs lack reviewed eligibility `
+        + `(catalog=${catalogMissing.length}, expo=${expoMissing.length}; sample=${sample || "none"}). `
+        + "Provide an exact reviewed Owner.sqlite snapshot with --owner-db.",
+      );
+    }
+  }
+
+  return { collections, errors, warnings, ownerAuthority };
 };
 
 const printSummary = (collections) => {
@@ -437,7 +470,31 @@ const printSummary = (collections) => {
   }
 };
 
-const { collections, errors, warnings } = validate();
+if (!ownerDbInput) {
+  console.error("Validation errors");
+  console.error("-----------------");
+  console.error("- Owner authority missing/stale: pass an absolute reviewed Owner.sqlite snapshot with --owner-db or PHOTOSBYELIE_OWNER_DB.");
+  process.exit(1);
+}
+
+if (!path.isAbsolute(ownerDbInput)) {
+  console.error("Validation errors");
+  console.error("-----------------");
+  console.error("- Owner authority missing/stale: --owner-db and PHOTOSBYELIE_OWNER_DB must be an absolute path.");
+  process.exit(1);
+}
+
+const catalogDbPath = path.join(repoRoot, "assets", "catalog", "photosbyelie.sqlite");
+const { collections, errors, warnings, ownerAuthority } = validate();
+
+if (ownerAuthority) {
+  console.log("Validation authority");
+  console.log("--------------------");
+  console.log(`Owner DB: ${ownerAuthority.path}`);
+  console.log(`Owner DB SHA-256: ${ownerAuthority.sha256}`);
+  console.log(`Catalog DB SHA-256: ${sha256File(catalogDbPath)}`);
+  console.log("");
+}
 
 if (warnings.length) {
   console.log("Validation warnings");

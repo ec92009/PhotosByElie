@@ -20,7 +20,7 @@ these fields:
 | `releaseNotes` | Human-readable notes shown before download. |
 | `artifactFormat` | Exactly `zip`; the archive must contain exactly one Backstage `.app` bundle. |
 | `downloadURL` | The approved HTTPS artifact URL. The app does not infer or invent this URL. |
-| `fileSize` | Exact archive byte count. |
+| `fileSize` | Exact archive byte count, from 1 byte through the hard 1 GiB archive ceiling. |
 | `sha256` | Exact 64-character SHA-256 digest of the downloaded archive. |
 | `trust.teamIdentifier` | Expected Apple Developer team identifier. |
 | `trust.signingIdentity` | Expected non-ad-hoc signing identity/authority. |
@@ -46,8 +46,11 @@ state includes recovery guidance. A downgrade, incompatible minimum OS, wrong
 bundle identity, invalid manifest, size mismatch, SHA-256 mismatch, archive
 shape mismatch, or signature/trust mismatch fails closed.
 
-Downloads are written below the app's user cache directory in a unique,
-isolated review directory. A rejected temporary download is removed; after
+Downloads stream through a fixed 64 KiB buffer directly into a file below the
+app's user cache directory in a unique, isolated review directory. The transport
+rejects a declared HTTP length or streamed byte that exceeds either the manifest
+size or the hard 1 GiB archive ceiling; it never accumulates the complete archive
+in `Data`. A rejected partial or temporary download is removed; after
 verification, the archive and extracted app remain there for review. The updater
 has no install, overwrite, launch, Keychain,
 Photos, connector, Owner database, fixture, catalog, upload, or publication
@@ -58,15 +61,25 @@ Verification checks, in order:
 
 1. The configured manifest endpoint and the manifest artifact URL are HTTPS.
 2. The release is newer and compatible with the running stable bundle identity.
-3. The downloaded archive has the exact declared byte count and SHA-256.
-4. The archive contains one app bundle with the declared bundle ID, version,
+3. The downloaded archive has the exact declared byte count and an incrementally
+   computed SHA-256.
+4. Before extraction, bounded `zipinfo` central-directory inspection rejects
+   unsafe paths, more than 50,000 entries, multiple top-level app bundles, and
+   per-entry or cumulative declared expansion above 4 GiB. The bounded listing
+   itself may not exceed 16 MiB.
+5. After extraction and before signature verification, a filesystem walk again
+   enforces the 50,000-entry and 4 GiB regular-file ceilings, rejects unsupported
+   entry types, and rejects links that resolve outside the isolated directory.
+   The archive must yield one app bundle with the declared bundle ID, version,
    and build.
-5. `codesign` verifies the bundle, team identifier, signing authority, and
+6. `codesign` verifies the bundle, team identifier, signing authority, and
    designated requirement. For an installed app bundle, the manifest trust
    values must also match the running app's trust values; a signer change is
    blocked rather than silently risking new Photos/TCC or Keychain identity.
 
-Only after all five checks does Backstage show `verified` and offer to reveal
+Any download, inspection, extraction, tree-validation, checksum, or signature
+failure removes the unique temporary directory. Only after all six checks does
+Backstage show `verified` and offer to reveal
 the isolated artifact for a separately reviewed manual action.
 
 ## Connector runtime installation

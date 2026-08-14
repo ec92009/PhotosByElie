@@ -6,6 +6,8 @@ public protocol BackstageUpdateTransport: Sendable {
     func download(
         from url: URL,
         to destination: URL,
+        expectedFileSize: Int64,
+        maximumFileSize: Int64,
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws
 }
@@ -44,22 +46,100 @@ public struct URLSessionBackstageUpdateTransport: BackstageUpdateTransport, @unc
         to destination: URL,
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
+        try await download(
+            from: url,
+            to: destination,
+            expectedFileSize: BackstageUpdateResourceLimits.hardMaximumArchiveFileSize,
+            maximumFileSize: BackstageUpdateResourceLimits.hardMaximumArchiveFileSize,
+            requireExactSize: false,
+            progress: progress
+        )
+    }
+
+    public func download(
+        from url: URL,
+        to destination: URL,
+        expectedFileSize: Int64,
+        maximumFileSize: Int64,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws {
+        try await download(
+            from: url,
+            to: destination,
+            expectedFileSize: expectedFileSize,
+            maximumFileSize: maximumFileSize,
+            requireExactSize: true,
+            progress: progress
+        )
+    }
+
+    private func download(
+        from url: URL,
+        to destination: URL,
+        expectedFileSize: Int64,
+        maximumFileSize: Int64,
+        requireExactSize: Bool,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws {
+        let effectiveMaximum = min(
+            expectedFileSize,
+            maximumFileSize,
+            BackstageUpdateResourceLimits.hardMaximumArchiveFileSize
+        )
+        guard effectiveMaximum > 0 else {
+            throw BackstageUpdateError.downloadFailed("The permitted archive size is invalid.")
+        }
         let (bytes, response) = try await session.bytes(from: url)
         try validate(response: response)
         let responseLength = response.expectedContentLength > 0 ? response.expectedContentLength : 0
+        guard responseLength == 0 || responseLength <= effectiveMaximum else {
+            throw BackstageUpdateError.downloadFailed(
+                "The release response exceeds the declared or hard archive-size limit."
+            )
+        }
+
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: destination)
+        guard fileManager.createFile(atPath: destination.path, contents: nil) else {
+            throw BackstageUpdateError.downloadFailed("The temporary archive could not be created.")
+        }
+        let handle = try FileHandle(forWritingTo: destination)
         var received: Int64 = 0
-        var data = Data()
-        data.reserveCapacity(responseLength > 0 ? Int(responseLength) : 0)
-        progress(0, responseLength)
-        for try await byte in bytes {
-            data.append(byte)
-            received += 1
-            if received % 65_536 == 0 || (responseLength > 0 && received == responseLength) {
-                progress(received, responseLength)
+        var buffer = Data()
+        buffer.reserveCapacity(65_536)
+        var completed = false
+        defer {
+            try? handle.close()
+            if !completed {
+                try? fileManager.removeItem(at: destination)
             }
         }
-        try data.write(to: destination, options: .atomic)
-        progress(received, responseLength)
+        progress(0, requireExactSize ? expectedFileSize : responseLength)
+        for try await byte in bytes {
+            guard received < effectiveMaximum else {
+                throw BackstageUpdateError.downloadFailed(
+                    "The release response exceeded the declared or hard archive-size limit while downloading."
+                )
+            }
+            buffer.append(byte)
+            received += 1
+            if buffer.count == 65_536 {
+                try handle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+                progress(received, requireExactSize ? expectedFileSize : responseLength)
+            }
+        }
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
+        if requireExactSize, received != expectedFileSize {
+            throw BackstageUpdateError.downloadFailed(
+                "The downloaded archive size did not match the release manifest."
+            )
+        }
+        try handle.synchronize()
+        completed = true
+        progress(received, requireExactSize ? expectedFileSize : responseLength)
     }
 
     private func validate(response: URLResponse) throws {
@@ -75,25 +155,202 @@ public struct URLSessionBackstageUpdateTransport: BackstageUpdateTransport, @unc
     }
 }
 
+private enum BackstageBoundedProcess {
+    static func run(
+        executable: String,
+        arguments: [String],
+        maximumOutputSize: Int
+    ) throws -> (status: Int32, output: Data) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        var environment = ProcessInfo.processInfo.environment
+        environment.removeValue(forKey: "ZIPINFO")
+        environment.removeValue(forKey: "ZIPINFOOPT")
+        environment["LANG"] = "C"
+        environment["LC_ALL"] = "C"
+        process.environment = environment
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        try process.run()
+        var output = Data()
+        do {
+            while let chunk = try pipe.fileHandleForReading.read(upToCount: 65_536),
+                  !chunk.isEmpty {
+                guard output.count <= maximumOutputSize - chunk.count else {
+                    process.terminate()
+                    process.waitUntilExit()
+                    throw BackstageUpdateError.archiveInvalid(
+                        "The archive inspection output exceeded its safety limit."
+                    )
+                }
+                output.append(chunk)
+            }
+        } catch {
+            if process.isRunning {
+                process.terminate()
+                process.waitUntilExit()
+            }
+            throw error
+        }
+        process.waitUntilExit()
+        return (process.terminationStatus, output)
+    }
+}
+
+private enum BackstageZipArchiveInspector {
+    private static let maximumArchiveListingSize = 16 * 1_024 * 1_024
+
+    static func validate(
+        archiveURL: URL,
+        limits: BackstageUpdateResourceLimits
+    ) throws {
+        let pathResult = try BackstageBoundedProcess.run(
+            executable: "/usr/bin/zipinfo",
+            arguments: ["-1", archiveURL.path],
+            maximumOutputSize: maximumArchiveListingSize
+        )
+        guard pathResult.status == 0,
+              let listing = String(data: pathResult.output, encoding: .utf8) else {
+            throw BackstageUpdateError.archiveInvalid(
+                "The downloaded archive could not be inspected safely before extraction."
+            )
+        }
+
+        var entryCount = 0
+        var appRoot: String?
+        var metadataRoots: Set<String> = []
+        for rawPath in listing.split(whereSeparator: \Character.isNewline) {
+            let path = String(rawPath)
+            entryCount += 1
+            guard entryCount <= limits.maximumExtractedEntryCount else {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The archive exceeds the \(limits.maximumExtractedEntryCount)-entry safety limit."
+                )
+            }
+            guard path.utf8.count <= 4_096,
+                  !path.hasPrefix("/"),
+                  !path.contains("\\"),
+                  !path.contains("\0") else {
+                throw BackstageUpdateError.archiveInvalid("The archive contains an unsafe entry path.")
+            }
+            var components = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+            if components.last == "" { components.removeLast() }
+            guard !components.isEmpty,
+                  components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+                throw BackstageUpdateError.archiveInvalid("The archive contains an unsafe entry path.")
+            }
+
+            if components[0] == "__MACOSX" {
+                guard components.count > 1 else {
+                    throw BackstageUpdateError.archiveInvalid("The archive contains an invalid metadata root.")
+                }
+                let metadataRoot = components[1].hasPrefix("._")
+                    ? String(components[1].dropFirst(2))
+                    : components[1]
+                metadataRoots.insert(metadataRoot)
+                continue
+            }
+
+            let root = components[0]
+            guard root.hasSuffix(".app") else {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The archive may contain only one top-level macOS app bundle."
+                )
+            }
+            if let appRoot {
+                guard appRoot == root else {
+                    throw BackstageUpdateError.archiveInvalid(
+                        "The archive contains more than one top-level app bundle."
+                    )
+                }
+            } else {
+                appRoot = root
+            }
+            guard !components.dropFirst().contains(where: { $0.hasSuffix(".app") }) else {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The archive contains a nested app bundle outside the one-app contract."
+                )
+            }
+        }
+        guard entryCount > 0, let appRoot else {
+            throw BackstageUpdateError.archiveInvalid("The archive does not contain a macOS app bundle.")
+        }
+        guard metadataRoots.allSatisfy({ $0 == appRoot }) else {
+            throw BackstageUpdateError.archiveInvalid(
+                "The archive contains metadata outside the declared app bundle."
+            )
+        }
+
+        let sizeResult = try BackstageBoundedProcess.run(
+            executable: "/usr/bin/zipinfo",
+            arguments: ["-l", archiveURL.path],
+            maximumOutputSize: maximumArchiveListingSize
+        )
+        guard sizeResult.status == 0,
+              let sizeListing = String(data: sizeResult.output, encoding: .utf8) else {
+            throw BackstageUpdateError.archiveInvalid(
+                "The archive sizes could not be inspected safely before extraction."
+            )
+        }
+        var sizedEntryCount = 0
+        var totalUncompressedSize: Int64 = 0
+        for line in sizeListing.split(whereSeparator: \Character.isNewline) {
+            let fields = line.split(whereSeparator: \Character.isWhitespace)
+            guard fields.count >= 4,
+                  fields[0].count == 10,
+                  fields[1].contains("."),
+                  fields[2].count == 3,
+                  let size = Int64(fields[3]) else {
+                continue
+            }
+            sizedEntryCount += 1
+            guard size <= limits.maximumExtractedRegularFileSize,
+                  totalUncompressedSize <= limits.maximumExtractedRegularFileSize - size else {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The archive declares more than \(limits.maximumExtractedRegularFileSize) bytes of uncompressed content."
+                )
+            }
+            totalUncompressedSize += size
+        }
+        guard sizedEntryCount == entryCount else {
+            throw BackstageUpdateError.archiveInvalid(
+                "The archive central directory could not be inspected completely."
+            )
+        }
+    }
+}
+
 public struct DittoBackstageUpdateArtifactExtractor: BackstageUpdateArtifactExtracting, Sendable {
-    public init() {}
+    private let limits: BackstageUpdateResourceLimits
+
+    public init(limits: BackstageUpdateResourceLimits = .standard) {
+        self.limits = limits
+    }
 
     public func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
-        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        process.arguments = ["-x", "-k", archiveURL.path, directoryURL.path]
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let message = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        try BackstageZipArchiveInspector.validate(archiveURL: archiveURL, limits: limits)
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        var completed = false
+        defer {
+            if !completed {
+                try? fileManager.removeItem(at: directoryURL)
+            }
+        }
+        let result = try BackstageBoundedProcess.run(
+            executable: "/usr/bin/ditto",
+            arguments: ["-x", "-k", archiveURL.path, directoryURL.path],
+            maximumOutputSize: 65_536
+        )
+        guard result.status == 0 else {
+            let message = String(data: result.output, encoding: .utf8) ?? ""
             throw BackstageUpdateError.archiveInvalid(
                 "The downloaded Backstage archive could not be unpacked. \(message.trimmingCharacters(in: .whitespacesAndNewlines))"
             )
         }
-        let bundles = FileManager.default.enumerator(
+        let bundles = fileManager.enumerator(
             at: directoryURL,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
@@ -104,6 +361,7 @@ public struct DittoBackstageUpdateArtifactExtractor: BackstageUpdateArtifactExtr
         guard bundles.count == 1 else {
             throw BackstageUpdateError.archiveInvalid("The archive must contain exactly one macOS app bundle.")
         }
+        completed = true
         return bundles[0]
     }
 }
@@ -116,25 +374,28 @@ public struct BackstageUpdateService: Sendable {
     private let currentTrustReader: any BackstageCurrentReleaseTrustReading
     private let currentBundleURL: URL?
     private let cacheDirectory: URL
+    private let limits: BackstageUpdateResourceLimits
 
     public init(
         configuration: BackstageUpdateConfiguration = BackstageUpdateConfiguration(bundle: .main),
         transport: any BackstageUpdateTransport = URLSessionBackstageUpdateTransport(),
-        extractor: any BackstageUpdateArtifactExtracting = DittoBackstageUpdateArtifactExtractor(),
+        extractor: (any BackstageUpdateArtifactExtracting)? = nil,
         signatureVerifier: any BackstageCodeSignatureVerifying = SystemBackstageCodeSignatureVerifier(),
         currentTrustReader: any BackstageCurrentReleaseTrustReading = SystemBackstageCodeSignatureVerifier(),
         currentBundleURL: URL? = Bundle.main.bundleURL,
-        cacheDirectory: URL? = nil
+        cacheDirectory: URL? = nil,
+        limits: BackstageUpdateResourceLimits = .standard
     ) {
         self.configuration = configuration
         self.transport = transport
-        self.extractor = extractor
+        self.extractor = extractor ?? DittoBackstageUpdateArtifactExtractor(limits: limits)
         self.signatureVerifier = signatureVerifier
         self.currentTrustReader = currentTrustReader
         self.currentBundleURL = currentBundleURL
         self.cacheDirectory = cacheDirectory
             ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("PhotosByElie/Backstage/Updates", isDirectory: true)
+        self.limits = limits
     }
 
     public func check(current: BackstageReleaseIdentity) async throws -> BackstageUpdateCheck {
@@ -155,7 +416,7 @@ public struct BackstageUpdateService: Sendable {
         } catch {
             throw BackstageUpdateError.invalidManifest("The cloud release manifest is not valid JSON: \(error.localizedDescription)")
         }
-        try manifest.validate()
+        try manifest.validate(maximumFileSize: limits.maximumArchiveFileSize)
         try enforceStableSigningContract(manifest)
         return try makeCheck(current: current, manifest: manifest)
     }
@@ -164,7 +425,7 @@ public struct BackstageUpdateService: Sendable {
         current: BackstageReleaseIdentity,
         manifest: BackstageReleaseManifest
     ) throws -> BackstageUpdateCheck {
-        try manifest.validate()
+        try manifest.validate(maximumFileSize: limits.maximumArchiveFileSize)
         guard current.bundleIdentifier == BackstageReleaseManifest.bundleIdentifier else {
             return BackstageUpdateCheck(
                 current: current,
@@ -216,7 +477,13 @@ public struct BackstageUpdateService: Sendable {
         let extractionURL = temporaryRoot.appendingPathComponent("extracted", isDirectory: true)
         do {
             try fileManager.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
-            try await transport.download(from: manifest.downloadURL, to: archiveURL, progress: progress)
+            try await transport.download(
+                from: manifest.downloadURL,
+                to: archiveURL,
+                expectedFileSize: manifest.fileSize,
+                maximumFileSize: limits.maximumArchiveFileSize,
+                progress: progress
+            )
             let attributes = try fileManager.attributesOfItem(atPath: archiveURL.path)
             guard let size = attributes[.size] as? NSNumber, size.int64Value == manifest.fileSize else {
                 throw BackstageUpdateError.downloadFailed("The downloaded archive size did not match the release manifest.")
@@ -228,6 +495,10 @@ public struct BackstageUpdateService: Sendable {
                     actual: actualChecksum
                 )
             }
+            try BackstageZipArchiveInspector.validate(
+                archiveURL: archiveURL,
+                limits: limits
+            )
             let bundleURL = try extractor.extractAppBundle(from: archiveURL, to: extractionURL)
             let extractionPath = extractionURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
             let bundlePath = bundleURL.resolvingSymlinksInPath().standardizedFileURL.path
@@ -236,6 +507,7 @@ public struct BackstageUpdateService: Sendable {
                     "The archive extractor returned an app bundle outside the isolated update directory."
                 )
             }
+            try validateExtractedTree(at: extractionURL)
             try verifyBundle(bundleURL, manifest: manifest)
             let finalRoot = cacheDirectory.appendingPathComponent(
                 "Backstage-\(manifest.version)-\(manifest.build)-\(UUID().uuidString)",
@@ -262,8 +534,78 @@ public struct BackstageUpdateService: Sendable {
     }
 
     public static func sha256(of url: URL) throws -> String {
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func validateExtractedTree(at extractionURL: URL) throws {
+        let fileManager = FileManager.default
+        let resourceKeys: Set<URLResourceKey> = [
+            .isDirectoryKey,
+            .isRegularFileKey,
+            .isSymbolicLinkKey,
+            .fileSizeKey,
+        ]
+        var enumerationError: Error?
+        guard let enumerator = fileManager.enumerator(
+            at: extractionURL,
+            includingPropertiesForKeys: Array(resourceKeys),
+            options: [],
+            errorHandler: { _, error in
+                enumerationError = error
+                return false
+            }
+        ) else {
+            throw BackstageUpdateError.archiveInvalid("The extracted archive could not be inspected.")
+        }
+
+        let extractionPath = extractionURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        var entryCount = 0
+        var regularFileSize: Int64 = 0
+        for case let entryURL as URL in enumerator {
+            entryCount += 1
+            guard entryCount <= limits.maximumExtractedEntryCount else {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The extracted archive exceeds the \(limits.maximumExtractedEntryCount)-entry safety limit."
+                )
+            }
+            let values = try entryURL.resourceValues(forKeys: resourceKeys)
+            if values.isSymbolicLink == true {
+                let destination = try fileManager.destinationOfSymbolicLink(atPath: entryURL.path)
+                let lexicalTarget = URL(
+                    fileURLWithPath: destination,
+                    relativeTo: destination.hasPrefix("/") ? nil : entryURL.deletingLastPathComponent()
+                ).standardizedFileURL.path
+                let resolvedTarget = entryURL.resolvingSymlinksInPath().standardizedFileURL.path
+                guard lexicalTarget.hasPrefix(extractionPath),
+                      resolvedTarget.hasPrefix(extractionPath) else {
+                    throw BackstageUpdateError.archiveInvalid(
+                        "The extracted archive contains a link outside the isolated update directory."
+                    )
+                }
+            } else if values.isRegularFile == true {
+                let size = Int64(values.fileSize ?? 0)
+                guard size >= 0,
+                      size <= limits.maximumExtractedRegularFileSize - regularFileSize else {
+                    throw BackstageUpdateError.archiveInvalid(
+                        "The extracted archive exceeds the \(limits.maximumExtractedRegularFileSize)-byte regular-file safety limit."
+                    )
+                }
+                regularFileSize += size
+            } else if values.isDirectory != true {
+                throw BackstageUpdateError.archiveInvalid(
+                    "The extracted archive contains an unsupported filesystem entry."
+                )
+            }
+        }
+        if enumerationError != nil {
+            throw BackstageUpdateError.archiveInvalid("The extracted archive could not be inspected completely.")
+        }
     }
 
     private static func operatingSystemVersion(_ value: String) -> OperatingSystemVersion? {

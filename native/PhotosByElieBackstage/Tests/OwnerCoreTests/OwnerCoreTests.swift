@@ -79,11 +79,51 @@ struct OwnerCoreTests {
         paddedTrust.trust.teamIdentifier += " "
         invalidManifests.append(paddedTrust)
 
+        var oversizedArchive = manifest
+        oversizedArchive.fileSize = BackstageUpdateResourceLimits.hardMaximumArchiveFileSize + 1
+        invalidManifests.append(oversizedArchive)
+
         for invalidManifest in invalidManifests {
             #expect(throws: BackstageUpdateError.self) {
                 try invalidManifest.validate()
             }
         }
+    }
+
+    @Test("Backstage URL transport stops an undeclared streaming overrun and removes partial bytes")
+    func backstageUpdateTransportRejectsStreamingOverrun() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        StreamingBackstageURLProtocol.setResponse(Data(repeating: 0x41, count: 18))
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StreamingBackstageURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-stream-overrun-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: URLSessionBackstageUpdateTransport(session: session),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An archive byte beyond the declared size unexpectedly downloaded.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("exceeded"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
     }
 
     @Test("Backstage updater fetches and validates the configured manifest")
@@ -144,7 +184,7 @@ struct OwnerCoreTests {
 
     @Test("Backstage updater verifies cache bytes and bundle metadata before offering an update")
     func backstageUpdateDownloadAndVerify() async throws {
-        let manifest = try backstageUpdateManifestFixture()
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-update-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -154,7 +194,7 @@ struct OwnerCoreTests {
             configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
             transport: StubBackstageUpdateTransport(
                 manifestData: try JSONEncoder().encode(manifest),
-                artifactData: Data("fixture-zip-bytes".utf8)
+                artifactData: artifactData
             ),
             extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
             signatureVerifier: StubBackstageSignatureVerifier(),
@@ -173,13 +213,13 @@ struct OwnerCoreTests {
 
         #expect(FileManager.default.fileExists(atPath: verified.archiveURL.path))
         #expect(FileManager.default.fileExists(atPath: verified.bundleURL.path))
-        #expect(progress.values.last?.received == 17)
-        #expect(progress.values.last?.total == 17)
+        #expect(progress.values.last?.received == manifest.fileSize)
+        #expect(progress.values.last?.total == manifest.fileSize)
     }
 
     @Test("Backstage updater blocks checksum and signature failures with recovery guidance")
     func backstageUpdateVerificationFailuresAreSafe() async throws {
-        let manifest = try backstageUpdateManifestFixture()
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-update-failure-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -188,7 +228,7 @@ struct OwnerCoreTests {
         badChecksum.sha256 = String(repeating: "0", count: 64)
         let checksumService = BackstageUpdateService(
             configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
-            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data("fixture-zip-bytes".utf8)),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: artifactData),
             extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
             signatureVerifier: StubBackstageSignatureVerifier(),
             cacheDirectory: root
@@ -206,7 +246,7 @@ struct OwnerCoreTests {
 
         let signatureService = BackstageUpdateService(
             configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
-            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data("fixture-zip-bytes".utf8)),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: artifactData),
             extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
             signatureVerifier: FailingBackstageSignatureVerifier(),
             cacheDirectory: root
@@ -227,7 +267,7 @@ struct OwnerCoreTests {
             configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
             transport: StubBackstageUpdateTransport(
                 manifestData: Data(),
-                artifactData: Data("fixture-zip-bytes".utf8)
+                artifactData: artifactData
             ),
             extractor: EscapingBackstageArtifactExtractor(),
             signatureVerifier: StubBackstageSignatureVerifier(),
@@ -247,6 +287,150 @@ struct OwnerCoreTests {
             #expect(error.localizedDescription.contains("outside the isolated update directory"))
         }
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects excessive extracted bytes before signature verification and cleans up")
+    func backstageUpdateRejectsExcessiveExtractedSize() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-extracted-size-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: artifactData
+            ),
+            extractor: StubBackstageArtifactExtractor(
+                version: manifest.version,
+                build: manifest.build,
+                extraFileCount: 1,
+                extraFileSize: 8_192
+            ),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 4_096,
+                maximumExtractedEntryCount: 100
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An oversized extracted tree unexpectedly reached signature verification.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("regular-file safety limit"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects excessive extracted entries and cleans up")
+    func backstageUpdateRejectsExcessiveExtractedEntries() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-extracted-count-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: artifactData
+            ),
+            extractor: StubBackstageArtifactExtractor(
+                version: manifest.version,
+                build: manifest.build,
+                extraFileCount: 10
+            ),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 10_000,
+                maximumExtractedEntryCount: 10
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An extracted tree with too many entries unexpectedly reached signature verification.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("entry safety limit"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects ZIP-declared expansion before invoking the extractor")
+    func backstageUpdateRejectsZipBombBeforeExtraction() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-zip-bomb-\(UUID().uuidString)", isDirectory: true)
+        let sourceApp = root.appendingPathComponent("Oversized.app", isDirectory: true)
+        let contents = sourceApp.appendingPathComponent("Contents", isDirectory: true)
+        let archive = root.appendingPathComponent("oversized.zip")
+        let cache = root.appendingPathComponent("cache", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        try Data(repeating: 0x5a, count: 1_024).write(
+            to: contents.appendingPathComponent("payload.bin")
+        )
+        try createZipArchive(sourceApp: sourceApp, destination: archive)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        manifest.fileSize = Int64(
+            try #require(
+                (try FileManager.default.attributesOfItem(atPath: archive.path)[.size] as? NSNumber)?.int64Value
+            )
+        )
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let extractorCall = LockedFlag()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: try Data(contentsOf: archive)
+            ),
+            extractor: RecordingBackstageArtifactExtractor(called: extractorCall),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: cache,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 512,
+                maximumExtractedEntryCount: 100
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("A ZIP declaring excessive expansion unexpectedly reached the extractor.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("uncompressed content"))
+        }
+        #expect(!extractorCall.value())
+        #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).isEmpty)
     }
 
     @Test("Backstage updater reports the missing authoritative endpoint as a safe blocker")
@@ -3317,6 +3501,27 @@ private func backstageUpdateManifestFixture() throws -> BackstageReleaseManifest
     return try JSONDecoder().decode(BackstageReleaseManifest.self, from: Data(contentsOf: url))
 }
 
+private func backstageUpdateManifestAndArtifactFixture() throws -> (
+    manifest: BackstageReleaseManifest,
+    artifactData: Data
+) {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("pbe-update-archive-fixture-\(UUID().uuidString)", isDirectory: true)
+    let sourceApp = root.appendingPathComponent("PhotosByElie Backstage.app", isDirectory: true)
+    let contents = sourceApp.appendingPathComponent("Contents", isDirectory: true)
+    let archive = root.appendingPathComponent("Backstage.zip")
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    try Data([0x50, 0x42, 0x45]).write(to: contents.appendingPathComponent("fixture.bin"))
+    try createZipArchive(sourceApp: sourceApp, destination: archive)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    var manifest = try backstageUpdateManifestFixture()
+    let attributes = try FileManager.default.attributesOfItem(atPath: archive.path)
+    manifest.fileSize = try #require((attributes[.size] as? NSNumber)?.int64Value)
+    manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+    return (manifest, try Data(contentsOf: archive))
+}
+
 private struct StubBackstageUpdateTransport: BackstageUpdateTransport {
     let manifestData: Data
     let artifactData: Data
@@ -3326,17 +3531,25 @@ private struct StubBackstageUpdateTransport: BackstageUpdateTransport {
     func download(
         from url: URL,
         to destination: URL,
+        expectedFileSize: Int64,
+        maximumFileSize: Int64,
         progress: @escaping @Sendable (Int64, Int64) -> Void
     ) async throws {
-        progress(0, Int64(artifactData.count))
+        let size = Int64(artifactData.count)
+        guard size == expectedFileSize, size <= maximumFileSize else {
+            throw BackstageUpdateError.downloadFailed("Synthetic bounded download rejected its size.")
+        }
+        progress(0, expectedFileSize)
         try artifactData.write(to: destination, options: .atomic)
-        progress(Int64(artifactData.count), Int64(artifactData.count))
+        progress(size, expectedFileSize)
     }
 }
 
 private struct StubBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
     var version = "219.2"
     var build = "78"
+    var extraFileCount = 0
+    var extraFileSize = 0
 
     func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
         let app = directoryURL.appendingPathComponent("PhotosByElie Backstage.app", isDirectory: true)
@@ -3350,6 +3563,11 @@ private struct StubBackstageArtifactExtractor: BackstageUpdateArtifactExtracting
         ]
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try data.write(to: contents.appendingPathComponent("Info.plist"))
+        for index in 0..<extraFileCount {
+            try Data(repeating: UInt8(index % 255), count: extraFileSize).write(
+                to: contents.appendingPathComponent("extra-\(index).bin")
+            )
+        }
         return app
     }
 }
@@ -3357,6 +3575,15 @@ private struct StubBackstageArtifactExtractor: BackstageUpdateArtifactExtracting
 private struct EscapingBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
     func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
         URL(fileURLWithPath: "/tmp/PhotosByElie Outside.app", isDirectory: true)
+    }
+}
+
+private struct RecordingBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    let called: LockedFlag
+
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        called.set()
+        throw BackstageUpdateError.archiveInvalid("Extractor should not have been invoked.")
     }
 }
 
@@ -3395,6 +3622,76 @@ private final class LockedProgress: @unchecked Sendable {
 
     func append(received: Int64, total: Int64) {
         lock.withLock { values.append(ProgressSample(received: received, total: total)) }
+    }
+}
+
+private final class StreamingBackstageURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let fixture = LockedDataFixture()
+
+    static func setResponse(_ data: Data) {
+        fixture.set(data)
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let client, let url = request.url else { return }
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client.urlProtocol(self, didLoad: Self.fixture.get())
+        client.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+private final class LockedDataFixture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    func set(_ data: Data) {
+        lock.withLock { self.data = data }
+    }
+
+    func get() -> Data {
+        lock.withLock { data }
+    }
+}
+
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = false
+
+    func set() {
+        lock.withLock { storage = true }
+    }
+
+    func value() -> Bool {
+        lock.withLock { storage }
+    }
+}
+
+private func createZipArchive(sourceApp: URL, destination: URL) throws {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+    process.arguments = ["-c", "-k", "--keepParent", sourceApp.path, destination.path]
+    let pipe = Pipe()
+    process.standardError = pipe
+    try process.run()
+    process.waitUntilExit()
+    guard process.terminationStatus == 0 else {
+        let message = String(
+            data: pipe.fileHandleForReading.readDataToEndOfFile(),
+            encoding: .utf8
+        ) ?? ""
+        throw BackstageUpdateError.archiveInvalid("Synthetic ZIP creation failed: \(message)")
     }
 }
 

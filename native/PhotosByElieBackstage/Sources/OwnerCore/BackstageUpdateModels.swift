@@ -1,5 +1,36 @@
 import Foundation
 
+public struct BackstageUpdateResourceLimits: Sendable, Equatable {
+    public static let hardMaximumArchiveFileSize: Int64 = 1_073_741_824
+    public static let hardMaximumExtractedRegularFileSize: Int64 = 4_294_967_296
+    public static let hardMaximumExtractedEntryCount = 50_000
+
+    public static let standard = BackstageUpdateResourceLimits()
+
+    public let maximumArchiveFileSize: Int64
+    public let maximumExtractedRegularFileSize: Int64
+    public let maximumExtractedEntryCount: Int
+
+    public init(
+        maximumArchiveFileSize: Int64 = Self.hardMaximumArchiveFileSize,
+        maximumExtractedRegularFileSize: Int64 = Self.hardMaximumExtractedRegularFileSize,
+        maximumExtractedEntryCount: Int = Self.hardMaximumExtractedEntryCount
+    ) {
+        self.maximumArchiveFileSize = min(
+            max(maximumArchiveFileSize, 1),
+            Self.hardMaximumArchiveFileSize
+        )
+        self.maximumExtractedRegularFileSize = min(
+            max(maximumExtractedRegularFileSize, 1),
+            Self.hardMaximumExtractedRegularFileSize
+        )
+        self.maximumExtractedEntryCount = min(
+            max(maximumExtractedEntryCount, 1),
+            Self.hardMaximumExtractedEntryCount
+        )
+    }
+}
+
 public struct BackstageReleaseTrust: Codable, Sendable, Equatable {
     public var teamIdentifier: String
     public var signingIdentity: String
@@ -62,7 +93,9 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
         self.trust = trust
     }
 
-    public func validate() throws {
+    public func validate(
+        maximumFileSize: Int64 = BackstageUpdateResourceLimits.hardMaximumArchiveFileSize
+    ) throws {
         guard schemaVersion == Self.currentSchemaVersion else {
             throw BackstageUpdateError.invalidManifest("Unsupported manifest schema version \(schemaVersion).")
         }
@@ -90,8 +123,14 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
               downloadURL.password == nil else {
             throw BackstageUpdateError.invalidManifest("Manifest downloadURL must be an HTTPS URL.")
         }
-        guard fileSize > 0 else {
-            throw BackstageUpdateError.invalidManifest("Manifest fileSize must be greater than zero.")
+        let effectiveMaximumFileSize = min(
+            max(maximumFileSize, 1),
+            BackstageUpdateResourceLimits.hardMaximumArchiveFileSize
+        )
+        guard fileSize > 0, fileSize <= effectiveMaximumFileSize else {
+            throw BackstageUpdateError.invalidManifest(
+                "Manifest fileSize must be between 1 and \(effectiveMaximumFileSize) bytes."
+            )
         }
         guard sha256.range(of: "^[0-9a-fA-F]{64}$", options: .regularExpression) != nil else {
             throw BackstageUpdateError.invalidManifest("Manifest sha256 must contain exactly 64 hexadecimal characters.")

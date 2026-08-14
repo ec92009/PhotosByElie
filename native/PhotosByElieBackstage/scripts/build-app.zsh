@@ -35,7 +35,16 @@ cd "$package_root"
 swift build -c "$configuration"
 binary_path="$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage"
 
-rm -rf "$app"
+if [[ -e "$app" || -L "$app" ]]; then
+  if [[ -L "$app" || ! -d "$app" ]]; then
+    print -u2 "Refusing to replace an unexpected Backstage dist output: $app"
+    exit 1
+  fi
+  # The embedded Owner runtime is deliberately read-only. Restore write access
+  # only on this build-owned prior output so a subsequent release can replace it.
+  chmod -R u+w "$app"
+  rm -rf "$app"
+fi
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
 cp "$binary_path" "$executable"
 

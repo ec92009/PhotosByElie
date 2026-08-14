@@ -753,6 +753,13 @@ class NativeCullingParityTest(unittest.TestCase):
             "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
             build_script,
         )
+        self.assertIn('if [[ -e "$app" || -L "$app" ]]', build_script)
+        self.assertIn('if [[ -L "$app" || ! -d "$app" ]]', build_script)
+        self.assertIn('chmod -R u+w "$app"', build_script)
+        self.assertLess(
+            build_script.index('chmod -R u+w "$app"'),
+            build_script.index('rm -rf "$app"'),
+        )
 
     def test_backstage_and_bridge_release_metadata_stay_in_lockstep(self):
         metadata = (NATIVE / "release-metadata.zsh").read_text(encoding="utf-8")

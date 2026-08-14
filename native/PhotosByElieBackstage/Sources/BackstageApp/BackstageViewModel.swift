@@ -509,9 +509,14 @@ final class BackstageViewModel: ObservableObject {
 
     func launchPBEOwner() async {
         guard canLaunchPBEOwner else {
-            pbeOwnerSessionStatus = authentication.phase == .authenticated
-                ? "Choose an available fixture and finish current work before opening PBE Owner."
-                : "Enroll this Mac before opening PBE Owner."
+            switch authentication.phase {
+            case .authenticated:
+                pbeOwnerSessionStatus = "Choose an available fixture and finish current work before opening PBE Owner."
+            case .renewalFailed:
+                pbeOwnerSessionStatus = "Retry this Mac's retained Owner session before opening PBE Owner."
+            case .needsEnrollment, .signedOut:
+                pbeOwnerSessionStatus = "Enroll this Mac before opening PBE Owner."
+            }
             return
         }
         let captured: (fixtureID: String, breadcrumb: String)
@@ -867,6 +872,12 @@ final class BackstageViewModel: ObservableObject {
             await refreshActions()
             await loadFixtures()
             await syncPhotosIncrementally()
+        case .renewalFailed:
+            authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
+            status = "Retry Owner session"
+            markFixtureSelectionUnavailable(
+                "Fixtures are unavailable until the saved Owner session renews. This Mac's enrollment is retained."
+            )
         case .needsEnrollment:
             authenticationStatus = "Enroll Backstage from a signed-in Owner browser session."
             status = "Enrollment required"
@@ -936,7 +947,7 @@ final class BackstageViewModel: ObservableObject {
             status = "Connected"
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 status = userFacingMessage(for: error)
             }
         }
@@ -991,7 +1002,7 @@ final class BackstageViewModel: ObservableObject {
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 photoStatus = userFacingMessage(for: error)
             }
         }
@@ -1031,7 +1042,7 @@ final class BackstageViewModel: ObservableObject {
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 photoStatus = userFacingMessage(for: error)
             }
         }
@@ -1706,7 +1717,7 @@ final class BackstageViewModel: ObservableObject {
                 fixtureStatus = "Fixture refresh cancelled; the previous current fixture was preserved."
                 return
             }
-            let reason = "Backstage could not load fixtures because this Mac needs enrollment. Fixture-scoped actions are disabled."
+            let reason = "Fixtures could not load: \(authenticationOperationRecoveryMessage) Fixture-scoped actions are disabled."
             fixtureStatus = reason
             markFixtureSelectionUnavailable(reason)
             return
@@ -4466,7 +4477,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningFixture = true
         defer { isRunningFixture = false }
         guard await prepareAuthenticatedOperation() else {
-            fixtureStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            fixtureStatus = authenticationOperationRecoveryMessage
             return
         }
         do {
@@ -4484,7 +4495,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningAccess = true
         defer { isRunningAccess = false }
         guard await prepareAuthenticatedOperation() else {
-            accessStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            accessStatus = authenticationOperationRecoveryMessage
             return
         }
         do {
@@ -4513,8 +4524,7 @@ final class BackstageViewModel: ObservableObject {
     private func prepareAuthenticatedOperation() async -> Bool {
         authentication = await ensuredAuthentication()
         guard authentication.phase == .authenticated else {
-            authenticationStatus = "This Mac's Backstage enrollment must be renewed from Owner."
-            status = "Sign in again"
+            updateAuthenticationRecoveryStatus()
             return false
         }
         return true
@@ -4540,8 +4550,7 @@ final class BackstageViewModel: ObservableObject {
         guard let envelope = error as? APIErrorEnvelope,
               envelope.error.code == "google_login_required" else { return }
         authentication = await authenticationService.currentSnapshot()
-        authenticationStatus = "This Mac's Backstage session could not be renewed automatically."
-        status = "Sign in again"
+        updateAuthenticationRecoveryStatus()
     }
 
     private func isTransientCancellation(_ error: Error) -> Bool {
@@ -4556,7 +4565,10 @@ final class BackstageViewModel: ObservableObject {
     private func userFacingMessage(for error: Error) -> String {
         if let envelope = error as? APIErrorEnvelope {
             if envelope.error.code == "google_login_required" {
-                return "Backstage could not renew this Mac's Owner session. Open Overview and enroll this Mac again."
+                if authentication.phase == .needsEnrollment {
+                    return "Backstage's saved device credential was rejected. Open Overview and enroll this Mac again."
+                }
+                return "Backstage could not renew this Mac's Owner session. Its enrollment is retained; check the connection and retry from Overview."
             }
             return envelope.error.message
         }
@@ -4572,6 +4584,36 @@ final class BackstageViewModel: ObservableObject {
             return "The Owner index is busy with another sync. Backstage kept the current view; try again after the sync finishes."
         }
         return message
+    }
+
+    private func updateAuthenticationRecoveryStatus() {
+        switch authentication.phase {
+        case .authenticated:
+            authenticationStatus = "Authenticated with this Mac's revocable device credential."
+            status = "Connected"
+        case .renewalFailed:
+            authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
+            status = "Retry Owner session"
+        case .needsEnrollment:
+            authenticationStatus = "This Mac's saved Backstage device credential is missing or was rejected. Enroll it again from Owner."
+            status = "Enrollment required"
+        case .signedOut:
+            authenticationStatus = "Signed out on this Mac."
+            status = "Signed out"
+        }
+    }
+
+    private var authenticationOperationRecoveryMessage: String {
+        switch authentication.phase {
+        case .authenticated:
+            return "Backstage Owner authentication is ready."
+        case .renewalFailed:
+            return "Backstage retained this Mac's enrollment, but the Owner session needs to be retried from Overview."
+        case .needsEnrollment:
+            return "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+        case .signedOut:
+            return "Backstage is signed out. Open Overview to enroll this Mac."
+        }
     }
 
     private func runMetadata(commit: Bool) async {

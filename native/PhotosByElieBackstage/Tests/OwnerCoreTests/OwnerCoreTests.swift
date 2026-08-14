@@ -931,6 +931,70 @@ struct OwnerCoreTests {
         #expect(try await session.load() == nil)
     }
 
+    @Test("Corrupted credential storage returns to enrollment")
+    func corruptedCredentialStorageRequiresEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        try vault.write(Data("not-owner-credentials".utf8), account: OwnerCredentialSession.account)
+        let session = OwnerCredentialSession(vault: vault)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: RoutingTransport(responses: [:])
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap()
+        #expect(snapshot.phase == .needsEnrollment)
+        #expect(try vault.read(account: OwnerCredentialSession.account) == nil)
+    }
+
+    @Test("Temporary Keychain read failure retains the renewal path")
+    func credentialReadFailureRetainsRenewalPath() async {
+        let vault = ControlledFailureCredentialVault(failReads: true)
+        let service = OwnerAuthenticationService(
+            api: OwnerAPIClient(
+                baseURL: URL(string: "https://example.test/api/v1")!,
+                transport: RoutingTransport(responses: [:])
+            ),
+            session: OwnerCredentialSession(vault: vault)
+        )
+
+        #expect(await service.bootstrap().phase == .renewalFailed)
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+    }
+
+    @Test("Token-only storage cannot bypass device enrollment")
+    func tokenWithoutDeviceCredentialRequiresEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-incomplete",
+            deviceCredential: nil,
+            accessToken: "unexpired-but-unbound",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/actions": [
+                .init(status: 200, body: """
+                {"actions":[],"page":{"hasMore":false}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .needsEnrollment)
+        _ = try await client.listActions()
+        let requests = await transport.requests()
+        #expect(requests.last?.value(forHTTPHeaderField: "Authorization") == nil)
+        let saved = try #require(try await session.load())
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+    }
+
     @Test("One-time enrollment stores the device credential and a short-lived access token")
     func credentialEnrollment() async throws {
         let vault = MemoryCredentialVault()
@@ -1002,6 +1066,218 @@ struct OwnerCoreTests {
         let saved = try #require(try await session.load())
         #expect(saved.accessToken == "access-two")
         #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/tokens"])
+    }
+
+    @Test("Transient renewal failure retains enrollment for retry")
+    func credentialBootstrapRetainsEnrollmentAfterTransientFailure() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 503, body: """
+                {"error":{"code":"owner_token_auth_unavailable","message":"Native Owner token issuance is not configured."}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .renewalFailed)
+        #expect(snapshot.deviceId == "owner-device-max")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+    }
+
+    @Test("Network renewal failure retains enrollment for retry")
+    func credentialBootstrapRetainsEnrollmentAfterNetworkFailure() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: nil,
+            accessExpiresAt: nil
+        ))
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: RoutingTransport(responses: [:])
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap()
+        #expect(snapshot.phase == .renewalFailed)
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == nil)
+    }
+
+    @Test("Retained enrollment authenticates on a later retry")
+    func credentialBootstrapRetrySucceeds() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: nil,
+            accessExpiresAt: nil
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 503, body: """
+                {"error":{"code":"owner_token_auth_unavailable","message":"Try again later."}}
+                """),
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"access-after-retry",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        #expect(await service.bootstrap().phase == .renewalFailed)
+        let retried = await service.bootstrap()
+        #expect(retried.phase == .authenticated)
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == "access-after-retry")
+        #expect(await transport.requests().map(\.url?.path) == [
+            "/api/v1/auth/tokens",
+            "/api/v1/auth/tokens",
+        ])
+    }
+
+    @Test("Rejected device credential requires fresh enrollment")
+    func credentialBootstrapRejectsInvalidEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-revoked",
+            deviceCredential: String(repeating: "r", count: 48),
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 401, body: """
+                {"error":{"code":"owner_device_credential_invalid","message":"The Backstage device credential is invalid or revoked."}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .needsEnrollment)
+        #expect(snapshot.deviceId == "owner-device-revoked")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == nil)
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+        #expect(await service.currentSnapshot().phase == .needsEnrollment)
+    }
+
+    @Test("Failed credential persistence never authenticates an issued token")
+    func credentialPersistenceFailureFailsClosed() async throws {
+        let original = OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let stored = try JSONEncoder.ownerAPI.encode(original)
+        let vault = ControlledFailureCredentialVault(value: stored, failWrites: true)
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"must-not-be-used",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+            "/api/v1/actions": [
+                .init(status: 200, body: """
+                {"actions":[],"page":{"hasMore":false}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        #expect(
+            await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000)).phase
+                == .renewalFailed
+        )
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+        _ = try await client.listActions()
+        let requests = await transport.requests()
+        #expect(requests.last?.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(vault.value() == stored)
+    }
+
+    @Test("Rejected credential remains enrollment-required when persistence fails")
+    func rejectedCredentialPersistenceFailureStillNeedsEnrollment() async throws {
+        let original = OwnerCredentialSet(
+            deviceId: "owner-device-revoked",
+            deviceCredential: String(repeating: "r", count: 48),
+            accessToken: nil,
+            accessExpiresAt: nil
+        )
+        let vault = ControlledFailureCredentialVault(
+            value: try JSONEncoder.ownerAPI.encode(original),
+            failWrites: true
+        )
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 401, body: """
+                {"error":{"code":"owner_device_credential_invalid","message":"The Backstage device credential is invalid or revoked."}}
+                """),
+            ],
+        ])
+        let service = OwnerAuthenticationService(
+            api: OwnerAPIClient(
+                baseURL: URL(string: "https://example.test/api/v1")!,
+                transport: transport
+            ),
+            session: session
+        )
+
+        #expect(await service.bootstrap().phase == .needsEnrollment)
+        #expect(await service.currentSnapshot().phase == .needsEnrollment)
     }
 
     @Test("Expired native access recovers once and retries the original request")
@@ -3746,6 +4022,45 @@ private final class MemoryCredentialVault: CredentialVault, @unchecked Sendable 
 
     func delete(account: String) throws {
         lock.withLock { _ = values.removeValue(forKey: account) }
+    }
+}
+
+private final class ControlledFailureCredentialVault: CredentialVault, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValue: Data?
+    private let failReads: Bool
+    private let failWrites: Bool
+    private let failDeletes: Bool
+
+    init(
+        value: Data? = nil,
+        failReads: Bool = false,
+        failWrites: Bool = false,
+        failDeletes: Bool = false
+    ) {
+        storedValue = value
+        self.failReads = failReads
+        self.failWrites = failWrites
+        self.failDeletes = failDeletes
+    }
+
+    func read(account: String) throws -> Data? {
+        if failReads { throw URLError(.cannotLoadFromNetwork) }
+        return lock.withLock { storedValue }
+    }
+
+    func write(_ data: Data, account: String) throws {
+        if failWrites { throw URLError(.cannotWriteToFile) }
+        lock.withLock { storedValue = data }
+    }
+
+    func delete(account: String) throws {
+        if failDeletes { throw URLError(.cannotRemoveFile) }
+        lock.withLock { storedValue = nil }
+    }
+
+    func value() -> Data? {
+        lock.withLock { storedValue }
     }
 }
 

@@ -183,7 +183,8 @@ private struct OverviewView: View {
                         message: model.authenticationStatus,
                         isWorking: model.isAuthenticating
                     )
-                    if model.authentication.phase != .authenticated {
+                    if model.authentication.phase == .needsEnrollment
+                        || model.authentication.phase == .signedOut {
                         SecureField("One-time enrollment code", text: $model.enrollmentCode)
                             .textFieldStyle(.roundedBorder)
                         HStack {
@@ -199,6 +200,15 @@ private struct OverviewView: View {
                             .backstageHelp("Recheck the saved Keychain credential and renew this Mac's Owner session if possible.")
                         }
                         Text("Create the code from Owner in a currently authenticated browser. It is exchanged immediately and stored only in this Mac's Keychain.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if model.authentication.phase == .renewalFailed {
+                        Button("Retry Owner session") {
+                            Task { await model.bootstrapAuthentication() }
+                        }
+                        .disabled(model.isAuthenticating)
+                        .backstageHelp("Retry renewal using this Mac's retained device credential. No new enrollment code is required.")
+                        Text("This Mac's device enrollment is still stored in Keychain. Retry the session after checking the network or Owner service.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {

@@ -826,6 +826,48 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertNotIn("Text(model.nativeUploadStatus)", upload)
 
+    def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+
+        expected_feedback = {
+            "authenticationStatus": "model.isAuthenticating",
+            "deliveryStatus": "model.isRunningDelivery",
+            "r2ReconciliationStatus": "model.isRunningR2Reconciliation",
+            "lifecycleStatus": "model.isRunningLifecycle",
+            "fixturePolicyStatus": "model.isLoadingFixturePolicy",
+            "fixtureSnapshotStatus": "model.isRunningFixtureSnapshotOperation",
+            "accessStatus": "model.isRunningAccess",
+            "photosSyncStatus": "model.isSyncingPhotos",
+            "metadataModelLadderStatus": "model.isSavingMetadataModelLadder",
+            "metadataStatus": "model.isRunningMetadata",
+        }
+        for status, flag in expected_feedback.items():
+            self.assertIn("BackstageFeedbackView(", app)
+            self.assertIn(f"message: model.{status}", app)
+            self.assertIn(f"isWorking: {flag}", app)
+            self.assertNotIn(f"Text(model.{status})", app)
+
+        self.assertIn(
+            'message: model.isLoadingFixtureTree ? "Loading fixture tree…" : model.fixtureStatus',
+            app,
+        )
+        self.assertNotIn("Text(model.fixtureStatus)", app)
+
+        for status in ("metadataReviewStatus", "metadataProposalStatus"):
+            self.assertIn("BackstageFeedbackView(", app)
+            self.assertIn(f"message: model.{status}", app)
+            self.assertNotIn(f"Text(model.{status})", app)
+
+        for flag in (
+            "model.isRunningFixture",
+            "model.isSearchingFixtureAssets",
+            "model.isRunningFixtureSnapshotOperation",
+            "model.isLoadingFixturePolicy",
+        ):
+            self.assertIn(flag, app)
+
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
             NATIVE

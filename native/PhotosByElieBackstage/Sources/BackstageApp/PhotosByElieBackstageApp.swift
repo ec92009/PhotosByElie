@@ -179,9 +179,10 @@ private struct OverviewView: View {
                     if let expiresAt = model.authentication.accessExpiresAt {
                         LabeledContent("Session expires", value: expiresAt.formatted())
                     }
-                    Text(model.authenticationStatus)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    BackstageFeedbackView(
+                        message: model.authenticationStatus,
+                        isWorking: model.isAuthenticating
+                    )
                     if model.authentication.phase != .authenticated {
                         SecureField("One-time enrollment code", text: $model.enrollmentCode)
                             .textFieldStyle(.roundedBorder)
@@ -407,7 +408,10 @@ private struct DeliverablesView: View {
                     )
                     .backstageHelp("Record the authenticated HTTPS link as the ready delivery for the chosen product and fixture without messaging a client.")
             }
-            Text(model.deliveryStatus).font(.callout).foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.deliveryStatus,
+                isWorking: model.isRunningDelivery
+            )
             Table(model.deliverables) {
                 TableColumn("Kind", value: \.kind)
                 TableColumn("State", value: \.state)
@@ -462,7 +466,10 @@ private struct PublicationView: View {
             }
             Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
-            Text(model.r2ReconciliationStatus).font(.callout).foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.r2ReconciliationStatus,
+                isWorking: model.isRunningR2Reconciliation
+            )
             if model.isRunningR2Reconciliation {
                 ProgressView(model.r2Reconciliation?.stage ?? "Checking R2 references and sale protection…")
             }
@@ -531,9 +538,10 @@ private struct LifecycleView: View {
                     .disabled(model.isRunningLifecycle || model.lifecycleItems.allSatisfy { $0.state != "hidden" })
                     .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
-            Text(model.lifecycleStatus)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.lifecycleStatus,
+                isWorking: model.isRunningLifecycle
+            )
             Table(model.lifecycleItems, selection: $model.selectedLifecycleIDs) {
                 TableColumn("Title") { item in
                     Text(item.title.isEmpty ? item.mediaID : item.title)
@@ -658,14 +666,14 @@ private struct FixtureWorkflowView: View {
                     .disabled(model.isLoadingFixtureTree)
                     .backstageHelp("Reload the complete fixture hierarchy and its current archived states from Owner.")
             }
-            HStack {
-                if model.isLoadingFixtureTree {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-                Text(model.isLoadingFixtureTree ? "Loading fixture tree…" : model.fixtureStatus)
-                    .foregroundStyle(.secondary)
-            }
+            BackstageFeedbackView(
+                message: model.isLoadingFixtureTree ? "Loading fixture tree…" : model.fixtureStatus,
+                isWorking: model.isLoadingFixtureTree
+                    || model.isRunningFixture
+                    || model.isSearchingFixtureAssets
+                    || model.isRunningFixtureSnapshotOperation
+                    || model.isLoadingFixturePolicy
+            )
             HSplitView {
                 VStack(alignment: .leading, spacing: 10) {
                     List(selection: Binding<String?>(
@@ -878,9 +886,10 @@ private struct FixtureWorkflowView: View {
                                             if model.isLoadingFixturePolicy {
                                                 ProgressView().controlSize(.small)
                                             }
-                                            Text(model.fixturePolicyStatus)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                            BackstageFeedbackView(
+                                                message: model.fixturePolicyStatus,
+                                                isWorking: model.isLoadingFixturePolicy
+                                            )
                                         }
                                     }
                                 }
@@ -986,9 +995,10 @@ private struct FixtureWorkflowView: View {
                                             }
                                         }
                                         if !model.fixtureSnapshotStatus.isEmpty {
-                                            Text(model.fixtureSnapshotStatus)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                            BackstageFeedbackView(
+                                                message: model.fixtureSnapshotStatus,
+                                                isWorking: model.isRunningFixtureSnapshotOperation
+                                            )
                                         }
                                     }
                                 }
@@ -1044,7 +1054,10 @@ private struct AccessControlView: View {
                     .disabled(model.isRunningAccess)
                     .backstageHelp("Reload people, groups, and inherited access grants from Owner.")
             }
-            Text(model.accessStatus).foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.accessStatus,
+                isWorking: model.isRunningAccess
+            )
             HSplitView {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -1210,8 +1223,10 @@ private struct MetadataGiveBackView: View {
                         .disabled(model.isCancellingPhotosSync)
                         .backstageHelp("Stop after the current PhotoKit checkpoint. Completed asset classifications remain recorded and the rest retry on the next pass.")
                     }
-                    Text(model.photosSyncStatus)
-                        .foregroundStyle(.secondary)
+                    BackstageFeedbackView(
+                        message: model.photosSyncStatus,
+                        isWorking: model.isSyncingPhotos
+                    )
                 }
                 if let report = model.photosSyncReport {
                     HStack(spacing: 18) {
@@ -1263,8 +1278,7 @@ private struct MetadataGiveBackView: View {
                     }
                     .backstageHelp("Replace the canonical metadata keyword blacklist with the normalized terms entered here.")
                 }
-                Text(model.metadataReviewStatus)
-                    .foregroundStyle(.secondary)
+                BackstageFeedbackView(message: model.metadataReviewStatus)
             }
             Section("OpenAI title & keyword proposal ladder") {
                 Text("Add as many ordered rungs as needed. Each attempt advances through the saved order; every rung always receives a bounded JPEG preview.")
@@ -1312,9 +1326,10 @@ private struct MetadataGiveBackView: View {
                     }
                     .disabled(model.metadataModelLadderValidation != nil || model.isSavingMetadataModelLadder)
                     .backstageHelp("Save the selected OpenAI title and keyword proposal ladder through the audited Owner action.")
-                    Text(model.metadataModelLadderStatus)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    BackstageFeedbackView(
+                        message: model.metadataModelLadderStatus,
+                        isWorking: model.isSavingMetadataModelLadder
+                    )
                 }
                 if let validation = model.metadataModelLadderValidation {
                     Text(validation)
@@ -1331,8 +1346,7 @@ private struct MetadataGiveBackView: View {
                         Task { await model.loadMetadataProposals() }
                     }
                     .backstageHelp("Load pending AI metadata proposals from the local read-only Owner helper for human review.")
-                    Text(model.metadataProposalStatus)
-                        .foregroundStyle(.secondary)
+                    BackstageFeedbackView(message: model.metadataProposalStatus)
                 }
                 Table(model.metadataProposals) {
                     TableColumn("Current") { proposal in
@@ -1420,7 +1434,10 @@ private struct MetadataGiveBackView: View {
                         ProgressView().controlSize(.small)
                     }
                 }
-                Text(model.metadataStatus)
+                BackstageFeedbackView(
+                    message: model.metadataStatus,
+                    isWorking: model.isRunningMetadata
+                )
             }
             if let report = model.metadataReport {
                 Section("Receipt \(report.actionID)") {

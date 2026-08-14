@@ -244,18 +244,6 @@ struct CullingView: View {
 
     private var cullingFilterControls: some View {
         FlowLayout(spacing: 8) {
-            Text("Media").font(.caption.weight(.semibold))
-            ForEach(model.cullingMediaFilterControls, id: \.self) { filter in
-                Toggle(
-                    filter.label,
-                    isOn: Binding(
-                        get: { model.cullingMediaFilters.contains(filter) },
-                        set: { _ in model.toggleCullingMediaFilter(filter) }
-                    )
-                )
-                .toggleStyle(.checkbox)
-            }
-            Divider().frame(width: 1, height: 18)
             Text("Status").font(.caption.weight(.semibold))
             ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
                 Toggle(
@@ -288,7 +276,7 @@ struct CullingView: View {
                 }
             }
             Button("Clear filters") { model.clearCullingFilters() }
-                .backstageHelp("Restore the default Culling media, status, rating, color, and search filters.")
+                .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()

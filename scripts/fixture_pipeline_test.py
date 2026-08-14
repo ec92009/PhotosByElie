@@ -90,7 +90,7 @@ class FixturePipelineTest(unittest.TestCase):
                 "pixelHeight": 4000,
                 "resourceFormat": "JPEG",
             },
-            {"localIdentifier": "asset-2", "filename": "B.MOV", "mediaType": "video", "creationDate": "2026-07-15T10:01:00Z"},
+            {"localIdentifier": "asset-2", "filename": "B.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:01:00Z"},
             {"localIdentifier": "asset-3", "filename": "C.JPG", "mediaType": "photo", "creationDate": "2026-07-16T10:00:00Z"},
         ])
 
@@ -237,8 +237,24 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
-    def test_culling_media_availability_uses_unfiltered_fixture_universe(self):
+    def test_culling_universe_is_still_only_even_with_stale_video_filters(self):
+        upsert_assets(self.root, [{
+            "localIdentifier": "asset-video",
+            "filename": "SOURCE.MOV",
+            "mediaType": "video",
+            "creationDate": "2026-07-15T10:02:00Z",
+        }])
         mixed = create_fixture(self.root, "Mixed", fixture_id="mixed")
+        self.assertNotIn(
+            "asset-video",
+            fixture_candidate_asset_ids(self.root, mixed["fixtureId"]),
+        )
+        self.assertEqual(
+            search_assets(self.root, {"mediaTypes": ["video"]})["totalCount"],
+            0,
+        )
+        with self.assertRaisesRegex(ValueError, "still-only Culling snapshot"):
+            create_pool(self.root, mixed["fixtureId"], ["asset-video"])
         mixed_filtered = fixture_culling_window(
             self.root,
             mixed["fixtureId"],
@@ -247,13 +263,10 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(
             mixed_filtered["mediaAvailability"],
-            {"photos": 2, "videos": 1},
+            {"photos": 3, "videos": 0},
         )
-        self.assertEqual(
-            [item["assetId"] for item in mixed_filtered["items"]],
-            ["asset-2"],
-        )
-        self.assertEqual(mixed_filtered["summary"]["universe"], 1)
+        self.assertEqual(mixed_filtered["items"], [])
+        self.assertEqual(mixed_filtered["summary"]["universe"], 0)
 
         still_parent = create_fixture(self.root, "Still parent", fixture_id="still-parent")
         still_child = create_fixture(
@@ -289,14 +302,15 @@ class FixturePipelineTest(unittest.TestCase):
         set_fixture_asset_state(
             self.root,
             video_parent["fixtureId"],
-            ["asset-2"],
+            ["asset-video"],
             "picked",
         )
         video_only = fixture_culling_window(self.root, video_child["fixtureId"])
         self.assertEqual(
             video_only["mediaAvailability"],
-            {"photos": 0, "videos": 1},
+            {"photos": 0, "videos": 0},
         )
+        self.assertEqual(video_only["items"], [])
         fully_filtered = fixture_culling_window(
             self.root,
             mixed["fixtureId"],
@@ -310,7 +324,7 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(fully_filtered["items"], [])
         self.assertEqual(
             fully_filtered["mediaAvailability"],
-            {"photos": 2, "videos": 1},
+            {"photos": 3, "videos": 0},
         )
 
     def test_culling_window_includes_original_metadata_without_exporting(self):
@@ -626,11 +640,17 @@ class FixturePipelineTest(unittest.TestCase):
             )
 
     def test_review_filters_proposal_availability_and_media_across_the_complete_queue(self):
+        upsert_assets(self.root, [{
+            "localIdentifier": "asset-video",
+            "filename": "SOURCE.MOV",
+            "mediaType": "video",
+            "creationDate": "2026-07-15T10:02:00Z",
+        }])
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(
             self.root,
             root["fixtureId"],
-            ["asset-1", "asset-2", "asset-3"],
+            ["asset-1", "asset-2", "asset-3", "asset-video"],
             "picked",
         )
         with connect(self.root) as conn:
@@ -651,12 +671,20 @@ class FixturePipelineTest(unittest.TestCase):
                         "Improve title",
                     ),
                     (
-                        "proposal-video",
+                        "proposal-second",
                         "asset-2",
                         "loaded",
-                        "Video proposal",
-                        '["Video"]',
+                        "Second proposal",
+                        '["Second"]',
                         "Add details",
+                    ),
+                    (
+                        "proposal-source-video",
+                        "asset-video",
+                        "loaded",
+                        "Source video proposal",
+                        '["Video"]',
+                        "Source video must stay excluded",
                     ),
                     (
                         "proposal-old",
@@ -699,7 +727,7 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(photos["mediaFilters"], ["photos"])
         self.assertEqual(
             [item["assetId"] for item in photos["items"]],
-            ["asset-1"],
+            ["asset-1", "asset-2"],
         )
         videos = fixture_review_window(
             self.root,
@@ -709,7 +737,7 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(
             [item["assetId"] for item in videos["items"]],
-            ["asset-2"],
+            [],
         )
         empty = fixture_review_window(
             self.root,
@@ -2176,7 +2204,7 @@ class FixturePipelineTest(unittest.TestCase):
         record_decision(self.root, {"assetId": "asset-1", "action": "metadata", "caption": "Mediterranean terrace", "metadataState": "proposed"})
         self.assertEqual(search_assets(self.root, {"query": "Mediterranean"})["totalCount"], 1)
         result = search_assets(self.root, {"mediaTypes": ["photo"], "query": ".jpg"})
-        self.assertEqual(result["totalCount"], 2)
+        self.assertEqual(result["totalCount"], 3)
         pool = create_pool(self.root, fixture["fixtureId"], [item["assetId"] for item in result["items"]], criteria=result["filters"])
         again = create_pool(self.root, fixture["fixtureId"], [item["assetId"] for item in result["items"]], criteria=result["filters"])
         self.assertEqual(pool["poolId"], again["poolId"])
@@ -2186,13 +2214,13 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(list_pools(self.root, fixture_id="missing"), [])
         upsert_assets(self.root, [{"localIdentifier": "asset-4", "filename": "D.JPG", "mediaType": "photo", "creationDate": "2026-07-17T10:00:00Z"}])
-        self.assertEqual(pool["assetCount"], 2)
+        self.assertEqual(pool["assetCount"], 3)
         refresh = preview_pool_refresh(self.root, pool["poolId"])
-        self.assertEqual(refresh["afterCount"], 3)
+        self.assertEqual(refresh["afterCount"], 4)
         self.assertFalse(refresh["applied"])
         applied = apply_pool_refresh(self.root, pool["poolId"])
         self.assertTrue(applied["applied"])
-        self.assertEqual(applied["pool"]["assetCount"], 3)
+        self.assertEqual(applied["pool"]["assetCount"], 4)
         self.assertEqual(apply_pool_refresh(self.root, pool["poolId"])["pool"]["poolId"], applied["pool"]["poolId"])
 
     def test_search_filters_escape_literal_like_wildcards(self):
@@ -2219,7 +2247,7 @@ class FixturePipelineTest(unittest.TestCase):
 
     def test_exact_identity_dedupe_never_uses_capture_time(self):
         upsert_assets(self.root, [{"cloudIdentifier": "cloud-asset-1", "localIdentifier": "asset-1", "filename": "A copy.JPG", "mediaType": "photo", "creationDate": "2026-07-15T10:00:00Z"}])
-        self.assertEqual(search_assets(self.root, {"mediaTypes": ["photo"], "dedupeExact": True})["totalCount"], 2)
+        self.assertEqual(search_assets(self.root, {"mediaTypes": ["photo"], "dedupeExact": True})["totalCount"], 3)
         self.assertEqual(search_assets(self.root, {"dateFrom": "2026-07-15T10:00:00Z", "dateTo": "2026-07-15T10:00:00Z", "dedupeExact": True})["totalCount"], 1)
         upsert_assets(self.root, [
             {"localIdentifier": "checksum-a", "filename": "checksum-a.jpg", "mediaType": "photo", "checksumSha256": "c" * 64},

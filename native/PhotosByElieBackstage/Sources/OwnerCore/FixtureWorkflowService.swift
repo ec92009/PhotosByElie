@@ -1129,7 +1129,7 @@ public actor FixtureWorkflowService {
         mode: FixtureReviewMode = .backfill,
         stateFilters: [String] = ["picked"],
         proposalAvailableOnly: Bool = false,
-        mediaFilters: [String] = ["photos", "videos"],
+        mediaFilters: [String] = ["photos"],
         offset: Int = 0,
         limit: Int = 200,
         search: String = ""

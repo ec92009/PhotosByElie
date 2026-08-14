@@ -193,7 +193,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
     @Published var cullingSearch = ""
-    @Published var cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+    @Published var cullingMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var cullingRatingFilters = Set(0...5)
     @Published var cullingColorFilters = Set(CullingColorFilter.selectableCases)
     @Published var cullingWindowOffset = 0
@@ -209,7 +209,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewMode: FixtureReviewMode = .full
     @Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]
     @Published var reviewProposalAvailableOnly = false
-    @Published var reviewMediaFilters = Set(CullingMediaFilter.selectableCases)
+    @Published var reviewMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var reviewSearch = ""
     @Published var reviewWindowOffset = 0
     @Published var reviewWindowLimit = 200
@@ -1162,10 +1162,14 @@ final class BackstageViewModel: ObservableObject {
 
     var cullingAssets: [FixtureAsset] {
         if cullingPool == nil, hasCurrentCullingFixture {
-            return fixtureCullingWindow?.items ?? []
+            return (fixtureCullingWindow?.items ?? []).filter {
+                !$0.mediaType.lowercased().contains("video")
+            }
         }
         if let cullingPool {
-            return cullingPool.assets.map {
+            return cullingPool.assets.filter {
+                !$0.mediaType.lowercased().contains("video")
+            }.map {
                 FixtureAsset(
                     id: $0.id,
                     title: $0.title,
@@ -1174,24 +1178,21 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
         }
-        return libraryItems.map {
+        return libraryItems.filter {
+            !$0.mediaType.lowercased().contains("video")
+        }.map {
             FixtureAsset(id: $0.id, title: "", filename: $0.filename, mediaType: $0.mediaType)
         }
     }
 
     var cullingMediaFilterControls: [CullingMediaFilter] {
-        if cullingPool == nil, hasCurrentCullingFixture {
-            return fixtureCullingMediaAvailability?.availableFilters
-                ?? fixtureCullingWindow?.availableMediaFilters
-                ?? CullingMediaFilter.selectableCases
-        }
-        return CullingMediaFilter.availableCases(in: cullingAssets.map(\.mediaType))
+        [.photos]
     }
 
     var cullingQuery: CullingQuery {
         CullingQuery(
             search: cullingSearch,
-            media: cullingMediaFilters,
+            media: [.photos],
             pick: Set(cullingViews.map {
                 switch $0 {
                 case .undecided: .undecided
@@ -1203,12 +1204,6 @@ final class BackstageViewModel: ObservableObject {
             ratings: cullingRatingFilters,
             colors: cullingColorFilters
         )
-    }
-
-    var cullingMediaFilterLabel: String {
-        cullingMediaFilters.count == CullingMediaFilter.selectableCases.count
-            ? "All media"
-            : cullingMediaFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
     }
 
     var cullingViewFilterLabel: String {
@@ -1229,12 +1224,6 @@ final class BackstageViewModel: ObservableObject {
         cullingColorFilters.count == CullingColorFilter.selectableCases.count
             ? "All colors"
             : cullingColorFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
-    }
-
-    func toggleCullingMediaFilter(_ filter: CullingMediaFilter) {
-        guard cullingMediaFilterControls.contains(filter) else { return }
-        toggle(filter, in: &cullingMediaFilters)
-        applyCullingFilters()
     }
 
     func toggleCullingViewFilter(_ view: FixtureCullingView) {
@@ -1262,10 +1251,8 @@ final class BackstageViewModel: ObservableObject {
     func normalizeCullingMediaFilters(
         for availableCases: [CullingMediaFilter]
     ) -> Bool {
-        let normalized = CullingMediaFilter.normalizedSelection(
-            cullingMediaFilters,
-            availableCases: availableCases
-        )
+        _ = availableCases
+        let normalized: Set<CullingMediaFilter> = [.photos]
         guard normalized != cullingMediaFilters else { return false }
         cullingMediaFilters = normalized
         return true
@@ -1448,7 +1435,7 @@ final class BackstageViewModel: ObservableObject {
 
     func clearCullingFilters() {
         cullingSearch = ""
-        cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+        cullingMediaFilters = [.photos]
         cullingRatingFilters = Set(0...5)
         cullingColorFilters = Set(CullingColorFilter.selectableCases)
         let allViews = Set(FixtureCullingView.selectableCases)
@@ -1640,13 +1627,7 @@ final class BackstageViewModel: ObservableObject {
             let requestedOffset = cullingWindowOffset
             let requestedLimit = cullingWindowLimit
 
-            func requestWindow(
-                mediaFilters: Set<CullingMediaFilter>,
-                offset: Int
-            ) async throws -> FixtureCullingWindow {
-                let mediaTypes = mediaFilters.map {
-                    $0 == .videos ? "video" : "photo"
-                }.sorted()
+            func requestWindow(offset: Int) async throws -> FixtureCullingWindow {
                 return try await fixtureService.cullingWindow(
                     fixtureID: requestedFixtureID,
                     view: views.count == 1 ? views[0] : .allActive,
@@ -1654,34 +1635,16 @@ final class BackstageViewModel: ObservableObject {
                     offset: offset,
                     limit: requestedLimit,
                     search: requestedSearch,
-                    mediaTypes: mediaTypes,
+                    mediaTypes: ["photo"],
                     ratings: ratings,
                     colors: colors
                 )
             }
 
-            let requestedMediaFilters = cullingMediaFilters
-            var window = try await requestWindow(
-                mediaFilters: requestedMediaFilters,
-                offset: requestedOffset
-            )
+            cullingMediaFilters = [.photos]
+            let window = try await requestWindow(offset: requestedOffset)
             guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
             fixtureCullingMediaAvailability = window.mediaAvailability
-            let availableMediaFilters = window.availableMediaFilters
-            let requiresNormalizedReload = !availableMediaFilters.isEmpty
-                && requestedMediaFilters.isDisjoint(with: Set(availableMediaFilters))
-            normalizeCullingMediaFilters(for: availableMediaFilters)
-            if requiresNormalizedReload {
-                window = try await requestWindow(
-                    mediaFilters: cullingMediaFilters,
-                    offset: 0
-                )
-            }
-            guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
-            fixtureCullingMediaAvailability = window.mediaAvailability
-            if requiresNormalizedReload {
-                cullingWindowOffset = 0
-            }
             fixtureCullingWindow = window
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
@@ -2240,19 +2203,6 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
-    func toggleReviewMediaFilter(_ filter: CullingMediaFilter) {
-        preserveCurrentReviewDraft()
-        if reviewMediaFilters.contains(filter) {
-            reviewMediaFilters.remove(filter)
-        } else {
-            reviewMediaFilters.insert(filter)
-        }
-        reviewWindowOffset = 0
-        reviewSelection.clear()
-        clearReviewDraft()
-        Task { await loadFixtureReviewWindow() }
-    }
-
     func moveReviewWindow(forward: Bool) {
         guard let window = fixtureReviewWindow else { return }
         if forward, window.hasNext {
@@ -2285,12 +2235,13 @@ final class BackstageViewModel: ObservableObject {
             }
         }
         do {
+            reviewMediaFilters = [.photos]
             let window = try await fixtureService.reviewWindow(
                 fixtureID: selectedFixtureID,
                 mode: reviewMode,
                 stateFilters: reviewStateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: reviewProposalAvailableOnly,
-                mediaFilters: reviewMediaFilters.map(\.rawValue).sorted(),
+                mediaFilters: [CullingMediaFilter.photos.rawValue],
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
                 search: reviewSearch
@@ -2316,18 +2267,7 @@ final class BackstageViewModel: ObservableObject {
             let scope = reviewProposalAvailableOnly
                 ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
                 : (queueScope.isEmpty ? "No states" : queueScope)
-            let mediaScope: String
-            switch reviewMediaFilters {
-            case let filters where filters == Set(CullingMediaFilter.selectableCases):
-                mediaScope = "items"
-            case let filters where filters == [.photos]:
-                mediaScope = "photos"
-            case let filters where filters == [.videos]:
-                mediaScope = "videos"
-            default:
-                mediaScope = "items"
-            }
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) photos • oldest first."
             await refreshAIStatus()
         } catch {
             guard requestSerial == reviewWindowRequestSerial else { return }
@@ -2744,8 +2684,7 @@ final class BackstageViewModel: ObservableObject {
             return false
         }
 
-        let mediaFilter: CullingMediaFilter = item.mediaType == "video" ? .videos : .photos
-        guard reviewMediaFilters.contains(mediaFilter) else { return false }
+        guard !item.mediaType.lowercased().contains("video") else { return false }
 
         let query = reviewSearch.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return true }
@@ -2829,7 +2768,7 @@ final class BackstageViewModel: ObservableObject {
                     reviewMode = entry.mode
                     reviewStateFilters = entry.stateFilters
                     reviewProposalAvailableOnly = entry.proposalAvailableOnly
-                    reviewMediaFilters = entry.mediaFilters
+                    reviewMediaFilters = [.photos]
                     reviewSearch = entry.search
                     reviewWindowOffset = entry.offset
                     await loadFixtureReviewWindow(
@@ -2849,7 +2788,7 @@ final class BackstageViewModel: ObservableObject {
                 reviewMode = entry.mode
                 reviewStateFilters = entry.stateFilters
                 reviewProposalAvailableOnly = entry.proposalAvailableOnly
-                reviewMediaFilters = entry.mediaFilters
+                reviewMediaFilters = [.photos]
                 reviewSearch = entry.search
                 reviewWindowOffset = entry.offset
                 let window = try await fixtureService.reviewWindow(
@@ -2857,7 +2796,7 @@ final class BackstageViewModel: ObservableObject {
                     mode: entry.mode,
                     stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
                     proposalAvailableOnly: entry.proposalAvailableOnly,
-                    mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
+                    mediaFilters: [CullingMediaFilter.photos.rawValue],
                     offset: entry.offset,
                     limit: reviewWindowLimit,
                     search: entry.search

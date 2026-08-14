@@ -46,6 +46,7 @@ public struct PhotoExportReceipt: Sendable, Equatable {
 public enum PhotoLibraryError: Error, Sendable, Equatable {
     case accessDenied
     case assetNotFound(String)
+    case unsupportedMediaType(String)
     case resourceNotFound(String)
     case previewUnavailable(String)
     case exportFailed(String)
@@ -79,7 +80,10 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let options = PHFetchOptions()
         options.fetchLimit = max(1, min(5_000, limit))
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        let result = PHAsset.fetchAssets(with: options)
+        // Backstage source intake is still-photo only. Real-estate videos are
+        // generated deliverables built from approved stills and do not belong
+        // in the PhotoKit culling/preview universe.
+        let result = PHAsset.fetchAssets(with: .image, options: options)
         var items: [PhotoLibraryItem] = []
         result.enumerateObjects { asset, _, stop in
             let resources = PHAssetResource.assetResources(for: asset)
@@ -206,14 +210,17 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         ).firstObject else {
             throw PhotoLibraryError.assetNotFound(localIdentifier)
         }
+        guard asset.mediaType == .image else {
+            throw PhotoLibraryError.unsupportedMediaType(
+                "Backstage source workflows accept still photos only."
+            )
+        }
         return asset
     }
 
     private func preferredOriginalResource(for asset: PHAsset) -> PHAssetResource? {
         let resources = PHAssetResource.assetResources(for: asset)
-        let priorities: [PHAssetResourceType] = asset.mediaType == .video
-            ? [.fullSizeVideo, .video, .pairedVideo]
-            : [.fullSizePhoto, .photo, .alternatePhoto]
+        let priorities: [PHAssetResourceType] = [.fullSizePhoto, .photo, .alternatePhoto]
         for type in priorities {
             if let resource = resources.first(where: { $0.type == type }) {
                 return resource

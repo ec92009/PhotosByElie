@@ -424,18 +424,6 @@ struct ReviewView: View {
                 )
             )
             .toggleStyle(.checkbox)
-            Text("Media")
-                .font(.callout.weight(.semibold))
-            ForEach(CullingMediaFilter.selectableCases, id: \.rawValue) { filter in
-                Toggle(
-                    filter.label,
-                    isOn: Binding(
-                        get: { model.reviewMediaFilters.contains(filter) },
-                        set: { _ in model.toggleReviewMediaFilter(filter) }
-                    )
-                )
-                .toggleStyle(.checkbox)
-            }
         }
     }
 }

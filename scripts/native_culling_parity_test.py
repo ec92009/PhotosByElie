@@ -73,7 +73,6 @@ class NativeCullingParityTest(unittest.TestCase):
             "X move to recoverable Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
-            "CullingMediaFilter.selectableCases",
             "FixtureCullingView.selectableCases",
             "cullingRatingFilters.contains",
             "CullingColorFilter.selectableCases",
@@ -314,7 +313,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady",
             apply_action,
         )
-        self.assertIn("reviewMediaFilters.contains(mediaFilter)", apply_action)
+        self.assertIn(
+            'guard !item.mediaType.lowercased().contains("video") else { return false }',
+            apply_action,
+        )
         self.assertNotIn("fixtureService.reviewWindow(", apply_action)
         review_action_and_retention = apply_action.split(
             "private func removeUnpickedReviewItems",
@@ -340,9 +342,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("item.proposedTitle", hydration)
         self.assertIn("item.proposedKeywords", hydration)
         self.assertNotIn("markAIProposalsLoaded", hydration)
-        self.assertIn("CullingMediaFilter.selectableCases", app)
-        self.assertIn("reviewMediaFilters.contains", app)
-        self.assertIn("toggleReviewMediaFilter", model)
+        review = app.split("struct ReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+        self.assertNotIn('Text("Media")', review)
+        self.assertNotIn("toggleReviewMediaFilter", review)
+        self.assertNotIn("func toggleReviewMediaFilter", model)
+        self.assertIn(
+            "mediaFilters: [CullingMediaFilter.photos.rawValue]",
+            model,
+        )
         self.assertIn("FixtureReviewStateFilter.allCases", app)
         self.assertIn("reviewStateFilters.contains", app)
         self.assertIn("toggleReviewStateFilter", model)
@@ -592,8 +601,8 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertNotIn('Button("Apply")', culling)
         self.assertNotIn("Menu {", culling)
-        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 2)
-        self.assertIn("Text(\"Media\")", culling)
+        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 1)
+        self.assertNotIn("Text(\"Media\")", culling)
         self.assertIn("Text(\"Status\")", culling)
         self.assertIn("Text(\"Rating\")", culling)
         self.assertIn("Text(\"Color\")", culling)
@@ -615,7 +624,7 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
-    def test_media_controls_use_unfiltered_fixture_availability_and_leave_no_hidden_ax_nodes(self):
+    def test_source_workflows_are_still_only_without_media_controls(self):
         app = backstage_ui_source()
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
@@ -623,50 +632,62 @@ class NativeCullingParityTest(unittest.TestCase):
         owner = (
             NATIVE / "Sources" / "OwnerCore" / "FixtureWorkflowService.swift"
         ).read_text(encoding="utf-8")
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        bridge = (ROOT / "scripts" / "apple_photos_bridge.swift").read_text(
+            encoding="utf-8"
+        )
         pipeline = (ROOT / "scripts" / "fixture_pipeline.py").read_text(
             encoding="utf-8"
         )
         culling = app.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
-        media_controls = culling.split('Text("Media")', 1)[1].split(
-            'Text("Status")', 1
+        review = app.split("struct ReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
         )[0]
         loader = model.split(
             "func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false)",
             1,
         )[1].split("private func scheduleFixtureCullingBackfill", 1)[0]
 
-        self.assertLess(
-            pipeline.index("universe_predicates = list(predicates)"),
-            pipeline.index("clean_media ="),
+        self.assertNotIn('Text("Media")', culling)
+        self.assertNotIn("cullingMediaFilterControls", culling)
+        self.assertNotIn('Text("Media")', review)
+        self.assertNotIn("toggleReviewMediaFilter", review)
+        self.assertIn("PHAsset.fetchAssets(with: .image", photo_library)
+        self.assertGreaterEqual(
+            bridge.count("PHAsset.fetchAssets(with: .image"),
+            2,
         )
-        self.assertIn("WHERE {' AND '.join(universe_predicates)}", pipeline)
-        self.assertIn('"mediaAvailability": {', pipeline)
-        self.assertIn("FixtureCullingMediaAvailability", owner)
-        self.assertIn("public var availableMediaFilters", owner)
+        self.assertIn('format: "mediaType == %d"', bridge)
+        self.assertIn('code: "source_video_unsupported"', bridge)
+        self.assertNotIn('case "video":', bridge)
+        self.assertNotIn("writeLocalVideoPosterPreviewJPEG", bridge)
+        self.assertNotIn("writeVideoResource", bridge)
+        self.assertNotIn("import AVFoundation", bridge)
+        self.assertIn("case unsupportedMediaType(String)", photo_library)
+        self.assertGreaterEqual(
+            pipeline.count("lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'"),
+            5,
+        )
         self.assertIn(
-            "ForEach(model.cullingMediaFilterControls, id: \\.self)",
-            media_controls,
+            "source videos cannot enter a still-only Culling snapshot",
+            pipeline,
         )
-        for visual_hiding_marker in (
-            ".hidden()",
-            ".opacity(",
-            ".accessibilityHidden(",
-        ):
-            self.assertNotIn(visual_hiding_marker, media_controls)
-        self.assertNotIn("onChange(of: model.cullingMediaFilters)", culling)
+        self.assertIn('mediaFilters: [String] = ["photos"]', owner)
+        self.assertIn('mediaTypes: ["photo"]', loader)
+        self.assertIn("cullingMediaFilters = [.photos]", loader)
+        self.assertIn("reviewMediaFilters = [.photos]", model)
         self.assertIn(
-            "applyCullingFilters()",
-            model.split("func toggleCullingMediaFilter", 1)[1].split(
-                "func toggleCullingViewFilter", 1
-            )[0],
+            "mediaFilters: [CullingMediaFilter.photos.rawValue]",
+            model,
         )
-        self.assertIn("window.availableMediaFilters", loader)
         self.assertIn("fixtureCullingMediaAvailability = window.mediaAvailability", loader)
-        self.assertIn("requestedMediaFilters.isDisjoint", loader)
-        self.assertIn("cullingWindowOffset = 0", loader)
-        self.assertEqual(loader.count("window = try await requestWindow("), 2)
+        self.assertEqual(loader.count("let window = try await requestWindow("), 1)
+        self.assertNotIn("requestedMediaFilters", loader)
+        self.assertNotIn("requestedMediaFilters.isDisjoint", loader)
         self.assertIn(
             "normalizeCullingMediaFilters(for: cullingMediaFilterControls)",
             model,
@@ -710,7 +731,7 @@ class NativeCullingParityTest(unittest.TestCase):
             return match.group(1)
 
         self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "226.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "86")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "87")
         self.assertEqual(value("PBE_BACKSTAGE_VERSION"), value("PBE_PHOTOS_BRIDGE_VERSION"))
         self.assertEqual(value("PBE_BACKSTAGE_BUILD"), value("PBE_PHOTOS_BRIDGE_BUILD"))
         self.assertIn('source "$release_metadata"', build_script)

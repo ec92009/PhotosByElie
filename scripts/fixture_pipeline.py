@@ -1350,7 +1350,10 @@ def fixture_candidate_asset_ids(
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
         if not fixture["parent_fixture_id"]:
-            predicates = ["1 = 1"]
+            predicates = [
+                "1 = 1",
+                "lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'",
+            ]
             if not include_missing:
                 predicates.append("(a.missing_at IS NULL OR a.missing_at = '')")
             predicates.append(
@@ -1384,6 +1387,7 @@ def fixture_candidate_asset_ids(
                   AND d.placement_state = 'picked'
                   AND d.eligibility_state = 'active'
                   AND (a.missing_at IS NULL OR a.missing_at = '')
+                  AND lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'
                   AND NOT EXISTS (
                     SELECT 1 FROM sidecar_tombstones t
                     WHERE t.asset_id = d.asset_id AND t.tombstone_state = 'active'
@@ -1457,6 +1461,7 @@ def fixture_culling_window(
         params.append(fixture_id)
         predicates = [
             "(a.missing_at IS NULL OR a.missing_at = '')",
+            "lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'",
             """
             NOT EXISTS (
               SELECT 1 FROM sidecar_tombstones AS tombstone
@@ -1466,8 +1471,8 @@ def fixture_culling_window(
             """,
             "COALESCE(global_decision.pick_state, '') <> 'hidden'",
         ]
-        # Media controls describe the fixture candidate universe, so snapshot
-        # these predicates before any interactive filter is appended.
+        # Culling is a still-photo source workflow. Snapshot that still-only
+        # universe before any interactive status/rating/color/search filter.
         universe_predicates = list(predicates)
         universe_params = list(params)
         clean_media = {
@@ -1695,6 +1700,7 @@ def _fixture_review_predicates(
 ) -> tuple[list[str], list[Any]]:
     predicates = [
         "(a.missing_at IS NULL OR a.missing_at = '')",
+        "lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'",
         """
         NOT EXISTS (
           SELECT 1 FROM sidecar_tombstones AS tombstone
@@ -1751,7 +1757,7 @@ def _fixture_review_predicates(
         )
     selected_media = {
         str(value or "").strip().casefold()
-        for value in (media_filters if media_filters is not None else ["photos", "videos"])
+        for value in (media_filters if media_filters is not None else ["photos"])
     } & {"photos", "videos"}
     if selected_media != {"photos", "videos"}:
         if not selected_media:
@@ -1759,7 +1765,7 @@ def _fixture_review_predicates(
         elif selected_media == {"videos"}:
             predicates.append("lower(COALESCE(a.media_type, 'photo')) = 'video'")
         else:
-            predicates.append("lower(COALESCE(a.media_type, 'photo')) != 'video'")
+            predicates.append("lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'")
     params: list[Any] = []
     columns = (
         "a.asset_id",
@@ -1981,7 +1987,7 @@ def fixture_review_window(
         ),
         "proposalAvailableOnly": bool(proposal_available_only),
         "mediaFilters": list(
-            media_filters if media_filters is not None else ["photos", "videos"]
+            media_filters if media_filters is not None else ["photos"]
         ),
         "offset": safe_offset,
         "limit": safe_limit,
@@ -3390,6 +3396,7 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
     filters = filters or {}
     predicates = [
         "(a.missing_at IS NULL OR a.missing_at = '')",
+        "lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'",
         "COALESCE(d.pick_state, '') <> 'hidden'",
         "NOT EXISTS (SELECT 1 FROM sidecar_tombstones t WHERE t.asset_id = a.asset_id AND t.tombstone_state = 'active')",
         "NOT EXISTS (SELECT 1 FROM media_lifecycle lifecycle WHERE lifecycle.media_id = a.asset_id AND lifecycle.lifecycle_state IN ('hidden', 'discarded'))",
@@ -3504,15 +3511,30 @@ def create_pool(repo_root: Path, fixture_id: str, asset_ids: Iterable[str], *, n
     snapshot_hash = _snapshot_hash(clean_ids, criteria)
     with connect(repo_root) as conn:
         breadcrumbs = fixture_breadcrumbs(conn, fixture_id)
-        existing = conn.execute("SELECT pool_id FROM fixture_culling_pools WHERE fixture_id = ? AND snapshot_hash = ?", (fixture_id, snapshot_hash)).fetchone()
-        if existing:
-            return get_pool(repo_root, existing["pool_id"], conn=conn)
         placeholders = ",".join("?" for _ in clean_ids)
-        rows = conn.execute(f"SELECT asset_id, source_anchor, raw_json FROM sidecar_assets WHERE asset_id IN ({placeholders})", clean_ids).fetchall()
+        rows = conn.execute(
+            f"SELECT asset_id, source_anchor, raw_json, media_type FROM sidecar_assets WHERE asset_id IN ({placeholders})",
+            clean_ids,
+        ).fetchall()
         by_id = {row["asset_id"]: row for row in rows}
         missing = [asset_id for asset_id in clean_ids if asset_id not in by_id]
         if missing:
             raise ValueError(f"{len(missing)} selected asset(s) are not indexed")
+        source_videos = [
+            asset_id
+            for asset_id in clean_ids
+            if "video" in str(by_id[asset_id]["media_type"] or "photo").strip().casefold()
+        ]
+        if source_videos:
+            raise ValueError(
+                "source videos cannot enter a still-only Culling snapshot"
+            )
+        existing = conn.execute(
+            "SELECT pool_id FROM fixture_culling_pools WHERE fixture_id = ? AND snapshot_hash = ?",
+            (fixture_id, snapshot_hash),
+        ).fetchone()
+        if existing:
+            return get_pool(repo_root, existing["pool_id"], conn=conn)
         pool_id = f"pool-{uuid.uuid4().hex[:16]}"
         pool_name = _clean_name(name or f"{' / '.join(item['name'] for item in breadcrumbs)} pool")
         conn.execute("INSERT INTO fixture_culling_pools (pool_id, fixture_id, name, criteria_json, snapshot_hash, asset_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (pool_id, fixture_id, pool_name, _json(criteria), snapshot_hash, len(clean_ids), timestamp, timestamp))

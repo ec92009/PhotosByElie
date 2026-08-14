@@ -93,7 +93,7 @@ struct BackstageFixtureSelectionTests {
         #expect(model.isFixtureChooserDisabled)
     }
 
-    @Test("Fixture switches recompute media controls and normalize stale selection")
+    @Test("Fixture switches keep Culling on the still-photo source policy")
     @MainActor
     func fixtureSwitchRecomputesCullingMediaAvailability() throws {
         let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
@@ -127,16 +127,16 @@ struct BackstageFixtureSelectionTests {
             videos: 7
         )
 
-        #expect(model.cullingMediaFilterControls == [.videos])
-        #expect(model.normalizeCullingMediaFilters(for: model.cullingMediaFilterControls))
-        #expect(model.cullingMediaFilters == [.videos])
+        #expect(model.cullingMediaFilterControls == [.photos])
+        #expect(!model.normalizeCullingMediaFilters(for: model.cullingMediaFilterControls))
+        #expect(model.cullingMediaFilters == [.photos])
 
         model.fixtureCullingWindow = cullingWindow(
             fixtureID: "fixture-expo",
             photos: 5,
             videos: 7
         )
-        #expect(model.cullingMediaFilterControls == [.photos, .videos])
+        #expect(model.cullingMediaFilterControls == [.photos])
     }
 
     @Test("Refresh previews reports immediate progress and prevents duplicate requests")
@@ -203,7 +203,7 @@ struct BackstageFixtureSelectionTests {
         #expect(model.photoStatus == "Photos access is required. Choose Allow Photos, then retry Refresh previews.")
     }
 
-    @Test("Missing media availability keeps both controls for connector compatibility")
+    @Test("Missing media availability still keeps Culling on photos")
     @MainActor
     func missingMediaAvailabilityFallsBackSafely() throws {
         let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
@@ -224,7 +224,7 @@ struct BackstageFixtureSelectionTests {
             "candidateMode": .string("photos-library"),
         ])
 
-        #expect(model.cullingMediaFilterControls == [.photos, .videos])
+        #expect(model.cullingMediaFilterControls == [.photos])
     }
 
     @Test("PBE launch captures fixture synchronously and releases provisional freeze")

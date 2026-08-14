@@ -1175,6 +1175,8 @@ final class BackstageViewModel: ObservableObject {
 
     func retryThumbnail(for assetID: String) {
         guard cullingThumbnails[assetID] == nil else { return }
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         requestThumbnail(for: assetID)
     }

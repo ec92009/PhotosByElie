@@ -357,7 +357,9 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   assert.match(localHost, /\?gallery=pbe-owner/);
   assert.match(localHost, /assert_pbe_owner_x_scope/);
   assert.match(localHost, /queue_hosted_lifecycle_request/);
-  assert.match(gallery, /if \(isPBEOwnerGallery\) detailParams\.set\("gallery", pbeOwnerGalleryKey\)/);
+  assert.match(gallery, /const detailHrefForPhotoId = \(photoId\) => \{[\s\S]*if \(isPBEOwnerGallery\) detailParams\.set\("gallery", pbeOwnerGalleryKey\);[\s\S]*return versionedHref/);
+  assert.match(gallery, /window\.location\.assign\(detailHrefForPhotoId\(photo\.id\)\)/);
+  assert.match(gallery, /const href = detailHrefForPhotoId\(photo\.id\);/);
 });
 
 test("hosted action queues sanitized intent and polls its opaque result", async () => {

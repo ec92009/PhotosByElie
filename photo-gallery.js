@@ -100,6 +100,12 @@ const ownerCommandAdapter = window.photosByElieOwnerGalleryCommands || {};
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+const detailHrefForPhotoId = (photoId) => {
+  const detailParams = new URLSearchParams({ id: String(photoId || "") });
+  if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
+  if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
+  return versionedHref(`./photo.html?${detailParams.toString()}`);
+};
 let selectedIndex = 0;
 const selectedPhotoIds = new Set();
 let selectionAnchorPhotoId = "";
@@ -1683,7 +1689,7 @@ const selectBurstCandidates = () => {
 const openSelectedDetail = (photo = selectedShortcutPhoto()) => {
   if (!photo?.id) return false;
   syncSelectionDetailContext();
-  window.location.assign(versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}${isSharedGallery ? `&gallery=${sharedGalleryKey}` : ""}`));
+  window.location.assign(detailHrefForPhotoId(photo.id));
   return true;
 };
 
@@ -2078,10 +2084,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   }
   selectedIndex = Math.max(0, Math.min(selectedIndex, visibleSubset.length - 1));
   galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
-    const detailParams = new URLSearchParams({ id: photo.id });
-    if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
-    if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
-    const href = versionedHref(`./photo.html?${detailParams.toString()}`);
+    const href = detailHrefForPhotoId(photo.id);
     const isLiked = likedIds.has(photo.id);
     const selectButton = `
           <button

@@ -36,6 +36,7 @@ except ImportError:
 
 
 DEFAULT_CLOUD_SESSION_URL = "https://auth.photos-by-elie.com/api/v1/pbe-owner/session"
+PBE_OWNER_VERIFIER_USER_AGENT = "PhotosByElie-PBE-Owner-Host/1.0"
 DEFAULT_LOCAL_LEASE_SECONDS = 90
 REQUIRED_CAPABILITIES = frozenset(
     {"gallery.read", "waste-basket.x", "waste-basket.restore"}
@@ -520,7 +521,11 @@ class CloudPBEOwnerSessionVerifier:
             )
         request = Request(
             self.endpoint,
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "User-Agent": PBE_OWNER_VERIFIER_USER_AGENT,
+            },
         )
         try:
             with self.opener(request, timeout=self.timeout) as response:

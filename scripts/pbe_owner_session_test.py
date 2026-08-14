@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
 from scripts.pbe_owner_session import (
+    CloudPBEOwnerSessionVerifier,
     PBEOwnerSessionError,
     PBEOwnerHostAuthenticator,
     PBEOwnerSessionStore,
@@ -240,6 +241,30 @@ class PBEOwnerSessionTests(unittest.TestCase):
         with self.assertRaisesRegex(PBEOwnerSessionError, "does not match") as caught:
             self.store.authorize("raw-secret-session-token", mismatched, self.readiness)
         self.assertEqual(caught.exception.code, "pbe_owner_session_mismatch")
+
+    def test_cloud_verifier_uses_explicit_owner_host_user_agent(self) -> None:
+        class Response:
+            def __enter__(_self):
+                return _self
+
+            def __exit__(_self, *_args):
+                return False
+
+            def read(_self) -> bytes:
+                return json.dumps({"session": self.session}).encode()
+
+        def opener(request: Request, *, timeout: float):
+            self.assertEqual(timeout, 5.0)
+            self.assertEqual(
+                request.get_header("User-agent"),
+                "PhotosByElie-PBE-Owner-Host/1.0",
+            )
+            self.assertNotIn("Python-urllib", request.get_header("User-agent"))
+            self.assertEqual(request.get_header("Authorization"), "Bearer cloud-token")
+            return Response()
+
+        verifier = CloudPBEOwnerSessionVerifier(opener=opener)
+        self.assertEqual(verifier.verify("cloud-token"), self.session)
 
     def test_browser_handoff_is_one_time_and_unrelated_to_cloud_token(self) -> None:
         self.store.start("raw-secret-session-token", self.session, self.readiness)

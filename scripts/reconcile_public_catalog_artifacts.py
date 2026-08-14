@@ -133,11 +133,16 @@ def _refresh_projections(repo_root: Path) -> list[str]:
     return completed_steps
 
 
-def reconcile(repo_root: Path, *, apply: bool = False) -> dict[str, Any]:
+def reconcile(
+    repo_root: Path,
+    *,
+    apply: bool = False,
+    owner_db_path: Path | None = None,
+) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     catalog_path = repo_root / CATALOG_PATH
     manifest_path = repo_root / EXPO_MANIFEST_PATH
-    policy = public_catalog_policy_snapshot(repo_root)
+    policy = public_catalog_policy_snapshot(repo_root, owner_db_path=owner_db_path)
     catalog_summary = _catalog_counts(catalog_path, policy)
     manifest = _read_json(manifest_path, {})
     filtered_manifest, expo_summary = filter_expo_manifest(
@@ -169,7 +174,7 @@ def reconcile(repo_root: Path, *, apply: bool = False) -> dict[str, Any]:
                 existing.add(relative)
         staged_catalog = temp_root / "photosbyelie.reconciled.sqlite"
         try:
-            write_db(repo_root, staged_catalog)
+            write_db(repo_root, staged_catalog, owner_db_path=owner_db_path)
             os.replace(staged_catalog, catalog_path)
             _write_json_atomic(manifest_path, filtered_manifest)
             result["projectionSteps"] = _refresh_projections(repo_root)
@@ -204,8 +209,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--apply", action="store_true", help="atomically replace catalog artifacts after a dry-run review")
+    parser.add_argument(
+        "--owner-db",
+        type=Path,
+        default=None,
+        help="absolute reviewed Owner.sqlite authority snapshot used for lifecycle eligibility",
+    )
     args = parser.parse_args()
-    print(json.dumps(reconcile(args.repo_root, apply=args.apply), ensure_ascii=False, indent=2))
+    print(json.dumps(reconcile(args.repo_root, apply=args.apply, owner_db_path=args.owner_db), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

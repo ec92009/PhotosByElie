@@ -742,10 +742,16 @@ def ordered_collections(catalog: dict[str, Any]) -> list[tuple[str, dict[str, An
     return sorted(merged.items(), key=lambda item: (order.get(item[0], len(order)), item[0]))
 
 
-def write_db(repo_root: Path, output: Path, source: str = "auto", allow_empty: bool = False) -> dict[str, int]:
+def write_db(
+    repo_root: Path,
+    output: Path,
+    source: str = "auto",
+    allow_empty: bool = False,
+    owner_db_path: Path | None = None,
+) -> dict[str, int]:
     catalog = load_catalog(repo_root, source=source)
     title_keyword_decisions = load_applied_title_keyword_decisions(repo_root)
-    publication_policy = public_catalog_policy_snapshot(repo_root)
+    publication_policy = public_catalog_policy_snapshot(repo_root, owner_db_path=owner_db_path)
     applied_title_keyword_ids = set(publication_policy["eligibleMediaIds"])
     applied_title_keywords = apply_title_keyword_decisions(catalog, title_keyword_decisions)
     blocked_lifecycle_ids = set(publication_policy["blockedMediaIds"])
@@ -1293,7 +1299,11 @@ COMMERCE_TABLES_INSERT_ORDER = [
 ]
 
 
-def refresh_commerce(repo_root: Path, output: Path) -> dict[str, int]:
+def refresh_commerce(
+    repo_root: Path,
+    output: Path,
+    owner_db_path: Path | None = None,
+) -> dict[str, int]:
     """Refresh commerce tables and storefront exclusions without rebuilding media."""
     if not output.exists():
         raise RuntimeError(f"cannot refresh commerce in missing catalog {output}")
@@ -1305,7 +1315,13 @@ def refresh_commerce(repo_root: Path, output: Path) -> dict[str, int]:
         temp_path = Path(temp.name)
 
     try:
-        write_db(repo_root, commerce_path, source="auto", allow_empty=True)
+        write_db(
+            repo_root,
+            commerce_path,
+            source="auto",
+            allow_empty=True,
+            owner_db_path=owner_db_path,
+        )
         shutil.copy2(output, temp_path)
         conn = sqlite3.connect(temp_path)
         try:
@@ -1374,14 +1390,21 @@ def main() -> None:
         action="store_true",
         help=f"allow overwriting an existing populated public catalog with zero media rows; also allowed by {ALLOW_EMPTY_CATALOG_ENV}=1",
     )
+    parser.add_argument(
+        "--owner-db",
+        type=Path,
+        default=None,
+        help="absolute reviewed Owner.sqlite authority snapshot used for lifecycle eligibility",
+    )
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     output = args.output if args.output.is_absolute() else repo_root / args.output
-    counts = refresh_commerce(repo_root, output) if args.commerce_only else write_db(
+    counts = refresh_commerce(repo_root, output, owner_db_path=args.owner_db) if args.commerce_only else write_db(
         repo_root,
         output,
         source=args.source,
         allow_empty=args.allow_empty,
+        owner_db_path=args.owner_db,
     )
     if not args.quiet:
         print(f"Wrote {output}")

@@ -212,9 +212,10 @@ struct CullingView: View {
     private var cullingHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             cullingTitleBar
-            Text(model.photoStatus)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            BackstageFeedbackView(
+                message: model.photoStatus,
+                isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex
+            )
             CullingSearchControls(model: model)
             cullingFilterControls
             cullingSummary

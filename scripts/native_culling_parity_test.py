@@ -775,8 +775,21 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
+        feedback = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageFeedbackView.swift"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("await model.refreshPhotos()", culling)
+        self.assertIn("struct BackstageFeedbackView: View", feedback)
+        self.assertIn('.accessibilityLabel(isWorking ? "Working. ', feedback)
+        self.assertIn("BackstageFeedbackView(", culling)
+        self.assertIn(
+            "isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex",
+            culling,
+        )
         self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
         self.assertIn("guard !isLoadingPhotos else { return }", model_source)
         self.assertIn('Text("Refreshing previews…")', culling)

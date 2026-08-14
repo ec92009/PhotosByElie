@@ -37,12 +37,13 @@ const manifestMusicKeys = () => {
 };
 
 test("non-revocable public allowlist exactly matches intentional music manifests", () => {
-  assert.deepEqual(NON_REVOCABLE_PUBLIC_ASSET_KEYS, manifestMusicKeys());
-  assert.equal(NON_REVOCABLE_PUBLIC_ASSET_KEYS.length, 70);
+  assert.deepEqual(NON_REVOCABLE_PUBLIC_ASSET_KEYS, ["hidden-blacklist.json", ...manifestMusicKeys()].sort());
+  assert.equal(NON_REVOCABLE_PUBLIC_ASSET_KEYS.length, 71);
 });
 
 test("unknown and path-confused music keys are not allowlisted", () => {
-  assert.equal(isNonRevocablePublicAsset(NON_REVOCABLE_PUBLIC_ASSET_KEYS[0]), true);
+  assert.equal(isNonRevocablePublicAsset("hidden-blacklist.json"), true);
+  assert.equal(isNonRevocablePublicAsset(NON_REVOCABLE_PUBLIC_ASSET_KEYS[1]), true);
   assert.equal(isNonRevocablePublicAsset("assets/music/unreviewed.mp3"), false);
   assert.equal(isNonRevocablePublicAsset("assets/music/../expo/photo.jpg"), false);
   assert.equal(isNonRevocablePublicAsset("assets/music/slideshow-guitar/pixabay/sample.mp3"), false);

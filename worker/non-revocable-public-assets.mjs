@@ -59,7 +59,15 @@ const PIXABAY_MUSIC_TRACKS = [
   "pixabay-usa-mocking-neo-western-blues-instrumental-391301.mp3",
 ];
 
+// This is a public control artifact consumed by the public catalog bootstrap,
+// not a media object with a canonical catalog identity. It must remain
+// available while the media objects themselves stay lifecycle-gated.
+const PUBLIC_CONTROL_ASSET_KEYS = [
+  "hidden-blacklist.json",
+];
+
 export const NON_REVOCABLE_PUBLIC_ASSET_KEYS = Object.freeze([
+  ...PUBLIC_CONTROL_ASSET_KEYS,
   ...ROOT_MUSIC_TRACKS.map((name) => `assets/music/slideshow-guitar/${name}`),
   ...PUBLIC_DOMAIN_TRACK_NUMBERS.map(
     (number) => `assets/music/slideshow-guitar/public-domain/spanish-guitar-chords-${number}-cc0-wilfredor.mp3`,

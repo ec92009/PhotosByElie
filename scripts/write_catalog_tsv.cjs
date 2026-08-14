@@ -80,9 +80,144 @@ const runtimeParser = `(() => {
     window.photosByEliePodOptions = (catalog.podOptions || []).map((option) => ({ ...option }));
   };
 
-  const finishCatalogLoad = (source, data, owner, productCatalog) => {
+  const lifecycleWorkerBase = () => {
+    const config = window.photosByElieMediaConfig || {};
+    return String(config.authWorkerBaseUrl || config.checkoutWorkerBaseUrl || "").trim().replace(/\\/+$/, "");
+  };
+
+  const publicPhotos = (data = {}) => Object.values(data)
+    .flatMap((collection) => Array.isArray(collection?.photos) ? collection.photos : []);
+
+  const isLocalhost = () => /^(localhost|127\\.0\\.0\\.1)$/i.test(window.location.hostname);
+  let lifecycleVisibleIds = null;
+
+  const lifecycleSafePhoto = (photo) => {
+    const id = String(photo?.id || "").trim();
+    if (!id || !lifecycleVisibleIds?.has(id)) return null;
+    const media = photo?.media && typeof photo.media === "object" ? { ...photo.media } : {};
+    const preview = media.publicPreview && typeof media.publicPreview === "object"
+      ? { ...media.publicPreview }
+      : {};
+    [
+      "detailUrl", "galleryUrl", "posterUrl", "previewUrl", "thumbnailUrl", "videoUrl",
+    ].forEach((key) => delete preview[key]);
+    const video = media.video && typeof media.video === "object" ? { ...media.video } : null;
+    if (video) {
+      ["posterUrl", "previewUrl", "publicPreviewUrl", "url", "videoUrl"].forEach((key) => delete video[key]);
+    }
+    return {
+      ...photo,
+      gallerySrc: "",
+      imageSrc: "",
+      media: { ...media, publicPreview: preview, ...(video ? { video } : {}) },
+    };
+  };
+
+  const lifecycleSafeCollection = (collection = {}) => {
+    const sanitizePhotos = (photos) => (Array.isArray(photos) ? photos : [])
+      .map(lifecycleSafePhoto)
+      .filter(Boolean);
+    const photosTarget = sanitizePhotos(collection?.photos);
+    const photos = new Proxy(photosTarget, {
+      get(target, key, receiver) {
+        if (key === "push" || key === "unshift") {
+          return (...items) => Array.prototype[key].apply(target, sanitizePhotos(items));
+        }
+        if (key === "splice") {
+          return (start, deleteCount, ...items) => Array.prototype.splice.call(
+            target, start, deleteCount, ...sanitizePhotos(items),
+          );
+        }
+        return Reflect.get(target, key, receiver);
+      },
+      set(target, key, value) {
+        if (key === "length") return Reflect.set(target, key, value);
+        const safe = lifecycleSafePhoto(value);
+        return safe ? Reflect.set(target, key, safe) : true;
+      },
+    });
+    const target = { ...collection, count: photos.length, photos };
+    return new Proxy(target, {
+      set(current, key, value) {
+        if (key === "photos") {
+          photos.splice(0, photos.length, ...sanitizePhotos(value));
+          current.count = photos.length;
+          return true;
+        }
+        return Reflect.set(current, key, value);
+      },
+    });
+  };
+
+  const installLifecycleGuardedCatalog = (data = {}) => {
+    if (isLocalhost()) {
+      window.photosByElieData = data;
+      return data;
+    }
+    const target = {};
+    const guarded = new Proxy(target, {
+      set(collections, key, collection) {
+        if (typeof key === "symbol") return Reflect.set(collections, key, collection);
+        return Reflect.set(collections, key, lifecycleSafeCollection(collection));
+      },
+      defineProperty(collections, key, descriptor) {
+        if (typeof key === "symbol") return Reflect.defineProperty(collections, key, descriptor);
+        return Reflect.defineProperty(collections, key, {
+          ...descriptor,
+          value: lifecycleSafeCollection(descriptor.value),
+        });
+      },
+    });
+    const replace = (next) => {
+      if (next === guarded) return;
+      Object.keys(target).forEach((key) => delete target[key]);
+      Object.entries(next && typeof next === "object" ? next : {}).forEach(([key, collection]) => {
+        guarded[key] = collection;
+      });
+    };
+    Object.defineProperty(window, "photosByElieData", {
+      configurable: true,
+      enumerable: true,
+      get: () => guarded,
+      set: replace,
+    });
+    replace(data);
+    return guarded;
+  };
+
+  const applyLifecycleVisibility = async (data = {}) => {
+    if (isLocalhost()) return data;
+    const base = lifecycleWorkerBase();
+    const ids = [...new Set(publicPhotos(data).map((photo) => String(photo?.id || "").trim()).filter(Boolean))];
+    const requestedIds = new Set(ids);
+    if (!base || !ids.length) throw new Error("Lifecycle visibility authority is unavailable.");
+    const visibleIds = new Set();
+    for (let index = 0; index < ids.length; index += 100) {
+      const response = await fetch(\`\${base}/lifecycle/visibility\`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mediaIds: ids.slice(index, index + 100) }),
+      });
+      if (!response.ok) throw new Error(\`Lifecycle visibility failed with HTTP \${response.status}.\`);
+      const payload = await response.json();
+      (payload.visibleMediaIds || []).forEach((id) => {
+        const normalized = String(id || "").trim();
+        if (!requestedIds.has(normalized)) throw new Error("Lifecycle visibility response contains an unknown media ID.");
+        visibleIds.add(normalized);
+      });
+    }
+    lifecycleVisibleIds = visibleIds;
+    return Object.fromEntries(Object.entries(data).map(([key, collection]) => [key, {
+      ...collection,
+      photos: (collection?.photos || []).filter((photo) => visibleIds.has(photo?.id)),
+    }]));
+  };
+
+  const finishCatalogLoad = async (source, data, owner, productCatalog) => {
     const existingData = window.photosByElieData || {};
-    window.photosByElieData = { ...(data || {}), ...existingData };
+    const filteredData = await applyLifecycleVisibility({ ...(data || {}), ...existingData });
+    installLifecycleGuardedCatalog(filteredData);
     window.photosByElieOwnerData = owner || {};
     const canonicalCatalog = readJson("./assets/catalog/product-pricing.json");
     applyProductCatalog({ ...canonicalCatalog, ...(productCatalog || {}), storefrontPolicy: canonicalCatalog.storefrontPolicy || {} });
@@ -99,12 +234,15 @@ const runtimeParser = `(() => {
     if (window.photosByElieCatalogSqlite?.decodeCatalog) {
       try {
         const bundle = window.photosByElieCatalogSqlite.decodeCatalog(readBinary("./assets/catalog/photosbyelie.sqlite"));
-        return finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
+        return await finishCatalogLoad("sqlite", bundle.data, bundle.owner, bundle.productCatalog);
       } catch (error) {
         console.warn(error?.message || "SQLite catalog load failed.");
       }
     }
-    throw new Error("Could not load public SQLite catalog.");
+    lifecycleVisibleIds = new Set();
+    installLifecycleGuardedCatalog({});
+    window.photosByElieCatalogSource = "lifecycle-denied";
+    throw new Error("Could not load a lifecycle-authorized public catalog.");
   })();
 })();`;
 

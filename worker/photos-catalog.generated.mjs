@@ -166088,7 +166088,7 @@ export const collections = {
         "id": "001-10325afd73",
         "className": "p1",
         "title": "RE 2026 La Concha 2 Apt 8A5",
-        "caption": "Spain / Italy / 2026-05-13",
+        "caption": "Spain / 2026-05-13",
         "captionColor": "",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -166114,7 +166114,7 @@ export const collections = {
           },
           {
             "label": "Location",
-            "value": "Italy"
+            "value": "Spain"
           },
           {
             "label": "Preview file",
@@ -166143,7 +166143,7 @@ export const collections = {
         "id": "001-b32659c9f5",
         "className": "p2",
         "title": "RE 2026 La Concha 2 Apt 8A5",
-        "caption": "Spain / Italy / 2026-05-13",
+        "caption": "Spain / 2026-05-13",
         "captionColor": "",
         "full": "JPG master",
         "megapixels": 20.7,
@@ -166169,7 +166169,7 @@ export const collections = {
           },
           {
             "label": "Location",
-            "value": "Italy"
+            "value": "Spain"
           },
           {
             "label": "Preview file",
@@ -179149,78 +179149,6 @@ export const collections = {
           "gold",
           "instrument collection",
           "museum artifact"
-        ]
-      },
-      {
-        "id": "784e6227-1dd0-4e2f-b3d1-da8491171b55-001-avupnbvfdcdwordqqw3ejk8rmq27-7cb6d89038",
-        "className": "p5",
-        "title": "Blurred Antique Instrument Display, Barcelona Music Museum",
-        "caption": "Spain / 2022-10-02",
-        "captionColor": "",
-        "full": "JPG master",
-        "megapixels": 20.7,
-        "sourceOrigin": "camera",
-        "gallerySrc": "",
-        "imageSrc": "",
-        "metadata": [
-          {
-            "label": "Metadata title",
-            "value": "Blurred Antique Instrument Display, Barcelona Music Museum"
-          },
-          {
-            "label": "Keywords",
-            "value": "Barcelona, music museum, museum exhibit, antique instrument, ornate, display case, glass reflection, interior, red walls, artifact, blurred, gallery"
-          },
-          {
-            "label": "Captured",
-            "value": "2022:10:02 19:29:02"
-          },
-          {
-            "label": "Original file",
-            "value": "20221002 122902 01272.jpg"
-          },
-          {
-            "label": "Original size",
-            "value": "JPEG / 3712 x 5568 / 20.7 MP"
-          },
-          {
-            "label": "Location",
-            "value": "Spain"
-          },
-          {
-            "label": "Preview file",
-            "value": "784e6227-1dd0-4e2f-b3d1-da8491171b55-001-avupnbvfdcdwordqqw3ejk8rmq27-7cb6d89038_1800.jpg / 1200 x 1800 / JPEG"
-          }
-        ],
-        "media": {
-          "type": "photo",
-          "sourcePolicy": "developed-master",
-          "publicPreview": {
-            "allowed": true,
-            "galleryKey": "expo/784e6227-1dd0-4e2f-b3d1-da8491171b55-001-avupnbvfdcdwordqqw3ejk8rmq27-7cb6d89038_900.jpg",
-            "detailKey": "expo/784e6227-1dd0-4e2f-b3d1-da8491171b55-001-avupnbvfdcdwordqqw3ejk8rmq27-7cb6d89038_1800.jpg"
-          }
-        },
-        "sourceFiles": [
-          {
-            "path": "Apple Photos Sidecar Uploads/20221002 122902 01272.jpg",
-            "type": "JPG",
-            "bytes": 5550131
-          }
-        ],
-        "keywords": [
-          "Barcelona",
-          "music museum",
-          "museum exhibit",
-          "antique instrument",
-          "ornate",
-          "display case",
-          "glass reflection",
-          "interior",
-          "red walls",
-          "artifact",
-          "blurred",
-          "gallery"
         ]
       },
       {

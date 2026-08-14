@@ -161,9 +161,34 @@ fi
 
 touch "$app_dir"
 # Seal the whole bundle rather than relying on swiftc's linker-only signature.
-# A Developer ID may be supplied in production; local builds retain a stable
-# bundle identifier under an explicit ad-hoc app signature.
-identity="${PBE_CODESIGN_IDENTITY:--}"
+# Match Backstage's release policy: prefer a stable named identity so future
+# helper rebuilds retain the same Keychain/TCC identity. Ad-hoc signing is only
+# available as an explicit disposable-development escape hatch.
+identity="${PBE_CODESIGN_IDENTITY:-}"
+if [[ -z "$identity" ]]; then
+  identity="$(
+    security find-identity -v -p codesigning 2>/dev/null \
+      | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' \
+      | head -n 1
+  )"
+fi
+if [[ -z "$identity" ]]; then
+  identity="$(
+    security find-identity -v -p codesigning 2>/dev/null \
+      | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' \
+      | head -n 1
+  )"
+fi
+if [[ -z "$identity" ]]; then
+  identity="-"
+fi
+if [[ "$identity" == "-" && "${PBE_ALLOW_ADHOC_SIGNING:-0}" != "1" ]]; then
+  printf 'No stable code-signing identity is available.\n' >&2
+  printf 'Photos Bridge installation is blocked because ad-hoc rebuilds can lose Photos and Keychain authorization.\n' >&2
+  printf 'Install an Apple Development or Developer ID Application identity, set PBE_CODESIGN_IDENTITY,\n' >&2
+  printf 'or set PBE_ALLOW_ADHOC_SIGNING=1 only for a disposable local build.\n' >&2
+  exit 1
+fi
 if [[ "$identity" == "-" ]]; then
   # Ad-hoc signatures normally use the changing binary cdhash as their
   # designated requirement, which makes every rebuild look like a new app to
@@ -173,7 +198,12 @@ if [[ "$identity" == "-" ]]; then
     --requirements '=designated => identifier "com.photosbyelie.photos-bridge"' \
     "$app_dir"
 else
-  codesign --force --deep --sign "$identity" "$app_dir"
+  codesign --force --deep --options runtime --sign "$identity" "$app_dir"
 fi
 codesign --verify --deep --strict "$app_dir"
+signature_details="$(codesign -dvv "$app_dir" 2>&1)"
+if [[ "$identity" != "-" && "$signature_details" == *"Signature=adhoc"* ]]; then
+  printf 'Photos Bridge unexpectedly received an ad-hoc signature.\n' >&2
+  exit 1
+fi
 printf 'Installed %s\n' "$app_dir"

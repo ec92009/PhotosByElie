@@ -756,6 +756,16 @@ class NativeCullingParityTest(unittest.TestCase):
             'identifier "com.photosbyelie.backstage"',
             build_script,
         )
+        self.assertIn('identity="${PBE_CODESIGN_IDENTITY:-}"', bridge_installer)
+        self.assertIn("Developer ID Application:", bridge_installer)
+        self.assertIn("Apple Development:", bridge_installer)
+        self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', bridge_installer)
+        self.assertIn(
+            "Photos Bridge installation is blocked because ad-hoc rebuilds can lose Photos and Keychain authorization.",
+            bridge_installer,
+        )
+        self.assertIn("--options runtime --sign", bridge_installer)
+        self.assertIn("Signature=adhoc", bridge_installer)
 
     def test_bridge_installer_refuses_a_silent_downgrade(self):
         installer = ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"

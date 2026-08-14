@@ -1,7 +1,10 @@
 """Executable source contract for the native Backstage culling workspace."""
 
 from pathlib import Path
+import plistlib
 import re
+import subprocess
+import tempfile
 import unittest
 
 
@@ -754,6 +757,36 @@ class NativeCullingParityTest(unittest.TestCase):
             build_script,
         )
 
+    def test_bridge_installer_refuses_a_silent_downgrade(self):
+        installer = ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            app = Path(temporary_directory) / "PhotosByElie Photos Bridge.app"
+            contents = app / "Contents"
+            contents.mkdir(parents=True)
+            marker = contents / "must-survive"
+            marker.write_text("newer helper\n", encoding="utf-8")
+            with (contents / "Info.plist").open("wb") as handle:
+                plistlib.dump(
+                    {
+                        "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
+                        "CFBundleShortVersionString": "999.0",
+                        "CFBundleVersion": "999",
+                    },
+                    handle,
+                )
+
+            result = subprocess.run(
+                ["zsh", str(installer), "--app-dir", str(app)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Preserved newer Photos Bridge 999.0 build 999", result.stdout)
+            self.assertEqual(marker.read_text(encoding="utf-8"), "newer helper\n")
+
     def test_backstage_control_cli_is_structured_and_does_not_use_cua(self):
         control = (
             NATIVE / "Sources" / "OwnerCore" / "BackstageControlService.swift"
@@ -783,7 +816,11 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, control)
         self.assertIn('arguments.first == "--control"', launcher)
         self.assertIn("Darwin.exit(exitCode)", launcher)
-        self.assertIn('exec "$executable" --control "$@"', wrapper)
+        self.assertIn("/usr/bin/open -n -j", wrapper)
+        self.assertIn('--args --control "$@"', wrapper)
+        self.assertIn('--stdout "$stdout_path"', wrapper)
+        self.assertIn('payload.get("ok") is True', wrapper)
+        self.assertNotIn('exec "$executable" --control', wrapper)
         self.assertIn("scripts/backstage-control.zsh health --pretty", docs)
         self.assertNotIn("AXUIElement", control)
         self.assertNotIn("CGEvent", control)

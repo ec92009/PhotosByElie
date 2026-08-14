@@ -60,6 +60,38 @@ if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
   exit 1
 fi
 
+installed_info="$app_dir/Contents/Info.plist"
+if [[ "${PBE_ALLOW_PHOTOS_BRIDGE_DOWNGRADE:-0}" != "1" && -r "$installed_info" ]]; then
+  installed_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$installed_info" 2>/dev/null || true)"
+  installed_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$installed_info" 2>/dev/null || true)"
+  installed_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$installed_info" 2>/dev/null || true)"
+  if [[ "$installed_identifier" == "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" ]] && \
+    python3 - "$installed_version" "$installed_build" "$PBE_PHOTOS_BRIDGE_VERSION" "$PBE_PHOTOS_BRIDGE_BUILD" <<'PY'
+import sys
+
+
+def release(version: str, build: str) -> tuple[tuple[int, ...], int]:
+    parts = tuple(int(part) for part in version.split("."))
+    if not parts or any(part < 0 for part in parts):
+        raise ValueError("invalid version")
+    return parts, int(build)
+
+
+try:
+    installed = release(sys.argv[1], sys.argv[2])
+    requested = release(sys.argv[3], sys.argv[4])
+except (IndexError, TypeError, ValueError):
+    raise SystemExit(1)
+
+raise SystemExit(0 if installed > requested else 1)
+PY
+  then
+    printf 'Preserved newer Photos Bridge %s build %s at %s\n' \
+      "$installed_version" "$installed_build" "$app_dir"
+    exit 0
+  fi
+fi
+
 app_contents="$app_dir/Contents"
 macos_dir="$app_contents/MacOS"
 resources_dir="$app_contents/Resources"

@@ -956,16 +956,20 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshPhotos() async {
+        guard !isLoadingPhotos else { return }
         photoAccess = photoLibrary.authorization()
         guard [.authorized, .limited].contains(photoAccess) else {
-            photoStatus = "Photos access is required for indexing, preview, and export."
+            photoStatus = "Photos access is required. Choose Allow Photos, then retry Refresh previews."
             return
         }
         isLoadingPhotos = true
+        photoStatus = "Refreshing Photos previews…"
         defer { isLoadingPhotos = false }
         libraryItems = await photoLibrary.fetch(limit: 2_000)
         replaceCullingItems()
-        photoStatus = "\(libraryItems.count.formatted()) recent Photos previews cached."
+        photoStatus = libraryItems.isEmpty
+            ? "Refresh completed with no Photos previews. Try Refresh previews again."
+            : "\(libraryItems.count.formatted()) recent Photos previews cached."
     }
 
     func reconcilePhotosLibraryIndex() async {

@@ -139,6 +139,70 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingMediaFilterControls == [.photos, .videos])
     }
 
+    @Test("Refresh previews reports immediate progress and prevents duplicate requests")
+    @MainActor
+    func refreshPhotosReportsProgressAndGuardsDuplicates() async throws {
+        let library = RefreshPhotoLibrary(
+            access: .authorized,
+            items: (0..<2_000).map { index in
+                PhotoLibraryItem(
+                    id: "asset-\(index)",
+                    filename: "IMG_\(index).HEIC",
+                    creationDate: nil,
+                    mediaType: "photo"
+                )
+            },
+            delay: .milliseconds(40)
+        )
+        let model = BackstageViewModel(photoLibrary: library)
+
+        let refreshTask = Task { await model.refreshPhotos() }
+        for _ in 0..<100 where library.fetchCount == 0 || !model.isLoadingPhotos {
+            await Task.yield()
+        }
+
+        #expect(library.fetchCount == 1)
+        #expect(model.isLoadingPhotos)
+        #expect(model.photoStatus == "Refreshing Photos previews…")
+
+        await model.refreshPhotos()
+        #expect(library.fetchCount == 1)
+        #expect(model.isLoadingPhotos)
+
+        await refreshTask.value
+        #expect(model.isLoadingPhotos == false)
+        #expect(model.libraryItems.count == 2_000)
+        #expect(model.photoStatus == "2,000 recent Photos previews cached.")
+    }
+
+    @Test("Refresh previews makes an empty result actionable")
+    @MainActor
+    func emptyRefreshResultOffersRetry() async {
+        let model = BackstageViewModel(
+            photoLibrary: RefreshPhotoLibrary(
+                access: .authorized,
+                items: [],
+                delay: .milliseconds(1)
+            )
+        )
+
+        await model.refreshPhotos()
+
+        #expect(model.isLoadingPhotos == false)
+        #expect(model.photoStatus == "Refresh completed with no Photos previews. Try Refresh previews again.")
+    }
+
+    @Test("Refresh previews makes missing Photos access actionable")
+    @MainActor
+    func deniedRefreshOffersActionableRecovery() async {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+
+        await model.refreshPhotos()
+
+        #expect(model.isLoadingPhotos == false)
+        #expect(model.photoStatus == "Photos access is required. Choose Allow Photos, then retry Refresh previews.")
+    }
+
     @Test("Missing media availability keeps both controls for connector compatibility")
     @MainActor
     func missingMediaAvailabilityFallsBackSafely() throws {
@@ -266,6 +330,42 @@ private struct InertPhotoLibrary: PhotoLibraryServing {
     func authorization() -> PhotoLibraryAccess { .denied }
     func requestAuthorization() async -> PhotoLibraryAccess { .denied }
     func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+}
+
+private final class RefreshPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private let lock = NSLock()
+    private let access: PhotoLibraryAccess
+    private let items: [PhotoLibraryItem]
+    private let delay: Duration
+    private var calls = 0
+
+    init(access: PhotoLibraryAccess, items: [PhotoLibraryItem], delay: Duration) {
+        self.access = access
+        self.items = items
+        self.delay = delay
+    }
+
+    var fetchCount: Int {
+        lock.withLock { calls }
+    }
+
+    func authorization() -> PhotoLibraryAccess { access }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { access }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] {
+        lock.withLock { calls += 1 }
+        try? await Task.sleep(for: delay)
+        return Array(items.prefix(limit))
+    }
 
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         throw PhotoLibraryError.assetNotFound(localIdentifier)

@@ -777,6 +777,10 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
 
         self.assertIn("await model.refreshPhotos()", culling)
+        self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
+        self.assertIn("guard !isLoadingPhotos else { return }", model_source)
+        self.assertIn('Text("Refreshing previews…")', culling)
+        self.assertIn('"Refreshing Photos previews" : "Refresh Photos previews"', culling)
         self.assertNotIn("await model.refreshPhotosAndRecentIndex()", culling)
         self.assertNotIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
         self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)

@@ -699,15 +699,28 @@ struct CullingView: View {
                 Task { await model.authorizeAndLoadPhotos() }
             }
             .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
-            Button("Refresh previews") {
+            Button {
                 Task {
                     await model.refreshPhotos()
                     if !model.selectedFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
                 }
+            } label: {
+                if model.isLoadingPhotos {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Refreshing previews…")
+                    }
+                } else {
+                    Text("Refresh previews")
+                }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .accessibilityLabel(
+                model.isLoadingPhotos ? "Refreshing Photos previews" : "Refresh Photos previews"
+            )
             .backstageHelp("Refresh local Photos previews and then reload the active fixture Culling window.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }

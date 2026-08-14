@@ -34,11 +34,21 @@ if [[ ! -f "$bridge_source" ]]; then
 fi
 
 release_metadata="$repo_root/native/PhotosByElieBackstage/release-metadata.zsh"
-if [[ ! -r "$release_metadata" ]]; then
-  printf 'Missing native release metadata: %s\n' "$release_metadata" >&2
-  exit 1
+if [[ -r "$release_metadata" ]]; then
+  source "$release_metadata"
+else
+  backstage_info="${PBE_BACKSTAGE_INFO_PLIST:-$HOME/Applications/PhotosByElie Backstage.app/Contents/Info.plist}"
+  if [[ ! -r "$backstage_info" ]]; then
+    printf 'Missing native release metadata and installed Backstage Info.plist: %s\n' "$backstage_info" >&2
+    exit 1
+  fi
+  PBE_BACKSTAGE_BUNDLE_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$backstage_info")"
+  PBE_BACKSTAGE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$backstage_info")"
+  PBE_BACKSTAGE_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$backstage_info")"
+  PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeBundleIdentifier' "$backstage_info")"
+  PBE_PHOTOS_BRIDGE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeVersion' "$backstage_info")"
+  PBE_PHOTOS_BRIDGE_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeBuild' "$backstage_info")"
 fi
-source "$release_metadata"
 if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
       "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
   printf 'Native release metadata contains an unexpected bundle identity.\n' >&2

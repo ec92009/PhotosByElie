@@ -211,22 +211,10 @@ struct FixturePicker: View {
                 }
             }
 
-            HStack(alignment: .top, spacing: 6) {
-                if model.isLaunchingPBEOwner {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Circle()
-                        .fill(model.pbeOwnerFixtureSession == nil ? Color.secondary : Color.green)
-                        .frame(width: 7, height: 7)
-                        .padding(.top, 4)
-                        .accessibilityHidden(true)
-                }
-                Text(model.pbeOwnerSessionStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
+            BackstageFeedbackView(
+                message: model.pbeOwnerSessionStatus,
+                isWorking: model.isLaunchingPBEOwner
+            )
             .accessibilityLabel("PBE Owner status: \(model.pbeOwnerSessionStatus)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)

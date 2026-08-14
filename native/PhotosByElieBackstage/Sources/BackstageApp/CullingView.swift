@@ -482,9 +482,13 @@ struct CullingView: View {
             cullingDestinationActions
             cullingDecisionActions
             cullingHistoryActions
-            Text(model.cullingStatus)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.cullingStatus,
+                isWorking: model.isLoadingFixtureCulling
+                    || model.isLoadingCullingDecisions
+                    || model.isApplyingCullingDecision
+                    || model.isLoadingPreview
+            )
             cullingOperationProgress
             Text("Shortcuts: P include in fixture • H exclude from fixture • X move to recoverable Waste Basket • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)

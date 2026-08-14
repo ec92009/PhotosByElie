@@ -351,9 +351,10 @@ struct ReviewView: View {
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
                         .backstageHelp("Deselect every Review item without changing titles, keywords, or workflow states.")
                 }
-                Text(model.reviewStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                BackstageFeedbackView(
+                    message: model.reviewStatus,
+                    isWorking: model.isRunningReview || model.isRunningAIPass
+                )
             }
             .padding()
             .frame(minWidth: 480)
@@ -705,14 +706,10 @@ private struct ReviewInspector: View {
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
-                        if model.isRunningReview {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        Text(model.reviewStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                        BackstageFeedbackView(
+                            message: model.reviewStatus,
+                            isWorking: model.isRunningReview || model.isRunningAIPass
+                        )
                     }
                     Divider()
                     Text("Mark for AI review")

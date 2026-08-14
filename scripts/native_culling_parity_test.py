@@ -868,6 +868,42 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(flag, app)
 
+    def test_shared_feedback_surface_is_adopted_by_remaining_workflow_surfaces(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        upload = (source_dir / "UploadView.swift").read_text(encoding="utf-8")
+        picker = (source_dir / "FixturePicker.swift").read_text(encoding="utf-8")
+
+        self.assertIn("BackstageFeedbackView(", culling)
+        self.assertIn("message: model.cullingStatus", culling)
+        for flag in (
+            "model.isLoadingFixtureCulling",
+            "model.isLoadingCullingDecisions",
+            "model.isApplyingCullingDecision",
+            "model.isLoadingPreview",
+        ):
+            self.assertIn(flag, culling)
+        self.assertNotIn("Text(model.cullingStatus)", culling)
+
+        self.assertGreaterEqual(review.count("message: model.reviewStatus"), 2)
+        self.assertGreaterEqual(review.count("BackstageFeedbackView("), 2)
+        self.assertIn(
+            "isWorking: model.isRunningReview || model.isRunningAIPass",
+            review,
+        )
+        self.assertNotIn("Text(model.reviewStatus)", review)
+
+        self.assertIn("BackstageFeedbackView(", upload)
+        self.assertIn("message: model.uploadRecoveryStatus", upload)
+        self.assertIn("isWorking: model.isRunningDelivery", upload)
+        self.assertNotIn("Text(model.uploadRecoveryStatus)", upload)
+
+        self.assertIn("BackstageFeedbackView(", picker)
+        self.assertIn("message: model.pbeOwnerSessionStatus", picker)
+        self.assertIn("isWorking: model.isLaunchingPBEOwner", picker)
+        self.assertNotIn("Text(model.pbeOwnerSessionStatus)", picker)
+
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
             NATIVE

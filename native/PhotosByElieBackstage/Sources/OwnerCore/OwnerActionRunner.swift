@@ -113,20 +113,27 @@ public actor OwnerActionRunner {
 
     public func submit(
         _ request: OwnerActionCreate,
-        idempotencyKey: String = UUID().uuidString
+        idempotencyKey: String = UUID().uuidString,
+        completionTimeout: Duration? = nil
     ) async throws -> OwnerAction {
         let envelope = try await api.createAction(request, idempotencyKey: idempotencyKey)
-        return try await awaitCompletion(of: envelope.action)
+        return try await awaitCompletion(
+            of: envelope.action,
+            completionTimeout: completionTimeout
+        )
     }
 
-    public func awaitCompletion(of queued: OwnerAction) async throws -> OwnerAction {
-        let deadline = clock.now.advanced(by: timeout)
+    public func awaitCompletion(
+        of queued: OwnerAction,
+        completionTimeout: Duration? = nil
+    ) async throws -> OwnerAction {
+        let deadline = clock.now.advanced(by: completionTimeout ?? timeout)
         var action = queued
 
         // Fast path: the local connector fetches and validates this exact
         // Worker-created action. Failure or timeout is intentionally ignored;
         // its durable poller remains the fallback.
-        if let awakened = try? await waker.wake(actionID: action.id) {
+        if let awakened = await wake(actionID: action.id, before: deadline) {
             action = awakened
         }
 
@@ -148,8 +155,29 @@ public actor OwnerActionRunner {
             guard clock.now < deadline else {
                 throw OwnerActionRunError.timedOut
             }
-            try await clock.sleep(for: pollInterval)
+            let remaining = deadline - clock.now
+            try await clock.sleep(for: min(pollInterval, remaining))
             action = try await api.getAction(id: action.id)
+        }
+    }
+
+    private func wake(
+        actionID: String,
+        before deadline: ContinuousClock.Instant
+    ) async -> OwnerAction? {
+        let waker = self.waker
+        let clock = self.clock
+        return await withTaskGroup(of: OwnerAction?.self) { group in
+            group.addTask {
+                try? await waker.wake(actionID: actionID)
+            }
+            group.addTask {
+                try? await clock.sleep(until: deadline)
+                return nil
+            }
+            let result = await group.next() ?? nil
+            group.cancelAll()
+            return result
         }
     }
 }

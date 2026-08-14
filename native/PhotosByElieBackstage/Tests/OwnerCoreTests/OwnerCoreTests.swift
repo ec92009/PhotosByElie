@@ -1594,6 +1594,46 @@ struct OwnerCoreTests {
         #expect(request.payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-tree-list")
     }
 
+    @Test("Fixture tree uses a bounded refresh timeout without changing shared action timeout")
+    func nativeFixtureTreeUsesBoundedRefreshTimeout() async throws {
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: PendingOwnerActionAPI(),
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            fixtureTreeTimeout: .milliseconds(20)
+        )
+
+        do {
+            _ = try await service.tree()
+            Issue.record("Expected the fixture tree refresh to time out")
+        } catch let error as OwnerActionRunError {
+            #expect(error == .timedOut)
+        }
+    }
+
+    @Test("Fixture tree timeout cancels a delayed local wake")
+    func nativeFixtureTreeCancelsDelayedWake() async throws {
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: PendingOwnerActionAPI(),
+                waker: DelayedWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            fixtureTreeTimeout: .milliseconds(20)
+        )
+
+        do {
+            _ = try await service.tree()
+            Issue.record("Expected the delayed fixture-tree wake to time out")
+        } catch let error as OwnerActionRunError {
+            #expect(error == .timedOut)
+        }
+    }
+
     @Test("Native fixture state migration remains an explicit audited action")
     func nativeFixtureStateMigrationPlan() async throws {
         let terminal = OwnerAction(
@@ -4179,6 +4219,39 @@ private actor SequencedRoutingTransport: OwnerAPITransport {
 private struct UnavailableWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         throw URLError(.cannotConnectToHost)
+    }
+}
+
+private struct DelayedWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        try await Task.sleep(for: .seconds(10))
+        return nil
+    }
+}
+
+private actor PendingOwnerActionAPI: OwnerActionServing {
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        OwnerActionEnvelope(
+            action: OwnerAction(
+                id: "owner-action-pending-fixture-tree",
+                actionKind: action.actionKind,
+                target: action.target,
+                state: .queued
+            ),
+            idempotencyReplayed: false
+        )
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        OwnerAction(
+            id: id,
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .queued
+        )
     }
 }
 

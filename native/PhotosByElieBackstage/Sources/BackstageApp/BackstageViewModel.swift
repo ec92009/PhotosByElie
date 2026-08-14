@@ -459,7 +459,9 @@ final class BackstageViewModel: ObservableObject {
         preferences: UserDefaults = .standard,
         pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
-        updateService: BackstageUpdateService = BackstageUpdateService()
+        updateService: BackstageUpdateService = BackstageUpdateService(),
+        authenticationService: OwnerAuthenticationService? = nil,
+        fixtureService: FixtureWorkflowService? = nil
     ) {
         self.preferences = preferences
         self.updateService = updateService
@@ -482,13 +484,13 @@ final class BackstageViewModel: ObservableObject {
                 ? legacyPreviewVisibility
                 : preferences.bool(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey)
         self.api = api
-        self.authenticationService = OwnerAuthenticationService(api: api)
+        self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
         self.metadataService = MetadataGiveBackService(runner: runner)
-        self.fixtureService = FixtureWorkflowService(
+        self.fixtureService = fixtureService ?? FixtureWorkflowService(
             runner: runner,
             connectorIdentity: LocalOwnerConnectorIdentity()
         )
@@ -739,9 +741,10 @@ final class BackstageViewModel: ObservableObject {
         publishFixtureSelection(persist: persistSelection)
     }
 
-    func markFixtureSelectionUnavailable(_ reason: String) {
+    func markFixtureSelectionUnavailable(_ reason: String, notice: String? = nil) {
         fixtureSelectionCoordinator.markUnavailable(reason)
         publishFixtureSelection(persist: false)
+        fixtureSelectionNotice = notice
     }
 
     private var fixtureSelectionOperationInFlight: Bool {
@@ -1808,9 +1811,10 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             await presentAuthenticationFailureIfNeeded(error)
-            let reason = "Fixtures could not load: \(userFacingMessage(for: error)) Fixture-scoped actions are disabled."
-            fixtureStatus = reason
-            markFixtureSelectionUnavailable(reason)
+            let failure = fixtureTreeFailureMessage(for: error)
+            let reason = "\(failure) Fixture-scoped actions are disabled."
+            fixtureStatus = "\(failure) Select Reload tree to retry."
+            markFixtureSelectionUnavailable(reason, notice: "Select Reload tree to retry.")
         }
     }
 
@@ -4619,6 +4623,18 @@ final class BackstageViewModel: ObservableObject {
               envelope.error.code == "google_login_required" else { return }
         authentication = await authenticationService.currentSnapshot()
         updateAuthenticationRecoveryStatus()
+    }
+
+    private func fixtureTreeFailureMessage(for error: Error) -> String {
+        if let ownerActionError = error as? OwnerActionRunError,
+           case .timedOut = ownerActionError {
+            return "Fixture tree refresh timed out."
+        }
+        if let envelope = error as? APIErrorEnvelope,
+           envelope.error.code == "google_login_required" {
+            return "Backstage authentication expired."
+        }
+        return "Fixture tree unavailable: \(userFacingMessage(for: error))"
     }
 
     private func isTransientCancellation(_ error: Error) -> Bool {

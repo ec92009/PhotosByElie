@@ -1003,21 +1003,26 @@ public struct EffectiveFixtureAccess: Identifiable, Sendable, Equatable {
 }
 
 public actor FixtureWorkflowService {
+    public static let defaultFixtureTreeTimeout: Duration = .seconds(10)
+
     private let runner: OwnerActionRunner
     private let connectorIdentity: any OwnerConnectorIdentifying
+    private let fixtureTreeTimeout: Duration
 
     public init(
         runner: OwnerActionRunner,
-        connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max")
+        connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max"),
+        fixtureTreeTimeout: Duration = FixtureWorkflowService.defaultFixtureTreeTimeout
     ) {
         self.runner = runner
         self.connectorIdentity = connectorIdentity
+        self.fixtureTreeTimeout = fixtureTreeTimeout
     }
 
     public func tree(includeArchived: Bool = true) async throws -> [FixtureNode] {
         let result = try await run("fixture-tree-list", extra: [
             "includeArchived": .bool(includeArchived),
-        ])
+        ], completionTimeout: fixtureTreeTimeout)
         return parseNodes(result["fixtures"])
     }
 
@@ -1404,7 +1409,11 @@ public actor FixtureWorkflowService {
         return parseNodes(result["fixtures"])
     }
 
-    private func run(_ mode: String, extra: [String: JSONValue]) async throws -> [String: JSONValue] {
+    private func run(
+        _ mode: String,
+        extra: [String: JSONValue],
+        completionTimeout: Duration? = nil
+    ) async throws -> [String: JSONValue] {
         var manifest = extra
         manifest["mode"] = .string(mode)
         // Native Backstage resolves PhotoKit thumbnails itself. The connector
@@ -1426,7 +1435,8 @@ public actor FixtureWorkflowService {
         )
         let completed = try await runner.submit(
             action,
-            idempotencyKey: ["native-fixture", mode, UUID().uuidString].joined(separator: "-")
+            idempotencyKey: ["native-fixture", mode, UUID().uuidString].joined(separator: "-"),
+            completionTimeout: completionTimeout
         )
         guard let result = completed.result else {
             throw APIErrorEnvelope(error: .init(

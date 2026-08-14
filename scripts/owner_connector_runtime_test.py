@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -49,7 +50,7 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             destination = scripts_root / name
             if name == "pbe_owner_host_tracked_paths.txt":
                 destination.write_text(
-                    ":(glob)scripts/**/*.py\ngallery.html\n",
+                    ":(glob)scripts/**/*.py\ngallery.html\ngallery-commands.js\n",
                     encoding="utf-8",
                 )
             elif name in {
@@ -64,8 +65,15 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "<!doctype html><title>Runtime fixture</title>\n",
             encoding="utf-8",
         )
+        (source_root / "gallery-commands.js").write_text(
+            "window.photosByElieGalleryCommands = { fixture: true };\n",
+            encoding="utf-8",
+        )
         subprocess.run(["git", "init", "-q", str(source_root)], check=True)
-        subprocess.run(["git", "-C", str(source_root), "add", "--", "scripts", "gallery.html"], check=True)
+        subprocess.run(
+            ["git", "-C", str(source_root), "add", "--", "scripts", "gallery.html", "gallery-commands.js"],
+            check=True,
+        )
         subprocess.run(
             [
                 "git",
@@ -205,6 +213,16 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 )
                 self.assertEqual(runtime_manifest["schemaVersion"], 2)
                 self.assertIn("gallery.html", runtime_manifest["pbeOwnerHost"]["files"])
+                self.assertIn("gallery-commands.js", runtime_manifest["pbeOwnerHost"]["files"])
+                gallery_commands = runtime_root / "gallery-commands.js"
+                gallery_commands_entry = next(
+                    entry for entry in runtime_manifest["files"] if entry["path"] == "gallery-commands.js"
+                )
+                self.assertEqual(gallery_commands_entry["size"], gallery_commands.stat().st_size)
+                self.assertEqual(
+                    gallery_commands_entry["sha256"],
+                    hashlib.sha256(gallery_commands.read_bytes()).hexdigest(),
+                )
 
                 offline_status = """
 import json

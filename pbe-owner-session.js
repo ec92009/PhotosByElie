@@ -1,6 +1,7 @@
 (() => {
   const localHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-  const ownerSurface = new URLSearchParams(window.location.search).get("gallery") === "pbe-owner";
+  const requestedGallery = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+  const ownerSurface = requestedGallery === "pbe-owner";
   const fragmentKey = "pbe_owner_ticket";
   const localBase = "/__photosbyelie/pbe-owner";
   const galleryKey = "pbe-owner";
@@ -14,6 +15,15 @@
   let heartbeatTimer = 0;
   let sessionGeneration = 0;
   let bannerResizeObserver = null;
+
+  // The hosted Owner route intentionally does not depend on the public SQLite
+  // catalog. Observe those background promises so an expected public-catalog
+  // failure cannot become an unhandled rejection while the fixture session is
+  // loading its private, frozen gallery.
+  if (ownerSurface) {
+    window.photosByElieCatalogReady?.catch(() => {});
+    window.photosByElieSharedGalleryReady?.catch(() => {});
+  }
 
   const consumeFragment = () => {
     const raw = window.location.hash.replace(/^#/, "");
@@ -285,6 +295,24 @@
     }
   };
 
+  const pageReady = async () => {
+    if (ownerSurface) {
+      await window.photosByEliePBEOwnerSessionReady;
+      await window.photosByElieHiddenActionsReady;
+      const gallery = window.photosByElieData?.[galleryKey];
+      if (!state.ready || !state.session || !gallery) {
+        const error = new Error(state.message || "PBE Owner session is unavailable.");
+        error.code = "pbe_owner_page_unavailable";
+        throw error;
+      }
+      return { mode: "pbe-owner", galleryKey, gallery };
+    }
+    await window.photosByElieCatalogReady;
+    await window.photosByElieSharedGalleryReady;
+    await window.photosByElieHiddenActionsReady;
+    return { mode: "public", galleryKey: "", gallery: null };
+  };
+
   browserTicket = consumeFragment();
   window.photosByEliePBEOwnerSession = {
     action,
@@ -294,4 +322,5 @@
     state: publicState,
   };
   window.photosByEliePBEOwnerSessionReady = bootstrap();
+  window.photosByEliePageReady = pageReady;
 })();

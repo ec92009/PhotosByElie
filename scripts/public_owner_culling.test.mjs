@@ -8,7 +8,9 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   const hidden = read("hidden-actions.js");
   const gallery = read("photo-gallery.js");
   const detail = read("photo-detail.js");
+  const session = read("pbe-owner-session.js");
   assert.match(hidden, /pbeOwnerSession\?\.isReady\?\.\(\)/);
+  assert.match(hidden, /if \(isHostedOwnerSurface\(\)\) await window\.photosByEliePBEOwnerSessionReady/);
   assert.match(hidden, /pbeOwnerSession\.action\(action, requestPayload\)/);
   assert.match(hidden, /source: "owner-gallery"/);
   assert.match(hidden, /const markMany = async/);
@@ -29,8 +31,9 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.match(gallery, /if \(extend\) \{\s*extendOwnerKeyboardSelection\(photos, nextIndex\);/);
   assert.match(gallery, /stepGallerySelection\(delta, !horizontal, \{ extend: event\.shiftKey \}\)/);
   assert.match(gallery, /syncGallerySelectionToolbar\(\)/);
-  assert.match(gallery, /await window\.photosByElieHiddenActionsReady/);
-  assert.match(detail, /await window\.photosByElieHiddenActionsReady/);
+  assert.match(gallery, /await window\.photosByEliePageReady\(\)/);
+  assert.match(detail, /await window\.photosByEliePageReady\(\)/);
+  assert.match(session, /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady;[\s\S]*await window\.photosByElieHiddenActionsReady/);
   assert.match(gallery, /data-owner-cull-count/);
   assert.doesNotMatch(gallery, /data-owner-cull-select-visible/);
   assert.doesNotMatch(gallery, /data-owner-cull-hide/);
@@ -42,6 +45,7 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.doesNotMatch(gallery, /data-owner-cull-touch-hide|data-owner-cull-touch-undo/);
   assert.doesNotMatch(read("gallery.html"), /data-owner-cull-touch-actions/);
   assert.match(read("gallery.html"), /gallery-commands\.js[\s\S]*photo-gallery\.js/);
+  assert.match(read("scripts/pbe_owner_host_tracked_paths.txt"), /^gallery-commands\.js$/m);
   assert.match(read("photos.css"), /\.gallery-command-bar/);
 });
 

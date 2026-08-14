@@ -1,7 +1,9 @@
 (() => {
   const localEnabled = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
   const pbeOwnerSession = window.photosByEliePBEOwnerSession;
-  const isHostedOwnerSurface = () => new URLSearchParams(window.location.search).get("gallery") === "pbe-owner";
+  const isHostedOwnerSurface = () => (
+    String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase() === "pbe-owner"
+  );
   const cullingEnabled = () => Boolean(localEnabled && isHostedOwnerSurface() && pbeOwnerSession?.isReady?.());
   const key = "photosbyelie-hidden";
   const historyKey = "photosbyelie-hidden-history";
@@ -675,7 +677,7 @@
     emptyWasteBasket,
   };
   window.photosByElieHiddenActionsReady = (async () => {
-    await window.photosByEliePBEOwnerSessionReady;
+    if (isHostedOwnerSurface()) await window.photosByEliePBEOwnerSessionReady;
     if (cullingEnabled()) return syncFromPublishedBlacklist().catch(() => read());
     return read();
   })();

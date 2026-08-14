@@ -293,6 +293,35 @@ raise SystemExit(connector.main())
             finally:
                 self._make_tree_writable(runtime_root)
 
+    def test_installer_renames_a_sealed_runtime_on_bsd_mv(self):
+        with TemporaryDirectory() as temporary_directory:
+            fixture_root = Path(temporary_directory)
+            source_root = self._make_source_fixture(fixture_root)
+            data_root = fixture_root / "stable-data"
+            data_root.mkdir()
+            env = self._installer_environment(fixture_root, data_root)
+            guard_bin = fixture_root / "guard-bin"
+            guard_bin.mkdir()
+            guarded_mv = guard_bin / "mv"
+            guarded_mv.write_text(
+                "#!/bin/sh\n"
+                "if [ -d \"$1\" ] && [ ! -w \"$1\" ]; then\n"
+                "  echo 'guarded mv rejected read-only source' >&2\n"
+                "  exit 73\n"
+                "fi\n"
+                "exec /bin/mv \"$@\"\n",
+                encoding="utf-8",
+            )
+            guarded_mv.chmod(0o755)
+            env["PATH"] = f"{guard_bin}:{env['PATH']}"
+            runtime_root = Path(env["PBE_CONNECTOR_RUNTIME_PARENT"]) / env["PBE_CONNECTOR_RUNTIME_NAME"]
+            try:
+                installed = self._run_installer(source_root, env)
+                self.assertEqual(installed.returncode, 0, installed.stderr or installed.stdout)
+                self.assertEqual(stat.S_IMODE(runtime_root.stat().st_mode), 0o555)
+            finally:
+                self._make_tree_writable(runtime_root)
+
     def test_installer_uses_only_head_bytes_despite_dirty_index_and_worktree(self):
         mutations = {
             "unstaged": ("requested_ai_proposal_pass.py", "unstaged runtime shadow\n"),

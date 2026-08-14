@@ -106,8 +106,14 @@ chmod 500 "$materializer_temporary"
   --revision "$runtime_revision"
 rm -f -- "$materializer_temporary"
 materializer_temporary=""
+# The materializer deliberately seals the runtime root at 0555. BSD mv on
+# some supported Macs refuses to rename that read-only directory even when its
+# parent is writable, so make only the staging root owner-writable for the
+# atomic rename and immediately restore the sealed runtime mode afterward.
+chmod u+w "$runtime_stage"
 mv "$runtime_stage" "$runtime_path"
 runtime_stage=""
+chmod 0555 "$runtime_path"
 
 config_temporary="$config_dir/.connector.json.$$"
 plist_temporary="$launch_agents/.com.photosbyelie.owner-connector.plist.$$"

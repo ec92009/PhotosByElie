@@ -805,6 +805,27 @@ class NativeCullingParityTest(unittest.TestCase):
             culling.index("await model.loadFixtureCullingWindow()"),
         )
 
+    def test_shared_feedback_surface_is_adopted_by_review_and_upload_headers(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        upload = (source_dir / "UploadHeaderView.swift").read_text(encoding="utf-8")
+
+        self.assertIn("BackstageFeedbackView(", review)
+        self.assertIn("message: model.aiProposalStatus", review)
+        self.assertIn(
+            "isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true",
+            review,
+        )
+        self.assertNotIn("Text(model.aiProposalStatus)", review)
+
+        self.assertIn("BackstageFeedbackView(", upload)
+        self.assertIn("message: model.nativeUploadStatus", upload)
+        self.assertIn(
+            "isWorking: model.isRunningDelivery || model.isRunningNativePublication",
+            upload,
+        )
+        self.assertNotIn("Text(model.nativeUploadStatus)", upload)
+
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
             NATIVE

@@ -214,9 +214,10 @@ struct ReviewView: View {
                         .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
                     }
                 }
-                Text(model.aiProposalStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                BackstageFeedbackView(
+                    message: model.aiProposalStatus,
+                    isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true
+                )
                 if let run = model.fixtureAIStatus?.run, model.fixtureAIStatus?.active == true {
                     ProgressView(
                         value: Double(run.processed),

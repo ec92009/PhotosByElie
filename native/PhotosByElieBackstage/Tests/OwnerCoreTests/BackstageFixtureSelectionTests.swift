@@ -93,6 +93,76 @@ struct BackstageFixtureSelectionTests {
         #expect(model.isFixtureChooserDisabled)
     }
 
+    @Test("Fixture switches recompute media controls and normalize stale selection")
+    @MainActor
+    func fixtureSwitchRecomputesCullingMediaAvailability() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-pool",
+            persistSelection: false
+        )
+        model.cullingMediaFilters = [.videos]
+        model.fixtureCullingWindow = cullingWindow(
+            fixtureID: "fixture-pool",
+            photos: 12,
+            videos: 0
+        )
+
+        #expect(model.cullingMediaFilterControls == [.photos])
+        #expect(model.normalizeCullingMediaFilters(for: model.cullingMediaFilterControls))
+        #expect(model.cullingMediaFilters == [.photos])
+
+        #expect(model.selectFixture("fixture-expo"))
+        model.fixtureCullingWindow = cullingWindow(
+            fixtureID: "fixture-expo",
+            photos: 0,
+            videos: 7
+        )
+
+        #expect(model.cullingMediaFilterControls == [.videos])
+        #expect(model.normalizeCullingMediaFilters(for: model.cullingMediaFilterControls))
+        #expect(model.cullingMediaFilters == [.videos])
+
+        model.fixtureCullingWindow = cullingWindow(
+            fixtureID: "fixture-expo",
+            photos: 5,
+            videos: 7
+        )
+        #expect(model.cullingMediaFilterControls == [.photos, .videos])
+    }
+
+    @Test("Missing media availability keeps both controls for connector compatibility")
+    @MainActor
+    func missingMediaAvailabilityFallsBackSafely() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.fixtureCullingWindow = FixtureCullingWindow(json: [
+            "fixtureId": .string("fixture-expo"),
+            "candidateMode": .string("photos-library"),
+        ])
+
+        #expect(model.cullingMediaFilterControls == [.photos, .videos])
+    }
+
     @Test("PBE launch captures fixture synchronously and releases provisional freeze")
     @MainActor
     func pbeLaunchProvisionalFreeze() async throws {
@@ -174,6 +244,21 @@ struct BackstageFixtureSelectionTests {
             anchorID: nil,
             focusedID: nil
         )
+    }
+
+    private func cullingWindow(
+        fixtureID: String,
+        photos: Int,
+        videos: Int
+    ) -> FixtureCullingWindow {
+        FixtureCullingWindow(json: [
+            "fixtureId": .string(fixtureID),
+            "candidateMode": .string("inherited"),
+            "mediaAvailability": .object([
+                "photos": .number(Double(photos)),
+                "videos": .number(Double(videos)),
+            ]),
+        ])
     }
 }
 

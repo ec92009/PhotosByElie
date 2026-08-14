@@ -420,6 +420,26 @@ public struct FixtureCullingSummary: Sendable, Equatable {
     }
 }
 
+public struct FixtureCullingMediaAvailability: Sendable, Equatable {
+    public var photos: Int
+    public var videos: Int
+
+    init(json: [String: JSONValue]) {
+        photos = json["photos"]?.intValue ?? 0
+        videos = json["videos"]?.intValue ?? 0
+    }
+
+    public var availableFilters: [CullingMediaFilter] {
+        CullingMediaFilter.selectableCases.filter { filter in
+            switch filter {
+            case .photos: photos > 0
+            case .videos: videos > 0
+            case .all: false
+            }
+        }
+    }
+}
+
 public struct FixtureCullingWindow: Sendable, Equatable {
     public var fixtureID: String
     public var candidateMode: String
@@ -429,6 +449,7 @@ public struct FixtureCullingWindow: Sendable, Equatable {
     public var nextOffset: Int
     public var hasNext: Bool
     public var summary: FixtureCullingSummary
+    public var mediaAvailability: FixtureCullingMediaAvailability?
     public var items: [FixtureAsset]
 
     init(json: [String: JSONValue]) {
@@ -442,9 +463,16 @@ public struct FixtureCullingWindow: Sendable, Equatable {
         nextOffset = json["nextOffset"]?.intValue ?? 0
         hasNext = json["hasNext"]?.boolValue ?? false
         summary = FixtureCullingSummary(json: json["summary"]?.objectValue ?? [:])
+        mediaAvailability = json["mediaAvailability"]?.objectValue.map(
+            FixtureCullingMediaAvailability.init(json:)
+        )
         items = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureAsset.init(json:))
+    }
+
+    public var availableMediaFilters: [CullingMediaFilter] {
+        mediaAvailability?.availableFilters ?? CullingMediaFilter.selectableCases
     }
 }
 

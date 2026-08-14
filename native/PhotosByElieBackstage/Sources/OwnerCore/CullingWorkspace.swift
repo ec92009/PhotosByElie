@@ -36,6 +36,27 @@ public enum CullingMediaFilter: String, CaseIterable, Sendable {
     }
 
     public static var selectableCases: [Self] { [.photos, .videos] }
+
+    public static func availableCases<MediaTypes: Sequence>(
+        in mediaTypes: MediaTypes
+    ) -> [Self] where MediaTypes.Element == String {
+        let available = Set(mediaTypes.map { mediaFilter(for: $0) })
+        return selectableCases.filter(available.contains)
+    }
+
+    public static func normalizedSelection(
+        _ selection: Set<Self>,
+        availableCases: [Self]
+    ) -> Set<Self> {
+        let available = Set(availableCases)
+        guard !available.isEmpty else { return Set(selectableCases) }
+        let retained = selection.intersection(available)
+        return retained.isEmpty ? available : retained
+    }
+
+    private static func mediaFilter(for mediaType: String) -> Self {
+        mediaType.lowercased().contains("video") ? .videos : .photos
+    }
 }
 
 public enum CullingPickFilter: String, CaseIterable, Sendable {

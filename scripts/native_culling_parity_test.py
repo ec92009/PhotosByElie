@@ -615,6 +615,72 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
+    def test_media_controls_use_unfiltered_fixture_availability_and_leave_no_hidden_ax_nodes(self):
+        app = backstage_ui_source()
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        owner = (
+            NATIVE / "Sources" / "OwnerCore" / "FixtureWorkflowService.swift"
+        ).read_text(encoding="utf-8")
+        pipeline = (ROOT / "scripts" / "fixture_pipeline.py").read_text(
+            encoding="utf-8"
+        )
+        culling = app.split("struct CullingView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+        media_controls = culling.split('Text("Media")', 1)[1].split(
+            'Text("Status")', 1
+        )[0]
+        loader = model.split(
+            "func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false)",
+            1,
+        )[1].split("private func scheduleFixtureCullingBackfill", 1)[0]
+
+        self.assertLess(
+            pipeline.index("universe_predicates = list(predicates)"),
+            pipeline.index("clean_media ="),
+        )
+        self.assertIn("WHERE {' AND '.join(universe_predicates)}", pipeline)
+        self.assertIn('"mediaAvailability": {', pipeline)
+        self.assertIn("FixtureCullingMediaAvailability", owner)
+        self.assertIn("public var availableMediaFilters", owner)
+        self.assertIn(
+            "ForEach(model.cullingMediaFilterControls, id: \\.self)",
+            media_controls,
+        )
+        for visual_hiding_marker in (
+            ".hidden()",
+            ".opacity(",
+            ".accessibilityHidden(",
+        ):
+            self.assertNotIn(visual_hiding_marker, media_controls)
+        self.assertNotIn("onChange(of: model.cullingMediaFilters)", culling)
+        self.assertIn(
+            "applyCullingFilters()",
+            model.split("func toggleCullingMediaFilter", 1)[1].split(
+                "func toggleCullingViewFilter", 1
+            )[0],
+        )
+        self.assertIn("window.availableMediaFilters", loader)
+        self.assertIn("fixtureCullingMediaAvailability = window.mediaAvailability", loader)
+        self.assertIn("requestedMediaFilters.isDisjoint", loader)
+        self.assertIn("cullingWindowOffset = 0", loader)
+        self.assertEqual(loader.count("window = try await requestWindow("), 2)
+        self.assertIn(
+            "normalizeCullingMediaFilters(for: cullingMediaFilterControls)",
+            model,
+        )
+        reset = model.split("private func resetFixtureScopedViewState()", 1)[1].split(
+            "func refreshVisibleFixtureSurface", 1
+        )[0]
+        apply_filters = model.split("func applyCullingFilters", 1)[1].split(
+            "func scheduleCullingSearchRefresh", 1
+        )[0]
+        self.assertIn("fixtureCullingMediaAvailability = nil", reset)
+        self.assertNotIn("fixtureCullingMediaAvailability = nil", apply_filters)
+        self.assertNotIn("window.items.count(where:", model)
+
     def test_backstage_release_requires_a_stable_signing_identity(self):
         build_script = (
             NATIVE / "scripts" / "build-app.zsh"

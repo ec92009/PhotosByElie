@@ -244,7 +244,7 @@ struct CullingView: View {
     private var cullingFilterControls: some View {
         FlowLayout(spacing: 8) {
             Text("Media").font(.caption.weight(.semibold))
-            ForEach(CullingMediaFilter.selectableCases, id: \.self) { filter in
+            ForEach(model.cullingMediaFilterControls, id: \.self) { filter in
                 Toggle(
                     filter.label,
                     isOn: Binding(
@@ -292,7 +292,6 @@ struct CullingView: View {
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
         }
-        .onChange(of: model.cullingMediaFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingColorFilters) { _, _ in model.applyCullingFilters() }

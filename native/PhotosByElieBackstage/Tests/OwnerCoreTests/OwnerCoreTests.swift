@@ -432,6 +432,61 @@ struct OwnerCoreTests {
         #expect(result.summary.videos == 1)
     }
 
+    @Test("Still-only Culling universes expose only the Photos control")
+    func stillOnlyCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["photo", "image/jpeg", "still"])
+                == [.photos]
+        )
+    }
+
+    @Test("Video-only Culling universes expose only the Videos control")
+    func videoOnlyCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["video", "quicktime-video"])
+                == [.videos]
+        )
+    }
+
+    @Test("Mixed Culling universes retain both media controls in stable order")
+    func mixedCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["video", "photo", "video"])
+                == [.photos, .videos]
+        )
+    }
+
+    @Test("Stale media selection normalizes to a visible valid candidate type")
+    func staleCullingMediaSelectionCannotHideValidCandidates() {
+        let candidates = [
+            CullingCandidate(id: "still", filename: "STILL.JPG", mediaType: "photo"),
+        ]
+        let available = CullingMediaFilter.availableCases(
+            in: candidates.map(\.mediaType)
+        )
+        let normalized = CullingMediaFilter.normalizedSelection(
+            [.videos],
+            availableCases: available
+        )
+        let result = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(media: normalized)
+        )
+
+        #expect(normalized == [.photos])
+        #expect(result.items.map(\.id) == ["still"])
+    }
+
+    @Test("Empty Culling universes reset media selection to a safe neutral state")
+    func emptyCullingMediaAvailabilityResetsSelection() {
+        #expect(
+            CullingMediaFilter.normalizedSelection(
+                [.videos],
+                availableCases: []
+            ) == Set(CullingMediaFilter.selectableCases)
+        )
+    }
+
     @Test("Fixture hidden states match the rejected culling filter")
     func fixtureHiddenMatchesRejectedFilter() {
         let candidates = [
@@ -1265,6 +1320,10 @@ struct OwnerCoreTests {
                         "picked": 2200,
                         "hidden": 211,
                     ]),
+                    "mediaAvailability": .object([
+                        "photos": 3400,
+                        "videos": 151,
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-newest",
                         "photoLibraryIdentifier": "photos-newest",
@@ -1309,6 +1368,9 @@ struct OwnerCoreTests {
         #expect(window.fixtureID == "fixture-expo")
         #expect(window.summary.universe == 3551)
         #expect(window.summary.filtered == 1140)
+        #expect(window.mediaAvailability?.photos == 3400)
+        #expect(window.mediaAvailability?.videos == 151)
+        #expect(window.availableMediaFilters == [.photos, .videos])
         #expect(window.items.map(\.id) == ["asset-newest"])
         #expect(window.items.first?.photoLibraryIdentifier == "photos-newest")
         #expect(window.items.first?.placementState == .undecided)

@@ -1466,6 +1466,10 @@ def fixture_culling_window(
             """,
             "COALESCE(global_decision.pick_state, '') <> 'hidden'",
         ]
+        # Media controls describe the fixture candidate universe, so snapshot
+        # these predicates before any interactive filter is appended.
+        universe_predicates = list(predicates)
+        universe_params = list(params)
         clean_media = {
             str(value or "").strip().casefold()
             for value in (media_types or [])
@@ -1523,6 +1527,17 @@ def fixture_culling_window(
             LEFT JOIN sidecar_decisions AS global_decision
               ON global_decision.asset_id = a.asset_id
         """
+        universe_media = conn.execute(
+            f"""
+            SELECT sum(CASE WHEN lower(COALESCE(a.media_type, 'photo')) LIKE '%video%'
+                            THEN 0 ELSE 1 END) photos,
+                   sum(CASE WHEN lower(COALESCE(a.media_type, 'photo')) LIKE '%video%'
+                            THEN 1 ELSE 0 END) videos
+            FROM {from_sql}
+            WHERE {' AND '.join(universe_predicates)}
+            """,
+            universe_params,
+        ).fetchone()
         base_where_sql = " AND ".join(predicates)
         summary = conn.execute(
             f"""
@@ -1628,6 +1643,10 @@ def fixture_culling_window(
             "undecided": int(summary["undecided"] or 0),
             "picked": int(summary["picked"] or 0),
             "hidden": int(summary["hidden"] or 0),
+        },
+        "mediaAvailability": {
+            "photos": int(universe_media["photos"] or 0),
+            "videos": int(universe_media["videos"] or 0),
         },
         "items": items,
     }

@@ -237,6 +237,82 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
+    def test_culling_media_availability_uses_unfiltered_fixture_universe(self):
+        mixed = create_fixture(self.root, "Mixed", fixture_id="mixed")
+        mixed_filtered = fixture_culling_window(
+            self.root,
+            mixed["fixtureId"],
+            media_types=["video"],
+            limit=1,
+        )
+        self.assertEqual(
+            mixed_filtered["mediaAvailability"],
+            {"photos": 2, "videos": 1},
+        )
+        self.assertEqual(
+            [item["assetId"] for item in mixed_filtered["items"]],
+            ["asset-2"],
+        )
+        self.assertEqual(mixed_filtered["summary"]["universe"], 1)
+
+        still_parent = create_fixture(self.root, "Still parent", fixture_id="still-parent")
+        still_child = create_fixture(
+            self.root,
+            "Still child",
+            parent_fixture_id=still_parent["fixtureId"],
+            fixture_id="still-child",
+        )
+        set_fixture_asset_state(
+            self.root,
+            still_parent["fixtureId"],
+            ["asset-1", "asset-3"],
+            "picked",
+        )
+        stale_video_filter = fixture_culling_window(
+            self.root,
+            still_child["fixtureId"],
+            media_types=["video"],
+        )
+        self.assertEqual(
+            stale_video_filter["mediaAvailability"],
+            {"photos": 2, "videos": 0},
+        )
+        self.assertEqual(stale_video_filter["items"], [])
+
+        video_parent = create_fixture(self.root, "Video parent", fixture_id="video-parent")
+        video_child = create_fixture(
+            self.root,
+            "Video child",
+            parent_fixture_id=video_parent["fixtureId"],
+            fixture_id="video-child",
+        )
+        set_fixture_asset_state(
+            self.root,
+            video_parent["fixtureId"],
+            ["asset-2"],
+            "picked",
+        )
+        video_only = fixture_culling_window(self.root, video_child["fixtureId"])
+        self.assertEqual(
+            video_only["mediaAvailability"],
+            {"photos": 0, "videos": 1},
+        )
+        fully_filtered = fixture_culling_window(
+            self.root,
+            mixed["fixtureId"],
+            views=["picked"],
+            search="does-not-exist",
+            media_types=["video"],
+            ratings=[5],
+            colors=["purple"],
+            limit=1,
+        )
+        self.assertEqual(fully_filtered["items"], [])
+        self.assertEqual(
+            fully_filtered["mediaAvailability"],
+            {"photos": 2, "videos": 1},
+        )
+
     def test_culling_window_includes_original_metadata_without_exporting(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")
         with connect(self.root) as conn:

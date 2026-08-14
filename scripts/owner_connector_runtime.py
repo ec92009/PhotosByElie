@@ -375,7 +375,7 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
         mode_text = str(raw_entry.get("mode") or "")
         if mode_text not in {"0444", "0555"}:
             raise ConnectorRuntimeError(f"Connector runtime manifest mode is invalid: {relative_text}")
-        actual_stat = file_path.stat(follow_symlinks=False)
+        actual_stat = file_path.lstat()
         if stat.S_IMODE(actual_stat.st_mode) != int(mode_text, 8):
             raise ConnectorRuntimeError(f"Connector runtime file mode changed: {relative_text}")
         if actual_stat.st_size != raw_entry.get("size"):
@@ -424,7 +424,7 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
         if item.is_symlink():
             raise ConnectorRuntimeError(f"Connector runtime contains a symlink: {item.relative_to(runtime_root)}")
         if item.is_dir():
-            if stat.S_IMODE(item.stat(follow_symlinks=False).st_mode) != 0o555:
+            if stat.S_IMODE(item.lstat().st_mode) != 0o555:
                 raise ConnectorRuntimeError(f"Connector runtime directory mode changed: {item.relative_to(runtime_root)}")
             continue
         if not item.is_file():
@@ -435,9 +435,9 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
         raise ConnectorRuntimeError(
             "The connector runtime contains unmanifested files: " + ", ".join(unexpected)
         )
-    if stat.S_IMODE(runtime_root.stat(follow_symlinks=False).st_mode) != 0o555:
+    if stat.S_IMODE(runtime_root.lstat().st_mode) != 0o555:
         raise ConnectorRuntimeError("The connector runtime root mode changed.")
-    if stat.S_IMODE(manifest_path.stat(follow_symlinks=False).st_mode) != 0o444:
+    if stat.S_IMODE(manifest_path.lstat().st_mode) != 0o444:
         raise ConnectorRuntimeError("The connector runtime manifest mode changed.")
 
     return ConnectorRuntimeVerification(

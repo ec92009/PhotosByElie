@@ -198,7 +198,7 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 self.assertFalse(any(path.is_symlink() for path in runtime_paths))
                 for path in runtime_paths:
                     if path.is_file():
-                        self.assertTrue(stat.S_ISREG(path.stat(follow_symlinks=False).st_mode))
+                        self.assertTrue(stat.S_ISREG(path.lstat().st_mode))
                         self.assertFalse(path.stat().st_mode & 0o222)
                         self.assertNotIn(source_bytes, path.read_bytes())
                     elif path.is_dir():

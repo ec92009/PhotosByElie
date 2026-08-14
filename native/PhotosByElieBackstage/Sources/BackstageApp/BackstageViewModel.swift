@@ -53,6 +53,61 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var focusedID: String?
 }
 
+enum CullingThumbnailFailure: Equatable, Sendable {
+    case photosAccess
+    case assetUnavailable
+    case previewUnavailable
+
+    init(error: Error) {
+        guard let photoError = error as? PhotoLibraryError else {
+            self = .previewUnavailable
+            return
+        }
+        switch photoError {
+        case .accessDenied:
+            self = .photosAccess
+        case .assetNotFound, .unsupportedMediaType:
+            self = .assetUnavailable
+        case .resourceNotFound, .previewUnavailable, .exportFailed:
+            self = .previewUnavailable
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .photosAccess: "Photos access needed"
+        case .assetUnavailable: "Photo unavailable"
+        case .previewUnavailable: "Preview unavailable"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .photosAccess:
+            "Choose Allow Photos or grant Full Access in System Settings."
+        case .assetUnavailable:
+            "This asset is not in the current Photos library. Retry after Photos sync completes."
+        case .previewUnavailable:
+            "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .photosAccess: "lock.shield"
+        case .assetUnavailable, .previewUnavailable: "photo.badge.exclamationmark"
+        }
+    }
+
+    var actionTitle: String {
+        self == .photosAccess ? "Allow Photos" : "Retry"
+    }
+
+    var offersPhotosAccess: Bool {
+        self == .photosAccess
+    }
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -199,6 +254,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
+    @Published var cullingThumbnailFailures: [String: CullingThumbnailFailure] = [:]
     @Published var isLoadingPreview = false
     @Published var isLoadingCullingDecisions = false
     @Published var cullingDecisionProgress = 0
@@ -740,6 +796,7 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         cullingStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped Culling is unavailable."
             : "Loading \(selectedFixtureBreadcrumb) for Culling…"
@@ -1057,8 +1114,8 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Loading preview…"
         defer { isLoadingPreview = false }
         do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: photoLibraryIdentifier(for: id),
+            let preview = try await previewForAsset(
+                forAssetID: id,
                 maxPixelSize: 1_600
             )
             guard focusedCullingAssetID == id else { return }
@@ -1082,32 +1139,44 @@ final class BackstageViewModel: ObservableObject {
 
     func loadThumbnail(for assetID: String) async {
         guard cullingThumbnails[assetID] == nil else { return }
-        let localIdentifier = photoLibraryIdentifier(for: assetID)
+        var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
-                let preview = try await photoLibrary.preview(
-                    localIdentifier: localIdentifier,
+                let preview = try await previewForAsset(
+                    forAssetID: assetID,
                     maxPixelSize: 180
                 )
                 guard let image = NSImage(data: preview.jpegData) else {
+                    lastFailure = .previewUnavailable
                     if attempt < 2 {
                         try? await Task.sleep(for: .milliseconds(180))
                         continue
                     }
-                    return
+                    break
                 }
                 if cullingThumbnails.count >= 300,
                    let oldest = cullingThumbnails.keys.first {
                     cullingThumbnails.removeValue(forKey: oldest)
                 }
                 cullingThumbnails[assetID] = image
+                cullingThumbnailFailures.removeValue(forKey: assetID)
                 return
             } catch {
-                guard !Task.isCancelled, attempt < 2 else { return }
+                lastFailure = CullingThumbnailFailure(error: error)
+                guard !Task.isCancelled, attempt < 2 else { break }
                 try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
             }
         }
+        if !Task.isCancelled {
+            cullingThumbnailFailures[assetID] = lastFailure
+        }
+    }
+
+    func retryThumbnail(for assetID: String) {
+        guard cullingThumbnails[assetID] == nil else { return }
+        cullingThumbnailFailures.removeValue(forKey: assetID)
+        requestThumbnail(for: assetID)
     }
 
     func exportSelected(to directory: URL) async {
@@ -1596,6 +1665,7 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
         selection = .culling
         Task { await refreshCullingDecisions() }
@@ -1604,6 +1674,8 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
+        cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         Task { await loadFixtureCullingWindow() }
     }
 
@@ -4649,6 +4721,43 @@ final class BackstageViewModel: ObservableObject {
             return "\(report.readyCount) ready; \(report.blocked.count) blocked. Photos is unchanged."
         }
         return "\(report.verifiedCount) written and re-read as verified; \(report.failed.count) failed; \(report.blocked.count) blocked."
+    }
+
+    private func photoLibraryIdentifierCandidates(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) -> [String] {
+        var candidates: [String] = []
+        for value in [preferredIdentifier, photoLibraryIdentifier(for: assetID), assetID] {
+            guard let value, !value.isEmpty, !candidates.contains(value) else { continue }
+            candidates.append(value)
+        }
+        return candidates
+    }
+
+    private func previewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.preview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
     }
 
     private func photoLibraryIdentifier(for assetID: String) -> String {

@@ -33,6 +33,41 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
+
+        for marker in (
+            "photoLibraryIdentifierCandidates(",
+            "previewForAsset(",
+            "cullingThumbnailFailures: [String: CullingThumbnailFailure]",
+            "CullingThumbnailFailure(error: error)",
+            "cullingThumbnailFailures[assetID] = lastFailure",
+            "func retryThumbnail(for assetID: String)",
+        ):
+            self.assertIn(marker, model)
+        for marker in (
+            "PHCloudIdentifier(stringValue:",
+            "localIdentifierMappings(for:",
+            "apple-photos-cloud://",
+            "Choose Allow Photos",
+        ):
+            self.assertIn(marker, photo_library)
+        for marker in (
+            "thumbnailFailure: model.cullingThumbnailFailures[asset.id]",
+            "onRetryThumbnail: { model.retryThumbnail(for: asset.id) }",
+            "await model.authorizeAndLoadPhotos()",
+            "if let thumbnailFailure",
+            "Button(thumbnailFailure.actionTitle)",
+            "Loading preview…",
+        ):
+            self.assertIn(marker, source)
+
     def test_owner_core_owns_filter_window_burst_and_hierarchy_rules(self):
         source = (
             NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"

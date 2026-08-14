@@ -52,6 +52,25 @@ public enum PhotoLibraryError: Error, Sendable, Equatable {
     case exportFailed(String)
 }
 
+extension PhotoLibraryError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .accessDenied:
+            return "Photos access is unavailable for Backstage. Choose Allow Photos or grant Full Access in System Settings."
+        case .assetNotFound:
+            return "This photo is unavailable in the current Photos library. Retry after Photos sync completes."
+        case .unsupportedMediaType:
+            return "Backstage source workflows accept still photos only."
+        case .resourceNotFound:
+            return "The original Photos resource is unavailable."
+        case .previewUnavailable:
+            return "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
+        case .exportFailed:
+            return "Photos could not export this asset."
+        }
+    }
+}
+
 public protocol PhotoLibraryServing: Sendable {
     func authorization() -> PhotoLibraryAccess
     func requestAuthorization() async -> PhotoLibraryAccess
@@ -203,19 +222,42 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
     }
 
-    private func asset(_ localIdentifier: String) throws -> PHAsset {
-        guard let asset = PHAsset.fetchAssets(
-            withLocalIdentifiers: [localIdentifier],
-            options: nil
-        ).firstObject else {
-            throw PhotoLibraryError.assetNotFound(localIdentifier)
+    private func asset(_ identifier: String) throws -> PHAsset {
+        let asset: PHAsset
+        if let localAsset = fetchAsset(localIdentifier: identifier) {
+            asset = localAsset
+        } else if #available(macOS 12.0, *) {
+            // Fixture IDs are stable across Macs while PhotoKit local
+            // identifiers are library-local. Resolve the canonical cloud ID
+            // when the connector does not provide a local Photos ID.
+            let cloudValue = identifier.hasPrefix("apple-photos-cloud://")
+                ? String(identifier.dropFirst("apple-photos-cloud://".count))
+                : identifier
+            let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
+            let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
+            guard let result = mappings[cloudIdentifier],
+                  case .success(let localIdentifier) = result,
+                  let mappedAsset = fetchAsset(localIdentifier: localIdentifier) else {
+                throw PhotoLibraryError.assetNotFound(identifier)
+            }
+            asset = mappedAsset
+        } else {
+            throw PhotoLibraryError.assetNotFound(identifier)
         }
+
         guard asset.mediaType == .image else {
             throw PhotoLibraryError.unsupportedMediaType(
                 "Backstage source workflows accept still photos only."
             )
         }
         return asset
+    }
+
+    private func fetchAsset(localIdentifier: String) -> PHAsset? {
+        PHAsset.fetchAssets(
+            withLocalIdentifiers: [localIdentifier],
+            options: nil
+        ).firstObject
     }
 
     private func preferredOriginalResource(for asset: PHAsset) -> PHAssetResource? {

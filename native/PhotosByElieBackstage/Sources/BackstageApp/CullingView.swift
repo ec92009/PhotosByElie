@@ -399,6 +399,14 @@ struct CullingView: View {
                     asset: asset,
                     state: model.cullingStates[asset.id],
                     thumbnail: model.cullingThumbnails[asset.id],
+                    thumbnailFailure: model.cullingThumbnailFailures[asset.id],
+                    onRetryThumbnail: { model.retryThumbnail(for: asset.id) },
+                    onAllowPhotos: {
+                        Task {
+                            await model.authorizeAndLoadPhotos()
+                            model.retryThumbnail(for: asset.id)
+                        }
+                    },
                     isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
                     isFocused: model.cullingSelection.focusedID == asset.id,
                     usesFill: model.cullingUsesFill
@@ -904,6 +912,9 @@ private struct CullingAssetCard: View {
     var asset: FixtureAsset
     var state: SidecarDecisionState?
     var thumbnail: NSImage?
+    var thumbnailFailure: CullingThumbnailFailure?
+    var onRetryThumbnail: () -> Void
+    var onAllowPhotos: () -> Void
     var isSelected: Bool
     var isFocused: Bool
     var usesFill: Bool
@@ -915,10 +926,46 @@ private struct CullingAssetCard: View {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: usesFill ? .fill : .fit)
+                } else if let thumbnailFailure {
+                    VStack(spacing: 5) {
+                        Image(systemName: thumbnailFailure.systemImage)
+                            .font(.title2)
+                        Text(thumbnailFailure.title)
+                            .font(.caption2.weight(.semibold))
+                        Text(thumbnailFailure.detail)
+                            .font(.caption2)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                        Button(thumbnailFailure.actionTitle) {
+                            if thumbnailFailure.offersPhotosAccess {
+                                onAllowPhotos()
+                            } else {
+                                onRetryThumbnail()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .backstageHelp(
+                            thumbnailFailure.offersPhotosAccess
+                                ? "Request Photos permission for Backstage, then retry this thumbnail."
+                                : "Retry loading this individual Photos thumbnail without changing its culling decision."
+                        )
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "\(thumbnailFailure.title). \(thumbnailFailure.detail)"
+                    )
                 } else {
-                    Image(systemName: asset.mediaType == "video" ? "video" : "photo")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 5) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Loading preview…")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(maxWidth: .infinity)

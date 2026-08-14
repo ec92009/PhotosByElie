@@ -97,6 +97,9 @@ public protocol PBEOwnerHostServing: Sendable {
 
 enum PBEOwnerCheckoutIdentity {
     private static let scopeManifest = "scripts/pbe_owner_host_tracked_paths.txt"
+    private static let runtimeManifestName = "connector-runtime-manifest.json"
+    private static let runtimeManifestKind = "photosbyelie-owner-connector-runtime"
+    private static let runtimeManifestSchemaVersion = 2
     private static let pythonImportExtensions: Set<String> = [
         "bundle", "dylib", "pth", "py", "pyc", "pyo", "so",
     ]
@@ -108,7 +111,17 @@ enum PBEOwnerCheckoutIdentity {
     ]
 
     static func verified(repositoryRoot: URL) throws -> String {
-        let root = repositoryRoot.standardizedFileURL.resolvingSymlinksInPath()
+        let standardizedRoot = repositoryRoot.standardizedFileURL
+        let runtimeManifest = standardizedRoot.appendingPathComponent(runtimeManifestName)
+        if FileManager.default.fileExists(atPath: runtimeManifest.path)
+            || isSymbolicLink(runtimeManifest)
+            || isSymbolicLink(standardizedRoot) {
+            return try verifiedRuntime(standardizedRoot)
+        }
+        return try verifiedGitCheckout(standardizedRoot.resolvingSymlinksInPath())
+    }
+
+    private static func verifiedGitCheckout(_ root: URL) throws -> String {
         let pathspecs = try hostPathspecs(repositoryRoot: root)
         do {
             let topLevel = try git(root, ["rev-parse", "--show-toplevel"]).text
@@ -190,6 +203,203 @@ enum PBEOwnerCheckoutIdentity {
                 message: "Backstage could not verify the tracked PBE Owner host checkout."
             ))
         }
+    }
+
+    private struct RuntimeManifest: Decodable {
+        struct FileEntry: Decodable {
+            var path: String
+            var sha256: String
+            var size: Int
+            var mode: String
+        }
+
+        struct OwnerHost: Decodable {
+            var scopeManifest: String
+            var files: [String]
+        }
+
+        var schemaVersion: Int
+        var kind: String
+        var sourceRevision: String
+        var files: [FileEntry]
+        var pbeOwnerHost: OwnerHost
+    }
+
+    private static func verifiedRuntime(_ standardizedRoot: URL) throws -> String {
+        do {
+            guard !isSymbolicLink(standardizedRoot) else {
+                throw VerificationFailure.invalidRepository
+            }
+            let root = standardizedRoot.resolvingSymlinksInPath()
+            let manifestURL = root.appendingPathComponent(runtimeManifestName)
+            guard !isSymbolicLink(manifestURL),
+                  FileManager.default.fileExists(atPath: manifestURL.path),
+                  try permissions(manifestURL) == 0o444 else {
+                throw VerificationFailure.invalidRuntime("manifest")
+            }
+            let manifest = try JSONDecoder().decode(
+                RuntimeManifest.self,
+                from: Data(contentsOf: manifestURL)
+            )
+            guard manifest.schemaVersion == runtimeManifestSchemaVersion,
+                  manifest.kind == runtimeManifestKind,
+                  manifest.sourceRevision.range(
+                    of: "^[0-9a-f]{40,64}$",
+                    options: .regularExpression
+                  ) != nil,
+                  manifest.pbeOwnerHost.scopeManifest == scopeManifest,
+                  !manifest.files.isEmpty,
+                  !manifest.pbeOwnerHost.files.isEmpty,
+                  try permissions(root) == 0o555 else {
+                throw VerificationFailure.invalidRuntime("header")
+            }
+
+            var entries: [String: RuntimeManifest.FileEntry] = [:]
+            for entry in manifest.files {
+                let relative = try safeRuntimePath(entry.path)
+                guard entries[relative] == nil,
+                      ["0444", "0555"].contains(entry.mode),
+                      entry.size >= 0,
+                      entry.sha256.range(
+                        of: "^[0-9a-f]{64}$",
+                        options: .regularExpression
+                      ) != nil else {
+                    throw VerificationFailure.invalidRuntime("entry metadata: \(entry.path)")
+                }
+                guard let expectedPermissions = Int(entry.mode, radix: 8) else {
+                    throw VerificationFailure.invalidRepository
+                }
+                let fileURL = root.appendingPathComponent(relative)
+                guard !isSymbolicLink(fileURL),
+                      FileManager.default.fileExists(atPath: fileURL.path),
+                      try permissions(fileURL) == expectedPermissions,
+                      try fileSize(fileURL) == entry.size,
+                      try sha256(fileURL) == entry.sha256.lowercased() else {
+                    throw VerificationFailure.invalidRuntime("entry content: \(entry.path)")
+                }
+                entries[relative] = entry
+            }
+
+            let hostPaths = try manifest.pbeOwnerHost.files.map(safeRuntimePath).sorted()
+            guard Set(hostPaths).count == hostPaths.count,
+                  Set(requiredPaths).isSubset(of: Set(hostPaths)),
+                  Set(hostPaths).isSubset(of: Set(entries.keys)) else {
+                throw VerificationFailure.invalidRuntime("host scope")
+            }
+            try verifyRuntimeContents(root: root, manifestURL: manifestURL, entries: entries)
+
+            var hasher = SHA256()
+            for path in hostPaths {
+                guard let entry = entries[path] else {
+                    throw VerificationFailure.invalidRuntime("host entry: \(path)")
+                }
+                hasher.update(data: Data(path.utf8))
+                hasher.update(data: Data([0]))
+                hasher.update(data: Data(entry.mode.utf8))
+                hasher.update(data: Data([0]))
+                hasher.update(data: Data(entry.sha256.lowercased().utf8))
+                hasher.update(data: Data([10]))
+            }
+            let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            return "runtime:\(manifest.sourceRevision):pbe-host-sha256:\(digest)"
+        } catch let error as APIErrorEnvelope {
+            throw error
+        } catch {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_runtime_identity_unavailable",
+                message: "Backstage could not verify the installed PBE Owner runtime."
+            ))
+        }
+    }
+
+    private static func verifyRuntimeContents(
+        root: URL,
+        manifestURL: URL,
+        entries: [String: RuntimeManifest.FileEntry]
+    ) throws {
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey]
+        var enumerationFailed = false
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: keys,
+            options: [],
+            errorHandler: { _, _ in
+                enumerationFailed = true
+                return false
+            }
+        ) else {
+            throw VerificationFailure.invalidRuntime("enumerator")
+        }
+        let canonicalManifestURL = manifestURL.resolvingSymlinksInPath()
+        var actualFiles = Set<String>()
+        while let candidate = enumerator.nextObject() as? URL {
+            let values = try candidate.resourceValues(forKeys: Set(keys))
+            guard values.isSymbolicLink != true else {
+                throw VerificationFailure.invalidRuntime("symlink: \(candidate.path)")
+            }
+            let canonicalCandidate = candidate.resolvingSymlinksInPath()
+            if canonicalCandidate == canonicalManifestURL { continue }
+            let rootPrefix = root.path + "/"
+            guard canonicalCandidate.path.hasPrefix(rootPrefix) else {
+                throw VerificationFailure.invalidRuntime("outside runtime: \(candidate.path)")
+            }
+            let relative = String(canonicalCandidate.path.dropFirst(rootPrefix.count))
+            if values.isDirectory == true {
+                guard try permissions(candidate) == 0o555 else {
+                    throw VerificationFailure.invalidRuntime("directory permissions: \(relative)")
+                }
+                continue
+            }
+            guard values.isRegularFile == true, entries[relative] != nil else {
+                throw VerificationFailure.invalidRuntime("unexpected file: \(relative)")
+            }
+            actualFiles.insert(relative)
+        }
+        guard !enumerationFailed, actualFiles == Set(entries.keys) else {
+            throw VerificationFailure.invalidRuntime("file set")
+        }
+    }
+
+    private static func safeRuntimePath(_ value: String) throws -> String {
+        guard !value.isEmpty,
+              !(value as NSString).isAbsolutePath,
+              !value.split(separator: "/", omittingEmptySubsequences: false).contains(where: {
+                $0.isEmpty || $0 == "." || $0 == ".."
+              }) else {
+            throw VerificationFailure.invalidRepository
+        }
+        return value
+    }
+
+    private static func isSymbolicLink(_ url: URL) -> Bool {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return attributes?[.type] as? FileAttributeType == .typeSymbolicLink
+    }
+
+    private static func permissions(_ url: URL) throws -> Int {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue else {
+            throw VerificationFailure.invalidRepository
+        }
+        return permissions
+    }
+
+    private static func fileSize(_ url: URL) throws -> Int {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard let size = (attributes[.size] as? NSNumber)?.intValue else {
+            throw VerificationFailure.invalidRepository
+        }
+        return size
+    }
+
+    private static func sha256(_ url: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+            hasher.update(data: data)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     private static func assertNoStrayPythonHostContent(
@@ -294,6 +504,72 @@ enum PBEOwnerCheckoutIdentity {
     private enum VerificationFailure: Error {
         case gitFailed
         case invalidRepository
+        case invalidRuntime(String)
+    }
+}
+
+struct PBEOwnerRuntimeRoots: Equatable {
+    private struct ConnectorConfig: Decodable {
+        var repoRoot: String
+        var runtimeRoot: String?
+    }
+
+    var runtimeRoot: URL?
+    var dataRoot: URL?
+
+    static func resolve(
+        environment: [String: String],
+        bundleRuntimeRoot: URL?,
+        connectorConfigURL: URL,
+        homeDirectory: URL,
+        fileManager: FileManager = .default
+    ) -> PBEOwnerRuntimeRoots {
+        let configExists = fileManager.fileExists(atPath: connectorConfigURL.path)
+        let config: ConnectorConfig? = {
+            guard configExists,
+                  let data = try? Data(contentsOf: connectorConfigURL) else { return nil }
+            return try? JSONDecoder().decode(ConnectorConfig.self, from: data)
+        }()
+
+        let environmentRuntime = environment["PBE_OWNER_RUNTIME_ROOT"]
+            ?? environment["PBE_CONNECTOR_RUNTIME_ROOT"]
+        let runtimeCandidates: [URL?] = [
+            environmentRuntime.map { URL(fileURLWithPath: $0, isDirectory: true) },
+            bundleRuntimeRoot,
+            config?.runtimeRoot.map { URL(fileURLWithPath: $0, isDirectory: true) },
+            configExists ? nil : homeDirectory.appendingPathComponent("Dev/PhotosByElie", isDirectory: true),
+            configExists ? nil : homeDirectory.appendingPathComponent("MDev/PhotosByElie", isDirectory: true),
+        ]
+        let dataCandidates: [URL?] = [
+            environment["PBE_REPO_ROOT"].map { URL(fileURLWithPath: $0, isDirectory: true) },
+            config?.repoRoot.isEmpty == false
+                ? URL(fileURLWithPath: config?.repoRoot ?? "", isDirectory: true)
+                : nil,
+            configExists ? nil : homeDirectory.appendingPathComponent("Dev/PhotosByElie", isDirectory: true),
+            configExists ? nil : homeDirectory.appendingPathComponent("MDev/PhotosByElie", isDirectory: true),
+        ]
+        return PBEOwnerRuntimeRoots(
+            runtimeRoot: firstExisting(
+                runtimeCandidates,
+                marker: "scripts/local_server.py",
+                fileManager: fileManager
+            ),
+            dataRoot: firstExisting(
+                dataCandidates,
+                marker: "assets/owner-actions/Owner.sqlite",
+                fileManager: fileManager
+            )
+        )
+    }
+
+    private static func firstExisting(
+        _ candidates: [URL?],
+        marker: String,
+        fileManager: FileManager
+    ) -> URL? {
+        candidates.compactMap { $0 }.first(where: {
+            fileManager.fileExists(atPath: $0.appendingPathComponent(marker).path)
+        })?.standardizedFileURL
     }
 }
 
@@ -328,7 +604,8 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
     private let transport: OwnerAPITransport
     private let decoder = JSONDecoder.ownerAPI
     private let encoder = JSONEncoder.ownerAPI
-    private let repositoryRoot: URL?
+    private let runtimeRoot: URL?
+    private let dataRoot: URL?
     private var launchedProcess: Process?
     private var hostAuthorization: String
     private var bootstrapDescriptorURL: URL?
@@ -337,11 +614,30 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         baseURL: URL? = nil,
         transport: OwnerAPITransport = URLSessionOwnerTransport(),
         repositoryRoot: URL? = nil,
+        runtimeRoot: URL? = nil,
+        dataRoot: URL? = nil,
+        connectorConfigURL: URL? = nil,
         hostAuthorization: String = ""
     ) {
         self.baseURL = baseURL ?? URL(string: "http://127.0.0.1:0/__photosbyelie/pbe-owner")!
         self.transport = transport
-        self.repositoryRoot = repositoryRoot ?? Self.defaultRepositoryRoot()
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let defaultConfig = home.appendingPathComponent(
+            ".config/photosbyelie/connector.json",
+            isDirectory: false
+        )
+        let bundleRuntime = Bundle.main.resourceURL?.appendingPathComponent(
+            "OwnerRuntime",
+            isDirectory: true
+        )
+        let roots = PBEOwnerRuntimeRoots.resolve(
+            environment: ProcessInfo.processInfo.environment,
+            bundleRuntimeRoot: bundleRuntime,
+            connectorConfigURL: connectorConfigURL ?? defaultConfig,
+            homeDirectory: home
+        )
+        self.runtimeRoot = runtimeRoot ?? repositoryRoot ?? roots.runtimeRoot
+        self.dataRoot = dataRoot ?? repositoryRoot ?? roots.dataRoot
         self.hostAuthorization = hostAuthorization
     }
 
@@ -432,16 +728,25 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
 
     private func launchHostAndBootstrap() async throws {
         if launchedProcess?.isRunning == true { return }
-        guard let repositoryRoot,
+        guard let runtimeRoot,
               FileManager.default.fileExists(
-                atPath: repositoryRoot.appendingPathComponent("scripts/local_server.py").path
+                atPath: runtimeRoot.appendingPathComponent("scripts/local_server.py").path
               ) else {
             throw APIErrorEnvelope(error: .init(
-                code: "pbe_owner_checkout_missing",
-                message: "Backstage cannot find a PhotosByElie checkout on this Mac. Set PBE_REPO_ROOT to its path."
+                code: "pbe_owner_runtime_missing",
+                message: "Backstage cannot find its installed PBE Owner runtime on this Mac."
             ))
         }
-        let expectedCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: repositoryRoot)
+        let expectedCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: runtimeRoot)
+        guard let dataRoot,
+              FileManager.default.fileExists(
+                atPath: dataRoot.appendingPathComponent("assets/owner-actions/Owner.sqlite").path
+              ) else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_data_root_missing",
+                message: "Backstage cannot find the configured Owner.sqlite data root on this Mac."
+            ))
+        }
         let descriptorURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-owner-host-\(UUID().uuidString).json")
         let bytecodeCacheURL = FileManager.default.temporaryDirectory
@@ -450,16 +755,19 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [
             "python3", "-E", "-B", "-X", "pycache_prefix=\(bytecodeCacheURL.path)",
-            "scripts/local_server.py", "0", "--bind", "127.0.0.1",
+            runtimeRoot.appendingPathComponent("scripts/local_server.py").path,
+            "0", "--bind", "127.0.0.1",
             "--backstage-bootstrap-file", descriptorURL.path,
         ]
-        process.currentDirectoryURL = repositoryRoot
+        process.currentDirectoryURL = dataRoot
         var environment = ProcessInfo.processInfo.environment
         for key in environment.keys where key.hasPrefix("PYTHON") {
             environment.removeValue(forKey: key)
         }
         environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        let launchCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: repositoryRoot)
+        environment["PBE_CONNECTOR_RUNTIME_ROOT"] = runtimeRoot.path
+        environment["PBE_REPO_ROOT"] = dataRoot.path
+        let launchCheckoutIdentity = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: runtimeRoot)
         guard launchCheckoutIdentity == expectedCheckoutIdentity else {
             throw APIErrorEnvelope(error: .init(
                 code: "pbe_owner_checkout_changed",
@@ -577,19 +885,6 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
             ))
         }
         return try decoder.decode(Response.self, from: data)
-    }
-
-    private static func defaultRepositoryRoot() -> URL? {
-        let environment = ProcessInfo.processInfo.environment
-        let fileManager = FileManager.default
-        let candidates = [
-            environment["PBE_REPO_ROOT"].map { URL(fileURLWithPath: $0, isDirectory: true) },
-            URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Dev/PhotosByElie", isDirectory: true),
-            URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("MDev/PhotosByElie", isDirectory: true),
-        ].compactMap { $0 }
-        return candidates.first(where: {
-            fileManager.fileExists(atPath: $0.appendingPathComponent("scripts/local_server.py").path)
-        })
     }
 
 }

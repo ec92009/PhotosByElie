@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SQLite3
 import Testing
@@ -3634,6 +3635,154 @@ struct PBEOwnerHostContractTests {
         } catch let error as APIErrorEnvelope {
             #expect(error.error.code == "pbe_owner_checkout_content_mismatch")
         }
+    }
+
+    @Test("Installed runtime attestation rejects tampering and symlinks")
+    func installedRuntimeIdentityFailsClosed() throws {
+        let fixtureRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-runtime-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: fixtureRoot, withIntermediateDirectories: true)
+        defer {
+            makeWritable(fixtureRoot)
+            try? FileManager.default.removeItem(at: fixtureRoot)
+        }
+
+        func makeRuntime(named name: String) throws -> URL {
+            let root = fixtureRoot.appendingPathComponent(name, isDirectory: true)
+            let scripts = root.appendingPathComponent("scripts", isDirectory: true)
+            try FileManager.default.createDirectory(at: scripts, withIntermediateDirectories: true)
+            let files: [String: Data] = [
+                "scripts/pbe_owner_host_tracked_paths.txt": Data("gallery.html\n".utf8),
+                "scripts/local_server.py": Data("# local host\n".utf8),
+                "scripts/pbe_owner_session.py": Data("# session host\n".utf8),
+                "scripts/waste_basket_gateway.py": Data("# waste basket\n".utf8),
+                "gallery.html": Data("<!doctype html><title>Owner runtime</title>\n".utf8),
+            ]
+            var entries: [[String: Any]] = []
+            for path in files.keys.sorted() {
+                let data = try #require(files[path])
+                let destination = root.appendingPathComponent(path)
+                try data.write(to: destination)
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: 0o444],
+                    ofItemAtPath: destination.path
+                )
+                entries.append([
+                    "path": path,
+                    "sha256": SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+                    "size": data.count,
+                    "mode": "0444",
+                ])
+            }
+            let manifest: [String: Any] = [
+                "schemaVersion": 2,
+                "kind": "photosbyelie-owner-connector-runtime",
+                "sourceRevision": String(repeating: "a", count: 40),
+                "files": entries,
+                "pbeOwnerHost": [
+                    "scopeManifest": "scripts/pbe_owner_host_tracked_paths.txt",
+                    "files": files.keys.sorted(),
+                ],
+            ]
+            let manifestURL = root.appendingPathComponent("connector-runtime-manifest.json")
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted])
+                .write(to: manifestURL)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o444],
+                ofItemAtPath: manifestURL.path
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o555],
+                ofItemAtPath: scripts.path
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o555],
+                ofItemAtPath: root.path
+            )
+            return root
+        }
+
+        let clean = try makeRuntime(named: "clean")
+        #expect(
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: clean)
+                == "runtime:\(String(repeating: "a", count: 40)):pbe-host-sha256:"
+                + "75a383e01ec8dc07680edda4b442b1318fc525f09113cebe866ac2f9a5a4c615"
+        )
+
+        let tampered = try makeRuntime(named: "tampered")
+        let tamperedGallery = tampered.appendingPathComponent("gallery.html")
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: tampered.path
+        )
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: tamperedGallery.path)
+        try "tampered\n".write(to: tamperedGallery, atomically: true, encoding: .utf8)
+        #expect(throws: APIErrorEnvelope.self) {
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: tampered)
+        }
+
+        let symlinked = try makeRuntime(named: "symlinked")
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: symlinked.path)
+        let symlinkedGallery = symlinked.appendingPathComponent("gallery.html")
+        try FileManager.default.removeItem(at: symlinkedGallery)
+        try FileManager.default.createSymbolicLink(
+            at: symlinkedGallery,
+            withDestinationURL: clean.appendingPathComponent("gallery.html")
+        )
+        #expect(throws: APIErrorEnvelope.self) {
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: symlinked)
+        }
+    }
+
+    @Test("Installed Owner runtime and mutable data root resolve independently")
+    func installedRuntimeUsesSplitRoots() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-split-root-\(UUID().uuidString)", isDirectory: true)
+        let bundleRuntime = root.appendingPathComponent("signed-app/OwnerRuntime", isDirectory: true)
+        let dataRoot = root.appendingPathComponent("mutable-data", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        try FileManager.default.createDirectory(
+            at: bundleRuntime.appendingPathComponent("scripts", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: dataRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data().write(to: bundleRuntime.appendingPathComponent("scripts/local_server.py"))
+        try Data().write(to: dataRoot.appendingPathComponent("assets/owner-actions/Owner.sqlite"))
+        try JSONSerialization.data(withJSONObject: [
+            "repoRoot": dataRoot.path,
+            "runtimeRoot": root.appendingPathComponent("stale-runtime").path,
+        ]).write(to: configURL)
+
+        let roots = PBEOwnerRuntimeRoots.resolve(
+            environment: [:],
+            bundleRuntimeRoot: bundleRuntime,
+            connectorConfigURL: configURL,
+            homeDirectory: root.appendingPathComponent("home", isDirectory: true)
+        )
+        #expect(roots.runtimeRoot == bundleRuntime.standardizedFileURL)
+        #expect(roots.dataRoot == dataRoot.standardizedFileURL)
+        #expect(!FileManager.default.fileExists(
+            atPath: dataRoot.appendingPathComponent("scripts/pbe_owner_host_tracked_paths.txt").path
+        ))
+    }
+
+    private func makeWritable(_ root: URL) {
+        guard FileManager.default.fileExists(atPath: root.path) else { return }
+        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {
+            let paths = enumerator.allObjects.compactMap { $0 as? URL }
+                .sorted { $0.pathComponents.count > $1.pathComponents.count }
+            for path in paths {
+                try? FileManager.default.setAttributes(
+                    [.posixPermissions: path.hasDirectoryPath ? 0o700 : 0o600],
+                    ofItemAtPath: path.path
+                )
+            }
+        }
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
     }
 
     @Test("Backstage bearer mints a fully bound short-lived session")

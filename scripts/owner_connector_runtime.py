@@ -16,7 +16,8 @@ import subprocess
 
 MANIFEST_NAME = "connector-runtime-manifest.json"
 MANIFEST_KIND = "photosbyelie-owner-connector-runtime"
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
+PBE_OWNER_HOST_SCOPE_MANIFEST = "scripts/pbe_owner_host_tracked_paths.txt"
 REQUIRED_RUNTIME_FILES = frozenset(
     {
         "scripts/fixture_pipeline.py",
@@ -24,9 +25,20 @@ REQUIRED_RUNTIME_FILES = frozenset(
         "scripts/new_owner_connector.py",
         "scripts/new_owner_connector_launch_agent.plist.in",
         "scripts/owner_connector_runtime.py",
+        PBE_OWNER_HOST_SCOPE_MANIFEST,
+        "scripts/pbe_owner_session.py",
         "scripts/requested_ai_proposal_pass.py",
         "scripts/sidecar_server.py",
         "scripts/sidecar_state_db.py",
+        "scripts/waste_basket_gateway.py",
+    }
+)
+PBE_OWNER_HOST_REQUIRED_FILES = frozenset(
+    {
+        PBE_OWNER_HOST_SCOPE_MANIFEST,
+        "scripts/local_server.py",
+        "scripts/pbe_owner_session.py",
+        "scripts/waste_basket_gateway.py",
     }
 )
 
@@ -43,7 +55,7 @@ class ConnectorRuntimeVerification:
 
 
 @dataclass(frozen=True)
-class CommitScriptEntry:
+class CommitRuntimeEntry:
     path: PurePosixPath
     object_id: str
     mode: int
@@ -57,16 +69,35 @@ def _sha256(file_path: Path) -> str:
     return digest.hexdigest()
 
 
-def _safe_script_path(value: object) -> PurePosixPath:
+def _safe_runtime_path(value: object) -> PurePosixPath:
     relative = PurePosixPath(str(value or ""))
     if (
         relative.is_absolute()
         or not relative.parts
-        or relative.parts[0] != "scripts"
         or any(part in {"", ".", ".."} for part in relative.parts)
     ):
         raise ConnectorRuntimeError(f"Unsafe connector runtime path: {value!r}")
     return relative
+
+
+def _safe_host_pathspec(value: object) -> str:
+    pathspec = str(value or "").strip()
+    if not pathspec or "\0" in pathspec:
+        raise ConnectorRuntimeError("The PBE Owner host scope contains an empty or unsafe pathspec.")
+    if pathspec.startswith(":(glob)"):
+        relative = pathspec[len(":(glob)") :]
+    elif pathspec.startswith(":"):
+        raise ConnectorRuntimeError(f"Unsupported PBE Owner host pathspec: {pathspec}")
+    else:
+        relative = pathspec
+    candidate = PurePosixPath(relative)
+    if (
+        candidate.is_absolute()
+        or not candidate.parts
+        or any(part in {"", ".", ".."} for part in candidate.parts)
+    ):
+        raise ConnectorRuntimeError(f"Unsafe PBE Owner host pathspec: {pathspec}")
+    return pathspec
 
 
 def _run_git(source_root: Path, *arguments: str) -> bytes:
@@ -103,7 +134,11 @@ def resolve_commit(source_root: Path, revision: str) -> str:
     return resolved
 
 
-def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScriptEntry]:
+def _tree_entries(
+    source_root: Path,
+    commit_sha: str,
+    pathspecs: list[str] | None = None,
+) -> list[CommitRuntimeEntry]:
     raw_tree = _run_git(
         source_root,
         "ls-tree",
@@ -111,10 +146,8 @@ def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScr
         "-z",
         "--full-tree",
         commit_sha,
-        "--",
-        "scripts",
     )
-    entries: list[CommitScriptEntry] = []
+    entries: list[CommitRuntimeEntry] = []
     seen: set[str] = set()
     for raw_entry in raw_tree.split(b"\0"):
         if not raw_entry:
@@ -125,7 +158,7 @@ def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScr
             raise ConnectorRuntimeError("Git returned a malformed connector runtime tree entry.")
         mode_text, object_type, object_id = fields
         try:
-            relative = _safe_script_path(raw_path.decode("utf-8", errors="strict"))
+            relative = _safe_runtime_path(raw_path.decode("utf-8", errors="strict"))
             object_id_text = object_id.decode("ascii", errors="strict").lower()
         except UnicodeError as error:
             raise ConnectorRuntimeError("Git returned a non-text connector runtime tree entry.") from error
@@ -139,14 +172,92 @@ def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScr
             )
         if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", object_id_text):
             raise ConnectorRuntimeError(f"Connector runtime Git object is invalid: {relative_text}")
-        entries.append(
-            CommitScriptEntry(
-                path=relative,
-                object_id=object_id_text,
-                mode=0o555 if mode_text == b"100755" else 0o444,
-            )
+        entry = CommitRuntimeEntry(
+            path=relative,
+            object_id=object_id_text,
+            mode=0o555 if mode_text == b"100755" else 0o444,
         )
+        if not pathspecs or any(
+            _host_pathspec_matches(pathspec, str(relative)) for pathspec in pathspecs
+        ):
+            entries.append(entry)
     entries.sort(key=lambda entry: str(entry.path))
+    return entries
+
+
+def _host_pathspec_matches(pathspec: str, relative_path: str) -> bool:
+    if not pathspec.startswith(":(glob)"):
+        return relative_path == pathspec
+    pattern = pathspec[len(":(glob)") :]
+    expression = ""
+    index = 0
+    while index < len(pattern):
+        if pattern.startswith("**/", index):
+            expression += "(?:.*/)?"
+            index += 3
+        elif pattern.startswith("**", index):
+            expression += ".*"
+            index += 2
+        elif pattern[index] == "*":
+            expression += "[^/]*"
+            index += 1
+        elif pattern[index] == "?":
+            expression += "[^/]"
+            index += 1
+        else:
+            expression += re.escape(pattern[index])
+            index += 1
+    return re.fullmatch(expression, relative_path) is not None
+
+
+def _pbe_owner_host_pathspecs(source_root: Path, commit_sha: str) -> list[str]:
+    try:
+        raw_scope = _run_git(
+            source_root,
+            "show",
+            f"{commit_sha}:{PBE_OWNER_HOST_SCOPE_MANIFEST}",
+        ).decode("utf-8", errors="strict")
+    except (ConnectorRuntimeError, UnicodeError) as error:
+        raise ConnectorRuntimeError(
+            "The source commit does not contain a readable PBE Owner host scope manifest."
+        ) from error
+    pathspecs = list(PBE_OWNER_HOST_REQUIRED_FILES)
+    for line in raw_scope.splitlines():
+        value = line.strip()
+        if value and not value.startswith("#"):
+            pathspec = _safe_host_pathspec(value)
+            if pathspec not in pathspecs:
+                pathspecs.append(pathspec)
+    return pathspecs
+
+
+def _commit_runtime_entries(
+    source_root: Path,
+    commit_sha: str,
+) -> tuple[list[CommitRuntimeEntry], list[str]]:
+    host_pathspecs = _pbe_owner_host_pathspecs(source_root, commit_sha)
+    all_entries = _tree_entries(source_root, commit_sha)
+    host_entries = [
+        entry
+        for entry in all_entries
+        if any(
+            _host_pathspec_matches(pathspec, str(entry.path))
+            for pathspec in host_pathspecs
+        )
+    ]
+    host_paths = [str(entry.path) for entry in host_entries]
+    for pathspec in host_pathspecs:
+        if not any(_host_pathspec_matches(pathspec, path) for path in host_paths):
+            raise ConnectorRuntimeError(
+                f"The source commit PBE Owner host scope did not match any file: {pathspec}"
+            )
+    runtime_entries = [
+        entry
+        for entry in all_entries
+        if str(entry.path).startswith("scripts/") or str(entry.path) in set(host_paths)
+    ]
+    entries_by_path = {str(entry.path): entry for entry in runtime_entries}
+    entries = [entries_by_path[path] for path in sorted(entries_by_path)]
     if not entries:
         raise ConnectorRuntimeError("The source commit contains no connector runtime files.")
     missing = sorted(REQUIRED_RUNTIME_FILES - {str(entry.path) for entry in entries})
@@ -154,7 +265,12 @@ def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScr
         raise ConnectorRuntimeError(
             "The source commit is missing required connector runtime files: " + ", ".join(missing)
         )
-    return entries
+    missing_host = sorted(PBE_OWNER_HOST_REQUIRED_FILES - set(host_paths))
+    if missing_host:
+        raise ConnectorRuntimeError(
+            "The source commit is missing required PBE Owner host files: " + ", ".join(missing_host)
+        )
+    return entries, host_paths
 
 
 def materialize_runtime(source_root: Path, destination: Path, revision: str) -> ConnectorRuntimeVerification:
@@ -165,7 +281,7 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
     source_root = expanded_source.resolve(strict=True)
     destination = destination.expanduser()
     commit_sha = resolve_commit(source_root, revision)
-    commit_entries = _commit_script_entries(source_root, commit_sha)
+    commit_entries, owner_host_paths = _commit_runtime_entries(source_root, commit_sha)
     if destination.is_symlink():
         raise ConnectorRuntimeError(f"The connector runtime destination must not be a symlink: {destination}")
     destination.mkdir(parents=True, exist_ok=True)
@@ -194,6 +310,10 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
         "kind": MANIFEST_KIND,
         "sourceRevision": commit_sha,
         "files": file_entries,
+        "pbeOwnerHost": {
+            "scopeManifest": PBE_OWNER_HOST_SCOPE_MANIFEST,
+            "files": owner_host_paths,
+        },
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
@@ -244,7 +364,7 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
     for raw_entry in raw_entries:
         if not isinstance(raw_entry, dict):
             raise ConnectorRuntimeError("The connector runtime manifest contains an invalid file entry.")
-        relative = _safe_script_path(raw_entry.get("path"))
+        relative = _safe_runtime_path(raw_entry.get("path"))
         relative_text = str(relative)
         if relative_text in expected_paths:
             raise ConnectorRuntimeError(f"Duplicate connector runtime manifest path: {relative_text}")
@@ -269,13 +389,38 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
         raise ConnectorRuntimeError(
             "The connector runtime manifest omits required files: " + ", ".join(missing)
         )
-    scripts_root = runtime_root / "scripts"
-    if scripts_root.is_symlink() or not scripts_root.is_dir():
-        raise ConnectorRuntimeError("The connector runtime scripts directory is missing or unsafe.")
-    if stat.S_IMODE(scripts_root.stat(follow_symlinks=False).st_mode) != 0o555:
-        raise ConnectorRuntimeError("The connector runtime scripts directory mode changed.")
+    raw_owner_host = manifest.get("pbeOwnerHost")
+    if not isinstance(raw_owner_host, dict):
+        raise ConnectorRuntimeError("The connector runtime omits its PBE Owner host attestation.")
+    if raw_owner_host.get("scopeManifest") != PBE_OWNER_HOST_SCOPE_MANIFEST:
+        raise ConnectorRuntimeError("The connector runtime names an unexpected PBE Owner host scope.")
+    raw_owner_host_paths = raw_owner_host.get("files")
+    if not isinstance(raw_owner_host_paths, list) or not raw_owner_host_paths:
+        raise ConnectorRuntimeError("The connector runtime PBE Owner host scope is empty.")
+    owner_host_paths: set[str] = set()
+    for raw_path in raw_owner_host_paths:
+        relative = _safe_runtime_path(raw_path)
+        relative_text = str(relative)
+        if relative_text in owner_host_paths:
+            raise ConnectorRuntimeError(
+                f"Duplicate connector runtime PBE Owner host path: {relative_text}"
+            )
+        owner_host_paths.add(relative_text)
+    missing_host = sorted(PBE_OWNER_HOST_REQUIRED_FILES - owner_host_paths)
+    if missing_host:
+        raise ConnectorRuntimeError(
+            "The connector runtime omits required PBE Owner host files: " + ", ".join(missing_host)
+        )
+    outside_runtime = sorted(owner_host_paths - expected_paths)
+    if outside_runtime:
+        raise ConnectorRuntimeError(
+            "The connector runtime PBE Owner host scope names unmanifested files: "
+            + ", ".join(outside_runtime)
+        )
     actual_paths: set[str] = set()
-    for item in scripts_root.rglob("*"):
+    for item in runtime_root.rglob("*"):
+        if item == manifest_path:
+            continue
         if item.is_symlink():
             raise ConnectorRuntimeError(f"Connector runtime contains a symlink: {item.relative_to(runtime_root)}")
         if item.is_dir():

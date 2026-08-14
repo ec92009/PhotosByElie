@@ -19,9 +19,12 @@ REQUIRED_FIXTURE_SCRIPTS = {
     "new_owner_connector.py",
     "new_owner_connector_launch_agent.plist.in",
     "owner_connector_runtime.py",
+    "pbe_owner_host_tracked_paths.txt",
+    "pbe_owner_session.py",
     "requested_ai_proposal_pass.py",
     "sidecar_server.py",
     "sidecar_state_db.py",
+    "waste_basket_gateway.py",
 }
 
 
@@ -44,7 +47,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
         for name in sorted(REQUIRED_FIXTURE_SCRIPTS):
             source = REPO_ROOT / "scripts" / name
             destination = scripts_root / name
-            if name in {
+            if name == "pbe_owner_host_tracked_paths.txt":
+                destination.write_text(
+                    ":(glob)scripts/**/*.py\ngallery.html\n",
+                    encoding="utf-8",
+                )
+            elif name in {
                 "new_owner_connector.py",
                 "new_owner_connector_launch_agent.plist.in",
                 "owner_connector_runtime.py",
@@ -52,8 +60,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.copy2(source, destination)
             else:
                 destination.write_text(f'"""Disposable fixture for {name}."""\n', encoding="utf-8")
+        (source_root / "gallery.html").write_text(
+            "<!doctype html><title>Runtime fixture</title>\n",
+            encoding="utf-8",
+        )
         subprocess.run(["git", "init", "-q", str(source_root)], check=True)
-        subprocess.run(["git", "-C", str(source_root), "add", "--", "scripts"], check=True)
+        subprocess.run(["git", "-C", str(source_root), "add", "--", "scripts", "gallery.html"], check=True)
         subprocess.run(
             [
                 "git",
@@ -187,6 +199,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.rmtree(source_root)
                 self.assertFalse(source_root.exists())
                 self.assertTrue((runtime_root / "scripts" / "new_owner_connector.py").is_file())
+                self.assertTrue((runtime_root / "gallery.html").is_file())
+                runtime_manifest = json.loads(
+                    (runtime_root / "connector-runtime-manifest.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(runtime_manifest["schemaVersion"], 2)
+                self.assertIn("gallery.html", runtime_manifest["pbeOwnerHost"]["files"])
 
                 offline_status = """
 import json

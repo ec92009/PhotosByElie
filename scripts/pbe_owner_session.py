@@ -21,6 +21,19 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+try:
+    from .owner_connector_runtime import (
+        MANIFEST_NAME as CONNECTOR_RUNTIME_MANIFEST,
+        ConnectorRuntimeError,
+        validate_runtime,
+    )
+except ImportError:
+    from owner_connector_runtime import (  # type: ignore
+        MANIFEST_NAME as CONNECTOR_RUNTIME_MANIFEST,
+        ConnectorRuntimeError,
+        validate_runtime,
+    )
+
 
 DEFAULT_CLOUD_SESSION_URL = "https://auth.photos-by-elie.com/api/v1/pbe-owner/session"
 DEFAULT_LOCAL_LEASE_SECONDS = 90
@@ -191,8 +204,59 @@ def _verified_host_tree(repo_root: Path, pathspecs: tuple[str, ...]) -> tuple[st
 
 def checkout_identity(repo_root: Path) -> str:
     root = repo_root.resolve()
+    runtime_manifest = root / CONNECTOR_RUNTIME_MANIFEST
+    if runtime_manifest.exists() or runtime_manifest.is_symlink():
+        return _runtime_checkout_identity(root)
     revision, tree_digest = _verified_host_tree(root, _host_scope_pathspecs(root))
     return f"git:{revision}:pbe-host-sha256:{tree_digest}"
+
+
+def _runtime_checkout_identity(runtime_root: Path) -> str:
+    try:
+        verification = validate_runtime(runtime_root)
+        manifest = json.loads(
+            (runtime_root / CONNECTOR_RUNTIME_MANIFEST).read_text(encoding="utf-8")
+        )
+        raw_entries = manifest.get("files")
+        raw_owner_host = manifest.get("pbeOwnerHost")
+        if not isinstance(raw_entries, list) or not isinstance(raw_owner_host, dict):
+            raise ValueError("runtime host attestation is missing")
+        entries = {
+            str(entry.get("path") or ""): entry
+            for entry in raw_entries
+            if isinstance(entry, dict)
+        }
+        raw_host_paths = raw_owner_host.get("files")
+        if not isinstance(raw_host_paths, list) or not raw_host_paths:
+            raise ValueError("runtime host scope is empty")
+        host_paths = sorted(str(path or "") for path in raw_host_paths)
+        if len(set(host_paths)) != len(host_paths):
+            raise ValueError("runtime host scope contains duplicate paths")
+        digest = hashlib.sha256()
+        for path in host_paths:
+            entry = entries.get(path)
+            if not entry:
+                raise ValueError("runtime host scope references an unmanifested file")
+            mode = str(entry.get("mode") or "")
+            sha256 = str(entry.get("sha256") or "").lower()
+            if mode not in {"0444", "0555"} or not re.fullmatch(r"[0-9a-f]{64}", sha256):
+                raise ValueError("runtime host entry is malformed")
+            digest.update(path.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(mode.encode("ascii"))
+            digest.update(b"\0")
+            digest.update(sha256.encode("ascii"))
+            digest.update(b"\n")
+        return (
+            f"runtime:{verification.revision}:"
+            f"pbe-host-sha256:{digest.hexdigest()}"
+        )
+    except (ConnectorRuntimeError, OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise PBEOwnerSessionError(
+            "PBE Owner host cannot verify the installed runtime.",
+            code="pbe_owner_runtime_identity_unavailable",
+            status=503,
+        ) from error
 
 
 class PBEOwnerHostAuthenticator:

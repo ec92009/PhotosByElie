@@ -1,9 +1,12 @@
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import threading
+import time
 import unittest
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
@@ -17,6 +20,7 @@ from scripts.pbe_owner_session import (
     checkout_identity,
     repository_readiness,
 )
+from scripts.owner_connector_runtime import materialize_runtime
 from unittest.mock import patch
 
 from scripts.local_server import (
@@ -127,6 +131,97 @@ class PBEOwnerSessionTests(unittest.TestCase):
             with self.assertRaises(PBEOwnerSessionError) as hidden:
                 checkout_identity(root)
             self.assertEqual(hidden.exception.code, "pbe_owner_checkout_content_mismatch")
+
+    def test_installed_runtime_identity_and_static_host_use_split_roots(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime_root = root / "immutable-runtime"
+            data_root = root / "mutable-data"
+            data_root.mkdir()
+            (data_root / "gallery.html").write_text(
+                "<!doctype html><title>stale mutable checkout</title>\n",
+                encoding="utf-8",
+            )
+            bootstrap_path = root / "host-bootstrap.json"
+            process: subprocess.Popen[str] | None = None
+            try:
+                verification = materialize_runtime(repo_root, runtime_root, "HEAD")
+                identity = checkout_identity(runtime_root)
+                self.assertTrue(
+                    identity.startswith(
+                        f"runtime:{verification.revision}:pbe-host-sha256:"
+                    )
+                )
+                self.assertRegex(
+                    identity,
+                    r"^runtime:[0-9a-f]{40,64}:pbe-host-sha256:[0-9a-f]{64}$",
+                )
+
+                environment = {
+                    **os.environ,
+                    "PBE_BACKSTAGE_BOOTSTRAP_SECRET": "split-root-bootstrap-secret",
+                    "PBE_CONNECTOR_RUNTIME_ROOT": str(runtime_root),
+                    "PBE_REPO_ROOT": str(data_root),
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                }
+                process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        str(runtime_root / "scripts/local_server.py"),
+                        "0",
+                        "--backstage-bootstrap-file",
+                        str(bootstrap_path),
+                    ],
+                    cwd=data_root,
+                    env=environment,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                deadline = time.monotonic() + 10
+                while not bootstrap_path.exists() and time.monotonic() < deadline:
+                    if process.poll() is not None:
+                        stdout, stderr = process.communicate(timeout=1)
+                        self.fail(f"Split-root host stopped early: {stderr or stdout}")
+                    time.sleep(0.05)
+                self.assertTrue(bootstrap_path.exists(), "Split-root host did not publish readiness")
+                descriptor = json.loads(bootstrap_path.read_text(encoding="utf-8"))
+                self.assertEqual(descriptor["checkoutIdentity"], identity)
+                with urlopen(
+                    f"http://127.0.0.1:{descriptor['port']}/gallery.html",
+                    timeout=5,
+                ) as response:
+                    served = response.read()
+                self.assertEqual(served, (runtime_root / "gallery.html").read_bytes())
+                self.assertNotIn(b"stale mutable checkout", served)
+
+                runtime_root.chmod(0o755)
+                runtime_gallery = runtime_root / "gallery.html"
+                runtime_gallery.chmod(0o644)
+                runtime_gallery.write_text("tampered runtime\n", encoding="utf-8")
+                with self.assertRaises(PBEOwnerSessionError) as tampered:
+                    checkout_identity(runtime_root)
+                self.assertEqual(
+                    tampered.exception.code,
+                    "pbe_owner_runtime_identity_unavailable",
+                )
+            finally:
+                if process is not None and process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=5)
+                if runtime_root.exists():
+                    for path in sorted(
+                        [runtime_root, *runtime_root.rglob("*")],
+                        key=lambda item: len(item.parts),
+                        reverse=True,
+                    ):
+                        if not path.is_symlink():
+                            path.chmod(0o700 if path.is_dir() else 0o600)
 
     def test_freezes_fixture_and_retains_only_token_digest(self) -> None:
         started = self.store.start("raw-secret-session-token", self.session, self.readiness)

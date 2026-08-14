@@ -12,6 +12,7 @@ repo_root="${package_root:h:h}"
 icon_source="${repo_root}/assets/branding/photosbyelie-camera-tripod-logo-1024.png"
 iconset="${output_root}/Backstage.iconset"
 icon_file="${contents}/Resources/Backstage.icns"
+owner_runtime="${contents}/Resources/OwnerRuntime"
 release_metadata="${package_root}/release-metadata.zsh"
 
 if [[ ! -r "$release_metadata" ]]; then
@@ -37,6 +38,34 @@ binary_path="$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBack
 rm -rf "$app"
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
 cp "$binary_path" "$executable"
+
+runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options 'HEAD^{commit}')"
+materializer_entry="$(git -C "$repo_root" ls-tree "$runtime_revision" -- scripts/owner_connector_runtime.py)"
+materializer_path="${materializer_entry#*$'\t'}"
+materializer_metadata="${materializer_entry%%$'\t'*}"
+materializer_mode="${materializer_metadata%% *}"
+materializer_type="${${materializer_metadata#* }%% *}"
+materializer_object="${materializer_metadata##* }"
+if [[ "$materializer_path" != "scripts/owner_connector_runtime.py" \
+      || "$materializer_type" != "blob" \
+      || ( "$materializer_mode" != "100644" && "$materializer_mode" != "100755" ) \
+      || ! "$materializer_object" =~ '^([0-9a-f]{40}|[0-9a-f]{64})$' ]]; then
+  print -u2 "The release commit does not contain a safe Owner runtime materializer."
+  exit 1
+fi
+materializer_temporary="$(mktemp "${TMPDIR:-/tmp}/pbe-owner-runtime.XXXXXX.py")"
+cleanup_materializer() {
+  [[ ! -f "$materializer_temporary" ]] || rm -f -- "$materializer_temporary"
+}
+trap cleanup_materializer EXIT HUP INT TERM
+git -C "$repo_root" cat-file blob "$materializer_object" > "$materializer_temporary"
+chmod 500 "$materializer_temporary"
+python3 "$materializer_temporary" materialize \
+  --source "$repo_root" \
+  --destination "$owner_runtime" \
+  --revision "$runtime_revision"
+rm -f -- "$materializer_temporary"
+trap - EXIT HUP INT TERM
 
 rm -rf "$iconset"
 mkdir -p "$iconset"
@@ -96,6 +125,8 @@ cat > "${contents}/Info.plist" <<PLIST
   <string>${PBE_PHOTOS_BRIDGE_VERSION}</string>
   <key>PBEPhotosBridgeBuild</key>
   <string>${PBE_PHOTOS_BRIDGE_BUILD}</string>
+  <key>PBEOwnerRuntimeRevision</key>
+  <string>${runtime_revision}</string>
 </dict>
 </plist>
 PLIST

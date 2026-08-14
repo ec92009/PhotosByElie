@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import date, datetime, timezone
+from functools import partial
 import hashlib
 import os
 import ipaddress
@@ -3944,10 +3945,25 @@ def main() -> int:
     args = parser.parse_args()
     _bootstrap_local_tool_path()
 
-    server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
-    server.allow_lan_owner = args.allow_lan_owner
     bootstrap_secret = os.environ.pop("PBE_BACKSTAGE_BOOTSTRAP_SECRET", "")
-    checkout = checkout_identity(Path.cwd()) if bootstrap_secret else ""
+    document_root = Path.cwd().resolve()
+    checkout = ""
+    handler: type[PhotosByElieLocalHandler] | Callable[..., PhotosByElieLocalHandler]
+    if bootstrap_secret:
+        runtime_root = CONNECTOR_RUNTIME_ROOT
+        runtime_script = runtime_root / "scripts/local_server.py"
+        if runtime_script.resolve() != Path(__file__).resolve():
+            raise SystemExit(
+                "Backstage bootstrap runtime does not contain the executing PBE Owner host."
+            )
+        checkout = checkout_identity(runtime_root)
+        document_root = runtime_root
+        handler = partial(PhotosByElieLocalHandler, directory=str(document_root))
+    else:
+        handler = PhotosByElieLocalHandler
+
+    server = ThreadingHTTPServer((args.bind, args.port), handler)
+    server.allow_lan_owner = args.allow_lan_owner
     server.pbe_host_authenticator = PBEOwnerHostAuthenticator(bootstrap_secret, checkout)
     if args.backstage_bootstrap_file:
         if not bootstrap_secret or args.bind != "127.0.0.1":

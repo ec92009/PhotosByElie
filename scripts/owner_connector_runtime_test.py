@@ -12,6 +12,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "scripts" / "install_new_owner_connector.zsh"
+MATERIALIZER = REPO_ROOT / "scripts" / "owner_connector_runtime.py"
 REQUIRED_FIXTURE_SCRIPTS = {
     "fixture_pipeline.py",
     "local_server.py",
@@ -25,6 +26,17 @@ REQUIRED_FIXTURE_SCRIPTS = {
 
 
 class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
+    @staticmethod
+    def _git(source_root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", "-C", str(source_root), *arguments],
+            check=True,
+            capture_output=True,
+        )
+
+    def _fixture_head(self, source_root: Path) -> str:
+        return self._git(source_root, "rev-parse", "HEAD").stdout.decode().strip()
+
     def _make_source_fixture(self, fixture_root: Path) -> Path:
         source_root = fixture_root / "ephemeral-source"
         scripts_root = source_root / "scripts"
@@ -42,6 +54,21 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 destination.write_text(f'"""Disposable fixture for {name}."""\n', encoding="utf-8")
         subprocess.run(["git", "init", "-q", str(source_root)], check=True)
         subprocess.run(["git", "-C", str(source_root), "add", "--", "scripts"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(source_root),
+                "-c",
+                "user.name=Runtime Fixture",
+                "-c",
+                "user.email=runtime-fixture@photosbyelie.invalid",
+                "commit",
+                "-qm",
+                "fixture runtime",
+            ],
+            check=True,
+        )
         return source_root
 
     def _installer_environment(self, fixture_root: Path, data_root: Path) -> dict[str, str]:
@@ -58,7 +85,7 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "PBE_CONNECTOR_LOG_DIR": str(fixture_root / "logs"),
             "PBE_CONNECTOR_RUNTIME_NAME": "connector-runtime-fixture",
             "PBE_CONNECTOR_RUNTIME_PARENT": str(fixture_root / "application-support"),
-            "PBE_CONNECTOR_RUNTIME_REVISION": "fixture-revision",
+            "PBE_CONNECTOR_RUNTIME_REVISION": "HEAD",
             "PBE_CONNECTOR_SKIP_ACTIVATION": "1",
             "PBE_CONNECTOR_TOKEN": "fixture-token-xxxxxxxxxxxxxxxxxxxxxxxx",
             "PBE_SKIP_BRIDGE_BUILD": "1",
@@ -74,6 +101,29 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             text=True,
             capture_output=True,
             timeout=30,
+            check=False,
+        )
+
+    def _run_materializer(
+        self,
+        source_root: Path,
+        destination: Path,
+        revision: str,
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(MATERIALIZER),
+                "materialize",
+                "--source",
+                str(source_root),
+                "--destination",
+                str(destination),
+                f"--revision={revision}",
+            ],
+            text=True,
+            capture_output=True,
+            timeout=10,
             check=False,
         )
 
@@ -96,6 +146,7 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             env = self._installer_environment(fixture_root, data_root)
             runtime_root = Path(env["PBE_CONNECTOR_RUNTIME_PARENT"]) / env["PBE_CONNECTOR_RUNTIME_NAME"]
             expected_data_root = data_root.resolve()
+            expected_revision = self._fixture_head(source_root)
             try:
                 installed = self._run_installer(source_root, env)
                 self.assertEqual(installed.returncode, 0, installed.stderr or installed.stdout)
@@ -177,7 +228,7 @@ raise SystemExit(connector.main())
                         self.assertTrue(status["ok"])
                         self.assertFalse(status["networkAttempted"])
                         self.assertTrue(status["connector"]["runtime"]["verified"])
-                        self.assertEqual(status["connector"]["runtime"]["revision"], "fixture-revision")
+                        self.assertEqual(status["connector"]["runtime"]["revision"], expected_revision)
                         self.assertNotIn(config["token"], launched.stdout)
 
                 scripts_root = runtime_root / "scripts"
@@ -206,6 +257,68 @@ raise SystemExit(connector.main())
             finally:
                 self._make_tree_writable(runtime_root)
 
+    def test_installer_uses_only_head_bytes_despite_dirty_index_and_worktree(self):
+        mutations = {
+            "unstaged": ("requested_ai_proposal_pass.py", "unstaged runtime shadow\n"),
+            "staged-materializer": ("owner_connector_runtime.py", "raise RuntimeError('staged shadow')\n"),
+            "deleted": ("local_server.py", None),
+            "untracked-shadow": ("sidecar_server.py", "untracked runtime shadow\n"),
+        }
+        for mutation, (name, shadow_text) in mutations.items():
+            with self.subTest(mutation=mutation), TemporaryDirectory() as temporary_directory:
+                fixture_root = Path(temporary_directory)
+                source_root = self._make_source_fixture(fixture_root)
+                data_root = fixture_root / "stable-data"
+                data_root.mkdir()
+                expected_revision = self._fixture_head(source_root)
+                relative = f"scripts/{name}"
+                expected_bytes = self._git(source_root, "show", f"HEAD:{relative}").stdout
+                target = source_root / relative
+
+                if mutation == "deleted":
+                    target.unlink()
+                elif mutation == "untracked-shadow":
+                    self._git(source_root, "rm", "--cached", "--", relative)
+                    target.write_text(shadow_text or "", encoding="utf-8")
+                else:
+                    target.write_text(shadow_text or "", encoding="utf-8")
+                    if mutation == "staged-materializer":
+                        self._git(source_root, "add", "--", relative)
+
+                env = self._installer_environment(fixture_root, data_root)
+                runtime_root = Path(env["PBE_CONNECTOR_RUNTIME_PARENT"]) / env["PBE_CONNECTOR_RUNTIME_NAME"]
+                try:
+                    installed = self._run_installer(source_root, env)
+
+                    self.assertEqual(installed.returncode, 0, installed.stderr or installed.stdout)
+                    self.assertEqual((runtime_root / relative).read_bytes(), expected_bytes)
+                    manifest = json.loads(
+                        (runtime_root / "connector-runtime-manifest.json").read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(manifest["sourceRevision"], expected_revision)
+                    manifest_entry = next(entry for entry in manifest["files"] if entry["path"] == relative)
+                    self.assertEqual(manifest_entry["size"], len(expected_bytes))
+                finally:
+                    self._make_tree_writable(runtime_root)
+
+    def test_materializer_rejects_unresolvable_and_noncommit_revisions(self):
+        with TemporaryDirectory() as temporary_directory:
+            fixture_root = Path(temporary_directory)
+            source_root = self._make_source_fixture(fixture_root)
+            tree_object = self._git(source_root, "rev-parse", "HEAD^{tree}").stdout.decode().strip()
+            for label, revision in (
+                ("missing", "not-a-runtime-ref"),
+                ("leading-dash", "--help"),
+                ("tree", tree_object),
+            ):
+                with self.subTest(label=label):
+                    destination = fixture_root / f"runtime-{label}"
+                    materialized = self._run_materializer(source_root, destination, revision)
+
+                    self.assertNotEqual(materialized.returncode, 0)
+                    self.assertIn("provenance", materialized.stderr.lower())
+                    self.assertFalse(destination.exists())
+
     def test_installer_rejects_external_and_broken_tracked_symlinks(self):
         for symlink_kind in ("external", "broken"):
             with self.subTest(symlink_kind=symlink_kind), TemporaryDirectory() as temporary_directory:
@@ -223,12 +336,27 @@ raise SystemExit(connector.main())
                     ["git", "-C", str(source_root), "add", "-f", "--", str(link.relative_to(source_root))],
                     check=True,
                 )
+                subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(source_root),
+                        "-c",
+                        "user.name=Runtime Fixture",
+                        "-c",
+                        "user.email=runtime-fixture@photosbyelie.invalid",
+                        "commit",
+                        "-qm",
+                        f"fixture {symlink_kind} symlink",
+                    ],
+                    check=True,
+                )
                 env = self._installer_environment(fixture_root, data_root)
 
                 installed = self._run_installer(source_root, env)
 
                 self.assertNotEqual(installed.returncode, 0)
-                self.assertIn("source symlink", (installed.stderr + installed.stdout).lower())
+                self.assertIn("not a regular file", (installed.stderr + installed.stdout).lower())
                 self.assertFalse(
                     (Path(env["PBE_CONNECTOR_RUNTIME_PARENT"]) / env["PBE_CONNECTOR_RUNTIME_NAME"]).exists()
                 )

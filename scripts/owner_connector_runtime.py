@@ -7,7 +7,6 @@ import argparse
 from dataclasses import dataclass
 import hashlib
 import json
-import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -43,6 +42,13 @@ class ConnectorRuntimeVerification:
     manifest_sha256: str
 
 
+@dataclass(frozen=True)
+class CommitScriptEntry:
+    path: PurePosixPath
+    object_id: str
+    mode: int
+
+
 def _sha256(file_path: Path) -> str:
     digest = hashlib.sha256()
     with file_path.open("rb") as handle:
@@ -63,73 +69,122 @@ def _safe_script_path(value: object) -> PurePosixPath:
     return relative
 
 
-def _tracked_script_paths(source_root: Path) -> list[PurePosixPath]:
+def _run_git(source_root: Path, *arguments: str) -> bytes:
     git = shutil.which("git")
     if not git:
-        raise ConnectorRuntimeError("git is required to select tracked connector runtime files.")
+        raise ConnectorRuntimeError("git is required to materialize the connector runtime.")
     completed = subprocess.run(
-        [git, "-C", str(source_root), "ls-files", "-z", "--", "scripts"],
+        [git, "-C", str(source_root), *arguments],
         capture_output=True,
         check=False,
     )
     if completed.returncode != 0:
         detail = completed.stderr.decode("utf-8", errors="replace").strip()
         raise ConnectorRuntimeError(
-            f"Could not enumerate tracked connector runtime files: {detail or 'git ls-files failed.'}"
+            f"Git could not provide connector runtime provenance: {detail or 'command failed.'}"
         )
-    paths = sorted(
-        {_safe_script_path(item.decode("utf-8")) for item in completed.stdout.split(b"\0") if item}
+    return completed.stdout
+
+
+def resolve_commit(source_root: Path, revision: str) -> str:
+    """Resolve a revision to one exact commit object SHA."""
+    if not revision or "\0" in revision:
+        raise ConnectorRuntimeError("The connector runtime revision is empty or unsafe.")
+    output = _run_git(
+        source_root,
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        f"{revision}^{{commit}}",
     )
-    if not paths:
-        raise ConnectorRuntimeError("The source contains no tracked connector runtime files.")
-    missing = sorted(REQUIRED_RUNTIME_FILES - {str(item) for item in paths})
+    resolved = output.decode("ascii", errors="strict").strip().lower()
+    if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", resolved):
+        raise ConnectorRuntimeError("Git returned an invalid connector runtime commit SHA.")
+    return resolved
+
+
+def _commit_script_entries(source_root: Path, commit_sha: str) -> list[CommitScriptEntry]:
+    raw_tree = _run_git(
+        source_root,
+        "ls-tree",
+        "-r",
+        "-z",
+        "--full-tree",
+        commit_sha,
+        "--",
+        "scripts",
+    )
+    entries: list[CommitScriptEntry] = []
+    seen: set[str] = set()
+    for raw_entry in raw_tree.split(b"\0"):
+        if not raw_entry:
+            continue
+        metadata, separator, raw_path = raw_entry.partition(b"\t")
+        fields = metadata.split()
+        if not separator or len(fields) != 3:
+            raise ConnectorRuntimeError("Git returned a malformed connector runtime tree entry.")
+        mode_text, object_type, object_id = fields
+        try:
+            relative = _safe_script_path(raw_path.decode("utf-8", errors="strict"))
+            object_id_text = object_id.decode("ascii", errors="strict").lower()
+        except UnicodeError as error:
+            raise ConnectorRuntimeError("Git returned a non-text connector runtime tree entry.") from error
+        relative_text = str(relative)
+        if relative_text in seen:
+            raise ConnectorRuntimeError(f"Duplicate connector runtime commit path: {relative_text}")
+        seen.add(relative_text)
+        if object_type != b"blob" or mode_text not in {b"100644", b"100755"}:
+            raise ConnectorRuntimeError(
+                f"Connector runtime commit entry is not a regular file: {relative_text}"
+            )
+        if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", object_id_text):
+            raise ConnectorRuntimeError(f"Connector runtime Git object is invalid: {relative_text}")
+        entries.append(
+            CommitScriptEntry(
+                path=relative,
+                object_id=object_id_text,
+                mode=0o555 if mode_text == b"100755" else 0o444,
+            )
+        )
+    entries.sort(key=lambda entry: str(entry.path))
+    if not entries:
+        raise ConnectorRuntimeError("The source commit contains no connector runtime files.")
+    missing = sorted(REQUIRED_RUNTIME_FILES - {str(entry.path) for entry in entries})
     if missing:
         raise ConnectorRuntimeError(
-            "The source is missing required tracked connector runtime files: " + ", ".join(missing)
+            "The source commit is missing required connector runtime files: " + ", ".join(missing)
         )
-    return paths
+    return entries
 
 
 def materialize_runtime(source_root: Path, destination: Path, revision: str) -> ConnectorRuntimeVerification:
-    """Copy tracked scripts into a symlink-free, read-only runtime snapshot."""
-    source_root = source_root.expanduser().resolve(strict=True)
+    """Copy one commit's scripts into a symlink-free, read-only runtime snapshot."""
+    expanded_source = source_root.expanduser()
+    if expanded_source.is_symlink():
+        raise ConnectorRuntimeError(f"The connector runtime source must not be a symlink: {expanded_source}")
+    source_root = expanded_source.resolve(strict=True)
     destination = destination.expanduser()
-    if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", revision):
-        raise ConnectorRuntimeError("The connector runtime revision contains unsafe characters.")
+    commit_sha = resolve_commit(source_root, revision)
+    commit_entries = _commit_script_entries(source_root, commit_sha)
     if destination.is_symlink():
         raise ConnectorRuntimeError(f"The connector runtime destination must not be a symlink: {destination}")
     destination.mkdir(parents=True, exist_ok=True)
     if any(destination.iterdir()):
         raise ConnectorRuntimeError(f"The connector runtime destination is not empty: {destination}")
 
-    scripts_root = source_root / "scripts"
-    if scripts_root.is_symlink() or not scripts_root.is_dir():
-        raise ConnectorRuntimeError("The source scripts directory must be a real directory, not a symlink.")
-
     file_entries: list[dict[str, object]] = []
-    for relative in _tracked_script_paths(source_root):
-        source_file = source_root.joinpath(*relative.parts)
-        if source_file.is_symlink():
-            raise ConnectorRuntimeError(
-                f"Refusing connector runtime source symlink: {relative} -> {os.readlink(source_file)}"
-            )
-        try:
-            source_mode = source_file.stat(follow_symlinks=False).st_mode
-        except FileNotFoundError as error:
-            raise ConnectorRuntimeError(f"Tracked connector runtime file is missing: {relative}") from error
-        if not stat.S_ISREG(source_mode):
-            raise ConnectorRuntimeError(f"Tracked connector runtime entry is not a regular file: {relative}")
-
-        destination_file = destination.joinpath(*relative.parts)
+    for commit_entry in commit_entries:
+        destination_file = destination.joinpath(*commit_entry.path.parts)
         destination_file.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source_file, destination_file)
-        desired_mode = 0o555 if source_mode & 0o111 else 0o444
+        destination_file.write_bytes(
+            _run_git(source_root, "cat-file", "blob", commit_entry.object_id)
+        )
         file_entries.append(
             {
-                "path": str(relative),
+                "path": str(commit_entry.path),
                 "sha256": _sha256(destination_file),
                 "size": destination_file.stat().st_size,
-                "mode": f"{desired_mode:04o}",
+                "mode": f"{commit_entry.mode:04o}",
             }
         )
 
@@ -137,7 +192,7 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
     manifest = {
         "schemaVersion": MANIFEST_SCHEMA_VERSION,
         "kind": MANIFEST_KIND,
-        "sourceRevision": revision,
+        "sourceRevision": commit_sha,
         "files": file_entries,
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -179,8 +234,8 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
     if manifest.get("schemaVersion") != MANIFEST_SCHEMA_VERSION or manifest.get("kind") != MANIFEST_KIND:
         raise ConnectorRuntimeError("The connector runtime manifest schema or kind is unsupported.")
     revision = str(manifest.get("sourceRevision") or "")
-    if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", revision):
-        raise ConnectorRuntimeError("The connector runtime manifest has an invalid source revision.")
+    if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", revision):
+        raise ConnectorRuntimeError("The connector runtime manifest does not name an exact commit SHA.")
     raw_entries = manifest.get("files")
     if not isinstance(raw_entries, list) or not raw_entries:
         raise ConnectorRuntimeError("The connector runtime manifest contains no files.")

@@ -13,16 +13,34 @@ python_bin="$(command -v python3)"
 
 repo_root="${repo_root:A}"
 data_root="${data_root:A}"
-if [[ -L "$repo_root/scripts" || -L "$repo_root/scripts/new_owner_connector.py" || -L "$repo_root/scripts/owner_connector_runtime.py" ]]; then
-  print -u2 "PhotosByElie connector source must not use symlinks: $repo_root/scripts"
-  exit 1
-fi
-if [[ ! -f "$repo_root/scripts/new_owner_connector.py" || ! -f "$repo_root/scripts/owner_connector_runtime.py" ]]; then
-  print -u2 "PhotosByElie repo not found at $repo_root"
+if [[ ! -d "$repo_root" ]]; then
+  print -u2 "PhotosByElie Git source not found at $repo_root"
   exit 1
 fi
 if [[ ! -d "$data_root" ]]; then
   print -u2 "PhotosByElie connector data root not found at $data_root"
+  exit 1
+fi
+
+runtime_revision_request="${PBE_CONNECTOR_RUNTIME_REVISION:-HEAD}"
+runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options "${runtime_revision_request}^{commit}" 2>/dev/null || true)"
+runtime_revision="${runtime_revision:l}"
+if [[ ! "$runtime_revision" =~ '^([0-9a-f]{40}|[0-9a-f]{64})$' ]]; then
+  print -u2 "Could not resolve an exact connector runtime commit: $runtime_revision_request"
+  exit 1
+fi
+runtime_revision_short="${runtime_revision[1,12]}"
+materializer_entry="$(git -C "$repo_root" ls-tree "$runtime_revision" -- scripts/owner_connector_runtime.py 2>/dev/null || true)"
+materializer_path="${materializer_entry#*$'\t'}"
+materializer_metadata="${materializer_entry%%$'\t'*}"
+materializer_mode="${materializer_metadata%% *}"
+materializer_type="${${materializer_metadata#* }%% *}"
+materializer_object="${materializer_metadata##* }"
+if [[ "$materializer_path" != "scripts/owner_connector_runtime.py" \
+      || "$materializer_type" != "blob" \
+      || ( "$materializer_mode" != "100644" && "$materializer_mode" != "100755" ) \
+      || ! "$materializer_object" =~ '^([0-9a-f]{40}|[0-9a-f]{64})$' ]]; then
+  print -u2 "The connector runtime commit does not contain a safe materializer."
   exit 1
 fi
 
@@ -52,12 +70,7 @@ if [[ ${#token} -lt 24 ]]; then
   exit 1
 fi
 
-runtime_revision="${PBE_CONNECTOR_RUNTIME_REVISION:-$(git -C "$repo_root" rev-parse --short=12 HEAD 2>/dev/null || true)}"
-if [[ -z "$runtime_revision" || ! "$runtime_revision" =~ '^[A-Za-z0-9._-]{1,80}$' ]]; then
-  print -u2 "Could not determine a safe connector runtime revision."
-  exit 1
-fi
-runtime_name="${PBE_CONNECTOR_RUNTIME_NAME:-connector-runtime-${runtime_revision}-$(date -u +%Y%m%dT%H%M%SZ)}"
+runtime_name="${PBE_CONNECTOR_RUNTIME_NAME:-connector-runtime-${runtime_revision_short}-$(date -u +%Y%m%dT%H%M%SZ)}"
 if [[ ! "$runtime_name" =~ '^connector-runtime-[A-Za-z0-9._-]+$' ]]; then
   print -u2 "Connector runtime name is unsafe: $runtime_name"
   exit 1
@@ -66,6 +79,7 @@ runtime_path="$runtime_parent/$runtime_name"
 runtime_stage="$runtime_parent/.${runtime_name}.staging.$$"
 config_temporary=""
 plist_temporary=""
+materializer_temporary=""
 if [[ -e "$runtime_path" || -e "$runtime_stage" ]]; then
   print -u2 "Refusing to overwrite an existing connector runtime: $runtime_path"
   exit 1
@@ -78,14 +92,20 @@ cleanup() {
   fi
   [[ -n "$config_temporary" && -f "$config_temporary" ]] && rm -f -- "$config_temporary"
   [[ -n "$plist_temporary" && -f "$plist_temporary" ]] && rm -f -- "$plist_temporary"
+  [[ -n "$materializer_temporary" && -f "$materializer_temporary" ]] && rm -f -- "$materializer_temporary"
 }
 trap cleanup EXIT
 
 mkdir "$runtime_stage"
-"$python_bin" "$repo_root/scripts/owner_connector_runtime.py" materialize \
+materializer_temporary="$runtime_parent/.owner_connector_runtime.${runtime_revision_short}.$$.py"
+git -C "$repo_root" cat-file blob "$materializer_object" > "$materializer_temporary"
+chmod 500 "$materializer_temporary"
+"$python_bin" "$materializer_temporary" materialize \
   --source "$repo_root" \
   --destination "$runtime_stage" \
   --revision "$runtime_revision"
+rm -f -- "$materializer_temporary"
+materializer_temporary=""
 mv "$runtime_stage" "$runtime_path"
 runtime_stage=""
 

@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,7 @@ import backstage_photos_client
 from backstage_photos_client import (
     BackstagePhotosClientError,
     request_library_index,
+    request_export_original,
     request_preview,
 )
 import sidecar_server
@@ -161,6 +163,91 @@ class BackstagePhotosClientTest(unittest.TestCase):
             self.assertEqual(result["mode"], "library-index")
             self.assertEqual(result["count"], 1)
             self.assertEqual(result["items"][0]["assetId"], "asset-1")
+
+    def test_authenticated_original_export_copies_and_cleans_private_staging(self):
+        original = b"owner-only-original-bytes"
+        observed_requests = []
+
+        def export_response(request):
+            observed_requests.append(request)
+            export_root = root / "PhotosByElie Backstage" / "exports"
+            export_root.mkdir(mode=0o700)
+            export_root.chmod(0o700)
+            staging = export_root / request["requestId"]
+            staging.mkdir(parents=True, mode=0o700)
+            staging.chmod(0o700)
+            source = staging / "IMG_0001.JPG"
+            source.write_bytes(original)
+            source.chmod(0o600)
+            return {
+                "ok": True,
+                "requestId": request["requestId"],
+                "mode": "export-original",
+                "assetId": request["assetId"],
+                "filename": source.name,
+                "originalFilename": source.name,
+                "relativePath": f"{request['requestId']}/{source.name}",
+                "uniformTypeIdentifier": "public.jpeg",
+                "bytes": len(original),
+                "checksumSHA256": hashlib.sha256(original).hexdigest(),
+            }
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "spool"
+            with FakeBackstagePreviewServer(root, export_response) as server:
+                result = request_export_original(
+                    "asset-1",
+                    destination,
+                    allow_icloud_downloads=False,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+            target = destination / "IMG_0001.JPG"
+            self.assertEqual(target.read_bytes(), original)
+            self.assertEqual(oct(target.stat().st_mode & 0o777), "0o600")
+            self.assertEqual(result["mode"], "materialize-one")
+            self.assertEqual(result["materializedCount"], 1)
+            self.assertEqual(result["items"][0]["path"], str(target))
+            self.assertEqual(len(observed_requests), 1)
+            self.assertEqual(observed_requests[0]["operation"], "photos.export-original")
+            self.assertFalse(observed_requests[0]["allowICloudDownloads"])
+            self.assertFalse(
+                (
+                    root
+                    / "PhotosByElie Backstage"
+                    / "exports"
+                    / observed_requests[0]["requestId"]
+                ).exists()
+            )
+
+    def test_original_export_rejects_unsafe_staging_path(self):
+        def unsafe_response(request):
+            return {
+                "ok": True,
+                "requestId": request["requestId"],
+                "mode": "export-original",
+                "assetId": request["assetId"],
+                "filename": "photo.jpg",
+                "originalFilename": "photo.jpg",
+                "relativePath": "../photo.jpg",
+                "uniformTypeIdentifier": "public.jpeg",
+                "bytes": 1,
+                "checksumSHA256": "0" * 64,
+            }
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with FakeBackstagePreviewServer(root, unsafe_response) as server:
+                with self.assertRaises(BackstagePhotosClientError) as raised:
+                    request_export_original(
+                        "asset-1",
+                        root / "spool",
+                        descriptor_path=server.descriptor,
+                        timeout=1,
+                    )
+            self.assertEqual(raised.exception.code, "unsafe_export_source")
 
     def test_library_index_arguments_fail_closed_before_descriptor_access(self):
         with TemporaryDirectory() as temporary_directory:
@@ -312,6 +399,13 @@ class BackstagePhotosClientTest(unittest.TestCase):
         self.assertIn('"source_video_unsupported"', video_handler)
         self.assertNotIn("_run_apple_photos_bridge_app_task", video_handler)
         self.assertNotIn("_video_cache_", source)
+
+    def test_sidecar_materialization_uses_backstage_ipc_without_bridge_fallback(self):
+        source = (ROOT / "scripts" / "sidecar_state_db.py").read_text(encoding="utf-8")
+        self.assertIn("request_export_original", source)
+        self.assertIn("_run_backstage_photos_materialize_one", source)
+        self.assertNotIn("PhotosByElie Photos Bridge.app", source)
+        self.assertNotIn("apple_photos_bridge.swift", source)
 
     def test_background_index_streams_backstage_pages(self):
         with TemporaryDirectory() as temporary_directory:

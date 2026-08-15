@@ -7,15 +7,20 @@ public struct BackstagePreviewIPCServerConfiguration: Sendable {
     public var descriptorURL: URL
     public var connectionTimeout: TimeInterval
     public var limits: BackstagePreviewIPCLimits
+    public var exportDirectory: URL
 
     public init(
         descriptorURL: URL = Self.defaultDescriptorURL,
         connectionTimeout: TimeInterval = 60,
-        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits()
+        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits(),
+        exportDirectory: URL? = nil
     ) {
         self.descriptorURL = descriptorURL
         self.connectionTimeout = connectionTimeout
         self.limits = limits
+        self.exportDirectory = exportDirectory ?? descriptorURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("exports", isDirectory: true)
     }
 
     public static var defaultDescriptorURL: URL {
@@ -80,6 +85,7 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
         guard listener == nil else { return }
 
         try prepareDescriptorLocation()
+        try prepareExportLocation()
         let token = try makeBearerToken()
         let parameters = NWParameters.tcp
         parameters.allowLocalEndpointReuse = false
@@ -181,10 +187,12 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
                     connection.cancel()
                     return
                 }
+                deadline.disarm()
                 let processor = BackstagePreviewIPCProcessor(
                     photoLibrary: self.photoLibrary,
                     bearerToken: token,
-                    limits: self.configuration.limits
+                    limits: self.configuration.limits,
+                    exportDirectory: self.configuration.exportDirectory
                 )
                 Task {
                     let response = await processor.process(requestData)
@@ -291,6 +299,28 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
             throw BackstagePreviewIPCServerError.unsafeDescriptor(configuration.descriptorURL.path)
         }
         try FileManager.default.removeItem(at: configuration.descriptorURL)
+    }
+
+    private func prepareExportLocation() throws {
+        let directory = configuration.exportDirectory
+        if let fileInfo = try fileInfo(at: directory) {
+            guard isDirectory(fileInfo), fileInfo.st_uid == geteuid() else {
+                throw BackstagePreviewIPCServerError.unsafeDescriptorDirectory(directory.path)
+            }
+        } else {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        }
+        guard chmod(directory.path, 0o700) == 0,
+              let securedDirectory = try fileInfo(at: directory),
+              isDirectory(securedDirectory),
+              securedDirectory.st_uid == geteuid(),
+              securedDirectory.st_mode & 0o077 == 0 else {
+            throw BackstagePreviewIPCServerError.unsafeDescriptorDirectory(directory.path)
+        }
     }
 
     private func publishDescriptor(port: UInt16, token: String) throws {

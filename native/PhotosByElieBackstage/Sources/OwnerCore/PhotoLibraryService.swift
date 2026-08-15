@@ -78,9 +78,22 @@ public protocol PhotoLibraryServing: Sendable {
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt
+    func exportOriginal(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt
 }
 
 public extension PhotoLibraryServing {
+    func exportOriginal(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
+        try await exportOriginal(localIdentifier: localIdentifier, to: directory)
+    }
+
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data {
         let safeLimit = max(1, min(1_000, limit))
         let safeOffset = max(0, offset)
@@ -291,6 +304,18 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         localIdentifier: String,
         to directory: URL
     ) async throws -> PhotoExportReceipt {
+        try await exportOriginal(
+            localIdentifier: localIdentifier,
+            to: directory,
+            allowICloudDownloads: true
+        )
+    }
+
+    public func exportOriginal(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
         try requireAccess()
         let asset = try asset(localIdentifier)
         guard let resource = preferredOriginalResource(for: asset) else {
@@ -305,7 +330,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             filename: resource.originalFilename
         )
         let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
+        options.isNetworkAccessAllowed = allowICloudDownloads
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             PHAssetResourceManager.default().writeData(
                 for: resource,

@@ -1,4 +1,5 @@
 import Darwin
+import CryptoKit
 import Foundation
 import Testing
 @testable import OwnerCore
@@ -56,6 +57,45 @@ struct BackstagePreviewIPCTests {
         #expect(response["requestId"] as? String != nil)
         #expect(response["count"] as? Int == 1)
         #expect(library.libraryIndexCount == 1)
+    }
+
+    @Test("Authenticated original export stages a private receipt without exposing an absolute path")
+    func authenticatedOriginalExportSucceeds() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BackstageExportIPCTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = Data("owner-only-original".utf8)
+        let library = PreviewIPCTestLibrary(
+            outcome: .failure(.assetNotFound("asset-1")),
+            exportData: original
+        )
+        var exportRequest = request(assetID: "asset-1")
+        exportRequest["operation"] = BackstagePreviewIPCConstants.exportOriginalOperation
+        exportRequest.removeValue(forKey: "maxPixel")
+        exportRequest["allowICloudDownloads"] = false
+
+        let response = try await process(
+            library: library,
+            request: exportRequest,
+            exportDirectory: root
+        )
+
+        #expect(response["ok"] as? Bool == true)
+        #expect(response["mode"] as? String == "export-original")
+        #expect(response["assetId"] as? String == "asset-1")
+        #expect(response["relativePath"] as? String != nil)
+        #expect((response["relativePath"] as? String)?.hasPrefix("/") == false)
+        #expect(response["bytes"] as? Int == original.count)
+        #expect(response["checksumSHA256"] as? String == SHA256.hash(data: original).map { String(format: "%02x", $0) }.joined())
+        #expect(library.exportCount == 1)
+        #expect(library.lastAllowICloudDownloads == false)
+
+        let relativePath = try #require(response["relativePath"] as? String)
+        let destination = root.appendingPathComponent(relativePath)
+        let exportedData = try Data(contentsOf: destination)
+        #expect(exportedData == original)
+        let attributes = try FileManager.default.attributesOfItem(atPath: destination.path)
+        #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
     }
 
     @Test("Authentication and unsupported operations fail before Photos is called")
@@ -217,13 +257,15 @@ struct BackstagePreviewIPCTests {
     private func process(
         library: PreviewIPCTestLibrary,
         request: [String: Any],
-        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits()
+        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits(),
+        exportDirectory: URL? = nil
     ) async throws -> [String: Any] {
         let requestData = try JSONSerialization.data(withJSONObject: request)
         let processor = BackstagePreviewIPCProcessor(
             photoLibrary: library,
             bearerToken: "test-token",
-            limits: limits
+            limits: limits,
+            exportDirectory: exportDirectory ?? BackstagePreviewIPCConstants.defaultExportDirectory()
         )
         let responseData = await processor.process(requestData)
         guard let response = try JSONSerialization.jsonObject(with: responseData) as? [String: Any] else {
@@ -355,19 +397,24 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
     private let delay: Duration
     private let outcome: Result<PhotoPreview, PhotoLibraryError>
     private let libraryPayload: Data?
+    private let exportData: Data?
     private var previewCalls = 0
     private var libraryCalls = 0
+    private var exportCalls = 0
+    private var lastAllowICloudDownloadsValue: Bool?
 
     init(
         access: PhotoLibraryAccess = .authorized,
         delay: Duration = .zero,
         outcome: Result<PhotoPreview, PhotoLibraryError>,
-        libraryPayload: Data? = nil
+        libraryPayload: Data? = nil,
+        exportData: Data? = nil
     ) {
         self.access = access
         self.delay = delay
         self.outcome = outcome
         self.libraryPayload = libraryPayload
+        self.exportData = exportData
     }
 
     var previewCount: Int {
@@ -376,6 +423,14 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
 
     var libraryIndexCount: Int {
         lock.withLock { libraryCalls }
+    }
+
+    var exportCount: Int {
+        lock.withLock { exportCalls }
+    }
+
+    var lastAllowICloudDownloads: Bool? {
+        lock.withLock { lastAllowICloudDownloadsValue }
     }
 
     func authorization() -> PhotoLibraryAccess { access }
@@ -408,6 +463,46 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
     }
 
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
-        throw PhotoLibraryError.assetNotFound(localIdentifier)
+        try await exportOriginal(
+            localIdentifier: localIdentifier,
+            to: directory,
+            allowICloudDownloads: true
+        )
+    }
+
+    func exportOriginal(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
+        guard let exportData else {
+            throw PhotoLibraryError.assetNotFound(localIdentifier)
+        }
+        lock.withLock {
+            exportCalls += 1
+            lastAllowICloudDownloadsValue = allowICloudDownloads
+        }
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        let destination = directory.appendingPathComponent("IMG_0001.JPG")
+        try exportData.write(to: destination, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: destination.path
+        )
+        let checksum = SHA256.hash(data: exportData)
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return PhotoExportReceipt(
+            assetID: localIdentifier,
+            filename: destination.lastPathComponent,
+            destination: destination,
+            uniformTypeIdentifier: "public.jpeg",
+            byteCount: Int64(exportData.count),
+            checksumSHA256: checksum
+        )
     }
 }

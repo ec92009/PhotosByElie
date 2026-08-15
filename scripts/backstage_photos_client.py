@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import socket
 import stat
 import struct
@@ -20,6 +22,7 @@ import uuid
 SCHEMA_VERSION = 1
 OPERATION = "photos.preview"
 LIBRARY_OPERATION = "photos.library-index"
+EXPORT_OPERATION = "photos.export-original"
 MIN_MAX_PIXEL = 256
 MAX_MAX_PIXEL = 1_800
 MIN_LIBRARY_LIMIT = 1
@@ -31,6 +34,8 @@ MAX_REQUEST_BYTES = 16_384
 MAX_PREVIEW_BYTES = 8 * 1_024 * 1_024
 MAX_RESPONSE_BYTES = 12 * 1_024 * 1_024
 DEFAULT_TIMEOUT_SECONDS = 60.0
+DEFAULT_EXPORT_TIMEOUT_SECONDS = 1_800.0
+MAX_EXPORT_FILENAME_BYTES = 1_024
 DEFAULT_DESCRIPTOR_PATH = (
     Path.home()
     / "Library"
@@ -127,17 +132,101 @@ def request_library_index(
     return _decode_library_response(response_data, request_id, limit, offset)
 
 
+def request_export_original(
+    asset_id: str,
+    destination: Path,
+    *,
+    allow_icloud_downloads: bool = True,
+    descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
+    timeout: float = DEFAULT_EXPORT_TIMEOUT_SECONDS,
+) -> dict:
+    """Materialize one still original through Backstage-owned PhotoKit IPC."""
+
+    _validate_asset_id(asset_id)
+    if not isinstance(allow_icloud_downloads, bool):
+        raise BackstagePhotosClientError(
+            "invalid_export_options",
+            "allowICloudDownloads must be a boolean.",
+        )
+    if (
+        not isinstance(timeout, (int, float))
+        or not 0 < float(timeout) <= DEFAULT_EXPORT_TIMEOUT_SECONDS
+    ):
+        raise BackstagePhotosClientError(
+            "invalid_timeout",
+            "The original-export timeout must be between 0 and 1800 seconds.",
+        )
+
+    descriptor_path = Path(descriptor_path)
+    descriptor = _read_descriptor(descriptor_path)
+    request_id = str(uuid.uuid4())
+    request = {
+        "requestId": request_id,
+        "operation": EXPORT_OPERATION,
+        "authorization": f"Bearer {descriptor['bearerToken']}",
+        "assetId": asset_id,
+        "allowICloudDownloads": allow_icloud_downloads,
+    }
+    response_data = _send_request(
+        request,
+        descriptor,
+        timeout,
+        operation_label="Photos original export",
+    )
+    response = _decode_export_response(response_data, request_id, asset_id)
+
+    export_root = descriptor_path.parent / "exports"
+    source = _resolve_export_source(export_root, response["relativePath"])
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(destination, 0o700)
+    except OSError as error:
+        raise BackstagePhotosClientError(
+            "unsafe_export_destination",
+            "The materialization destination could not be secured.",
+        ) from error
+    target = destination / response["filename"]
+    _atomic_copy(source, target, response["bytes"], response["checksumSHA256"])
+    try:
+        shutil.rmtree(source.parent)
+    except OSError:
+        # A successful copy is still usable; the staging directory is private
+        # and can be cleaned by the next Backstage startup.
+        pass
+    return {
+        "ok": True,
+        "mode": "materialize-one",
+        "materializedCount": 1,
+        "items": [
+            {
+                "status": "materialized",
+                "path": str(target),
+                "filename": response["filename"],
+                "originalFilename": response["originalFilename"],
+                "bytes": response["bytes"],
+                "uniformTypeIdentifier": response["uniformTypeIdentifier"],
+                "checksumSHA256": response["checksumSHA256"],
+            }
+        ],
+    }
+
+
 def _validate_request_arguments(asset_id: str, max_pixel: int, timeout: float) -> None:
+    _validate_asset_id(asset_id)
+    if not isinstance(max_pixel, int) or not MIN_MAX_PIXEL <= max_pixel <= MAX_MAX_PIXEL:
+        raise BackstagePhotosClientError("invalid_max_pixel", "maxPixel must be between 256 and 1800.")
+    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_TIMEOUT_SECONDS:
+        raise BackstagePhotosClientError("invalid_timeout", "The preview timeout must be between 0 and 60 seconds.")
+
+
+def _validate_asset_id(asset_id: str) -> None:
     if not isinstance(asset_id, str) or not asset_id or asset_id.strip() != asset_id:
         raise BackstagePhotosClientError("invalid_asset_id", "A non-empty Photos asset ID is required.")
     if len(asset_id.encode("utf-8")) > MAX_ASSET_ID_BYTES or any(
         unicodedata.category(char) == "Cc" for char in asset_id
     ):
         raise BackstagePhotosClientError("invalid_asset_id", "The Photos asset ID exceeds the allowed size.")
-    if not isinstance(max_pixel, int) or not MIN_MAX_PIXEL <= max_pixel <= MAX_MAX_PIXEL:
-        raise BackstagePhotosClientError("invalid_max_pixel", "maxPixel must be between 256 and 1800.")
-    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_TIMEOUT_SECONDS:
-        raise BackstagePhotosClientError("invalid_timeout", "The preview timeout must be between 0 and 60 seconds.")
 
 
 def _validate_library_arguments(
@@ -373,6 +462,144 @@ def _decode_library_response(response_data: bytes, request_id: str, limit: int, 
         raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid library-index metadata.")
     response["items"] = items
     return response
+
+
+def _decode_export_response(response_data: bytes, request_id: str, asset_id: str) -> dict:
+    try:
+        response = json.loads(response_data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned malformed export JSON.") from error
+    if not isinstance(response, dict) or response.get("requestId") != request_id:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned a mismatched export request ID.")
+    if response.get("ok") is not True:
+        error_payload = response.get("error") if isinstance(response.get("error"), dict) else {}
+        code = str(error_payload.get("code") or "export_failed")
+        message = str(error_payload.get("message") or "Backstage could not materialize the Photos original.")
+        raise BackstagePhotosClientError(code, message)
+    if response.get("mode") != "export-original" or response.get("assetId") != asset_id:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned the wrong export response.")
+
+    filename = response.get("filename")
+    original_filename = response.get("originalFilename")
+    relative_path = response.get("relativePath")
+    uniform_type_identifier = response.get("uniformTypeIdentifier")
+    byte_count = response.get("bytes")
+    checksum = response.get("checksumSHA256")
+    if (
+        not _is_safe_filename(filename)
+        or not _is_safe_filename(original_filename)
+        or not isinstance(relative_path, str)
+        or not relative_path
+        or not isinstance(uniform_type_identifier, str)
+        or not uniform_type_identifier
+        or not isinstance(byte_count, int)
+        or byte_count <= 0
+        or not isinstance(checksum, str)
+        or re.fullmatch(r"[0-9a-f]{64}", checksum) is None
+        or Path(relative_path).name != filename
+    ):
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid export metadata.")
+    response["filename"] = filename
+    response["originalFilename"] = original_filename
+    response["relativePath"] = relative_path
+    response["uniformTypeIdentifier"] = uniform_type_identifier
+    response["bytes"] = byte_count
+    response["checksumSHA256"] = checksum
+    return response
+
+
+def _is_safe_filename(filename: object) -> bool:
+    if not isinstance(filename, str) or not filename or len(filename.encode("utf-8")) > MAX_EXPORT_FILENAME_BYTES:
+        return False
+    if filename in {".", ".."} or Path(filename).name != filename:
+        return False
+    return not any(unicodedata.category(char) == "Cc" for char in filename)
+
+
+def _resolve_export_source(export_root: Path, relative_path: str) -> Path:
+    relative = Path(relative_path)
+    if (
+        relative.is_absolute()
+        or not relative.parts
+        or any(part in {"", ".", ".."} for part in relative.parts)
+        or any(unicodedata.category(char) == "Cc" for char in relative_path)
+    ):
+        raise BackstagePhotosClientError(
+            "unsafe_export_source",
+            "Backstage returned an unsafe export staging path.",
+        )
+
+    current = export_root
+    for part in relative.parts:
+        info = _safe_lstat(current, "export_source_unavailable")
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) & 0o077
+        ):
+            raise BackstagePhotosClientError(
+                "unsafe_export_source",
+                "The Backstage export staging directory is not owner-only.",
+            )
+        current = current / part
+
+    info = _safe_lstat(current, "export_source_unavailable")
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.getuid()
+        or stat.S_IMODE(info.st_mode) & 0o077
+        or info.st_nlink != 1
+    ):
+        raise BackstagePhotosClientError(
+            "unsafe_export_source",
+            "The Backstage export is not a safe owner-only regular file.",
+        )
+    return current
+
+
+def _atomic_copy(source: Path, destination: Path, expected_bytes: int, expected_checksum: str) -> None:
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        dir=destination.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(file_descriptor, 0o600)
+        digest = hashlib.sha256()
+        byte_count = 0
+        with source.open("rb") as source_handle, os.fdopen(file_descriptor, "wb", closefd=True) as target_handle:
+            file_descriptor = -1
+            while True:
+                chunk = source_handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                target_handle.write(chunk)
+                digest.update(chunk)
+                byte_count += len(chunk)
+            target_handle.flush()
+            os.fsync(target_handle.fileno())
+        if byte_count != expected_bytes or digest.hexdigest() != expected_checksum:
+            raise BackstagePhotosClientError(
+                "export_integrity_failed",
+                "The staged Photos original did not match Backstage's receipt.",
+            )
+        os.replace(temporary, destination)
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        directory_descriptor = os.open(destination.parent, directory_flags)
+        try:
+            os.fsync(directory_descriptor)
+        finally:
+            os.close(directory_descriptor)
+    except FileNotFoundError as error:
+        raise BackstagePhotosClientError("export_source_unavailable", "The Backstage export disappeared before it could be copied.") from error
+    finally:
+        if file_descriptor >= 0:
+            os.close(file_descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _atomic_write(destination: Path, data: bytes) -> None:

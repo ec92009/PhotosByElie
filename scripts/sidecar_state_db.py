@@ -13,7 +13,6 @@ import mimetypes
 import os
 import re
 import sqlite3
-import subprocess
 import threading
 import time
 import uuid
@@ -21,9 +20,11 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
+    from backstage_photos_client import BackstagePhotosClientError, request_export_original
     from import_source_anchor import photo_id_for_source_path
     from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
 except ModuleNotFoundError:  # pragma: no cover - supports package-style test imports.
+    from scripts.backstage_photos_client import BackstagePhotosClientError, request_export_original
     from scripts.import_source_anchor import photo_id_for_source_path
     from scripts.media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
 
@@ -34,7 +35,6 @@ DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_BRIDGE_RUN_ROOT = Path("assets/owner-actions/sidecar-upload-runs")
-APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
@@ -2218,7 +2218,7 @@ def _upload_bridge_run_id() -> str:
     return f"ub-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
-def _run_apple_photos_materialize_one(
+def _run_backstage_photos_materialize_one(
     repo_root: Path,
     *,
     asset_id: str,
@@ -2226,66 +2226,15 @@ def _run_apple_photos_materialize_one(
     allow_icloud_downloads: bool,
     timeout: int = 1800,
 ) -> dict[str, Any]:
-    destination.mkdir(parents=True, exist_ok=True)
-    result_destination = destination / "photos-bridge-result.json"
-    launched_app_bundle = APPLE_PHOTOS_BRIDGE_APP.exists()
-    if launched_app_bundle:
-        command = [
-            "open",
-            "-W",
-            "-n",
-            str(APPLE_PHOTOS_BRIDGE_APP),
-            "--args",
-            "materialize-one",
-        ]
-    else:
-        runtime_root = Path(
-            os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(repo_root))
-        ).expanduser().resolve()
-        bridge = runtime_root / "scripts" / "apple_photos_bridge.swift"
-        if not bridge.exists():
-            raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
-        command = ["swift", str(bridge), "materialize-one"]
-    command.extend([
-        "--asset-id",
-        asset_id,
-        "--destination",
-        str(destination),
-        "--result-destination",
-        str(result_destination),
-    ])
-    if allow_icloud_downloads:
-        command.append("--allow-icloud-downloads")
     try:
-        result = subprocess.run(
-            command,
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
+        return request_export_original(
+            asset_id,
+            destination,
+            allow_icloud_downloads=allow_icloud_downloads,
+            timeout=float(timeout),
         )
-    except FileNotFoundError as error:
-        if launched_app_bundle:
-            raise RuntimeError("macOS open is required to launch the Photos Bridge app bundle.") from error
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge development fallback. Install Xcode Command Line Tools.") from error
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError("Apple Photos bridge timed out while materializing the queued asset.") from error
-    stdout = (result.stdout or "").strip()
-    stderr = (result.stderr or "").strip()
-    if result_destination.exists() and result_destination.stat().st_size > 0:
-        stdout = result_destination.read_text(encoding="utf-8").strip()
-    try:
-        payload = json.loads(stdout or "{}")
-    except json.JSONDecodeError as error:
-        message = stderr or stdout or "Apple Photos bridge returned invalid JSON or did not write its result file."
-        raise RuntimeError(message.strip()) from error
-    if result.returncode != 0 or payload.get("ok") is False:
-        message = str(payload.get("error") or stderr or f"Apple Photos bridge exited {result.returncode}").strip()
-        raise RuntimeError(message)
-    if stderr:
-        payload["stderr"] = stderr
-    return payload
+    except BackstagePhotosClientError as error:
+        raise RuntimeError(f"Backstage original export failed ({error.code}): {error}") from error
 
 
 def _first_env(*names: str) -> str:
@@ -2830,7 +2779,7 @@ def execute_upload_bridge_batch_item(
 
     try:
         export_started = time.perf_counter()
-        export_payload = _run_apple_photos_materialize_one(
+        export_payload = _run_backstage_photos_materialize_one(
             repo_root,
             asset_id=item["assetId"],
             destination=export_root / str(item["runItemId"]),
@@ -2880,7 +2829,7 @@ def execute_upload_bridge_batch_item(
                 item_status = "uploaded"
         else:
             item_status = "export_failed"
-            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+            export_error = export_error or "Backstage did not materialize an export file."
     except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
         message = str(error)
         if item_status == "exported":
@@ -3254,7 +3203,7 @@ def run_upload_bridge_export_dry_run(
     upload_results: list[dict[str, Any]] = []
     upload_error = ""
     try:
-        export_payload = _run_apple_photos_materialize_one(
+        export_payload = _run_backstage_photos_materialize_one(
             repo_root,
             asset_id=item["assetId"],
             destination=export_root,
@@ -3305,7 +3254,7 @@ def run_upload_bridge_export_dry_run(
         else:
             item_status = "export_failed"
             run_status = "export_failed"
-            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+            export_error = export_error or "Backstage did not materialize an export file."
     except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
         message = str(error)
         if item_status == "exported" and execute_upload:

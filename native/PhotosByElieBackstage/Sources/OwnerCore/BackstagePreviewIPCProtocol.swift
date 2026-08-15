@@ -4,6 +4,7 @@ public enum BackstagePreviewIPCConstants {
     public static let schemaVersion = 1
     public static let operation = "photos.preview"
     public static let libraryIndexOperation = "photos.library-index"
+    public static let exportOriginalOperation = "photos.export-original"
     public static let minimumMaxPixel = 256
     public static let maximumMaxPixel = 1_800
     public static let minimumLibraryLimit = 1
@@ -13,6 +14,17 @@ public enum BackstagePreviewIPCConstants {
     public static let maximumPreviewBytes = 8 * 1_024 * 1_024
     public static let maximumResponseBytes = 12 * 1_024 * 1_024
     public static let maximumAssetIDBytes = 2_048
+
+    public static func defaultExportDirectory() -> URL {
+        let applicationSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first ?? FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
+        return applicationSupport
+            .appendingPathComponent("PhotosByElie Backstage", isDirectory: true)
+            .appendingPathComponent("exports", isDirectory: true)
+    }
 }
 
 public struct BackstagePreviewIPCDescriptor: Codable, Equatable, Sendable {
@@ -45,17 +57,20 @@ public struct BackstagePreviewIPCLimits: Sendable {
     public var maximumPreviewBytes: Int
     public var maximumResponseBytes: Int
     public var operationTimeout: Duration
+    public var exportOperationTimeout: Duration
 
     public init(
         maximumRequestBytes: Int = BackstagePreviewIPCConstants.maximumRequestBytes,
         maximumPreviewBytes: Int = BackstagePreviewIPCConstants.maximumPreviewBytes,
         maximumResponseBytes: Int = BackstagePreviewIPCConstants.maximumResponseBytes,
-        operationTimeout: Duration = .seconds(55)
+        operationTimeout: Duration = .seconds(55),
+        exportOperationTimeout: Duration = .seconds(1_800)
     ) {
         self.maximumRequestBytes = maximumRequestBytes
         self.maximumPreviewBytes = maximumPreviewBytes
         self.maximumResponseBytes = maximumResponseBytes
         self.operationTimeout = operationTimeout
+        self.exportOperationTimeout = exportOperationTimeout
     }
 }
 
@@ -63,15 +78,18 @@ public struct BackstagePreviewIPCProcessor: Sendable {
     private let photoLibrary: any PhotoLibraryServing
     private let bearerToken: String
     private let limits: BackstagePreviewIPCLimits
+    private let exportDirectory: URL
 
     public init(
         photoLibrary: any PhotoLibraryServing,
         bearerToken: String,
-        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits()
+        limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits(),
+        exportDirectory: URL = BackstagePreviewIPCConstants.defaultExportDirectory()
     ) {
         self.photoLibrary = photoLibrary
         self.bearerToken = bearerToken
         self.limits = limits
+        self.exportDirectory = exportDirectory
     }
 
     public func process(_ requestData: Data) async -> Data {
@@ -95,7 +113,8 @@ public struct BackstagePreviewIPCProcessor: Sendable {
             return encodeError(requestID: request.requestID, code: "authentication_failed", message: "The IPC bearer token was rejected.")
         }
         guard request.operation == BackstagePreviewIPCConstants.operation
-            || request.operation == BackstagePreviewIPCConstants.libraryIndexOperation else {
+            || request.operation == BackstagePreviewIPCConstants.libraryIndexOperation
+            || request.operation == BackstagePreviewIPCConstants.exportOriginalOperation else {
             return encodeError(requestID: request.requestID, code: "unsupported_operation", message: "The requested IPC operation is not supported.")
         }
         guard [.authorized, .limited].contains(photoLibrary.authorization()) else {
@@ -108,6 +127,9 @@ public struct BackstagePreviewIPCProcessor: Sendable {
 
         guard let assetID = request.assetID, validAssetID(assetID) else {
             return encodeError(requestID: request.requestID, code: "invalid_asset_id", message: "The Photos asset ID is missing or exceeds the allowed size.")
+        }
+        if request.operation == BackstagePreviewIPCConstants.exportOriginalOperation {
+            return await processExportOriginal(request, assetID: assetID)
         }
         guard let maxPixel = request.maxPixel,
               (BackstagePreviewIPCConstants.minimumMaxPixel...BackstagePreviewIPCConstants.maximumMaxPixel)
@@ -253,6 +275,86 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func processExportOriginal(_ request: PreviewRequest, assetID: String) async -> Data {
+        let requestDirectory = exportDirectory
+            .appendingPathComponent(request.requestID, isDirectory: true)
+        var completed = false
+        defer {
+            if !completed { try? FileManager.default.removeItem(at: requestDirectory) }
+        }
+
+        do {
+            try FileManager.default.createDirectory(
+                at: requestDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            let receipt = try await exportWithTimeout(
+                assetID: assetID,
+                directory: requestDirectory,
+                allowICloudDownloads: request.allowICloudDownloads ?? true
+            )
+            let destination = receipt.destination.standardizedFileURL
+            let requestRoot = requestDirectory.standardizedFileURL
+            let exportRoot = exportDirectory.standardizedFileURL
+            guard destination.path.hasPrefix(requestRoot.path + "/"),
+                  destination.path.hasPrefix(exportRoot.path + "/"),
+                  FileManager.default.fileExists(atPath: destination.path) else {
+                return encodeExportError(
+                    requestID: request.requestID,
+                    code: "unsafe_export_destination",
+                    message: "Backstage returned an export outside its owner-only staging directory."
+                )
+            }
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: destination.path
+            )
+            let relativePath = String(destination.path.dropFirst(exportRoot.path.count + 1))
+            let response = ExportResponse(
+                ok: true,
+                requestID: request.requestID,
+                mode: "export-original",
+                assetID: receipt.assetID,
+                filename: destination.lastPathComponent,
+                originalFilename: receipt.filename,
+                relativePath: relativePath,
+                uniformTypeIdentifier: receipt.uniformTypeIdentifier,
+                bytes: receipt.byteCount,
+                checksumSHA256: receipt.checksumSHA256,
+                error: nil
+            )
+            let encoded = encode(response)
+            guard encoded.count <= limits.maximumResponseBytes else {
+                return encodeExportError(
+                    requestID: request.requestID,
+                    code: "response_oversized",
+                    message: "The export receipt exceeds the allowed response size."
+                )
+            }
+            completed = true
+            return encoded
+        } catch is ExportTimeoutError {
+            return encodeExportError(
+                requestID: request.requestID,
+                code: "export_timeout",
+                message: "Backstage timed out while materializing the Photos original."
+            )
+        } catch let error as PhotoLibraryError {
+            return encodeExportError(
+                requestID: request.requestID,
+                code: errorCode(error),
+                message: error.localizedDescription
+            )
+        } catch {
+            return encodeExportError(
+                requestID: request.requestID,
+                code: "export_failed",
+                message: "Backstage could not materialize the Photos original."
+            )
+        }
+    }
+
     private func previewWithTimeout(assetID: String, maxPixel: Int) async throws -> PhotoPreview {
         let photoLibrary = photoLibrary
         let operationTimeout = limits.operationTimeout
@@ -316,6 +418,39 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func exportWithTimeout(
+        assetID: String,
+        directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
+        let photoLibrary = photoLibrary
+        let operationTimeout = limits.exportOperationTimeout
+        return try await withCheckedThrowingContinuation { continuation in
+            let gate = ExportResultGate(continuation)
+            Task {
+                do {
+                    let receipt = try await photoLibrary.exportOriginal(
+                        localIdentifier: assetID,
+                        to: directory,
+                        allowICloudDownloads: allowICloudDownloads
+                    )
+                    gate.resume(with: .success(receipt))
+                } catch {
+                    gate.resume(with: .failure(error))
+                }
+            }
+            let timeoutTask = Task {
+                do {
+                    try await Task.sleep(for: operationTimeout)
+                } catch {
+                    return
+                }
+                gate.resume(with: .failure(ExportTimeoutError()))
+            }
+            gate.installTimeout(timeoutTask)
+        }
+    }
+
     private func parseDate(_ value: String?, field: String) throws -> Date? {
         guard let value, !value.isEmpty else { return nil }
         let fractional = ISO8601DateFormatter()
@@ -356,7 +491,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         case .unsupportedMediaType: "unsupported_media_type"
         case .resourceNotFound: "resource_not_found"
         case .previewUnavailable: "preview_unavailable"
-        case .exportFailed: "preview_failed"
+        case .exportFailed: "export_failed"
         }
     }
 
@@ -380,6 +515,28 @@ public struct BackstagePreviewIPCProcessor: Sendable {
             #"{"ok":false,"requestId":"","mode":"preview","error":{"code":"encoding_failed","message":"Backstage could not encode the IPC response."}}"#.utf8
         )
     }
+
+    private func encodeExportError(requestID: String, code: String, message: String) -> Data {
+        encode(ExportResponse(
+            ok: false,
+            requestID: requestID,
+            mode: "export-original",
+            assetID: nil,
+            filename: nil,
+            originalFilename: nil,
+            relativePath: nil,
+            uniformTypeIdentifier: nil,
+            bytes: nil,
+            checksumSHA256: nil,
+            error: PreviewError(code: code, message: message)
+        ))
+    }
+
+    private func encode(_ response: ExportResponse) -> Data {
+        (try? JSONEncoder().encode(response)) ?? Data(
+            #"{"ok":false,"requestId":"","mode":"export-original","error":{"code":"encoding_failed","message":"Backstage could not encode the export receipt."}}"#.utf8
+        )
+    }
 }
 
 private struct PreviewRequest: Decodable {
@@ -392,6 +549,7 @@ private struct PreviewRequest: Decodable {
     var offset: Int?
     var dateFrom: String?
     var dateTo: String?
+    var allowICloudDownloads: Bool?
 
     enum CodingKeys: String, CodingKey {
         case requestID = "requestId"
@@ -400,6 +558,7 @@ private struct PreviewRequest: Decodable {
         case maxPixel
         case limit, offset
         case dateFrom, dateTo
+        case allowICloudDownloads
     }
 }
 
@@ -422,6 +581,27 @@ private struct PreviewResponse: Encodable {
     }
 }
 
+private struct ExportResponse: Encodable {
+    var ok: Bool
+    var requestID: String
+    var mode: String
+    var assetID: String?
+    var filename: String?
+    var originalFilename: String?
+    var relativePath: String?
+    var uniformTypeIdentifier: String?
+    var bytes: Int64?
+    var checksumSHA256: String?
+    var error: PreviewError?
+
+    enum CodingKeys: String, CodingKey {
+        case ok, mode, filename, originalFilename, relativePath
+        case uniformTypeIdentifier, bytes, checksumSHA256, error
+        case requestID = "requestId"
+        case assetID = "assetId"
+    }
+}
+
 private struct PreviewError: Encodable {
     var code: String
     var message: String
@@ -434,6 +614,8 @@ private struct LibraryDateArgumentError: Error {
 }
 
 private struct LibraryIndexTimeoutError: Error {}
+
+private struct ExportTimeoutError: Error {}
 
 /// Completes the preview race exactly once without waiting for a PhotoKit
 /// continuation that may not support cancellation.
@@ -478,6 +660,35 @@ private final class LibraryIndexResultGate: @unchecked Sendable {
     }
 
     func resume(with result: Result<Data, Error>) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        let timeout = timeoutTask
+        timeoutTask = nil
+        lock.unlock()
+        timeout?.cancel()
+        pending?.resume(with: result)
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        let isPending = continuation != nil
+        if isPending { timeoutTask = task }
+        lock.unlock()
+        if !isPending { task.cancel() }
+    }
+}
+
+private final class ExportResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<PhotoExportReceipt, Error>?
+    private var timeoutTask: Task<Void, Never>?
+
+    init(_ continuation: CheckedContinuation<PhotoExportReceipt, Error>) {
+        self.continuation = continuation
+    }
+
+    func resume(with result: Result<PhotoExportReceipt, Error>) {
         lock.lock()
         let pending = continuation
         continuation = nil

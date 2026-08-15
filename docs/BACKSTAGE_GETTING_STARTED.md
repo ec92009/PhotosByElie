@@ -298,9 +298,11 @@ audited Owner action path.
    unavailable only after the complete scan. Reconciliation preserves all
    existing culling decisions, approvals, and tombstones.
 2. When working from a saved fixture pool, confirm the pool name and immutable
-   asset count above the list. Search and the Media, Decision, Rating, and
-   Color filters only narrow that pool; the total and matching counts remain
-   visible.
+   asset count above the list. Search and the Decision, Rating, and Color
+   filters only narrow that pool; the total and matching counts remain visible.
+   Backstage Culling and Review source candidates are still photos only.
+   Generated Real Estate videos are downstream Delivery outputs, not fixture
+   or review candidates.
 3. Backstage shows at most 200 matching rows at once. Use **Previous** and
    **Next** to move through a large pool without changing its membership or
    order.
@@ -317,8 +319,8 @@ audited Owner action path.
 7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
    0 through 5 apply the corresponding value.
 8. Use **Color** and **Apply color** for the five labels or to clear a label.
-9. Choose **Quick Look** or press Space to inspect photos, videos, and
-   panoramas without leaving Backstage. The read-only metadata panel never
+9. Choose **Quick Look** or press Space to inspect still photos and panoramas
+   without leaving Backstage. The read-only metadata panel never
    covers the item: it stacks below landscape previews and beside portrait
    previews while showing the current filename, title, keywords, capture time,
    rating, color, and state. While

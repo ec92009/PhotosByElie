@@ -319,21 +319,24 @@ Sidecar has two primary pages backed by the same current window:
   the SQLite table first and falls back to the JSON compatibility export when
   the table is missing or empty.
 
-Videos are first-class Sidecar review items. The UI marks video previews with a
-standard play icon and duration chip, filters photos/videos separately, asks
-PhotoKit for local poster frames without iCloud downloads, then derives a JPEG
-frame from the same local video resource used by Quick Look when PhotoKit has no
-usable poster. It plays local videos in place when Photos can expose the video
-resource locally, starts video playback immediately in Quick Look with a muted
-fallback when browser autoplay policy requires it, and supports Space-bar Quick
-Look previews for the active item.
+Historical-only video behavior (retained for migration archaeology): the
+obsolete Sidecar treated videos as first-class review items. The UI marked
+video previews with a standard play icon and duration chip, filtered
+photos/videos separately, asked PhotoKit for local poster frames without iCloud
+downloads, then derived a JPEG frame from the same local video resource used by
+Quick Look when PhotoKit had no usable poster. It played local videos in place
+when Photos could expose the video resource locally, started video playback
+immediately in Quick Look with a muted fallback when browser autoplay policy
+required it, and supported Space-bar Quick Look previews for the active item.
+Current Backstage source and review workflows are stills-only; generated Real
+Estate videos belong to downstream Delivery.
 
 Source controls should include:
 
 - preview count
 - load/refill plus previous/next working-window movement
 - album/smart album later
-- horizontal rating, color, decision-state, and media-type filters
+- horizontal rating, color, decision-state, and historical media-type filters
 - search terms later
 
 ## Current V0 Slice

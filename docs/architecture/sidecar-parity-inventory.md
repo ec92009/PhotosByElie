@@ -25,8 +25,8 @@ still perform it.
 | Indexed Photos scope | PhotoKit read access | Culling | PhotoKit | Global and fixture-pool scopes are explicit; an out-of-pool asset cannot appear in pool scope |
 | Selection and navigation | Sidecar JavaScript | Culling | None | Click, Command-click, Shift-click, arrows, Shift-arrows, select all/none, and visible selection count work natively |
 | Culling decisions | `Owner.sqlite` decision ledger | Culling | Worker authorization + Max connector | Rating 0-5, five colors, pick/unpick, reject, hide, restore, and session undo are audited and immediately reflected |
-| Photo/video preview | Sidecar preview bridge | Culling native preview/Quick Look | Photos Bridge only where PhotoKit/TCC export is required | Space opens photo or video preview; navigation stays inside the pool; no browser window opens |
-| Burst review and filters | Sidecar JavaScript + local index | Culling | `Owner.sqlite` index | Search, paging/refill, rating/color/decision/media filters, burst grouping, and picked-only review preserve scope |
+| Still-photo preview | Sidecar preview bridge | Culling native preview/Quick Look | Photos Bridge only where PhotoKit/TCC export is required | Space opens a still-photo preview; source video assets are rejected before candidate, snapshot, and review workflows; generated Real Estate videos are handled only by Delivery; no browser window opens |
+| Burst review and filters | Sidecar JavaScript + local index | Culling | `Owner.sqlite` index | Search, paging/refill, rating/color/decision filters, burst grouping, and picked-only review preserve scope; source media is fixed to still photos |
 | Editorial metadata | `Owner.sqlite` accepted/applied metadata state | Metadata | Worker action + Max connector | Title, caption, keywords, approve/reject/rework/comment, blacklist filtering, propagation, and AI proposal review work natively |
 | Apple Photos metadata give-back | Worker action + Max connector | Metadata progress and receipt UI | Headless Photos Bridge with stable TCC identity | Backstage shows per-item planned/written/verified/failed receipts; no raw Swift or bare executable path exists |
 | Recoverable reject lifecycle | `Owner.sqlite` Waste Basket gateway, provenance, operations, and receipts | Waste Basket | Worker action + local wake/connector | Culling/Review/Owner-gallery X is recoverable; restore is exact; only confirmed Empty activates a tombstone; explicit tombstone restore is separate |
@@ -89,7 +89,9 @@ pass.
 
 1. Automated unit/contract tests cover every native service and the
    native-only entry-point gate.
-2. A fixture-scoped rehearsal includes a representative photo and video.
+2. A fixture-scoped rehearsal includes a representative still-photo fixture
+   and a generated Real Estate video delivery artifact; source videos do not
+   enter the fixture or review pool.
 3. Membership and ordering of the immutable pool are compared before and after
    the native run.
 4. Reversible culling and metadata actions are applied and undone.

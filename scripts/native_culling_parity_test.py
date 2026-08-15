@@ -1343,6 +1343,36 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, guide)
 
+    def test_current_source_media_contract_is_documented(self):
+        guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
+            encoding="utf-8"
+        )
+        parity = (
+            ROOT / "docs" / "architecture" / "sidecar-parity-inventory.md"
+        ).read_text(encoding="utf-8")
+        historical = (ROOT / "docs" / "architecture" / "sidecar.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn(
+            "Backstage Culling and Review source candidates are still photos only",
+            guide,
+        )
+        self.assertIn(
+            "Generated Real Estate videos are downstream Delivery outputs",
+            guide,
+        )
+        self.assertIn("source video assets are rejected before candidate", parity)
+        self.assertIn(
+            "generated Real Estate videos are handled only by Delivery",
+            parity,
+        )
+        self.assertIn("Historical-only video behavior", historical)
+        self.assertIn(
+            "Current Backstage source and review workflows are stills-only",
+            historical,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -382,7 +382,10 @@ const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
   if (isPanoramaGallery) return t("collection.panoramas");
   if (isSharedGallery) return t("collection.shared");
-  if (isPBEOwnerGallery) return String(gallery?.title || "PBE Owner").trim() || "PBE Owner";
+  if (isPBEOwnerGallery) {
+    const ownerGallery = window.photosByElieData?.[pbeOwnerGalleryKey];
+    return String(ownerGallery?.title || "PBE Owner").trim() || "PBE Owner";
+  }
   const key = `collection.${galleryKey}`;
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";

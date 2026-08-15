@@ -53,6 +53,10 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
     assert.ok(actionsIndex > sessionIndex, `${page} loads Owner actions after the session client`);
   }
   assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
+  assert.match(
+    read("photo-gallery.js"),
+    /if \(isPBEOwnerGallery\) \{[\s\S]*const ownerGallery = window\.photosByElieData\?\.\[pbeOwnerGalleryKey\]/,
+  );
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
 });

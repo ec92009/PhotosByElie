@@ -484,18 +484,9 @@ class FixtureConnectorTest(unittest.TestCase):
                         "keywords": ["Spain"],
                     }]
 
-            def fake_preview(_repo_root, args):
-                input_path = Path(args[args.index("--input") + 1])
-                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
-                items = []
-                for request in requests:
-                    Path(request["destination"]).write_bytes(b"rendered-current-jpeg")
-                    items.append({
-                        "assetId": request["assetId"],
-                        "ok": True,
-                        "destination": request["destination"],
-                    })
-                return {"ok": True, "items": items}
+            def fake_preview(_photo_id, destination, _max_pixel, _timeout):
+                Path(destination).write_bytes(b"rendered-current-jpeg")
+                return {"ok": True, "destination": str(destination)}
 
             synced = local_server._incremental_photos_sync(
                 root,
@@ -548,12 +539,9 @@ class FixtureConnectorTest(unittest.TestCase):
                         for request in requests
                     ]
 
-            def fake_preview(_repo_root, args):
-                input_path = Path(args[args.index("--input") + 1])
-                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
-                for request in requests:
-                    Path(request["destination"]).write_bytes(request["assetId"].encode())
-                return {"ok": True, "items": requests}
+            def fake_preview(photo_id, destination, _max_pixel, _timeout):
+                Path(destination).write_bytes(photo_id.encode())
+                return {"ok": True, "destination": str(destination)}
 
             should_stop = {"value": False}
 
@@ -577,6 +565,16 @@ class FixtureConnectorTest(unittest.TestCase):
                     connection.execute("SELECT count(*) total FROM asset_sync_state").fetchone()["total"],
                     1,
                 )
+
+    def test_incremental_sync_preview_path_has_no_standalone_bridge_batch_fallback(self):
+        source = Path(local_server.__file__).read_text(encoding="utf-8")
+        start = source.index("def _request_backstage_preview_for_sync")
+        end = source.index("def _photos_sync_run_status", start)
+        sync_source = source[start:end]
+
+        self.assertIn("request_preview", sync_source)
+        self.assertNotIn("_run_apple_photos_bridge", sync_source)
+        self.assertNotIn("preview-many", sync_source)
 
 
 if __name__ == "__main__":

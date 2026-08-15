@@ -2396,6 +2396,19 @@ def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, co
     raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
 
 
+def _request_backstage_preview_for_sync(
+    photo_id: str,
+    destination: Path,
+    max_pixel: int,
+    timeout: float,
+) -> dict:
+    """Request one incremental-sync preview through Backstage-owned IPC."""
+    try:
+        return request_preview(photo_id, destination, max_pixel, timeout=timeout)
+    except BackstagePhotosClientError as error:
+        return error.as_payload()
+
+
 def _incremental_photos_sync(
     repo_root: Path,
     *,
@@ -2409,7 +2422,7 @@ def _incremental_photos_sync(
     bounded_limit = max(1, min(int(limit or 25), 50))
     started = time.monotonic()
     adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
-    preview_runner = preview_runner or _run_apple_photos_bridge
+    preview_runner = preview_runner or _request_backstage_preview_for_sync
     with fixture_connect(repo_root) as connection:
         rows = connection.execute(
             """
@@ -2483,37 +2496,56 @@ def _incremental_photos_sync(
     preview_by_id: dict[str, dict] = {}
     with tempfile.TemporaryDirectory(prefix="pbe-incremental-photos-sync-") as temp_dir:
         temp_root = Path(temp_dir)
-        preview_requests: list[dict] = []
         destination_by_id: dict[str, Path] = {}
         for target in targets:
             photos_id = target["photosAssetId"]
             destination = temp_root / f"{hashlib.sha256(photos_id.encode()).hexdigest()[:24]}.jpg"
             destination_by_id[photos_id] = destination
-            preview_requests.append({
-                "assetId": photos_id,
-                "destination": str(destination),
-                "maxPixel": 1600,
-            })
-        preview_input = temp_root / "preview-requests.json"
-        preview_input.write_text(
-            json.dumps(preview_requests, ensure_ascii=False),
-            encoding="utf-8",
-        )
         report("Rendering comparison previews")
-        preview_payload = (
-            {"ok": False, "error": "Stopped before preview rendering", "items": []}
-            if stopped()
-            else preview_runner(
-                repo_root,
-                ["preview-many", "--input", str(preview_input)],
-            )
-        )
-        if preview_payload.get("ok"):
-            preview_by_id = {
-                str(row.get("assetId") or ""): row
-                for row in preview_payload.get("items") or []
-                if isinstance(row, dict)
+        preview_payload: dict = {"ok": True, "items": []}
+        if stopped():
+            preview_payload = {
+                "ok": False,
+                "error": "Stopped before preview rendering",
+                "items": [],
             }
+        else:
+            for target in targets:
+                if stopped():
+                    preview_payload = {
+                        "ok": False,
+                        "error": "Stopped during preview rendering",
+                        "items": [],
+                    }
+                    break
+                photos_id = target["photosAssetId"]
+                try:
+                    preview = preview_runner(
+                        photos_id,
+                        destination_by_id[photos_id],
+                        1600,
+                        60.0,
+                    )
+                except Exception as error:
+                    preview = {
+                        "ok": False,
+                        "error": str(error) or error.__class__.__name__,
+                    }
+                if not isinstance(preview, dict):
+                    preview = {
+                        "ok": False,
+                        "error": "Backstage preview runner returned an invalid payload.",
+                    }
+                preview_payload["items"].append({
+                    "assetId": photos_id,
+                    **preview,
+                })
+            if preview_payload["ok"]:
+                preview_by_id = {
+                    str(row.get("assetId") or ""): row
+                    for row in preview_payload["items"]
+                    if isinstance(row, dict)
+                }
 
         snapshots: list[dict] = []
         failures: list[dict] = []

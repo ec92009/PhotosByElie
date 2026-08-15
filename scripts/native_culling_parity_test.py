@@ -1,7 +1,10 @@
 """Executable source contract for the native Backstage culling workspace."""
 
 from pathlib import Path
+import plistlib
 import re
+import subprocess
+import tempfile
 import unittest
 
 
@@ -30,6 +33,41 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        source = backstage_ui_source()
+
+        for marker in (
+            "photoLibraryIdentifierCandidates(",
+            "previewForAsset(",
+            "cullingThumbnailFailures: [String: CullingThumbnailFailure]",
+            "CullingThumbnailFailure(error: error)",
+            "cullingThumbnailFailures[assetID] = lastFailure",
+            "func retryThumbnail(for assetID: String)",
+        ):
+            self.assertIn(marker, model)
+        for marker in (
+            "PHCloudIdentifier(stringValue:",
+            "localIdentifierMappings(for:",
+            "apple-photos-cloud://",
+            "Choose Allow Photos",
+        ):
+            self.assertIn(marker, photo_library)
+        for marker in (
+            "thumbnailFailure: model.cullingThumbnailFailures[asset.id]",
+            "onRetryThumbnail: { model.retryThumbnail(for: asset.id) }",
+            "await model.authorizeAndLoadPhotos()",
+            "if let thumbnailFailure",
+            "Button(thumbnailFailure.actionTitle)",
+            "Loading preview…",
+        ):
+            self.assertIn(marker, source)
+
     def test_owner_core_owns_filter_window_burst_and_hierarchy_rules(self):
         source = (
             NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"
@@ -73,7 +111,6 @@ class NativeCullingParityTest(unittest.TestCase):
             "X move to recoverable Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
-            "CullingMediaFilter.selectableCases",
             "FixtureCullingView.selectableCases",
             "cullingRatingFilters.contains",
             "CullingColorFilter.selectableCases",
@@ -314,7 +351,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady",
             apply_action,
         )
-        self.assertIn("reviewMediaFilters.contains(mediaFilter)", apply_action)
+        self.assertIn(
+            'guard !item.mediaType.lowercased().contains("video") else { return false }',
+            apply_action,
+        )
         self.assertNotIn("fixtureService.reviewWindow(", apply_action)
         review_action_and_retention = apply_action.split(
             "private func removeUnpickedReviewItems",
@@ -340,9 +380,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("item.proposedTitle", hydration)
         self.assertIn("item.proposedKeywords", hydration)
         self.assertNotIn("markAIProposalsLoaded", hydration)
-        self.assertIn("CullingMediaFilter.selectableCases", app)
-        self.assertIn("reviewMediaFilters.contains", app)
-        self.assertIn("toggleReviewMediaFilter", model)
+        review = app.split("struct ReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+        self.assertNotIn('Text("Media")', review)
+        self.assertNotIn("toggleReviewMediaFilter", review)
+        self.assertNotIn("func toggleReviewMediaFilter", model)
+        self.assertIn(
+            "mediaFilters: [CullingMediaFilter.photos.rawValue]",
+            model,
+        )
         self.assertIn("FixtureReviewStateFilter.allCases", app)
         self.assertIn("reviewStateFilters.contains", app)
         self.assertIn("toggleReviewStateFilter", model)
@@ -543,24 +590,34 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("VStack(alignment: .leading, spacing: 12)", header)
         self.assertIn(".layoutPriority(3)", header)
         self.assertIn(
-            ".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)",
+            ".frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)",
             grid,
         )
         self.assertIn(".clipped()", grid)
         self.assertIn(".id(cullingViewportIdentity)", grid)
         self.assertIn(".padding(.top, 12)", grid)
+        self.assertIn(".safeAreaInset(edge: .bottom, spacing: 0)", culling)
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
         self.assertIn(".layoutPriority(2)", culling)
+        self.assertNotIn(".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)", culling)
         self.assertNotIn("GeometryReader { paneGeometry in", culling)
+        workspace = culling.split("private var cullingWorkspacePane", 1)[1].split(
+            "private var cullingHeader", 1
+        )[0]
+        self.assertIn("cullingActions", workspace)
+        self.assertNotIn(".clipped()", workspace)
         self.assertIn(".frame(minWidth: 480)", culling)
         self.assertIn(
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
         )
         self.assertIn("GeometryReader { viewport in", culling)
-        self.assertIn(".padding(.top, viewport.safeAreaInsets.top)", culling)
+        self.assertIn("let topInset = viewport.safeAreaInsets.top", culling)
+        self.assertIn("let bottomInset = viewport.safeAreaInsets.bottom", culling)
+        self.assertIn(".padding(.top, topInset)", culling)
+        self.assertIn(".padding(.bottom, bottomInset)", culling)
         self.assertIn(
-            "height: max(0, viewport.size.height - viewport.safeAreaInsets.top)",
+            "height: max(0, viewport.size.height - topInset - bottomInset)",
             culling,
         )
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
@@ -582,8 +639,8 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertNotIn('Button("Apply")', culling)
         self.assertNotIn("Menu {", culling)
-        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 2)
-        self.assertIn("Text(\"Media\")", culling)
+        self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 1)
+        self.assertNotIn("Text(\"Media\")", culling)
         self.assertIn("Text(\"Status\")", culling)
         self.assertIn("Text(\"Rating\")", culling)
         self.assertIn("Text(\"Color\")", culling)
@@ -605,6 +662,84 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
+    def test_source_workflows_are_still_only_without_media_controls(self):
+        app = backstage_ui_source()
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        owner = (
+            NATIVE / "Sources" / "OwnerCore" / "FixtureWorkflowService.swift"
+        ).read_text(encoding="utf-8")
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        bridge = (ROOT / "scripts" / "apple_photos_bridge.swift").read_text(
+            encoding="utf-8"
+        )
+        pipeline = (ROOT / "scripts" / "fixture_pipeline.py").read_text(
+            encoding="utf-8"
+        )
+        culling = app.split("struct CullingView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+        review = app.split("struct ReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+        loader = model.split(
+            "func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false)",
+            1,
+        )[1].split("private func scheduleFixtureCullingBackfill", 1)[0]
+
+        self.assertNotIn('Text("Media")', culling)
+        self.assertNotIn("cullingMediaFilterControls", culling)
+        self.assertNotIn('Text("Media")', review)
+        self.assertNotIn("toggleReviewMediaFilter", review)
+        self.assertIn("PHAsset.fetchAssets(with: .image", photo_library)
+        self.assertGreaterEqual(
+            bridge.count("PHAsset.fetchAssets(with: .image"),
+            2,
+        )
+        self.assertIn('format: "mediaType == %d"', bridge)
+        self.assertIn('code: "source_video_unsupported"', bridge)
+        self.assertNotIn('case "video":', bridge)
+        self.assertNotIn("writeLocalVideoPosterPreviewJPEG", bridge)
+        self.assertNotIn("writeVideoResource", bridge)
+        self.assertNotIn("import AVFoundation", bridge)
+        self.assertIn("case unsupportedMediaType(String)", photo_library)
+        self.assertGreaterEqual(
+            pipeline.count("lower(COALESCE(a.media_type, 'photo')) NOT LIKE '%video%'"),
+            5,
+        )
+        self.assertIn(
+            "source videos cannot enter a still-only Culling snapshot",
+            pipeline,
+        )
+        self.assertIn('mediaFilters: [String] = ["photos"]', owner)
+        self.assertIn('mediaTypes: ["photo"]', loader)
+        self.assertIn("cullingMediaFilters = [.photos]", loader)
+        self.assertIn("reviewMediaFilters = [.photos]", model)
+        self.assertIn(
+            "mediaFilters: [CullingMediaFilter.photos.rawValue]",
+            model,
+        )
+        self.assertIn("fixtureCullingMediaAvailability = window.mediaAvailability", loader)
+        self.assertEqual(loader.count("let window = try await requestWindow("), 1)
+        self.assertNotIn("requestedMediaFilters", loader)
+        self.assertNotIn("requestedMediaFilters.isDisjoint", loader)
+        self.assertIn(
+            "normalizeCullingMediaFilters(for: cullingMediaFilterControls)",
+            model,
+        )
+        reset = model.split("private func resetFixtureScopedViewState()", 1)[1].split(
+            "func refreshVisibleFixtureSurface", 1
+        )[0]
+        apply_filters = model.split("func applyCullingFilters", 1)[1].split(
+            "func scheduleCullingSearchRefresh", 1
+        )[0]
+        self.assertIn("fixtureCullingMediaAvailability = nil", reset)
+        self.assertNotIn("fixtureCullingMediaAvailability = nil", apply_filters)
+        self.assertNotIn("window.items.count(where:", model)
+
     def test_backstage_release_requires_a_stable_signing_identity(self):
         build_script = (
             NATIVE / "scripts" / "build-app.zsh"
@@ -617,6 +752,13 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(
             "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
             build_script,
+        )
+        self.assertIn('if [[ -e "$app" || -L "$app" ]]', build_script)
+        self.assertIn('if [[ -L "$app" || ! -d "$app" ]]', build_script)
+        self.assertIn('chmod -R u+w "$app"', build_script)
+        self.assertLess(
+            build_script.index('chmod -R u+w "$app"'),
+            build_script.index('rm -rf "$app"'),
         )
 
     def test_backstage_and_bridge_release_metadata_stay_in_lockstep(self):
@@ -633,12 +775,15 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "219.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "77")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "226.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "89")
         self.assertEqual(value("PBE_BACKSTAGE_VERSION"), value("PBE_PHOTOS_BRIDGE_VERSION"))
         self.assertEqual(value("PBE_BACKSTAGE_BUILD"), value("PBE_PHOTOS_BRIDGE_BUILD"))
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn('source "$release_metadata"', bridge_installer)
+        self.assertIn("PBE_BACKSTAGE_INFO_PLIST", bridge_installer)
+        self.assertIn("PBEPhotosBridgeVersion", bridge_installer)
+        self.assertIn("PBEPhotosBridgeBuild", bridge_installer)
         self.assertIn("PBEPhotosBridgeVersion", build_script)
         self.assertIn("PBEPhotosBridgeBuild", build_script)
         self.assertNotIn("SIDECAR_VERSION", build_script)
@@ -653,6 +798,46 @@ class NativeCullingParityTest(unittest.TestCase):
             'identifier "com.photosbyelie.backstage"',
             build_script,
         )
+        self.assertIn('identity="${PBE_CODESIGN_IDENTITY:-}"', bridge_installer)
+        self.assertIn("Developer ID Application:", bridge_installer)
+        self.assertIn("Apple Development:", bridge_installer)
+        self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', bridge_installer)
+        self.assertIn(
+            "Photos Bridge installation is blocked because ad-hoc rebuilds can lose Photos and Keychain authorization.",
+            bridge_installer,
+        )
+        self.assertIn("--options runtime --sign", bridge_installer)
+        self.assertIn("Signature=adhoc", bridge_installer)
+
+    def test_bridge_installer_refuses_a_silent_downgrade(self):
+        installer = ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            app = Path(temporary_directory) / "PhotosByElie Photos Bridge.app"
+            contents = app / "Contents"
+            contents.mkdir(parents=True)
+            marker = contents / "must-survive"
+            marker.write_text("newer helper\n", encoding="utf-8")
+            with (contents / "Info.plist").open("wb") as handle:
+                plistlib.dump(
+                    {
+                        "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
+                        "CFBundleShortVersionString": "999.0",
+                        "CFBundleVersion": "999",
+                    },
+                    handle,
+                )
+
+            result = subprocess.run(
+                ["zsh", str(installer), "--app-dir", str(app)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Preserved newer Photos Bridge 999.0 build 999", result.stdout)
+            self.assertEqual(marker.read_text(encoding="utf-8"), "newer helper\n")
 
     def test_backstage_control_cli_is_structured_and_does_not_use_cua(self):
         control = (
@@ -683,7 +868,11 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, control)
         self.assertIn('arguments.first == "--control"', launcher)
         self.assertIn("Darwin.exit(exitCode)", launcher)
-        self.assertIn('exec "$executable" --control "$@"', wrapper)
+        self.assertIn("/usr/bin/open -n -j", wrapper)
+        self.assertIn('--args --control "$@"', wrapper)
+        self.assertIn('--stdout "$stdout_path"', wrapper)
+        self.assertIn('payload.get("ok") is True', wrapper)
+        self.assertNotIn('exec "$executable" --control', wrapper)
         self.assertIn("scripts/backstage-control.zsh health --pretty", docs)
         self.assertNotIn("AXUIElement", control)
         self.assertNotIn("CGEvent", control)
@@ -699,8 +888,25 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = source.split("struct CullingView", 1)[1].split(
             "private struct CullingAssetCard", 1
         )[0]
+        feedback = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageFeedbackView.swift"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("await model.refreshPhotos()", culling)
+        self.assertIn("struct BackstageFeedbackView: View", feedback)
+        self.assertIn('.accessibilityLabel(isWorking ? "Working. ', feedback)
+        self.assertIn("BackstageFeedbackView(", culling)
+        self.assertIn(
+            "isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex",
+            culling,
+        )
+        self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
+        self.assertIn("guard !isLoadingPhotos else { return }", model_source)
+        self.assertIn('Text("Refreshing previews…")', culling)
+        self.assertIn('"Refreshing Photos previews" : "Refresh Photos previews"', culling)
         self.assertNotIn("await model.refreshPhotosAndRecentIndex()", culling)
         self.assertNotIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
         self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)
@@ -711,6 +917,105 @@ class NativeCullingParityTest(unittest.TestCase):
             culling.index("await model.refreshPhotos()"),
             culling.index("await model.loadFixtureCullingWindow()"),
         )
+
+    def test_shared_feedback_surface_is_adopted_by_review_and_upload_headers(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        upload = (source_dir / "UploadHeaderView.swift").read_text(encoding="utf-8")
+
+        self.assertIn("BackstageFeedbackView(", review)
+        self.assertIn("message: model.aiProposalStatus", review)
+        self.assertIn(
+            "isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true",
+            review,
+        )
+        self.assertNotIn("Text(model.aiProposalStatus)", review)
+
+        self.assertIn("BackstageFeedbackView(", upload)
+        self.assertIn("message: model.nativeUploadStatus", upload)
+        self.assertIn(
+            "isWorking: model.isRunningDelivery || model.isRunningNativePublication",
+            upload,
+        )
+        self.assertNotIn("Text(model.nativeUploadStatus)", upload)
+
+    def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+
+        expected_feedback = {
+            "authenticationStatus": "model.isAuthenticating",
+            "deliveryStatus": "model.isRunningDelivery",
+            "r2ReconciliationStatus": "model.isRunningR2Reconciliation",
+            "lifecycleStatus": "model.isRunningLifecycle",
+            "fixturePolicyStatus": "model.isLoadingFixturePolicy",
+            "fixtureSnapshotStatus": "model.isRunningFixtureSnapshotOperation",
+            "accessStatus": "model.isRunningAccess",
+            "photosSyncStatus": "model.isSyncingPhotos",
+            "metadataModelLadderStatus": "model.isSavingMetadataModelLadder",
+            "metadataStatus": "model.isRunningMetadata",
+        }
+        for status, flag in expected_feedback.items():
+            self.assertIn("BackstageFeedbackView(", app)
+            self.assertIn(f"message: model.{status}", app)
+            self.assertIn(f"isWorking: {flag}", app)
+            self.assertNotIn(f"Text(model.{status})", app)
+
+        self.assertIn(
+            'message: model.isLoadingFixtureTree ? "Loading fixture tree…" : model.fixtureStatus',
+            app,
+        )
+        self.assertNotIn("Text(model.fixtureStatus)", app)
+
+        for status in ("metadataReviewStatus", "metadataProposalStatus"):
+            self.assertIn("BackstageFeedbackView(", app)
+            self.assertIn(f"message: model.{status}", app)
+            self.assertNotIn(f"Text(model.{status})", app)
+
+        for flag in (
+            "model.isRunningFixture",
+            "model.isSearchingFixtureAssets",
+            "model.isRunningFixtureSnapshotOperation",
+            "model.isLoadingFixturePolicy",
+        ):
+            self.assertIn(flag, app)
+
+    def test_shared_feedback_surface_is_adopted_by_remaining_workflow_surfaces(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        upload = (source_dir / "UploadView.swift").read_text(encoding="utf-8")
+        picker = (source_dir / "FixturePicker.swift").read_text(encoding="utf-8")
+
+        self.assertIn("BackstageFeedbackView(", culling)
+        self.assertIn("message: model.cullingStatus", culling)
+        for flag in (
+            "model.isLoadingFixtureCulling",
+            "model.isLoadingCullingDecisions",
+            "model.isApplyingCullingDecision",
+            "model.isLoadingPreview",
+        ):
+            self.assertIn(flag, culling)
+        self.assertNotIn("Text(model.cullingStatus)", culling)
+
+        self.assertGreaterEqual(review.count("message: model.reviewStatus"), 2)
+        self.assertGreaterEqual(review.count("BackstageFeedbackView("), 2)
+        self.assertIn(
+            "isWorking: model.isRunningReview || model.isRunningAIPass",
+            review,
+        )
+        self.assertNotIn("Text(model.reviewStatus)", review)
+
+        self.assertIn("BackstageFeedbackView(", upload)
+        self.assertIn("message: model.uploadRecoveryStatus", upload)
+        self.assertIn("isWorking: model.isRunningDelivery", upload)
+        self.assertNotIn("Text(model.uploadRecoveryStatus)", upload)
+
+        self.assertIn("BackstageFeedbackView(", picker)
+        self.assertIn("message: model.pbeOwnerSessionStatus", picker)
+        self.assertIn("isWorking: model.isLaunchingPBEOwner", picker)
+        self.assertNotIn("Text(model.pbeOwnerSessionStatus)", picker)
 
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
@@ -983,12 +1288,19 @@ class NativeCullingParityTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("Task.sleep(for: .milliseconds(500))", hover_help)
-        self.assertIn(".overlay(alignment: .bottom)", hover_help)
-        self.assertIn("Group {", hover_help)
+        self.assertIn("BackstageTooltipPlacement", hover_help)
+        self.assertIn("NSPanel", hover_help)
+        self.assertIn("window.addChildWindow(panel, ordered: .above)", hover_help)
+        self.assertIn("NSWindow.didResizeNotification", hover_help)
+        self.assertIn("NSView.boundsDidChangeNotification", hover_help)
+        self.assertIn("maximumContentHeight", hover_help)
+        self.assertIn("maximumLineCount", hover_help)
+        self.assertIn(".truncationMode(.tail)", hover_help)
         self.assertIn(".allowsHitTesting(false)", hover_help)
-        self.assertIn(".frame(width: 280, alignment: .leading)", hover_help)
+        self.assertIn("panel.ignoresMouseEvents = true", hover_help)
         self.assertNotIn(".popover(", hover_help)
         self.assertIn(".accessibilityHint(explanation)", hover_help)
+        self.assertIn(".accessibilityLabel(explanation)", hover_help)
 
     def test_upload_preview_hides_current_item_and_advances(self):
         ui = backstage_ui_source()

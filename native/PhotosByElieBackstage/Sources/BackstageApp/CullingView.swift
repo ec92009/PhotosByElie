@@ -156,15 +156,19 @@ struct CullingView: View {
 
     var body: some View {
         GeometryReader { viewport in
+            let topInset = viewport.safeAreaInsets.top
+            let bottomInset = viewport.safeAreaInsets.bottom
+
             HSplitView {
                 cullingWorkspacePane
                 cullingPreviewPane
             }
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
-            .padding(.top, viewport.safeAreaInsets.top)
+            .padding(.top, topInset)
+            .padding(.bottom, bottomInset)
             .frame(
                 width: viewport.size.width,
-                height: max(0, viewport.size.height - viewport.safeAreaInsets.top),
+                height: max(0, viewport.size.height - topInset - bottomInset),
                 alignment: .top
             )
         }
@@ -190,20 +194,28 @@ struct CullingView: View {
         VStack(alignment: .leading, spacing: 12) {
             cullingHeader
             cullingGrid
-            cullingActions
         }
         .padding()
         .frame(minWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
+        // The footer owns the action, status, and keyboard-help copy. The inset
+        // reserves its height from the grid so resizing cannot cover it.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                cullingActions
+            }
+            .padding(.top, 8)
+        }
     }
 
     private var cullingHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             cullingTitleBar
-            Text(model.photoStatus)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            BackstageFeedbackView(
+                message: model.photoStatus,
+                isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex
+            )
             CullingSearchControls(model: model)
             cullingFilterControls
             cullingSummary
@@ -232,18 +244,6 @@ struct CullingView: View {
 
     private var cullingFilterControls: some View {
         FlowLayout(spacing: 8) {
-            Text("Media").font(.caption.weight(.semibold))
-            ForEach(CullingMediaFilter.selectableCases, id: \.self) { filter in
-                Toggle(
-                    filter.label,
-                    isOn: Binding(
-                        get: { model.cullingMediaFilters.contains(filter) },
-                        set: { _ in model.toggleCullingMediaFilter(filter) }
-                    )
-                )
-                .toggleStyle(.checkbox)
-            }
-            Divider().frame(width: 1, height: 18)
             Text("Status").font(.caption.weight(.semibold))
             ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
                 Toggle(
@@ -276,12 +276,11 @@ struct CullingView: View {
                 }
             }
             Button("Clear filters") { model.clearCullingFilters() }
-                .backstageHelp("Restore the default Culling media, status, rating, color, and search filters.")
+                .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
         }
-        .onChange(of: model.cullingMediaFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingColorFilters) { _, _ in model.applyCullingFilters() }
@@ -360,7 +359,7 @@ struct CullingView: View {
                 )
                 .modifier(CullingDisplayKeyCommands(model: model))
         }
-        .frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
         .layoutPriority(1)
     }
@@ -400,6 +399,14 @@ struct CullingView: View {
                     asset: asset,
                     state: model.cullingStates[asset.id],
                     thumbnail: model.cullingThumbnails[asset.id],
+                    thumbnailFailure: model.cullingThumbnailFailures[asset.id],
+                    onRetryThumbnail: { model.retryThumbnail(for: asset.id) },
+                    onAllowPhotos: {
+                        Task {
+                            await model.authorizeAndLoadPhotos()
+                            model.retryThumbnail(for: asset.id)
+                        }
+                    },
                     isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
                     isFocused: model.cullingSelection.focusedID == asset.id,
                     usesFill: model.cullingUsesFill
@@ -471,9 +478,13 @@ struct CullingView: View {
             cullingDestinationActions
             cullingDecisionActions
             cullingHistoryActions
-            Text(model.cullingStatus)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.cullingStatus,
+                isWorking: model.isLoadingFixtureCulling
+                    || model.isLoadingCullingDecisions
+                    || model.isApplyingCullingDecision
+                    || model.isLoadingPreview
+            )
             cullingOperationProgress
             Text("Shortcuts: P include in fixture • H exclude from fixture • X move to recoverable Waste Basket • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
@@ -689,15 +700,28 @@ struct CullingView: View {
                 Task { await model.authorizeAndLoadPhotos() }
             }
             .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
-            Button("Refresh previews") {
+            Button {
                 Task {
                     await model.refreshPhotos()
                     if !model.selectedFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
                 }
+            } label: {
+                if model.isLoadingPhotos {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Refreshing previews…")
+                    }
+                } else {
+                    Text("Refresh previews")
+                }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .accessibilityLabel(
+                model.isLoadingPhotos ? "Refreshing Photos previews" : "Refresh Photos previews"
+            )
             .backstageHelp("Refresh local Photos previews and then reload the active fixture Culling window.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
@@ -888,6 +912,9 @@ private struct CullingAssetCard: View {
     var asset: FixtureAsset
     var state: SidecarDecisionState?
     var thumbnail: NSImage?
+    var thumbnailFailure: CullingThumbnailFailure?
+    var onRetryThumbnail: () -> Void
+    var onAllowPhotos: () -> Void
     var isSelected: Bool
     var isFocused: Bool
     var usesFill: Bool
@@ -899,10 +926,46 @@ private struct CullingAssetCard: View {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: usesFill ? .fill : .fit)
+                } else if let thumbnailFailure {
+                    VStack(spacing: 5) {
+                        Image(systemName: thumbnailFailure.systemImage)
+                            .font(.title2)
+                        Text(thumbnailFailure.title)
+                            .font(.caption2.weight(.semibold))
+                        Text(thumbnailFailure.detail)
+                            .font(.caption2)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                        Button(thumbnailFailure.actionTitle) {
+                            if thumbnailFailure.offersPhotosAccess {
+                                onAllowPhotos()
+                            } else {
+                                onRetryThumbnail()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .backstageHelp(
+                            thumbnailFailure.offersPhotosAccess
+                                ? "Request Photos permission for Backstage, then retry this thumbnail."
+                                : "Retry loading this individual Photos thumbnail without changing its culling decision."
+                        )
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "\(thumbnailFailure.title). \(thumbnailFailure.detail)"
+                    )
                 } else {
-                    Image(systemName: asset.mediaType == "video" ? "video" : "photo")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 5) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Loading preview…")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(maxWidth: .infinity)

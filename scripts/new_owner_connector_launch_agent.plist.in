@@ -21,6 +21,12 @@
   <dict>
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PBE_CONNECTOR_DATA_ROOT</key>
+    <string>__REPO_ROOT__</string>
+    <key>PBE_CONNECTOR_RUNTIME_ROOT</key>
+    <string>__RUNTIME_ROOT__</string>
+    <key>PYTHONDONTWRITEBYTECODE</key>
+    <string>1</string>
   </dict>
   <key>StandardOutPath</key>
   <string>__STDOUT__</string>

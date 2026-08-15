@@ -1,7 +1,18 @@
 ((async () => {
-await window.photosByElieCatalogReady;
-await window.photosByElieSharedGalleryReady;
-await window.photosByElieHiddenActionsReady;
+const params = new URLSearchParams(window.location.search);
+const requestedCollectionKey = String(params.get("gallery") || "").trim().toLowerCase();
+const isRequestedPBEOwnerCollection = requestedCollectionKey === "pbe-owner";
+if (isRequestedPBEOwnerCollection) {
+  document.body.dataset.gallery = "pbe-owner";
+  if (!document.head.querySelector('meta[name="robots"]')) {
+    const robots = document.createElement("meta");
+    robots.name = "robots";
+    robots.content = "noindex,nofollow";
+    document.head.append(robots);
+  }
+}
+if (typeof window.photosByEliePageReady !== "function") throw new Error("Photo readiness is unavailable.");
+await window.photosByEliePageReady();
 if (window.photosByElieReserve?.enabled) {
   await window.photosByElieReserve.load();
 }
@@ -19,7 +30,6 @@ const formatMoney = (value) => {
     maximumFractionDigits: 2,
   }).format(amount);
 };
-const params = new URLSearchParams(window.location.search);
 const requestedPhotoId = params.get("id") || "";
 const photoId = requestedPhotoId || "france-1";
 const ownerReviewDetailPhotoStateKey = "photosbyelie-owner-review-detail-photo";
@@ -46,7 +56,6 @@ const hiddenCollections = window.photosByElieHiddenData || {};
 const fallbackCollection = Object.values(collections).find((collection) => Array.isArray(collection.photos) && collection.photos.length)
   || collections.france
   || { title: "Gallery", accent: "", photos: [] };
-const requestedCollectionKey = String(params.get("gallery") || "").trim().toLowerCase();
 const requestedCollectionEntry = requestedCollectionKey && collections[requestedCollectionKey]?.photos?.some((photo) => photo.id === photoId)
   ? [requestedCollectionKey, collections[requestedCollectionKey]]
   : null;
@@ -1166,4 +1175,22 @@ if (!ownerDetailPurchaseHidden) {
   updateTotal();
 }
 }
-})());
+})()).catch((error) => {
+  const requestedCollectionKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+  const isPBEOwnerFailure = requestedCollectionKey === "pbe-owner";
+  if (isPBEOwnerFailure) document.body.dataset.gallery = "pbe-owner";
+  document.querySelector("[data-photo-preview]")?.setAttribute("hidden", "");
+  document.querySelector(".purchase-panel")?.setAttribute("hidden", "");
+  document.querySelector("[data-detail-shortcut-hint]")?.setAttribute("hidden", "");
+  const message = error?.message || (isPBEOwnerFailure ? "PBE Owner session is unavailable." : "Could not load photo.");
+  const meta = document.querySelector("[data-photo-meta]");
+  if (meta) {
+    meta.removeAttribute("data-i18n");
+    meta.textContent = isPBEOwnerFailure ? "PBE Owner unavailable" : "Photo unavailable";
+  }
+  const title = document.querySelector("[data-photo-title]");
+  if (title) {
+    title.removeAttribute("data-i18n");
+    title.textContent = message;
+  }
+});

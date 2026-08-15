@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import date, datetime, timezone
+from functools import partial
 import hashlib
 import os
 import ipaddress
 import json
 import mimetypes
+import plistlib
 import re
 import signal
 import shutil
@@ -123,6 +125,9 @@ LIFECYCLE_WRITING_ACTIONS = frozenset({
     "waste-basket-x", "waste-basket-x-many", "waste-basket-restore",
     "waste-basket-empty", "waste-basket-tombstone-restore",
 })
+CONNECTOR_RUNTIME_ROOT = Path(
+    os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
+).expanduser().resolve()
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -147,6 +152,7 @@ APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
+BACKSTAGE_APP = Path.home() / "Applications" / "PhotosByElie Backstage.app"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
     os.environ.get(
@@ -233,6 +239,18 @@ R2_SWEEP_PHASES = {
 }
 
 ADMIN_MACHINE_NAMES_CACHE: list[str] | None = None
+
+
+def _connector_runtime_script(name: str, fallback_root: Path | None = None) -> Path:
+    root = (
+        CONNECTOR_RUNTIME_ROOT
+        if os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", "").strip() or fallback_root is None
+        else fallback_root
+    )
+    candidate = root / "scripts" / name
+    if candidate.is_symlink() or not candidate.is_file():
+        raise RuntimeError(f"Connector runtime script is missing or unsafe: {name}")
+    return candidate
 
 
 def _local_machine_names() -> list[str]:
@@ -1637,7 +1655,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        media_id = unquote(path[len(SOURCE_PREVIEW_PATH):]).strip("/")
+        media_id = _source_preview_media_id_from_path(path)
         query = parse_qs(urlparse(self.path).query)
         info_only = "info" in query
         result = _source_preview_for_media_id(Path.cwd(), media_id)
@@ -2789,7 +2807,7 @@ def _start_requested_ai_pass(repo_root: Path) -> dict:
         process = subprocess.Popen(
             [
                 sys.executable,
-                str(repo_root / "scripts" / "requested_ai_proposal_pass.py"),
+                str(_connector_runtime_script("requested_ai_proposal_pass.py")),
                 "--repo-root",
                 str(repo_root),
                 "--trigger",
@@ -2822,7 +2840,7 @@ def _start_native_publication_run(repo_root: Path, run_id: str) -> dict:
         process = subprocess.Popen(
             [
                 sys.executable,
-                str(repo_root / "scripts" / "native_asset_publication.py"),
+                str(_connector_runtime_script("native_asset_publication.py")),
                 "--repo-root",
                 str(repo_root),
                 "--run-id",
@@ -3927,10 +3945,25 @@ def main() -> int:
     args = parser.parse_args()
     _bootstrap_local_tool_path()
 
-    server = ThreadingHTTPServer((args.bind, args.port), PhotosByElieLocalHandler)
-    server.allow_lan_owner = args.allow_lan_owner
     bootstrap_secret = os.environ.pop("PBE_BACKSTAGE_BOOTSTRAP_SECRET", "")
-    checkout = checkout_identity(Path.cwd()) if bootstrap_secret else ""
+    document_root = Path.cwd().resolve()
+    checkout = ""
+    handler: type[PhotosByElieLocalHandler] | Callable[..., PhotosByElieLocalHandler]
+    if bootstrap_secret:
+        runtime_root = CONNECTOR_RUNTIME_ROOT
+        runtime_script = runtime_root / "scripts/local_server.py"
+        if runtime_script.resolve() != Path(__file__).resolve():
+            raise SystemExit(
+                "Backstage bootstrap runtime does not contain the executing PBE Owner host."
+            )
+        checkout = checkout_identity(runtime_root)
+        document_root = runtime_root
+        handler = partial(PhotosByElieLocalHandler, directory=str(document_root))
+    else:
+        handler = PhotosByElieLocalHandler
+
+    server = ThreadingHTTPServer((args.bind, args.port), handler)
+    server.allow_lan_owner = args.allow_lan_owner
     server.pbe_host_authenticator = PBEOwnerHostAuthenticator(bootstrap_secret, checkout)
     if args.backstage_bootstrap_file:
         if not bootstrap_secret or args.bind != "127.0.0.1":
@@ -7458,6 +7491,69 @@ def _source_preview_photo_from_catalog(repo_root: Path, media_id: str) -> dict |
     }
 
 
+def _source_preview_photo_from_owner_sidecar(repo_root: Path, media_id: str) -> dict | None:
+    """Resolve private Apple Photos identity from the authoritative Owner sidecar.
+
+    PBE Owner fixture rows are intentionally not public-catalog rows.  Their
+    stable asset id is backed by Owner.sqlite and their renderable preview is
+    obtained through the signed Photos Bridge, using the PhotoKit local
+    identifier retained in raw_json.  Keep this lookup metadata-only: the
+    sidecar may describe a source without exposing a filesystem path.
+    """
+    clean_id = str(media_id or "").strip()
+    if not clean_id:
+        return None
+    try:
+        conn = _connect_owner_sqlite_readonly(repo_root)
+        try:
+            row = conn.execute(
+                """
+                SELECT asset_id, source_anchor, media_type, filename,
+                       photos_title, metadata_seed_title, raw_json
+                FROM sidecar_assets
+                WHERE asset_id = ?
+                LIMIT 1
+                """,
+                (clean_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    except (FileNotFoundError, sqlite3.Error):
+        return None
+    if row is None:
+        return None
+
+    try:
+        raw = json.loads(str(row["raw_json"] or "{}"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    source_anchor = str(row["source_anchor"] or "").strip()
+    photo_library_identifier = str(raw.get("localIdentifier") or "").strip()
+    if not photo_library_identifier and source_anchor.startswith("apple-photos://"):
+        photo_library_identifier = source_anchor.removeprefix("apple-photos://").strip()
+    if not photo_library_identifier:
+        photo_library_identifier = clean_id
+    media_type = str(row["media_type"] or raw.get("mediaType") or "photo").strip().lower() or "photo"
+    filename = str(row["filename"] or raw.get("preferredResourceFilename") or "").strip()
+    title = str(
+        row["photos_title"]
+        or row["metadata_seed_title"]
+        or raw.get("title")
+        or filename
+        or clean_id
+    ).strip() or clean_id
+    return {
+        "id": clean_id,
+        "title": title,
+        "media": {"type": media_type},
+        "sourceFiles": [{"label": filename, "type": "APPLE_PHOTOS"}] if filename else [],
+        "photoLibraryIdentifier": photo_library_identifier,
+        "sourcePreviewBridge": True,
+    }
+
+
 def _source_preview_cache_path(source: Path) -> Path:
     stat = source.stat()
     digest = hashlib.sha256(
@@ -7465,6 +7561,101 @@ def _source_preview_cache_path(source: Path) -> Path:
     ).hexdigest()[:20]
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source.stem).strip("-._") or "source"
     return SOURCE_PREVIEW_CACHE_ROOT / f"{stem}-{digest}.jpg"
+
+
+def _source_preview_media_id_from_path(path: str) -> str:
+    """Decode the media id without trimming meaningful trailing slashes."""
+    encoded_path = str(path or "")
+    if not encoded_path.startswith(SOURCE_PREVIEW_PATH):
+        return ""
+    return unquote(encoded_path[len(SOURCE_PREVIEW_PATH):])
+
+
+def _owner_source_preview_cache_path(repo_root: Path, media_id: str) -> Path:
+    digest = hashlib.sha256(str(media_id).encode("utf-8")).hexdigest()[:32]
+    return repo_root / SOURCE_PREVIEW_CACHE_ROOT / f"apple-photos-{digest}.jpg"
+
+
+def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict:
+    if media_type == "video":
+        return _source_preview_error(
+            HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+            media_id,
+            media_type,
+            "Apple Photos PhotoKit preview",
+            str(photo.get("title") or media_id),
+            "Apple Photos previews are available for still images only.",
+        )
+    cache_path = _owner_source_preview_cache_path(repo_root, media_id)
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return {
+            "ok": True,
+            "mediaId": media_id,
+            "mediaType": "photo",
+            "sourceType": "Apple Photos PhotoKit preview",
+            "sourceLabel": str(photo.get("title") or media_id),
+            "path": str(cache_path),
+            "contentType": "image/jpeg",
+            "isOriginal": False,
+        }
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = cache_path.with_name(f".{cache_path.name}.{uuid.uuid4().hex}.tmp")
+    bridge_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
+    try:
+        result = _run_apple_photos_bridge(
+            repo_root,
+            [
+                "preview",
+                "--asset-id",
+                bridge_identifier,
+                "--destination",
+                str(temporary_path),
+                "--max-pixel",
+                "900",
+            ],
+        )
+        if not isinstance(result, dict) or not result.get("ok"):
+            message = str((result or {}).get("error") or "Photos Bridge did not return a preview.")
+            return _source_preview_error(
+                HTTPStatus.BAD_GATEWAY,
+                media_id,
+                media_type,
+                "Apple Photos PhotoKit preview",
+                str(photo.get("title") or media_id),
+                message,
+            )
+        if not temporary_path.exists() or temporary_path.stat().st_size <= 0:
+            return _source_preview_error(
+                HTTPStatus.BAD_GATEWAY,
+                media_id,
+                media_type,
+                "Apple Photos PhotoKit preview",
+                str(photo.get("title") or media_id),
+                "Photos Bridge reported success without producing a preview file.",
+            )
+        temporary_path.replace(cache_path)
+        return {
+            "ok": True,
+            "mediaId": media_id,
+            "mediaType": "photo",
+            "sourceType": "Apple Photos PhotoKit preview",
+            "sourceLabel": str(photo.get("title") or media_id),
+            "path": str(cache_path),
+            "contentType": "image/jpeg",
+            "isOriginal": False,
+        }
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        return _source_preview_error(
+            HTTPStatus.BAD_GATEWAY,
+            media_id,
+            media_type,
+            "Apple Photos PhotoKit preview",
+            str(photo.get("title") or media_id),
+            str(error),
+        )
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _source_preview_public_fallback(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict | None:
@@ -7824,6 +8015,8 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
         return _source_preview_error(HTTPStatus.BAD_REQUEST, clean_id, "photo", "source/full", "", "missing media id")
     photo = _source_preview_photo_from_catalog(repo_root, clean_id)
     if not photo:
+        photo = _source_preview_photo_from_owner_sidecar(repo_root, clean_id)
+    if not photo:
         return _source_preview_error(
             HTTPStatus.NOT_FOUND,
             clean_id,
@@ -7841,6 +8034,8 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
         fallback = _source_preview_public_fallback(repo_root, photo, clean_id, media_type)
         if fallback:
             return fallback
+        if photo.get("sourcePreviewBridge"):
+            return _apple_photos_source_preview(repo_root, photo, clean_id, media_type)
         return _source_preview_error(
             HTTPStatus.NOT_FOUND,
             clean_id,
@@ -10293,15 +10488,36 @@ def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], prog
     return payload
 
 
+def _bundle_release(app: Path, expected_identifier: str) -> tuple[tuple[int, ...], int] | None:
+    try:
+        with (app / "Contents" / "Info.plist").open("rb") as handle:
+            info = plistlib.load(handle)
+        if info.get("CFBundleIdentifier") != expected_identifier:
+            return None
+        version = tuple(int(part) for part in str(info["CFBundleShortVersionString"]).split("."))
+        build = int(str(info["CFBundleVersion"]))
+    except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException):
+        return None
+    return version, build
+
+
+def _installed_bridge_satisfies_backstage_release() -> bool:
+    bridge = _bundle_release(APPLE_PHOTOS_BRIDGE_APP, "com.photosbyelie.photos-bridge")
+    backstage = _bundle_release(BACKSTAGE_APP, "com.photosbyelie.backstage")
+    return bridge is not None and backstage is not None and bridge >= backstage
+
+
 def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
-    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    installer = _connector_runtime_script(APPLE_PHOTOS_BRIDGE_APP_INSTALLER.name, repo_root)
+    bridge_source = _connector_runtime_script(APPLE_PHOTOS_BRIDGE.name, repo_root)
     if not installer.exists():
         raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
     if not bridge_source.exists():
         raise RuntimeError(f"Apple Photos bridge is missing: {bridge_source}")
     needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
     if not needs_build:
+        if _installed_bridge_satisfies_backstage_release():
+            return
         try:
             installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
                 encoding="utf-8"

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -12,7 +13,9 @@ import time
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
+REPO_ROOT = Path(
+    os.environ.get("PBE_CONNECTOR_DATA_ROOT", str(SCRIPT_DIR.parent))
+).expanduser().resolve()
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 

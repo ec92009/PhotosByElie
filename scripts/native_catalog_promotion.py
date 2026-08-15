@@ -327,12 +327,13 @@ def nominatim_collection_lookup(query: str) -> dict[str, Any]:
         wait_for = max(0.0, 1.0 - (time.monotonic() - _NOMINATIM_LAST_REQUEST_AT))
         if wait_for:
             time.sleep(wait_for)
-        request_url = f"{NOMINATIM_SEARCH_URL}?{urlencode({
+        request_params = urlencode({
             'q': clean_query,
             'format': 'jsonv2',
             'addressdetails': '1',
             'limit': '5',
-        })}"
+        })
+        request_url = f"{NOMINATIM_SEARCH_URL}?{request_params}"
         request = Request(request_url, headers={"User-Agent": NOMINATIM_USER_AGENT})
         _NOMINATIM_LAST_REQUEST_AT = time.monotonic()
         try:

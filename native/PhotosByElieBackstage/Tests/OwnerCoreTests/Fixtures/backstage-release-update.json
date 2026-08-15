@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "product": "PhotosByElie Backstage",
+  "bundleIdentifier": "com.photosbyelie.backstage",
+  "version": "219.2",
+  "build": "78",
+  "minimumOSVersion": "14.0",
+  "releaseNotes": "Synthetic fixture release for deterministic updater tests.",
+  "artifactFormat": "zip",
+  "downloadURL": "https://updates.test/photosbyelie/backstage-219.2-78.zip",
+  "fileSize": 17,
+  "sha256": "87c87f4215e4860bffd0ebd8bdf643a4364da28f9ed352bf4deae8077e50609f",
+  "trust": {
+    "teamIdentifier": "TESTTEAM",
+    "signingIdentity": "Developer ID Application: PhotosByElie Test (TESTTEAM)",
+    "designatedRequirement": "identifier \"com.photosbyelie.backstage\""
+  }
+}

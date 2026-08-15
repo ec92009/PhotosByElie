@@ -1,5 +1,6 @@
 import hashlib
 import json
+import plistlib
 import sqlite3
 import subprocess
 import sys
@@ -267,9 +268,25 @@ class IndexedWindowTest(unittest.TestCase):
 
 
 class PhotosBridgeLaunchTest(unittest.TestCase):
+    @staticmethod
+    def write_bundle_info(app: Path, identifier: str, version: str, build: str) -> None:
+        info = app / "Contents" / "Info.plist"
+        info.parent.mkdir(parents=True, exist_ok=True)
+        with info.open("wb") as handle:
+            plistlib.dump(
+                {
+                    "CFBundleIdentifier": identifier,
+                    "CFBundleShortVersionString": version,
+                    "CFBundleVersion": build,
+                },
+                handle,
+            )
+
     def test_helper_rebuilds_when_source_fingerprint_is_missing_or_stale(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
+            bridge_app = repo_root / "PhotosByElie Photos Bridge.app"
+            backstage_app = repo_root / "PhotosByElie Backstage.app"
             source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
             installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
             source.parent.mkdir(parents=True, exist_ok=True)
@@ -277,6 +294,14 @@ class PhotosBridgeLaunchTest(unittest.TestCase):
             installer.write_text("#!/bin/zsh\n", encoding="utf-8")
 
             with patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP",
+                bridge_app,
+            ), patch.object(
+                sidecar_server,
+                "BACKSTAGE_APP",
+                backstage_app,
+            ), patch.object(
                 sidecar_server,
                 "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE",
                 repo_root / "installed-helper",
@@ -296,6 +321,8 @@ class PhotosBridgeLaunchTest(unittest.TestCase):
     def test_helper_is_reused_when_source_fingerprint_matches(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
+            bridge_app = repo_root / "PhotosByElie Photos Bridge.app"
+            backstage_app = repo_root / "PhotosByElie Backstage.app"
             source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
             installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
             source.parent.mkdir(parents=True, exist_ok=True)
@@ -304,6 +331,14 @@ class PhotosBridgeLaunchTest(unittest.TestCase):
             fingerprint = hashlib.sha256(source.read_bytes()).hexdigest()
 
             with patch.object(
+                sidecar_server,
+                "APPLE_PHOTOS_BRIDGE_APP",
+                bridge_app,
+            ), patch.object(
+                sidecar_server,
+                "BACKSTAGE_APP",
+                backstage_app,
+            ), patch.object(
                 sidecar_server,
                 "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE",
                 repo_root / "installed-helper",
@@ -318,6 +353,63 @@ class PhotosBridgeLaunchTest(unittest.TestCase):
                 sidecar_server._ensure_apple_photos_bridge_app(repo_root)
 
             install.assert_not_called()
+
+    def test_matching_release_is_not_rebuilt_by_a_stale_connector_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            bridge_app = repo_root / "PhotosByElie Photos Bridge.app"
+            backstage_app = repo_root / "PhotosByElie Backstage.app"
+            executable = bridge_app / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
+            fingerprint = bridge_app / "Contents" / "Resources" / "BridgeSource.sha256"
+            source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
+            installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("stale connector bridge source", encoding="utf-8")
+            installer.write_text("#!/bin/zsh\n", encoding="utf-8")
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            executable.write_text("binary", encoding="utf-8")
+            fingerprint.parent.mkdir(parents=True, exist_ok=True)
+            fingerprint.write_text("different", encoding="utf-8")
+            self.write_bundle_info(bridge_app, "com.photosbyelie.photos-bridge", "226.0", "88")
+            self.write_bundle_info(backstage_app, "com.photosbyelie.backstage", "226.0", "88")
+
+            with patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP", bridge_app), \
+                 patch.object(sidecar_server, "BACKSTAGE_APP", backstage_app), \
+                 patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE", executable), \
+                 patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT", fingerprint), \
+                 patch.object(sidecar_server.subprocess, "run") as install:
+                sidecar_server._ensure_apple_photos_bridge_app(repo_root)
+
+            install.assert_not_called()
+
+    def test_older_helper_is_rebuilt_for_the_installed_backstage_release(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            bridge_app = repo_root / "PhotosByElie Photos Bridge.app"
+            backstage_app = repo_root / "PhotosByElie Backstage.app"
+            executable = bridge_app / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
+            fingerprint = bridge_app / "Contents" / "Resources" / "BridgeSource.sha256"
+            source = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE
+            installer = repo_root / sidecar_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("current bridge source", encoding="utf-8")
+            installer.write_text("#!/bin/zsh\n", encoding="utf-8")
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            executable.write_text("binary", encoding="utf-8")
+            fingerprint.parent.mkdir(parents=True, exist_ok=True)
+            fingerprint.write_text("different", encoding="utf-8")
+            self.write_bundle_info(bridge_app, "com.photosbyelie.photos-bridge", "141.10", "1")
+            self.write_bundle_info(backstage_app, "com.photosbyelie.backstage", "226.0", "88")
+
+            with patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP", bridge_app), \
+                 patch.object(sidecar_server, "BACKSTAGE_APP", backstage_app), \
+                 patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE", executable), \
+                 patch.object(sidecar_server, "APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT", fingerprint), \
+                 patch.object(sidecar_server.subprocess, "run") as install:
+                install.return_value = subprocess.CompletedProcess([], 0, "", "")
+                sidecar_server._ensure_apple_photos_bridge_app(repo_root)
+
+            install.assert_called_once()
 
     def test_app_task_waits_for_unique_result_file_without_open_wait_mode(self):
         commands = []

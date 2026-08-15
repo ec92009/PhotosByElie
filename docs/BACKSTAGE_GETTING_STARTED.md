@@ -8,7 +8,9 @@ Backstage is currently installed on Max at:
 
 `/Users/ecohen/Applications/PhotosByElie Backstage.app`
 
-The current native workflow is included in version **v219.0 (build 76)**.
+The installed build's exact version and build are shown in the Backstage
+toolbar and in the **Updates** workspace; do not rely on a copied version label
+from an older handoff.
 
 Open it from Finder, Spotlight, or the Applications folder in your Home
 directory.
@@ -66,6 +68,23 @@ during remote acceptance. `photos authorize` is the explicit exception: it asks
 PhotoKit to show the standard macOS permission request and reports the result;
 it does not click or automate that prompt. Cloud/photo mutations remain behind
 the existing Owner action and explicit authorization gates.
+
+## Updates
+
+Open **Updates** to see the exact installed bundle identifier, version, and
+build. **Check for updates** reads only the configured authoritative HTTPS
+release manifest. When a newer compatible release is available, Backstage shows
+its version/build, minimum macOS version, release notes, and archive size.
+
+**Download and verify** writes a unique archive below the app cache and checks
+the declared byte count, SHA-256, stable bundle identity, version/build, team,
+signing authority, and designated requirement. A verified archive can be
+revealed in Finder for a separately confirmed manual action. Backstage never
+overwrites or launches the running app and never changes Photos permission,
+connector enrollment, Keychain credentials, Owner SQLite, fixtures, catalog, or
+publication state. If the endpoint is not configured, the release is a
+downgrade/incompatible, or verification fails, the workspace explains the
+blocker and recovery guidance.
 
 ### No-send client-originals preflight API
 

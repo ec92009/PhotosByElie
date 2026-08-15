@@ -44,6 +44,7 @@ AI_SOURCE_ROOT_CANDIDATES = [
     Path("/Volumes/Saturn-1/Pictures/LR/_All Leonardo"),
     Path.home() / "Pictures/LR/_All Leonardo",
 ]
+SCRIPT_ROOT = Path(__file__).resolve().parent
 IMPORT_CACHE_ROOT = Path("tmp/import-cache")
 
 HIDDEN_ASSET_ROOT = Path("assets/hidden")
@@ -52,7 +53,7 @@ DIVERSITY_BUCKET_MINUTES = 10
 
 
 def load_builder(repo_root: Path):
-    script_path = repo_root / "scripts" / "build_lightroom_thumbnails.py"
+    script_path = SCRIPT_ROOT / "build_lightroom_thumbnails.py"
     spec = importlib.util.spec_from_file_location("thumb_builder", script_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -79,7 +80,7 @@ def rebuild_missing_manifests(
     ai_source_root: Path | None = None,
 ) -> list[dict]:
     builder = load_builder(repo_root)
-    script_path = repo_root / "scripts" / "build_lightroom_thumbnails.py"
+    script_path = SCRIPT_ROOT / "build_lightroom_thumbnails.py"
     rebuilt = []
 
     jobs = [

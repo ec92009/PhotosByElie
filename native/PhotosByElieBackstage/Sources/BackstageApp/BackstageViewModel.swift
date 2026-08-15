@@ -53,6 +53,61 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var focusedID: String?
 }
 
+enum CullingThumbnailFailure: Equatable, Sendable {
+    case photosAccess
+    case assetUnavailable
+    case previewUnavailable
+
+    init(error: Error) {
+        guard let photoError = error as? PhotoLibraryError else {
+            self = .previewUnavailable
+            return
+        }
+        switch photoError {
+        case .accessDenied:
+            self = .photosAccess
+        case .assetNotFound, .unsupportedMediaType:
+            self = .assetUnavailable
+        case .resourceNotFound, .previewUnavailable, .exportFailed:
+            self = .previewUnavailable
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .photosAccess: "Photos access needed"
+        case .assetUnavailable: "Photo unavailable"
+        case .previewUnavailable: "Preview unavailable"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .photosAccess:
+            "Choose Allow Photos or grant Full Access in System Settings."
+        case .assetUnavailable:
+            "This asset is not in the current Photos library. Retry after Photos sync completes."
+        case .previewUnavailable:
+            "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .photosAccess: "lock.shield"
+        case .assetUnavailable, .previewUnavailable: "photo.badge.exclamationmark"
+        }
+    }
+
+    var actionTitle: String {
+        self == .photosAccess ? "Allow Photos" : "Retry"
+    }
+
+    var offersPhotosAccess: Bool {
+        self == .photosAccess
+    }
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -67,6 +122,7 @@ final class BackstageViewModel: ObservableObject {
         case uploads = "Uploads"
         case delivery = "Delivery"
         case publication = "Publication"
+        case updates = "Updates"
         var id: String { rawValue }
     }
 
@@ -166,6 +222,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isLoadingFixturePolicy = false
     @Published var cullingPool: FixturePool?
     @Published var fixtureCullingWindow: FixtureCullingWindow?
+    @Published private(set) var fixtureCullingMediaAvailability: FixtureCullingMediaAvailability?
     @Published var cullingViews: Set<FixtureCullingView> = Set(FixtureCullingView.selectableCases)
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
@@ -191,12 +248,13 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
     @Published var cullingSearch = ""
-    @Published var cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+    @Published var cullingMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var cullingRatingFilters = Set(0...5)
     @Published var cullingColorFilters = Set(CullingColorFilter.selectableCases)
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
+    @Published var cullingThumbnailFailures: [String: CullingThumbnailFailure] = [:]
     @Published var isLoadingPreview = false
     @Published var isLoadingCullingDecisions = false
     @Published var cullingDecisionProgress = 0
@@ -207,7 +265,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewMode: FixtureReviewMode = .full
     @Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]
     @Published var reviewProposalAvailableOnly = false
-    @Published var reviewMediaFilters = Set(CullingMediaFilter.selectableCases)
+    @Published var reviewMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var reviewSearch = ""
     @Published var reviewWindowOffset = 0
     @Published var reviewWindowLimit = 200
@@ -278,6 +336,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var deliverableShareLink = ""
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
+    @Published var updateState: BackstageUpdateState = .idle
     @Published var photosBridgeHealth = PhotosBridgeHealth(
         installed: false,
         headless: false,
@@ -303,6 +362,8 @@ final class BackstageViewModel: ObservableObject {
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let photosBridgeHealthService: PhotosBridgeHealthService
+    let updateService: BackstageUpdateService
+    let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
@@ -407,9 +468,12 @@ final class BackstageViewModel: ObservableObject {
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         preferences: UserDefaults = .standard,
         pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
-        openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
+        openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+        updateService: BackstageUpdateService = BackstageUpdateService()
     ) {
         self.preferences = preferences
+        self.updateService = updateService
+        self.installedRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
         )
@@ -501,9 +565,14 @@ final class BackstageViewModel: ObservableObject {
 
     func launchPBEOwner() async {
         guard canLaunchPBEOwner else {
-            pbeOwnerSessionStatus = authentication.phase == .authenticated
-                ? "Choose an available fixture and finish current work before opening PBE Owner."
-                : "Enroll this Mac before opening PBE Owner."
+            switch authentication.phase {
+            case .authenticated:
+                pbeOwnerSessionStatus = "Choose an available fixture and finish current work before opening PBE Owner."
+            case .renewalFailed:
+                pbeOwnerSessionStatus = "Retry this Mac's retained Owner session before opening PBE Owner."
+            case .needsEnrollment, .signedOut:
+                pbeOwnerSessionStatus = "Enroll this Mac before opening PBE Owner."
+            }
             return
         }
         let captured: (fixtureID: String, breadcrumb: String)
@@ -721,11 +790,13 @@ final class BackstageViewModel: ObservableObject {
         cullingWindowRequestSerial += 1
         cullingPool = nil
         fixtureCullingWindow = nil
+        fixtureCullingMediaAvailability = nil
         cullingWindowOffset = 0
         cullingSelection.clear()
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         cullingStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped Culling is unavailable."
             : "Loading \(selectedFixtureBreadcrumb) for Culling…"
@@ -780,8 +851,70 @@ final class BackstageViewModel: ObservableObject {
             await loadDeliverables()
         case .publication:
             await loadPublicationPlan()
+        case .updates:
+            await checkForUpdates()
         case .overview, .activity, .access, .metadata, .wasteBasket:
             break
+        }
+    }
+
+    func checkForUpdates() async {
+        updateState = .checking
+        do {
+            let check = try await updateService.check(current: installedRelease)
+            switch check.availability {
+            case .current:
+                updateState = .current(check.manifest)
+            case .updateAvailable:
+                updateState = .updateAvailable(check.manifest)
+            case .downgradeRejected:
+                updateState = .failed(
+                    message: BackstageUpdateError.downgradeRejected.localizedDescription,
+                    recovery: BackstageUpdateError.downgradeRejected.recoveryGuidance
+                )
+            case .incompatible:
+                let error = BackstageUpdateError.incompatible(
+                    "The cloud release is not compatible with this Backstage installation or Mac."
+                )
+                updateState = .failed(message: error.localizedDescription, recovery: error.recoveryGuidance)
+            }
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.network(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
+        }
+    }
+
+    func downloadVerifiedUpdate() async {
+        guard case let .updateAvailable(manifest) = updateState else { return }
+        updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)
+        do {
+            let verified = try await updateService.downloadAndVerify(
+                current: installedRelease,
+                manifest: manifest
+            ) { [weak self] received, total in
+                Task { @MainActor in
+                    guard let self,
+                          case let .downloading(activeManifest, _, _) = self.updateState,
+                          activeManifest == manifest else { return }
+                    self.updateState = .downloading(
+                        manifest,
+                        receivedBytes: received,
+                        totalBytes: total > 0 ? total : manifest.fileSize
+                    )
+                }
+            }
+            updateState = .verified(verified)
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.downloadFailed(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
         }
     }
 
@@ -796,6 +929,12 @@ final class BackstageViewModel: ObservableObject {
             await refreshActions()
             await loadFixtures()
             await syncPhotosIncrementally()
+        case .renewalFailed:
+            authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
+            status = "Retry Owner session"
+            markFixtureSelectionUnavailable(
+                "Fixtures are unavailable until the saved Owner session renews. This Mac's enrollment is retained."
+            )
         case .needsEnrollment:
             authenticationStatus = "Enroll Backstage from a signed-in Owner browser session."
             status = "Enrollment required"
@@ -865,7 +1004,7 @@ final class BackstageViewModel: ObservableObject {
             status = "Connected"
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 status = userFacingMessage(for: error)
             }
         }
@@ -885,16 +1024,20 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshPhotos() async {
+        guard !isLoadingPhotos else { return }
         photoAccess = photoLibrary.authorization()
         guard [.authorized, .limited].contains(photoAccess) else {
-            photoStatus = "Photos access is required for indexing, preview, and export."
+            photoStatus = "Photos access is required. Choose Allow Photos, then retry Refresh previews."
             return
         }
         isLoadingPhotos = true
+        photoStatus = "Refreshing Photos previews…"
         defer { isLoadingPhotos = false }
         libraryItems = await photoLibrary.fetch(limit: 2_000)
         replaceCullingItems()
-        photoStatus = "\(libraryItems.count.formatted()) recent Photos previews cached."
+        photoStatus = libraryItems.isEmpty
+            ? "Refresh completed with no Photos previews. Try Refresh previews again."
+            : "\(libraryItems.count.formatted()) recent Photos previews cached."
     }
 
     func reconcilePhotosLibraryIndex() async {
@@ -916,7 +1059,7 @@ final class BackstageViewModel: ObservableObject {
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 photoStatus = userFacingMessage(for: error)
             }
         }
@@ -956,7 +1099,7 @@ final class BackstageViewModel: ObservableObject {
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            if status != "Sign in again" {
+            if authentication.phase == .authenticated {
                 photoStatus = userFacingMessage(for: error)
             }
         }
@@ -971,8 +1114,8 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Loading preview…"
         defer { isLoadingPreview = false }
         do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: photoLibraryIdentifier(for: id),
+            let preview = try await previewForAsset(
+                forAssetID: id,
                 maxPixelSize: 1_600
             )
             guard focusedCullingAssetID == id else { return }
@@ -996,32 +1139,46 @@ final class BackstageViewModel: ObservableObject {
 
     func loadThumbnail(for assetID: String) async {
         guard cullingThumbnails[assetID] == nil else { return }
-        let localIdentifier = photoLibraryIdentifier(for: assetID)
+        var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
-                let preview = try await photoLibrary.preview(
-                    localIdentifier: localIdentifier,
+                let preview = try await previewForAsset(
+                    forAssetID: assetID,
                     maxPixelSize: 180
                 )
                 guard let image = NSImage(data: preview.jpegData) else {
+                    lastFailure = .previewUnavailable
                     if attempt < 2 {
                         try? await Task.sleep(for: .milliseconds(180))
                         continue
                     }
-                    return
+                    break
                 }
                 if cullingThumbnails.count >= 300,
                    let oldest = cullingThumbnails.keys.first {
                     cullingThumbnails.removeValue(forKey: oldest)
                 }
                 cullingThumbnails[assetID] = image
+                cullingThumbnailFailures.removeValue(forKey: assetID)
                 return
             } catch {
-                guard !Task.isCancelled, attempt < 2 else { return }
+                lastFailure = CullingThumbnailFailure(error: error)
+                guard !Task.isCancelled, attempt < 2 else { break }
                 try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
             }
         }
+        if !Task.isCancelled {
+            cullingThumbnailFailures[assetID] = lastFailure
+        }
+    }
+
+    func retryThumbnail(for assetID: String) {
+        guard cullingThumbnails[assetID] == nil else { return }
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailFailures.removeValue(forKey: assetID)
+        requestThumbnail(for: assetID)
     }
 
     func exportSelected(to directory: URL) async {
@@ -1087,10 +1244,14 @@ final class BackstageViewModel: ObservableObject {
 
     var cullingAssets: [FixtureAsset] {
         if cullingPool == nil, hasCurrentCullingFixture {
-            return fixtureCullingWindow?.items ?? []
+            return (fixtureCullingWindow?.items ?? []).filter {
+                !$0.mediaType.lowercased().contains("video")
+            }
         }
         if let cullingPool {
-            return cullingPool.assets.map {
+            return cullingPool.assets.filter {
+                !$0.mediaType.lowercased().contains("video")
+            }.map {
                 FixtureAsset(
                     id: $0.id,
                     title: $0.title,
@@ -1099,15 +1260,21 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
         }
-        return libraryItems.map {
+        return libraryItems.filter {
+            !$0.mediaType.lowercased().contains("video")
+        }.map {
             FixtureAsset(id: $0.id, title: "", filename: $0.filename, mediaType: $0.mediaType)
         }
+    }
+
+    var cullingMediaFilterControls: [CullingMediaFilter] {
+        [.photos]
     }
 
     var cullingQuery: CullingQuery {
         CullingQuery(
             search: cullingSearch,
-            media: cullingMediaFilters,
+            media: [.photos],
             pick: Set(cullingViews.map {
                 switch $0 {
                 case .undecided: .undecided
@@ -1119,12 +1286,6 @@ final class BackstageViewModel: ObservableObject {
             ratings: cullingRatingFilters,
             colors: cullingColorFilters
         )
-    }
-
-    var cullingMediaFilterLabel: String {
-        cullingMediaFilters.count == CullingMediaFilter.selectableCases.count
-            ? "All media"
-            : cullingMediaFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
     }
 
     var cullingViewFilterLabel: String {
@@ -1145,10 +1306,6 @@ final class BackstageViewModel: ObservableObject {
         cullingColorFilters.count == CullingColorFilter.selectableCases.count
             ? "All colors"
             : cullingColorFilters.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
-    }
-
-    func toggleCullingMediaFilter(_ filter: CullingMediaFilter) {
-        toggle(filter, in: &cullingMediaFilters)
     }
 
     func toggleCullingViewFilter(_ view: FixtureCullingView) {
@@ -1172,6 +1329,17 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func normalizeCullingMediaFilters(
+        for availableCases: [CullingMediaFilter]
+    ) -> Bool {
+        _ = availableCases
+        let normalized: Set<CullingMediaFilter> = [.photos]
+        guard normalized != cullingMediaFilters else { return false }
+        cullingMediaFilters = normalized
+        return true
+    }
+
     var cullingWorkspace: CullingWorkspaceResult {
         if cullingPool == nil, hasCurrentCullingFixture, let window = fixtureCullingWindow {
             return CullingWorkspaceResult(
@@ -1190,8 +1358,8 @@ final class BackstageViewModel: ObservableObject {
                     undecided: window.summary.undecided,
                     picked: window.summary.picked,
                     rejected: window.summary.hidden,
-                    photos: window.items.count(where: { $0.mediaType != "video" }),
-                    videos: window.items.count(where: { $0.mediaType == "video" })
+                    photos: window.mediaAvailability?.photos ?? 0,
+                    videos: window.mediaAvailability?.videos ?? 0
                 ),
                 offset: window.offset,
                 limit: window.limit
@@ -1308,6 +1476,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func replaceCullingItems() {
+        if cullingPool != nil || !hasCurrentCullingFixture {
+            normalizeCullingMediaFilters(for: cullingMediaFilterControls)
+        }
         cullingSelection.replaceItems(visibleCullingAssets.map(\.id))
         selectedPhotoIDs = cullingSelection.selectedIDs
     }
@@ -1346,7 +1517,7 @@ final class BackstageViewModel: ObservableObject {
 
     func clearCullingFilters() {
         cullingSearch = ""
-        cullingMediaFilters = Set(CullingMediaFilter.selectableCases)
+        cullingMediaFilters = [.photos]
         cullingRatingFilters = Set(0...5)
         cullingColorFilters = Set(CullingColorFilter.selectableCases)
         let allViews = Set(FixtureCullingView.selectableCases)
@@ -1491,10 +1662,12 @@ final class BackstageViewModel: ObservableObject {
         guard let fixturePool else { return }
         cullingPool = fixturePool
         cullingWindowOffset = 0
+        normalizeCullingMediaFilters(for: cullingMediaFilterControls)
         cullingSelection = OwnerSelectionModel(orderedIDs: fixturePool.assets.map(\.id))
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
         selection = .culling
         Task { await refreshCullingDecisions() }
@@ -1503,6 +1676,8 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
+        cullingThumbnails = [:]
+        cullingThumbnailFailures = [:]
         Task { await loadFixtureCullingWindow() }
     }
 
@@ -1529,23 +1704,32 @@ final class BackstageViewModel: ObservableObject {
             }
         }
         do {
-            let mediaTypes = cullingMediaFilters.map {
-                $0 == .videos ? "video" : "photo"
-            }.sorted()
+            let requestedFixtureID = selectedFixtureID
+            let requestedSearch = cullingSearch
             let colors = cullingColorFilters.map(\.rawValue).sorted()
             let views = cullingViews.sorted(by: { $0.rawValue < $1.rawValue })
-            let window = try await fixtureService.cullingWindow(
-                fixtureID: selectedFixtureID,
-                view: views.count == 1 ? views[0] : .allActive,
-                views: views,
-                offset: cullingWindowOffset,
-                limit: cullingWindowLimit,
-                search: cullingSearch,
-                mediaTypes: mediaTypes,
-                ratings: cullingRatingFilters.sorted(),
-                colors: colors
-            )
+            let ratings = cullingRatingFilters.sorted()
+            let requestedOffset = cullingWindowOffset
+            let requestedLimit = cullingWindowLimit
+
+            func requestWindow(offset: Int) async throws -> FixtureCullingWindow {
+                return try await fixtureService.cullingWindow(
+                    fixtureID: requestedFixtureID,
+                    view: views.count == 1 ? views[0] : .allActive,
+                    views: views,
+                    offset: offset,
+                    limit: requestedLimit,
+                    search: requestedSearch,
+                    mediaTypes: ["photo"],
+                    ratings: ratings,
+                    colors: colors
+                )
+            }
+
+            cullingMediaFilters = [.photos]
+            let window = try await requestWindow(offset: requestedOffset)
             guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
+            fixtureCullingMediaAvailability = window.mediaAvailability
             fixtureCullingWindow = window
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
@@ -1607,7 +1791,7 @@ final class BackstageViewModel: ObservableObject {
                 fixtureStatus = "Fixture refresh cancelled; the previous current fixture was preserved."
                 return
             }
-            let reason = "Backstage could not load fixtures because this Mac needs enrollment. Fixture-scoped actions are disabled."
+            let reason = "Fixtures could not load: \(authenticationOperationRecoveryMessage) Fixture-scoped actions are disabled."
             fixtureStatus = reason
             markFixtureSelectionUnavailable(reason)
             return
@@ -2104,19 +2288,6 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
-    func toggleReviewMediaFilter(_ filter: CullingMediaFilter) {
-        preserveCurrentReviewDraft()
-        if reviewMediaFilters.contains(filter) {
-            reviewMediaFilters.remove(filter)
-        } else {
-            reviewMediaFilters.insert(filter)
-        }
-        reviewWindowOffset = 0
-        reviewSelection.clear()
-        clearReviewDraft()
-        Task { await loadFixtureReviewWindow() }
-    }
-
     func moveReviewWindow(forward: Bool) {
         guard let window = fixtureReviewWindow else { return }
         if forward, window.hasNext {
@@ -2149,12 +2320,13 @@ final class BackstageViewModel: ObservableObject {
             }
         }
         do {
+            reviewMediaFilters = [.photos]
             let window = try await fixtureService.reviewWindow(
                 fixtureID: selectedFixtureID,
                 mode: reviewMode,
                 stateFilters: reviewStateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: reviewProposalAvailableOnly,
-                mediaFilters: reviewMediaFilters.map(\.rawValue).sorted(),
+                mediaFilters: [CullingMediaFilter.photos.rawValue],
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
                 search: reviewSearch
@@ -2180,18 +2352,7 @@ final class BackstageViewModel: ObservableObject {
             let scope = reviewProposalAvailableOnly
                 ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
                 : (queueScope.isEmpty ? "No states" : queueScope)
-            let mediaScope: String
-            switch reviewMediaFilters {
-            case let filters where filters == Set(CullingMediaFilter.selectableCases):
-                mediaScope = "items"
-            case let filters where filters == [.photos]:
-                mediaScope = "photos"
-            case let filters where filters == [.videos]:
-                mediaScope = "videos"
-            default:
-                mediaScope = "items"
-            }
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) photos • oldest first."
             await refreshAIStatus()
         } catch {
             guard requestSerial == reviewWindowRequestSerial else { return }
@@ -2608,8 +2769,7 @@ final class BackstageViewModel: ObservableObject {
             return false
         }
 
-        let mediaFilter: CullingMediaFilter = item.mediaType == "video" ? .videos : .photos
-        guard reviewMediaFilters.contains(mediaFilter) else { return false }
+        guard !item.mediaType.lowercased().contains("video") else { return false }
 
         let query = reviewSearch.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return true }
@@ -2693,7 +2853,7 @@ final class BackstageViewModel: ObservableObject {
                     reviewMode = entry.mode
                     reviewStateFilters = entry.stateFilters
                     reviewProposalAvailableOnly = entry.proposalAvailableOnly
-                    reviewMediaFilters = entry.mediaFilters
+                    reviewMediaFilters = [.photos]
                     reviewSearch = entry.search
                     reviewWindowOffset = entry.offset
                     await loadFixtureReviewWindow(
@@ -2713,7 +2873,7 @@ final class BackstageViewModel: ObservableObject {
                 reviewMode = entry.mode
                 reviewStateFilters = entry.stateFilters
                 reviewProposalAvailableOnly = entry.proposalAvailableOnly
-                reviewMediaFilters = entry.mediaFilters
+                reviewMediaFilters = [.photos]
                 reviewSearch = entry.search
                 reviewWindowOffset = entry.offset
                 let window = try await fixtureService.reviewWindow(
@@ -2721,7 +2881,7 @@ final class BackstageViewModel: ObservableObject {
                     mode: entry.mode,
                     stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
                     proposalAvailableOnly: entry.proposalAvailableOnly,
-                    mediaFilters: entry.mediaFilters.map(\.rawValue).sorted(),
+                    mediaFilters: [CullingMediaFilter.photos.rawValue],
                     offset: entry.offset,
                     limit: reviewWindowLimit,
                     search: entry.search
@@ -4391,7 +4551,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningFixture = true
         defer { isRunningFixture = false }
         guard await prepareAuthenticatedOperation() else {
-            fixtureStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            fixtureStatus = authenticationOperationRecoveryMessage
             return
         }
         do {
@@ -4409,7 +4569,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningAccess = true
         defer { isRunningAccess = false }
         guard await prepareAuthenticatedOperation() else {
-            accessStatus = "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+            accessStatus = authenticationOperationRecoveryMessage
             return
         }
         do {
@@ -4438,8 +4598,7 @@ final class BackstageViewModel: ObservableObject {
     private func prepareAuthenticatedOperation() async -> Bool {
         authentication = await ensuredAuthentication()
         guard authentication.phase == .authenticated else {
-            authenticationStatus = "This Mac's Backstage enrollment must be renewed from Owner."
-            status = "Sign in again"
+            updateAuthenticationRecoveryStatus()
             return false
         }
         return true
@@ -4465,8 +4624,7 @@ final class BackstageViewModel: ObservableObject {
         guard let envelope = error as? APIErrorEnvelope,
               envelope.error.code == "google_login_required" else { return }
         authentication = await authenticationService.currentSnapshot()
-        authenticationStatus = "This Mac's Backstage session could not be renewed automatically."
-        status = "Sign in again"
+        updateAuthenticationRecoveryStatus()
     }
 
     private func isTransientCancellation(_ error: Error) -> Bool {
@@ -4481,7 +4639,10 @@ final class BackstageViewModel: ObservableObject {
     private func userFacingMessage(for error: Error) -> String {
         if let envelope = error as? APIErrorEnvelope {
             if envelope.error.code == "google_login_required" {
-                return "Backstage could not renew this Mac's Owner session. Open Overview and enroll this Mac again."
+                if authentication.phase == .needsEnrollment {
+                    return "Backstage's saved device credential was rejected. Open Overview and enroll this Mac again."
+                }
+                return "Backstage could not renew this Mac's Owner session. Its enrollment is retained; check the connection and retry from Overview."
             }
             return envelope.error.message
         }
@@ -4497,6 +4658,36 @@ final class BackstageViewModel: ObservableObject {
             return "The Owner index is busy with another sync. Backstage kept the current view; try again after the sync finishes."
         }
         return message
+    }
+
+    private func updateAuthenticationRecoveryStatus() {
+        switch authentication.phase {
+        case .authenticated:
+            authenticationStatus = "Authenticated with this Mac's revocable device credential."
+            status = "Connected"
+        case .renewalFailed:
+            authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
+            status = "Retry Owner session"
+        case .needsEnrollment:
+            authenticationStatus = "This Mac's saved Backstage device credential is missing or was rejected. Enroll it again from Owner."
+            status = "Enrollment required"
+        case .signedOut:
+            authenticationStatus = "Signed out on this Mac."
+            status = "Signed out"
+        }
+    }
+
+    private var authenticationOperationRecoveryMessage: String {
+        switch authentication.phase {
+        case .authenticated:
+            return "Backstage Owner authentication is ready."
+        case .renewalFailed:
+            return "Backstage retained this Mac's enrollment, but the Owner session needs to be retried from Overview."
+        case .needsEnrollment:
+            return "Backstage needs this Mac to be enrolled again. Open Overview to continue."
+        case .signedOut:
+            return "Backstage is signed out. Open Overview to enroll this Mac."
+        }
     }
 
     private func runMetadata(commit: Bool) async {
@@ -4532,6 +4723,43 @@ final class BackstageViewModel: ObservableObject {
             return "\(report.readyCount) ready; \(report.blocked.count) blocked. Photos is unchanged."
         }
         return "\(report.verifiedCount) written and re-read as verified; \(report.failed.count) failed; \(report.blocked.count) blocked."
+    }
+
+    private func photoLibraryIdentifierCandidates(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) -> [String] {
+        var candidates: [String] = []
+        for value in [preferredIdentifier, photoLibraryIdentifier(for: assetID), assetID] {
+            guard let value, !value.isEmpty, !candidates.contains(value) else { continue }
+            candidates.append(value)
+        }
+        return candidates
+    }
+
+    private func previewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.preview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
     }
 
     private func photoLibraryIdentifier(for assetID: String) -> String {

@@ -1,6 +1,5 @@
 #!/usr/bin/env swift
 import AppKit
-import AVFoundation
 import CoreLocation
 import Foundation
 import ImageIO
@@ -274,6 +273,10 @@ func findAlbum(id: String?, name: String?) throws -> PHAssetCollection {
 
 func assetFetchOptions(limit: Int) -> PHFetchOptions {
     let options = PHFetchOptions()
+    options.predicate = NSPredicate(
+        format: "mediaType == %d",
+        PHAssetMediaType.image.rawValue
+    )
     options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
     if limit > 0 { options.fetchLimit = limit }
     return options
@@ -740,7 +743,9 @@ func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> [S
     let safeOffset = max(0, offset)
     let safeLimit = limit > 0 ? min(limit, 1000) : 120
     let options = libraryFetchOptions(limit: safeLimit, offset: safeOffset, dateFrom: dateFrom, dateTo: dateTo)
-    let assets = PHAsset.fetchAssets(with: options)
+    // PBE/PBB source intake is still-photo only. Generated real-estate videos
+    // are downstream deliverables, not PhotoKit source candidates.
+    let assets = PHAsset.fetchAssets(with: .image, options: options)
     var rows: [[String: Any]] = []
     var skipped = 0
     var localIdentifiers: [String] = []
@@ -787,7 +792,7 @@ func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) -> [S
 func writeLibraryIndexFile(destination: URL, dateFrom: Date?, dateTo: Date?, progressEvery: Int) throws -> [String: Any] {
     let safeProgressEvery = max(1, progressEvery)
     let options = libraryFetchOptions(limit: 0, offset: 0, dateFrom: dateFrom, dateTo: dateTo)
-    let assets = PHAsset.fetchAssets(with: options)
+    let assets = PHAsset.fetchAssets(with: .image, options: options)
     try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
     FileManager.default.createFile(atPath: destination.path, contents: nil)
     let handle = try FileHandle(forWritingTo: destination)
@@ -860,31 +865,39 @@ func findAsset(id: String?) throws -> PHAsset {
     }
     var result = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil)
     if let asset = result.firstObject {
-        return asset
+        return try requireStillPhoto(asset)
     }
     if let localIdentifier = localIdentifierForCloudIdentifier(id) {
         result = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         if let asset = result.firstObject {
             cloudIdentifierCache[localIdentifier] = id
-            return asset
+            return try requireStillPhoto(asset)
         }
     }
     throw BridgeError(code: "asset_not_found", message: "Apple Photos asset not found.")
 }
 
+func requireStillPhoto(_ asset: PHAsset) throws -> PHAsset {
+    guard asset.mediaType == .image else {
+        throw BridgeError(
+            code: "source_video_unsupported",
+            message: "PBE/PBB source workflows accept still photos only. Real-estate videos are generated later from approved stills."
+        )
+    }
+    return asset
+}
+
 func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws -> [String: Any] {
-    guard asset.mediaType == .image || asset.mediaType == .video else {
-        throw BridgeError(code: "preview_unsupported", message: "Sidecar preview export currently supports still images and video poster frames.")
+    guard asset.mediaType == .image else {
+        throw BridgeError(code: "source_video_unsupported", message: "PBE/PBB source previews accept still photos only.")
     }
     let pixel = max(256, min(maxPixel, 1800))
     var imageDataPreviewFailure: String?
-    if asset.mediaType == .image {
-        switch writeImageDataPreviewJPEG(asset, to: destination, maxPixel: pixel) {
-        case .success(let payload):
-            return payload
-        case .failure(let error):
-            imageDataPreviewFailure = errorMessage(error)
-        }
+    switch writeImageDataPreviewJPEG(asset, to: destination, maxPixel: pixel) {
+    case .success(let payload):
+        return payload
+    case .failure(let error):
+        imageDataPreviewFailure = errorMessage(error)
     }
     let target = CGSize(width: pixel, height: pixel)
     let options = PHImageRequestOptions()
@@ -953,7 +966,7 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
                 "pixelWidth": bitmap.pixelsWide,
                 "pixelHeight": bitmap.pixelsHigh,
                 "networkAccessAllowed": false,
-                "previewSource": asset.mediaType == .video ? "photokit_video_poster" : "photokit_render",
+                "previewSource": "photokit_render",
             ]
             if let imageDataPreviewFailure {
                 payload["imageDataPreviewFailure"] = imageDataPreviewFailure
@@ -966,34 +979,6 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
         ?? (smallPhotoKitPreview == nil
             ? "Photos did not provide a local preview image."
             : "Photos only provided a tiny degraded preview image.")
-    if asset.mediaType == .video {
-        switch writeLocalVideoPosterPreviewJPEG(asset, to: destination, maxPixel: pixel) {
-        case .success(let payload):
-            return payload
-        case .failure(let localPosterError):
-            if let smallPhotoKitPreview {
-                try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try smallPhotoKitPreview.data.write(to: destination, options: .atomic)
-                let bitmap = smallPhotoKitPreview.bitmap
-                return [
-                    "ok": true,
-                    "mode": "preview",
-                    "localIdentifier": asset.localIdentifier,
-                    "destination": destination.path,
-                    "bytes": smallPhotoKitPreview.data.count,
-                    "pixelWidth": bitmap.pixelsWide,
-                    "pixelHeight": bitmap.pixelsHigh,
-                    "networkAccessAllowed": false,
-                    "previewSource": "photokit_degraded_video_poster",
-                    "localVideoPosterFallbackError": errorMessage(localPosterError),
-                ]
-            }
-            throw BridgeError(
-                code: "video_poster_unavailable",
-                message: "\(fallbackReason) Sidecar also could not derive a poster from the local video resource: \(errorMessage(localPosterError))"
-            )
-        }
-    }
     if let resource = localImageResourceForJPEGFallback(asset),
        resourceFormat(resource) == "RAW",
        let smallPhotoKitPreview {
@@ -1052,109 +1037,6 @@ func writePreviewJPEG(asset: PHAsset, destination: URL, maxPixel: Int) throws ->
             code: "preview_unavailable",
             message: "\(fallbackReason) Local preview fallback also failed: \(errorMessage(fallbackError))"
         )
-    }
-}
-
-func writeLocalVideoPosterPreviewJPEG(_ asset: PHAsset, to destination: URL, maxPixel: Int) -> Result<[String: Any], Error> {
-    guard let resource = preferredResource(asset) else {
-        return .failure(BridgeError(code: "video_resource_unavailable", message: "Photos did not expose a local video resource for this asset."))
-    }
-    let sourceURL = temporaryResourceURL(for: destination, resource: resource)
-    defer { try? FileManager.default.removeItem(at: sourceURL) }
-    switch writeResource(resource, to: sourceURL, allowIcloudDownloads: false, timeoutSeconds: 90) {
-    case .failure(let error):
-        return .failure(BridgeError(code: "video_resource_export_failed", message: "Could not export the local video resource for its poster frame: \(errorMessage(error))"))
-    case .success:
-        break
-    }
-
-    let video = AVURLAsset(url: sourceURL)
-    let generator = AVAssetImageGenerator(asset: video)
-    generator.appliesPreferredTrackTransform = true
-    let pixel = max(256, min(maxPixel, 1800))
-    generator.maximumSize = CGSize(width: pixel, height: pixel)
-    let durationSeconds = CMTimeGetSeconds(video.duration)
-    let posterSeconds = durationSeconds.isFinite && durationSeconds > 0
-        ? min(0.5, durationSeconds * 0.1)
-        : 0
-    var actualTime = CMTime.zero
-    let requestedTime = CMTime(seconds: posterSeconds, preferredTimescale: 600)
-    let image: CGImage
-    do {
-        image = try generator.copyCGImage(at: requestedTime, actualTime: &actualTime)
-    } catch {
-        return .failure(BridgeError(code: "video_poster_frame_failed", message: "Could not decode a still frame from the local video resource: \(errorMessage(error))"))
-    }
-    do {
-        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-    } catch {
-        return .failure(error)
-    }
-    guard let jpeg = CGImageDestinationCreateWithURL(destination as CFURL, "public.jpeg" as CFString, 1, nil) else {
-        return .failure(BridgeError(code: "jpeg_destination_failed", message: "Could not create the video poster JPEG destination."))
-    }
-    let properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.86]
-    CGImageDestinationAddImage(jpeg, image, properties as CFDictionary)
-    guard CGImageDestinationFinalize(jpeg) else {
-        return .failure(BridgeError(code: "video_poster_write_failed", message: "Could not write the local video poster JPEG."))
-    }
-    return .success([
-        "ok": true,
-        "mode": "preview",
-        "localIdentifier": asset.localIdentifier,
-        "destination": destination.path,
-        "bytes": (try? Data(contentsOf: destination).count) ?? 0,
-        "pixelWidth": image.width,
-        "pixelHeight": image.height,
-        "networkAccessAllowed": false,
-        "previewSource": "local_video_resource",
-        "posterTimeSeconds": actualTime.isValid ? CMTimeGetSeconds(actualTime) : posterSeconds,
-        "resourceFilename": resource.originalFilename,
-        "resourceFormat": resourceFormat(resource),
-    ])
-}
-
-func videoMimeType(_ resource: PHAssetResource) -> String {
-    let ext = fileExtension(resource.originalFilename)
-    if ext == "mp4" || ext == "m4v" {
-        return "video/mp4"
-    }
-    return "video/quicktime"
-}
-
-func videoDestinationURL(base destination: URL, resource: PHAssetResource) -> URL {
-    let ext = fileExtension(resource.originalFilename)
-    let safeExt = ext.isEmpty ? "mov" : ext
-    if destination.pathExtension.isEmpty {
-        return destination.appendingPathExtension(safeExt)
-    }
-    return destination
-}
-
-func writeVideoResource(asset: PHAsset, destination: URL) throws -> [String: Any] {
-    guard asset.mediaType == .video else {
-        throw BridgeError(code: "video_unsupported", message: "Selected Apple Photos asset is not a video.")
-    }
-    guard let resource = preferredResource(asset) else {
-        throw BridgeError(code: "video_resource_unavailable", message: "Photos did not expose a local video resource for this asset.")
-    }
-    let outputURL = videoDestinationURL(base: destination, resource: resource)
-    try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    switch writeResource(resource, to: outputURL, allowIcloudDownloads: false, timeoutSeconds: 90) {
-    case .success:
-        return [
-            "ok": true,
-            "mode": "video",
-            "localIdentifier": asset.localIdentifier,
-            "destination": outputURL.path,
-            "bytes": (try? Data(contentsOf: outputURL).count) ?? 0,
-            "networkAccessAllowed": false,
-            "resourceFilename": resource.originalFilename,
-            "resourceFormat": resourceFormat(resource),
-            "mimeType": videoMimeType(resource),
-        ]
-    case .failure(let error):
-        throw BridgeError(code: "video_unavailable", message: "Sidecar could not export a local video preview without iCloud downloads: \(errorMessage(error))")
     }
 }
 
@@ -1281,7 +1163,7 @@ func plannedAssets(album: PHAssetCollection, limit: Int, filterBursts: Bool) -> 
 }
 
 func albumSummary(_ collection: PHAssetCollection) -> [String: Any] {
-    let assets = PHAsset.fetchAssets(in: collection, options: nil)
+    let assets = PHAsset.fetchAssets(in: collection, options: assetFetchOptions(limit: 0))
     return [
         "localIdentifier": collection.localIdentifier,
         "title": collection.localizedTitle ?? "(Untitled)",
@@ -2148,6 +2030,7 @@ func materialize(album: PHAssetCollection, destination: URL, limit: Int, filterB
 }
 
 func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool) throws -> [String: Any] {
+    _ = try requireStillPhoto(asset)
     try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
     var row = assetRow(asset, index: 1)
     let strategy = row["exportStrategy"] as? String ?? "unsupported"
@@ -2308,7 +2191,7 @@ func materializeOne(asset: PHAsset, destination: URL, allowIcloudDownloads: Bool
 
 let command = CommandLine.arguments.dropFirst().first ?? ""
 if command.isEmpty || command == "--help" {
-    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift health | albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | preview-many --input PATH | video --asset-id ID --destination PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
+    outputJSON(["ok": true, "usage": "apple_photos_bridge.swift health | albums | library-index [--limit N] [--offset N] [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] | library-index-file --destination PATH [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD] [--progress-every N] | preview --asset-id ID --destination PATH [--max-pixel N] | preview-many --input PATH | preflight --album-id ID [--filter-bursts] [--allow-icloud-downloads] | export --album-id ID --destination PATH [--filter-bursts] [--allow-icloud-downloads] | materialize-one --asset-id ID --destination PATH [--allow-icloud-downloads] [--result-destination PATH] | metadata-read-many --input PATH | metadata-apply-many --input PATH"])
     exit(0)
 }
 
@@ -2415,15 +2298,6 @@ do {
             "count": items.count,
             "items": items,
         ])
-    case "video":
-        guard let destination = argValue("--destination") else {
-            fail("missing_destination", "Missing --destination for Apple Photos video preview.")
-        }
-        let asset = try findAsset(id: argValue("--asset-id"))
-        outputJSON(try writeVideoResource(
-            asset: asset,
-            destination: URL(fileURLWithPath: destination)
-        ))
     case "preflight":
         let album = try findAlbum(id: argValue("--album-id"), name: argValue("--album-name"))
         outputJSON(preflight(album: album, limit: intArg("--limit"), filterBursts: boolArg("--filter-bursts"), allowIcloudDownloads: boolArg("--allow-icloud-downloads")))

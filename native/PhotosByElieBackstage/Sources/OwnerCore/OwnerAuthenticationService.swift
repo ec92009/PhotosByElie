@@ -2,6 +2,7 @@ import Foundation
 
 public enum OwnerAuthenticationPhase: String, Codable, Sendable, Equatable {
     case needsEnrollment
+    case renewalFailed
     case authenticated
     case signedOut
 }
@@ -68,6 +69,7 @@ public actor OwnerAuthenticationService {
     private let renewalLeeway: TimeInterval
     private var recoveryTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var recoveryHandlerInstalled = false
+    private var persistenceFailureSnapshot: OwnerAuthenticationSnapshot?
 
     public init(
         api: OwnerAPIClient,
@@ -85,14 +87,30 @@ public actor OwnerAuthenticationService {
     }
 
     public func currentSnapshot(now: Date = Date()) async -> OwnerAuthenticationSnapshot {
-        guard let credentials = try? await session.load() else {
+        if let persistenceFailureSnapshot {
+            return persistenceFailureSnapshot
+        }
+        let credentials: OwnerCredentialSet?
+        do {
+            credentials = try await session.load()
+        } catch {
+            return await snapshotForCredentialLoadFailure(error)
+        }
+        guard let credentials else {
             return OwnerAuthenticationSnapshot(phase: .needsEnrollment)
+        }
+        guard let deviceCredential = credentials.deviceCredential,
+              !deviceCredential.isEmpty else {
+            return OwnerAuthenticationSnapshot(
+                phase: .needsEnrollment,
+                deviceId: credentials.deviceId
+            )
         }
         guard credentials.accessToken != nil,
               let accessExpiresAt = credentials.accessExpiresAt,
               accessExpiresAt > now else {
             return OwnerAuthenticationSnapshot(
-                phase: .needsEnrollment,
+                phase: .renewalFailed,
                 deviceId: credentials.deviceId
             )
         }
@@ -128,35 +146,72 @@ public actor OwnerAuthenticationService {
         now: Date,
         forceRenewal: Bool
     ) async -> OwnerAuthenticationSnapshot {
-        guard var credentials = try? await session.load() else {
+        let loadedCredentials: OwnerCredentialSet?
+        do {
+            loadedCredentials = try await session.load()
+        } catch {
+            return await snapshotForCredentialLoadFailure(error)
+        }
+        guard var credentials = loadedCredentials else {
+            persistenceFailureSnapshot = nil
             await api.setAccessToken(nil)
             return OwnerAuthenticationSnapshot(phase: .needsEnrollment)
         }
+        guard let deviceCredential = credentials.deviceCredential,
+              !deviceCredential.isEmpty else {
+            credentials.accessToken = nil
+            credentials.accessExpiresAt = nil
+            let snapshot = OwnerAuthenticationSnapshot(
+                phase: .needsEnrollment,
+                deviceId: credentials.deviceId
+            )
+            _ = await persist(credentials, failureSnapshot: snapshot)
+            await api.setAccessToken(nil)
+            return snapshot
+        }
         if !forceRenewal,
+           persistenceFailureSnapshot == nil,
            let accessToken = credentials.accessToken,
            let accessExpiresAt = credentials.accessExpiresAt,
            accessExpiresAt.timeIntervalSince(now) > renewalLeeway {
             await api.setAccessToken(accessToken)
             return snapshot(for: credentials)
         }
-        if let deviceCredential = credentials.deviceCredential,
-           let tokens = try? await api.exchangeDeviceCredential(
-               deviceId: credentials.deviceId,
-               deviceCredential: deviceCredential
-           ) {
+        do {
+            let tokens = try await api.exchangeDeviceCredential(
+                deviceId: credentials.deviceId,
+                deviceCredential: deviceCredential
+            )
             credentials = applying(tokens, to: credentials)
-            try? await session.save(credentials)
+            let authenticated = snapshot(for: credentials)
+            let renewalFailed = OwnerAuthenticationSnapshot(
+                phase: .renewalFailed,
+                deviceId: credentials.deviceId
+            )
+            guard await persist(credentials, failureSnapshot: renewalFailed) else {
+                await api.setAccessToken(nil)
+                return renewalFailed
+            }
             await api.setAccessToken(tokens.accessToken)
-            return snapshot(for: credentials)
+            return authenticated
+        } catch {
+            credentials.accessToken = nil
+            credentials.accessExpiresAt = nil
+            let phase: OwnerAuthenticationPhase
+            if Self.isRejectedDeviceCredential(error) {
+                credentials.deviceCredential = nil
+                phase = .needsEnrollment
+            } else {
+                phase = .renewalFailed
+            }
+            let snapshot = OwnerAuthenticationSnapshot(
+                phase: phase,
+                deviceId: credentials.deviceId
+            )
+            _ = await persist(credentials, failureSnapshot: snapshot)
+            await api.setAccessToken(nil)
+            return snapshot
         }
-        credentials.accessToken = nil
-        credentials.accessExpiresAt = nil
-        try? await session.save(credentials)
-        await api.setAccessToken(nil)
-        return OwnerAuthenticationSnapshot(
-            phase: .needsEnrollment,
-            deviceId: credentials.deviceId
-        )
     }
 
     public func enroll(code: String) async throws -> OwnerAuthenticationSnapshot {
@@ -172,6 +227,7 @@ public actor OwnerAuthenticationService {
             accessExpiresAt: nil
         ))
         try await session.save(credentials)
+        persistenceFailureSnapshot = nil
         await api.setAccessToken(tokens.accessToken)
         return snapshot(for: credentials)
     }
@@ -179,6 +235,7 @@ public actor OwnerAuthenticationService {
     public func signOut() async throws -> OwnerAuthenticationSnapshot {
         try await api.logout()
         try await session.clear()
+        persistenceFailureSnapshot = nil
         await api.setAccessToken(nil)
         return OwnerAuthenticationSnapshot(phase: .signedOut)
     }
@@ -199,5 +256,43 @@ public actor OwnerAuthenticationService {
             deviceId: credentials.deviceId,
             accessExpiresAt: credentials.accessExpiresAt
         )
+    }
+
+    private static func isRejectedDeviceCredential(_ error: Error) -> Bool {
+        guard let envelope = error as? APIErrorEnvelope else { return false }
+        return envelope.error.code == "owner_device_credential_invalid"
+    }
+
+    private func persist(
+        _ credentials: OwnerCredentialSet,
+        failureSnapshot: OwnerAuthenticationSnapshot
+    ) async -> Bool {
+        do {
+            try await session.save(credentials)
+            persistenceFailureSnapshot = nil
+            return true
+        } catch {
+            persistenceFailureSnapshot = failureSnapshot
+            return false
+        }
+    }
+
+    private func snapshotForCredentialLoadFailure(
+        _ error: Error
+    ) async -> OwnerAuthenticationSnapshot {
+        await api.setAccessToken(nil)
+        if error is DecodingError {
+            let snapshot = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
+            do {
+                try await session.clear()
+                persistenceFailureSnapshot = nil
+            } catch {
+                persistenceFailureSnapshot = snapshot
+            }
+            return snapshot
+        }
+        let snapshot = OwnerAuthenticationSnapshot(phase: .renewalFailed)
+        persistenceFailureSnapshot = snapshot
+        return snapshot
     }
 }

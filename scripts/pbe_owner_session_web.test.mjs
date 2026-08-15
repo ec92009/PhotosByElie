@@ -5,6 +5,45 @@ import vm from "node:vm";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
+const runSessionClient = ({
+  search,
+  fetch,
+  catalogReady = Promise.resolve(),
+  sharedReady = Promise.resolve(),
+  data = {},
+}) => {
+  let banner = null;
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: (selector) => selector === "[data-pbe-owner-session]" ? banner : null,
+    createElement: () => {
+      banner = {
+        className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+        getBoundingClientRect: () => ({ height: 40 }),
+        querySelector: () => null,
+      };
+      return banner;
+    },
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", pathname: "/gallery.html", search, hash: "" },
+    history: { replaceState: () => {} },
+    dispatchEvent: () => {},
+    setInterval: () => 1,
+    clearInterval: () => {},
+    setTimeout,
+    photosByElieCatalogReady: catalogReady,
+    photosByElieSharedGalleryReady: sharedReady,
+    photosByElieData: data,
+  };
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window, document, fetch, URLSearchParams, encodeURIComponent,
+    CustomEvent: class CustomEvent {}, Date, setTimeout,
+  });
+  return { window, document };
+};
+
 test("gallery and detail bootstrap the Backstage session before Owner actions", () => {
   for (const page of ["gallery.html", "photo.html"]) {
     const html = read(page);
@@ -12,6 +51,172 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
     const actionsIndex = html.indexOf("hidden-actions.js");
     assert.ok(sessionIndex >= 0, `${page} loads the PBE Owner session client`);
     assert.ok(actionsIndex > sessionIndex, `${page} loads Owner actions after the session client`);
+    assert.match(html, /pbe-owner-session\.js\?v=226\.1/);
+  }
+  assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
+  assert.match(
+    read("photo-gallery.js"),
+    /if \(isPBEOwnerGallery\) \{[\s\S]*const ownerGallery = window\.photosByElieData\?\.\[pbeOwnerGalleryKey\]/,
+  );
+  assert.match(read("gallery.html"), /photo-gallery\.js\?v=226\.1/);
+  assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
+  assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
+  assert.match(read("photo-gallery.js"), /const setCollectionLabel = \(element\) => \{[\s\S]*if \(isPBEOwnerGallery\) delete element\.dataset\.i18n;/);
+});
+
+test("hosted Owner page readiness ignores a rejected public catalog", async () => {
+  let rejectCatalog;
+  let rejectShared;
+  const catalogReady = new Promise((_, reject) => { rejectCatalog = reject; });
+  const sharedReady = new Promise((_, reject) => { rejectShared = reject; });
+  const session = {
+    id: "session-owner", state: "ready", fixtureId: "fixture-owner",
+    fixtureBreadcrumb: "RE > Owner", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const fetch = async (url) => {
+    if (url.endsWith("/session")) return response({ ok: true, session });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: {
+        fixtureId: session.fixtureId,
+        fixtureBreadcrumb: "collection.pbe-owner",
+        items: [{ assetId: "owner-photo", filename: "owner-photo.jpg", mediaType: "photo" }],
+        summary: { filtered: 1 },
+      },
+    });
+    throw new Error(`unexpected request ${url}`);
+  };
+  const { window } = runSessionClient({
+    search: "?gallery=%20PBE-OWNER%20",
+    fetch,
+    catalogReady,
+    sharedReady,
+  });
+  window.photosByElieHiddenActionsReady = Promise.resolve();
+  rejectCatalog(new Error("public catalog unavailable"));
+  rejectShared(new Error("shared catalog unavailable"));
+
+  const context = await window.photosByEliePageReady();
+
+  assert.equal(context.mode, "pbe-owner");
+  assert.equal(context.galleryKey, "pbe-owner");
+  assert.equal(context.gallery.fixtureId, session.fixtureId);
+  assert.equal(context.gallery.title, session.fixtureBreadcrumb);
+  assert.deepEqual(Array.from(context.gallery.photos, (photo) => photo.id), ["owner-photo"]);
+});
+
+test("invalid Owner session fails closed without falling through to France", async () => {
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const { window } = runSessionClient({
+    search: "?gallery=pbe-owner",
+    fetch: async (url) => {
+      if (url.endsWith("/session")) {
+        return response({ ok: false, error: { message: "Backstage lease rejected" } }, 401);
+      }
+      throw new Error(`unexpected request ${url}`);
+    },
+    data: { france: { title: "France", photos: [{ id: "france-one" }] } },
+  });
+  window.photosByElieHiddenActionsReady = Promise.resolve();
+
+  await assert.rejects(window.photosByEliePageReady(), /Backstage lease rejected/);
+  assert.equal(window.photosByEliePBEOwnerSession.state().ready, false);
+  assert.equal(window.photosByElieData["pbe-owner"], undefined);
+  assert.deepEqual(Array.from(window.photosByElieData.france.photos, (photo) => photo.id), ["france-one"]);
+  assert.match(read("photo-gallery.js"), /normalized === pbeOwnerGalleryKey\) return pbeOwnerGalleryKey/);
+});
+
+test("public page readiness is independent of the Owner session promise", async () => {
+  const { window } = runSessionClient({
+    search: "?gallery=spain",
+    fetch: async () => { throw new Error("public readiness must not fetch an Owner session"); },
+  });
+  window.photosByElieHiddenActionsReady = Promise.resolve();
+  window.photosByEliePBEOwnerSessionReady = new Promise(() => {});
+
+  const context = await Promise.race([
+    window.photosByEliePageReady(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("public readiness waited for Owner")), 100)),
+  ]);
+
+  assert.equal(context.mode, "public");
+});
+
+test("public hidden actions initialize while Owner readiness remains pending", async () => {
+  const window = {
+    location: { hostname: "127.0.0.1", search: "?gallery=spain" },
+    photosByEliePBEOwnerSession: { isReady: () => false },
+    photosByEliePBEOwnerSessionReady: new Promise(() => {}),
+    addEventListener: () => {},
+    dispatchEvent: () => {},
+  };
+  vm.runInNewContext(read("hidden-actions.js"), {
+    window,
+    URLSearchParams,
+    CustomEvent: class CustomEvent {},
+  });
+
+  const hiddenIds = await Promise.race([
+    window.photosByElieHiddenActionsReady,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("public hidden actions waited for Owner")), 100)),
+  ]);
+
+  assert.deepEqual(Array.from(hiddenIds), []);
+});
+
+test("detail controller renders explicit failure without public fallback", async (t) => {
+  for (const [label, search, expectedMeta] of [
+    ["Owner", "?gallery=%20PBE-OWNER%20&id=france-one", "PBE Owner unavailable"],
+    ["public", "?gallery=france&id=france-one", "Photo unavailable"],
+  ]) {
+    await t.test(label, async () => {
+      const elements = {
+        preview: { setAttribute: (name) => { elements.preview[name] = true; } },
+        purchase: { setAttribute: (name) => { elements.purchase[name] = true; } },
+        shortcut: { setAttribute: (name) => { elements.shortcut[name] = true; } },
+        meta: { textContent: "", removeAttribute: () => {} },
+        title: { textContent: "", removeAttribute: () => {} },
+      };
+      const selectors = {
+        "[data-photo-preview]": elements.preview,
+        ".purchase-panel": elements.purchase,
+        "[data-detail-shortcut-hint]": elements.shortcut,
+        "[data-photo-meta]": elements.meta,
+        "[data-photo-title]": elements.title,
+      };
+      const document = {
+        body: { dataset: {} },
+        head: {
+          querySelector: () => null,
+          append: () => {},
+        },
+        createElement: () => ({}),
+        querySelector: (selector) => selectors[selector] || null,
+      };
+      let replaced = "";
+      const window = {
+        location: { search, replace: (value) => { replaced = value; } },
+        photosByEliePageReady: async () => { throw new Error("Fixture authorization unavailable"); },
+        photosByElieData: { france: { title: "France", photos: [{ id: "france-one" }] } },
+      };
+
+      await vm.runInNewContext(read("photo-detail.js"), {
+        window,
+        document,
+        URLSearchParams,
+      });
+
+      assert.equal(replaced, "");
+      assert.equal(elements.preview.hidden, true);
+      assert.equal(elements.purchase.hidden, true);
+      assert.equal(elements.meta.textContent, expectedMeta);
+      assert.equal(elements.title.textContent, "Fixture authorization unavailable");
+    });
   }
 });
 
@@ -160,7 +365,9 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   assert.match(localHost, /\?gallery=pbe-owner/);
   assert.match(localHost, /assert_pbe_owner_x_scope/);
   assert.match(localHost, /queue_hosted_lifecycle_request/);
-  assert.match(gallery, /if \(isPBEOwnerGallery\) detailParams\.set\("gallery", pbeOwnerGalleryKey\)/);
+  assert.match(gallery, /const detailHrefForPhotoId = \(photoId\) => \{[\s\S]*if \(isPBEOwnerGallery\) detailParams\.set\("gallery", pbeOwnerGalleryKey\);[\s\S]*return versionedHref/);
+  assert.match(gallery, /window\.location\.assign\(detailHrefForPhotoId\(photo\.id\)\)/);
+  assert.match(gallery, /const href = detailHrefForPhotoId\(photo\.id\);/);
 });
 
 test("hosted action queues sanitized intent and polls its opaque result", async () => {

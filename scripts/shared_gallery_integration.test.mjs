@@ -13,6 +13,7 @@ const detailJs = read("photo-detail.js");
 const accountJs = read("photos.js");
 const landingJs = read("landing-concept/landing.js");
 const sharedStore = read("shared-gallery-store.js");
+const ownerSession = read("pbe-owner-session.js");
 const sharedCss = read("shared.css");
 const landingHtml = read("index.html");
 const legacyHtml = read("shared-galleries.html");
@@ -31,8 +32,12 @@ test("gallery and detail wait for authenticated shared data", () => {
   for (const html of [galleryHtml, photoHtml]) {
     assert.ok(html.indexOf("photos-data.js") < html.indexOf("shared-gallery-store.js"));
   }
-  assert.match(galleryJs, /await window\.photosByElieSharedGalleryReady/);
-  assert.match(detailJs, /await window\.photosByElieSharedGalleryReady/);
+  assert.match(galleryJs, /await window\.photosByEliePageReady\(\)/);
+  assert.match(detailJs, /await window\.photosByEliePageReady\(\)/);
+  assert.match(
+    ownerSession,
+    /if \(ownerSurface\) \{[\s\S]*return \{ mode: "pbe-owner"[\s\S]*await window\.photosByElieCatalogReady;[\s\S]*await window\.photosByElieSharedGalleryReady;/,
+  );
 });
 
 test("shared cards use the normal gallery, detail, likes, and basket path", () => {

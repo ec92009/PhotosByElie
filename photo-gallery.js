@@ -1,17 +1,27 @@
 ((async () => {
-await window.photosByElieCatalogReady;
-await window.photosByElieSharedGalleryReady;
-await window.photosByElieHiddenActionsReady;
+const pbeOwnerGalleryKey = "pbe-owner";
+const requestedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+const markNoIndex = () => {
+  if (document.head.querySelector('meta[name="robots"]')) return;
+  const robots = document.createElement("meta");
+  robots.name = "robots";
+  robots.content = "noindex,nofollow";
+  document.head.append(robots);
+};
+if (requestedGalleryKey === pbeOwnerGalleryKey) {
+  document.body.dataset.gallery = pbeOwnerGalleryKey;
+  markNoIndex();
+}
+if (typeof window.photosByEliePageReady !== "function") throw new Error("Gallery readiness is unavailable.");
+await window.photosByEliePageReady();
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
 const panoramaGalleryKey = "panoramas";
 const sharedGalleryKey = "shared";
-const pbeOwnerGalleryKey = "pbe-owner";
 const panoramaGalleryAliases = new Set([panoramaGalleryKey, "pano", "panos", "panorama"]);
 const baseGalleryCollections = ["france", "usa", "spain", "mexico", "italy", "portugal", "slovakia"];
 const selectionGalleryCollections = baseGalleryCollections;
-const requestedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
 if (window.photosByElieCollectionIsRetired?.(requestedGalleryKey)) {
   const replacement = window.photosByElieVersionedHref?.("./gallery.html?gallery=selection") || "./gallery.html?gallery=selection";
   window.location.replace(replacement);
@@ -25,6 +35,7 @@ const galleryKeyFromPage = () => {
   const normalized = requested.toLowerCase().replace(/[^a-z0-9_-]/g, "");
   if (isSelectionGalleryKey(normalized)) return selectionGalleryKey;
   if (isPanoramaGalleryKey(normalized)) return panoramaGalleryKey;
+  if (normalized === pbeOwnerGalleryKey) return pbeOwnerGalleryKey;
   if (normalized && window.photosByElieData?.[normalized]) return normalized;
   const pageSlug = (window.location.pathname.split("/").pop() || "").replace(/\.html$/i, "");
   if (isPanoramaGalleryKey(pageSlug)) return panoramaGalleryKey;
@@ -70,10 +81,7 @@ const isSharedGallery = galleryKey === sharedGalleryKey;
 const isPBEOwnerGallery = galleryKey === pbeOwnerGalleryKey;
 document.body.dataset.gallery = galleryKey;
 if (isSharedGallery || isPBEOwnerGallery) {
-  const robots = document.createElement("meta");
-  robots.name = "robots";
-  robots.content = "noindex,nofollow";
-  document.head.append(robots);
+  markNoIndex();
 }
 let gallery = galleryForKey(galleryKey);
 const galleryRoot = document.querySelector("[data-gallery-root]");
@@ -92,6 +100,12 @@ const ownerCommandAdapter = window.photosByElieOwnerGalleryCommands || {};
 const reserveFillEnabled = false;
 const galleryActions = document.querySelector("[data-gallery-actions]");
 const versionedHref = (href) => window.photosByElieVersionedHref?.(href) || href;
+const detailHrefForPhotoId = (photoId) => {
+  const detailParams = new URLSearchParams({ id: String(photoId || "") });
+  if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
+  if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
+  return versionedHref(`./photo.html?${detailParams.toString()}`);
+};
 let selectedIndex = 0;
 const selectedPhotoIds = new Set();
 let selectionAnchorPhotoId = "";
@@ -368,9 +382,19 @@ const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
   if (isPanoramaGallery) return t("collection.panoramas");
   if (isSharedGallery) return t("collection.shared");
+  if (isPBEOwnerGallery) {
+    const ownerGallery = window.photosByElieData?.[pbeOwnerGalleryKey];
+    return String(ownerGallery?.title || "PBE Owner").trim() || "PBE Owner";
+  }
   const key = `collection.${galleryKey}`;
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";
+};
+const setCollectionLabel = (element) => {
+  if (!element) return;
+  if (isPBEOwnerGallery) delete element.dataset.i18n;
+  else element.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
+  element.textContent = localizedCollectionTitle();
 };
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
 const primaryShortcutLabel = () => /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
@@ -1675,7 +1699,7 @@ const selectBurstCandidates = () => {
 const openSelectedDetail = (photo = selectedShortcutPhoto()) => {
   if (!photo?.id) return false;
   syncSelectionDetailContext();
-  window.location.assign(versionedHref(`./photo.html?id=${encodeURIComponent(photo.id)}${isSharedGallery ? `&gallery=${sharedGalleryKey}` : ""}`));
+  window.location.assign(detailHrefForPhotoId(photo.id));
   return true;
 };
 
@@ -2070,10 +2094,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   }
   selectedIndex = Math.max(0, Math.min(selectedIndex, visibleSubset.length - 1));
   galleryRoot.innerHTML = visibleSubset.map((photo, index) => {
-    const detailParams = new URLSearchParams({ id: photo.id });
-    if (isSharedGallery) detailParams.set("gallery", sharedGalleryKey);
-    if (isPBEOwnerGallery) detailParams.set("gallery", pbeOwnerGalleryKey);
-    const href = versionedHref(`./photo.html?${detailParams.toString()}`);
+    const href = detailHrefForPhotoId(photo.id);
     const isLiked = likedIds.has(photo.id);
     const selectButton = `
           <button
@@ -2220,15 +2241,13 @@ if (galleryRoot && gallery) {
   });
   const currentNav = document.querySelector("[data-nav-current]");
   if (currentNav) {
-    currentNav.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
-    currentNav.textContent = localizedCollectionTitle();
+    setCollectionLabel(currentNav);
     currentNav.setAttribute("href", versionedHref(galleryHrefForKey(galleryKey)));
   }
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   const titleRoot = document.querySelector("[data-gallery-title]");
   if (titleRoot) {
-    titleRoot.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
-    titleRoot.textContent = localizedCollectionTitle();
+    setCollectionLabel(titleRoot);
   }
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
@@ -2319,8 +2338,8 @@ if (galleryRoot && gallery) {
   window.addEventListener("photosbyelie:languagechange", () => {
     if (gallery) {
       document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
-      document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
-      document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
+      setCollectionLabel(document.querySelector("[data-nav-current]"));
+      setCollectionLabel(document.querySelector("[data-gallery-title]"));
       syncFilterControls();
       renderGallery({ scrollSelection: false });
       applyGalleryDensity();
@@ -2329,6 +2348,11 @@ if (galleryRoot && gallery) {
 window.addEventListener("photosbyelie:likedchange", updateGalleryLikeButtons);
 }
 })().catch((error) => {
+  const failedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+  if (failedGalleryKey === "pbe-owner") {
+    document.body.dataset.gallery = "pbe-owner";
+    document.querySelector("[data-gallery-root]")?.setAttribute("hidden", "");
+  }
   const status = document.querySelector("[data-gallery-status]");
   if (status) status.textContent = error?.message || "Could not load gallery.";
 }));

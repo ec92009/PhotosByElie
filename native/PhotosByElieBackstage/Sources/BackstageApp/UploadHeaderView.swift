@@ -50,9 +50,10 @@ struct UploadHeaderView: View {
             if model.isRunningDelivery, model.nativeUploadPlan == nil {
                 ProgressView("Loading approved publication eligibility…")
             }
-            Text(model.nativeUploadStatus)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            BackstageFeedbackView(
+                message: model.nativeUploadStatus,
+                isWorking: model.isRunningDelivery || model.isRunningNativePublication
+            )
         }
     }
 }

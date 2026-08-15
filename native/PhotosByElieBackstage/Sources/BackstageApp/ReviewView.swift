@@ -214,9 +214,10 @@ struct ReviewView: View {
                         .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
                     }
                 }
-                Text(model.aiProposalStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                BackstageFeedbackView(
+                    message: model.aiProposalStatus,
+                    isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true
+                )
                 if let run = model.fixtureAIStatus?.run, model.fixtureAIStatus?.active == true {
                     ProgressView(
                         value: Double(run.processed),
@@ -350,9 +351,10 @@ struct ReviewView: View {
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
                         .backstageHelp("Deselect every Review item without changing titles, keywords, or workflow states.")
                 }
-                Text(model.reviewStatus)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                BackstageFeedbackView(
+                    message: model.reviewStatus,
+                    isWorking: model.isRunningReview || model.isRunningAIPass
+                )
             }
             .padding()
             .frame(minWidth: 480)
@@ -422,18 +424,6 @@ struct ReviewView: View {
                 )
             )
             .toggleStyle(.checkbox)
-            Text("Media")
-                .font(.callout.weight(.semibold))
-            ForEach(CullingMediaFilter.selectableCases, id: \.rawValue) { filter in
-                Toggle(
-                    filter.label,
-                    isOn: Binding(
-                        get: { model.reviewMediaFilters.contains(filter) },
-                        set: { _ in model.toggleReviewMediaFilter(filter) }
-                    )
-                )
-                .toggleStyle(.checkbox)
-            }
         }
     }
 }
@@ -704,14 +694,10 @@ private struct ReviewInspector: View {
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
-                        if model.isRunningReview {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        Text(model.reviewStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                        BackstageFeedbackView(
+                            message: model.reviewStatus,
+                            isWorking: model.isRunningReview || model.isRunningAIPass
+                        )
                     }
                     Divider()
                     Text("Mark for AI review")

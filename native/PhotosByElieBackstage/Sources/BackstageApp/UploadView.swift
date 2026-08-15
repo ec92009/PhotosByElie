@@ -213,9 +213,10 @@ struct UploadView: View {
                             )
                             .backstageHelp("Review the confirmation for reconstructing fixture receipts from the verified legacy upload run.")
                     }
-                    Text(model.uploadRecoveryStatus)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    BackstageFeedbackView(
+                        message: model.uploadRecoveryStatus,
+                        isWorking: model.isRunningDelivery
+                    )
                     Table(
                         model.deliveryPlan?.items ?? [],
                         selection: $model.selectedDeliveryIDs

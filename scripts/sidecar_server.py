@@ -12,6 +12,7 @@ import json
 import mimetypes
 import os
 from pathlib import Path
+import plistlib
 import sqlite3
 import subprocess
 import sys
@@ -48,11 +49,15 @@ from fixture_pipeline import get_pool, pool_asset_ids
 from streaming_fixture_delivery import finalize_streamed_upload_batch
 
 
+CONNECTOR_RUNTIME_ROOT = Path(
+    os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
+).expanduser().resolve()
 APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
 APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
 APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
 APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
 APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
+BACKSTAGE_APP = Path.home() / "Applications" / "PhotosByElie Backstage.app"
 DEFAULT_CONNECTOR_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
 SIDECAR_DEFAULT_VERSION = "125.2"
@@ -443,13 +448,42 @@ def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout:
     }
 
 
+def _connector_runtime_path(repo_root: Path, relative_path: Path) -> Path:
+    root = CONNECTOR_RUNTIME_ROOT if os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", "").strip() else repo_root
+    candidate = root / relative_path
+    if candidate.is_symlink():
+        raise RuntimeError(f"Connector runtime file is unsafe: {candidate}")
+    return candidate
+
+
+def _bundle_release(app: Path, expected_identifier: str) -> tuple[tuple[int, ...], int] | None:
+    try:
+        with (app / "Contents" / "Info.plist").open("rb") as handle:
+            info = plistlib.load(handle)
+        if info.get("CFBundleIdentifier") != expected_identifier:
+            return None
+        version = tuple(int(part) for part in str(info["CFBundleShortVersionString"]).split("."))
+        build = int(str(info["CFBundleVersion"]))
+    except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException):
+        return None
+    return version, build
+
+
+def _installed_bridge_satisfies_backstage_release() -> bool:
+    bridge = _bundle_release(APPLE_PHOTOS_BRIDGE_APP, "com.photosbyelie.photos-bridge")
+    backstage = _bundle_release(BACKSTAGE_APP, "com.photosbyelie.backstage")
+    return bridge is not None and backstage is not None and bridge >= backstage
+
+
 def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = repo_root / APPLE_PHOTOS_BRIDGE_APP_INSTALLER
-    bridge_source = repo_root / APPLE_PHOTOS_BRIDGE
+    installer = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE_APP_INSTALLER)
+    bridge_source = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE)
     if not installer.exists():
         raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
     needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
     if not needs_build:
+        if _installed_bridge_satisfies_backstage_release():
+            return
         try:
             installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
                 encoding="utf-8"
@@ -480,7 +514,7 @@ def _apple_photos_bridge_command(repo_root: Path, args: list[str]) -> list[str]:
             raise RuntimeError(f"Configured Apple Photos bridge executable is missing: {executable}")
         return [str(executable), *args]
 
-    bridge = repo_root / APPLE_PHOTOS_BRIDGE
+    bridge = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE)
     if not bridge.exists():
         raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
     return ["swift", str(bridge), *args]

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SQLite3
 import Testing
@@ -13,6 +14,443 @@ struct OwnerCoreTests {
         #expect(page.actions[0].actionKind == "fixture-operation")
         #expect(page.actions[0].progress?.total == 20)
         #expect(page.page.hasMore)
+    }
+
+    @Test("Backstage updater compares a signed release manifest without inventing an endpoint")
+    func backstageUpdateManifestAndVersionComparison() throws {
+        let manifest = try backstageUpdateManifestFixture()
+        try manifest.validate()
+        let current = BackstageReleaseIdentity(
+            bundleIdentifier: "com.photosbyelie.backstage",
+            version: "219.1",
+            build: "77"
+        )
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data()),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier()
+        )
+        #expect(try service.makeCheck(current: current, manifest: manifest).availability == .updateAvailable)
+
+        var same = manifest
+        same.version = "219.1"
+        same.build = "77"
+        #expect(try service.makeCheck(current: current, manifest: same).availability == .current)
+
+        var older = manifest
+        older.version = "219.0"
+        older.build = "76"
+        #expect(try service.makeCheck(current: current, manifest: older).availability == .downgradeRejected)
+
+        var futureOS = manifest
+        futureOS.minimumOSVersion = "999.0"
+        #expect(try service.makeCheck(current: current, manifest: futureOS).availability == .incompatible)
+
+        let wrongIdentity = BackstageReleaseIdentity(
+            bundleIdentifier: "com.photosbyelie.backstage.canvas",
+            version: "219.1",
+            build: "77"
+        )
+        #expect(try service.makeCheck(current: wrongIdentity, manifest: manifest).availability == .incompatible)
+    }
+
+    @Test("Backstage updater rejects ambiguous manifest values")
+    func backstageUpdateManifestValidationFailsClosed() throws {
+        let manifest = try backstageUpdateManifestFixture()
+        var invalidManifests: [BackstageReleaseManifest] = []
+
+        var negativeVersion = manifest
+        negativeVersion.version = "-1.0"
+        invalidManifests.append(negativeVersion)
+
+        var negativeBuild = manifest
+        negativeBuild.build = "-1"
+        invalidManifests.append(negativeBuild)
+
+        var missingNotes = manifest
+        missingNotes.releaseNotes = "  \n"
+        invalidManifests.append(missingNotes)
+
+        var insecureDownload = manifest
+        insecureDownload.downloadURL = try #require(URL(string: "http://updates.test/backstage.zip"))
+        invalidManifests.append(insecureDownload)
+
+        var paddedTrust = manifest
+        paddedTrust.trust.teamIdentifier += " "
+        invalidManifests.append(paddedTrust)
+
+        var oversizedArchive = manifest
+        oversizedArchive.fileSize = BackstageUpdateResourceLimits.hardMaximumArchiveFileSize + 1
+        invalidManifests.append(oversizedArchive)
+
+        for invalidManifest in invalidManifests {
+            #expect(throws: BackstageUpdateError.self) {
+                try invalidManifest.validate()
+            }
+        }
+    }
+
+    @Test("Backstage URL transport stops an undeclared streaming overrun and removes partial bytes")
+    func backstageUpdateTransportRejectsStreamingOverrun() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        StreamingBackstageURLProtocol.setResponse(Data(repeating: 0x41, count: 18))
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StreamingBackstageURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-stream-overrun-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: URLSessionBackstageUpdateTransport(session: session),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An archive byte beyond the declared size unexpectedly downloaded.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("exceeded"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater fetches and validates the configured manifest")
+    func backstageUpdateChecksConfiguredManifest() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: Data()
+            ),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            currentBundleURL: nil
+        )
+        let result = try await service.check(
+            current: BackstageReleaseIdentity(
+                bundleIdentifier: "com.photosbyelie.backstage",
+                version: "219.1",
+                build: "77"
+            )
+        )
+        #expect(result.availability == .updateAvailable)
+        #expect(result.manifest == manifest)
+    }
+
+    @Test("Backstage updater blocks a signer change before offering a download")
+    func backstageUpdateRejectsChangedCurrentSigner() async throws {
+        let manifest = try backstageUpdateManifestFixture()
+        var differentTrust = manifest.trust
+        differentTrust.teamIdentifier = "OTHERTEAM"
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: Data()
+            ),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            currentTrustReader: StubBackstageCurrentTrustReader(trust: differentTrust),
+            currentBundleURL: URL(fileURLWithPath: "/tmp/PhotosByElie Backstage.app")
+        )
+
+        do {
+            _ = try await service.check(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                )
+            )
+            Issue.record("A changed signing team unexpectedly passed the update check.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("signing contract differs"))
+            #expect(error.recoveryGuidance.contains("Keep this installation"))
+        }
+    }
+
+    @Test("Backstage updater verifies cache bytes and bundle metadata before offering an update")
+    func backstageUpdateDownloadAndVerify() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let progress = LockedProgress()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: try JSONEncoder().encode(manifest),
+                artifactData: artifactData
+            ),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        let verified = try await service.downloadAndVerify(
+            current: BackstageReleaseIdentity(
+                bundleIdentifier: "com.photosbyelie.backstage",
+                version: "219.1",
+                build: "77"
+            ),
+            manifest: manifest
+        ) { received, total in
+            progress.append(received: received, total: total)
+        }
+
+        #expect(FileManager.default.fileExists(atPath: verified.archiveURL.path))
+        #expect(FileManager.default.fileExists(atPath: verified.bundleURL.path))
+        #expect(progress.values.last?.received == manifest.fileSize)
+        #expect(progress.values.last?.total == manifest.fileSize)
+    }
+
+    @Test("Backstage updater blocks checksum and signature failures with recovery guidance")
+    func backstageUpdateVerificationFailuresAreSafe() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-failure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var badChecksum = manifest
+        badChecksum.sha256 = String(repeating: "0", count: 64)
+        let checksumService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: artifactData),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await checksumService.downloadAndVerify(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77"),
+                manifest: badChecksum
+            )
+            Issue.record("Checksum mismatch unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.recoveryGuidance.contains("running app"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+
+        let signatureService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: artifactData),
+            extractor: StubBackstageArtifactExtractor(version: manifest.version, build: manifest.build),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await signatureService.downloadAndVerify(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77"),
+                manifest: manifest
+            )
+            Issue.record("Signature mismatch unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("signature"))
+            #expect(error.recoveryGuidance.contains("temporary archive was removed"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+
+        let escapingExtractorService = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: artifactData
+            ),
+            extractor: EscapingBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: root
+        )
+        do {
+            _ = try await escapingExtractorService.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An extracted bundle outside the update directory unexpectedly verified.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("outside the isolated update directory"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects excessive extracted bytes before signature verification and cleans up")
+    func backstageUpdateRejectsExcessiveExtractedSize() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-extracted-size-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: artifactData
+            ),
+            extractor: StubBackstageArtifactExtractor(
+                version: manifest.version,
+                build: manifest.build,
+                extraFileCount: 1,
+                extraFileSize: 8_192
+            ),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 4_096,
+                maximumExtractedEntryCount: 100
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An oversized extracted tree unexpectedly reached signature verification.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("regular-file safety limit"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects excessive extracted entries and cleans up")
+    func backstageUpdateRejectsExcessiveExtractedEntries() async throws {
+        let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-extracted-count-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: artifactData
+            ),
+            extractor: StubBackstageArtifactExtractor(
+                version: manifest.version,
+                build: manifest.build,
+                extraFileCount: 10
+            ),
+            signatureVerifier: FailingBackstageSignatureVerifier(),
+            cacheDirectory: root,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 10_000,
+                maximumExtractedEntryCount: 10
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("An extracted tree with too many entries unexpectedly reached signature verification.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("entry safety limit"))
+        }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test("Backstage updater rejects ZIP-declared expansion before invoking the extractor")
+    func backstageUpdateRejectsZipBombBeforeExtraction() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-update-zip-bomb-\(UUID().uuidString)", isDirectory: true)
+        let sourceApp = root.appendingPathComponent("Oversized.app", isDirectory: true)
+        let contents = sourceApp.appendingPathComponent("Contents", isDirectory: true)
+        let archive = root.appendingPathComponent("oversized.zip")
+        let cache = root.appendingPathComponent("cache", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        try Data(repeating: 0x5a, count: 1_024).write(
+            to: contents.appendingPathComponent("payload.bin")
+        )
+        try createZipArchive(sourceApp: sourceApp, destination: archive)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        manifest.fileSize = Int64(
+            try #require(
+                (try FileManager.default.attributesOfItem(atPath: archive.path)[.size] as? NSNumber)?.int64Value
+            )
+        )
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let extractorCall = LockedFlag()
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(manifestURL: manifest.downloadURL),
+            transport: StubBackstageUpdateTransport(
+                manifestData: Data(),
+                artifactData: try Data(contentsOf: archive)
+            ),
+            extractor: RecordingBackstageArtifactExtractor(called: extractorCall),
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            cacheDirectory: cache,
+            limits: BackstageUpdateResourceLimits(
+                maximumArchiveFileSize: manifest.fileSize,
+                maximumExtractedRegularFileSize: 512,
+                maximumExtractedEntryCount: 100
+            )
+        )
+
+        do {
+            _ = try await service.downloadAndVerify(
+                current: BackstageReleaseIdentity(
+                    bundleIdentifier: "com.photosbyelie.backstage",
+                    version: "219.1",
+                    build: "77"
+                ),
+                manifest: manifest
+            )
+            Issue.record("A ZIP declaring excessive expansion unexpectedly reached the extractor.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("uncompressed content"))
+        }
+        #expect(!extractorCall.value())
+        #expect(try FileManager.default.contentsOfDirectory(atPath: cache.path).isEmpty)
+    }
+
+    @Test("Backstage updater reports the missing authoritative endpoint as a safe blocker")
+    func backstageUpdateEndpointIsExplicit() async throws {
+        let service = BackstageUpdateService(
+            configuration: BackstageUpdateConfiguration(),
+            transport: StubBackstageUpdateTransport(manifestData: Data(), artifactData: Data()),
+            extractor: StubBackstageArtifactExtractor(),
+            signatureVerifier: StubBackstageSignatureVerifier()
+        )
+        do {
+            _ = try await service.check(
+                current: BackstageReleaseIdentity(bundleIdentifier: "com.photosbyelie.backstage", version: "219.1", build: "77")
+            )
+            Issue.record("Missing release endpoint unexpectedly proceeded.")
+        } catch let error as BackstageUpdateError {
+            #expect(error == .configurationMissing)
+            #expect(error.recoveryGuidance.contains("approved HTTPS manifest"))
+        }
     }
 
     @Test("Decodes legacy queued actions without canonical v1 aliases")
@@ -177,6 +615,61 @@ struct OwnerCoreTests {
         #expect(result.summary.picked == 2)
         #expect(result.summary.photos == 9)
         #expect(result.summary.videos == 1)
+    }
+
+    @Test("Still-only Culling universes expose only the Photos control")
+    func stillOnlyCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["photo", "image/jpeg", "still"])
+                == [.photos]
+        )
+    }
+
+    @Test("Video-only Culling universes expose only the Videos control")
+    func videoOnlyCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["video", "quicktime-video"])
+                == [.videos]
+        )
+    }
+
+    @Test("Mixed Culling universes retain both media controls in stable order")
+    func mixedCullingMediaAvailability() {
+        #expect(
+            CullingMediaFilter.availableCases(in: ["video", "photo", "video"])
+                == [.photos, .videos]
+        )
+    }
+
+    @Test("Stale media selection normalizes to a visible valid candidate type")
+    func staleCullingMediaSelectionCannotHideValidCandidates() {
+        let candidates = [
+            CullingCandidate(id: "still", filename: "STILL.JPG", mediaType: "photo"),
+        ]
+        let available = CullingMediaFilter.availableCases(
+            in: candidates.map(\.mediaType)
+        )
+        let normalized = CullingMediaFilter.normalizedSelection(
+            [.videos],
+            availableCases: available
+        )
+        let result = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(media: normalized)
+        )
+
+        #expect(normalized == [.photos])
+        #expect(result.items.map(\.id) == ["still"])
+    }
+
+    @Test("Empty Culling universes reset media selection to a safe neutral state")
+    func emptyCullingMediaAvailabilityResetsSelection() {
+        #expect(
+            CullingMediaFilter.normalizedSelection(
+                [.videos],
+                availableCases: []
+            ) == Set(CullingMediaFilter.selectableCases)
+        )
     }
 
     @Test("Fixture hidden states match the rejected culling filter")
@@ -439,6 +932,70 @@ struct OwnerCoreTests {
         #expect(try await session.load() == nil)
     }
 
+    @Test("Corrupted credential storage returns to enrollment")
+    func corruptedCredentialStorageRequiresEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        try vault.write(Data("not-owner-credentials".utf8), account: OwnerCredentialSession.account)
+        let session = OwnerCredentialSession(vault: vault)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: RoutingTransport(responses: [:])
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap()
+        #expect(snapshot.phase == .needsEnrollment)
+        #expect(try vault.read(account: OwnerCredentialSession.account) == nil)
+    }
+
+    @Test("Temporary Keychain read failure retains the renewal path")
+    func credentialReadFailureRetainsRenewalPath() async {
+        let vault = ControlledFailureCredentialVault(failReads: true)
+        let service = OwnerAuthenticationService(
+            api: OwnerAPIClient(
+                baseURL: URL(string: "https://example.test/api/v1")!,
+                transport: RoutingTransport(responses: [:])
+            ),
+            session: OwnerCredentialSession(vault: vault)
+        )
+
+        #expect(await service.bootstrap().phase == .renewalFailed)
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+    }
+
+    @Test("Token-only storage cannot bypass device enrollment")
+    func tokenWithoutDeviceCredentialRequiresEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-incomplete",
+            deviceCredential: nil,
+            accessToken: "unexpired-but-unbound",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_900_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/actions": [
+                .init(status: 200, body: """
+                {"actions":[],"page":{"hasMore":false}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .needsEnrollment)
+        _ = try await client.listActions()
+        let requests = await transport.requests()
+        #expect(requests.last?.value(forHTTPHeaderField: "Authorization") == nil)
+        let saved = try #require(try await session.load())
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+    }
+
     @Test("One-time enrollment stores the device credential and a short-lived access token")
     func credentialEnrollment() async throws {
         let vault = MemoryCredentialVault()
@@ -510,6 +1067,218 @@ struct OwnerCoreTests {
         let saved = try #require(try await session.load())
         #expect(saved.accessToken == "access-two")
         #expect(await transport.requests().map(\.url?.path) == ["/api/v1/auth/tokens"])
+    }
+
+    @Test("Transient renewal failure retains enrollment for retry")
+    func credentialBootstrapRetainsEnrollmentAfterTransientFailure() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 503, body: """
+                {"error":{"code":"owner_token_auth_unavailable","message":"Native Owner token issuance is not configured."}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .renewalFailed)
+        #expect(snapshot.deviceId == "owner-device-max")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+    }
+
+    @Test("Network renewal failure retains enrollment for retry")
+    func credentialBootstrapRetainsEnrollmentAfterNetworkFailure() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: nil,
+            accessExpiresAt: nil
+        ))
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: RoutingTransport(responses: [:])
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap()
+        #expect(snapshot.phase == .renewalFailed)
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == nil)
+    }
+
+    @Test("Retained enrollment authenticates on a later retry")
+    func credentialBootstrapRetrySucceeds() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let deviceCredential = String(repeating: "d", count: 48)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: deviceCredential,
+            accessToken: nil,
+            accessExpiresAt: nil
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 503, body: """
+                {"error":{"code":"owner_token_auth_unavailable","message":"Try again later."}}
+                """),
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"access-after-retry",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        #expect(await service.bootstrap().phase == .renewalFailed)
+        let retried = await service.bootstrap()
+        #expect(retried.phase == .authenticated)
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == deviceCredential)
+        #expect(saved.accessToken == "access-after-retry")
+        #expect(await transport.requests().map(\.url?.path) == [
+            "/api/v1/auth/tokens",
+            "/api/v1/auth/tokens",
+        ])
+    }
+
+    @Test("Rejected device credential requires fresh enrollment")
+    func credentialBootstrapRejectsInvalidEnrollment() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-revoked",
+            deviceCredential: String(repeating: "r", count: 48),
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        ))
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 401, body: """
+                {"error":{"code":"owner_device_credential_invalid","message":"The Backstage device credential is invalid or revoked."}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let snapshot = await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(snapshot.phase == .needsEnrollment)
+        #expect(snapshot.deviceId == "owner-device-revoked")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential == nil)
+        #expect(saved.accessToken == nil)
+        #expect(saved.accessExpiresAt == nil)
+        #expect(await service.currentSnapshot().phase == .needsEnrollment)
+    }
+
+    @Test("Failed credential persistence never authenticates an issued token")
+    func credentialPersistenceFailureFailsClosed() async throws {
+        let original = OwnerCredentialSet(
+            deviceId: "owner-device-max",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "expired-access",
+            accessExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let stored = try JSONEncoder.ownerAPI.encode(original)
+        let vault = ControlledFailureCredentialVault(value: stored, failWrites: true)
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"must-not-be-used",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+            "/api/v1/actions": [
+                .init(status: 200, body: """
+                {"actions":[],"page":{"hasMore":false}}
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        #expect(
+            await service.bootstrap(now: Date(timeIntervalSince1970: 1_800_000_000)).phase
+                == .renewalFailed
+        )
+        #expect(await service.currentSnapshot().phase == .renewalFailed)
+        _ = try await client.listActions()
+        let requests = await transport.requests()
+        #expect(requests.last?.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(vault.value() == stored)
+    }
+
+    @Test("Rejected credential remains enrollment-required when persistence fails")
+    func rejectedCredentialPersistenceFailureStillNeedsEnrollment() async throws {
+        let original = OwnerCredentialSet(
+            deviceId: "owner-device-revoked",
+            deviceCredential: String(repeating: "r", count: 48),
+            accessToken: nil,
+            accessExpiresAt: nil
+        )
+        let vault = ControlledFailureCredentialVault(
+            value: try JSONEncoder.ownerAPI.encode(original),
+            failWrites: true
+        )
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/auth/tokens": [
+                .init(status: 401, body: """
+                {"error":{"code":"owner_device_credential_invalid","message":"The Backstage device credential is invalid or revoked."}}
+                """),
+            ],
+        ])
+        let service = OwnerAuthenticationService(
+            api: OwnerAPIClient(
+                baseURL: URL(string: "https://example.test/api/v1")!,
+                transport: transport
+            ),
+            session: session
+        )
+
+        #expect(await service.bootstrap().phase == .needsEnrollment)
+        #expect(await service.currentSnapshot().phase == .needsEnrollment)
     }
 
     @Test("Expired native access recovers once and retries the original request")
@@ -1012,6 +1781,10 @@ struct OwnerCoreTests {
                         "picked": 2200,
                         "hidden": 211,
                     ]),
+                    "mediaAvailability": .object([
+                        "photos": 3400,
+                        "videos": 151,
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-newest",
                         "photoLibraryIdentifier": "photos-newest",
@@ -1056,6 +1829,9 @@ struct OwnerCoreTests {
         #expect(window.fixtureID == "fixture-expo")
         #expect(window.summary.universe == 3551)
         #expect(window.summary.filtered == 1140)
+        #expect(window.mediaAvailability?.photos == 3400)
+        #expect(window.mediaAvailability?.videos == 151)
+        #expect(window.availableMediaFilters == [.photos, .videos])
         #expect(window.items.map(\.id) == ["asset-newest"])
         #expect(window.items.first?.photoLibraryIdentifier == "photos-newest")
         #expect(window.items.first?.placementState == .undecided)
@@ -2861,6 +3637,154 @@ struct PBEOwnerHostContractTests {
         }
     }
 
+    @Test("Installed runtime attestation rejects tampering and symlinks")
+    func installedRuntimeIdentityFailsClosed() throws {
+        let fixtureRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-runtime-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: fixtureRoot, withIntermediateDirectories: true)
+        defer {
+            makeWritable(fixtureRoot)
+            try? FileManager.default.removeItem(at: fixtureRoot)
+        }
+
+        func makeRuntime(named name: String) throws -> URL {
+            let root = fixtureRoot.appendingPathComponent(name, isDirectory: true)
+            let scripts = root.appendingPathComponent("scripts", isDirectory: true)
+            try FileManager.default.createDirectory(at: scripts, withIntermediateDirectories: true)
+            let files: [String: Data] = [
+                "scripts/pbe_owner_host_tracked_paths.txt": Data("gallery.html\n".utf8),
+                "scripts/local_server.py": Data("# local host\n".utf8),
+                "scripts/pbe_owner_session.py": Data("# session host\n".utf8),
+                "scripts/waste_basket_gateway.py": Data("# waste basket\n".utf8),
+                "gallery.html": Data("<!doctype html><title>Owner runtime</title>\n".utf8),
+            ]
+            var entries: [[String: Any]] = []
+            for path in files.keys.sorted() {
+                let data = try #require(files[path])
+                let destination = root.appendingPathComponent(path)
+                try data.write(to: destination)
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: 0o444],
+                    ofItemAtPath: destination.path
+                )
+                entries.append([
+                    "path": path,
+                    "sha256": SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+                    "size": data.count,
+                    "mode": "0444",
+                ])
+            }
+            let manifest: [String: Any] = [
+                "schemaVersion": 2,
+                "kind": "photosbyelie-owner-connector-runtime",
+                "sourceRevision": String(repeating: "a", count: 40),
+                "files": entries,
+                "pbeOwnerHost": [
+                    "scopeManifest": "scripts/pbe_owner_host_tracked_paths.txt",
+                    "files": files.keys.sorted(),
+                ],
+            ]
+            let manifestURL = root.appendingPathComponent("connector-runtime-manifest.json")
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted])
+                .write(to: manifestURL)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o444],
+                ofItemAtPath: manifestURL.path
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o555],
+                ofItemAtPath: scripts.path
+            )
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o555],
+                ofItemAtPath: root.path
+            )
+            return root
+        }
+
+        let clean = try makeRuntime(named: "clean")
+        #expect(
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: clean)
+                == "runtime:\(String(repeating: "a", count: 40)):pbe-host-sha256:"
+                + "75a383e01ec8dc07680edda4b442b1318fc525f09113cebe866ac2f9a5a4c615"
+        )
+
+        let tampered = try makeRuntime(named: "tampered")
+        let tamperedGallery = tampered.appendingPathComponent("gallery.html")
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: tampered.path
+        )
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: tamperedGallery.path)
+        try "tampered\n".write(to: tamperedGallery, atomically: true, encoding: .utf8)
+        #expect(throws: APIErrorEnvelope.self) {
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: tampered)
+        }
+
+        let symlinked = try makeRuntime(named: "symlinked")
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: symlinked.path)
+        let symlinkedGallery = symlinked.appendingPathComponent("gallery.html")
+        try FileManager.default.removeItem(at: symlinkedGallery)
+        try FileManager.default.createSymbolicLink(
+            at: symlinkedGallery,
+            withDestinationURL: clean.appendingPathComponent("gallery.html")
+        )
+        #expect(throws: APIErrorEnvelope.self) {
+            try PBEOwnerCheckoutIdentity.verified(repositoryRoot: symlinked)
+        }
+    }
+
+    @Test("Installed Owner runtime and mutable data root resolve independently")
+    func installedRuntimeUsesSplitRoots() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-split-root-\(UUID().uuidString)", isDirectory: true)
+        let bundleRuntime = root.appendingPathComponent("signed-app/OwnerRuntime", isDirectory: true)
+        let dataRoot = root.appendingPathComponent("mutable-data", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        try FileManager.default.createDirectory(
+            at: bundleRuntime.appendingPathComponent("scripts", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: dataRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data().write(to: bundleRuntime.appendingPathComponent("scripts/local_server.py"))
+        try Data().write(to: dataRoot.appendingPathComponent("assets/owner-actions/Owner.sqlite"))
+        try JSONSerialization.data(withJSONObject: [
+            "repoRoot": dataRoot.path,
+            "runtimeRoot": root.appendingPathComponent("stale-runtime").path,
+        ]).write(to: configURL)
+
+        let roots = PBEOwnerRuntimeRoots.resolve(
+            environment: [:],
+            bundleRuntimeRoot: bundleRuntime,
+            connectorConfigURL: configURL,
+            homeDirectory: root.appendingPathComponent("home", isDirectory: true)
+        )
+        #expect(roots.runtimeRoot == bundleRuntime.standardizedFileURL)
+        #expect(roots.dataRoot == dataRoot.standardizedFileURL)
+        #expect(!FileManager.default.fileExists(
+            atPath: dataRoot.appendingPathComponent("scripts/pbe_owner_host_tracked_paths.txt").path
+        ))
+    }
+
+    private func makeWritable(_ root: URL) {
+        guard FileManager.default.fileExists(atPath: root.path) else { return }
+        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {
+            let paths = enumerator.allObjects.compactMap { $0 as? URL }
+                .sorted { $0.pathComponents.count > $1.pathComponents.count }
+            for path in paths {
+                try? FileManager.default.setAttributes(
+                    [.posixPermissions: path.hasDirectoryPath ? 0o700 : 0o600],
+                    ofItemAtPath: path.path
+                )
+            }
+        }
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
+    }
+
     @Test("Backstage bearer mints a fully bound short-lived session")
     func mintRequestCarriesEveryBinding() async throws {
         let transport = RoutingTransport(responses: [
@@ -2993,6 +3917,209 @@ private final class LockedStringOutput: @unchecked Sendable {
     }
 }
 
+private func backstageUpdateManifestFixture() throws -> BackstageReleaseManifest {
+    let url = try #require(Bundle.module.url(
+        forResource: "backstage-release-update",
+        withExtension: "json",
+        subdirectory: "Fixtures"
+    ))
+    return try JSONDecoder().decode(BackstageReleaseManifest.self, from: Data(contentsOf: url))
+}
+
+private func backstageUpdateManifestAndArtifactFixture() throws -> (
+    manifest: BackstageReleaseManifest,
+    artifactData: Data
+) {
+    let root = FileManager.default.temporaryDirectory
+        .appendingPathComponent("pbe-update-archive-fixture-\(UUID().uuidString)", isDirectory: true)
+    let sourceApp = root.appendingPathComponent("PhotosByElie Backstage.app", isDirectory: true)
+    let contents = sourceApp.appendingPathComponent("Contents", isDirectory: true)
+    let archive = root.appendingPathComponent("Backstage.zip")
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    try Data([0x50, 0x42, 0x45]).write(to: contents.appendingPathComponent("fixture.bin"))
+    try createZipArchive(sourceApp: sourceApp, destination: archive)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    var manifest = try backstageUpdateManifestFixture()
+    let attributes = try FileManager.default.attributesOfItem(atPath: archive.path)
+    manifest.fileSize = try #require((attributes[.size] as? NSNumber)?.int64Value)
+    manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+    return (manifest, try Data(contentsOf: archive))
+}
+
+private struct StubBackstageUpdateTransport: BackstageUpdateTransport {
+    let manifestData: Data
+    let artifactData: Data
+
+    func fetchManifest(from url: URL) async throws -> Data { manifestData }
+
+    func download(
+        from url: URL,
+        to destination: URL,
+        expectedFileSize: Int64,
+        maximumFileSize: Int64,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws {
+        let size = Int64(artifactData.count)
+        guard size == expectedFileSize, size <= maximumFileSize else {
+            throw BackstageUpdateError.downloadFailed("Synthetic bounded download rejected its size.")
+        }
+        progress(0, expectedFileSize)
+        try artifactData.write(to: destination, options: .atomic)
+        progress(size, expectedFileSize)
+    }
+}
+
+private struct StubBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    var version = "219.2"
+    var build = "78"
+    var extraFileCount = 0
+    var extraFileSize = 0
+
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        let app = directoryURL.appendingPathComponent("PhotosByElie Backstage.app", isDirectory: true)
+        let contents = app.appendingPathComponent("Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let plist: [String: Any] = [
+            "CFBundleIdentifier": "com.photosbyelie.backstage",
+            "CFBundleShortVersionString": version,
+            "CFBundleVersion": build,
+            "CFBundlePackageType": "APPL",
+        ]
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try data.write(to: contents.appendingPathComponent("Info.plist"))
+        for index in 0..<extraFileCount {
+            try Data(repeating: UInt8(index % 255), count: extraFileSize).write(
+                to: contents.appendingPathComponent("extra-\(index).bin")
+            )
+        }
+        return app
+    }
+}
+
+private struct EscapingBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        URL(fileURLWithPath: "/tmp/PhotosByElie Outside.app", isDirectory: true)
+    }
+}
+
+private struct RecordingBackstageArtifactExtractor: BackstageUpdateArtifactExtracting {
+    let called: LockedFlag
+
+    func extractAppBundle(from archiveURL: URL, to directoryURL: URL) throws -> URL {
+        called.set()
+        throw BackstageUpdateError.archiveInvalid("Extractor should not have been invoked.")
+    }
+}
+
+private struct StubBackstageSignatureVerifier: BackstageCodeSignatureVerifying {
+    func verify(
+        bundleURL: URL,
+        expectedBundleIdentifier: String,
+        trust: BackstageReleaseTrust
+    ) throws {}
+}
+
+private struct StubBackstageCurrentTrustReader: BackstageCurrentReleaseTrustReading {
+    let trust: BackstageReleaseTrust
+
+    func readTrust(bundleURL: URL) throws -> BackstageReleaseTrust { trust }
+}
+
+private struct FailingBackstageSignatureVerifier: BackstageCodeSignatureVerifying {
+    func verify(
+        bundleURL: URL,
+        expectedBundleIdentifier: String,
+        trust: BackstageReleaseTrust
+    ) throws {
+        throw BackstageUpdateError.signatureMismatch("Synthetic signature mismatch.")
+    }
+}
+
+private struct ProgressSample: Sendable {
+    let received: Int64
+    let total: Int64
+}
+
+private final class LockedProgress: @unchecked Sendable {
+    private let lock = NSLock()
+    private(set) var values: [ProgressSample] = []
+
+    func append(received: Int64, total: Int64) {
+        lock.withLock { values.append(ProgressSample(received: received, total: total)) }
+    }
+}
+
+private final class StreamingBackstageURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let fixture = LockedDataFixture()
+
+    static func setResponse(_ data: Data) {
+        fixture.set(data)
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let client, let url = request.url else { return }
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client.urlProtocol(self, didLoad: Self.fixture.get())
+        client.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+private final class LockedDataFixture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    func set(_ data: Data) {
+        lock.withLock { self.data = data }
+    }
+
+    func get() -> Data {
+        lock.withLock { data }
+    }
+}
+
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = false
+
+    func set() {
+        lock.withLock { storage = true }
+    }
+
+    func value() -> Bool {
+        lock.withLock { storage }
+    }
+}
+
+private func createZipArchive(sourceApp: URL, destination: URL) throws {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+    process.arguments = ["-c", "-k", "--keepParent", sourceApp.path, destination.path]
+    let pipe = Pipe()
+    process.standardError = pipe
+    try process.run()
+    process.waitUntilExit()
+    guard process.terminationStatus == 0 else {
+        let message = String(
+            data: pipe.fileHandleForReading.readDataToEndOfFile(),
+            encoding: .utf8
+        ) ?? ""
+        throw BackstageUpdateError.archiveInvalid("Synthetic ZIP creation failed: \(message)")
+    }
+}
+
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {
     var database: OpaquePointer?
     guard sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK,
@@ -3044,6 +4171,45 @@ private final class MemoryCredentialVault: CredentialVault, @unchecked Sendable 
 
     func delete(account: String) throws {
         lock.withLock { _ = values.removeValue(forKey: account) }
+    }
+}
+
+private final class ControlledFailureCredentialVault: CredentialVault, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValue: Data?
+    private let failReads: Bool
+    private let failWrites: Bool
+    private let failDeletes: Bool
+
+    init(
+        value: Data? = nil,
+        failReads: Bool = false,
+        failWrites: Bool = false,
+        failDeletes: Bool = false
+    ) {
+        storedValue = value
+        self.failReads = failReads
+        self.failWrites = failWrites
+        self.failDeletes = failDeletes
+    }
+
+    func read(account: String) throws -> Data? {
+        if failReads { throw URLError(.cannotLoadFromNetwork) }
+        return lock.withLock { storedValue }
+    }
+
+    func write(_ data: Data, account: String) throws {
+        if failWrites { throw URLError(.cannotWriteToFile) }
+        lock.withLock { storedValue = data }
+    }
+
+    func delete(account: String) throws {
+        if failDeletes { throw URLError(.cannotRemoveFile) }
+        lock.withLock { storedValue = nil }
+    }
+
+    func value() -> Data? {
+        lock.withLock { storedValue }
     }
 }
 

@@ -27,6 +27,7 @@ gallery-card.js
 gallery-layout.js
 gallery-hero.js
 gallery-date-picker.js
+gallery-commands.js
 photo-gallery.js
 photo-detail.js
 basket-rail.js

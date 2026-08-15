@@ -18,6 +18,7 @@ from scripts.pbe_owner_session import (
     PBEOwnerSessionError,
     PBEOwnerHostAuthenticator,
     PBEOwnerSessionStore,
+    _connect_query_only,
     checkout_identity,
     repository_readiness,
 )
@@ -703,6 +704,37 @@ class PBEOwnerSessionTests(unittest.TestCase):
             with self.assertRaises(PBEOwnerSessionError) as caught:
                 repository_readiness(root, "fixture-la-concha")
             self.assertEqual(caught.exception.code, "pbe_owner_host_not_ready")
+
+    def test_query_only_connection_reads_open_wal_without_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            database = Path(temporary) / "Owner.sqlite"
+            writer = sqlite3.connect(database)
+            writer.execute(
+                "CREATE TABLE owner_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT)"
+            )
+            writer.execute("PRAGMA journal_mode = WAL")
+            writer.execute(
+                "INSERT INTO owner_settings VALUES ('fixture', 'expo')"
+            )
+            writer.commit()
+            try:
+                reader = _connect_query_only(database)
+                try:
+                    self.assertEqual(reader.execute("PRAGMA query_only").fetchone()[0], 1)
+                    self.assertEqual(
+                        reader.execute(
+                            "SELECT setting_value FROM owner_settings WHERE setting_key = 'fixture'"
+                        ).fetchone()[0],
+                        "expo",
+                    )
+                    with self.assertRaises(sqlite3.OperationalError):
+                        reader.execute(
+                            "INSERT INTO owner_settings VALUES ('blocked', 'write')"
+                        )
+                finally:
+                    reader.close()
+            finally:
+                writer.close()
 
     def test_hosted_x_and_restore_derive_guarded_writer_context(self) -> None:
         lease = {"id": "session-one", "fixtureId": "fixture-la-concha"}

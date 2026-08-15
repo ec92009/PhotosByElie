@@ -301,6 +301,18 @@ class BackstagePhotosClientTest(unittest.TestCase):
         self.assertIn("_run_backstage_photos_library_index", library_handler)
         self.assertNotIn("_run_apple_photos_bridge", library_handler)
 
+    def test_sidecar_source_video_route_is_retired_without_bridge_fallback(self):
+        source = (ROOT / "scripts" / "sidecar_server.py").read_text(encoding="utf-8")
+        get_handler = source.split("    def do_GET", 1)[1].split("    def do_POST", 1)[0]
+        video_handler = source.split("    def _handle_video", 1)[1].split(
+            "    def _handle_decision", 1
+        )[0]
+        self.assertIn("SIDECAR_VIDEO_PATH", get_handler)
+        self.assertIn("HTTPStatus.GONE", video_handler)
+        self.assertIn('"source_video_unsupported"', video_handler)
+        self.assertNotIn("_run_apple_photos_bridge_app_task", video_handler)
+        self.assertNotIn("_video_cache_", source)
+
     def test_background_index_streams_backstage_pages(self):
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

@@ -50,6 +50,7 @@ public enum PhotoLibraryError: Error, Sendable, Equatable {
     case resourceNotFound(String)
     case previewUnavailable(String)
     case exportFailed(String)
+    case metadataFailed(String)
 }
 
 extension PhotoLibraryError: LocalizedError {
@@ -67,6 +68,8 @@ extension PhotoLibraryError: LocalizedError {
             return "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
         case .exportFailed:
             return "Photos could not export this asset."
+        case .metadataFailed:
+            return "Photos metadata automation failed. Retry after Backstage has Automation access to Photos."
         }
     }
 }
@@ -83,6 +86,8 @@ public protocol PhotoLibraryServing: Sendable {
         to directory: URL,
         allowICloudDownloads: Bool
     ) async throws -> PhotoExportReceipt
+    func metadataReadMany(assetIDs: [String]) async throws -> Data
+    func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data
 }
 
 public extension PhotoLibraryServing {
@@ -92,6 +97,14 @@ public extension PhotoLibraryServing {
         allowICloudDownloads: Bool
     ) async throws -> PhotoExportReceipt {
         try await exportOriginal(localIdentifier: localIdentifier, to: directory)
+    }
+
+    func metadataReadMany(assetIDs: [String]) async throws -> Data {
+        throw PhotoLibraryError.metadataFailed("This Photos library service does not provide metadata read-back.")
+    }
+
+    func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data {
+        throw PhotoLibraryError.metadataFailed("This Photos library service does not provide metadata apply.")
     }
 
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data {
@@ -353,6 +366,24 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             byteCount: Int64(values.fileSize ?? 0),
             checksumSHA256: try sha256(of: destination)
         )
+    }
+
+    public func metadataReadMany(assetIDs: [String]) async throws -> Data {
+        try requireAccess()
+        do {
+            return try PhotoMetadataAutomation.read(assetIDs: assetIDs)
+        } catch {
+            throw PhotoLibraryError.metadataFailed(error.localizedDescription)
+        }
+    }
+
+    public func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data {
+        try requireAccess()
+        do {
+            return try PhotoMetadataAutomation.apply(requests: requests)
+        } catch {
+            throw PhotoLibraryError.metadataFailed(error.localizedDescription)
+        }
     }
 
     private func libraryIndexRow(_ asset: PHAsset, index: Int) -> [String: Any] {

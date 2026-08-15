@@ -23,19 +23,25 @@ migration is rehearsed.
   durable action ledger, delivery, and sharing.
 - **Max connector** — claims exact opaque actions, validates target and kind,
   owns all private `Owner.sqlite` mutations, and reports terminal results.
-- **Photos Bridge** — the existing signed PhotoKit writer for title, keyword,
-  and receipt give-back. Backstage may read, select, preview, and export
-  through PhotoKit; it does not create a second metadata writer.
+- **Backstage PhotoKit services** — `PhotoLibraryService` owns authorization,
+  indexing, still previews, and bounded original export. `PhotoMetadataService`
+  owns the approved title, caption, and managed-keyword read/write path. There
+  is no separately installed or permissioned Photos helper.
 
 ## Native media and Photos give-back
 
-`PhotoKitLibraryService` is read/export-only:
+`PhotoLibraryService` and `PhotoMetadataService` are the only normal-release
+PhotoKit authority:
 
 - it requests the app's Photos permission, indexes stable local identifiers,
   filename, capture date and media kind;
 - it prepares bounded JPEG previews without exporting originals;
-- it exports the preferred original resource only after an explicit folder
-  choice and returns byte count, UTI and a streamed SHA-256 receipt.
+- `PhotoLibraryService` exports the preferred original resource only after an
+  explicit folder choice and returns byte count, UTI and a streamed SHA-256
+  receipt;
+- `PhotoMetadataService` reads and applies only the approved title, caption,
+  and managed keyword fields, returning per-item before/after values and
+  verified failures.
 
 The Metadata screen never calls an Apple Photos mutation API. It creates a
 `sidecar-culling-review` action containing the existing
@@ -45,14 +51,13 @@ posts only the opaque action ID to the allowlisted Max localhost wake endpoint;
 if the endpoint is unavailable, the durable connector poller picks up the same
 action.
 
-The connector invokes `PhotosByElie Photos Bridge.app` for both the batch
-read used by the dry run and the batch write. JavaScript for Automation runs
-inside that stable signed app identity. The bridge preserves unrelated
-keywords, returns per-item before/after values, and the connector records an
-Apple Photos receipt only after a re-read verifies title, caption and managed
-keywords. Failed item IDs remain independently retryable; retry submits only
-those IDs. No production give-back path invokes the legacy in-process JXA
-adapter.
+Python/browser/connector maintenance invokes the authenticated Backstage IPC
+surface for both batch reads and batch writes. The signed Backstage app owns
+the stable Photos permission identity, preserves unrelated keywords, returns
+per-item before/after values, and records an Apple Photos receipt only after a
+re-read verifies title, caption, and managed keywords. Failed item IDs remain
+independently retryable; retry submits only those IDs. No production path
+launches, installs, or compiles a standalone Photos helper.
 
 ## Native fixture, ACS, culling, and metadata workflows
 
@@ -113,10 +118,11 @@ flowchart LR
   Core -->|short lived bearer| Worker["Worker API v1"]
   Worker -->|opaque action ID| Connector["Max connector"]
   Connector --> DB[("Owner.sqlite")]
-  Connector --> Bridge["Signed Photos Bridge"]
+  Connector --> BackstageIPC["Authenticated Backstage IPC"]
+  BackstageIPC --> PhotoKit["PhotoKit"]
   Worker --> D1[("D1 access and audit")]
   Worker --> R2[("R2 media and delivery")]
-  Core -. read, preview, export .-> PhotoKit["PhotoKit"]
+  Core -. read, preview, export, metadata .-> PhotoKit
 ```
 
 `Owner.sqlite` is the only local curation authority. Native code opens it

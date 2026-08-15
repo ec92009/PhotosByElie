@@ -8,7 +8,7 @@ from typing import Any
 
 from apple_photos_metadata_writer import (
     PhotosMetadataAccess,
-    SignedPhotosBridgeAdapter,
+    BackstagePhotosMetadataAdapter,
     commit_writeback,
 )
 from fixture_pipeline import adopt_upload_run
@@ -45,7 +45,7 @@ def finalize_streamed_upload_batch(
         fixture_id,
         asset_ids=selected_ids,
     )
-    photos_adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
+    photos_adapter = adapter or BackstagePhotosMetadataAdapter(repo_root)
     photos = commit_writeback(
         repo_root,
         fixture_id,

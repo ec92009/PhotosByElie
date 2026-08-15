@@ -17,10 +17,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import backstage_photos_client
+import sidecar_maintenance
 from backstage_photos_client import (
     BackstagePhotosClientError,
     request_library_index,
     request_export_original,
+    request_metadata_apply_many,
+    request_metadata_read_many,
     request_preview,
 )
 import sidecar_server
@@ -81,17 +84,21 @@ class FakeBackstagePreviewServer:
 
     def _serve(self):
         try:
-            connection, _ = self.socket.accept()
-            with connection:
-                length = struct.unpack("!I", self._read_exact(connection, 4))[0]
-                request = json.loads(self._read_exact(connection, length))
-                response = self.responder(request)
-                if isinstance(response, tuple):
-                    declared_length, payload = response
-                else:
-                    payload = json.dumps(response, separators=(",", ":")).encode("utf-8")
-                    declared_length = len(payload)
-                connection.sendall(struct.pack("!I", declared_length) + payload)
+            while True:
+                try:
+                    connection, _ = self.socket.accept()
+                except socket.timeout:
+                    return
+                with connection:
+                    length = struct.unpack("!I", self._read_exact(connection, 4))[0]
+                    request = json.loads(self._read_exact(connection, length))
+                    response = self.responder(request)
+                    if isinstance(response, tuple):
+                        declared_length, payload = response
+                    else:
+                        payload = json.dumps(response, separators=(",", ":")).encode("utf-8")
+                        declared_length = len(payload)
+                    connection.sendall(struct.pack("!I", declared_length) + payload)
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
         except Exception as error:  # pragma: no cover - surfaced by __exit__
@@ -123,6 +130,31 @@ def success_library_response(request: dict) -> dict:
         "fetchedCount": request["offset"] + 1,
         "skippedCount": request["offset"],
         "items": [{"assetId": "asset-1", "mediaType": "photo", "filename": "one.jpg"}],
+    }
+
+
+def success_metadata_response(request: dict) -> dict:
+    operation = request["operation"]
+    items = []
+    for item in request["requests"]:
+        row = {
+            "assetId": item["assetId"],
+            "title": item.get("title", "Read title"),
+            "caption": item.get("caption", ""),
+            "keywords": item.get("keywords", ["Spain"]),
+        }
+        if operation == "photos.metadata-apply-many":
+            row.update({
+                "before": {"title": "Old", "caption": "", "keywords": []},
+                "after": row.copy(),
+            })
+        items.append(row)
+    return {
+        "ok": True,
+        "requestId": request["requestId"],
+        "mode": operation,
+        "count": len(items),
+        "items": items,
     }
 
 
@@ -163,6 +195,62 @@ class BackstagePhotosClientTest(unittest.TestCase):
             self.assertEqual(result["mode"], "library-index")
             self.assertEqual(result["count"], 1)
             self.assertEqual(result["items"][0]["assetId"], "asset-1")
+
+    def test_authenticated_metadata_read_and_apply_batches(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            asset_ids = [f"asset-{index}" for index in range(3)]
+            with FakeBackstagePreviewServer(root, success_metadata_response) as server:
+                read_rows = request_metadata_read_many(
+                    asset_ids,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+            self.assertEqual([row["assetId"] for row in read_rows], asset_ids)
+
+            with TemporaryDirectory() as apply_directory:
+                apply_root = Path(apply_directory)
+                with FakeBackstagePreviewServer(apply_root, success_metadata_response) as server:
+                    apply_rows = request_metadata_apply_many(
+                        [
+                            {
+                                "assetId": asset_ids[0],
+                                "title": "Updated",
+                                "caption": "A caption",
+                                "keywords": ["Spain"],
+                                "managedKeywords": ["PBE:Approved"],
+                            }
+                        ],
+                        descriptor_path=server.descriptor,
+                        timeout=1,
+                    )
+
+            self.assertEqual(apply_rows[0]["assetId"], asset_ids[0])
+
+    def test_metadata_batch_splits_at_the_authenticated_ipc_request_limit(self):
+        observed = []
+
+        def responder(request):
+            observed.append(request)
+            return success_metadata_response(request)
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            requests = [
+                {"assetId": f"asset-{index}", "title": "x" * 1_000}
+                for index in range(20)
+            ]
+            with FakeBackstagePreviewServer(root, responder) as server:
+                rows = request_metadata_apply_many(
+                    requests,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+            self.assertEqual(len(rows), len(requests))
+            self.assertGreater(len(observed), 1)
+            self.assertTrue(all(len(json.dumps(request).encode("utf-8")) <= 16 * 1_024 for request in observed))
 
     def test_authenticated_original_export_copies_and_cleans_private_staging(self):
         original = b"owner-only-original-bytes"
@@ -406,6 +494,40 @@ class BackstagePhotosClientTest(unittest.TestCase):
         self.assertIn("_run_backstage_photos_materialize_one", source)
         self.assertNotIn("PhotosByElie Photos Bridge.app", source)
         self.assertNotIn("apple_photos_bridge.swift", source)
+
+    def test_scheduled_ai_preview_export_uses_backstage_ipc(self):
+        source = (ROOT / "scripts" / "sidecar_maintenance.py").read_text(encoding="utf-8")
+        self.assertIn("request_preview", source)
+        self.assertNotIn("PhotosByElie Photos Bridge.app", source)
+        self.assertNotIn("_ensure_apple_photos_bridge_app", source)
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "previews" / "001-photo-900.jpg"
+            args = type("Args", (), {
+                "repo_root": root,
+                "limit": 1,
+                "preview_root": root / "previews",
+                "max_pixel": 900,
+                "timeout": 90,
+                "output": None,
+            })()
+
+            def fake_preview(_asset_id, target, _max_pixel, *, timeout):
+                self.assertEqual(timeout, 60.0)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(JPEG)
+                return {"ok": True, "mode": "preview"}
+
+            with patch.object(
+                sidecar_maintenance,
+                "ai_metadata_plan",
+                return_value={"count": 1, "items": [{"assetId": "asset-1", "filename": "photo.jpg"}]},
+            ), patch.object(sidecar_maintenance, "request_preview", side_effect=fake_preview) as preview:
+                exit_code = sidecar_maintenance.picked_ai_preview_export(args)
+
+            self.assertEqual(exit_code, 0)
+            preview.assert_called_once_with("asset-1", destination, 900, timeout=60.0)
 
     def test_background_index_streams_backstage_pages(self):
         with TemporaryDirectory() as temporary_directory:

@@ -8,7 +8,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from apple_photos_metadata_writer import (
-    SignedPhotosBridgeAdapter,
+    BackstagePhotosMetadataAdapter,
     commit_writeback,
     merge_keywords,
     writeback_plan,
@@ -184,31 +184,22 @@ class ApplePhotosMetadataWriterTest(unittest.TestCase):
             ["Personal", "PBE:Tombstone"],
         )
 
-    def test_signed_adapter_batches_through_app_and_removes_private_input(self):
-        calls = []
-
-        def bridge(_root, args, timeout):
-            calls.append((args, timeout))
-            request = json.loads(Path(args[2]).read_text(encoding="utf-8"))
-            return {
-                "ok": True,
-                "items": [
-                    {
-                        "assetId": item["assetId"],
-                        "title": "Read title",
-                        "caption": "",
-                        "keywords": ["PBE-Approved"],
-                    }
-                    for item in request
-                ],
-            }
-
-        adapter = SignedPhotosBridgeAdapter(self.root)
-        with mock.patch("sidecar_server._run_apple_photos_bridge_app_task", side_effect=bridge):
+    def test_signed_adapter_reads_through_backstage_ipc(self):
+        adapter = BackstagePhotosMetadataAdapter(self.root)
+        with mock.patch(
+            "backstage_photos_client.request_metadata_read_many",
+            return_value=[
+                {
+                    "assetId": "asset-1",
+                    "title": "Read title",
+                    "caption": "",
+                    "keywords": ["PBE-Approved"],
+                }
+            ],
+        ) as read_many:
             rows = adapter.read_many([{"assetId": "asset-1"}])
         self.assertEqual(rows[0]["title"], "Read title")
-        self.assertEqual(calls[0][0][0], "metadata-read-many")
-        self.assertFalse(Path(calls[0][0][2]).exists())
+        read_many.assert_called_once_with(["asset-1"], timeout=60.0)
 
 
 if __name__ == "__main__":

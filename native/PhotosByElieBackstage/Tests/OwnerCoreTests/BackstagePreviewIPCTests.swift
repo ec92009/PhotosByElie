@@ -59,6 +59,62 @@ struct BackstagePreviewIPCTests {
         #expect(library.libraryIndexCount == 1)
     }
 
+    @Test("Authenticated metadata requests stay inside Backstage and preserve batch receipts")
+    func authenticatedMetadataBatchSucceeds() async throws {
+        let readPayload = try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": BackstagePreviewIPCConstants.metadataReadManyOperation,
+            "count": 2,
+            "items": [
+                ["assetId": "asset-1", "title": "One", "caption": "", "keywords": ["Spain"]],
+                ["assetId": "asset-2", "title": "Two", "caption": "", "keywords": ["France"]],
+            ],
+        ])
+        let applyPayload = try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": BackstagePreviewIPCConstants.metadataApplyManyOperation,
+            "count": 1,
+            "items": [[
+                "assetId": "asset-1",
+                "before": ["title": "One", "caption": "", "keywords": []],
+                "after": ["title": "Updated", "caption": "", "keywords": ["Spain"]],
+                "keywords": ["Spain"],
+            ]],
+        ])
+        let library = PreviewIPCTestLibrary(
+            outcome: .failure(.assetNotFound("asset-1")),
+            metadataReadPayload: readPayload,
+            metadataApplyPayload: applyPayload
+        )
+
+        var readRequest = request(assetID: "ignored")
+        readRequest["operation"] = BackstagePreviewIPCConstants.metadataReadManyOperation
+        readRequest.removeValue(forKey: "assetId")
+        readRequest.removeValue(forKey: "maxPixel")
+        readRequest["requests"] = [["assetId": "asset-1"], ["assetId": "asset-2"]]
+        let readResponse = try await process(library: library, request: readRequest)
+        #expect(readResponse["ok"] as? Bool == true)
+        #expect(readResponse["mode"] as? String == BackstagePreviewIPCConstants.metadataReadManyOperation)
+        #expect(readResponse["requestId"] as? String != nil)
+        #expect(library.metadataReadCount == 1)
+
+        var applyRequest = request(assetID: "ignored")
+        applyRequest["operation"] = BackstagePreviewIPCConstants.metadataApplyManyOperation
+        applyRequest.removeValue(forKey: "assetId")
+        applyRequest.removeValue(forKey: "maxPixel")
+        applyRequest["requests"] = [[
+            "assetId": "asset-1",
+            "title": "Updated",
+            "caption": "",
+            "keywords": ["Spain"],
+            "managedKeywords": ["PBE:Approved"],
+        ]]
+        let applyResponse = try await process(library: library, request: applyRequest)
+        #expect(applyResponse["ok"] as? Bool == true)
+        #expect(applyResponse["mode"] as? String == BackstagePreviewIPCConstants.metadataApplyManyOperation)
+        #expect(library.metadataApplyCount == 1)
+    }
+
     @Test("Authenticated original export stages a private receipt without exposing an absolute path")
     func authenticatedOriginalExportSucceeds() async throws {
         let root = FileManager.default.temporaryDirectory
@@ -398,9 +454,13 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
     private let outcome: Result<PhotoPreview, PhotoLibraryError>
     private let libraryPayload: Data?
     private let exportData: Data?
+    private let metadataReadPayload: Data?
+    private let metadataApplyPayload: Data?
     private var previewCalls = 0
     private var libraryCalls = 0
     private var exportCalls = 0
+    private var metadataReadCalls = 0
+    private var metadataApplyCalls = 0
     private var lastAllowICloudDownloadsValue: Bool?
 
     init(
@@ -408,13 +468,17 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
         delay: Duration = .zero,
         outcome: Result<PhotoPreview, PhotoLibraryError>,
         libraryPayload: Data? = nil,
-        exportData: Data? = nil
+        exportData: Data? = nil,
+        metadataReadPayload: Data? = nil,
+        metadataApplyPayload: Data? = nil
     ) {
         self.access = access
         self.delay = delay
         self.outcome = outcome
         self.libraryPayload = libraryPayload
         self.exportData = exportData
+        self.metadataReadPayload = metadataReadPayload
+        self.metadataApplyPayload = metadataApplyPayload
     }
 
     var previewCount: Int {
@@ -431,6 +495,14 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
 
     var lastAllowICloudDownloads: Bool? {
         lock.withLock { lastAllowICloudDownloadsValue }
+    }
+
+    var metadataReadCount: Int {
+        lock.withLock { metadataReadCalls }
+    }
+
+    var metadataApplyCount: Int {
+        lock.withLock { metadataApplyCalls }
     }
 
     func authorization() -> PhotoLibraryAccess { access }
@@ -504,5 +576,27 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
             byteCount: Int64(exportData.count),
             checksumSHA256: checksum
         )
+    }
+
+    func metadataReadMany(assetIDs: [String]) async throws -> Data {
+        lock.withLock { metadataReadCalls += 1 }
+        if let metadataReadPayload { return metadataReadPayload }
+        return try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": BackstagePreviewIPCConstants.metadataReadManyOperation,
+            "count": assetIDs.count,
+            "items": assetIDs.map { ["assetId": $0, "title": "", "caption": "", "keywords": []] },
+        ])
+    }
+
+    func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data {
+        lock.withLock { metadataApplyCalls += 1 }
+        if let metadataApplyPayload { return metadataApplyPayload }
+        return try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": BackstagePreviewIPCConstants.metadataApplyManyOperation,
+            "count": requests.count,
+            "items": requests.map { ["assetId": $0.assetID] },
+        ])
     }
 }

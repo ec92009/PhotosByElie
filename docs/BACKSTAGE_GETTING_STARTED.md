@@ -55,9 +55,9 @@ scripts/backstage-control.zsh real-estate originals preflight \
   --pretty
 ```
 
-The response includes Backstage release metadata, Photos Bridge compatibility
-and authorization, Backstage Photos access, Owner session state, connector
-identity, and an actionable message. Exit code `0` means local readiness; `2`
+The response includes Backstage release metadata, Backstage Photos access,
+Owner session state, connector identity, and an actionable message. Exit code
+`0` means local readiness; `2`
 means a readiness gate needs attention; `64` means invalid arguments.
 `release verify` checks the Backstage/helper release path without requiring
 first-run Photos/TCC access. `health`, `doctor`, and `photos health` include
@@ -384,15 +384,15 @@ reapplies the proposal filter.
 ## Metadata
 
 The upper Metadata sections manage Owner metadata and review decisions. The
-final section writes approved metadata back to Apple Photos through the signed
-Photos Bridge.
+final section writes approved metadata back to Apple Photos through Backstage's
+native PhotoKit services.
 
-Photos Bridge runs as a background-only helper. It should not appear in the
-Dock or as a second operator application. On **Overview**, the **Signed Photos
-helper** card reports its version/build, whether it is compatible with the
-installed Backstage release, and whether it is authorized for Photos. Use
-**Check helper** after an upgrade or permissions change. Backstage blocks culling
-and metadata give-back while the helper is stale, missing, or unauthorized.
+Backstage is the only normal-release Photos authority; there is no second
+operator application or helper to install. On **Overview**, the **Signed Photos
+helper** card reports the bundled helper compatibility and authorization state.
+Use **Check helper** after an upgrade or permissions change. Backstage blocks
+culling and metadata give-back while its own signed helper is stale, missing,
+or unauthorized.
 
 ### Edit metadata
 
@@ -532,9 +532,9 @@ was already exchanged should not be reused.
 ### Photos access is required
 
 Choose **Allow Photos**. If macOS no longer prompts, open **System Settings →
-Privacy & Security → Photos** and grant Full Access to both **PhotosByElie
-Backstage** and **PhotosByElie Photos Bridge**, then return to the app and choose
-**Refresh**. The Overview helper card must report **Compatible** and
+Privacy & Security → Photos** and grant Full Access to **PhotosByElie
+Backstage**, then return to the app and choose **Refresh**. The Overview helper
+card must report **Compatible** and
 **authorized** before culling or metadata give-back.
 
 ### Photos indexed, but an item is absent
@@ -560,17 +560,17 @@ fixture and item counts, and inspect **Activity**. The browser Owner remains
 available for authentication, enrollment, connector health, access review,
 and audit, but Backstage is the active mutation workspace.
 
-Browser Owner and fixture pages do not launch Sidecar. During the native
-rehearsal window only, the compatibility UI can be enabled deliberately by
-starting the connector with `PBE_ENABLE_LEGACY_SIDECAR=1`; ordinary operation
-leaves this switch unset and exposes only Backstage as the operator app.
+Browser Owner and the retired Sidecar pages do not launch PhotoKit work.
+Ordinary operation exposes only Backstage as the operator app; legacy browser
+import routes fail closed with `410 Backstage required`.
 
 ## Safety summary
 
 - `Owner.sqlite` remains the private Owner source of truth.
 - Normal Backstage mutations pass through the Worker audit ledger and the Max
   connector; the app does not directly edit business rows.
-- Photos writes use the signed Photos Bridge and are verified by re-reading.
+- Photos writes use Backstage's signed native PhotoKit services and are verified
+  by re-reading.
 - Upload, delivery, publication, deployment, and client messaging are separate
   decisions.
 - Public buyer pages and private client pages remain independent of Backstage.

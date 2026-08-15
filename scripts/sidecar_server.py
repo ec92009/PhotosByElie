@@ -11,9 +11,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import plistlib
 import sqlite3
-import subprocess
 import sys
 import threading
 import time
@@ -54,15 +52,6 @@ from fixture_pipeline import get_pool, pool_asset_ids
 from streaming_fixture_delivery import finalize_streamed_upload_batch
 
 
-CONNECTOR_RUNTIME_ROOT = Path(
-    os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
-).expanduser().resolve()
-APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
-APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
-APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
-APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
-APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
-BACKSTAGE_APP = Path.home() / "Applications" / "PhotosByElie Backstage.app"
 DEFAULT_CONNECTOR_CONFIG_PATH = Path.home() / ".config" / "photosbyelie" / "connector.json"
 SIDECAR_VERSION_FILE = Path("SIDECAR_VERSION")
 SIDECAR_DEFAULT_VERSION = "125.2"
@@ -90,12 +79,9 @@ SIDECAR_COMMIT_PLAN_PATH = "/__sidecar/commit-plan"
 SIDECAR_VERSION_PATH = "/__sidecar/version"
 SIDECAR_EMPTY_WASTEBASKET_PATH = "/__sidecar/empty-wastebasket"
 SIDECAR_INDEX_ROOT = Path("tmp/sidecar-index")
-SIDECAR_BRIDGE_BUSY_PATH = Path("tmp/sidecar-bridge-results/bridge-busy.json")
 SIDECAR_UPLOAD_BRIDGE_EXECUTE_LIMIT = 500
-APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
 UPLOAD_BRIDGE_CANCEL_LOCK = threading.Lock()
 UPLOAD_BRIDGE_CANCEL_REQUESTS: set[str] = set()
-APPLE_PHOTOS_BRIDGE_TASK_SLOTS = threading.BoundedSemaphore(12)
 SUMMARY_CACHE_LOCK = threading.Lock()
 SUMMARY_CACHE_TTL_SECONDS = 60.0
 SUMMARY_CACHE: dict[str, object] = {}
@@ -190,35 +176,6 @@ def _index_job_snapshot(repo_root: Path) -> dict:
     except sqlite3.Error as error:
         payload["summaryError"] = str(error)
     payload["version"] = sidecar_version(repo_root)
-    return payload
-
-
-def _run_apple_photos_bridge(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
-    command = _apple_photos_bridge_command(repo_root, args)
-    try:
-        result = subprocess.run(
-            command,
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    output = (result.stdout or "").strip()
-    try:
-        payload = json.loads(output or "{}")
-    except json.JSONDecodeError as error:
-        raise RuntimeError((result.stderr or output or "Apple Photos bridge returned invalid JSON.").strip()) from error
-    if result.returncode != 0 and payload.get("ok") is not False:
-        return {
-            "ok": False,
-            "code": "photos_bridge_error",
-            "error": (result.stderr or output or f"Apple Photos bridge exited {result.returncode}").strip(),
-        }
-    if result.stderr and payload.get("ok") is False:
-        payload.setdefault("stderr", result.stderr.strip())
     return payload
 
 
@@ -330,307 +287,6 @@ def _run_backstage_photos_preview_task(
     )
 
 
-def _run_apple_photos_bridge_stream(
-    repo_root: Path,
-    args: list[str],
-    progress_handler,
-) -> dict:
-    command = _apple_photos_bridge_command(repo_root, args)
-    try:
-        process = subprocess.Popen(
-            command,
-            cwd=repo_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    stderr_lines: list[str] = []
-    assert process.stderr is not None
-    for line in process.stderr:
-        clean = line.strip()
-        if clean.startswith(APPLE_PHOTOS_PROGRESS_PREFIX):
-            try:
-                progress_handler(json.loads(clean[len(APPLE_PHOTOS_PROGRESS_PREFIX):]))
-            except json.JSONDecodeError:
-                stderr_lines.append(clean)
-        elif clean:
-            stderr_lines.append(clean)
-    stdout = process.stdout.read() if process.stdout is not None else ""
-    returncode = process.wait()
-    output = (stdout or "").strip()
-    try:
-        payload = json.loads(output or "{}")
-    except json.JSONDecodeError as error:
-        raise RuntimeError(("\n".join(stderr_lines) or output or "Apple Photos bridge returned invalid JSON.").strip()) from error
-    if returncode != 0 or payload.get("ok") is False:
-        message = payload.get("error") or "\n".join(stderr_lines) or f"Apple Photos bridge exited {returncode}"
-        raise RuntimeError(str(message).strip())
-    if stderr_lines:
-        payload["stderr"] = "\n".join(stderr_lines)
-    return payload
-
-
-def _bridge_busy_path(repo_root: Path) -> Path:
-    return repo_root / SIDECAR_BRIDGE_BUSY_PATH
-
-
-def _read_bridge_busy(repo_root: Path) -> dict:
-    path = _bridge_busy_path(repo_root)
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    started_at = float(payload.get("startedAtEpoch") or 0)
-    ttl = float(payload.get("ttlSeconds") or 0)
-    if started_at and ttl and time.time() - started_at > ttl:
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
-        return {}
-    return payload
-
-
-def _write_bridge_busy(repo_root: Path, mode: str, args: list[str], ttl_seconds: int) -> None:
-    path = _bridge_busy_path(repo_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "ok": True,
-        "mode": mode,
-        "args": args[:12],
-        "pid": os.getpid(),
-        "startedAt": _utc_now(),
-        "startedAtEpoch": time.time(),
-        "ttlSeconds": ttl_seconds,
-    }
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def _clear_bridge_busy(repo_root: Path) -> None:
-    try:
-        _bridge_busy_path(repo_root).unlink()
-    except FileNotFoundError:
-        pass
-
-
-def _bridge_busy_response(repo_root: Path) -> dict | None:
-    busy = _read_bridge_busy(repo_root)
-    if not busy:
-        return None
-    mode = str(busy.get("mode") or "Photos Bridge task")
-    return {
-        "ok": False,
-        "code": "photos_bridge_busy",
-        "mode": mode,
-        "retryAfterSeconds": 20,
-        "error": f"Photos Bridge is busy running {mode}. Retry when the library refresh finishes.",
-    }
-
-
-def _run_apple_photos_bridge_app_index(repo_root: Path, args: list[str], destination: Path, timeout: int = 900) -> dict:
-    _ensure_apple_photos_bridge_app(repo_root)
-    busy = _bridge_busy_response(repo_root)
-    if busy:
-        raise RuntimeError(busy["error"])
-    _write_bridge_busy(repo_root, "library-index-file", args, ttl_seconds=timeout + 120)
-    try:
-        result = subprocess.run(
-            ["open", "-W", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
-    finally:
-        _clear_bridge_busy(repo_root)
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip()
-        raise RuntimeError(message)
-    if not destination.exists():
-        raise RuntimeError(
-            "Apple Photos bridge app did not write the index file. "
-            "Confirm PhotosByElie Photos Bridge has Full Access in System Settings > Privacy & Security > Photos, then retry."
-        )
-    total_count = 0
-    with destination.open("r", encoding="utf-8") as handle:
-        for total_count, _line in enumerate(handle, start=1):
-            pass
-    _handle_index_progress({
-        "event": "library_index_done",
-        "indexedCount": total_count,
-        "totalCount": total_count,
-        "progress": 1,
-    })
-    return {
-        "ok": True,
-        "mode": "library-index-file",
-        "destination": str(destination),
-        "count": total_count,
-        "totalCount": total_count,
-    }
-
-
-def _run_apple_photos_bridge_app_task(repo_root: Path, args: list[str], timeout: int = 900) -> dict:
-    _ensure_apple_photos_bridge_app(repo_root)
-    busy = _bridge_busy_response(repo_root)
-    if busy:
-        return busy
-    result_destination = repo_root / "tmp" / "sidecar-bridge-results" / f"{uuid.uuid4().hex}.json"
-    result_destination.parent.mkdir(parents=True, exist_ok=True)
-    started_at = time.monotonic()
-    if not APPLE_PHOTOS_BRIDGE_TASK_SLOTS.acquire(timeout=max(0.1, float(timeout))):
-        return {
-            "ok": False,
-            "code": "photos_bridge_queue_timeout",
-            "error": "Photos Bridge preview queue timed out. Retry the preview.",
-        }
-    try:
-        try:
-            result = subprocess.run(
-                [
-                    "open", "-n", str(APPLE_PHOTOS_BRIDGE_APP), "--args", *args,
-                    "--result-destination", str(result_destination),
-                ],
-                cwd=repo_root,
-                text=True,
-                capture_output=True,
-                timeout=max(0.1, float(timeout)),
-                check=False,
-            )
-        except FileNotFoundError as error:
-            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
-        except subprocess.TimeoutExpired:
-            return {
-                "ok": False,
-                "code": "photos_bridge_launch_timeout",
-                "error": "Photos Bridge app launch timed out. Retry the preview.",
-            }
-        if result.returncode != 0:
-            return {
-                "ok": False,
-                "code": "photos_bridge_app_error",
-                "error": (result.stderr or result.stdout or f"Apple Photos bridge app exited {result.returncode}").strip(),
-            }
-        deadline = started_at + max(0.1, float(timeout))
-        while True:
-            try:
-                payload = json.loads(result_destination.read_text(encoding="utf-8"))
-                break
-            except FileNotFoundError:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    return {
-                        "ok": False,
-                        "code": "photos_bridge_result_timeout",
-                        "error": "Photos Bridge app did not finish before the preview timed out. Retry the preview.",
-                    }
-                time.sleep(min(0.025, remaining))
-            except (OSError, json.JSONDecodeError) as error:
-                return {
-                    "ok": False,
-                    "code": "photos_bridge_result_invalid",
-                    "error": f"Photos Bridge app wrote an unreadable result: {error}",
-                }
-    finally:
-        APPLE_PHOTOS_BRIDGE_TASK_SLOTS.release()
-        try:
-            result_destination.unlink()
-        except FileNotFoundError:
-            pass
-    if not isinstance(payload, dict):
-        return {
-            "ok": False,
-            "code": "photos_bridge_result_invalid",
-            "error": "Photos Bridge app returned an invalid result payload.",
-        }
-    if payload.get("ok") is False:
-        return payload
-    return payload if payload.get("ok") is True else {
-        "ok": False,
-        "code": "photos_bridge_result_invalid",
-        "error": "Photos Bridge app returned a result without an outcome.",
-    }
-
-
-def _connector_runtime_path(repo_root: Path, relative_path: Path) -> Path:
-    root = CONNECTOR_RUNTIME_ROOT if os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", "").strip() else repo_root
-    candidate = root / relative_path
-    if candidate.is_symlink():
-        raise RuntimeError(f"Connector runtime file is unsafe: {candidate}")
-    return candidate
-
-
-def _bundle_release(app: Path, expected_identifier: str) -> tuple[tuple[int, ...], int] | None:
-    try:
-        with (app / "Contents" / "Info.plist").open("rb") as handle:
-            info = plistlib.load(handle)
-        if info.get("CFBundleIdentifier") != expected_identifier:
-            return None
-        version = tuple(int(part) for part in str(info["CFBundleShortVersionString"]).split("."))
-        build = int(str(info["CFBundleVersion"]))
-    except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException):
-        return None
-    return version, build
-
-
-def _installed_bridge_satisfies_backstage_release() -> bool:
-    bridge = _bundle_release(APPLE_PHOTOS_BRIDGE_APP, "com.photosbyelie.photos-bridge")
-    backstage = _bundle_release(BACKSTAGE_APP, "com.photosbyelie.backstage")
-    return bridge is not None and backstage is not None and bridge >= backstage
-
-
-def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE_APP_INSTALLER)
-    bridge_source = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE)
-    if not installer.exists():
-        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
-    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
-    if not needs_build:
-        if _installed_bridge_satisfies_backstage_release():
-            return
-        try:
-            installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
-                encoding="utf-8"
-            ).strip()
-            source_fingerprint = hashlib.sha256(bridge_source.read_bytes()).hexdigest()
-            needs_build = installed_fingerprint != source_fingerprint
-        except OSError:
-            needs_build = True
-    if not needs_build:
-        return
-    result = subprocess.run(
-        ["zsh", str(installer)],
-        cwd=repo_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
-        raise RuntimeError(message)
-
-
-def _apple_photos_bridge_command(repo_root: Path, args: list[str]) -> list[str]:
-    override = os.environ.get("PBE_APPLE_PHOTOS_BRIDGE_EXECUTABLE", "").strip()
-    if override:
-        executable = Path(override).expanduser()
-        if not executable.exists():
-            raise RuntimeError(f"Configured Apple Photos bridge executable is missing: {executable}")
-        return [str(executable), *args]
-
-    bridge = _connector_runtime_path(repo_root, APPLE_PHOTOS_BRIDGE)
-    if not bridge.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
-    return ["swift", str(bridge), *args]
-
-
 def _int_query(query: dict[str, list[str]], name: str, default: int, minimum: int, maximum: int) -> int:
     try:
         value = int((query.get(name) or [""])[0] or default)
@@ -657,38 +313,6 @@ def _list_query(query: dict[str, list[str]], *names: str) -> list[str]:
 
 def _asset_id_from_row(row: dict) -> str:
     return str(row.get("assetId") or row.get("cloudIdentifier") or row.get("asset_id") or row.get("localIdentifier") or "").strip()
-
-
-def _handle_index_progress(payload: dict) -> None:
-    event = str(payload.get("event") or "")
-    total = int(payload.get("totalCount") or 0)
-    indexed = int(payload.get("indexedCount") or 0)
-    progress = float(payload.get("progress") or (indexed / total if total else 0))
-    if event == "library_index_start":
-        _set_index_job(
-            status="running",
-            stage="Scanning Apple Photos metadata",
-            indexedCount=0,
-            totalCount=total,
-            progress=0,
-            error="",
-        )
-    elif event == "library_index_progress":
-        _set_index_job(
-            status="running",
-            stage="Scanning Apple Photos metadata",
-            indexedCount=indexed,
-            totalCount=total,
-            progress=max(0, min(1, progress)),
-        )
-    elif event == "library_index_done":
-        _set_index_job(
-            status="running",
-            stage="Importing metadata into Sidecar",
-            indexedCount=indexed,
-            totalCount=total,
-            progress=1,
-        )
 
 
 def _import_index_jsonl(repo_root: Path, path: Path, total_count: int, prune_missing: bool) -> tuple[int, int]:

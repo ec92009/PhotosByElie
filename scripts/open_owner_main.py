@@ -17,7 +17,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HELPER = REPO_ROOT / "scripts" / "local_server.py"
-APPLE_PHOTOS_BRIDGE = REPO_ROOT / "scripts" / "apple_photos_bridge.swift"
 LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
@@ -117,31 +116,6 @@ def owner_helper_command_pids() -> set[int]:
     return pids
 
 
-def apple_photos_bridge_pids() -> set[int]:
-    pids: set[int] = set()
-    bridge_path = str(APPLE_PHOTOS_BRIDGE)
-    result = subprocess.run(
-        ["ps", "-axo", "pid=,command="],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    for line in result.stdout.splitlines():
-        row = line.strip()
-        if not row:
-            continue
-        try:
-            pid_text, command = row.split(maxsplit=1)
-            pid = int(pid_text)
-        except ValueError:
-            continue
-        if pid == os.getpid():
-            continue
-        if bridge_path in command:
-            pids.add(pid)
-    return pids
-
-
 def terminate_pids(pids: set[int], log, reason: str) -> None:
     pids.discard(os.getpid())
     if not pids:
@@ -177,8 +151,6 @@ def terminate_pids(pids: set[int], log, reason: str) -> None:
 
 def clean_start(log) -> None:
     helper_pids = owner_helper_listener_pids() | owner_helper_command_pids()
-    bridge_pids = apple_photos_bridge_pids()
-    terminate_pids(bridge_pids, log, "Apple Photos bridge process")
     terminate_pids(helper_pids, log, "stale Owner helper")
 
 

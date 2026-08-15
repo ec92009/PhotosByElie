@@ -44,10 +44,6 @@ if [[ "$materializer_path" != "scripts/owner_connector_runtime.py" \
   exit 1
 fi
 
-if [[ "${PBE_SKIP_BRIDGE_BUILD:-0}" != "1" ]]; then
-  "$repo_root/scripts/install_sidecar_photos_bridge_app.zsh"
-fi
-
 mkdir -p "$runtime_parent" "$config_dir" "$launch_agents" "$log_dir"
 runtime_parent="${runtime_parent:A}"
 config_dir="${config_dir:A}"

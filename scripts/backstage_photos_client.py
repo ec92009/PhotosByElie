@@ -23,6 +23,8 @@ SCHEMA_VERSION = 1
 OPERATION = "photos.preview"
 LIBRARY_OPERATION = "photos.library-index"
 EXPORT_OPERATION = "photos.export-original"
+METADATA_READ_OPERATION = "photos.metadata-read-many"
+METADATA_APPLY_OPERATION = "photos.metadata-apply-many"
 MIN_MAX_PIXEL = 256
 MAX_MAX_PIXEL = 1_800
 MIN_LIBRARY_LIMIT = 1
@@ -35,7 +37,9 @@ MAX_PREVIEW_BYTES = 8 * 1_024 * 1_024
 MAX_RESPONSE_BYTES = 12 * 1_024 * 1_024
 DEFAULT_TIMEOUT_SECONDS = 60.0
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 1_800.0
+DEFAULT_METADATA_TIMEOUT_SECONDS = 300.0
 MAX_EXPORT_FILENAME_BYTES = 1_024
+MAX_METADATA_ITEMS = 64
 DEFAULT_DESCRIPTOR_PATH = (
     Path.home()
     / "Library"
@@ -210,6 +214,142 @@ def request_export_original(
             }
         ],
     }
+
+
+def request_metadata_read_many(
+    asset_ids: list[str],
+    *,
+    descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
+    timeout: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+) -> list[dict]:
+    """Read Photos title, caption, and keywords through Backstage IPC."""
+
+    if not isinstance(asset_ids, list):
+        raise BackstagePhotosClientError(
+            "invalid_metadata_requests",
+            "asset_ids must be a list.",
+        )
+    requests = [{"assetId": asset_id} for asset_id in asset_ids]
+    return _request_metadata_many(
+        METADATA_READ_OPERATION,
+        requests,
+        descriptor_path=descriptor_path,
+        timeout=timeout,
+    )
+
+
+def request_metadata_apply_many(
+    requests: list[dict],
+    *,
+    descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
+    timeout: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+) -> list[dict]:
+    """Apply a verified Photos metadata batch through Backstage IPC."""
+
+    return _request_metadata_many(
+        METADATA_APPLY_OPERATION,
+        requests,
+        descriptor_path=descriptor_path,
+        timeout=timeout,
+    )
+
+
+def _request_metadata_many(
+    operation: str,
+    requests: list[dict],
+    *,
+    descriptor_path: Path,
+    timeout: float,
+) -> list[dict]:
+    if operation not in {METADATA_READ_OPERATION, METADATA_APPLY_OPERATION}:
+        raise BackstagePhotosClientError("invalid_metadata_operation", "The metadata operation is unsupported.")
+    _validate_metadata_requests(requests, timeout)
+    descriptor = _read_descriptor(Path(descriptor_path))
+    rows: list[dict] = []
+    for batch in _metadata_batches(operation, requests, descriptor):
+        request_id = str(uuid.uuid4())
+        request = {
+            "requestId": request_id,
+            "operation": operation,
+            "authorization": f"Bearer {descriptor['bearerToken']}",
+            "requests": batch,
+        }
+        response_data = _send_request(
+            request,
+            descriptor,
+            timeout,
+            operation_label="Photos metadata",
+        )
+        rows.extend(_decode_metadata_response(response_data, request_id, operation, batch))
+    return rows
+
+
+def _validate_metadata_requests(requests: list[dict], timeout: float) -> None:
+    if not isinstance(requests, list) or not 0 < len(requests) <= MAX_METADATA_ITEMS:
+        raise BackstagePhotosClientError(
+            "invalid_metadata_requests",
+            "Backstage metadata requests must contain 1 to 64 items.",
+        )
+    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_METADATA_TIMEOUT_SECONDS:
+        raise BackstagePhotosClientError(
+            "invalid_timeout",
+            "The metadata timeout must be between 0 and 300 seconds.",
+        )
+    for request in requests:
+        if not isinstance(request, dict):
+            raise BackstagePhotosClientError("invalid_metadata_request", "Each metadata request must be an object.")
+        _validate_asset_id(request.get("assetId"))
+        for field in ("title", "caption"):
+            if field in request and (
+                not isinstance(request[field], str)
+                or len(request[field].encode("utf-8")) > 8 * 1_024
+                or any(unicodedata.category(char) == "Cc" for char in request[field])
+            ):
+                raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
+        for field in ("keywords", "managedKeywords"):
+            if field not in request:
+                continue
+            values = request[field]
+            if (
+                not isinstance(values, list)
+                or len(values) > 512
+                or any(
+                    not isinstance(value, str)
+                    or len(value.encode("utf-8")) > 8 * 1_024
+                    or any(unicodedata.category(char) == "Cc" for char in value)
+                    for value in values
+                )
+            ):
+                raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
+
+
+def _metadata_batches(operation: str, requests: list[dict], descriptor: dict) -> list[list[dict]]:
+    batches: list[list[dict]] = []
+    current: list[dict] = []
+    placeholder_id = "00000000-0000-0000-0000-000000000000"
+    authorization = f"Bearer {descriptor['bearerToken']}"
+    for request in requests:
+        candidate = current + [request]
+        envelope = {
+            "requestId": placeholder_id,
+            "operation": operation,
+            "authorization": authorization,
+            "requests": candidate,
+        }
+        size = len(json.dumps(envelope, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+        if size > MAX_REQUEST_BYTES:
+            if not current:
+                raise BackstagePhotosClientError(
+                    "request_oversized",
+                    "A single Photos metadata request is too large for Backstage IPC.",
+                )
+            batches.append(current)
+            current = [request]
+        else:
+            current = candidate
+    if current:
+        batches.append(current)
+    return batches
 
 
 def _validate_request_arguments(asset_id: str, max_pixel: int, timeout: float) -> None:
@@ -506,6 +646,41 @@ def _decode_export_response(response_data: bytes, request_id: str, asset_id: str
     response["bytes"] = byte_count
     response["checksumSHA256"] = checksum
     return response
+
+
+def _decode_metadata_response(
+    response_data: bytes,
+    request_id: str,
+    operation: str,
+    requests: list[dict],
+) -> list[dict]:
+    try:
+        response = json.loads(response_data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned malformed metadata JSON.") from error
+    if not isinstance(response, dict) or response.get("requestId") != request_id:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned a mismatched metadata request ID.")
+    if response.get("ok") is not True:
+        error_payload = response.get("error") if isinstance(response.get("error"), dict) else {}
+        code = str(error_payload.get("code") or "metadata_failed")
+        message = str(error_payload.get("message") or "Backstage could not read or apply Photos metadata.")
+        raise BackstagePhotosClientError(code, message)
+    if response.get("mode") != operation:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned the wrong metadata response.")
+    items = response.get("items")
+    count = response.get("count")
+    expected_ids = [request["assetId"] for request in requests]
+    returned_ids = [item.get("assetId") for item in items] if isinstance(items, list) else []
+    if (
+        not isinstance(items, list)
+        or not isinstance(count, int)
+        or count != len(items)
+        or count != len(requests)
+        or returned_ids != expected_ids
+        or not all(isinstance(item, dict) for item in items)
+    ):
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid Photos metadata items.")
+    return [dict(item) for item in items]
 
 
 def _is_safe_filename(filename: object) -> bool:

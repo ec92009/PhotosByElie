@@ -1,13 +1,17 @@
 PhotosByElie Mac Connector
 ==========================
 
-This Owner-only package installs the permission-bearing Apple Photos bridge and
-the background PhotosByElie connector on a vetted Mac.
+This Owner-only package installs the background PhotosByElie connector on a
+vetted Mac. Apple Photos access belongs to the signed PhotosByElie Backstage
+app; this package does not install a second Photos helper or request a second
+Photos permission identity.
 
 1. Move the unzipped folder somewhere you can keep temporarily.
 2. Double-click "Install PhotosByElie Connector.command".
 3. Paste the separate connector token issued for this Mac when prompted.
-4. When macOS asks, grant PhotosByElie Photos Bridge Full Photos access.
+4. Open PhotosByElie Backstage on the Mac and grant it Full Photos access if
+   macOS asks. Backstage must be running for PhotoKit work; connector jobs fail
+   closed when the signed app is unavailable.
 5. Confirm the Mac appears as online on the authenticated Owner page.
 
 The download does not contain a connector token. Each Mac must use its own

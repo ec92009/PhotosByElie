@@ -1,13 +1,8 @@
-import plistlib
-import subprocess
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
 
-from unittest.mock import patch
-
-from scripts import local_server
 from scripts.local_server import _bump_visible_version, _next_visible_version
 
 
@@ -47,61 +42,46 @@ class VisibleVersionBumpTests(unittest.TestCase):
             self.assertIn("v999.2", (repo_root / "index.html").read_text(encoding="utf-8"))
 
 
-class PhotosBridgeReleaseGuardTests(unittest.TestCase):
-    @staticmethod
-    def write_bundle_info(app: Path, identifier: str, version: str, build: str) -> None:
-        info = app / "Contents" / "Info.plist"
-        info.parent.mkdir(parents=True, exist_ok=True)
-        with info.open("wb") as handle:
-            plistlib.dump(
-                {
-                    "CFBundleIdentifier": identifier,
-                    "CFBundleShortVersionString": version,
-                    "CFBundleVersion": build,
-                },
-                handle,
-            )
+class RetiredApplePhotosImportTests(unittest.TestCase):
+    def test_local_server_has_no_standalone_bridge_lifecycle(self):
+        source = Path(__file__).with_name("local_server.py").read_text(encoding="utf-8")
 
-    def exercise_guard(self, bridge_version: str, bridge_build: str) -> int:
-        with tempfile.TemporaryDirectory() as directory:
-            repo_root = Path(directory)
-            bridge_app = repo_root / "PhotosByElie Photos Bridge.app"
-            backstage_app = repo_root / "PhotosByElie Backstage.app"
-            executable = bridge_app / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
-            fingerprint = bridge_app / "Contents" / "Resources" / "BridgeSource.sha256"
-            source = repo_root / local_server.APPLE_PHOTOS_BRIDGE
-            installer = repo_root / local_server.APPLE_PHOTOS_BRIDGE_APP_INSTALLER
-            source.parent.mkdir(parents=True, exist_ok=True)
-            source.write_text("connector bridge source", encoding="utf-8")
-            installer.write_text("#!/bin/zsh\n", encoding="utf-8")
-            executable.parent.mkdir(parents=True, exist_ok=True)
-            executable.write_text("binary", encoding="utf-8")
-            fingerprint.parent.mkdir(parents=True, exist_ok=True)
-            fingerprint.write_text("different", encoding="utf-8")
-            self.write_bundle_info(
-                bridge_app,
-                "com.photosbyelie.photos-bridge",
-                bridge_version,
-                bridge_build,
-            )
-            self.write_bundle_info(backstage_app, "com.photosbyelie.backstage", "226.0", "88")
+        self.assertIn("_apple_photos_backstage_required", source)
+        self.assertNotIn("PhotosByElie Photos Bridge.app", source)
+        self.assertNotIn("_ensure_apple_photos_bridge_app", source)
+        self.assertNotIn("_run_apple_photos_bridge", source)
+        self.assertNotIn("apple_photos_bridge.swift", source)
 
-            with patch.object(local_server, "CONNECTOR_RUNTIME_ROOT", repo_root), \
-                 patch.object(local_server, "APPLE_PHOTOS_BRIDGE_APP", bridge_app), \
-                 patch.object(local_server, "BACKSTAGE_APP", backstage_app), \
-                 patch.object(local_server, "APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE", executable), \
-                 patch.object(local_server, "APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT", fingerprint), \
-                 patch.object(local_server.subprocess, "run") as install:
-                install.return_value = subprocess.CompletedProcess([], 0, "", "")
-                local_server._ensure_apple_photos_bridge_app(repo_root)
+    def test_normal_installers_do_not_package_or_launch_standalone_bridge(self):
+        root = Path(__file__).resolve().parents[1]
+        sources = {
+            "connector_installer": (
+                root / "scripts" / "install_new_owner_connector.zsh"
+            ).read_text(encoding="utf-8"),
+            "connector_package_builder": (
+                root / "scripts" / "build_new_owner_connector_package.zsh"
+            ).read_text(encoding="utf-8"),
+            "connector_package_command": (
+                root
+                / "assets"
+                / "connector-package"
+                / "Install PhotosByElie Connector.command"
+            ).read_text(encoding="utf-8"),
+            "scheduled_tasks": (
+                root / "scripts" / "install_sidecar_scheduled_tasks.zsh"
+            ).read_text(encoding="utf-8"),
+        }
 
-            return install.call_count
+        for name, source in sources.items():
+            with self.subTest(name=name):
+                self.assertNotIn("PBE_SKIP_BRIDGE_BUILD", source)
+                self.assertNotIn("install_sidecar_photos_bridge_app.zsh", source)
+                self.assertNotIn("PhotosByElie Photos Bridge.app", source)
 
-    def test_matching_release_is_not_rebuilt_for_a_stale_fingerprint(self):
-        self.assertEqual(self.exercise_guard("226.0", "88"), 0)
-
-    def test_older_release_is_rebuilt(self):
-        self.assertEqual(self.exercise_guard("141.10", "1"), 1)
+        package_readme = (
+            root / "assets" / "connector-package" / "README.txt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("does not install a second Photos helper", package_readme)
 
 
 if __name__ == "__main__":

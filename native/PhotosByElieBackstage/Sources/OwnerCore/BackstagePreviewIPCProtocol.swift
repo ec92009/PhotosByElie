@@ -5,6 +5,8 @@ public enum BackstagePreviewIPCConstants {
     public static let operation = "photos.preview"
     public static let libraryIndexOperation = "photos.library-index"
     public static let exportOriginalOperation = "photos.export-original"
+    public static let metadataReadManyOperation = "photos.metadata-read-many"
+    public static let metadataApplyManyOperation = "photos.metadata-apply-many"
     public static let minimumMaxPixel = 256
     public static let maximumMaxPixel = 1_800
     public static let minimumLibraryLimit = 1
@@ -14,6 +16,9 @@ public enum BackstagePreviewIPCConstants {
     public static let maximumPreviewBytes = 8 * 1_024 * 1_024
     public static let maximumResponseBytes = 12 * 1_024 * 1_024
     public static let maximumAssetIDBytes = 2_048
+    public static let maximumMetadataItems = 64
+    public static let maximumMetadataTextBytes = 8 * 1_024
+    public static let maximumMetadataKeywords = 512
 
     public static func defaultExportDirectory() -> URL {
         let applicationSupport = FileManager.default.urls(
@@ -58,19 +63,22 @@ public struct BackstagePreviewIPCLimits: Sendable {
     public var maximumResponseBytes: Int
     public var operationTimeout: Duration
     public var exportOperationTimeout: Duration
+    public var metadataOperationTimeout: Duration
 
     public init(
         maximumRequestBytes: Int = BackstagePreviewIPCConstants.maximumRequestBytes,
         maximumPreviewBytes: Int = BackstagePreviewIPCConstants.maximumPreviewBytes,
         maximumResponseBytes: Int = BackstagePreviewIPCConstants.maximumResponseBytes,
         operationTimeout: Duration = .seconds(55),
-        exportOperationTimeout: Duration = .seconds(1_800)
+        exportOperationTimeout: Duration = .seconds(1_800),
+        metadataOperationTimeout: Duration = .seconds(300)
     ) {
         self.maximumRequestBytes = maximumRequestBytes
         self.maximumPreviewBytes = maximumPreviewBytes
         self.maximumResponseBytes = maximumResponseBytes
         self.operationTimeout = operationTimeout
         self.exportOperationTimeout = exportOperationTimeout
+        self.metadataOperationTimeout = metadataOperationTimeout
     }
 }
 
@@ -114,7 +122,9 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
         guard request.operation == BackstagePreviewIPCConstants.operation
             || request.operation == BackstagePreviewIPCConstants.libraryIndexOperation
-            || request.operation == BackstagePreviewIPCConstants.exportOriginalOperation else {
+            || request.operation == BackstagePreviewIPCConstants.exportOriginalOperation
+            || request.operation == BackstagePreviewIPCConstants.metadataReadManyOperation
+            || request.operation == BackstagePreviewIPCConstants.metadataApplyManyOperation else {
             return encodeError(requestID: request.requestID, code: "unsupported_operation", message: "The requested IPC operation is not supported.")
         }
         guard [.authorized, .limited].contains(photoLibrary.authorization()) else {
@@ -123,6 +133,12 @@ public struct BackstagePreviewIPCProcessor: Sendable {
 
         if request.operation == BackstagePreviewIPCConstants.libraryIndexOperation {
             return await processLibraryIndex(request)
+        }
+        if request.operation == BackstagePreviewIPCConstants.metadataReadManyOperation {
+            return await processMetadata(request, apply: false)
+        }
+        if request.operation == BackstagePreviewIPCConstants.metadataApplyManyOperation {
+            return await processMetadata(request, apply: true)
         }
 
         guard let assetID = request.assetID, validAssetID(assetID) else {
@@ -271,6 +287,80 @@ public struct BackstagePreviewIPCProcessor: Sendable {
                 mode: "library-index",
                 code: "library_index_failed",
                 message: "Backstage could not index the Photos library."
+            )
+        }
+    }
+
+    private func processMetadata(_ request: PreviewRequest, apply: Bool) async -> Data {
+        let mode = apply
+            ? BackstagePreviewIPCConstants.metadataApplyManyOperation
+            : BackstagePreviewIPCConstants.metadataReadManyOperation
+        guard let requests = request.requests,
+              !requests.isEmpty,
+              requests.count <= BackstagePreviewIPCConstants.maximumMetadataItems else {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "invalid_metadata_requests",
+                message: "Backstage metadata requests must contain 1 to 64 items."
+            )
+        }
+        guard requests.allSatisfy(validMetadataRequest) else {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "invalid_metadata_request",
+                message: "Backstage metadata requests contain an invalid asset ID or field."
+            )
+        }
+
+        do {
+            let payloadData = try await metadataWithTimeout(requests: requests, apply: apply)
+            guard var payload = try JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+                  payload["ok"] as? Bool == true,
+                  payload["mode"] as? String == mode,
+                  let items = payload["items"] as? [[String: Any]],
+                  payload["count"] as? Int == items.count,
+                  items.count == requests.count,
+                  items.compactMap({ $0["assetId"] as? String }) == requests.map(\.assetID) else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: mode,
+                    code: "invalid_metadata_response",
+                    message: "Backstage returned malformed Photos metadata data."
+                )
+            }
+            payload["requestId"] = request.requestID
+            let encoded = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            guard encoded.count <= limits.maximumResponseBytes else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: mode,
+                    code: "response_oversized",
+                    message: "The metadata response exceeds the allowed size."
+                )
+            }
+            return encoded
+        } catch is LibraryIndexTimeoutError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "metadata_timeout",
+                message: "Backstage timed out while reading or applying Photos metadata."
+            )
+        } catch let error as PhotoLibraryError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: errorCode(error),
+                message: error.localizedDescription
+            )
+        } catch {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "metadata_failed",
+                message: "Backstage could not read or apply Photos metadata."
             )
         }
     }
@@ -451,6 +541,41 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func metadataWithTimeout(
+        requests: [PhotoMetadataApplyRequest],
+        apply: Bool
+    ) async throws -> Data {
+        let photoLibrary = photoLibrary
+        let operationTimeout = limits.metadataOperationTimeout
+        return try await withCheckedThrowingContinuation { continuation in
+            let gate = LibraryIndexResultGate(continuation)
+            Task {
+                do {
+                    let data: Data
+                    if apply {
+                        data = try await photoLibrary.metadataApplyMany(requests: requests)
+                    } else {
+                        data = try await photoLibrary.metadataReadMany(
+                            assetIDs: requests.map(\.assetID)
+                        )
+                    }
+                    gate.resume(with: .success(data))
+                } catch {
+                    gate.resume(with: .failure(error))
+                }
+            }
+            let timeoutTask = Task {
+                do {
+                    try await Task.sleep(for: operationTimeout)
+                } catch {
+                    return
+                }
+                gate.resume(with: .failure(LibraryIndexTimeoutError()))
+            }
+            gate.installTimeout(timeoutTask)
+        }
+    }
+
     private func parseDate(_ value: String?, field: String) throws -> Date? {
         guard let value, !value.isEmpty else { return nil }
         let fractional = ISO8601DateFormatter()
@@ -476,6 +601,23 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func validMetadataRequest(_ request: PhotoMetadataApplyRequest) -> Bool {
+        guard validAssetID(request.assetID),
+              validMetadataText(request.title),
+              validMetadataText(request.caption),
+              request.keywords.count <= BackstagePreviewIPCConstants.maximumMetadataKeywords,
+              request.managedKeywords.count <= BackstagePreviewIPCConstants.maximumMetadataKeywords else {
+            return false
+        }
+        return request.keywords.allSatisfy(validMetadataText)
+            && request.managedKeywords.allSatisfy(validMetadataText)
+    }
+
+    private func validMetadataText(_ value: String) -> Bool {
+        value.utf8.count <= BackstagePreviewIPCConstants.maximumMetadataTextBytes
+            && value.unicodeScalars.allSatisfy { !CharacterSet.controlCharacters.contains($0) }
+    }
+
     private func isJPEG(_ data: Data) -> Bool {
         data.count >= 4
             && data[data.startIndex] == 0xff
@@ -492,6 +634,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         case .resourceNotFound: "resource_not_found"
         case .previewUnavailable: "preview_unavailable"
         case .exportFailed: "export_failed"
+        case .metadataFailed: "metadata_failed"
         }
     }
 
@@ -550,6 +693,7 @@ private struct PreviewRequest: Decodable {
     var dateFrom: String?
     var dateTo: String?
     var allowICloudDownloads: Bool?
+    var requests: [PhotoMetadataApplyRequest]?
 
     enum CodingKeys: String, CodingKey {
         case requestID = "requestId"
@@ -559,6 +703,7 @@ private struct PreviewRequest: Decodable {
         case limit, offset
         case dateFrom, dateTo
         case allowICloudDownloads
+        case requests
     }
 }
 

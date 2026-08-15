@@ -109,7 +109,6 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "PBE_CONNECTOR_RUNTIME_REVISION": "HEAD",
             "PBE_CONNECTOR_SKIP_ACTIVATION": "1",
             "PBE_CONNECTOR_TOKEN": "fixture-token-xxxxxxxxxxxxxxxxxxxxxxxx",
-            "PBE_SKIP_BRIDGE_BUILD": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
             "TMPDIR": str(temporary),
         }

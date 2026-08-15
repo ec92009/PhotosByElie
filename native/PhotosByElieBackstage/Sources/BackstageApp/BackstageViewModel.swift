@@ -68,7 +68,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
             self = .photosAccess
         case .assetNotFound, .unsupportedMediaType:
             self = .assetUnavailable
-        case .resourceNotFound, .previewUnavailable, .exportFailed:
+        case .resourceNotFound, .previewUnavailable, .exportFailed, .metadataFailed:
             self = .previewUnavailable
         }
     }

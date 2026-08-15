@@ -12,7 +12,6 @@ import os
 import ipaddress
 import json
 import mimetypes
-import plistlib
 import re
 import signal
 import shutil
@@ -152,12 +151,6 @@ REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
-APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
-APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
-APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
-APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
-APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
-BACKSTAGE_APP = Path.home() / "Applications" / "PhotosByElie Backstage.app"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
     os.environ.get(
@@ -165,14 +158,15 @@ REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
         str(Path.home() / "Pictures" / "PhotosByElie" / "Real Estate Intake"),
     )
 )
-APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
-APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
-APPLE_PHOTOS_ALBUMS_CACHE_LOCK = threading.Lock()
-APPLE_PHOTOS_IMPORT_PROGRESS: dict[str, dict] = {}
-APPLE_PHOTOS_IMPORT_PROGRESS_LOCK = threading.Lock()
-APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
-APPLE_PHOTOS_PROGRESS_ITEM_LIMIT = 60
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
+
+
+def _apple_photos_backstage_required() -> dict:
+    return {
+        "ok": False,
+        "code": "backstage_required",
+        "error": "Legacy browser-hosted Apple Photos import is retired. Run the signed PhotosByElie Backstage app on this Mac.",
+    }
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
@@ -480,7 +474,7 @@ from fixture_policy import (  # noqa: E402
     fixture_configuration,
     plan_fixture_policy_migration,
 )
-from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
+from apple_photos_metadata_writer import BackstagePhotosMetadataAdapter, commit_writeback, writeback_plan  # noqa: E402
 from native_publication_pipeline import (  # noqa: E402
     create_r2_reconciliation_run,
     create_upload_run as create_native_upload_run,
@@ -1489,99 +1483,25 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        query = parse_qs(urlparse(self.path).query)
-        refresh = str((query.get("refresh") or [""])[0]).strip().lower() in {"1", "true", "yes"}
-        cache_only = str((query.get("cacheOnly") or query.get("cache_only") or [""])[0]).strip().lower() in {
-            "1",
-            "true",
-            "yes",
-        }
-        if not refresh:
-            cached = _cached_apple_photos_albums_payload()
-            if cached:
-                self._send_json(HTTPStatus.OK, _with_apple_photos_import_stats(Path.cwd(), cached))
-                return
-            if cache_only:
-                self._send_json(
-                    HTTPStatus.OK,
-                    {
-                        "ok": True,
-                        "albums": [],
-                        "albumImportStats": _apple_photos_album_import_stats(Path.cwd()),
-                        "cacheMiss": True,
-                        "cacheTtlSeconds": APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS,
-                    },
-                )
-                return
-        try:
-            started = time.monotonic()
-            result = _run_apple_photos_bridge(Path.cwd(), ["albums"])
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        if result.get("ok"):
-            result = {
-                **result,
-                "cached": False,
-                "cacheMiss": False,
-                "loadedAt": datetime.now(timezone.utc).isoformat(),
-                "durationMs": round((time.monotonic() - started) * 1000),
-                "cacheTtlSeconds": APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS,
-            }
-            _store_apple_photos_albums_payload(result)
-        if result.get("ok"):
-            result = _with_apple_photos_import_stats(Path.cwd(), result)
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_preflight(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        try:
-            payload = self._read_json_body()
-            result = _apple_photos_preflight(Path.cwd(), payload)
-            operation = _record_apple_photos_import_operation(
-                Path.cwd(),
-                payload,
-                result,
-                state="preflighted" if result.get("ok") else "failed",
-                error=str(result.get("error") or ""),
-            )
-            result = {**result, "operation": operation}
-        except ValueError as error:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_import(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        payload: dict = {}
-        try:
-            payload = self._read_json_body()
-            result = _start_apple_photos_import(Path.cwd(), payload)
-        except ValueError as error:
-            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_import_progress(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        query = parse_qs(urlparse(self.path).query)
-        progress_id = _clean_apple_photos_progress_id((query.get("progress_id") or query.get("task_id") or [""])[0])
-        progress = _apple_photos_import_progress(progress_id) if progress_id else _latest_apple_photos_import_progress()
-        self._send_json(HTTPStatus.OK, {"ok": True, "progress": progress})
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
@@ -2255,145 +2175,32 @@ def _new_owner_re_album_payload(item: dict, manifest: dict) -> dict:
 
 
 def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, connector_id: str) -> dict:
-    """Run private Apple Photos -> RE intake modes through NewOwner's existing Mac bridge."""
+    """Fail closed after the browser-hosted Apple Photos importer was retired."""
+    del repo_root
     manifest = _new_owner_manifest(action)
-    mode = str(manifest.get("mode") or "").strip()
+    message = _apple_photos_backstage_required()
     completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    base_result = {
-        "connectorId": connector_id,
-        "surface": "new-owner-local-bridge",
-        "actionId": str(action.get("id") or ""),
-        "type": "sidecar-culling-review",
-        "workflow": "apple-photos-real-estate-intake",
-        "mode": mode,
-        "readOnly": mode != "apple-photos-re-assign",
-        "published": False,
-        "completedAt": completed_at,
+    return {
+        "ok": False,
+        "connector": {
+            "id": connector_id,
+            "type": "sidecar-culling-review",
+            "completedAt": completed_at,
+        },
+        "result": {
+            "connectorId": connector_id,
+            "surface": "new-owner-backstage-required",
+            "actionId": str(action.get("id") or ""),
+            "type": "sidecar-culling-review",
+            "workflow": "apple-photos-real-estate-intake",
+            "mode": str(manifest.get("mode") or "").strip(),
+            "readOnly": True,
+            "published": False,
+            "completedAt": completed_at,
+            **message,
+        },
+        "preview": {"items": [], "stateCounts": []},
     }
-
-    if mode == "apple-photos-re-albums":
-        bridge = _run_apple_photos_bridge(repo_root, ["albums"])
-        if not bridge.get("ok"):
-            raise RuntimeError(str(bridge.get("error") or "Apple Photos albums could not be loaded."))
-        albums = [item for item in bridge.get("albums", []) if isinstance(item, dict)]
-        result = {
-            **base_result,
-            "albums": albums,
-            "recordsPrepared": len(albums),
-            "message": f"Loaded {len(albums):,} Apple Photos album(s) from this Mac.",
-        }
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": result,
-            "preview": {"items": [], "stateCounts": []},
-        }
-
-    raw_albums = manifest.get("albums")
-    if not isinstance(raw_albums, list) or not raw_albums:
-        raise ValueError("Choose at least one Apple Photos album for Real Estate intake.")
-    if len(raw_albums) > 24:
-        raise ValueError("Choose no more than 24 Apple Photos albums at a time.")
-    albums = [_new_owner_re_album_payload(item, manifest) for item in raw_albums if isinstance(item, dict)]
-    albums = [item for item in albums if item["albumLocalIdentifier"] or item["albumName"]]
-    if not albums:
-        raise ValueError("The selected Apple Photos albums do not have valid identifiers.")
-    assignment = _apple_photos_real_estate_assignment({
-        "destinationKind": "real_estate",
-        "intakeAssignment": manifest.get("intakeAssignment"),
-    })
-
-    if mode == "apple-photos-re-preflight":
-        preflights = []
-        items = []
-        for album in albums:
-            preflight = _apple_photos_preflight(repo_root, album)
-            if not preflight.get("ok"):
-                raise RuntimeError(str(preflight.get("error") or f"Could not inspect {album['albumName'] or 'Apple Photos album'}."))
-            preflights.append(preflight)
-            album_row = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-            album_id = str(album_row.get("localIdentifier") or album["albumLocalIdentifier"])
-            album_name = str(album_row.get("title") or album["albumName"] or "Apple Photos album")
-            # The PhotoKit bridge returns its dry-run rows as ``items``.  Keep
-            # only rows that survived format checks and the conservative burst
-            # filter; blocked rows remain summarized by the preflight so the UI
-            # can explain why the album count is larger than the preview count.
-            for candidate in preflight.get("items", []):
-                if not isinstance(candidate, dict):
-                    continue
-                if candidate.get("eligible") is not True:
-                    continue
-                asset_id = str(candidate.get("localIdentifier") or "").strip()
-                if not asset_id:
-                    continue
-                items.append({
-                    **candidate,
-                    "assetId": asset_id,
-                    "albumLocalIdentifier": album_id,
-                    "albumName": album_name,
-                })
-        limit = _new_owner_manifest_limit(manifest, default=60)
-        items = items[:limit]
-        inspected_count = sum(int(row.get("count") or 0) for row in preflights)
-        burst_filtered_count = sum(
-            int((row.get("burstFilter") or {}).get("skippedCount") or 0)
-            for row in preflights
-            if isinstance(row.get("burstFilter"), dict)
-        )
-        filter_note = (
-            f" from {inspected_count:,} item(s); {burst_filtered_count:,} burst frame(s) filtered"
-            if burst_filtered_count
-            else f" from {inspected_count:,} item(s)"
-            if inspected_count != len(items)
-            else ""
-        )
-        result = {
-            **base_result,
-            "intakeAssignment": assignment,
-            "albumCount": len(albums),
-            "candidateCount": sum(int(row.get("candidateCount") or 0) for row in preflights),
-            "recordsPrepared": len(items),
-            "inspectedCount": inspected_count,
-            "burstFilteredCount": burst_filtered_count,
-            "preflights": preflights,
-            "message": (
-                f"Prepared {len(items):,} private Apple Photos candidate(s) for "
-                f"{assignment['track']} / {assignment['fixture']} / {assignment['project']}"
-                f"{filter_note}."
-            ),
-        }
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": result,
-            "preview": {"items": items, "stateCounts": []},
-        }
-
-    if mode == "apple-photos-re-assign":
-        import_payload = {
-            "albums": albums,
-            "selectedAssetIds": manifest.get("selectedAssetIds") or [],
-            "filterBursts": bool(manifest.get("filterBursts", True)),
-            "allowIcloudDownloads": bool(manifest.get("allowIcloudDownloads", True)),
-            "destinationKind": "real_estate",
-            "intakeAssignment": assignment,
-        }
-        imported = _start_apple_photos_import(repo_root, import_payload)
-        if not imported.get("ok"):
-            raise RuntimeError(str(imported.get("error") or "Apple Photos Real Estate assignment failed."))
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": {
-                **base_result,
-                **imported,
-                "intakeAssignment": imported.get("intakeAssignment") or assignment,
-                "published": False,
-            },
-            "preview": {"items": [], "stateCounts": []},
-        }
-
-    raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
 
 
 def _request_backstage_preview_for_sync(
@@ -2413,7 +2220,7 @@ def _incremental_photos_sync(
     repo_root: Path,
     *,
     limit: int = 25,
-    adapter: SignedPhotosBridgeAdapter | None = None,
+    adapter: BackstagePhotosMetadataAdapter | None = None,
     preview_runner: Callable[..., dict] | None = None,
     cancel_requested: Callable[[], bool] | None = None,
     progress: Callable[[dict], None] | None = None,
@@ -2421,7 +2228,7 @@ def _incremental_photos_sync(
     """Read a bounded least-recently-scanned PhotoKit slice and import fingerprints."""
     bounded_limit = max(1, min(int(limit or 25), 50))
     started = time.monotonic()
-    adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
+    adapter = adapter or BackstagePhotosMetadataAdapter(repo_root)
     preview_runner = preview_runner or _request_backstage_preview_for_sync
     with fixture_connect(repo_root) as connection:
         rows = connection.execute(
@@ -3498,7 +3305,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             repo_root,
             str(manifest.get("fixtureId") or ""),
             manifest.get("assetIds") or [],
-            adapter=SignedPhotosBridgeAdapter(repo_root),
+            adapter=BackstagePhotosMetadataAdapter(repo_root),
         )})
     elif mode == "fixture-photos-writeback-commit":
         result.update({"readOnly": False, "photosWriteback": commit_writeback(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
@@ -7533,8 +7340,8 @@ def _source_preview_photo_from_owner_sidecar(repo_root: Path, media_id: str) -> 
 
     PBE Owner fixture rows are intentionally not public-catalog rows.  Their
     stable asset id is backed by Owner.sqlite and their renderable preview is
-    obtained through the signed Photos Bridge, using the PhotoKit local
-    identifier retained in raw_json.  Keep this lookup metadata-only: the
+    obtained through authenticated IPC to the signed PhotosByElie Backstage app,
+    using the PhotoKit local identifier retained in raw_json. Keep this lookup metadata-only: the
     sidecar may describe a source without exposing a filesystem path.
     """
     clean_id = str(media_id or "").strip()
@@ -10162,492 +9969,10 @@ def _apple_photos_filter_bursts(payload: dict) -> bool:
     return True
 
 
-def _clean_apple_photos_progress_id(value: object) -> str:
-    text = str(value or "").strip()
-    if not text or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", text):
-        return ""
-    return text
-
-
-def _apple_photos_progress_id(payload: dict) -> str:
-    for key in ("progressId", "progress_id", "taskId", "task_id"):
-        progress_id = _clean_apple_photos_progress_id(payload.get(key))
-        if progress_id:
-            return progress_id
-    return ""
-
-
-def _apple_photos_import_progress(progress_id: str) -> dict | None:
-    if not progress_id:
-        return None
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.get(progress_id)
-        return copy.deepcopy(progress) if progress else None
-
-
-def _latest_apple_photos_import_progress() -> dict | None:
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progresses = [copy.deepcopy(progress) for progress in APPLE_PHOTOS_IMPORT_PROGRESS.values()]
-    if not progresses:
-        return None
-    progresses.sort(
-        key=lambda progress: (
-            1 if str(progress.get("state") or "") == "running" else 0,
-            str(progress.get("updatedAt") or progress.get("startedAt") or ""),
-        ),
-        reverse=True,
-    )
-    return progresses[0]
-
-
-def _apple_photos_progress_album_payload(payload: dict) -> dict:
-    album = payload.get("album") if isinstance(payload.get("album"), dict) else {}
-    return {
-        "albumLocalIdentifier": str(album.get("localIdentifier") or payload.get("albumLocalIdentifier") or "").strip(),
-        "albumName": str(album.get("title") or payload.get("albumName") or "Apple Photos album").strip() or "Apple Photos album",
-    }
-
-
-def _start_apple_photos_import_progress(progress_id: str, albums: list[dict]) -> None:
-    if not progress_id:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    album_rows = []
-    seen: set[str] = set()
-    for payload in albums:
-        album = _apple_photos_progress_album_payload(payload)
-        album_id = album["albumLocalIdentifier"] or album["albumName"]
-        if not album_id or album_id in seen:
-            continue
-        seen.add(album_id)
-        album_rows.append({
-            **album,
-            "state": "queued",
-            "importableCount": 0,
-            "checkedCount": 0,
-            "materializedCount": 0,
-            "items": [],
-        })
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        APPLE_PHOTOS_IMPORT_PROGRESS[progress_id] = {
-            "id": progress_id,
-            "state": "running",
-            "message": "Preparing Apple Photos import...",
-            "startedAt": now,
-            "updatedAt": now,
-            "totalAlbums": len(album_rows),
-            "completedAlbums": 0,
-            "importableCount": 0,
-            "checkedCount": 0,
-            "materializedCount": 0,
-            "albums": album_rows,
-        }
-
-
-def _progress_event_album_key(event: dict) -> str:
-    album = event.get("album") if isinstance(event.get("album"), dict) else {}
-    return str(album.get("localIdentifier") or event.get("albumLocalIdentifier") or album.get("title") or event.get("albumName") or "").strip()
-
-
-def _progress_event_album_title(event: dict) -> str:
-    album = event.get("album") if isinstance(event.get("album"), dict) else {}
-    return str(album.get("title") or event.get("albumName") or "Apple Photos album").strip() or "Apple Photos album"
-
-
-def _progress_album_row(progress: dict, event: dict) -> dict:
-    album_key = _progress_event_album_key(event)
-    album_title = _progress_event_album_title(event)
-    albums = progress.setdefault("albums", [])
-    for row in albums:
-        if str(row.get("albumLocalIdentifier") or row.get("albumName") or "") == album_key:
-            return row
-    row = {
-        "albumLocalIdentifier": album_key,
-        "albumName": album_title,
-        "state": "queued",
-        "importableCount": 0,
-        "checkedCount": 0,
-        "materializedCount": 0,
-        "items": [],
-    }
-    albums.append(row)
-    progress["totalAlbums"] = len(albums)
-    return row
-
-
-def _progress_item_from_event(event: dict, state: str) -> dict:
-    progress_value = None
-    try:
-        progress_value = float(event.get("progress"))
-    except (TypeError, ValueError):
-        progress_value = None
-    if progress_value is not None:
-        progress_value = max(0.0, min(1.0, progress_value))
-    try:
-        progress_percent = int(event.get("progressPercent"))
-    except (TypeError, ValueError):
-        progress_percent = int(round(progress_value * 100)) if progress_value is not None else None
-    if progress_percent is not None:
-        progress_percent = max(0, min(100, progress_percent))
-    item = {
-        "localIdentifier": str(event.get("localIdentifier") or ""),
-        "filename": str(event.get("filename") or "Apple Photos asset"),
-        "index": int(event.get("index") or 0),
-        "status": state,
-        "reason": str(event.get("reason") or ""),
-        "relativePath": str(event.get("relativePath") or ""),
-        "path": str(event.get("path") or ""),
-        "mediaType": str(event.get("mediaType") or ""),
-        "exportStrategy": str(event.get("exportStrategy") or ""),
-        "resourceFormat": str(event.get("resourceFormat") or ""),
-        "preferredResourceFilename": str(event.get("preferredResourceFilename") or ""),
-        "preferredResourceFormat": str(event.get("preferredResourceFormat") or ""),
-        "fallbackResourceFilename": str(event.get("fallbackResourceFilename") or ""),
-        "fallbackResourceFormat": str(event.get("fallbackResourceFormat") or ""),
-        "localJPEGFallbackAvailable": bool(event.get("localJPEGFallbackAvailable") or False),
-        "updatedAt": datetime.now(timezone.utc).isoformat(),
-    }
-    resource_formats = event.get("resourceFormats")
-    if isinstance(resource_formats, list):
-        item["resourceFormats"] = [str(value) for value in resource_formats if str(value or "").strip()]
-    try:
-        elapsed_seconds = int(round(float(event.get("elapsedSeconds"))))
-    except (TypeError, ValueError):
-        elapsed_seconds = None
-    if progress_value is not None:
-        item["progress"] = progress_value
-    if progress_percent is not None:
-        item["progressPercent"] = progress_percent
-    if elapsed_seconds is not None and elapsed_seconds >= 0:
-        item["elapsedSeconds"] = elapsed_seconds
-    return item
-
-
-def _apple_photos_asset_progress_message(item: dict, album_name: str) -> str:
-    filename = item.get("filename") or "Apple Photos asset"
-    status = str(item.get("status") or "").strip()
-    percent = item.get("progressPercent")
-    elapsed = item.get("elapsedSeconds")
-    resource_format = str(item.get("resourceFormat") or "").strip()
-    format_suffix = f" ({resource_format})" if resource_format else ""
-    elapsed_label = f" after {elapsed}s" if isinstance(elapsed, int) and elapsed > 0 else ""
-    if status == "waiting_for_render":
-        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
-    if status == "render_fallback":
-        return f"Rendered JPEG stalled for {filename}{format_suffix}; trying the local source fallback from {album_name}..."
-    if status == "exporting_local_resource":
-        return f"Exporting the local source file for {filename}{format_suffix} from {album_name}..."
-    if status == "waiting_for_local_resource":
-        return f"Waiting{elapsed_label} for Photos to write the local source file for {filename}{format_suffix} from {album_name}..."
-    if status == "converting_local_jpeg":
-        return f"Converting the local source file to JPEG for {filename}{format_suffix} from {album_name}..."
-    if status == "waiting_for_file":
-        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the exported file from {album_name}..."
-    if status == "waiting_for_photos":
-        return f"Waiting{elapsed_label} for Photos to provide {filename}{format_suffix} from {album_name}..."
-    if status == "exporting_resource":
-        return f"Photos is exporting {filename}{format_suffix} from {album_name}{elapsed_label}..."
-    if status == "encoding_jpeg":
-        return f"Encoding JPEG for {filename} from {album_name}..."
-    if status == "writing_file":
-        return f"Writing {filename} to the temporary import folder..."
-    if percent is None:
-        return f"Photos is exporting {filename} from {album_name}..."
-    return f"Photos reports {percent}% for {filename}{format_suffix} from {album_name}..."
-
-
-def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:
-    item_key = item.get("localIdentifier") or f"{item.get('index')}:{item.get('filename')}"
-    items = [
-        existing for existing in album_row.get("items", [])
-        if (existing.get("localIdentifier") or f"{existing.get('index')}:{existing.get('filename')}") != item_key
-    ]
-    album_row["items"] = [item, *items][:APPLE_PHOTOS_PROGRESS_ITEM_LIMIT]
-
-
-def _recount_apple_photos_progress(progress: dict) -> None:
-    albums = progress.get("albums") if isinstance(progress.get("albums"), list) else []
-    progress["importableCount"] = sum(int(row.get("importableCount") or 0) for row in albums if isinstance(row, dict))
-    progress["checkedCount"] = sum(int(row.get("checkedCount") or 0) for row in albums if isinstance(row, dict))
-    progress["materializedCount"] = sum(int(row.get("materializedCount") or 0) for row in albums if isinstance(row, dict))
-    progress["completedAlbums"] = sum(1 for row in albums if isinstance(row, dict) and str(row.get("state") or "") in {"done", "failed"})
-
-
-def _update_apple_photos_import_progress_from_event(progress_id: str, event: dict) -> None:
-    if not progress_id or not isinstance(event, dict):
-        return
-    event_name = str(event.get("event") or "").strip()
-    now = datetime.now(timezone.utc).isoformat()
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
-            "id": progress_id,
-            "state": "running",
-            "startedAt": now,
-            "albums": [],
-        })
-        progress["state"] = "running"
-        progress["updatedAt"] = now
-        album_row = _progress_album_row(progress, event)
-        album_row["albumName"] = _progress_event_album_title(event)
-        album_row["importableCount"] = max(0, int(event.get("candidateCount") or album_row.get("importableCount") or 0))
-        album_row["checkedCount"] = max(0, int(event.get("attemptedCount") or album_row.get("checkedCount") or 0))
-        album_row["materializedCount"] = max(0, int(event.get("materializedCount") or album_row.get("materializedCount") or 0))
-        if event_name == "materialize_start":
-            album_row["state"] = "running"
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["message"] = f"Exporting {album_row['albumName']}..."
-        elif event_name == "asset_start":
-            item = _progress_item_from_event(event, "materializing")
-            album_row["state"] = "running"
-            album_row["currentItem"] = item
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = f"Exporting {item['filename']} from {album_row['albumName']}..."
-        elif event_name == "asset_progress":
-            state = str(event.get("status") or "materializing")
-            item = _progress_item_from_event(event, state)
-            album_row["state"] = "running"
-            album_row["currentItem"] = item
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = _apple_photos_asset_progress_message(item, album_row["albumName"])
-        elif event_name in {"asset_done", "asset_failed"}:
-            state = "materialized" if event_name == "asset_done" else str(event.get("status") or "unavailable")
-            item = _progress_item_from_event(event, state)
-            current = album_row.get("currentItem") if isinstance(album_row.get("currentItem"), dict) else {}
-            if current.get("localIdentifier") == item.get("localIdentifier"):
-                album_row.pop("currentItem", None)
-            _append_apple_photos_progress_item(album_row, item)
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = (
-                f"Exported {item['filename']}."
-                if state == "materialized"
-                else f"{item['filename']} was not exported: {item.get('reason') or 'Photos export failed'}"
-            )
-        elif event_name == "materialize_done":
-            album_row["state"] = "done"
-            album_row.pop("currentItem", None)
-            progress["message"] = f"Finished exporting {album_row['albumName']}."
-        _recount_apple_photos_progress(progress)
-
-
-def _finish_apple_photos_import_progress(progress_id: str, state: str, result: dict | None = None) -> None:
-    if not progress_id:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    result = result if isinstance(result, dict) else {}
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
-            "id": progress_id,
-            "startedAt": now,
-            "albums": [],
-        })
-        progress["state"] = state
-        progress["updatedAt"] = now
-        progress["completedAt"] = now
-        if result.get("message"):
-            progress["message"] = str(result.get("message") or "")
-        elif result.get("error"):
-            progress["message"] = str(result.get("error") or "")
-            progress["error"] = str(result.get("error") or "")
-        else:
-            progress["message"] = "Apple Photos export finished." if state == "done" else "Apple Photos export failed."
-        _recount_apple_photos_progress(progress)
-
-
-def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], progress_id: str) -> dict:
-    try:
-        process = subprocess.Popen(
-            command,
-            cwd=repo_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    stdout_chunks: list[str] = []
-    stderr_lines: list[str] = []
-
-    def read_stdout() -> None:
-        if process.stdout is None:
-            return
-        stdout_chunks.append(process.stdout.read() or "")
-
-    def read_stderr() -> None:
-        if process.stderr is None:
-            return
-        for raw_line in process.stderr:
-            line = raw_line.rstrip("\r\n")
-            if line.startswith(APPLE_PHOTOS_PROGRESS_PREFIX):
-                try:
-                    event = json.loads(line[len(APPLE_PHOTOS_PROGRESS_PREFIX):])
-                except json.JSONDecodeError:
-                    stderr_lines.append(line)
-                    continue
-                _update_apple_photos_import_progress_from_event(progress_id, event)
-            elif line.strip():
-                stderr_lines.append(line)
-
-    stdout_thread = threading.Thread(target=read_stdout, daemon=True)
-    stderr_thread = threading.Thread(target=read_stderr, daemon=True)
-    stdout_thread.start()
-    stderr_thread.start()
-    try:
-        return_code = process.wait(timeout=900)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return_code = process.wait(timeout=10)
-        stdout_thread.join(timeout=2)
-        stderr_thread.join(timeout=2)
-        _finish_apple_photos_import_progress(progress_id, "failed", {
-            "error": "Apple Photos bridge timed out while exporting assets.",
-        })
-        return {
-            "ok": False,
-            "error": "Apple Photos bridge timed out while exporting assets.",
-            "code": "photos_bridge_timeout",
-        }
-    stdout_thread.join(timeout=5)
-    stderr_thread.join(timeout=5)
-    output = "".join(stdout_chunks).strip()
-    payload = json.loads(output or "{}")
-    stderr = "\n".join(stderr_lines).strip()
-    if return_code != 0 and payload.get("ok") is not False:
-        message = (stderr or output or f"Apple Photos bridge exited {return_code}").strip()
-        return {"ok": False, "error": message, "code": "photos_bridge_error"}
-    if stderr and payload.get("ok") is False:
-        payload.setdefault("stderr", stderr)
-    return payload
-
-
-def _bundle_release(app: Path, expected_identifier: str) -> tuple[tuple[int, ...], int] | None:
-    try:
-        with (app / "Contents" / "Info.plist").open("rb") as handle:
-            info = plistlib.load(handle)
-        if info.get("CFBundleIdentifier") != expected_identifier:
-            return None
-        version = tuple(int(part) for part in str(info["CFBundleShortVersionString"]).split("."))
-        build = int(str(info["CFBundleVersion"]))
-    except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException):
-        return None
-    return version, build
-
-
-def _installed_bridge_satisfies_backstage_release() -> bool:
-    bridge = _bundle_release(APPLE_PHOTOS_BRIDGE_APP, "com.photosbyelie.photos-bridge")
-    backstage = _bundle_release(BACKSTAGE_APP, "com.photosbyelie.backstage")
-    return bridge is not None and backstage is not None and bridge >= backstage
-
-
-def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = _connector_runtime_script(APPLE_PHOTOS_BRIDGE_APP_INSTALLER.name, repo_root)
-    bridge_source = _connector_runtime_script(APPLE_PHOTOS_BRIDGE.name, repo_root)
-    if not installer.exists():
-        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
-    if not bridge_source.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge_source}")
-    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
-    if not needs_build:
-        if _installed_bridge_satisfies_backstage_release():
-            return
-        try:
-            installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
-                encoding="utf-8"
-            ).strip()
-            source_fingerprint = hashlib.sha256(bridge_source.read_bytes()).hexdigest()
-            needs_build = installed_fingerprint != source_fingerprint
-        except OSError:
-            needs_build = True
-    if not needs_build:
-        return
-    result = subprocess.run(
-        ["zsh", str(installer)],
-        cwd=repo_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
-        raise RuntimeError(message)
-
-
-def _run_apple_photos_bridge(repo_root: Path, args: list[str], *, progress_id: str = "") -> dict:
-    _ensure_apple_photos_bridge_app(repo_root)
-    progress_id = _clean_apple_photos_progress_id(progress_id)
-    with tempfile.TemporaryDirectory(prefix="pbe-photos-bridge-result-") as result_dir:
-        result_path = Path(result_dir) / "result.json"
-        command = [
-            "open",
-            "-W",
-            "-n",
-            str(APPLE_PHOTOS_BRIDGE_APP),
-            "--args",
-            *args,
-            "--result-destination",
-            str(result_path),
-        ]
-        try:
-            result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
-        except FileNotFoundError as error:
-            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
-        except subprocess.TimeoutExpired:
-            if progress_id:
-                _finish_apple_photos_import_progress(progress_id, "failed", {
-                    "error": "Photos Bridge app timed out while exporting assets.",
-                })
-            return {
-                "ok": False,
-                "error": "Photos Bridge app timed out while exporting assets.",
-                "code": "photos_bridge_timeout",
-            }
-        output = ""
-        if result_path.exists():
-            output = result_path.read_text(encoding="utf-8").strip()
-        elif result.stdout:
-            output = result.stdout.strip()
-    payload = json.loads(output or "{}")
-    if result.returncode != 0 and payload.get("ok") is not False:
-        message = (result.stderr or result.stdout or output or f"Photos Bridge app exited {result.returncode}").strip()
-        return {"ok": False, "error": message, "code": "photos_bridge_error"}
-    if result.stderr and payload.get("ok") is False:
-        payload.setdefault("stderr", result.stderr.strip())
-    if not payload and not output:
-        return {
-            "ok": False,
-            "error": "Photos Bridge app did not write a result payload.",
-            "code": "photos_bridge_empty_result",
-        }
-    return payload
-
-
-def _cached_apple_photos_albums_payload() -> dict | None:
-    now = time.time()
-    with APPLE_PHOTOS_ALBUMS_CACHE_LOCK:
-        payload = copy.deepcopy(APPLE_PHOTOS_ALBUMS_CACHE.get("payload"))
-        loaded_at = float(APPLE_PHOTOS_ALBUMS_CACHE.get("loaded_at") or 0.0)
-    if not isinstance(payload, dict) or loaded_at <= 0:
-        return None
-    age = max(0.0, now - loaded_at)
-    if age > APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS:
-        return None
-    payload["cached"] = True
-    payload["cacheMiss"] = False
-    payload["cacheAgeSeconds"] = round(age)
-    payload["cacheTtlSeconds"] = APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS
-    return payload
-
-
-def _store_apple_photos_albums_payload(payload: dict) -> None:
-    with APPLE_PHOTOS_ALBUMS_CACHE_LOCK:
-        APPLE_PHOTOS_ALBUMS_CACHE["payload"] = copy.deepcopy(payload)
-        APPLE_PHOTOS_ALBUMS_CACHE["loaded_at"] = time.time()
-
-
 def _apple_photos_preflight(repo_root: Path, payload: dict) -> dict:
-    return _run_apple_photos_bridge(repo_root, ["preflight", *_apple_photos_payload_args(payload)])
+    """Return the retired-import response without touching Apple Photos."""
+    del repo_root, payload
+    return _apple_photos_backstage_required()
 
 
 def _apple_photos_nothing_materialized_message(payload: dict) -> str:
@@ -11214,449 +10539,6 @@ def _merge_apple_photos_batch_sidecars(batch_root: Path, materialized_albums: li
         "duplicateCount": duplicate_count,
         "skippedCount": skipped_count,
     }
-
-
-def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_payloads: list[dict]) -> dict:
-    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
-    if not preflight_only and _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
-    if progress_id:
-        _start_apple_photos_import_progress(progress_id, album_payloads)
-    preflight_rows: list[dict] = []
-    operation_rows: list[dict] = []
-    failed_albums: list[dict] = []
-    prepared_rows: list[tuple[int, dict, dict, dict]] = []
-    for index, album_payload in enumerate(album_payloads, start=1):
-        try:
-            preflight = _apple_photos_preflight(repo_root, album_payload)
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            album = {
-                "localIdentifier": str(album_payload.get("albumLocalIdentifier") or ""),
-                "title": str(album_payload.get("albumName") or "Apple Photos album"),
-            }
-            failed_albums.append({"album": album, "error": str(error)})
-            continue
-        state = "preflighted" if preflight.get("ok") else "failed"
-        operation = _record_apple_photos_import_operation(
-            repo_root,
-            album_payload,
-            preflight,
-            state=state,
-            error=str(preflight.get("error") or ""),
-        )
-        operation_rows.append(operation)
-        preflight_rows.append(preflight)
-        album_payload = {**album_payload, "operationId": operation.get("operationId") or album_payload.get("operationId")}
-        if not preflight.get("ok"):
-            failed_albums.append({
-                "album": preflight.get("album") or {},
-                "error": str(preflight.get("error") or "Apple Photos dry run failed."),
-            })
-            continue
-        if int(preflight.get("candidateCount") or 0) <= 0:
-            failed_albums.append({
-                "album": preflight.get("album") or {},
-                "error": "No eligible local assets are available in this album.",
-                "code": "no_eligible_assets",
-            })
-            continue
-        prepared_rows.append((index, album_payload, preflight, operation))
-    if preflight_only:
-        return {
-            "ok": any(bool(row.get("ok")) for row in preflight_rows),
-            "batch": True,
-            "dryRun": True,
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-    if not prepared_rows:
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": "No selected Apple Photos albums have eligible local assets to import.",
-            "code": "no_eligible_assets",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    batch_root, intake_routing = _apple_photos_intake_destination(repo_root, payload, "batch")
-    materialized_albums: list[dict] = []
-    for index, album_payload, preflight, operation in prepared_rows:
-        album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-        destination = batch_root / _apple_photos_batch_album_dir(index, str(album.get("title") or "album"))
-        export_result = _run_apple_photos_bridge(
-            repo_root,
-            ["export", *_apple_photos_payload_args(album_payload), "--destination", str(destination)],
-            progress_id=progress_id,
-        )
-        if not export_result.get("ok"):
-            operation = update_import_operation_db(
-                repo_root,
-                str(operation.get("operationId") or ""),
-                state="failed",
-                error=str(export_result.get("error") or "Apple Photos export failed"),
-            )
-            failed_albums.append({**export_result, "album": album, "operation": operation})
-            continue
-        materialized = int(export_result.get("materializedCount") or 0)
-        if materialized <= 0:
-            nothing_message = _apple_photos_nothing_materialized_message(album_payload)
-            operation = update_import_operation_db(
-                repo_root,
-                str(operation.get("operationId") or ""),
-                state="failed",
-                error=nothing_message,
-            )
-            failed_albums.append({
-                **export_result,
-                "ok": False,
-                "album": album,
-                "operation": operation,
-                "error": nothing_message,
-                "code": "nothing_materialized",
-            })
-            continue
-        materialized_albums.append({**export_result, "preflight": preflight, "operation": operation})
-    if not materialized_albums:
-        nothing_message = _apple_photos_nothing_materialized_message({
-            "allowIcloudDownloads": any(_apple_photos_allow_icloud_downloads(album_payload) for _, album_payload, _, _ in prepared_rows),
-        })
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": nothing_message,
-            "code": "nothing_materialized",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    batch_sidecar = _merge_apple_photos_batch_sidecars(batch_root, materialized_albums)
-    unique_materialized = int(batch_sidecar.get("assetCount") or 0)
-    if unique_materialized <= 0:
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": "The selected albums only produced duplicate or invalid temporary assets.",
-            "code": "nothing_materialized",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "materializedAlbums": materialized_albums,
-            "failedAlbums": failed_albums,
-            "batchSidecar": batch_sidecar,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(batch_root, intake_routing, unique_materialized)
-        review_stage["batchSidecar"] = batch_sidecar
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            batch_root,
-            f"Apple Photos import: {len(materialized_albums):,} album(s)",
-        )
-        review_stage = _apple_photos_review_stage(batch_root, materialized_albums, batch_sidecar=batch_sidecar)
-    updated_operations: list[dict] = []
-    for row in materialized_albums:
-        operation = row.get("operation") if isinstance(row.get("operation"), dict) else {}
-        updated = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="done",
-            task=review_stage,
-        )
-        row["operation"] = updated
-        updated_operations.append(updated)
-    result = {
-        "ok": True,
-        "batch": True,
-        "preflights": preflight_rows,
-        "materializedAlbums": materialized_albums,
-        "failedAlbums": failed_albums,
-        "batchSidecar": batch_sidecar,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operations": updated_operations,
-        "message": (
-            (
-                f"Apple Photos assigned {unique_materialized:,} unique asset(s) to "
-                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-                "The local fixture is registered for RE import; nothing was published."
-            )
-            if intake_routing
-            else (
-                f"Apple Photos exported {unique_materialized:,} unique asset(s)"
-                f" from {len(materialized_albums):,} album(s) to a temporary import folder. Starting Expo import next."
-            )
-        ),
-    }
-    _finish_apple_photos_import_progress(progress_id, "done", result)
-    return result
-
-
-def _start_apple_photos_selected_asset_import(
-    repo_root: Path,
-    payload: dict,
-    album_payloads: list[dict],
-    selected_asset_ids: list[str],
-) -> dict:
-    """Materialize only checked PhotoKit assets and route them through the chosen intake lane."""
-    if _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    if not album_payloads:
-        album_payloads = [payload]
-    preflights: list[dict] = []
-    allowed_asset_ids: set[str] = set()
-    for album_payload in album_payloads:
-        preflight = _apple_photos_preflight(repo_root, album_payload)
-        preflights.append(preflight)
-        for item in preflight.get("items") or []:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("status") or "") not in {"candidate", "materialized"}:
-                continue
-            asset_id = str(item.get("localIdentifier") or "").strip()
-            if asset_id:
-                allowed_asset_ids.add(asset_id)
-    unknown = [asset_id for asset_id in selected_asset_ids if asset_id not in allowed_asset_ids]
-    if unknown:
-        raise ValueError("Selected Apple Photos assets must belong to the selected albums and pass dry run")
-
-    destination, intake_routing = _apple_photos_intake_destination(repo_root, payload, "selected-assets")
-    materialized_rows: list[dict] = []
-    failures: list[dict] = []
-    for index, asset_id in enumerate(selected_asset_ids, start=1):
-        asset_root = destination / f"{index:04d}-{hashlib.sha256(asset_id.encode('utf-8')).hexdigest()[:10]}"
-        args = ["materialize-one", "--asset-id", asset_id, "--destination", str(asset_root)]
-        if _apple_photos_allow_icloud_downloads(payload):
-            args.append("--allow-icloud-downloads")
-        export_result = _run_apple_photos_bridge(repo_root, args)
-        if export_result.get("ok") and int(export_result.get("materializedCount") or 0) > 0:
-            materialized_rows.append(export_result)
-        else:
-            failures.append({
-                "assetLocalIdentifier": asset_id,
-                "error": str(export_result.get("error") or "Apple Photos asset was not materialized"),
-            })
-    if not materialized_rows:
-        return {
-            "ok": False,
-            "batch": True,
-            "code": "nothing_materialized",
-            "error": _apple_photos_nothing_materialized_message(payload),
-            "preflights": preflights,
-            "failedAssets": failures,
-        }
-
-    batch_sidecar = _merge_apple_photos_batch_sidecars(destination, materialized_rows)
-    materialized_count = int(batch_sidecar.get("assetCount") or 0)
-    if materialized_count <= 0:
-        return {
-            "ok": False,
-            "batch": True,
-            "code": "nothing_materialized",
-            "error": "The selected Apple Photos assets only produced duplicate or invalid local files.",
-            "preflights": preflights,
-            "failedAssets": failures,
-        }
-
-    operation_payload = {**payload, "selectedAssetIds": selected_asset_ids}
-    synthetic_preflight = {
-        "ok": True,
-        "candidateCount": len(selected_asset_ids),
-        "count": sum(int(row.get("count") or 0) for row in preflights),
-        "items": [
-            item
-            for row in preflights
-            for item in (row.get("items") or [])
-            if isinstance(item, dict) and str(item.get("localIdentifier") or "") in set(selected_asset_ids)
-        ],
-    }
-    operation = _record_apple_photos_import_operation(
-        repo_root,
-        operation_payload,
-        synthetic_preflight,
-        state="done",
-    )
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized_count)
-        message = (
-            f"Apple Photos assigned {materialized_count:,} selected asset(s) to "
-            f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-            "The local fixture is registered for RE import; nothing was published."
-        )
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            destination,
-            f"Apple Photos selection: {materialized_count:,} asset(s)",
-        )
-        review_stage = _apple_photos_review_stage(destination, materialized_rows, batch_sidecar=batch_sidecar)
-        message = (
-            f"Apple Photos exported {materialized_count:,} selected asset(s) to a temporary import folder. "
-            "Starting Expo import next."
-        )
-    review_stage["batchSidecar"] = batch_sidecar
-    operation = update_import_operation_db(
-        repo_root,
-        str(operation.get("operationId") or ""),
-        state="done",
-        task=review_stage,
-    )
-    return {
-        "ok": True,
-        "batch": True,
-        "selectedAssets": True,
-        "preflights": preflights,
-        "materializedAlbums": materialized_rows,
-        "failedAssets": failures,
-        "batchSidecar": batch_sidecar,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operations": [operation],
-        "message": message,
-    }
-
-
-def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
-    album_payloads = _apple_photos_album_batch_payloads(payload)
-    selected_asset_ids = _apple_photos_selected_asset_ids(payload)
-    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
-    if selected_asset_ids and not preflight_only:
-        return _start_apple_photos_selected_asset_import(
-            repo_root,
-            payload,
-            album_payloads,
-            selected_asset_ids,
-        )
-    if album_payloads:
-        return _start_apple_photos_batch_import(repo_root, payload, album_payloads)
-    if not preflight_only and _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
-    if progress_id:
-        _start_apple_photos_import_progress(progress_id, [payload])
-    preflight = _apple_photos_preflight(repo_root, payload)
-    if not preflight.get("ok"):
-        operation = _record_apple_photos_import_operation(
-            repo_root,
-            payload,
-            preflight,
-            state="failed",
-            error=str(preflight.get("error") or ""),
-        )
-        result = {**preflight, "operation": operation}
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    operation = _record_apple_photos_import_operation(repo_root, payload, preflight, state="preflighted")
-    payload = {**payload, "operationId": operation.get("operationId") or payload.get("operationId")}
-    if preflight_only:
-        return {**preflight, "dryRun": True, "operation": operation}
-    candidate_count = int(preflight.get("candidateCount") or 0)
-    if candidate_count <= 0:
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error="No eligible Apple Photos assets are available to import.",
-        )
-        result = {
-            **preflight,
-            "ok": False,
-            "error": "No eligible Apple Photos assets are available to import.",
-            "code": "no_eligible_assets",
-            "operation": operation,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-    destination, intake_routing = _apple_photos_intake_destination(
-        repo_root,
-        payload,
-        str(album.get("title") or "album"),
-    )
-    export_result = _run_apple_photos_bridge(
-        repo_root,
-        ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
-        progress_id=progress_id,
-    )
-    if not export_result.get("ok"):
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error=str(export_result.get("error") or "Apple Photos export failed"),
-        )
-        result = {**export_result, "operation": operation}
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    materialized = int(export_result.get("materializedCount") or 0)
-    if materialized <= 0:
-        nothing_message = _apple_photos_nothing_materialized_message(payload)
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error=nothing_message,
-        )
-        result = {
-            **export_result,
-            "ok": False,
-            "error": nothing_message,
-            "code": "nothing_materialized",
-            "operation": operation,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized)
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            destination,
-            f"Apple Photos import: {album.get('title') or payload.get('albumName') or 'album'}",
-        )
-        review_stage = _apple_photos_review_stage(destination, [{**export_result, "preflight": preflight}])
-    operation = update_import_operation_db(
-        repo_root,
-        str(operation.get("operationId") or ""),
-        state="done",
-        task=review_stage,
-    )
-    result = {
-        "ok": True,
-        "preflight": preflight,
-        "materialized": export_result,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operation": operation,
-        "message": (
-            (
-                f"Apple Photos assigned {materialized:,} asset(s) to "
-                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-                "The local fixture is registered for RE import; nothing was published."
-            )
-            if intake_routing
-            else f"Apple Photos exported {materialized:,} asset(s) to a temporary import folder. Starting Expo import next."
-        ),
-    }
-    _finish_apple_photos_import_progress(progress_id, "done", result)
-    return result
 
 
 def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:

@@ -5,10 +5,16 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.local_server import _source_preview_for_media_id
+from scripts.local_server import SOURCE_PREVIEW_PATH, _source_preview_for_media_id, _source_preview_media_id_from_path
 
 
 class OwnerSourcePreviewTests(unittest.TestCase):
+    def test_source_preview_path_preserves_encoded_trailing_slash(self) -> None:
+        media_id = "cloud-id:001:fixture/"
+        encoded_path = SOURCE_PREVIEW_PATH + "cloud-id%3A001%3Afixture%2F"
+
+        self.assertEqual(_source_preview_media_id_from_path(encoded_path), media_id)
+
     def _write_owner_db(self, root: Path, *, asset_id: str, local_identifier: str) -> None:
         database = root / "assets/owner-actions/Owner.sqlite"
         database.parent.mkdir(parents=True)

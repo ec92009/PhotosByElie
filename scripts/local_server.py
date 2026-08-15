@@ -1655,7 +1655,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        media_id = unquote(path[len(SOURCE_PREVIEW_PATH):]).strip("/")
+        media_id = _source_preview_media_id_from_path(path)
         query = parse_qs(urlparse(self.path).query)
         info_only = "info" in query
         result = _source_preview_for_media_id(Path.cwd(), media_id)
@@ -7561,6 +7561,14 @@ def _source_preview_cache_path(source: Path) -> Path:
     ).hexdigest()[:20]
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source.stem).strip("-._") or "source"
     return SOURCE_PREVIEW_CACHE_ROOT / f"{stem}-{digest}.jpg"
+
+
+def _source_preview_media_id_from_path(path: str) -> str:
+    """Decode the media id without trimming meaningful trailing slashes."""
+    encoded_path = str(path or "")
+    if not encoded_path.startswith(SOURCE_PREVIEW_PATH):
+        return ""
+    return unquote(encoded_path[len(SOURCE_PREVIEW_PATH):])
 
 
 def _owner_source_preview_cache_path(repo_root: Path, media_id: str) -> Path:

@@ -51,6 +51,7 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
     const actionsIndex = html.indexOf("hidden-actions.js");
     assert.ok(sessionIndex >= 0, `${page} loads the PBE Owner session client`);
     assert.ok(actionsIndex > sessionIndex, `${page} loads Owner actions after the session client`);
+    assert.match(html, /pbe-owner-session\.js\?v=226\.1/);
   }
   assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(
@@ -80,7 +81,7 @@ test("hosted Owner page readiness ignores a rejected public catalog", async () =
       ok: true,
       gallery: {
         fixtureId: session.fixtureId,
-        fixtureBreadcrumb: session.fixtureBreadcrumb,
+        fixtureBreadcrumb: "collection.pbe-owner",
         items: [{ assetId: "owner-photo", filename: "owner-photo.jpg", mediaType: "photo" }],
         summary: { filtered: 1 },
       },
@@ -102,6 +103,7 @@ test("hosted Owner page readiness ignores a rejected public catalog", async () =
   assert.equal(context.mode, "pbe-owner");
   assert.equal(context.galleryKey, "pbe-owner");
   assert.equal(context.gallery.fixtureId, session.fixtureId);
+  assert.equal(context.gallery.title, session.fixtureBreadcrumb);
   assert.deepEqual(Array.from(context.gallery.photos, (photo) => photo.id), ["owner-photo"]);
 });
 

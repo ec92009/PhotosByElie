@@ -91,7 +91,10 @@
     window.photosByElieData = window.photosByElieData || {};
     window.photosByElieData[galleryKey] = {
       number: "",
-      title: String(gallery.fixtureBreadcrumb || session.fixtureBreadcrumb || "PBE Owner"),
+      // The frozen session is the authoritative fixture label. The gallery
+      // payload may have been produced by an older host and must not leak its
+      // internal collection key into the visible Owner surface.
+      title: String(session.fixtureBreadcrumb || gallery.fixtureBreadcrumb || "PBE Owner"),
       description: gallery.truncated
         ? `Showing the first ${photos.length} of ${Number(gallery.summary?.filtered) || photos.length} picked fixture items.`
         : `${photos.length} picked fixture item${photos.length === 1 ? "" : "s"}.`,

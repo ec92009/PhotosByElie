@@ -1781,11 +1781,68 @@ def _assignment_row(photo_id: str, record: dict[str, Any], fallback_batch_id: st
     )
 
 
+def _country_assignment_columns(conn: sqlite3.Connection) -> set[str]:
+    return {str(row[1]) for row in conn.execute("PRAGMA table_info(country_assignments)")}
+
+
+def _write_country_assignment_row(conn: sqlite3.Connection, row: tuple[Any, ...]) -> None:
+    media_id, country_slug, source_slug, batch_id, assigned_at, updated_at = row
+    if "assignment_id" not in _country_assignment_columns(conn):
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO country_assignments
+              (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            row,
+        )
+        return
+
+    existing = conn.execute(
+        "SELECT assignment_id FROM country_assignments WHERE media_id = ?",
+        (media_id,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            """
+            UPDATE country_assignments
+            SET country_slug = ?, source_slug = ?, batch_id = ?, assigned_at = ?, updated_at = ?
+            WHERE media_id = ?
+            """,
+            (country_slug, source_slug, batch_id, assigned_at, updated_at, media_id),
+        )
+        return
+
+    timestamp = str(updated_at or now_iso())
+    conn.execute(
+        """
+        INSERT INTO country_assignments
+          (assignment_id, asset_id, media_id, country_slug, source_slug, batch_id,
+           assigned_at, updated_at, identity_status, identity_source,
+           identity_evidence_json, migration_id, migrated_at)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, 'unmapped', 'legacy-owner-action',
+                '[]', 'post-migration-legacy-write', ?)
+        """,
+        (
+            f"legacy:{media_id}",
+            media_id,
+            country_slug,
+            source_slug,
+            batch_id,
+            assigned_at,
+            timestamp,
+            timestamp,
+        ),
+    )
+
+
 def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None = None, *, force: bool = False) -> None:
     owns_conn = conn is None
     conn = conn or connect(repo_root)
     try:
         if force:
+            if "assignment_id" in _country_assignment_columns(conn):
+                raise RuntimeError("Force-importing Country JSON is retired after identity schema v2 migration.")
             conn.execute("DELETE FROM country_assignments")
         elif conn.execute("SELECT count(*) FROM country_assignments").fetchone()[0]:
             return
@@ -1798,14 +1855,7 @@ def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                     continue
                 row = _assignment_row(photo_id, record)
                 if row:
-                    conn.execute(
-                        """
-                        INSERT OR REPLACE INTO country_assignments
-                          (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        row,
-                    )
+                    _write_country_assignment_row(conn, row)
 
         log_path = repo_root / COUNTRY_ASSIGNMENT_LOG
         if log_path.exists():
@@ -1824,14 +1874,7 @@ def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                             continue
                         row = _assignment_row(str(item.get("id") or ""), item, batch_id, created_at)
                         if row:
-                            conn.execute(
-                                """
-                                INSERT OR REPLACE INTO country_assignments
-                                  (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                                """,
-                                row,
-                            )
+                            _write_country_assignment_row(conn, row)
         _set_setting(conn, "country_assignments_json", COUNTRY_ASSIGNMENT_INDEX.as_posix())
         conn.commit()
     finally:
@@ -1850,13 +1893,16 @@ def export_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
             ORDER BY assigned_at, media_id
             """
         ).fetchall()
+        columns = _country_assignment_columns(conn)
+        migrated = "assignment_id" in columns
         photos: dict[str, Any] = {}
+        native_assets: dict[str, Any] = {}
         latest_batch_id = ""
         updated_at = ""
         for row in rows:
             latest_batch_id = row["batch_id"] or latest_batch_id
             updated_at = row["assigned_at"] or updated_at
-            photos[row["media_id"]] = {
+            record = {
                 "gallery_key": row["country_slug"],
                 "state": "reserve",
                 "from_state": "reserve",
@@ -1865,12 +1911,25 @@ def export_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                 "batch_id": row["batch_id"],
                 "assets": {},
             }
-        _write_json(repo_root / COUNTRY_ASSIGNMENT_INDEX, {
+            media_id = str(row["media_id"] or "").strip()
+            asset_id = str(row["asset_id"] or "").strip() if migrated else ""
+            if migrated:
+                record["identity_status"] = row["identity_status"]
+                record["asset_id"] = asset_id
+            if media_id:
+                photos[media_id] = record
+            if asset_id:
+                native_assets[asset_id] = {**record, "legacy_media_id": media_id}
+        payload = {
             "format": "photosbyelie-country-assignments",
             "updated_at": updated_at,
             "latest_batch_id": latest_batch_id,
             "photos": photos,
-        })
+        }
+        if migrated:
+            payload["schema_version"] = 2
+            payload["native_assets"] = native_assets
+        _write_json(repo_root / COUNTRY_ASSIGNMENT_INDEX, payload)
     finally:
         if owns_conn:
             conn.close()
@@ -1904,14 +1963,7 @@ def record_country_assignments(
                 continue
             row = _assignment_row(str(item.get("id") or ""), {**item, "gallery_key": item.get("to_slug") or target_slug}, batch_id, created_at)
             if row:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO country_assignments
-                      (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    row,
-                )
+                _write_country_assignment_row(conn, row)
         _set_setting(conn, "country_assignments_json", COUNTRY_ASSIGNMENT_INDEX.as_posix())
         conn.commit()
         export_country_assignments(repo_root, conn)

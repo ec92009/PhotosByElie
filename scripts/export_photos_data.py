@@ -841,10 +841,12 @@ def country_assignments_from_owner_index(repo_root: Path) -> dict[str, str]:
     conn = owner_db_connect(repo_root)
     assignments: dict[str, str] = {}
     try:
-        rows = conn.execute("SELECT media_id, country_slug FROM country_assignments").fetchall()
+        rows = conn.execute(
+            "SELECT media_id, country_slug FROM country_assignments WHERE media_id IS NOT NULL"
+        ).fetchall()
         for row in rows:
             slug = row["country_slug"]
-            if slug in COUNTRY_ASSIGNMENT_TARGETS:
+            if row["media_id"] and slug in COUNTRY_ASSIGNMENT_TARGETS:
                 assignments[row["media_id"]] = slug
     finally:
         conn.close()

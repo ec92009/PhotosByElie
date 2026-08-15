@@ -32,6 +32,11 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
 try:
+    from .backstage_photos_client import BackstagePhotosClientError, request_preview
+except ImportError:
+    from backstage_photos_client import BackstagePhotosClientError, request_preview  # type: ignore
+
+try:
     from .pbe_owner_session import (
         CloudPBEOwnerSessionVerifier,
         PBEOwnerHostAuthenticator,
@@ -7601,22 +7606,19 @@ def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, me
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = cache_path.with_name(f".{cache_path.name}.{uuid.uuid4().hex}.tmp")
-    bridge_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
+    photo_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
     try:
-        result = _run_apple_photos_bridge(
-            repo_root,
-            [
-                "preview",
-                "--asset-id",
-                bridge_identifier,
-                "--destination",
-                str(temporary_path),
-                "--max-pixel",
-                "900",
-            ],
-        )
+        try:
+            result = request_preview(
+                photo_identifier,
+                temporary_path,
+                900,
+                timeout=60.0,
+            )
+        except BackstagePhotosClientError as error:
+            result = error.as_payload()
         if not isinstance(result, dict) or not result.get("ok"):
-            message = str((result or {}).get("error") or "Photos Bridge did not return a preview.")
+            message = str((result or {}).get("error") or "Backstage did not return a preview.")
             return _source_preview_error(
                 HTTPStatus.BAD_GATEWAY,
                 media_id,
@@ -7632,7 +7634,7 @@ def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, me
                 media_type,
                 "Apple Photos PhotoKit preview",
                 str(photo.get("title") or media_id),
-                "Photos Bridge reported success without producing a preview file.",
+                "Backstage reported success without producing a preview file.",
             )
         temporary_path.replace(cache_path)
         return {

@@ -390,6 +390,12 @@ const localizedCollectionTitle = () => {
   const translated = t(key);
   return translated && translated !== key ? translated : gallery?.title || "";
 };
+const setCollectionLabel = (element) => {
+  if (!element) return;
+  if (isPBEOwnerGallery) delete element.dataset.i18n;
+  else element.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
+  element.textContent = localizedCollectionTitle();
+};
 const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
 const primaryShortcutLabel = () => /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
   ? "⌘"
@@ -2235,15 +2241,13 @@ if (galleryRoot && gallery) {
   });
   const currentNav = document.querySelector("[data-nav-current]");
   if (currentNav) {
-    currentNav.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
-    currentNav.textContent = localizedCollectionTitle();
+    setCollectionLabel(currentNav);
     currentNav.setAttribute("href", versionedHref(galleryHrefForKey(galleryKey)));
   }
   if (document.querySelector("[data-gallery-number]")) document.querySelector("[data-gallery-number]").textContent = `Collection ${gallery.number}`;
   const titleRoot = document.querySelector("[data-gallery-title]");
   if (titleRoot) {
-    titleRoot.dataset.i18n = isSelectionGallery ? "gallery.make_selection" : `collection.${galleryKey}`;
-    titleRoot.textContent = localizedCollectionTitle();
+    setCollectionLabel(titleRoot);
   }
   if (document.querySelector("[data-gallery-description]")) document.querySelector("[data-gallery-description]").textContent = gallery.description;
   galleryRoot.classList.add(gallery.accent);
@@ -2334,8 +2338,8 @@ if (galleryRoot && gallery) {
   window.addEventListener("photosbyelie:languagechange", () => {
     if (gallery) {
       document.title = `Photos By Elie | ${localizedCollectionTitle()} ${t("nav.gallery")}`;
-      document.querySelector("[data-nav-current]").textContent = localizedCollectionTitle();
-      document.querySelector("[data-gallery-title]").textContent = localizedCollectionTitle();
+      setCollectionLabel(document.querySelector("[data-nav-current]"));
+      setCollectionLabel(document.querySelector("[data-gallery-title]"));
       syncFilterControls();
       renderGallery({ scrollSelection: false });
       applyGalleryDensity();

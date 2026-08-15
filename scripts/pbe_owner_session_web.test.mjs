@@ -61,6 +61,7 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
   assert.match(read("gallery.html"), /photo-gallery\.js\?v=226\.1/);
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
+  assert.match(read("photo-gallery.js"), /const setCollectionLabel = \(element\) => \{[\s\S]*if \(isPBEOwnerGallery\) delete element\.dataset\.i18n;/);
 });
 
 test("hosted Owner page readiness ignores a rejected public catalog", async () => {

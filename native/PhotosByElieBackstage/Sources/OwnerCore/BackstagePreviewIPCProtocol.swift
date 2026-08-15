@@ -3,8 +3,12 @@ import Foundation
 public enum BackstagePreviewIPCConstants {
     public static let schemaVersion = 1
     public static let operation = "photos.preview"
+    public static let libraryIndexOperation = "photos.library-index"
     public static let minimumMaxPixel = 256
     public static let maximumMaxPixel = 1_800
+    public static let minimumLibraryLimit = 1
+    public static let maximumLibraryLimit = 1_000
+    public static let maximumLibraryOffset = 1_000_000
     public static let maximumRequestBytes = 16_384
     public static let maximumPreviewBytes = 8 * 1_024 * 1_024
     public static let maximumResponseBytes = 12 * 1_024 * 1_024
@@ -90,34 +94,41 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         guard constantTimeEqual(request.authorization, expectedAuthorization) else {
             return encodeError(requestID: request.requestID, code: "authentication_failed", message: "The IPC bearer token was rejected.")
         }
-        guard request.operation == BackstagePreviewIPCConstants.operation else {
+        guard request.operation == BackstagePreviewIPCConstants.operation
+            || request.operation == BackstagePreviewIPCConstants.libraryIndexOperation else {
             return encodeError(requestID: request.requestID, code: "unsupported_operation", message: "The requested IPC operation is not supported.")
         }
-        guard validAssetID(request.assetID) else {
+        guard [.authorized, .limited].contains(photoLibrary.authorization()) else {
+            return encodeError(requestID: request.requestID, code: "photos_access_denied", message: "Backstage does not have Photos access.")
+        }
+
+        if request.operation == BackstagePreviewIPCConstants.libraryIndexOperation {
+            return await processLibraryIndex(request)
+        }
+
+        guard let assetID = request.assetID, validAssetID(assetID) else {
             return encodeError(requestID: request.requestID, code: "invalid_asset_id", message: "The Photos asset ID is missing or exceeds the allowed size.")
         }
-        guard (BackstagePreviewIPCConstants.minimumMaxPixel...BackstagePreviewIPCConstants.maximumMaxPixel)
-            .contains(request.maxPixel) else {
+        guard let maxPixel = request.maxPixel,
+              (BackstagePreviewIPCConstants.minimumMaxPixel...BackstagePreviewIPCConstants.maximumMaxPixel)
+                .contains(maxPixel) else {
             return encodeError(
                 requestID: request.requestID,
                 code: "invalid_max_pixel",
                 message: "maxPixel must be between 256 and 1800."
             )
         }
-        guard [.authorized, .limited].contains(photoLibrary.authorization()) else {
-            return encodeError(requestID: request.requestID, code: "photos_access_denied", message: "Backstage does not have Photos access.")
-        }
 
         do {
             let preview = try await previewWithTimeout(
-                assetID: request.assetID,
-                maxPixel: request.maxPixel
+                assetID: assetID,
+                maxPixel: maxPixel
             )
-            guard preview.assetID == request.assetID,
+            guard preview.assetID == assetID,
                   preview.pixelWidth > 0,
                   preview.pixelHeight > 0,
-                  preview.pixelWidth <= request.maxPixel,
-                  preview.pixelHeight <= request.maxPixel,
+                  preview.pixelWidth <= maxPixel,
+                  preview.pixelHeight <= maxPixel,
                   isJPEG(preview.jpegData) else {
                 return encodeError(requestID: request.requestID, code: "invalid_preview", message: "Backstage returned malformed preview data.")
             }
@@ -154,6 +165,94 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func processLibraryIndex(_ request: PreviewRequest) async -> Data {
+        guard let limit = request.limit,
+              (BackstagePreviewIPCConstants.minimumLibraryLimit...BackstagePreviewIPCConstants.maximumLibraryLimit)
+                .contains(limit) else {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: "invalid_library_limit",
+                message: "Library limit must be between 1 and 1000."
+            )
+        }
+        guard let offset = request.offset,
+              (0...BackstagePreviewIPCConstants.maximumLibraryOffset).contains(offset) else {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: "invalid_library_offset",
+                message: "Library offset must be between 0 and 1000000."
+            )
+        }
+
+        do {
+            let dateFrom = try parseDate(request.dateFrom, field: "dateFrom")
+            let dateTo = try parseDate(request.dateTo, field: "dateTo")
+            let payloadData = try await libraryIndexWithTimeout(
+                limit: limit,
+                offset: offset,
+                dateFrom: dateFrom,
+                dateTo: dateTo
+            )
+            guard var payload = try JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+                  payload["ok"] as? Bool == true,
+                  payload["mode"] as? String == "library-index",
+                  payload["limit"] as? Int == limit,
+                  payload["offset"] as? Int == offset,
+                  let items = payload["items"] as? [[String: Any]],
+                  let count = payload["count"] as? Int,
+                  count == items.count,
+                  count <= limit else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: "library-index",
+                    code: "invalid_library_response",
+                    message: "Backstage returned malformed library-index data."
+                )
+            }
+            payload["requestId"] = request.requestID
+            let encoded = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            guard encoded.count <= limits.maximumResponseBytes else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: "library-index",
+                    code: "response_oversized",
+                    message: "The library-index response exceeds the allowed size."
+                )
+            }
+            return encoded
+        } catch is LibraryDateArgumentError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: "invalid_library_date",
+                message: "The library date range is invalid."
+            )
+        } catch is LibraryIndexTimeoutError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: "library_index_timeout",
+                message: "Backstage timed out while indexing the Photos library."
+            )
+        } catch let error as PhotoLibraryError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: errorCode(error),
+                message: error.localizedDescription
+            )
+        } catch {
+            return encodeError(
+                requestID: request.requestID,
+                mode: "library-index",
+                code: "library_index_failed",
+                message: "Backstage could not index the Photos library."
+            )
+        }
+    }
+
     private func previewWithTimeout(assetID: String, maxPixel: Int) async throws -> PhotoPreview {
         let photoLibrary = photoLibrary
         let operationTimeout = limits.operationTimeout
@@ -180,6 +279,57 @@ public struct BackstagePreviewIPCProcessor: Sendable {
             }
             gate.installTimeout(timeoutTask)
         }
+    }
+
+    private func libraryIndexWithTimeout(
+        limit: Int,
+        offset: Int,
+        dateFrom: Date?,
+        dateTo: Date?
+    ) async throws -> Data {
+        let photoLibrary = photoLibrary
+        let operationTimeout = limits.operationTimeout
+        return try await withCheckedThrowingContinuation { continuation in
+            let gate = LibraryIndexResultGate(continuation)
+            Task {
+                do {
+                    let data = try await photoLibrary.libraryIndex(
+                        limit: limit,
+                        offset: offset,
+                        dateFrom: dateFrom,
+                        dateTo: dateTo
+                    )
+                    gate.resume(with: .success(data))
+                } catch {
+                    gate.resume(with: .failure(error))
+                }
+            }
+            let timeoutTask = Task {
+                do {
+                    try await Task.sleep(for: operationTimeout)
+                } catch {
+                    return
+                }
+                gate.resume(with: .failure(LibraryIndexTimeoutError()))
+            }
+            gate.installTimeout(timeoutTask)
+        }
+    }
+
+    private func parseDate(_ value: String?, field: String) throws -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: value) { return date }
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        if let date = standard.date(from: value) { return date }
+        let day = DateFormatter()
+        day.locale = Locale(identifier: "en_US_POSIX")
+        day.timeZone = TimeZone(secondsFromGMT: 0)
+        day.dateFormat = "yyyy-MM-dd"
+        if let date = day.date(from: value) { return date }
+        throw LibraryDateArgumentError(field: field)
     }
 
     private func validAssetID(_ assetID: String) -> Bool {
@@ -210,11 +360,11 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
-    private func encodeError(requestID: String, code: String, message: String) -> Data {
+    private func encodeError(requestID: String, mode: String = "preview", code: String, message: String) -> Data {
         encode(PreviewResponse(
             ok: false,
             requestID: requestID,
-            mode: "preview",
+            mode: mode,
             assetID: nil,
             bytes: nil,
             pixelWidth: nil,
@@ -236,14 +386,20 @@ private struct PreviewRequest: Decodable {
     var requestID: String
     var operation: String
     var authorization: String
-    var assetID: String
-    var maxPixel: Int
+    var assetID: String?
+    var maxPixel: Int?
+    var limit: Int?
+    var offset: Int?
+    var dateFrom: String?
+    var dateTo: String?
 
     enum CodingKeys: String, CodingKey {
         case requestID = "requestId"
         case operation, authorization
         case assetID = "assetId"
         case maxPixel
+        case limit, offset
+        case dateFrom, dateTo
     }
 }
 
@@ -273,6 +429,12 @@ private struct PreviewError: Encodable {
 
 private struct PreviewTimeoutError: Error {}
 
+private struct LibraryDateArgumentError: Error {
+    var field: String
+}
+
+private struct LibraryIndexTimeoutError: Error {}
+
 /// Completes the preview race exactly once without waiting for a PhotoKit
 /// continuation that may not support cancellation.
 private final class PreviewResultGate: @unchecked Sendable {
@@ -285,6 +447,37 @@ private final class PreviewResultGate: @unchecked Sendable {
     }
 
     func resume(with result: Result<PhotoPreview, Error>) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        let timeout = timeoutTask
+        timeoutTask = nil
+        lock.unlock()
+        timeout?.cancel()
+        pending?.resume(with: result)
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        let isPending = continuation != nil
+        if isPending { timeoutTask = task }
+        lock.unlock()
+        if !isPending { task.cancel() }
+    }
+}
+
+/// Completes a library-index race exactly once while allowing a slow Photos
+/// fetch to finish independently after the bounded IPC response has returned.
+private final class LibraryIndexResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Data, Error>?
+    private var timeoutTask: Task<Void, Never>?
+
+    init(_ continuation: CheckedContinuation<Data, Error>) {
+        self.continuation = continuation
+    }
+
+    func resume(with result: Result<Data, Error>) {
         lock.lock()
         let pending = continuation
         continuation = nil

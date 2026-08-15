@@ -16,7 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import backstage_photos_client
-from backstage_photos_client import BackstagePhotosClientError, request_preview
+from backstage_photos_client import (
+    BackstagePhotosClientError,
+    request_library_index,
+    request_preview,
+)
 import sidecar_server
 
 
@@ -106,6 +110,20 @@ def success_response(request: dict) -> dict:
     }
 
 
+def success_library_response(request: dict) -> dict:
+    return {
+        "ok": True,
+        "requestId": request["requestId"],
+        "mode": "library-index",
+        "limit": request["limit"],
+        "offset": request["offset"],
+        "count": 1,
+        "fetchedCount": request["offset"] + 1,
+        "skippedCount": request["offset"],
+        "items": [{"assetId": "asset-1", "mediaType": "photo", "filename": "one.jpg"}],
+    }
+
+
 class BackstagePhotosClientTest(unittest.TestCase):
     def test_authenticated_preview_is_written_atomically(self):
         with TemporaryDirectory() as temporary_directory:
@@ -125,6 +143,40 @@ class BackstagePhotosClientTest(unittest.TestCase):
             self.assertEqual(result["pixelWidth"], 900)
             self.assertEqual(oct(destination.stat().st_mode & 0o777), "0o600")
             self.assertEqual(list(destination.parent.glob(".*.tmp")), [])
+
+    def test_authenticated_library_index_returns_a_bounded_page(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with FakeBackstagePreviewServer(root, success_library_response) as server:
+                result = request_library_index(
+                    2,
+                    3,
+                    date_from="2026-01-01",
+                    date_to="2026-08-15",
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+            self.assertTrue(result["ok"])
+            self.assertEqual(result["mode"], "library-index")
+            self.assertEqual(result["count"], 1)
+            self.assertEqual(result["items"][0]["assetId"], "asset-1")
+
+    def test_library_index_arguments_fail_closed_before_descriptor_access(self):
+        with TemporaryDirectory() as temporary_directory:
+            missing = Path(temporary_directory) / "missing.json"
+            for arguments, expected_code in [
+                ((0, 0), "invalid_library_limit"),
+                ((1, -1), "invalid_library_offset"),
+                ((1, 0), "invalid_library_date"),
+            ]:
+                with self.subTest(expected_code=expected_code):
+                    kwargs = {"descriptor_path": missing, "timeout": 1}
+                    if expected_code == "invalid_library_date":
+                        kwargs["date_from"] = "bad\u0001date"
+                    with self.assertRaises(BackstagePhotosClientError) as raised:
+                        request_library_index(*arguments, **kwargs)
+                    self.assertEqual(raised.exception.code, expected_code)
 
     def test_server_error_preserves_existing_destination(self):
         with TemporaryDirectory() as temporary_directory:
@@ -240,6 +292,49 @@ class BackstagePhotosClientTest(unittest.TestCase):
         )[0]
         self.assertIn("_run_backstage_photos_preview", preview_handler)
         self.assertNotIn("_run_apple_photos_bridge", preview_handler)
+
+    def test_sidecar_library_uses_backstage_ipc_without_standalone_bridge_fallback(self):
+        source = (ROOT / "scripts" / "sidecar_server.py").read_text(encoding="utf-8")
+        library_handler = source.split("    def _handle_library", 1)[1].split(
+            "    def _handle_preview", 1
+        )[0]
+        self.assertIn("_run_backstage_photos_library_index", library_handler)
+        self.assertNotIn("_run_apple_photos_bridge", library_handler)
+
+    def test_background_index_streams_backstage_pages(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "index" / "photos.jsonl"
+            responses = {
+                0: {
+                    "ok": True,
+                    "items": [{"assetId": "asset-1"}, {"assetId": "asset-2"}],
+                },
+                2: {"ok": True, "items": [{"assetId": "asset-3"}]},
+            }
+
+            def page(_limit, offset, **_kwargs):
+                return responses[offset]
+
+            with patch.object(sidecar_server, "_run_backstage_photos_library_index", side_effect=page):
+                result = sidecar_server._write_backstage_library_index(
+                    root,
+                    destination,
+                    job_id="job-1",
+                    page_size=2,
+                )
+
+            self.assertEqual(result["count"], 3)
+            self.assertEqual(
+                [json.loads(line)["assetId"] for line in destination.read_text(encoding="utf-8").splitlines()],
+                ["asset-1", "asset-2", "asset-3"],
+            )
+
+    def test_background_index_job_has_no_standalone_library_bridge_path(self):
+        source = (ROOT / "scripts" / "sidecar_server.py").read_text(encoding="utf-8")
+        index_job = source.split("def _run_index_job", 1)[1].split("def _start_index_job", 1)[0]
+        self.assertIn("_write_backstage_library_index", index_job)
+        self.assertNotIn("_run_apple_photos_bridge", index_job)
 
     def test_connector_preview_task_adapts_to_backstage_ipc_inside_runtime(self):
         with TemporaryDirectory() as temporary_directory:

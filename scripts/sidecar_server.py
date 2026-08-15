@@ -23,7 +23,11 @@ from urllib.parse import parse_qs, unquote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from backstage_photos_client import BackstagePhotosClientError, request_preview
+from backstage_photos_client import (
+    BackstagePhotosClientError,
+    request_library_index,
+    request_preview,
+)
 
 from sidecar_state_db import (
     ai_metadata_plan,
@@ -238,6 +242,27 @@ def _run_backstage_photos_preview(
         )
     except BackstagePhotosClientError as error:
         return error.as_payload()
+
+
+def _run_backstage_photos_library_index(
+    limit: int,
+    offset: int,
+    date_from: str = "",
+    date_to: str = "",
+    timeout: float = 60,
+) -> dict:
+    """Request one bounded PhotoKit index page from the running Backstage app."""
+
+    try:
+        return request_library_index(
+            limit,
+            offset,
+            date_from=date_from or None,
+            date_to=date_to or None,
+            timeout=min(60.0, max(0.1, float(timeout))),
+        )
+    except BackstagePhotosClientError as error:
+        return error.as_payload(mode="library-index")
 
 
 def _run_backstage_photos_preview_task(
@@ -710,6 +735,58 @@ def _import_index_jsonl(repo_root: Path, path: Path, total_count: int, prune_mis
     return imported, missing_count
 
 
+def _write_backstage_library_index(
+    repo_root: Path,
+    index_path: Path,
+    *,
+    date_from: str = "",
+    date_to: str = "",
+    job_id: str = "",
+    page_size: int = 200,
+) -> dict:
+    """Stream bounded Backstage IPC pages into the existing JSONL importer."""
+
+    if not 1 <= page_size <= 1_000:
+        raise ValueError("Backstage library-index page size is out of bounds.")
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    offset = 0
+    total_count = 0
+    with index_path.open("w", encoding="utf-8") as stream:
+        while True:
+            payload = _run_backstage_photos_library_index(
+                page_size,
+                offset,
+                date_from=date_from,
+                date_to=date_to,
+                timeout=60,
+            )
+            if payload.get("ok") is not True:
+                code = str(payload.get("code") or "library_index_failed")
+                message = str(payload.get("error") or "Backstage could not index the Photos library.")
+                raise RuntimeError(f"{code}: {message}")
+            rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
+            for row in rows:
+                stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+            stream.flush()
+            total_count += len(rows)
+            offset += len(rows)
+            _set_index_job(
+                status="running",
+                stage=f"Indexing through Backstage ({total_count} assets)",
+                jobId=job_id,
+                indexedCount=total_count,
+                importedCount=0,
+                totalCount=total_count,
+                progress=0,
+                error="",
+            )
+            if not rows or len(rows) < page_size:
+                break
+            if offset >= 1_000_000:
+                raise RuntimeError("Backstage library-index exceeded the safe offset limit.")
+    return {"ok": True, "mode": "library-index", "count": total_count, "totalCount": total_count}
+
+
 def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: str = "") -> None:
     index_dir = repo_root / SIDECAR_INDEX_ROOT
     index_path = index_dir / f"photos-index-{int(time.time())}-{job_id}.jsonl"
@@ -729,26 +806,21 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             completedAt="",
             missingMarkedCount=0,
         )
-        args = [
-            "library-index-file",
-            "--destination",
-            str(index_path),
-            "--progress-every",
-            "100",
-        ]
-        if date_from:
-            args.extend(["--date-from", date_from])
-        if date_to:
-            args.extend(["--date-to", date_to])
-        bridge_payload = _run_apple_photos_bridge_app_index(repo_root, args, index_path)
-        total_count = int(bridge_payload.get("totalCount") or bridge_payload.get("count") or 0)
+        index_payload = _write_backstage_library_index(
+            repo_root,
+            index_path,
+            date_from=date_from,
+            date_to=date_to,
+            job_id=job_id,
+        )
+        total_count = int(index_payload.get("totalCount") or index_payload.get("count") or 0)
         imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
         _invalidate_summary_cache()
         _set_index_job(
             ok=True,
             status="done",
             stage="Complete",
-            indexedCount=int(bridge_payload.get("count") or imported),
+            indexedCount=int(index_payload.get("count") or imported),
             importedCount=imported,
             totalCount=total_count,
             progress=1,
@@ -1184,15 +1256,15 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         limit = _int_query(query, "limit", 120, 1, 1000)
         offset = _int_query(query, "offset", 0, 0, 1_000_000)
-        args = ["library-index", "--limit", str(limit), "--offset", str(offset)]
         date_from = _text_query(query, "dateFrom", "date_from", "from")
         date_to = _text_query(query, "dateTo", "date_to", "to")
-        if date_from:
-            args.extend(["--date-from", date_from])
-        if date_to:
-            args.extend(["--date-to", date_to])
         try:
-            payload = _run_apple_photos_bridge(Path.cwd(), args)
+            payload = _run_backstage_photos_library_index(
+                limit,
+                offset,
+                date_from=date_from,
+                date_to=date_to,
+            )
             if payload.get("ok"):
                 rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
                 upsert_assets(Path.cwd(), rows)

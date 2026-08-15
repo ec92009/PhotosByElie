@@ -30,6 +30,34 @@ struct BackstagePreviewIPCTests {
         #expect(library.previewCount == 1)
     }
 
+    @Test("Authenticated library-index requests return a bounded PhotoKit page")
+    func authenticatedLibraryIndexSucceeds() async throws {
+        let payload = try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": "library-index",
+            "limit": 2,
+            "offset": 4,
+            "count": 1,
+            "fetchedCount": 5,
+            "skippedCount": 4,
+            "items": [["assetId": "asset-1", "mediaType": "photo", "filename": "one.jpg"]],
+        ])
+        let library = PreviewIPCTestLibrary(
+            outcome: .failure(.assetNotFound("asset-1")),
+            libraryPayload: payload
+        )
+        let response = try await process(
+            library: library,
+            request: libraryRequest(limit: 2, offset: 4)
+        )
+
+        #expect(response["ok"] as? Bool == true)
+        #expect(response["mode"] as? String == "library-index")
+        #expect(response["requestId"] as? String != nil)
+        #expect(response["count"] as? Int == 1)
+        #expect(library.libraryIndexCount == 1)
+    }
+
     @Test("Authentication and unsupported operations fail before Photos is called")
     func invalidAuthorizationFailsClosed() async throws {
         let library = PreviewIPCTestLibrary(
@@ -92,6 +120,13 @@ struct BackstagePreviewIPCTests {
         )
         #expect(errorCode(controlResponse) == "invalid_asset_id")
         #expect(authorizedLibrary.previewCount == 0)
+
+        let invalidLibrary = try await process(
+            library: authorizedLibrary,
+            request: libraryRequest(limit: 0, offset: 0)
+        )
+        #expect(errorCode(invalidLibrary) == "invalid_library_limit")
+        #expect(authorizedLibrary.libraryIndexCount == 0)
     }
 
     @Test("Preview timeout returns without waiting for a non-cancellable Photos continuation")
@@ -207,6 +242,16 @@ struct BackstagePreviewIPCTests {
         ]
     }
 
+    private func libraryRequest(limit: Int, offset: Int) -> [String: Any] {
+        [
+            "requestId": UUID().uuidString,
+            "operation": BackstagePreviewIPCConstants.libraryIndexOperation,
+            "authorization": "Bearer test-token",
+            "limit": limit,
+            "offset": offset,
+        ]
+    }
+
     private func errorCode(_ response: [String: Any]) -> String? {
         (response["error"] as? [String: Any])?["code"] as? String
     }
@@ -309,20 +354,28 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
     private let access: PhotoLibraryAccess
     private let delay: Duration
     private let outcome: Result<PhotoPreview, PhotoLibraryError>
+    private let libraryPayload: Data?
     private var previewCalls = 0
+    private var libraryCalls = 0
 
     init(
         access: PhotoLibraryAccess = .authorized,
         delay: Duration = .zero,
-        outcome: Result<PhotoPreview, PhotoLibraryError>
+        outcome: Result<PhotoPreview, PhotoLibraryError>,
+        libraryPayload: Data? = nil
     ) {
         self.access = access
         self.delay = delay
         self.outcome = outcome
+        self.libraryPayload = libraryPayload
     }
 
     var previewCount: Int {
         lock.withLock { previewCalls }
+    }
+
+    var libraryIndexCount: Int {
+        lock.withLock { libraryCalls }
     }
 
     func authorization() -> PhotoLibraryAccess { access }
@@ -330,6 +383,21 @@ private final class PreviewIPCTestLibrary: PhotoLibraryServing, @unchecked Senda
     func requestAuthorization() async -> PhotoLibraryAccess { access }
 
     func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data {
+        lock.withLock { libraryCalls += 1 }
+        if let libraryPayload { return libraryPayload }
+        return try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": "library-index",
+            "limit": limit,
+            "offset": offset,
+            "count": 0,
+            "fetchedCount": 0,
+            "skippedCount": 0,
+            "items": [],
+        ])
+    }
 
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         lock.withLock { previewCalls += 1 }

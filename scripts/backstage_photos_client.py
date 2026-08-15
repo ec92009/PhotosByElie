@@ -19,8 +19,12 @@ import uuid
 
 SCHEMA_VERSION = 1
 OPERATION = "photos.preview"
+LIBRARY_OPERATION = "photos.library-index"
 MIN_MAX_PIXEL = 256
 MAX_MAX_PIXEL = 1_800
+MIN_LIBRARY_LIMIT = 1
+MAX_LIBRARY_LIMIT = 1_000
+MAX_LIBRARY_OFFSET = 1_000_000
 MAX_ASSET_ID_BYTES = 2_048
 MAX_DESCRIPTOR_BYTES = 16_384
 MAX_REQUEST_BYTES = 16_384
@@ -44,8 +48,8 @@ class BackstagePhotosClientError(RuntimeError):
         super().__init__(message)
         self.code = code
 
-    def as_payload(self) -> dict:
-        return {"ok": False, "mode": "preview", "code": self.code, "error": str(self)}
+    def as_payload(self, *, mode: str = "preview") -> dict:
+        return {"ok": False, "mode": mode, "code": self.code, "error": str(self)}
 
 
 def request_preview(
@@ -68,33 +72,12 @@ def request_preview(
         "assetId": asset_id,
         "maxPixel": max_pixel,
     }
-    request_data = json.dumps(request, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    if len(request_data) > MAX_REQUEST_BYTES:
-        raise BackstagePhotosClientError("request_oversized", "The Backstage preview request is too large.")
-
-    deadline = time.monotonic() + timeout
-    try:
-        with socket.create_connection(
-            (descriptor["host"], descriptor["port"]),
-            timeout=_remaining(deadline),
-        ) as connection:
-            connection.settimeout(_remaining(deadline))
-            connection.sendall(struct.pack("!I", len(request_data)) + request_data)
-            response_length = struct.unpack("!I", _read_exact(connection, 4, deadline))[0]
-            if response_length == 0 or response_length > MAX_RESPONSE_BYTES:
-                raise BackstagePhotosClientError(
-                    "response_oversized",
-                    "The Backstage preview response exceeds the allowed size.",
-                )
-            response_data = _read_exact(connection, response_length, deadline)
-    except BackstagePhotosClientError:
-        raise
-    except (ConnectionError, OSError, TimeoutError) as error:
-        code = "ipc_timeout" if isinstance(error, (socket.timeout, TimeoutError)) else "ipc_unavailable"
-        raise BackstagePhotosClientError(
-            code,
-            "The running Backstage app did not answer the Photos preview request.",
-        ) from error
+    response_data = _send_request(
+        request,
+        descriptor,
+        timeout,
+        operation_label="Photos preview",
+    )
 
     response = _decode_response(response_data, request_id, asset_id, max_pixel)
     jpeg_data = response.pop("jpegData")
@@ -110,6 +93,40 @@ def request_preview(
     }
 
 
+def request_library_index(
+    limit: int,
+    offset: int = 0,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+) -> dict:
+    """Request a bounded PhotoKit library-index page from Backstage."""
+
+    _validate_library_arguments(limit, offset, date_from, date_to, timeout)
+    descriptor = _read_descriptor(Path(descriptor_path))
+    request_id = str(uuid.uuid4())
+    request = {
+        "requestId": request_id,
+        "operation": LIBRARY_OPERATION,
+        "authorization": f"Bearer {descriptor['bearerToken']}",
+        "limit": limit,
+        "offset": offset,
+    }
+    if date_from:
+        request["dateFrom"] = date_from
+    if date_to:
+        request["dateTo"] = date_to
+    response_data = _send_request(
+        request,
+        descriptor,
+        timeout,
+        operation_label="Photos library index",
+    )
+    return _decode_library_response(response_data, request_id, limit, offset)
+
+
 def _validate_request_arguments(asset_id: str, max_pixel: int, timeout: float) -> None:
     if not isinstance(asset_id, str) or not asset_id or asset_id.strip() != asset_id:
         raise BackstagePhotosClientError("invalid_asset_id", "A non-empty Photos asset ID is required.")
@@ -121,6 +138,30 @@ def _validate_request_arguments(asset_id: str, max_pixel: int, timeout: float) -
         raise BackstagePhotosClientError("invalid_max_pixel", "maxPixel must be between 256 and 1800.")
     if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_TIMEOUT_SECONDS:
         raise BackstagePhotosClientError("invalid_timeout", "The preview timeout must be between 0 and 60 seconds.")
+
+
+def _validate_library_arguments(
+    limit: int,
+    offset: int,
+    date_from: str | None,
+    date_to: str | None,
+    timeout: float,
+) -> None:
+    if not isinstance(limit, int) or not MIN_LIBRARY_LIMIT <= limit <= MAX_LIBRARY_LIMIT:
+        raise BackstagePhotosClientError("invalid_library_limit", "Library limit must be between 1 and 1000.")
+    if not isinstance(offset, int) or not 0 <= offset <= MAX_LIBRARY_OFFSET:
+        raise BackstagePhotosClientError("invalid_library_offset", "Library offset must be between 0 and 1000000.")
+    for name, value in (("dateFrom", date_from), ("dateTo", date_to)):
+        if value is None:
+            continue
+        if (
+            not isinstance(value, str)
+            or len(value) > 64
+            or any(unicodedata.category(char) == "Cc" for char in value)
+        ):
+            raise BackstagePhotosClientError("invalid_library_date", f"{name} is invalid.")
+    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_TIMEOUT_SECONDS:
+        raise BackstagePhotosClientError("invalid_timeout", "The library-index timeout must be between 0 and 60 seconds.")
 
 
 def _read_descriptor(descriptor_path: Path) -> dict:
@@ -204,6 +245,39 @@ def _safe_lstat(file_path: Path, missing_code: str) -> os.stat_result:
         raise BackstagePhotosClientError("unsafe_descriptor", "The Backstage IPC descriptor could not be inspected safely.") from error
 
 
+def _send_request(request: dict, descriptor: dict, timeout: float, *, operation_label: str) -> bytes:
+    request_data = json.dumps(request, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if len(request_data) > MAX_REQUEST_BYTES:
+        raise BackstagePhotosClientError(
+            "request_oversized",
+            f"The Backstage {operation_label.lower()} request is too large.",
+        )
+
+    deadline = time.monotonic() + timeout
+    try:
+        with socket.create_connection(
+            (descriptor["host"], descriptor["port"]),
+            timeout=_remaining(deadline),
+        ) as connection:
+            connection.settimeout(_remaining(deadline))
+            connection.sendall(struct.pack("!I", len(request_data)) + request_data)
+            response_length = struct.unpack("!I", _read_exact(connection, 4, deadline))[0]
+            if response_length == 0 or response_length > MAX_RESPONSE_BYTES:
+                raise BackstagePhotosClientError(
+                    "response_oversized",
+                    f"The Backstage {operation_label.lower()} response exceeds the allowed size.",
+                )
+            return _read_exact(connection, response_length, deadline)
+    except BackstagePhotosClientError:
+        raise
+    except (ConnectionError, OSError, TimeoutError) as error:
+        code = "ipc_timeout" if isinstance(error, (socket.timeout, TimeoutError)) else "ipc_unavailable"
+        raise BackstagePhotosClientError(
+            code,
+            f"The running Backstage app did not answer the {operation_label.lower()} request.",
+        ) from error
+
+
 def _read_exact(connection: socket.socket, count: int, deadline: float) -> bytes:
     chunks: list[bytes] = []
     remaining_count = count
@@ -264,6 +338,40 @@ def _decode_response(response_data: bytes, request_id: str, asset_id: str, max_p
     ):
         raise BackstagePhotosClientError("invalid_response", "Backstage returned malformed JPEG preview bytes.")
     response["jpegData"] = jpeg_data
+    return response
+
+
+def _decode_library_response(response_data: bytes, request_id: str, limit: int, offset: int) -> dict:
+    try:
+        response = json.loads(response_data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned malformed library-index JSON.") from error
+    if not isinstance(response, dict) or response.get("requestId") != request_id:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned a mismatched library-index request ID.")
+    if response.get("ok") is not True:
+        error_payload = response.get("error") if isinstance(response.get("error"), dict) else {}
+        code = str(error_payload.get("code") or "library_index_failed")
+        message = str(error_payload.get("message") or "Backstage could not index the Photos library.")
+        raise BackstagePhotosClientError(code, message)
+    if response.get("mode") != "library-index":
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned the wrong library-index response.")
+    items = response.get("items")
+    count = response.get("count")
+    response_limit = response.get("limit")
+    response_offset = response.get("offset")
+    if (
+        not isinstance(items, list)
+        or not isinstance(count, int)
+        or count != len(items)
+        or count < 0
+        or count > limit
+        or not isinstance(response_limit, int)
+        or response_limit != limit
+        or not isinstance(response_offset, int)
+        or response_offset != offset
+    ):
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid library-index metadata.")
+    response["items"] = items
     return response
 
 

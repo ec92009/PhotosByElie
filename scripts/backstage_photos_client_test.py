@@ -9,6 +9,7 @@ import threading
 import time
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import backstage_photos_client
 from backstage_photos_client import BackstagePhotosClientError, request_preview
+import sidecar_server
 
 
 JPEG = b"\xff\xd8bounded-preview\xff\xd9"
@@ -238,6 +240,78 @@ class BackstagePhotosClientTest(unittest.TestCase):
         )[0]
         self.assertIn("_run_backstage_photos_preview", preview_handler)
         self.assertNotIn("_run_apple_photos_bridge", preview_handler)
+
+    def test_connector_preview_task_adapts_to_backstage_ipc_inside_runtime(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "tmp" / "preview.jpg"
+            with patch.object(
+                sidecar_server,
+                "_run_backstage_photos_preview",
+                return_value={"ok": True, "mode": "preview"},
+            ) as preview:
+                result = sidecar_server._run_backstage_photos_preview_task(
+                    root,
+                    [
+                        "preview",
+                        "--asset-id",
+                        "asset-1",
+                        "--destination",
+                        str(destination),
+                        "--max-pixel",
+                        "480",
+                    ],
+                    timeout=90,
+                )
+
+            self.assertEqual(result["ok"], True)
+            preview.assert_called_once_with(
+                "asset-1",
+                destination.resolve(),
+                480,
+                timeout=60.0,
+            )
+
+    def test_connector_preview_task_rejects_bridge_arguments_and_escape_paths(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch.object(sidecar_server, "_run_backstage_photos_preview") as preview:
+                bridge_argument = sidecar_server._run_backstage_photos_preview_task(
+                    root,
+                    [
+                        "preview",
+                        "--asset-id",
+                        "asset-1",
+                        "--destination",
+                        str(root / "preview.jpg"),
+                        "--result-destination",
+                        str(root / "result.json"),
+                    ],
+                )
+                escaped = sidecar_server._run_backstage_photos_preview_task(
+                    root,
+                    [
+                        "preview",
+                        "--asset-id",
+                        "asset-1",
+                        "--destination",
+                        str(root.parent / "outside.jpg"),
+                        "--max-pixel",
+                        "480",
+                    ],
+                )
+
+            self.assertEqual(bridge_argument["code"], "invalid_preview_arguments")
+            self.assertEqual(escaped["code"], "unsafe_preview_destination")
+            preview.assert_not_called()
+
+    def test_connector_loader_does_not_select_standalone_bridge_preview_task(self):
+        source = (ROOT / "scripts" / "new_owner_connector.py").read_text(encoding="utf-8")
+        loader = source.split("def _load_local_modules", 1)[1].split(
+            "def _load_lifecycle_gateway", 1
+        )[0]
+        self.assertIn("_run_backstage_photos_preview_task", loader)
+        self.assertNotIn("_run_apple_photos_bridge_app_task", loader)
 
 
 if __name__ == "__main__":

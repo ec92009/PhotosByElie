@@ -240,6 +240,74 @@ def _run_backstage_photos_preview(
         return error.as_payload()
 
 
+def _run_backstage_photos_preview_task(
+    repo_root: Path,
+    args: list[str],
+    timeout: int = 900,
+) -> dict:
+    """Adapt the legacy preview task shape to Backstage-owned Photos IPC.
+
+    Connector callers still pass the historical ``preview`` argument shape,
+    but this adapter deliberately accepts no Bridge-specific command or
+    destination. The destination must remain inside the connector runtime so
+    an IPC failure cannot turn an internal caller into an arbitrary file
+    writer.
+    """
+
+    def failure(code: str, message: str) -> dict:
+        return {"ok": False, "mode": "preview", "code": code, "error": message}
+
+    if not args or args[0] != "preview" or len(args[1:]) % 2:
+        return failure(
+            "invalid_preview_arguments",
+            "Backstage preview tasks require preview, --asset-id, --destination, and --max-pixel.",
+        )
+
+    values: dict[str, str] = {}
+    allowed = {"--asset-id", "--destination", "--max-pixel"}
+    for index in range(1, len(args), 2):
+        name = args[index]
+        value = args[index + 1]
+        if name not in allowed or name in values or not value:
+            return failure("invalid_preview_arguments", "Backstage preview task arguments are invalid.")
+        values[name] = value
+
+    asset_id = values.get("--asset-id", "")
+    destination_text = values.get("--destination", "")
+    max_pixel_text = values.get("--max-pixel", "")
+    if not asset_id or not destination_text or not max_pixel_text:
+        return failure(
+            "invalid_preview_arguments",
+            "Backstage preview tasks require an asset ID, destination, and max-pixel value.",
+        )
+    try:
+        max_pixel = int(max_pixel_text)
+    except ValueError:
+        return failure("invalid_max_pixel", "Backstage preview max-pixel must be an integer.")
+    if not 256 <= max_pixel <= 1_800:
+        return failure("invalid_max_pixel", "Backstage preview max-pixel must be between 256 and 1800.")
+
+    root = repo_root.expanduser().resolve()
+    destination = Path(destination_text).expanduser()
+    if not destination.is_absolute():
+        destination = root / destination
+    try:
+        destination = destination.resolve()
+        destination.relative_to(root)
+    except (OSError, ValueError):
+        return failure(
+            "unsafe_preview_destination",
+            "Backstage preview destinations must remain inside the connector runtime.",
+        )
+
+    return _run_backstage_photos_preview(
+        asset_id,
+        destination,
+        max_pixel,
+        timeout=min(60.0, max(0.1, float(timeout))),
+    )
+
+
 def _run_apple_photos_bridge_stream(
     repo_root: Path,
     args: list[str],

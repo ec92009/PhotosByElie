@@ -936,9 +936,9 @@ def _load_local_modules(runtime_root: Path):
     if scripts_path not in sys.path:
         sys.path.insert(0, scripts_path)
     from local_server import apply_public_photo_moderation, new_owner_connector_result, new_owner_sidecar_decision_result
-    from sidecar_server import _preview_cache_path, _run_apple_photos_bridge_app_task
+    from sidecar_server import _preview_cache_path, _run_backstage_photos_preview_task
 
-    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_public_photo_moderation
+    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_backstage_photos_preview_task, apply_public_photo_moderation
 
 
 def _load_lifecycle_gateway(repo_root: Path):
@@ -1324,13 +1324,13 @@ def _owner_hidden_metadata(repo_root: Path, photo_ids: list[str]) -> dict[str, d
         connection.close()
 
 
-def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridge_task) -> tuple[str, str]:
+def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_preview_task) -> tuple[str, str]:
     asset_id = str(item.get("assetId") or "").strip()
     if not asset_id:
         return "", "missing asset id"
     destination = preview_cache_path(repo_root, asset_id, 480)
     if not destination.exists():
-        payload = run_bridge_task(
+        payload = run_preview_task(
             repo_root,
             ["preview", "--asset-id", asset_id, "--destination", str(destination), "--max-pixel", "480"],
             timeout=90,
@@ -1348,15 +1348,15 @@ def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridg
     return f"data:image/jpeg;base64,{base64.b64encode(data).decode('ascii')}", ""
 
 
-def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run_bridge_task) -> tuple[list[dict], list[dict]]:
+def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run_preview_task) -> tuple[list[dict], list[dict]]:
     enriched = [dict(item) for item in items]
     errors: list[dict] = []
-    # PhotoKit is permission-identity sensitive and the bridge app serializes
-    # resource callbacks more reliably than several simultaneous app launches.
+    # Keep requests serialized so one signed Backstage PhotoKit process owns
+    # the local resource callbacks and connector errors stay per-item.
     worker_count = 1
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_preview_data_url, repo_root, item, preview_cache_path, run_bridge_task): index
+            executor.submit(_preview_data_url, repo_root, item, preview_cache_path, run_preview_task): index
             for index, item in enumerate(enriched)
         }
         for future in as_completed(futures):
@@ -1573,7 +1573,7 @@ def execute_action(
             "hiddenMetadata": _owner_hidden_metadata(config.repo_root, photo_ids),
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.code_root)
+    connector_result, decision_result, preview_cache_path, run_preview_task, apply_public_photo_moderation = _load_local_modules(config.code_root)
     if action_type == "photo-moderation":
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         operation = str(payload.get("operation") or "").strip().lower()
@@ -1707,7 +1707,7 @@ def execute_action(
                 config.repo_root,
                 items,
                 preview_cache_path,
-                run_bridge_task,
+                run_preview_task,
             )
         result = dict(local.get("result") or {})
         result["previewItems"] = items

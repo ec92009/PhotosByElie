@@ -752,9 +752,16 @@ public actor PBEOwnerLocalHostService: PBEOwnerHostServing {
         let bytecodeCacheURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("pbe-owner-python-cache-\(UUID().uuidString)", isDirectory: true)
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        // Use macOS's bundled Python explicitly.  Resolving `python3` through
+        // the Backstage PATH can select a Homebrew Python whose extension
+        // modules are not compatible with the system libraries on this Mac
+        // (notably Python 3.14's `pyexpat` against `/usr/lib/libexpat`).
+        // The immutable host runtime is kept compatible with Apple's Python;
+        // Homebrew remains available in PATH for host subprocesses such as
+        // Node-based catalog helpers.
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
         process.arguments = [
-            "python3", "-E", "-B", "-X", "pycache_prefix=\(bytecodeCacheURL.path)",
+            "-E", "-B", "-X", "pycache_prefix=\(bytecodeCacheURL.path)",
             runtimeRoot.appendingPathComponent("scripts/local_server.py").path,
             "0", "--bind", "127.0.0.1",
             "--backstage-bootstrap-file", descriptorURL.path,

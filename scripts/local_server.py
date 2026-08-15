@@ -7491,6 +7491,69 @@ def _source_preview_photo_from_catalog(repo_root: Path, media_id: str) -> dict |
     }
 
 
+def _source_preview_photo_from_owner_sidecar(repo_root: Path, media_id: str) -> dict | None:
+    """Resolve private Apple Photos identity from the authoritative Owner sidecar.
+
+    PBE Owner fixture rows are intentionally not public-catalog rows.  Their
+    stable asset id is backed by Owner.sqlite and their renderable preview is
+    obtained through the signed Photos Bridge, using the PhotoKit local
+    identifier retained in raw_json.  Keep this lookup metadata-only: the
+    sidecar may describe a source without exposing a filesystem path.
+    """
+    clean_id = str(media_id or "").strip()
+    if not clean_id:
+        return None
+    try:
+        conn = _connect_owner_sqlite_readonly(repo_root)
+        try:
+            row = conn.execute(
+                """
+                SELECT asset_id, source_anchor, media_type, filename,
+                       photos_title, metadata_seed_title, raw_json
+                FROM sidecar_assets
+                WHERE asset_id = ?
+                LIMIT 1
+                """,
+                (clean_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    except (FileNotFoundError, sqlite3.Error):
+        return None
+    if row is None:
+        return None
+
+    try:
+        raw = json.loads(str(row["raw_json"] or "{}"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    source_anchor = str(row["source_anchor"] or "").strip()
+    photo_library_identifier = str(raw.get("localIdentifier") or "").strip()
+    if not photo_library_identifier and source_anchor.startswith("apple-photos://"):
+        photo_library_identifier = source_anchor.removeprefix("apple-photos://").strip()
+    if not photo_library_identifier:
+        photo_library_identifier = clean_id
+    media_type = str(row["media_type"] or raw.get("mediaType") or "photo").strip().lower() or "photo"
+    filename = str(row["filename"] or raw.get("preferredResourceFilename") or "").strip()
+    title = str(
+        row["photos_title"]
+        or row["metadata_seed_title"]
+        or raw.get("title")
+        or filename
+        or clean_id
+    ).strip() or clean_id
+    return {
+        "id": clean_id,
+        "title": title,
+        "media": {"type": media_type},
+        "sourceFiles": [{"label": filename, "type": "APPLE_PHOTOS"}] if filename else [],
+        "photoLibraryIdentifier": photo_library_identifier,
+        "sourcePreviewBridge": True,
+    }
+
+
 def _source_preview_cache_path(source: Path) -> Path:
     stat = source.stat()
     digest = hashlib.sha256(
@@ -7498,6 +7561,93 @@ def _source_preview_cache_path(source: Path) -> Path:
     ).hexdigest()[:20]
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", source.stem).strip("-._") or "source"
     return SOURCE_PREVIEW_CACHE_ROOT / f"{stem}-{digest}.jpg"
+
+
+def _owner_source_preview_cache_path(repo_root: Path, media_id: str) -> Path:
+    digest = hashlib.sha256(str(media_id).encode("utf-8")).hexdigest()[:32]
+    return repo_root / SOURCE_PREVIEW_CACHE_ROOT / f"apple-photos-{digest}.jpg"
+
+
+def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict:
+    if media_type == "video":
+        return _source_preview_error(
+            HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
+            media_id,
+            media_type,
+            "Apple Photos PhotoKit preview",
+            str(photo.get("title") or media_id),
+            "Apple Photos previews are available for still images only.",
+        )
+    cache_path = _owner_source_preview_cache_path(repo_root, media_id)
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return {
+            "ok": True,
+            "mediaId": media_id,
+            "mediaType": "photo",
+            "sourceType": "Apple Photos PhotoKit preview",
+            "sourceLabel": str(photo.get("title") or media_id),
+            "path": str(cache_path),
+            "contentType": "image/jpeg",
+            "isOriginal": False,
+        }
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = cache_path.with_name(f".{cache_path.name}.{uuid.uuid4().hex}.tmp")
+    bridge_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
+    try:
+        result = _run_apple_photos_bridge(
+            repo_root,
+            [
+                "preview",
+                "--asset-id",
+                bridge_identifier,
+                "--destination",
+                str(temporary_path),
+                "--max-pixel",
+                "900",
+            ],
+        )
+        if not isinstance(result, dict) or not result.get("ok"):
+            message = str((result or {}).get("error") or "Photos Bridge did not return a preview.")
+            return _source_preview_error(
+                HTTPStatus.BAD_GATEWAY,
+                media_id,
+                media_type,
+                "Apple Photos PhotoKit preview",
+                str(photo.get("title") or media_id),
+                message,
+            )
+        if not temporary_path.exists() or temporary_path.stat().st_size <= 0:
+            return _source_preview_error(
+                HTTPStatus.BAD_GATEWAY,
+                media_id,
+                media_type,
+                "Apple Photos PhotoKit preview",
+                str(photo.get("title") or media_id),
+                "Photos Bridge reported success without producing a preview file.",
+            )
+        temporary_path.replace(cache_path)
+        return {
+            "ok": True,
+            "mediaId": media_id,
+            "mediaType": "photo",
+            "sourceType": "Apple Photos PhotoKit preview",
+            "sourceLabel": str(photo.get("title") or media_id),
+            "path": str(cache_path),
+            "contentType": "image/jpeg",
+            "isOriginal": False,
+        }
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        return _source_preview_error(
+            HTTPStatus.BAD_GATEWAY,
+            media_id,
+            media_type,
+            "Apple Photos PhotoKit preview",
+            str(photo.get("title") or media_id),
+            str(error),
+        )
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _source_preview_public_fallback(repo_root: Path, photo: dict, media_id: str, media_type: str) -> dict | None:
@@ -7857,6 +8007,8 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
         return _source_preview_error(HTTPStatus.BAD_REQUEST, clean_id, "photo", "source/full", "", "missing media id")
     photo = _source_preview_photo_from_catalog(repo_root, clean_id)
     if not photo:
+        photo = _source_preview_photo_from_owner_sidecar(repo_root, clean_id)
+    if not photo:
         return _source_preview_error(
             HTTPStatus.NOT_FOUND,
             clean_id,
@@ -7874,6 +8026,8 @@ def _source_preview_for_media_id(repo_root: Path, media_id: str) -> dict:
         fallback = _source_preview_public_fallback(repo_root, photo, clean_id, media_type)
         if fallback:
             return fallback
+        if photo.get("sourcePreviewBridge"):
+            return _apple_photos_source_preview(repo_root, photo, clean_id, media_type)
         return _source_preview_error(
             HTTPStatus.NOT_FOUND,
             clean_id,

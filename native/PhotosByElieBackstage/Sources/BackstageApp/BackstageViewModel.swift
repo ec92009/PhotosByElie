@@ -344,6 +344,7 @@ final class BackstageViewModel: ObservableObject {
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
     let photoLibrary: any PhotoLibraryServing
+    let previewIPCServer: BackstagePreviewIPCServer
     let metadataService: MetadataGiveBackService
     let fixtureService: FixtureWorkflowService
     let accessService: AccessControlService
@@ -483,6 +484,7 @@ final class BackstageViewModel: ObservableObject {
         self.api = api
         self.authenticationService = OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
+        self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
         self.metadataService = MetadataGiveBackService(runner: runner)
@@ -940,6 +942,14 @@ final class BackstageViewModel: ObservableObject {
 
     func refreshPhotosAccess() {
         photoAccess = photoLibrary.authorization()
+    }
+
+    func startPreviewIPC() {
+        do {
+            try previewIPCServer.start()
+        } catch {
+            NSLog("PhotosByElie Backstage preview IPC unavailable: %@", error.localizedDescription)
+        }
     }
 
     func authorizePhotosAccess() async {

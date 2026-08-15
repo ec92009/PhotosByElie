@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "scripts" / "install_new_owner_connector.zsh"
 MATERIALIZER = REPO_ROOT / "scripts" / "owner_connector_runtime.py"
 REQUIRED_FIXTURE_SCRIPTS = {
+    "backstage_photos_client.py",
     "fixture_pipeline.py",
     "local_server.py",
     "new_owner_connector.py",

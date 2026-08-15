@@ -21,6 +21,7 @@ PBE_OWNER_HOST_SCOPE_MANIFEST = "scripts/pbe_owner_host_tracked_paths.txt"
 REQUIRED_RUNTIME_FILES = frozenset(
     {
         "scripts/fixture_pipeline.py",
+        "scripts/backstage_photos_client.py",
         "scripts/local_server.py",
         "scripts/new_owner_connector.py",
         "scripts/new_owner_connector_launch_agent.plist.in",

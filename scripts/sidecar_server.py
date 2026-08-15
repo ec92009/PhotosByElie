@@ -23,6 +23,8 @@ from urllib.parse import parse_qs, unquote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from backstage_photos_client import BackstagePhotosClientError, request_preview
+
 from sidecar_state_db import (
     ai_metadata_plan,
     apply_ai_metadata_proposals,
@@ -217,6 +219,25 @@ def _run_apple_photos_bridge(repo_root: Path, args: list[str], timeout: int = 90
     if result.stderr and payload.get("ok") is False:
         payload.setdefault("stderr", result.stderr.strip())
     return payload
+
+
+def _run_backstage_photos_preview(
+    asset_id: str,
+    destination: Path,
+    max_pixel: int,
+    timeout: float = 60,
+) -> dict:
+    """Request one still preview from the already-running Backstage app."""
+
+    try:
+        return request_preview(
+            asset_id,
+            destination,
+            max_pixel,
+            timeout=timeout,
+        )
+    except BackstagePhotosClientError as error:
+        return error.as_payload()
 
 
 def _run_apple_photos_bridge_stream(
@@ -1129,9 +1150,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             return
         cache_path = _preview_cache_path(Path.cwd(), asset_id, max_pixel)
         if not cache_path.exists():
-            payload = _run_apple_photos_bridge_app_task(
-                Path.cwd(),
-                ["preview", "--asset-id", asset_id, "--destination", str(cache_path), "--max-pixel", str(max_pixel)],
+            payload = _run_backstage_photos_preview(
+                asset_id,
+                cache_path,
+                max_pixel,
                 timeout=60,
             )
             if not payload.get("ok"):
@@ -1141,7 +1163,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
                     "ok": False,
                     "code": "preview_cache_missing",
-                    "error": "Photos Bridge app did not create the preview cache file.",
+                    "error": "Backstage did not create the preview cache file.",
                 })
                 return
         try:

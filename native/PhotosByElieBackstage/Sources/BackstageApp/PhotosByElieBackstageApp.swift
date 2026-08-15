@@ -72,6 +72,7 @@ public struct BackstageApplication: App {
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
             .frame(minWidth: 1_120, minHeight: 720)
+            .task { model.startPreviewIPC() }
             .task { await model.bootstrapAuthentication() }
             .task { await model.runPhotosSyncLoop() }
             .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in

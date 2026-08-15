@@ -28,6 +28,7 @@
 		475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */; };
 		490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */; };
 		52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB6E2056746C1F076962053 /* OwnerModels.swift */; };
+		56B7C35ACBECD902BB325AE9 /* BackstagePreviewIPCServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06643EBF1140D87675451A96 /* BackstagePreviewIPCServer.swift */; };
 		5710E0E1DAD841A895A560A6 /* BackstageViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */; };
 		59A4A5A7D9DA92BBF45977E4 /* BackstageFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0276A82E1C8B5457FF2B74D0 /* BackstageFeedbackView.swift */; };
 		606F3E3B753055C04B453D60 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88CB1E92117027223296FE1B /* Security.framework */; };
@@ -45,6 +46,7 @@
 		909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AFF8771D0832D9829AB0B6 /* ReviewView.swift */; };
 		9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */; };
 		9F00E0A43942886320041C7C /* UploadQuickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F3F03071063B67EC84E3F4 /* UploadQuickView.swift */; };
+		A76BE94062F61D8477ECF3C9 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1B4DAD75D5DA42F22F16F3 /* Network.framework */; };
 		A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */; };
 		AA8DFAFCDCA1BAD4790D3257 /* FixtureSelectionCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */; };
 		AF453AA808B073E373B241C6 /* ReviewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D157FCA2BE1DD356E595878B /* ReviewPreview.swift */; };
@@ -54,6 +56,7 @@
 		C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */; };
 		C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */; };
 		C8D1C6D430B8838040D17405 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04733C0078B7BE63D367291F /* Quartz.framework */; };
+		CCDCE2F11E81F2AE5DA953B8 /* BackstagePreviewIPCTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */; };
 		CD8131A150ABA38768AC91F2 /* action-page.json in Resources */ = {isa = PBXBuildFile; fileRef = 031D83FD70EDA99A4325EC56 /* action-page.json */; };
 		CE890E5906913FF1CEAB3B1A /* LifecycleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */; };
 		DC6F2F319C249E05C19FA365 /* OwnerConnectorIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */; };
@@ -62,6 +65,7 @@
 		EB5F3BB74623800A27583BC1 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
 		EDE2B294DDEAC12A59BD3DBE /* UploadPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */; };
 		EEA562533C53614F598B2274 /* OwnerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; };
+		F1651D6414B368CBED39AAD8 /* BackstagePreviewIPCProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10EACB0F350F72D4D702B495 /* BackstagePreviewIPCProtocol.swift */; };
 		F84DFB8C09A258C0A0A9D23A /* FixturePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2578FB791C0EF56084A5E52A /* FixturePicker.swift */; };
 		F8C417A77670F9D24B7082DB /* OwnerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		FA61CFA63F49A08273BCF800 /* OwnerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -113,8 +117,10 @@
 		0276A82E1C8B5457FF2B74D0 /* BackstageFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageFeedbackView.swift; sourceTree = "<group>"; };
 		031D83FD70EDA99A4325EC56 /* action-page.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "action-page.json"; sourceTree = "<group>"; };
 		04733C0078B7BE63D367291F /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+		06643EBF1140D87675451A96 /* BackstagePreviewIPCServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCServer.swift; sourceTree = "<group>"; };
 		0CB6E2056746C1F076962053 /* OwnerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerModels.swift; sourceTree = "<group>"; };
 		0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageViewModel.swift; sourceTree = "<group>"; };
+		10EACB0F350F72D4D702B495 /* BackstagePreviewIPCProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCProtocol.swift; sourceTree = "<group>"; };
 		177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageControlService.swift; sourceTree = "<group>"; };
 		18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureSelectionCoordinatorTests.swift; sourceTree = "<group>"; };
 		1B8EB0E6BEDA648050434552 /* OwnerCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OwnerCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -151,6 +157,7 @@
 		B31D0E07A87397F37067AA7E /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
 		B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerActionRunner.swift; sourceTree = "<group>"; };
 		BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadPreview.swift; sourceTree = "<group>"; };
+		CE1B4DAD75D5DA42F22F16F3 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		D157FCA2BE1DD356E595878B /* ReviewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewPreview.swift; sourceTree = "<group>"; };
 		D2767E09F166C097B7E771E8 /* BackstageAppKitAdapters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageAppKitAdapters.swift; sourceTree = "<group>"; };
 		D74526F4B1ADCEAE9881A458 /* CullingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingView.swift; sourceTree = "<group>"; };
@@ -161,6 +168,7 @@
 		EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarDecisionService.swift; sourceTree = "<group>"; };
 		EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCanvasInspector.swift; sourceTree = "<group>"; };
 		EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainVault.swift; sourceTree = "<group>"; };
+		F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCTests.swift; sourceTree = "<group>"; };
 		F27A5C736998E5CD0085DDFB /* CullingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingPreview.swift; sourceTree = "<group>"; };
 		FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAuthenticationService.swift; sourceTree = "<group>"; };
 		FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReviewService.swift; sourceTree = "<group>"; };
@@ -193,6 +201,7 @@
 			files = (
 				2B22F422E9747862C6D8F7E5 /* Security.framework in Frameworks */,
 				B1ECCE47B1724100BB78DAF2 /* Photos.framework in Frameworks */,
+				A76BE94062F61D8477ECF3C9 /* Network.framework in Frameworks */,
 				23184594798D5C17668ED4ED /* libsqlite3.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -204,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */,
+				F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */,
 				18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */,
 				7EEA8352484A30C52C52D650 /* OwnerCoreTests.swift */,
 				9B6F95FC0DE946577CA98F49 /* Fixtures */,
@@ -283,6 +293,8 @@
 				6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */,
 				E27EAC0D7AFD54514443059E /* BackstageCodeSignatureVerifier.swift */,
 				177796686B73AC32DFE9DBD1 /* BackstageControlService.swift */,
+				10EACB0F350F72D4D702B495 /* BackstagePreviewIPCProtocol.swift */,
+				06643EBF1140D87675451A96 /* BackstagePreviewIPCServer.swift */,
 				E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */,
 				4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */,
 				45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */,
@@ -312,6 +324,7 @@
 			isa = PBXGroup;
 			children = (
 				8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */,
+				CE1B4DAD75D5DA42F22F16F3 /* Network.framework */,
 				AC5BEA77F78B6B15A631E14C /* Photos.framework */,
 				04733C0078B7BE63D367291F /* Quartz.framework */,
 				88CB1E92117027223296FE1B /* Security.framework */,
@@ -457,6 +470,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				808980E6946D675224BB4745 /* BackstageHoverHelpTests.swift in Sources */,
+				CCDCE2F11E81F2AE5DA953B8 /* BackstagePreviewIPCTests.swift in Sources */,
 				AA8DFAFCDCA1BAD4790D3257 /* FixtureSelectionCoordinatorTests.swift in Sources */,
 				1A87044DE6560F9EDE957523 /* OwnerCoreTests.swift in Sources */,
 			);
@@ -469,6 +483,8 @@
 				4628074BA54F4ECE704A7053 /* AccessControlService.swift in Sources */,
 				88D3BAE82983A5520BD87C6A /* BackstageCodeSignatureVerifier.swift in Sources */,
 				3B7959F7B24C65FF0C87AAD2 /* BackstageControlService.swift in Sources */,
+				F1651D6414B368CBED39AAD8 /* BackstagePreviewIPCProtocol.swift in Sources */,
+				56B7C35ACBECD902BB325AE9 /* BackstagePreviewIPCServer.swift in Sources */,
 				490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */,
 				9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */,
 				85C552A4DC7DAE3B98B0D2CE /* CullingWorkspace.swift in Sources */,
@@ -710,7 +726,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -720,7 +736,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 227.0;
+				MARKETING_VERSION = 227.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -733,7 +749,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -743,7 +759,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 227.0;
+				MARKETING_VERSION = 227.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

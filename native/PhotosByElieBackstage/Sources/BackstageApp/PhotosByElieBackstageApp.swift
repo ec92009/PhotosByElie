@@ -228,30 +228,17 @@ private struct OverviewView: View {
                     }
                     .padding(6)
                 }
-                GroupBox("Signed Photos helper") {
+                GroupBox("Native Photos access") {
                     VStack(alignment: .leading, spacing: 10) {
-                    LabeledContent("Installed", value: model.photosBridgeHealth.installed ? "Yes" : "No")
-                    LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
-                    LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
-                    if !model.photosBridgeHealth.version.isEmpty {
-                        LabeledContent(
-                            "Photos Bridge helper version",
-                            value: model.photosBridgeHealth.build.isEmpty
-                                ? model.photosBridgeHealth.version
-                                : "\(model.photosBridgeHealth.version) (\(model.photosBridgeHealth.build))"
-                        )
-                    }
-                    LabeledContent(
-                        "Compatibility",
-                        value: model.photosBridgeHealth.compatible ? "Compatible" : "Incompatible"
-                    )
-                    Text(model.photosBridgeHealth.message)
+                    LabeledContent("PhotoKit authority", value: "PhotosByElie Backstage")
+                    LabeledContent("Photos access", value: photoAccessLabel(model.photoAccess))
+                    Text(photoAccessMessage(model.photoAccess))
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Button("Check helper") {
-                        Task { await model.refreshPhotosBridgeHealth() }
+                    Button(model.photoAccess == .notDetermined ? "Allow Photos" : "Refresh Photos access") {
+                        Task { await model.authorizePhotosAccess() }
                     }
-                    .backstageHelp("Recheck the installed signed Photos helper, its version, background mode, and Photos permission.")
+                    .backstageHelp("Authorize or recheck PhotosByElie Backstage's native PhotoKit access without launching another app or helper.")
                     }
                     .padding(6)
                 }
@@ -264,6 +251,26 @@ private struct OverviewView: View {
     private func abbreviatedDeviceID(_ deviceID: String) -> String {
         guard deviceID.count > 18 else { return deviceID }
         return "\(deviceID.prefix(18))…"
+    }
+
+    private func photoAccessLabel(_ access: PhotoLibraryAccess) -> String {
+        switch access {
+        case .notDetermined: return "Not determined"
+        case .denied: return "Denied"
+        case .limited: return "Limited"
+        case .authorized: return "Authorized"
+        }
+    }
+
+    private func photoAccessMessage(_ access: PhotoLibraryAccess) -> String {
+        switch access {
+        case .authorized, .limited:
+            return "Backstage is authorized to use PhotoKit for its native Photos workflows."
+        case .notDetermined:
+            return "Choose Allow Photos to authorize Backstage's native PhotoKit access."
+        case .denied:
+            return "Grant PhotosByElie Backstage Photos access in System Settings, then check again."
+        }
     }
 }
 

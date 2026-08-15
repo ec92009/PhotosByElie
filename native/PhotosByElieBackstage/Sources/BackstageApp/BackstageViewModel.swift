@@ -337,16 +337,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
     @Published var updateState: BackstageUpdateState = .idle
-    @Published var photosBridgeHealth = PhotosBridgeHealth(
-        installed: false,
-        headless: false,
-        bundleIdentifier: "",
-        version: "",
-        build: "",
-        photoAccess: "checking",
-        compatible: false,
-        message: "Checking the signed Photos helper…"
-    )
     private var nativePublicationCancellationRequested = false
     private var photosSyncCancellationRequested = false
     private var r2ReconciliationCancellationRequested = false
@@ -361,7 +351,6 @@ final class BackstageViewModel: ObservableObject {
     let metadataReviewService: MetadataReviewService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
-    let photosBridgeHealthService: PhotosBridgeHealthService
     let updateService: BackstageUpdateService
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
@@ -506,7 +495,6 @@ final class BackstageViewModel: ObservableObject {
         self.metadataReviewService = MetadataReviewService(runner: runner)
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
-        self.photosBridgeHealthService = PhotosBridgeHealthService()
         self.pbeOwnerHost = pbeOwnerHost
         self.openExternalURL = openExternalURL
     }
@@ -919,7 +907,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func bootstrapAuthentication() async {
-        photosBridgeHealth = await photosBridgeHealthService.probe()
+        photoAccess = photoLibrary.authorization()
         isAuthenticating = true
         defer { isAuthenticating = false }
         authentication = await ensuredAuthentication()
@@ -950,8 +938,16 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func refreshPhotosBridgeHealth() async {
-        photosBridgeHealth = await photosBridgeHealthService.probe()
+    func refreshPhotosAccess() {
+        photoAccess = photoLibrary.authorization()
+    }
+
+    func authorizePhotosAccess() async {
+        if photoLibrary.authorization() == .notDetermined {
+            photoAccess = await photoLibrary.requestAuthorization()
+        } else {
+            refreshPhotosAccess()
+        }
     }
 
     func enroll() async {
@@ -1011,15 +1007,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func authorizeAndLoadPhotos() async {
-        if photoLibrary.authorization() == .notDetermined {
-            photoAccess = await photoLibrary.requestAuthorization()
-        } else {
-            photoAccess = photoLibrary.authorization()
-        }
-        await refreshPhotosBridgeHealth()
-        if !photosBridgeHealth.compatible || photosBridgeHealth.photoAccess != "authorized" {
-            cullingStatus = photosBridgeHealth.message
-        }
+        await authorizePhotosAccess()
         await refreshPhotos()
     }
 
@@ -4606,18 +4594,14 @@ final class BackstageViewModel: ObservableObject {
 
     private func preparePhotosMutation() async -> Bool {
         photoAccess = photoLibrary.authorization()
-        photosBridgeHealth = await photosBridgeHealthService.probe()
         return [.authorized, .limited].contains(photoAccess)
-            && photosBridgeHealth.installed
-            && photosBridgeHealth.compatible
-            && photosBridgeHealth.photoAccess == "authorized"
     }
 
     private func photosMutationReadinessMessage() -> String {
         guard [.authorized, .limited].contains(photoAccess) else {
             return "Backstage Photos access is required before culling or metadata give-back. Choose Allow Photos or grant Full Access in System Settings."
         }
-        return photosBridgeHealth.message
+        return "Backstage native Photos access is ready."
     }
 
     private func presentAuthenticationFailureIfNeeded(_ error: Error) async {

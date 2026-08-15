@@ -4,34 +4,22 @@ public struct BackstageReleaseIdentity: Codable, Sendable, Equatable {
     public var bundleIdentifier: String
     public var version: String
     public var build: String
-    public var helperBundleIdentifier: String
-    public var helperVersion: String
-    public var helperBuild: String
 
     public init(
         bundleIdentifier: String = "",
         version: String = "",
-        build: String = "",
-        helperBundleIdentifier: String = "",
-        helperVersion: String = "",
-        helperBuild: String = ""
+        build: String = ""
     ) {
         self.bundleIdentifier = bundleIdentifier
         self.version = version
         self.build = build
-        self.helperBundleIdentifier = helperBundleIdentifier
-        self.helperVersion = helperVersion
-        self.helperBuild = helperBuild
     }
 
     public init(bundle: Bundle) {
         self.init(
             bundleIdentifier: bundle.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String ?? "",
             version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
-            build: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "",
-            helperBundleIdentifier: bundle.object(forInfoDictionaryKey: "PBEPhotosBridgeBundleIdentifier") as? String ?? "",
-            helperVersion: bundle.object(forInfoDictionaryKey: "PBEPhotosBridgeVersion") as? String ?? "",
-            helperBuild: bundle.object(forInfoDictionaryKey: "PBEPhotosBridgeBuild") as? String ?? ""
+            build: bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
         )
     }
 
@@ -39,9 +27,6 @@ public struct BackstageReleaseIdentity: Codable, Sendable, Equatable {
         !bundleIdentifier.isEmpty
             && !version.isEmpty
             && !build.isEmpty
-            && !helperBundleIdentifier.isEmpty
-            && !helperVersion.isEmpty
-            && !helperBuild.isEmpty
     }
 }
 
@@ -51,7 +36,6 @@ public struct BackstageControlHealth: Codable, Sendable, Equatable {
     public var checkedAt: Date
     public var ok: Bool
     public var release: BackstageReleaseIdentity
-    public var helper: PhotosBridgeHealth
     public var photoLibraryAccess: String
     public var ownerSession: String
     public var ownerAuthenticated: Bool
@@ -59,12 +43,11 @@ public struct BackstageControlHealth: Codable, Sendable, Equatable {
     public var message: String
 
     public init(
-        schemaVersion: Int = 1,
+        schemaVersion: Int = 2,
         command: String,
         checkedAt: Date = Date(),
         ok: Bool,
         release: BackstageReleaseIdentity,
-        helper: PhotosBridgeHealth,
         photoLibraryAccess: String,
         ownerSession: String,
         ownerAuthenticated: Bool,
@@ -76,7 +59,6 @@ public struct BackstageControlHealth: Codable, Sendable, Equatable {
         self.checkedAt = checkedAt
         self.ok = ok
         self.release = release
-        self.helper = helper
         self.photoLibraryAccess = photoLibraryAccess
         self.ownerSession = ownerSession
         self.ownerAuthenticated = ownerAuthenticated
@@ -197,7 +179,6 @@ public struct BackstageControlService: Sendable {
     ) async throws -> RealEstateOriginalsPreflightEnvelope
 
     private let release: BackstageReleaseIdentity
-    private let photosBridge: PhotosBridgeHealthService
     private let photoLibrary: any PhotoLibraryServing
     private let connectorIdentity: any OwnerConnectorIdentifying
     private let authenticationSnapshot: AuthenticationSnapshotProvider
@@ -205,28 +186,19 @@ public struct BackstageControlService: Sendable {
 
     public init(
         appURL: URL? = nil,
-        helperURL: URL? = nil,
         release: BackstageReleaseIdentity? = nil,
-        photosBridge: PhotosBridgeHealthService? = nil,
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         connectorIdentity: any OwnerConnectorIdentifying = LocalOwnerConnectorIdentity(),
         authenticationSnapshot: AuthenticationSnapshotProvider? = nil,
         realEstateOriginalsPreflight: RealEstateOriginalsPreflightProvider? = nil
     ) {
         let resolvedAppURL = appURL ?? Self.defaultAppURL
-        let resolvedHelperURL = helperURL ?? Self.defaultHelperURL
         let mainRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         let resolvedRelease = release
             ?? (mainRelease.isComplete
                 ? mainRelease
                 : BackstageReleaseIdentity(bundle: Bundle(url: resolvedAppURL) ?? Bundle.main))
         self.release = resolvedRelease
-        self.photosBridge = photosBridge ?? PhotosBridgeHealthService(
-            appURL: resolvedHelperURL,
-            expectedBundleIdentifier: resolvedRelease.helperBundleIdentifier,
-            expectedVersion: resolvedRelease.helperVersion,
-            expectedBuild: resolvedRelease.helperBuild
-        )
         self.photoLibrary = photoLibrary
         self.connectorIdentity = connectorIdentity
         if let authenticationSnapshot {
@@ -260,19 +232,13 @@ public struct BackstageControlService: Sendable {
     }
 
     public func health(command: String = "health") async -> BackstageControlHealth {
-        async let helper = photosBridge.probe()
         async let owner = authenticationSnapshot()
         async let connectorID = connectorIdentity.connectorID()
         let photoAccess = photoLibrary.authorization()
-        let helperHealth = await helper
         let ownerSnapshot = await owner
         let resolvedConnectorID = await connectorID
         let photoAccessLabel = Self.photoAccessLabel(photoAccess)
         let releaseReady = release.isComplete
-            && helperHealth.installed
-            && helperHealth.headless
-            && helperHealth.compatible
-            && helperHealth.photoAccess == "authorized"
         let photosReady = releaseReady && [.authorized, .limited].contains(photoAccess)
         let commandReady = command == "release verify" ? releaseReady : photosReady
 
@@ -280,14 +246,12 @@ public struct BackstageControlService: Sendable {
             command: command,
             ok: commandReady,
             release: release,
-            helper: helperHealth,
             photoLibraryAccess: photoAccessLabel,
             ownerSession: ownerSnapshot.phase.rawValue,
             ownerAuthenticated: ownerSnapshot.phase == .authenticated,
             connectorID: resolvedConnectorID,
             message: message(
                 photoAccess: photoAccessLabel,
-                helper: helperHealth,
                 ownerSnapshot: ownerSnapshot,
                 releaseReady: releaseReady,
                 photosReady: photosReady,
@@ -309,7 +273,6 @@ public struct BackstageControlService: Sendable {
 
     private func message(
         photoAccess: String,
-        helper: PhotosBridgeHealth,
         ownerSnapshot: OwnerAuthenticationSnapshot,
         releaseReady: Bool,
         photosReady: Bool,
@@ -318,11 +281,8 @@ public struct BackstageControlService: Sendable {
         guard release.isComplete else {
             return "Backstage release metadata is unavailable. Run this command from the installed Backstage app."
         }
-        guard helper.installed else { return helper.message }
-        guard helper.compatible else { return helper.message }
-        guard helper.photoAccess == "authorized" else { return helper.message }
         if command == "release verify" {
-            return "Backstage release and Photos Bridge helper are compatible."
+            return "Backstage release metadata is complete; no standalone Photos helper is required."
         }
         guard ["authorized", "limited"].contains(photoAccess) else {
             return "Backstage Photos access is \(photoAccess). Choose Allow Photos or grant Full Access to PhotosByElie Backstage in System Settings."
@@ -347,8 +307,6 @@ public struct BackstageControlService: Sendable {
 
     private static let defaultAppURL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Applications/PhotosByElie Backstage.app")
-    private static let defaultHelperURL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Applications/PhotosByElie Photos Bridge.app")
 }
 
 public enum BackstageControlCLI {

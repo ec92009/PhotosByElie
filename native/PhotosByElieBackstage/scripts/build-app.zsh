@@ -20,14 +20,8 @@ if [[ ! -r "$release_metadata" ]]; then
   exit 1
 fi
 source "$release_metadata"
-if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
-      "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
+if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" ]]; then
   print -u2 "Native release metadata contains an unexpected bundle identity."
-  exit 1
-fi
-if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
-      "$PBE_BACKSTAGE_BUILD" != "$PBE_PHOTOS_BRIDGE_BUILD" ]]; then
-  print -u2 "Backstage and Photos Bridge release metadata must match."
   exit 1
 fi
 
@@ -127,13 +121,7 @@ cat > "${contents}/Info.plist" <<PLIST
   <key>NSPhotoLibraryUsageDescription</key>
   <string>Backstage reads Photos for private culling, preview, and export workflows.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
-  <string>Verified metadata give-back is performed through the signed PhotosByElie bridge.</string>
-  <key>PBEPhotosBridgeBundleIdentifier</key>
-  <string>${PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER}</string>
-  <key>PBEPhotosBridgeVersion</key>
-  <string>${PBE_PHOTOS_BRIDGE_VERSION}</string>
-  <key>PBEPhotosBridgeBuild</key>
-  <string>${PBE_PHOTOS_BRIDGE_BUILD}</string>
+  <string>Backstage applies approved metadata updates to selected photos.</string>
   <key>PBEOwnerRuntimeRevision</key>
   <string>${runtime_revision}</string>
 </dict>

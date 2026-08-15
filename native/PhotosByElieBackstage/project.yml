@@ -49,9 +49,9 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: PhotosByElie Backstage
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Backstage reads Photos for private culling, preview, and export workflows.
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Verified metadata give-back is performed through the signed PhotosByElie bridge.
-        MARKETING_VERSION: 226.1
-        CURRENT_PROJECT_VERSION: 89
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Backstage applies approved metadata updates to selected photos.
+        MARKETING_VERSION: 227.0
+        CURRENT_PROJECT_VERSION: 90
         ENABLE_DEBUG_DYLIB: YES
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) BACKSTAGE_XCODE_HOST"
 

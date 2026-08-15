@@ -3193,141 +3193,15 @@ struct OwnerCoreTests {
         #expect(summary.requestingAI == 2)
     }
 
-    @Test("Backstage reports signed Photos helper identity and headless health")
-    func signedPhotosBridgeHealth() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-bridge-health-\(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "148.0",
-            "CFBundleVersion": "12",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let service = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "148.0",
-            expectedBuild: "12"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
-
-        let health = await service.probe()
-        #expect(health.installed)
-        #expect(health.headless)
-        #expect(health.bundleIdentifier == "com.photosbyelie.photos-bridge")
-        #expect(health.version == "148.0")
-        #expect(health.build == "12")
-        #expect(health.photoAccess == "authorized")
-        #expect(health.compatible)
-        #expect(health.message == "Signed helper is compatible and authorized.")
-    }
-
-    @Test("Backstage reports a stale Photos helper before mutation")
-    func stalePhotosBridgeHealthIsIncompatible() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-bridge-stale-(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "141.10",
-            "CFBundleVersion": "1",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let service = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "218.0",
-            expectedBuild: "75"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
-
-        let health = await service.probe()
-        #expect(!health.compatible)
-        #expect(health.photoAccess == "authorized")
-        #expect(health.message.contains("incompatible"))
-    }
-
-    @Test("Backstage control health stays structured and CUA-free")
+    @Test("Backstage control health is native, structured, and helper-free")
     func backstageControlHealthIsMachineReadable() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-control-health-\(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "218.0",
-            "CFBundleVersion": "75",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let bridge = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "218.0",
-            expectedBuild: "75"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
         let release = BackstageReleaseIdentity(
             bundleIdentifier: "com.photosbyelie.backstage",
             version: "218.0",
-            build: "75",
-            helperBundleIdentifier: "com.photosbyelie.photos-bridge",
-            helperVersion: "218.0",
-            helperBuild: "75"
+            build: "75"
         )
         let service = BackstageControlService(
             release: release,
-            photosBridge: bridge,
             photoLibrary: StaticPhotoLibrary(access: .notDetermined),
             connectorIdentity: StaticOwnerConnectorIdentity("max"),
             authenticationSnapshot: {
@@ -3340,26 +3214,43 @@ struct OwnerCoreTests {
 
         let health = await service.health(command: "release verify")
         #expect(health.ok)
+        #expect(health.schemaVersion == 2)
         #expect(health.command == "release verify")
-        #expect(health.release.helperBuild == "75")
-        #expect(health.helper.compatible)
         #expect(health.photoLibraryAccess == "not_determined")
         #expect(health.ownerAuthenticated)
         #expect(health.connectorID == "max")
-        #expect(health.message == "Backstage release and Photos Bridge helper are compatible.")
+        #expect(health.message == "Backstage release metadata is complete; no standalone Photos helper is required.")
 
         let photosHealth = await service.health(command: "photos health")
         #expect(!photosHealth.ok)
         #expect(photosHealth.message.contains("not_determined"))
 
+        let authorizedService = BackstageControlService(
+            release: release,
+            photoLibrary: StaticPhotoLibrary(access: .authorized),
+            connectorIdentity: StaticOwnerConnectorIdentity("max"),
+            authenticationSnapshot: {
+                OwnerAuthenticationSnapshot(
+                    phase: .authenticated,
+                    deviceId: "owner-device-test"
+                )
+            }
+        )
+        let authorizedPhotosHealth = await authorizedService.health(command: "photos health")
+        #expect(authorizedPhotosHealth.ok)
+        #expect(authorizedPhotosHealth.photoLibraryAccess == "authorized")
+        #expect(authorizedPhotosHealth.message == "Backstage control health is ready.")
+
         let encoded = try JSONEncoder.ownerAPI.encode(health)
+        let encodedText = try #require(String(data: encoded, encoding: .utf8))
+        #expect(!encodedText.contains("\"helper\":"))
+        #expect(!encodedText.contains("Bridge"))
         let decoded = try JSONDecoder.ownerAPI.decode(BackstageControlHealth.self, from: encoded)
         #expect(decoded.schemaVersion == health.schemaVersion)
         #expect(decoded.command == health.command)
         #expect(abs(decoded.checkedAt.timeIntervalSince(health.checkedAt)) < 1)
         #expect(decoded.ok == health.ok)
         #expect(decoded.release == health.release)
-        #expect(decoded.helper == health.helper)
         #expect(decoded.photoLibraryAccess == health.photoLibraryAccess)
         #expect(decoded.ownerSession == health.ownerSession)
         #expect(decoded.ownerAuthenticated == health.ownerAuthenticated)

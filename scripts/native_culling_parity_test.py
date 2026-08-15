@@ -761,7 +761,7 @@ class NativeCullingParityTest(unittest.TestCase):
             build_script.index('rm -rf "$app"'),
         )
 
-    def test_backstage_and_bridge_release_metadata_stay_in_lockstep(self):
+    def test_backstage_release_metadata_excludes_the_legacy_bridge(self):
         metadata = (NATIVE / "release-metadata.zsh").read_text(encoding="utf-8")
         build_script = (NATIVE / "scripts" / "build-app.zsh").read_text(
             encoding="utf-8"
@@ -775,17 +775,17 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "226.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "89")
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), value("PBE_PHOTOS_BRIDGE_VERSION"))
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), value("PBE_PHOTOS_BRIDGE_BUILD"))
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "227.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "90")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn('source "$release_metadata"', bridge_installer)
         self.assertIn("PBE_BACKSTAGE_INFO_PLIST", bridge_installer)
-        self.assertIn("PBEPhotosBridgeVersion", bridge_installer)
-        self.assertIn("PBEPhotosBridgeBuild", bridge_installer)
-        self.assertIn("PBEPhotosBridgeVersion", build_script)
-        self.assertIn("PBEPhotosBridgeBuild", build_script)
+        self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
+        self.assertNotIn("PBEPhotosBridge", build_script)
+        self.assertNotIn("Backstage and Photos Bridge", build_script)
+        self.assertIn('PBE_PHOTOS_BRIDGE_VERSION="${PBE_PHOTOS_BRIDGE_VERSION:-141.10}"', bridge_installer)
+        self.assertIn('PBE_PHOTOS_BRIDGE_BUILD="${PBE_PHOTOS_BRIDGE_BUILD:-1}"', bridge_installer)
+        self.assertNotIn("Print :PBEPhotosBridge", bridge_installer)
         self.assertNotIn("SIDECAR_VERSION", build_script)
         self.assertNotIn("SIDECAR_VERSION", bridge_installer)
         self.assertIn(
@@ -856,7 +856,6 @@ class NativeCullingParityTest(unittest.TestCase):
         for marker in (
             "BackstageControlHealth",
             "schemaVersion",
-            "PhotosBridgeHealthService",
             "photoLibrary.authorization()",
             "ownerAuthenticated",
             "release verify",
@@ -866,6 +865,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "invalid_arguments",
         ):
             self.assertIn(marker, control)
+        self.assertNotIn("PhotosBridgeHealthService", control)
+        self.assertNotIn("PhotosByElie Photos Bridge.app", control)
         self.assertIn('arguments.first == "--control"', launcher)
         self.assertIn("Darwin.exit(exitCode)", launcher)
         self.assertIn("/usr/bin/open -n -j", wrapper)

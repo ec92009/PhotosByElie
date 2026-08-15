@@ -60,7 +60,6 @@
 		E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */; };
 		E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */; };
 		EB5F3BB74623800A27583BC1 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
-		ED54B2CBB609F3F3F8EAE08E /* PhotosBridgeHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1A2A9A5645124540DBE815 /* PhotosBridgeHealthService.swift */; };
 		EDE2B294DDEAC12A59BD3DBE /* UploadPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */; };
 		EEA562533C53614F598B2274 /* OwnerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; };
 		F84DFB8C09A258C0A0A9D23A /* FixturePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2578FB791C0EF56084A5E52A /* FixturePicker.swift */; };
@@ -142,7 +141,6 @@
 		89AFF8771D0832D9829AB0B6 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		8A0F0E197FD86EC46D20B800 /* MetadataGiveBackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataGiveBackService.swift; sourceTree = "<group>"; };
 		8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
-		8E1A2A9A5645124540DBE815 /* PhotosBridgeHealthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosBridgeHealthService.swift; sourceTree = "<group>"; };
 		8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureDeliveryService.swift; sourceTree = "<group>"; };
 		928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureWorkflowService.swift; sourceTree = "<group>"; };
 		937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerContract.generated.swift; sourceTree = "<group>"; };
@@ -303,7 +301,6 @@
 				0CB6E2056746C1F076962053 /* OwnerModels.swift */,
 				85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */,
 				6F254F524C1CA93D37BE6A86 /* PhotoLibraryService.swift */,
-				8E1A2A9A5645124540DBE815 /* PhotosBridgeHealthService.swift */,
 				EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */,
 				3DB269B2266A38F283834152 /* Generated */,
 			);
@@ -491,7 +488,6 @@
 				52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */,
 				C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */,
 				6BE053FCB45AE57072E5C5B5 /* PhotoLibraryService.swift in Sources */,
-				ED54B2CBB609F3F3F8EAE08E /* PhotosBridgeHealthService.swift in Sources */,
 				64B413FD3994202E49A1C3C0 /* SidecarDecisionService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -714,17 +710,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 89;
+				CURRENT_PROJECT_VERSION = 90;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Verified metadata give-back is performed through the signed PhotosByElie bridge.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Backstage applies approved metadata updates to selected photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Backstage reads Photos for private culling, preview, and export workflows.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 226.1;
+				MARKETING_VERSION = 227.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -737,17 +733,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 89;
+				CURRENT_PROJECT_VERSION = 90;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Verified metadata give-back is performed through the signed PhotosByElie bridge.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Backstage applies approved metadata updates to selected photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Backstage reads Photos for private culling, preview, and export workflows.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 226.1;
+				MARKETING_VERSION = 227.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

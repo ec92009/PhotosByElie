@@ -45,18 +45,18 @@ else
   PBE_BACKSTAGE_BUNDLE_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$backstage_info")"
   PBE_BACKSTAGE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$backstage_info")"
   PBE_BACKSTAGE_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$backstage_info")"
-  PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeBundleIdentifier' "$backstage_info")"
-  PBE_PHOTOS_BRIDGE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeVersion' "$backstage_info")"
-  PBE_PHOTOS_BRIDGE_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :PBEPhotosBridgeBuild' "$backstage_info")"
 fi
+
+# Transitional compatibility only. The standalone helper is no longer part of
+# Backstage's release identity and keeps its last independent legacy identity
+# until the remaining Python callers move behind Backstage-native IPC.
+PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER="${PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER:-com.photosbyelie.photos-bridge}"
+PBE_PHOTOS_BRIDGE_VERSION="${PBE_PHOTOS_BRIDGE_VERSION:-141.10}"
+PBE_PHOTOS_BRIDGE_BUILD="${PBE_PHOTOS_BRIDGE_BUILD:-1}"
+
 if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
       "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
   printf 'Native release metadata contains an unexpected bundle identity.\n' >&2
-  exit 1
-fi
-if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
-      "$PBE_BACKSTAGE_BUILD" != "$PBE_PHOTOS_BRIDGE_BUILD" ]]; then
-  printf 'Backstage and Photos Bridge release metadata must match.\n' >&2
   exit 1
 fi
 

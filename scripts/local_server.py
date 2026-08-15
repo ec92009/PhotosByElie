@@ -66,6 +66,7 @@ PBE_OWNER_SESSION_CLOSE_PATH = "/__photosbyelie/pbe-owner/session/close"
 PBE_OWNER_GALLERY_PATH = "/__photosbyelie/pbe-owner/gallery"
 PBE_OWNER_ACTION_PATH = "/__photosbyelie/pbe-owner/action"
 PBE_OWNER_ACTION_STATUS_PATH = "/__photosbyelie/pbe-owner/action/status"
+PBE_OWNER_PROJECTION_RETRY_PATH = "/__photosbyelie/pbe-owner/action/projection-retry"
 PBE_OWNER_HOST_BOOTSTRAP_PATH = "/__photosbyelie/pbe-owner/host/bootstrap"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
@@ -420,10 +421,13 @@ from waste_basket_gateway import (  # noqa: E402
     EMPTY_CONFIRMATION_TOKEN,
     WasteBasketError,
     assert_recoverable_entries_in_fixture,
+    deployed_lifecycle_outbox,
     empty_waste_basket as empty_waste_basket_gateway,
     move_to_waste_basket as move_to_waste_basket_gateway,
     hosted_lifecycle_request_status,
+    latest_hosted_lifecycle_request,
     queue_hosted_lifecycle_request,
+    replace_completed_hosted_lifecycle_result,
     restore_from_waste_basket as restore_from_waste_basket_gateway,
     restore_tombstone as restore_tombstone_gateway,
 )
@@ -647,6 +651,242 @@ def assert_pbe_owner_restore_scope(repo_root: Path, session: dict, payload: dict
         ) from error
 
 
+def _hosted_projection_token(status: dict, lifecycle: dict, result: dict) -> str:
+    """Return an opaque optimistic-concurrency token for one projection state."""
+
+    retry = result.get("projectionRetry") if isinstance(result.get("projectionRetry"), dict) else {}
+    projection = result.get("projection") if isinstance(result.get("projection"), dict) else {}
+    body = {
+        "requestId": str(status.get("requestId") or ""),
+        "sessionId": str(status.get("sessionId") or ""),
+        "fixtureId": str(status.get("fixtureId") or ""),
+        "operation": str(status.get("operation") or ""),
+        "assetIds": sorted(str(value) for value in status.get("assetIds") or []),
+        "operationId": str(lifecycle.get("operationId") or ""),
+        "operationDigest": str(lifecycle.get("operationDigest") or ""),
+        "revision": int(lifecycle.get("revision") or 0),
+        "projectionState": str(projection.get("state") or ""),
+        "projectionError": str(projection.get("error_code") or ""),
+        "attempt": int(retry.get("attempt") or 0),
+    }
+    return hashlib.sha256(
+        json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _normalized_hosted_lifecycle_result(repo_root: Path, status: dict) -> dict:
+    """Expose authoritative, projection, and publication state separately."""
+
+    result = dict(status.get("result") or {})
+    request_id = str(status.get("requestId") or "").strip()
+    operation_id = str(result.get("operationId") or "").strip()
+    expected_operation_id = f"owner-action:hosted-lifecycle:{request_id}"
+    lifecycle: dict = {}
+    if request_id and operation_id == expected_operation_id:
+        try:
+            candidate = deployed_lifecycle_outbox(repo_root, operation_id)
+            expected_operation = (
+                "restore"
+                if status.get("operation") == "waste-basket-restore"
+                else "x"
+                if status.get("operation") in {"waste-basket-x", "waste-basket-x-many"}
+                else ""
+            )
+            receipt_ids = sorted(
+                str(item.get("canonicalAssetId") or "")
+                for item in candidate.get("receipts") or []
+            )
+            if (
+                expected_operation
+                and candidate.get("operation") == expected_operation
+                and receipt_ids == sorted(str(value) for value in status.get("assetIds") or [])
+            ):
+                lifecycle = candidate
+        except WasteBasketError:
+            lifecycle = {}
+
+    worker_catalog = result.get("worker_catalog") if isinstance(result.get("worker_catalog"), dict) else {}
+    projection = result.get("projection") if isinstance(result.get("projection"), dict) else {}
+    if not projection:
+        if worker_catalog.get("state") == "skipped-no-static-catalog":
+            projection = {"state": "skipped-no-static-catalog", "retryable": False}
+        elif worker_catalog.get("ok") is True:
+            projection = {"state": "applied", "retryable": False}
+        elif worker_catalog:
+            projection = {
+                "state": "partial",
+                "retryable": True,
+                "error_code": "worker_catalog_projection_failed",
+            }
+        elif result.get("operationId"):
+            projection = {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_unconfirmed",
+            }
+
+    authoritative_committed = bool(lifecycle)
+    result.update({
+        "requestId": request_id,
+        "authoritative_committed": authoritative_committed,
+        "authoritative": {
+            "state": "committed" if authoritative_committed else "unconfirmed",
+            **({
+                "operationId": lifecycle["operationId"],
+                "operationDigest": lifecycle["operationDigest"],
+                "revision": lifecycle["revision"],
+                "receiptState": lifecycle["state"],
+            } if lifecycle else {}),
+        },
+        "projection": projection,
+        "catalog_publish_pending": bool(result.get("catalog_publish_pending", True)),
+        "catalogPublication": result.get("catalogPublication") or {
+            "state": "pending",
+            "receipt": None,
+        },
+    })
+    retry = dict(result.get("projectionRetry") or {})
+    retryable = bool(projection.get("retryable"))
+    retry.update({
+        "available": bool(retryable and lifecycle and authoritative_committed),
+        "operationRevision": int(lifecycle.get("revision") or 0),
+    })
+    if retry["available"]:
+        retry["token"] = _hosted_projection_token(status, lifecycle, result)
+    else:
+        retry.pop("token", None)
+    result["projectionRetry"] = retry
+    return result
+
+
+def _latest_pbe_owner_action(repo_root: Path, session: dict) -> dict | None:
+    """Return browser-safe status for the newest request in one Owner lease."""
+
+    status = latest_hosted_lifecycle_request(
+        repo_root,
+        session_id=str(session["id"]),
+        fixture_id=str(session["fixtureId"]),
+    )
+    if status is None:
+        return None
+    state = str(status.get("state") or "")
+    if state == "completed":
+        return {
+            "ok": True,
+            "state": "completed",
+            **_normalized_hosted_lifecycle_result(repo_root, status),
+        }
+    return {
+        "ok": state != "failed",
+        "requestId": str(status.get("requestId") or ""),
+        "state": state,
+        **({"error": str(status.get("error") or "")} if status.get("error") else {}),
+    }
+
+
+def retry_hosted_lifecycle_projection(repo_root: Path, session: dict, payload: dict) -> dict:
+    """Retry only compatibility/static projection for one durable hosted action."""
+
+    request_id = str(payload.get("requestId") or "").strip()
+    token = str(payload.get("projectionToken") or "").strip()
+    raw_operation_revision = payload.get("operationRevision")
+    if isinstance(raw_operation_revision, bool):
+        raw_operation_revision = None
+    if isinstance(raw_operation_revision, int):
+        operation_revision = raw_operation_revision
+    elif isinstance(raw_operation_revision, str) and raw_operation_revision.strip().isdigit():
+        operation_revision = int(raw_operation_revision.strip())
+    else:
+        raise PBEOwnerSessionError(
+            "Projection retry requires the exact authoritative operation revision.",
+            code="pbe_owner_projection_revision_invalid",
+            status=400,
+        )
+    if not request_id or not token or operation_revision < 1:
+        raise PBEOwnerSessionError(
+            "Projection retry requires its opaque request, token, and operation revision.",
+            code="pbe_owner_projection_retry_invalid",
+            status=400,
+        )
+    try:
+        status = hosted_lifecycle_request_status(
+            repo_root,
+            request_id,
+            session_id=str(session["id"]),
+            fixture_id=str(session["fixtureId"]),
+        )
+    except WasteBasketError as error:
+        raise PBEOwnerSessionError(
+            "The projection retry is unavailable for this Owner session.",
+            code="pbe_owner_projection_retry_unavailable",
+            status=404,
+        ) from error
+    result = _normalized_hosted_lifecycle_result(repo_root, status)
+    retry = result.get("projectionRetry") or {}
+    if retry.get("lastAcceptedToken") == token:
+        return result
+    if status.get("state") != "completed" or not result.get("authoritative_committed"):
+        raise PBEOwnerSessionError(
+            "Projection retry requires a completed authoritative lifecycle action.",
+            code="pbe_owner_projection_authority_incomplete",
+            status=409,
+        )
+    if not retry.get("available"):
+        raise PBEOwnerSessionError(
+            "This lifecycle projection is not retryable.",
+            code="pbe_owner_projection_not_retryable",
+            status=409,
+        )
+    if operation_revision != int(retry.get("operationRevision") or 0) or token != retry.get("token"):
+        raise PBEOwnerSessionError(
+            "The lifecycle projection changed before retry; refresh its status.",
+            code="pbe_owner_projection_stale",
+            status=409,
+        )
+    operation = str(status.get("operation") or "")
+    projection_operation = {
+        "waste-basket-x": "x",
+        "waste-basket-x-many": "x",
+        "waste-basket-restore": "restore",
+    }.get(operation)
+    if not projection_operation:
+        raise PBEOwnerSessionError(
+            "This hosted lifecycle operation has no projection-only retry path.",
+            code="pbe_owner_projection_operation_forbidden",
+            status=409,
+        )
+    projected = project_lifecycle_catalog_state(
+        repo_root,
+        projection_operation,
+        list(status.get("assetIds") or []),
+    )
+    persisted_result = {
+        **dict(status.get("result") or {}),
+        **projected,
+        "authoritative_committed": True,
+        "projectionRetry": {
+            "attempt": int(retry.get("attempt") or 0) + 1,
+            "lastAcceptedToken": token,
+        },
+    }
+    try:
+        updated = replace_completed_hosted_lifecycle_result(
+            repo_root,
+            request_id,
+            session_id=str(session["id"]),
+            fixture_id=str(session["fixtureId"]),
+            expected_result=dict(status.get("result") or {}),
+            result=persisted_result,
+        )
+    except WasteBasketError as error:
+        raise PBEOwnerSessionError(
+            "The lifecycle projection changed before retry; refresh its status.",
+            code="pbe_owner_projection_stale",
+            status=409,
+        ) from error
+    return _normalized_hosted_lifecycle_result(repo_root, updated)
+
+
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
@@ -785,6 +1025,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == PBE_OWNER_ACTION_PATH:
             self._handle_pbe_owner_action()
+            return
+        if path == PBE_OWNER_PROJECTION_RETRY_PATH:
+            self._handle_pbe_owner_projection_retry()
             return
         if path == SOURCE_EDIT_PATH:
             self._handle_source_edit()
@@ -1060,7 +1303,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+        try:
+            latest_action = _latest_pbe_owner_action(Path.cwd(), session)
+        except (WasteBasketError, sqlite3.Error, OSError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {"code": "pbe_owner_action_status_failed", "message": str(error)},
+            })
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "session": session,
+            "latestAction": latest_action,
+        })
 
     def _handle_pbe_owner_gallery(self) -> None:
         if not self._is_loopback_request():
@@ -1089,7 +1344,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+        try:
+            latest_action = _latest_pbe_owner_action(Path.cwd(), session)
+        except (WasteBasketError, sqlite3.Error, OSError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {"code": "pbe_owner_action_status_failed", "message": str(error)},
+            })
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "session": session,
+            "latestAction": latest_action,
+        })
 
     def _handle_pbe_owner_session_close(self) -> None:
         if not self._is_loopback_request():
@@ -1165,6 +1432,7 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "ok": True,
             "requestId": queued["requestId"],
             "state": queued["state"],
+            **({"resumed": True} if queued.get("resumedActive") else {}),
         })
 
     def _handle_pbe_owner_action_status(self) -> None:
@@ -1174,18 +1442,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             session = self._pbe_authorized_browser_session()
             request_id = str(parse_qs(urlparse(self.path).query).get("requestId", [""])[0]).strip()
-            if not request_id:
-                raise PBEOwnerSessionError(
-                    "Hosted lifecycle status requires an opaque request ID.",
-                    code="pbe_owner_request_required",
-                    status=400,
+            if request_id:
+                status = hosted_lifecycle_request_status(
+                    Path.cwd(),
+                    request_id,
+                    session_id=str(session["id"]),
+                    fixture_id=str(session["fixtureId"]),
                 )
-            status = hosted_lifecycle_request_status(
-                Path.cwd(),
-                request_id,
-                session_id=str(session["id"]),
-                fixture_id=str(session["fixtureId"]),
-            )
+            else:
+                status = latest_hosted_lifecycle_request(
+                    Path.cwd(),
+                    session_id=str(session["id"]),
+                    fixture_id=str(session["fixtureId"]),
+                )
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
@@ -1195,18 +1464,22 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 "error": {"code": "pbe_owner_request_unavailable", "message": str(error)},
             })
             return
+        if status is None:
+            self._send_json(HTTPStatus.OK, {"ok": True, "requestId": "", "state": "idle"})
+            return
+        request_id = str(status.get("requestId") or request_id)
         if status["state"] == "completed":
-            result = dict(status.get("result") or {})
+            result = _normalized_hosted_lifecycle_result(Path.cwd(), status)
             result["ok"] = True
+            result["state"] = "completed"
             self._send_json(HTTPStatus.OK, result)
             return
         if status["state"] == "failed":
-            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
-                "ok": False,
-                "error": {
-                    "code": "pbe_owner_action_failed",
-                    "message": status.get("error") or "The trusted connector could not complete this action.",
-                },
+            self._send_json(HTTPStatus.OK, {
+                "ok": True,
+                "requestId": request_id,
+                "state": "failed",
+                "error": status.get("error") or "The trusted connector could not complete this action.",
             })
             return
         self._send_json(HTTPStatus.OK, {
@@ -1215,6 +1488,30 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "state": status["state"],
             **({"error": status["error"]} if status.get("error") else {}),
         })
+
+    def _handle_pbe_owner_projection_retry(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            self._require_same_origin_browser_post()
+            session = self._pbe_authorized_browser_session()
+            payload = self._read_json_body()
+            with OWNER_ACTION_LOCK:
+                result = retry_hosted_lifecycle_projection(Path.cwd(), session, payload)
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except (OSError, sqlite3.Error, subprocess.CalledProcessError, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {
+                    "code": "pbe_owner_projection_retry_failed",
+                    "message": str(error),
+                },
+            })
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, **result})
 
     def _handle_source_edit_import_all(self) -> None:
         if not self._is_loopback_request():
@@ -6582,6 +6879,141 @@ def _write_catalog_state(repo_root: Path, expo_groups: dict[str, list[dict]], re
     site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
     worker_catalog = _write_worker_catalog(repo_root)
     return site_state, worker_catalog
+
+
+def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: list[str]) -> dict:
+    """Project an already-committed lifecycle result into static catalog files.
+
+    This helper intentionally has no gateway, connector, cloud, or lifecycle
+    writer dependency. Its caller must first prove the durable authoritative
+    operation and immutable hosted request identity.
+    """
+
+    normalized_operation = str(operation or "").strip().lower()
+    ids = _normalized_photo_ids(photo_ids)
+    if normalized_operation not in {"x", "restore", "empty"}:
+        raise ValueError("unsupported lifecycle catalog projection operation")
+    if (not ids and normalized_operation != "empty") or len(ids) > 500:
+        raise ValueError("lifecycle catalog projection requires 1 to 500 photo ids")
+    if not ids:
+        return {
+            "projected_ids": [],
+            "missing_ids": [],
+            "catalog_publish_pending": False,
+            "projection": {"state": "applied", "retryable": False},
+            "worker_catalog": {"ok": True, "state": "not-needed"},
+            "site": {},
+            "catalogPublication": {"state": "not-needed", "receipt": None},
+        }
+    try:
+        expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+        return {
+            "projected_ids": [],
+            "catalog_publish_pending": True,
+            "projection": {"state": "skipped-no-static-catalog", "retryable": False},
+            "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
+            "site": {"ok": False, "state": "skipped-no-static-catalog"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+        }
+
+    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    projected_ids: list[str] = []
+    missing_ids: list[str] = []
+    projected_at = datetime.now(timezone.utc).isoformat()
+    for photo_id in ids:
+        if normalized_operation == "x":
+            if _find_photo(hidden_groups, photo_id):
+                projected_ids.append(photo_id)
+                continue
+            found = _find_and_remove(expo_groups, photo_id)
+            source_state = "expo"
+            if not found:
+                found = _find_and_remove(reserve_groups, photo_id)
+                source_state = "reserve"
+            if not found:
+                missing_ids.append(photo_id)
+                continue
+            source_slug, source_photo = found
+            hidden_groups[source_slug].append(
+                _hidden_review_photo(source_photo, source_slug, source_state, projected_at)
+            )
+            projected_ids.append(photo_id)
+            continue
+        if normalized_operation == "restore":
+            if _find_photo(expo_groups, photo_id) or _find_photo(reserve_groups, photo_id):
+                projected_ids.append(photo_id)
+                continue
+            found = _find_and_remove(hidden_groups, photo_id)
+            if not found:
+                missing_ids.append(photo_id)
+                continue
+            hidden_slug, hidden_photo = found
+            target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
+            if _restore_hidden_photo_to_normal_group(
+                expo_groups,
+                reserve_groups,
+                hidden_photo,
+                photo_id,
+                target_state,
+                target_slug,
+            ):
+                projected_ids.append(photo_id)
+            else:
+                missing_ids.append(photo_id)
+            continue
+        _remove_existing(expo_groups, photo_id)
+        _remove_existing(reserve_groups, photo_id)
+        _remove_existing(hidden_groups, photo_id)
+        projected_ids.append(photo_id)
+
+    try:
+        site_state, worker_catalog = _write_catalog_state(
+            repo_root,
+            expo_groups,
+            reserve_groups,
+            hidden_groups,
+        )
+    except Exception:  # noqa: BLE001 - authority is already committed.
+        return {
+            "projected_ids": [],
+            "missing_ids": missing_ids,
+            "catalog_publish_pending": True,
+            "projection": {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_failed",
+            },
+            "worker_catalog": {"ok": False, "state": "pending"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+        }
+
+    worker_ok = worker_catalog.get("ok") is True
+    if missing_ids:
+        projection = {
+            "state": "partial",
+            "retryable": False,
+            "error_code": "catalog_projection_assets_missing",
+            "missing_ids": missing_ids,
+        }
+    elif not worker_ok:
+        projection = {
+            "state": "partial",
+            "retryable": True,
+            "error_code": "worker_catalog_projection_failed",
+        }
+    else:
+        projection = {"state": "applied", "retryable": False}
+    return {
+        "projected_ids": projected_ids,
+        "missing_ids": missing_ids,
+        "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+        "catalog_publish_pending": True,
+        "projection": projection,
+        "worker_catalog": worker_catalog,
+        "site": site_state,
+        "catalogPublication": {"state": "pending", "receipt": None},
+    }
 
 
 def _split_keyword_text(value: object) -> list[str]:
@@ -12215,7 +12647,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "waste-basket-empty",
         "waste-basket-tombstone-restore",
     }
-    compatibility_state_available = True
     try:
         expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
@@ -12223,7 +12654,6 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             raise
         # Synthetic connector/Owner SQLite tests need the authoritative
         # gateway without a checked-out static catalog or Node helper.
-        compatibility_state_available = False
         expo_groups = {slug: [] for slug in ORDER}
         reserve_groups = {slug: [] for slug in ORDER}
         hidden_groups = {slug: [] for slug in ORDER}
@@ -12247,44 +12677,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
             deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
         )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": "waste-basket-x",
-                "photo_ids": photo_ids,
-                "moved_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        moved_ids = []
-        for current_photo_id in photo_ids:
-            found = _find_and_remove(hidden_groups, current_photo_id)
-            if found:
-                source_slug, source_photo = found
-                hidden_groups[source_slug].append(
-                    _hidden_review_photo(source_photo, source_slug, "hidden", datetime.now(timezone.utc).isoformat())
-                )
-                moved_ids.append(current_photo_id)
-                continue
-            found = _find_and_remove(expo_groups, current_photo_id) or _find_and_remove(reserve_groups, current_photo_id)
-            if found:
-                source_slug, source_photo = found
-                hidden_groups[source_slug].append(
-                    _hidden_review_photo(source_photo, source_slug, "expo", datetime.now(timezone.utc).isoformat())
-                )
-                moved_ids.append(current_photo_id)
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        projection_result = project_lifecycle_catalog_state(repo_root, "x", photo_ids)
         return {
             **gateway_result,
             "action": "waste-basket-x",
             "photo_ids": photo_ids,
-            "moved_ids": moved_ids,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            "moved_ids": projection_result.get("projected_ids", []),
+            "authoritative_committed": True,
+            **projection_result,
         }
 
     if action in {"waste-basket-restore", "waste-basket-tombstone-restore"}:
@@ -12317,77 +12717,15 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 fixture_id=payload.get("fixture_id") or "",
                 deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
             )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": action,
-                "photo_ids": photo_ids,
-                "restored_ids": photo_ids,
-                "projected_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "authoritative_committed": True,
-                "projection": {
-                    "state": "skipped-no-static-catalog",
-                    "retryable": False,
-                },
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        restored_ids = []
-        for current_photo_id in photo_ids:
-            found = _find_and_remove(hidden_groups, current_photo_id)
-            if not found:
-                continue
-            hidden_slug, hidden_photo = found
-            target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
-            restored = _restore_hidden_photo_to_normal_group(
-                expo_groups,
-                reserve_groups,
-                hidden_photo,
-                current_photo_id,
-                target_state,
-                target_slug,
-            )
-            if restored:
-                restored_ids.append(current_photo_id)
         authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
-        try:
-            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        except Exception:  # noqa: BLE001 - the authoritative transaction has already committed.
-            return {
-                **gateway_result,
-                "action": action,
-                "photo_ids": photo_ids,
-                "restored_ids": authoritative_ids,
-                "projected_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "authoritative_committed": True,
-                "projection": {
-                    "state": "pending",
-                    "retryable": True,
-                    "error_code": "catalog_projection_failed",
-                },
-                "worker_catalog": {"ok": False, "state": "pending"},
-            }
-        projection_complete = bool(worker_catalog.get("ok"))
+        projection_result = project_lifecycle_catalog_state(repo_root, "restore", authoritative_ids)
         return {
             **gateway_result,
             "action": action,
             "photo_ids": photo_ids,
             "restored_ids": authoritative_ids,
-            "projected_ids": restored_ids,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
             "authoritative_committed": True,
-            "projection": {
-                "state": "applied" if projection_complete else "partial",
-                "retryable": not projection_complete,
-                **({"error_code": "worker_catalog_projection_failed"} if not projection_complete else {}),
-            },
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            **projection_result,
         }
 
     if action == "waste-basket-empty":
@@ -12404,23 +12742,13 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
         )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": action,
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
+        projection_result = project_lifecycle_catalog_state(repo_root, "empty", authoritative_ids)
         return {
             **gateway_result,
             "action": action,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            "authoritative_committed": True,
+            **projection_result,
         }
 
     if action == "sync-country-keywords":

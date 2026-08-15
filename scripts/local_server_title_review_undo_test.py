@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -1345,27 +1346,22 @@ class TitleReviewUndoTests(unittest.TestCase):
                     })
                     self.assertEqual([photo["id"] for photo in state["hidden"]["france"]], [photo_id])
 
-                    retry_payload = {
-                        "action": "waste-basket-restore",
-                        "photo_id": photo_id,
-                        "fixture_id": "fixture-current",
-                        "source": "owner-gallery",
-                        "actor": "backstage-pbe:session-current",
-                        "owner_mode": True,
-                        "owner_authorized": True,
-                        "request_key": "projection-retry-restore-second",
-                    }
-                    local_server.assert_pbe_owner_restore_scope(
-                        repo_root,
-                        {"id": "session-current", "fixtureId": "fixture-current"},
-                        retry_payload,
-                    )
-                    retried = local_server.apply_photo_action(repo_root, retry_payload)
+                    with (
+                        patch.object(local_server, "restore_from_waste_basket_gateway") as restore_gateway,
+                        patch.object(local_server, "move_to_waste_basket_gateway") as move_gateway,
+                        patch.object(local_server, "empty_waste_basket_gateway") as empty_gateway,
+                    ):
+                        retried = local_server.project_lifecycle_catalog_state(
+                            repo_root,
+                            "restore",
+                            [photo_id],
+                        )
+                    restore_gateway.assert_not_called()
+                    move_gateway.assert_not_called()
+                    empty_gateway.assert_not_called()
                 finally:
                     local_server._write_catalog_state = successful_writer
 
-                self.assertEqual(retried["items"][0]["status"], "already-restored")
-                self.assertEqual(retried["restored_ids"], [photo_id])
                 self.assertEqual(retried["projected_ids"], [photo_id])
                 self.assertEqual(retried["projection"], {"state": "applied", "retryable": False})
                 self.assertEqual(state["hidden"]["france"], [])

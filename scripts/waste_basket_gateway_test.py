@@ -10,6 +10,8 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -372,6 +374,116 @@ class WasteBasketGatewayTests(unittest.TestCase):
             self.root, queued["requestId"], result={"attacker": True}, db_path=self.db,
         )
         self.assertEqual(replay["result"], {"ok": True, "restored": ["asset-1"]})
+
+    def test_active_hosted_request_is_recovered_without_replaying_a_new_intent(self) -> None:
+        with patch.object(gateway.uuid, "uuid4", return_value=uuid.UUID(int=(1 << 128) - 1)):
+            queued = gateway.queue_hosted_lifecycle_request(
+                self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+                session_id="session-one", fixture_id="fixture-1",
+                request_key="first-browser-intent", db_path=self.db,
+            )
+        resumed = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-2"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="second-browser-intent", db_path=self.db,
+        )
+        self.assertEqual(resumed["requestId"], queued["requestId"])
+        self.assertTrue(resumed["resumedActive"])
+        self.assertEqual(resumed["operation"], "waste-basket-x")
+        self.assertEqual(resumed["assetIds"], ["asset-1"])
+        self.assertEqual(
+            gateway.latest_hosted_lifecycle_request(
+                self.root, session_id="session-one", fixture_id="fixture-1", db_path=self.db,
+            )["requestId"],
+            queued["requestId"],
+        )
+        self.assertIsNone(gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="other-session", fixture_id="fixture-1", db_path=self.db,
+        ))
+        self.assertIsNone(gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="session-one", fixture_id="other-fixture", db_path=self.db,
+        ))
+        with sqlite3.connect(self.db) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM owner_hosted_lifecycle_requests"
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+
+        gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"], result={"ok": True}, db_path=self.db,
+        )
+        with patch.object(gateway.uuid, "uuid4", return_value=uuid.UUID(int=0)):
+            next_request = gateway.queue_hosted_lifecycle_request(
+                self.root, operation="waste-basket-restore", asset_ids=["asset-2"],
+                session_id="session-one", fixture_id="fixture-1",
+                request_key="third-browser-intent", db_path=self.db,
+            )
+        self.assertNotEqual(next_request["requestId"], queued["requestId"])
+        self.assertNotIn("resumedActive", next_request)
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                "UPDATE owner_hosted_lifecycle_requests SET created_at = ?",
+                (NOW,),
+            )
+        latest = gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="session-one", fixture_id="fixture-1", db_path=self.db,
+        )
+        self.assertEqual(latest["requestId"], next_request["requestId"])
+
+    def test_completed_hosted_result_projection_update_is_scoped_and_optimistic(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="projection-result", db_path=self.db,
+        )
+        gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        original = {
+            "ok": True,
+            "operationId": f"owner-action:hosted-lifecycle:{queued['requestId']}",
+            "authoritative_committed": True,
+            "projection": {"state": "pending", "retryable": True},
+        }
+        gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"], result=original, db_path=self.db,
+        )
+        replacement = {
+            **original,
+            "projection": {"state": "applied", "retryable": False},
+        }
+        updated = gateway.replace_completed_hosted_lifecycle_result(
+            self.root,
+            queued["requestId"],
+            session_id="session-one",
+            fixture_id="fixture-1",
+            expected_result=original,
+            result=replacement,
+            db_path=self.db,
+        )
+        self.assertEqual(updated["state"], "completed")
+        self.assertEqual(updated["operation"], "waste-basket-restore")
+        self.assertEqual(updated["assetIds"], ["asset-1"])
+        self.assertEqual(updated["result"], replacement)
+        with self.assertRaisesRegex(gateway.WasteBasketError, "changed before retry"):
+            gateway.replace_completed_hosted_lifecycle_result(
+                self.root,
+                queued["requestId"],
+                session_id="session-one",
+                fixture_id="fixture-1",
+                expected_result=original,
+                result={"attacker": True},
+                db_path=self.db,
+            )
+        with self.assertRaisesRegex(gateway.WasteBasketError, "unavailable"):
+            gateway.replace_completed_hosted_lifecycle_result(
+                self.root,
+                queued["requestId"],
+                session_id="other-session",
+                fixture_id="fixture-1",
+                expected_result=replacement,
+                result=replacement,
+                db_path=self.db,
+            )
 
     def test_culling_review_and_owner_gallery_share_authorized_gateway(self) -> None:
         culling = gateway.move_to_waste_basket(

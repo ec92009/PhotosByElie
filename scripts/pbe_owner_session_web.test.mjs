@@ -228,7 +228,11 @@ test("browser session handoff exchanges an opaque ticket for an HttpOnly session
   assert.match(source, /window\.history\.replaceState/);
   assert.match(source, /request\("\/browser\/bootstrap"/);
   assert.doesNotMatch(source, /Authorization/);
-  assert.doesNotMatch(source, /sessionStorage/);
+  assert.match(source, /lifecycleStoragePrefix = "photosbyelie-pbe-owner-lifecycle:"/);
+  assert.match(source, /pendingActionStoragePrefix = "photosbyelie-pbe-owner-pending-action:"/);
+  assert.match(source, /const lifecycleStorage = \(\) => \{\s*try \{\s*return window\.sessionStorage \|\| null;/);
+  assert.match(source, /storage\.setItem\(key, JSON\.stringify\(lifecycle\)\)/);
+  assert.doesNotMatch(source, /sessionStorage\.setItem\([^\n]*(?:browserTicket|pbe_owner_ticket|state\.session)/);
   assert.doesNotMatch(source, /localStorage/);
   assert.doesNotMatch(source, /deviceCredential|api[_-]?key/i);
   assert.match(source, /window\.setInterval\(heartbeat, 30_000\)/);
@@ -352,6 +356,8 @@ test("hosted PBE X is bound to the frozen fixture and guarded Waste Basket actio
   assert.match(actions, /Boolean\(localEnabled && isHostedOwnerSurface\(\) && pbeOwnerSession\?\.isReady\?\.\(\)\)/);
   assert.match(actions, /const wasteBasketContext = \{ source: "owner-gallery"/);
   assert.match(actions, /pbeOwnerSession\.action\(action, requestPayload\)/);
+  assert.match(actions, /pbeOwnerSession\.recordLifecycleResult\?\.\(payload\)/);
+  assert.match(actions, /photosbyelie:pbeowneractionresult[\s\S]*applyServerState\(event\.detail\)/);
   assert.match(gallery, /ensureGalleryCommandBar\(\);\s*renderGallery\(\{ scrollSelection: false \}\);/);
   assert.doesNotMatch(gallery, /ensureGalleryKeyboardHint/);
   assert.doesNotMatch(actions, /credentials:\s*"include"/);
@@ -425,6 +431,436 @@ test("hosted action queues sanitized intent and polls its opaque result", async 
   assert.deepEqual(body, { action: "waste-basket-x", photo_id: "photo-one" });
   assert.match(actionCall[1].headers["Idempotency-Key"], /^pbe-owner-[a-z0-9]+-browser-random$/);
   assert.equal(calls.filter(([url]) => url.includes("/action/status?")).length, 1);
+});
+
+test("lifecycle truth persists by session and projection retry never replays authority", async () => {
+  const values = new Map();
+  const sessionStorage = {
+    getItem: (key) => values.has(key) ? values.get(key) : null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: (key) => values.delete(key),
+  };
+  const session = {
+    id: "lifecycle-session", state: "ready", fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  let retryMode = "applied";
+  let latestStatus = null;
+  const retryBodies = [];
+  const fetch = async (url, options = {}) => {
+    if (url.endsWith("/session")) return response({ ok: true, session });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: { fixtureId: session.fixtureId, items: [], summary: { filtered: 0 } },
+    });
+    if (url.includes("/action/status?requestId=")) {
+      if (!latestStatus) throw new Error("unexpected lifecycle status lookup");
+      return response(latestStatus);
+    }
+    if (url.endsWith("/action/projection-retry")) {
+      retryBodies.push(JSON.parse(options.body));
+      if (retryMode === "stale") {
+        return response({
+          ok: false,
+          error: { code: "pbe_owner_projection_stale", message: "Projection state changed; refresh status." },
+        }, 409);
+      }
+      if (retryMode === "expired") {
+        return response({
+          ok: false,
+          error: { code: "pbe_owner_session_expired", message: "Owner session expired." },
+        }, 403);
+      }
+      return response({
+        ok: true,
+        requestId: "hlr-one",
+        state: "completed",
+        authoritative_committed: true,
+        authoritative: { state: "committed", operationId: "operation-one", revision: 23, receiptState: "applied" },
+        projection: { state: "applied", retryable: false },
+        catalogPublication: { state: "pending", receipt: null },
+        projectionRetry: { available: false, operationRevision: 23, attempt: 1 },
+      });
+    }
+    throw new Error(`unexpected request ${url}`);
+  };
+
+  const boot = async () => {
+    const node = () => ({
+      textContent: "", hidden: false, disabled: false, dataset: {},
+      addEventListener(_type, callback) { this.listener = callback; },
+    });
+    const nodes = {
+      title: node(), message: node(), close: node(), lifecycle: node(),
+      authoritative: node(), projection: node(), publication: node(),
+      layerHelp: node(), retryError: node(), retry: node(),
+    };
+    let banner = null;
+    const document = {
+      documentElement: { style: { setProperty: () => {} } },
+      body: { classList: { add: () => {} }, prepend: () => {} },
+      querySelector: (selector) => selector === "[data-pbe-owner-session]" ? banner : null,
+      createElement: () => {
+        banner = {
+          className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+          getBoundingClientRect: () => ({ height: 80 }),
+          querySelector: (selector) => ({
+            "[data-pbe-owner-title]": nodes.title,
+            "[data-pbe-owner-message]": nodes.message,
+            "[data-pbe-owner-close]": nodes.close,
+            "[data-pbe-owner-lifecycle]": nodes.lifecycle,
+            "[data-pbe-owner-authoritative]": nodes.authoritative,
+            "[data-pbe-owner-projection]": nodes.projection,
+            "[data-pbe-owner-publication]": nodes.publication,
+            "[data-pbe-owner-layer-help]": nodes.layerHelp,
+            "[data-pbe-owner-retry-error]": nodes.retryError,
+            "[data-pbe-owner-retry]": nodes.retry,
+          }[selector] || null),
+        };
+        return banner;
+      },
+    };
+    const window = {
+      location: { hostname: "127.0.0.1", pathname: "/gallery.html", search: "?gallery=pbe-owner", hash: "" },
+      history: { replaceState: () => {} }, dispatchEvent: () => {}, sessionStorage,
+      setInterval: () => 1, clearInterval: () => {},
+    };
+    vm.runInNewContext(read("pbe-owner-session.js"), {
+      window, document, fetch, URLSearchParams, encodeURIComponent,
+      CustomEvent: class CustomEvent {}, Date,
+      crypto: { randomUUID: () => "browser-random" },
+    });
+    await window.photosByEliePBEOwnerSessionReady;
+    return { window, nodes };
+  };
+
+  const pending = {
+    ok: true,
+    requestId: "hlr-one",
+    state: "completed",
+    authoritative_committed: true,
+    authoritative: { state: "committed", operationId: "operation-one", revision: 23, receiptState: "applied" },
+    projection: { state: "pending", retryable: true, error_code: "catalog_projection_unconfirmed" },
+    catalogPublication: { state: "pending", receipt: null },
+    projectionRetry: { available: true, token: "f".repeat(64), operationRevision: 23, attempt: 0 },
+  };
+  latestStatus = pending;
+
+  const first = await boot();
+  first.window.photosByEliePBEOwnerSession.recordLifecycleResult(pending);
+  assert.equal(first.nodes.authoritative.textContent, "Committed");
+  assert.equal(first.nodes.projection.textContent, "Pending retry");
+  assert.equal(first.nodes.publication.textContent, "Pending release receipt");
+  assert.match(first.nodes.layerHelp.textContent, /only the local\/static projection/);
+  assert.match(first.nodes.layerHelp.textContent, /Backstage Uploads receipt/);
+  assert.equal(first.nodes.retry.hidden, false);
+  assert.ok(values.has("photosbyelie-pbe-owner-lifecycle:lifecycle-session"));
+
+  const cached = JSON.parse(values.get("photosbyelie-pbe-owner-lifecycle:lifecycle-session"));
+  cached.projection = { state: "applied", retryable: false };
+  values.set("photosbyelie-pbe-owner-lifecycle:lifecycle-session", JSON.stringify(cached));
+  const restored = await boot();
+  assert.equal(restored.window.photosByEliePBEOwnerSession.state().lifecycle.requestId, "hlr-one");
+  assert.equal(restored.nodes.projection.textContent, "Pending retry");
+  await restored.window.photosByEliePBEOwnerSession.retryProjection();
+  assert.deepEqual(retryBodies[0], {
+    requestId: "hlr-one",
+    projectionToken: "f".repeat(64),
+    operationRevision: 23,
+  });
+  assert.equal(restored.nodes.projection.textContent, "Applied locally");
+  assert.match(restored.nodes.layerHelp.textContent, /not proven until Backstage Uploads records a release receipt/);
+  assert.equal(restored.nodes.retry.hidden, true);
+  assert.equal(restored.window.photosByEliePBEOwnerSession.state().ready, true);
+
+  restored.window.photosByEliePBEOwnerSession.recordLifecycleResult({
+    ...pending,
+    projection: { state: "partial", retryable: true },
+    projectionRetry: { available: true, token: "a".repeat(64), operationRevision: 23, attempt: 1 },
+  });
+  assert.equal(restored.nodes.projection.textContent, "Partially projected");
+  assert.match(restored.nodes.layerHelp.textContent, /only the local\/static projection/);
+  retryMode = "stale";
+  await assert.rejects(
+    () => restored.window.photosByEliePBEOwnerSession.retryProjection(),
+    /Projection state changed/,
+  );
+  assert.equal(restored.window.photosByEliePBEOwnerSession.state().ready, true);
+  assert.match(restored.window.photosByEliePBEOwnerSession.state().lifecycleRetryError, /changed/);
+  assert.equal(
+    restored.window.photosByEliePBEOwnerSession.state().lifecycle.projectionRetry.token,
+    "f".repeat(64),
+  );
+  assert.equal(restored.nodes.retry.hidden, false);
+
+  restored.window.photosByEliePBEOwnerSession.recordLifecycleResult({
+    ...pending,
+    projection: { state: "partial", retryable: false },
+    projectionRetry: { available: false, operationRevision: 23, attempt: 1 },
+  });
+  assert.match(restored.nodes.layerHelp.textContent, /projection needs Backstage review/);
+  assert.equal(restored.nodes.retry.hidden, true);
+
+  restored.window.photosByEliePBEOwnerSession.recordLifecycleResult({
+    ...pending,
+    projection: { state: "skipped-no-static-catalog", retryable: false },
+    projectionRetry: { available: false, operationRevision: 23, attempt: 1 },
+  });
+  assert.equal(restored.nodes.projection.textContent, "Intentionally skipped (no static catalog)");
+  assert.equal(restored.nodes.retry.hidden, true);
+  const retryCountBeforeNonretryable = retryBodies.length;
+  await assert.rejects(
+    () => restored.window.photosByEliePBEOwnerSession.retryProjection(),
+    /not retryable/,
+  );
+  assert.equal(retryBodies.length, retryCountBeforeNonretryable);
+
+  restored.window.photosByEliePBEOwnerSession.recordLifecycleResult({
+    ...pending,
+    projectionRetry: { available: true, token: "b".repeat(64), operationRevision: 23, attempt: 2 },
+  });
+  retryMode = "expired";
+  await assert.rejects(
+    () => restored.window.photosByEliePBEOwnerSession.retryProjection(),
+    /Owner session expired/,
+  );
+  const expired = restored.window.photosByEliePBEOwnerSession.state();
+  assert.equal(expired.ready, false);
+  assert.equal(expired.lifecycle, null);
+});
+
+test("lifecycle status remains memory-only when session storage is unavailable", async () => {
+  const session = {
+    id: "storage-denied-session", state: "ready", fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload) => ({ ok: true, status: 200, json: async () => payload });
+  const fetch = async (url) => {
+    if (url.endsWith("/session")) return response({ ok: true, session });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: { fixtureId: session.fixtureId, items: [], summary: { filtered: 0 } },
+    });
+    throw new Error(`unexpected request ${url}`);
+  };
+  let banner = null;
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: (selector) => selector === "[data-pbe-owner-session]" ? banner : null,
+    createElement: () => {
+      banner = {
+        className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+        getBoundingClientRect: () => ({ height: 40 }), querySelector: () => null,
+      };
+      return banner;
+    },
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", pathname: "/gallery.html", search: "?gallery=pbe-owner", hash: "" },
+    history: { replaceState: () => {} }, dispatchEvent: () => {},
+    setInterval: () => 1, clearInterval: () => {},
+  };
+  Object.defineProperty(window, "sessionStorage", {
+    get: () => { throw new Error("storage denied"); },
+  });
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window, document, fetch, URLSearchParams, encodeURIComponent,
+    CustomEvent: class CustomEvent {}, Date,
+    crypto: { randomUUID: () => "browser-random" },
+  });
+  await window.photosByEliePBEOwnerSessionReady;
+  assert.doesNotThrow(() => window.photosByEliePBEOwnerSession.recordLifecycleResult({
+    requestId: "hlr-storage-denied",
+    authoritative: { state: "committed", revision: 8 },
+    projection: { state: "pending", retryable: false },
+    catalogPublication: { state: "pending", receipt: null },
+    projectionRetry: { available: false, operationRevision: 8 },
+  }));
+  assert.equal(window.photosByEliePBEOwnerSession.state().ready, true);
+  assert.equal(window.photosByEliePBEOwnerSession.state().lifecycle.projection.state, "pending");
+});
+
+test("poll timeout retains one opaque pending handle and blocks a second POST", async () => {
+  const values = new Map();
+  const sessionStorage = {
+    getItem: (key) => values.has(key) ? values.get(key) : null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: (key) => values.delete(key),
+  };
+  const session = {
+    id: "timeout-session", state: "ready", fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  let actionPosts = 0;
+  let statusReads = 0;
+  const fetch = async (url) => {
+    if (url.endsWith("/session")) return response({ ok: true, session, latestAction: null });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: { fixtureId: session.fixtureId, items: [], summary: { filtered: 0 } },
+    });
+    if (url.endsWith("/action")) {
+      actionPosts += 1;
+      return response({ ok: true, requestId: "hlr-timeout", state: "queued" }, 202);
+    }
+    if (url.includes("/action/status?requestId=hlr-timeout")) {
+      statusReads += 1;
+      return response({ ok: true, requestId: "hlr-timeout", state: "queued" });
+    }
+    throw new Error(`unexpected request ${url}`);
+  };
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: () => null,
+    createElement: () => ({
+      className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+      getBoundingClientRect: () => ({ height: 40 }), querySelector: () => null,
+    }),
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", pathname: "/gallery.html", search: "?gallery=pbe-owner", hash: "" },
+    history: { replaceState: () => {} }, dispatchEvent: () => {}, sessionStorage,
+    setInterval: () => 1, clearInterval: () => {},
+    setTimeout: (callback) => { callback(); return 1; },
+  };
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window, document, fetch, URLSearchParams, encodeURIComponent,
+    CustomEvent: class CustomEvent {}, Date,
+    crypto: { randomUUID: () => "browser-random" },
+  });
+  await window.photosByEliePBEOwnerSessionReady;
+
+  await assert.rejects(
+    () => window.photosByEliePBEOwnerSession.action("waste-basket-x", { photo_id: "photo-one" }),
+    /remains safely queued/,
+  );
+  assert.equal(actionPosts, 1);
+  assert.equal(statusReads, 40);
+  assert.deepEqual(
+    JSON.parse(values.get("photosbyelie-pbe-owner-pending-action:timeout-session")),
+    { requestId: "hlr-timeout", state: "queued" },
+  );
+  assert.equal(window.photosByEliePBEOwnerSession.state().pendingAction.requestId, "hlr-timeout");
+  assert.match(window.photosByEliePBEOwnerSession.state().message, /New actions are paused/);
+
+  await assert.rejects(
+    () => window.photosByEliePBEOwnerSession.action("waste-basket-x", { photo_id: "photo-two" }),
+    /previous PBE Owner action is still safely queued/,
+  );
+  assert.equal(actionPosts, 1);
+  assert.equal(statusReads, 41);
+});
+
+test("reload recovers durable action without storage and terminal states remain truthful", async () => {
+  const session = {
+    id: "recovery-session", state: "ready", fixtureId: "fixture-current",
+    fixtureBreadcrumb: "Current fixture", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const completed = {
+    ok: true,
+    requestId: "hlr-recovered",
+    state: "completed",
+    action: "waste-basket-x",
+    hidden_ids: ["photo-one"],
+    authoritative_committed: true,
+    authoritative: { state: "committed", operationId: "operation-one", revision: 9 },
+    projection: { state: "applied", retryable: false },
+    catalogPublication: { state: "pending", receipt: null },
+    projectionRetry: { available: false, operationRevision: 9 },
+  };
+  let actionPosts = 0;
+  const fetch = async (url) => {
+    if (url.endsWith("/session")) return response({
+      ok: true,
+      session,
+      latestAction: { ok: true, requestId: "hlr-recovered", state: "queued" },
+    });
+    if (url.endsWith("/gallery")) return response({
+      ok: true,
+      gallery: { fixtureId: session.fixtureId, items: [], summary: { filtered: 0 } },
+    });
+    if (url.endsWith("/action")) {
+      actionPosts += 1;
+      const requestId = actionPosts === 1 ? "hlr-failed" : "hlr-expired";
+      return response({ ok: true, requestId, state: "queued" }, 202);
+    }
+    if (url.includes("requestId=hlr-recovered")) return response(completed);
+    if (url.includes("requestId=hlr-failed")) return response({
+      ok: true, requestId: "hlr-failed", state: "failed", error: "connector failed safely",
+    });
+    if (url.includes("requestId=hlr-expired")) return response({
+      ok: false,
+      error: { code: "pbe_owner_session_expired", message: "Owner session expired." },
+    }, 403);
+    throw new Error(`unexpected request ${url}`);
+  };
+  const events = [];
+  class CustomEvent {
+    constructor(type, options = {}) {
+      this.type = type;
+      this.detail = options.detail;
+    }
+  }
+  const document = {
+    documentElement: { style: { setProperty: () => {} } },
+    body: { classList: { add: () => {} }, prepend: () => {} },
+    querySelector: () => null,
+    createElement: () => ({
+      className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+      getBoundingClientRect: () => ({ height: 40 }), querySelector: () => null,
+    }),
+  };
+  const window = {
+    location: { hostname: "127.0.0.1", pathname: "/gallery.html", search: "?gallery=pbe-owner", hash: "" },
+    history: { replaceState: () => {} }, dispatchEvent: (event) => events.push(event),
+    setInterval: () => 1, clearInterval: () => {},
+    setTimeout: (callback) => { callback(); return 1; },
+  };
+  Object.defineProperty(window, "sessionStorage", {
+    get: () => { throw new Error("storage denied"); },
+  });
+  vm.runInNewContext(read("pbe-owner-session.js"), {
+    window, document, fetch, URLSearchParams, encodeURIComponent, CustomEvent, Date,
+    crypto: { randomUUID: () => "browser-random" },
+  });
+  await window.photosByEliePBEOwnerSessionReady;
+  assert.equal(window.photosByEliePBEOwnerSession.state().pendingAction.requestId, "hlr-recovered");
+
+  const recovered = await window.photosByEliePBEOwnerSession.refreshPendingAction();
+  assert.equal(recovered.state, "completed");
+  assert.equal(window.photosByEliePBEOwnerSession.state().pendingAction, null);
+  assert.equal(window.photosByEliePBEOwnerSession.state().lifecycle.requestId, "hlr-recovered");
+  assert.equal(
+    events.filter((event) => event.type === "photosbyelie:pbeowneractionresult").length,
+    1,
+  );
+
+  await assert.rejects(
+    () => window.photosByEliePBEOwnerSession.action("waste-basket-x", { photo_id: "photo-two" }),
+    /connector failed safely/,
+  );
+  assert.equal(window.photosByEliePBEOwnerSession.state().ready, true);
+  assert.equal(window.photosByEliePBEOwnerSession.state().pendingAction, null);
+  assert.match(window.photosByEliePBEOwnerSession.state().pendingActionError, /failed safely/);
+
+  await assert.rejects(
+    () => window.photosByEliePBEOwnerSession.action("waste-basket-x", { photo_id: "photo-three" }),
+    /Owner session expired/,
+  );
+  assert.equal(window.photosByEliePBEOwnerSession.state().ready, false);
+  assert.equal(window.photosByEliePBEOwnerSession.state().phase, "unavailable");
+  assert.equal(actionPosts, 2);
 });
 
 test("hosted PBE hidden history ignores stale global and prior-session state", async () => {
@@ -627,9 +1063,21 @@ test("Undo preserves retry history on failure and batches multi-restore atomical
 
 test("PBE Owner status remains usable at desktop and narrow widths", () => {
   const css = read("photos.css");
+  const session = read("pbe-owner-session.js");
+  assert.match(session, /aria-label="Latest lifecycle action" aria-live="polite" aria-atomic="true"/);
+  assert.match(session, /<dt>Authoritative lifecycle<\/dt>/);
+  assert.match(session, /<dt>Local\/static projection<\/dt>/);
+  assert.match(session, /<dt>Public catalog<\/dt>/);
+  assert.match(session, /data-pbe-owner-retry-error role="status" aria-live="polite"/);
+  assert.match(session, /setAttribute\?\.\("aria-busy", state\.lifecycleRetrying \? "true" : "false"\)/);
+  assert.match(session, /Retry repairs only the local\/static projection/);
+  assert.match(session, /Backstage Uploads records a release receipt/);
   assert.match(css, /\.pbe-owner-session\{[\s\S]*position:sticky[\s\S]*top:var\(--fixed-header-offset,86px\)[\s\S]*z-index:75/);
   assert.match(css, /\.pbe-owner-session button:focus-visible\{outline:3px solid #fff/);
+  assert.match(css, /\.pbe-owner-lifecycle\{[\s\S]*grid-template-columns:auto minmax\(0,1fr\) auto/);
+  assert.match(css, /\.pbe-owner-lifecycle\[hidden\]\{display:none\}/);
   assert.match(css, /@media \(max-width:700px\)[\s\S]*\.pbe-owner-session\{[\s\S]*position:fixed;[\s\S]*top:var\(--fixed-header-offset,86px\)[\s\S]*grid-template-columns:auto minmax\(0,1fr\)/);
+  assert.match(css, /@media \(max-width:700px\)[\s\S]*\.pbe-owner-lifecycle\{[\s\S]*grid-template-columns:minmax\(0,1fr\) auto/);
   assert.match(css, /body\.has-pbe-owner-session main\{[\s\S]*margin-top:calc\(var\(--fixed-header-offset,86px\) \+ var\(--pbe-owner-banner-height,120px\)\)/);
 });
 

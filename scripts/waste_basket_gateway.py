@@ -270,6 +270,8 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
         );
         CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_state
           ON owner_hosted_lifecycle_requests(state, created_at, request_id);
+        CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_session
+          ON owner_hosted_lifecycle_requests(session_id, fixture_id, created_at, request_id);
         CREATE TRIGGER IF NOT EXISTS owner_hosted_lifecycle_request_identity_immutable
           BEFORE UPDATE ON owner_hosted_lifecycle_requests
           WHEN OLD.request_id <> NEW.request_id
@@ -357,6 +359,21 @@ def queue_hosted_lifecycle_request(
                 raise WasteBasketError("hosted lifecycle idempotency key conflicts with its durable intent")
             connection.rollback()
             return _hosted_request_payload(existing)
+        active = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE session_id = ? AND fixture_id = ?
+                 AND state IN ('queued', 'running')
+               ORDER BY rowid DESC LIMIT 1""",
+            (clean_session, clean_fixture),
+        ).fetchone()
+        if active is not None:
+            # A browser can lose its same-tab cache or reload after its polling
+            # window expires. Return the already-durable request instead of
+            # accepting a second lifecycle intent for the frozen session.
+            connection.rollback()
+            payload = _hosted_request_payload(active)
+            payload["resumedActive"] = True
+            return payload
         now = _now()
         request_id = f"hlr-{uuid.uuid4().hex}"
         connection.execute(
@@ -396,6 +413,95 @@ def hosted_lifecycle_request_status(
         if row is None:
             raise WasteBasketError("hosted lifecycle request is unavailable for this Owner session")
         return _hosted_request_payload(row)
+    finally:
+        connection.close()
+
+
+def latest_hosted_lifecycle_request(
+    repo_root: Path,
+    *,
+    session_id: str,
+    fixture_id: str,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return the newest durable request for one frozen Owner session.
+
+    This is a read-only recovery seam for browser reload/storage-denial cases.
+    Session and fixture identity remain mandatory so an opaque request can
+    never be discovered across Owner leases.
+    """
+    normalized_session_id = str(session_id or "").strip()
+    normalized_fixture_id = str(fixture_id or "").strip()
+    if not normalized_session_id or not normalized_fixture_id:
+        raise WasteBasketError("hosted lifecycle request identity is incomplete")
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE session_id = ? AND fixture_id = ?
+               ORDER BY rowid DESC LIMIT 1""",
+            (normalized_session_id, normalized_fixture_id),
+        ).fetchone()
+        return _hosted_request_payload(row) if row is not None else None
+    finally:
+        connection.close()
+
+
+def replace_completed_hosted_lifecycle_result(
+    repo_root: Path,
+    request_id: str,
+    *,
+    session_id: str,
+    fixture_id: str,
+    expected_result: dict[str, Any],
+    result: dict[str, Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Replace one completed hosted result with optimistic concurrency.
+
+    Projection retry is deliberately allowed to update only ``result_json``.
+    The hosted request identity, authoritative lifecycle operation, and queue
+    state remain immutable, and a concurrent or stale caller cannot overwrite
+    a newer projection receipt.
+    """
+
+    normalized_request_id = str(request_id or "").strip()
+    normalized_session_id = str(session_id or "").strip()
+    normalized_fixture_id = str(fixture_id or "").strip()
+    if not normalized_request_id or not normalized_session_id or not normalized_fixture_id:
+        raise WasteBasketError("hosted lifecycle result identity is incomplete")
+    if not isinstance(expected_result, dict) or not isinstance(result, dict):
+        raise WasteBasketError("hosted lifecycle result replacement requires JSON objects")
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE request_id = ? AND session_id = ? AND fixture_id = ?""",
+            (normalized_request_id, normalized_session_id, normalized_fixture_id),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request is unavailable for this Owner session")
+        if str(row["state"]) != "completed":
+            raise WasteBasketError("hosted lifecycle projection requires a completed authoritative request")
+        current_result = json.loads(str(row["result_json"] or "{}"))
+        if current_result != expected_result:
+            raise WasteBasketError("hosted lifecycle projection result changed before retry")
+        connection.execute(
+            """UPDATE owner_hosted_lifecycle_requests
+               SET result_json = ?, updated_at = ?
+               WHERE request_id = ?""",
+            (_json(result), _now(), normalized_request_id),
+        )
+        updated = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
+        ).fetchone()
+        connection.commit()
+        return _hosted_request_payload(updated)
+    except Exception:
+        connection.rollback()
+        raise
     finally:
         connection.close()
 
@@ -1120,6 +1226,7 @@ def deployed_lifecycle_outbox(repo_root: Path, operation_id: str, db_path: Path 
         return {
             "operationId": str(operation["operation_id"]),
             "operationDigest": str(operation["operation_digest"]),
+            "operation": str(operation["operation"]),
             "revision": int(operation["revision"]),
             "state": str(operation["state"]),
             "receipts": receipts,

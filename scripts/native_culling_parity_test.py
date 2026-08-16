@@ -106,9 +106,8 @@ class NativeCullingParityTest(unittest.TestCase):
             'onKeyPress("x")',
             'onKeyPress("u")',
             'onKeyPress("b")',
-            "P include in fixture",
-            "H exclude from fixture",
-            "X move to recoverable Waste Basket",
+            "P include • H exclude",
+            "X Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
             "FixtureCullingView.selectableCases",
@@ -620,7 +619,7 @@ class NativeCullingParityTest(unittest.TestCase):
         grid = culling[grid_start:grid_end]
         actions = culling[grid_end:]
 
-        self.assertIn("VStack(alignment: .leading, spacing: 12)", header)
+        self.assertIn("VStack(alignment: .leading, spacing: 6)", header)
         self.assertIn(".layoutPriority(3)", header)
         self.assertIn(
             ".frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)",
@@ -649,15 +648,10 @@ class NativeCullingParityTest(unittest.TestCase):
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
         )
-        self.assertIn("GeometryReader { viewport in", culling)
-        self.assertIn("let topInset = viewport.safeAreaInsets.top", culling)
-        self.assertIn("let bottomInset = viewport.safeAreaInsets.bottom", culling)
-        self.assertIn(".padding(.top, topInset)", culling)
-        self.assertIn(".padding(.bottom, bottomInset)", culling)
-        self.assertIn(
-            "height: max(0, viewport.size.height - topInset - bottomInset)",
-            culling,
-        )
+        self.assertNotIn("GeometryReader { viewport in", culling)
+        self.assertNotIn("viewport.safeAreaInsets", culling)
+        self.assertNotIn(".padding(.top, topInset)", culling)
+        self.assertNotIn(".padding(.bottom, bottomInset)", culling)
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
 
     def test_culling_filters_are_visible_immediate_and_stale_safe(self):
@@ -813,8 +807,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "227.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "91")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "228.3")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "95")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn('source "$release_metadata"', bridge_installer)
         self.assertIn("PBE_BACKSTAGE_INFO_PLIST", bridge_installer)
@@ -1036,7 +1030,12 @@ class NativeCullingParityTest(unittest.TestCase):
             "model.isLoadingPreview",
         ):
             self.assertIn(flag, culling)
-        self.assertNotIn("Text(model.cullingStatus)", culling)
+        self.assertIn("private var cullingStatusFeedback", culling)
+        self.assertIn(
+            "BackstageFeedbackView(message: model.cullingStatus, isWorking: true)",
+            culling,
+        )
+        self.assertIn("Text(model.cullingStatus)", culling)
 
         self.assertGreaterEqual(review.count("message: model.reviewStatus"), 2)
         self.assertGreaterEqual(review.count("BackstageFeedbackView("), 2)

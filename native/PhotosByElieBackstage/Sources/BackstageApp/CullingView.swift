@@ -155,25 +155,13 @@ struct CullingView: View {
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
-        GeometryReader { viewport in
-            let topInset = viewport.safeAreaInsets.top
-            let bottomInset = viewport.safeAreaInsets.bottom
-
-            HSplitView {
-                cullingWorkspacePane
-                cullingPreviewPane
-            }
-            .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
-            .padding(.top, topInset)
-            .padding(.bottom, bottomInset)
-            .frame(
-                width: viewport.size.width,
-                height: max(0, viewport.size.height - topInset - bottomInset),
-                alignment: .top
-            )
+        HSplitView {
+            cullingWorkspacePane
+            cullingPreviewPane
         }
+        .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             quickLook.activate()
         }

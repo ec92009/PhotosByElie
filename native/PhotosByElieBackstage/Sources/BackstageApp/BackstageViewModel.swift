@@ -324,8 +324,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativePublicationBatchNumber = 0
     @Published var nativePublicationBatchCount = 0
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
-    @Published var nativeUploadPreviewImage: NSImage?
-    @Published var nativeUploadPreviewItemID = ""
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
@@ -842,8 +840,6 @@ final class BackstageViewModel: ObservableObject {
         nativeUploadPlan = nil
         nativeUploadRun = nil
         nativeUploadThumbnails = [:]
-        nativeUploadPreviewImage = nil
-        nativeUploadPreviewItemID = ""
         deliverables = []
         publicationPlan = nil
     }
@@ -4027,27 +4023,62 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadNativeUploadPreview(for item: NativeUploadPlanItem) async {
-        if nativeUploadPreviewItemID == item.id, nativeUploadPreviewImage != nil {
-            return
+    func prepareNativeUploadQuickLookURL(for item: NativeUploadPlanItem) async -> URL? {
+        let result = await prepareCanonicalQuickLookURL(
+            assetID: item.id,
+            localIdentifier: item.photoLibraryIdentifier,
+            namespace: "UploadQuickLook"
+        )
+        if result == nil {
+            nativeUploadStatus = "The Upload preview could not be prepared. The approved item is unchanged."
         }
-        nativeUploadPreviewItemID = item.id
-        nativeUploadPreviewImage = nil
-        do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: item.photoLibraryIdentifier,
-                maxPixelSize: 1_600
-            )
-            guard nativeUploadPreviewItemID == item.id else { return }
-            nativeUploadPreviewImage = NSImage(data: preview.jpegData)
-        } catch {
-            nativeUploadStatus = "The preview could not be prepared. The approved upload item is unchanged."
-        }
+        return result
     }
 
-    func clearNativeUploadPreview() {
-        nativeUploadPreviewItemID = ""
-        nativeUploadPreviewImage = nil
+    func prepareMetadataQuickLookURL(for assetID: String) async -> URL? {
+        let result = await prepareCanonicalQuickLookURL(
+            assetID: assetID,
+            localIdentifier: photoLibraryIdentifier(for: assetID),
+            namespace: "MetadataQuickLook"
+        )
+        if result == nil {
+            metadataReviewStatus = "The Metadata preview could not be prepared. No metadata was changed."
+        }
+        return result
+    }
+
+    private func prepareCanonicalQuickLookURL(
+        assetID: String,
+        localIdentifier: String,
+        namespace: String
+    ) async -> URL? {
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent(
+            "com.photosbyelie.backstage/\(namespace)",
+            isDirectory: true
+        )
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            let preview = try await photoLibrary.preview(
+                localIdentifier: localIdentifier,
+                maxPixelSize: 4_000
+            )
+            let safeName = assetID
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: ":", with: "_")
+            let destination = directory
+                .appendingPathComponent(safeName)
+                .appendingPathExtension("jpg")
+            try preview.jpegData.write(to: destination, options: .atomic)
+            return destination
+        } catch {
+            return nil
+        }
     }
 
     func returnSelectedUploadsToReview() async {
@@ -4116,10 +4147,6 @@ final class BackstageViewModel: ObservableObject {
             selectedDeliveryIDs.subtract(hiddenIDs)
             for id in hiddenIDs {
                 nativeUploadThumbnails.removeValue(forKey: id)
-            }
-            if nativeUploadPreviewItemID.isEmpty == false,
-               hiddenIDs.contains(nativeUploadPreviewItemID) {
-                clearNativeUploadPreview()
             }
             if let current = nativeUploadPlan {
                 nativeUploadPlan = NativeUploadPlan(
@@ -4430,11 +4457,6 @@ final class BackstageViewModel: ObservableObject {
         for id in attemptedIDs.subtracting(failedIDs) {
             nativeUploadThumbnails.removeValue(forKey: id)
         }
-        if !nativeUploadPreviewItemID.isEmpty,
-           !retainedIDs.contains(nativeUploadPreviewItemID) {
-            clearNativeUploadPreview()
-        }
-
         do {
             let summary = try await deliveryService.nativeUploadPlan(
                 fixtureID: selectedFixtureID,

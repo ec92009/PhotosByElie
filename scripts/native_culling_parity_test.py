@@ -25,7 +25,6 @@ def backstage_ui_source() -> str:
             "ReviewPreview.swift",
             "UploadView.swift",
             "UploadHeaderView.swift",
-            "UploadQuickView.swift",
             "UploadPreview.swift",
             "PhotosByElieBackstageApp.swift",
         )
@@ -277,14 +276,14 @@ class NativeCullingParityTest(unittest.TestCase):
             'onKeyPress("r")',
             'onKeyPress("h")',
             "onKeyPress(.space)",
-            ".focused($isUploadQuickViewFocused)",
-            "onKeyPress(.upArrow)",
-            "onKeyPress(.downArrow)",
-            "moveUploadQuickView(in: plan, by: -1)",
-            "moveUploadQuickView(in: plan, by: 1)",
-            "Use ↑/↓ to navigate",
-            "UploadQuickView",
-            "item.keywords.joined",
+            "BackstageQuickLookCoordinator()",
+            "prepareNativeUploadQuickLookURL(for: item)",
+            "quickLook.present(",
+            "BackstageQuickLookMetadata(",
+            "moveUploadQuickLook(from: assetID, by: -1)",
+            "moveUploadQuickLook(from: assetID, by: 1)",
+            "←/→ navigate • H hide • R return to Review",
+            "keywords: item.keywords",
             'Button("Hide…")',
             'Button("Load next 200")',
             "Batch complete",
@@ -295,7 +294,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn('TableColumn("File", value:', upload)
         self.assertIn("func returnSelectedUploadsToReview()", model)
         self.assertIn("func hideSelectedUploads()", model)
-        self.assertIn("func loadNativeUploadPreview(", model)
+        self.assertIn("func prepareNativeUploadQuickLookURL(", model)
         self.assertIn("items: current.items.filter { !returnedIDs.contains($0.id) }", model)
         self.assertIn("selectedDeliveryIDs.subtract(returnedIDs)", model)
         self.assertIn(".returnToReview", model)
@@ -1350,11 +1349,10 @@ class NativeCullingParityTest(unittest.TestCase):
             1,
         )[0]
         self.assertIn('.onKeyPress("h")', upload)
-        self.assertIn("hideCurrentUploadQuickView(in: plan)", upload)
+        self.assertIn("hideCurrentUploadQuickLook(assetID: assetID)", upload)
         self.assertIn("await model.hideSelectedUploads()", upload)
-        self.assertIn("uploadQuickViewItem = next", upload)
-        self.assertIn("await model.loadNativeUploadPreview(for: next)", upload)
-        self.assertIn("H hides", upload)
+        self.assertIn("presentUploadQuickLook(next)", upload)
+        self.assertIn("H hide", upload)
 
     def test_upload_preview_returns_current_item_to_review_and_advances(self):
         ui = backstage_ui_source()
@@ -1363,11 +1361,24 @@ class NativeCullingParityTest(unittest.TestCase):
             1,
         )[0]
         self.assertIn('.onKeyPress("r")', upload)
-        self.assertIn("returnCurrentUploadQuickViewToReview(in: plan)", upload)
+        self.assertIn("returnCurrentUploadQuickLookToReview(assetID: assetID)", upload)
         self.assertIn("await model.returnSelectedUploadsToReview()", upload)
-        self.assertIn("uploadQuickViewItem = next", upload)
-        self.assertIn("await model.loadNativeUploadPreview(for: next)", upload)
-        self.assertIn("R returns to Review", upload)
+        self.assertIn("presentUploadQuickLook(next)", upload)
+        self.assertIn("R return to Review", upload)
+
+    def test_metadata_uses_canonical_thumbnail_and_quick_look(self):
+        ui = backstage_ui_source()
+        metadata = ui.split("private struct MetadataGiveBackView", 1)[1]
+        for marker in (
+            'TableColumn("Preview")',
+            "model.cullingThumbnails[assetID]",
+            "model.requestThumbnail(for: assetID)",
+            "prepareMetadataQuickLookURL(for: assetID)",
+            "BackstageQuickLookMetadata(",
+            "quickLook.present(",
+            "canonical read-only Quick Look presentation",
+        ):
+            self.assertIn(marker, metadata)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

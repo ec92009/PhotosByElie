@@ -60,7 +60,7 @@ private enum ReviewQuickLookPresenter {
                         model.clickReviewItem(assetID, modifiers: [])
                         coordinator.dismiss()
                         Task { [weak model] in await model?.unpickReviewSelection() }
-                    case .pick, .rating, .color:
+                    case .pick, .returnToReview, .rating, .color:
                         return false
                     }
                     return true

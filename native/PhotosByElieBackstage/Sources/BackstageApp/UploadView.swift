@@ -16,8 +16,7 @@ struct UploadView: View {
     @State private var confirmingVisiblePublication = false
     @State private var confirmingReturnToReview = false
     @State private var confirmingUploadHide = false
-    @State private var uploadQuickViewItem: NativeUploadPlanItem?
-    @FocusState private var isUploadQuickViewFocused: Bool
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     private func sortedItems(_ plan: NativeUploadPlan) -> [NativeUploadPlanItem] {
         plan.items.sorted(using: uploadSortOrder)
@@ -119,7 +118,7 @@ struct UploadView: View {
                         return .handled
                     }
                     .onKeyPress(.space) {
-                        toggleUploadQuickView(in: plan)
+                        toggleUploadQuickLook(in: plan)
                         return .handled
                     }
                     HStack {
@@ -233,46 +232,6 @@ struct UploadView: View {
             }
         }
         .padding()
-        .overlay {
-            if let item = uploadQuickViewItem,
-               let plan = model.nativeUploadPlan {
-                UploadQuickView(
-                    item: item,
-                    image: model.nativeUploadPreviewItemID == item.id
-                        ? model.nativeUploadPreviewImage
-                        : nil
-                ) {
-                    closeUploadQuickView()
-                }
-                .focusable()
-                .focused($isUploadQuickViewFocused)
-                .onAppear {
-                    isUploadQuickViewFocused = true
-                }
-                .onKeyPress(.space) {
-                    closeUploadQuickView()
-                    return .handled
-                }
-                .onKeyPress(.upArrow) {
-                    moveUploadQuickView(in: plan, by: -1)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    moveUploadQuickView(in: plan, by: 1)
-                    return .handled
-                }
-                .onKeyPress("h") {
-                    guard !model.isRunningDelivery else { return .handled }
-                    hideCurrentUploadQuickView(in: plan)
-                    return .handled
-                }
-                .onKeyPress("r") {
-                    guard !model.isRunningDelivery else { return .handled }
-                    returnCurrentUploadQuickViewToReview(in: plan)
-                    return .handled
-                }
-            }
-        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty { await model.loadFixtures() }
@@ -280,6 +239,8 @@ struct UploadView: View {
                 await model.loadNativeUploadPlan()
             }
         }
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
             "Return the selected approved assets to Review?",
             isPresented: $confirmingReturnToReview
@@ -347,9 +308,9 @@ struct UploadView: View {
         }
     }
 
-    private func toggleUploadQuickView(in plan: NativeUploadPlan) {
-        if uploadQuickViewItem != nil {
-            closeUploadQuickView()
+    private func toggleUploadQuickLook(in plan: NativeUploadPlan) {
+        if quickLook.isVisible {
+            quickLook.dismiss()
             return
         }
         guard let item = sortedItems(plan).first(where: {
@@ -357,35 +318,68 @@ struct UploadView: View {
         }) else {
             return
         }
-        uploadQuickViewItem = item
-        isUploadQuickViewFocused = true
-        Task { await model.loadNativeUploadPreview(for: item) }
+        presentUploadQuickLook(item)
     }
 
-    private func closeUploadQuickView() {
-        isUploadQuickViewFocused = false
-        uploadQuickViewItem = nil
-        model.clearNativeUploadPreview()
+    private func presentUploadQuickLook(_ item: NativeUploadPlanItem) {
+        Task {
+            guard let url = await model.prepareNativeUploadQuickLookURL(for: item) else {
+                return
+            }
+            let source = model.cullingAssets.first(where: { $0.id == item.id })
+            let decision = model.cullingStates[item.id]
+            let metadata = BackstageQuickLookMetadata(
+                assetID: item.id,
+                filename: item.filename,
+                title: item.title,
+                keywords: item.keywords,
+                locationLabel: source?.locationLabel ?? "",
+                capturedAt: item.capturedAt,
+                rating: decision?.rating ?? source?.rating ?? 0,
+                color: decision?.color ?? source?.color ?? "",
+                state: item.deliveryState,
+                shortcutHint: "Shortcuts: ←/→ navigate • H hide • R return to Review"
+            )
+            quickLook.present(
+                urls: [url],
+                metadata: [metadata],
+                onShortcut: { shortcut, assetID in
+                    guard !model.isRunningDelivery else { return false }
+                    switch shortcut {
+                    case .previous:
+                        moveUploadQuickLook(from: assetID, by: -1)
+                    case .next:
+                        moveUploadQuickLook(from: assetID, by: 1)
+                    case .hide:
+                        hideCurrentUploadQuickLook(assetID: assetID)
+                    case .returnToReview:
+                        returnCurrentUploadQuickLookToReview(assetID: assetID)
+                    case .pick, .approve, .unpick, .rating, .color:
+                        return false
+                    }
+                    return true
+                }
+            )
+        }
     }
 
-    private func moveUploadQuickView(in plan: NativeUploadPlan, by delta: Int) {
+    private func moveUploadQuickLook(from assetID: String, by delta: Int) {
+        guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
-        guard let current = uploadQuickViewItem,
-              let index = items.firstIndex(where: { $0.id == current.id }) else {
+        guard let index = items.firstIndex(where: { $0.id == assetID }) else {
             return
         }
         let nextIndex = index + delta
         guard items.indices.contains(nextIndex) else { return }
         let next = items[nextIndex]
-        uploadQuickViewItem = next
         model.selectedDeliveryIDs = [next.id]
-        Task { await model.loadNativeUploadPreview(for: next) }
+        presentUploadQuickLook(next)
     }
 
-    private func hideCurrentUploadQuickView(in plan: NativeUploadPlan) {
+    private func hideCurrentUploadQuickLook(assetID: String) {
+        guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
-        guard let current = uploadQuickViewItem,
-              let currentIndex = items.firstIndex(where: { $0.id == current.id }) else {
+        guard let currentIndex = items.firstIndex(where: { $0.id == assetID }) else {
             return
         }
         let preferredNextID = items.indices.contains(currentIndex + 1)
@@ -393,11 +387,11 @@ struct UploadView: View {
             : items.indices.contains(currentIndex - 1)
                 ? items[currentIndex - 1].id
                 : nil
-        model.selectedDeliveryIDs = [current.id]
+        model.selectedDeliveryIDs = [assetID]
         Task {
             await model.hideSelectedUploads()
             guard let updatedPlan = model.nativeUploadPlan else {
-                closeUploadQuickView()
+                quickLook.dismiss()
                 return
             }
             let remaining = sortedItems(updatedPlan)
@@ -405,20 +399,18 @@ struct UploadView: View {
                 remaining.first(where: { $0.id == preferredID })
             } ?? remaining.first
             guard let next else {
-                closeUploadQuickView()
+                quickLook.dismiss()
                 return
             }
-            uploadQuickViewItem = next
             model.selectedDeliveryIDs = [next.id]
-            isUploadQuickViewFocused = true
-            await model.loadNativeUploadPreview(for: next)
+            presentUploadQuickLook(next)
         }
     }
 
-    private func returnCurrentUploadQuickViewToReview(in plan: NativeUploadPlan) {
+    private func returnCurrentUploadQuickLookToReview(assetID: String) {
+        guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
-        guard let current = uploadQuickViewItem,
-              let currentIndex = items.firstIndex(where: { $0.id == current.id }) else {
+        guard let currentIndex = items.firstIndex(where: { $0.id == assetID }) else {
             return
         }
         let preferredNextID = items.indices.contains(currentIndex + 1)
@@ -426,11 +418,11 @@ struct UploadView: View {
             : items.indices.contains(currentIndex - 1)
                 ? items[currentIndex - 1].id
                 : nil
-        model.selectedDeliveryIDs = [current.id]
+        model.selectedDeliveryIDs = [assetID]
         Task {
             await model.returnSelectedUploadsToReview()
             guard let updatedPlan = model.nativeUploadPlan else {
-                closeUploadQuickView()
+                quickLook.dismiss()
                 return
             }
             let remaining = sortedItems(updatedPlan)
@@ -438,13 +430,11 @@ struct UploadView: View {
                 remaining.first(where: { $0.id == preferredID })
             } ?? remaining.first
             guard let next else {
-                closeUploadQuickView()
+                quickLook.dismiss()
                 return
             }
-            uploadQuickViewItem = next
             model.selectedDeliveryIDs = [next.id]
-            isUploadQuickViewFocused = true
-            await model.loadNativeUploadPreview(for: next)
+            presentUploadQuickLook(next)
         }
     }
 }

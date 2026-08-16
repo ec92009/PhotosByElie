@@ -21,6 +21,7 @@ enum BackstageQuickLookShortcut: Equatable {
     case pick
     case hide
     case approve
+    case returnToReview
     case unpick
     case rating(Int)
     case color(SidecarColor)
@@ -205,6 +206,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         case "p": .pick
         case "h": .hide
         case "a": .approve
+        case "r": .returnToReview
         case "u": .unpick
         case "1": .rating(1)
         case "2": .rating(2)

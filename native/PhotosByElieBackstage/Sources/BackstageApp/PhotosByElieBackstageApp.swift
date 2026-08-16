@@ -1245,6 +1245,7 @@ struct FlowLayout: Layout {
 private struct MetadataGiveBackView: View {
     @ObservedObject var model: BackstageViewModel
     @State private var showingCommitConfirmation = false
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
         Form {
@@ -1288,6 +1289,15 @@ private struct MetadataGiveBackView: View {
                     Button("Use selected Photos item") { model.useSelectedPhotoForMetadata() }
                         .disabled(model.selectedPhotoIDs.isEmpty)
                         .backstageHelp("Copy the currently selected Photos asset ID into this Metadata editing form.")
+                    if !model.metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        metadataThumbnail(
+                            assetID: model.metadataAssetID,
+                            title: model.metadataTitle,
+                            keywords: model.metadataKeywords
+                                .split(separator: ",")
+                                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                        )
+                    }
                 }
                 TextField("Title", text: $model.metadataTitle)
                 TextField("Caption", text: $model.metadataCaption)
@@ -1391,6 +1401,14 @@ private struct MetadataGiveBackView: View {
                     BackstageFeedbackView(message: model.metadataProposalStatus)
                 }
                 Table(model.metadataProposals) {
+                    TableColumn("Preview") { proposal in
+                        metadataThumbnail(
+                            assetID: proposal.photoId,
+                            title: proposal.current.title,
+                            keywords: proposal.current.keywords
+                        )
+                    }
+                    .width(76)
                     TableColumn("Current") { proposal in
                         VStack(alignment: .leading) {
                             Text(proposal.current.title)
@@ -1497,6 +1515,8 @@ private struct MetadataGiveBackView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Metadata")
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
             "Write approved metadata to Apple Photos?",
             isPresented: $showingCommitConfirmation
@@ -1509,6 +1529,69 @@ private struct MetadataGiveBackView: View {
                 .backstageHelp("Close this confirmation without writing any metadata to Apple Photos.")
         } message: {
             Text("The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
+        }
+    }
+
+    private func metadataThumbnail(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) -> some View {
+        Button {
+            openMetadataQuickLook(
+                assetID: assetID,
+                title: title,
+                keywords: keywords
+            )
+        } label: {
+            Group {
+                if let thumbnail = model.cullingThumbnails[assetID] {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 64, height: 48)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open preview for \(title.isEmpty ? assetID : title)")
+        .backstageHelp("Open this exact Metadata asset in the canonical read-only Quick Look presentation.")
+        .task(id: assetID) { model.requestThumbnail(for: assetID) }
+    }
+
+    private func openMetadataQuickLook(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) {
+        Task {
+            guard let url = await model.prepareMetadataQuickLookURL(for: assetID) else {
+                return
+            }
+            let source = model.cullingAssets.first(where: { $0.id == assetID })
+            let decision = model.cullingStates[assetID]
+            quickLook.present(
+                urls: [url],
+                metadata: [
+                    BackstageQuickLookMetadata(
+                        assetID: assetID,
+                        filename: source?.filename ?? assetID,
+                        title: title,
+                        keywords: keywords,
+                        locationLabel: source?.locationLabel ?? "",
+                        capturedAt: source?.capturedAt ?? "",
+                        rating: decision?.rating ?? source?.rating ?? 0,
+                        color: decision?.color ?? source?.color ?? "",
+                        state: decision?.pickState ?? source?.placementState.rawValue ?? "metadata",
+                        shortcutHint: "Read-only Metadata preview • Escape closes"
+                    )
+                ]
+            )
         }
     }
 }

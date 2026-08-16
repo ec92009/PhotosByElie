@@ -47,7 +47,6 @@
 		88D3BAE82983A5520BD87C6A /* BackstageCodeSignatureVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E27EAC0D7AFD54514443059E /* BackstageCodeSignatureVerifier.swift */; };
 		909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AFF8771D0832D9829AB0B6 /* ReviewView.swift */; };
 		9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */; };
-		9F00E0A43942886320041C7C /* UploadQuickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F3F03071063B67EC84E3F4 /* UploadQuickView.swift */; };
 		A76BE94062F61D8477ECF3C9 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE1B4DAD75D5DA42F22F16F3 /* Network.framework */; };
 		A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */; };
 		AA8DFAFCDCA1BAD4790D3257 /* FixtureSelectionCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */; };
@@ -140,7 +139,6 @@
 		6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessControlService.swift; sourceTree = "<group>"; };
 		6F254F524C1CA93D37BE6A86 /* PhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryService.swift; sourceTree = "<group>"; };
 		CE7286C6C78B48C3843DD0B2 /* PhotoMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoMetadataService.swift; sourceTree = "<group>"; };
-		72F3F03071063B67EC84E3F4 /* UploadQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadQuickView.swift; sourceTree = "<group>"; };
 		7502CEEFDBCC869E566BF28A /* BackstageWindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageWindowState.swift; sourceTree = "<group>"; };
 		7C246863F54D8DD907520A7F /* OwnerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAPIClient.swift; sourceTree = "<group>"; };
 		7EEA8352484A30C52C52D650 /* OwnerCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCoreTests.swift; sourceTree = "<group>"; };
@@ -253,7 +251,6 @@
 				89AFF8771D0832D9829AB0B6 /* ReviewView.swift */,
 				4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */,
 				BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */,
-				72F3F03071063B67EC84E3F4 /* UploadQuickView.swift */,
 				B31D0E07A87397F37067AA7E /* UploadView.swift */,
 			);
 			name = BackstageApp;
@@ -466,7 +463,6 @@
 				909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */,
 				8053F33F07AB4E516EE2751F /* UploadHeaderView.swift in Sources */,
 				EDE2B294DDEAC12A59BD3DBE /* UploadPreview.swift in Sources */,
-				9F00E0A43942886320041C7C /* UploadQuickView.swift in Sources */,
 				26A15073D2A01FB5868A4DE2 /* UploadView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

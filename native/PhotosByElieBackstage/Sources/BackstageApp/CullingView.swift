@@ -70,7 +70,7 @@ private enum CullingQuickLookPresenter {
                             await model.applyColorShortcut(value)
                             refreshMetadata(assetID, model: model, coordinator: coordinator)
                         }
-                    case .approve, .unpick:
+                    case .approve, .returnToReview, .unpick:
                         return false
                     }
                     return true

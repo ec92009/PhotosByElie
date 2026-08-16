@@ -53,6 +53,30 @@ public enum PhotoLibraryError: Error, Sendable, Equatable {
     case metadataFailed(String)
 }
 
+enum PhotoLibraryIdentifier {
+    static let cloudPrefix = "apple-photos-cloud://"
+
+    static func cloudValue(from identifier: String) -> String? {
+        let value = identifier.hasPrefix(cloudPrefix)
+            ? String(identifier.dropFirst(cloudPrefix.count))
+            : identifier
+        let components = value.split(separator: ":", omittingEmptySubsequences: false)
+        guard components.count == 3,
+              UUID(uuidString: String(components[0])) != nil,
+              components[1].count == 3,
+              components[1].allSatisfy(\.isNumber),
+              (20...128).contains(components[2].count),
+              components[2].unicodeScalars.allSatisfy({ scalar in
+                  CharacterSet.alphanumerics.contains(scalar)
+                      || scalar == "+"
+                      || scalar == "/"
+                      || scalar == "="
+              })
+        else { return nil }
+        return value
+    }
+}
+
 extension PhotoLibraryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
@@ -577,13 +601,11 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let asset: PHAsset
         if let localAsset = fetchAsset(localIdentifier: identifier) {
             asset = localAsset
-        } else if #available(macOS 12.0, *) {
+        } else if #available(macOS 12.0, *),
+                  let cloudValue = PhotoLibraryIdentifier.cloudValue(from: identifier) {
             // Fixture IDs are stable across Macs while PhotoKit local
             // identifiers are library-local. Resolve the canonical cloud ID
             // when the connector does not provide a local Photos ID.
-            let cloudValue = identifier.hasPrefix("apple-photos-cloud://")
-                ? String(identifier.dropFirst("apple-photos-cloud://".count))
-                : identifier
             let cloudIdentifier = PHCloudIdentifier(stringValue: cloudValue)
             let mappings = PHPhotoLibrary.shared().localIdentifierMappings(for: [cloudIdentifier])
             guard let result = mappings[cloudIdentifier],

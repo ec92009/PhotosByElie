@@ -8,6 +8,27 @@ import Testing
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
+    @Test("PhotoKit cloud identifiers fail closed before native lookup")
+    func photoKitCloudIdentifiersFailClosed() {
+        let valid = "59647679-9EB0-46ED-9C2B-C98F61B58733:001:AZ69uAIW4v3U2XVypE0h8yYVh8mQ"
+        #expect(PhotoLibraryIdentifier.cloudValue(from: valid) == valid)
+        #expect(
+            PhotoLibraryIdentifier.cloudValue(from: "apple-photos-cloud://\(valid)") == valid
+        )
+
+        for invalid in [
+            "",
+            "upload-1",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:1:AZ69uAIW4v3U2XVypE0h8yYVh8mQ",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:001:",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:001:not valid whitespace",
+            "apple-photos-cloud://",
+        ] {
+            #expect(PhotoLibraryIdentifier.cloudValue(from: invalid) == nil)
+        }
+    }
+
     @Test("Quick Look close handling is scoped to the configured panel")
     @MainActor
     func quickLookCloseHandlingIsScoped() {

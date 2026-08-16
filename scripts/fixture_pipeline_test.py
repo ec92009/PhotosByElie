@@ -240,16 +240,23 @@ class FixturePipelineTest(unittest.TestCase):
     def test_culling_and_review_keep_photos_keywords_and_expose_location_separately(self):
         upsert_assets(self.root, [{
             "localIdentifier": "asset-gps",
-            "filename": "IMG_4497.HEIC",
+            "filename": "IMG_4497.jpg",
             "mediaType": "photo",
             "creationDate": "2026-08-05T17:40:00Z",
             "photosKeywords": ["Travel"],
             "location": {
-                "city": "Fuengirola",
-                "region": "Andalusia",
-                "country": "Spain",
+                "latitude": 36.56,
+                "longitude": -4.61,
             },
+            "preferredResourceFilename": "IMG_4497.HEIC",
+            "fallbackResourceFilename": "IMG_4497.HEIC",
+            "resourceFormat": "JPEG",
         }])
+        with connect(self.root) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET location_label = ?, location_keywords_json = ? WHERE asset_id = ?",
+                ("Spain", '["Spain"]', "asset-gps"),
+            )
         fixture = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(self.root, fixture["fixtureId"], ["asset-gps"], "picked")
 
@@ -266,8 +273,8 @@ class FixturePipelineTest(unittest.TestCase):
         )["items"][0]
         self.assertEqual(culling_item["keywords"], ["Travel"])
         self.assertEqual(review_item["keywords"], ["Travel"])
-        self.assertEqual(culling_item["locationLabel"], "Fuengirola, Andalusia, Spain")
-        self.assertEqual(review_item["locationLabel"], "Fuengirola, Andalusia, Spain")
+        self.assertEqual(culling_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(review_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
 
         record_decision(
             self.root,
@@ -291,8 +298,8 @@ class FixturePipelineTest(unittest.TestCase):
         )["items"][0]
         self.assertEqual(culling_after_decision["keywords"], [])
         self.assertEqual(review_after_decision["keywords"], [])
-        self.assertEqual(culling_after_decision["locationLabel"], "Fuengirola, Andalusia, Spain")
-        self.assertEqual(review_after_decision["locationLabel"], "Fuengirola, Andalusia, Spain")
+        self.assertEqual(culling_after_decision["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(review_after_decision["locationLabel"], "Fuengirola, Costa del Sol, Spain")
 
     def test_culling_universe_is_still_only_even_with_stale_video_filters(self):
         upsert_assets(self.root, [{

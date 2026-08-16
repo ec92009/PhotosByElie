@@ -158,6 +158,7 @@ CITY_GPS_HINTS: tuple[dict[str, Any], ...] = (
     {"city": "Solana Beach", "region": "California", "country": "United States", "lat": (32.98, 33.02), "lon": (-117.29, -117.24)},
     {"city": "Del Mar", "region": "California", "country": "United States", "lat": (32.93, 33.00), "lon": (-117.30, -117.22)},
     {"city": "San Diego", "region": "California", "country": "United States", "lat": (32.65, 32.90), "lon": (-117.30, -117.00)},
+    {"city": "Fuengirola", "region": "Costa del Sol", "country": "Spain", "lat": (36.50, 36.62), "lon": (-4.70, -4.52)},
     {"city": "Malaga", "region": "Andalusia", "country": "Spain", "lat": (36.62, 36.82), "lon": (-4.58, -4.25)},
     {"city": "Nerja", "region": "Andalusia", "country": "Spain", "lat": (36.70, 36.80), "lon": (-3.95, -3.80)},
     {"city": "Ronda", "region": "Andalusia", "country": "Spain", "lat": (36.68, 36.78), "lon": (-5.22, -5.10)},
@@ -632,6 +633,17 @@ def _location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], st
         label = ", ".join(_dedupe_text([poi.get("name"), place.get("city"), place.get("region"), place.get("country")]))
     title_place = str(poi.get("name") or place.get("city") or place.get("country") or (keywords[0] if keywords else "")).strip()
     return label, keywords, title_place
+
+
+def location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], str]:
+    """Return the canonical location projection for a stored Photos row.
+
+    Fixture reads use this public wrapper to repair labels that were derived
+    before a GPS hint was added, without mutating the Owner database merely to
+    render a more precise location.
+    """
+
+    return _location_metadata_from_row(row)
 
 
 def _seedable_title(value: Any) -> str:

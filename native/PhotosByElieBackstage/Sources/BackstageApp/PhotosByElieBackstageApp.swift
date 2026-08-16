@@ -39,9 +39,9 @@ public struct BackstageApplication: App {
                         ToolbarItem(placement: .primaryAction) {
                             HStack(spacing: 10) {
                                 Text(backstageVersionLabel)
-                                    .font(.caption.monospacedDigit())
+                                    .font(.caption.monospacedDigit().weight(.semibold))
                                     .foregroundStyle(.secondary)
-                                    .help("Installed PhotosByElie Backstage version")
+                                    .help("Installed PhotosByElie Backstage version and build")
                                 if model.authentication.phase == .authenticated {
                                     if model.selection == .culling || model.selection == .review {
                                         Button {
@@ -109,7 +109,7 @@ public struct BackstageApplication: App {
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "?"
-        return "v\(short) (\(build))"
+        return "Backstage v\(short) · build \(build)"
     }
 
     @ViewBuilder

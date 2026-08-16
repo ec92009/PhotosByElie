@@ -23,6 +23,7 @@ from sidecar_state_db import (
     DEFAULT_DB as OWNER_DB,
     connect as connect_owner,
     editorial_version_hash as sidecar_editorial_version_hash,
+    location_metadata_from_row,
 )
 
 
@@ -60,6 +61,24 @@ def _read_json(value: Any, fallback: Any) -> Any:
         return json.loads(str(value or ""))
     except json.JSONDecodeError:
         return fallback
+
+
+def _location_label_specificity(value: Any) -> int:
+    return sum(1 for part in str(value or "").split(",") if part.strip())
+
+
+def _location_label_for_row(row: sqlite3.Row) -> str:
+    """Prefer a more precise GPS-derived label while retaining stored detail."""
+
+    stored = str(row["location_label"] or "").strip() if "location_label" in row.keys() else ""
+    raw = _read_json(row["raw_json"], {}) if "raw_json" in row.keys() else {}
+    derived = ""
+    if isinstance(raw, dict):
+        derived, _, _ = location_metadata_from_row(raw)
+        derived = str(derived or "").strip()
+    if derived and _location_label_specificity(derived) > _location_label_specificity(stored):
+        return derived
+    return stored or derived
 
 
 def _clean_name(value: Any) -> str:
@@ -1624,7 +1643,7 @@ def fixture_culling_window(
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or "photo"),
             "capturedAt": str(row["captured_at"] or ""),
-            "locationLabel": str(row["location_label"] or ""),
+            "locationLabel": _location_label_for_row(row),
             "pixelWidth": int(row["pixel_width"] or 0),
             "pixelHeight": int(row["pixel_height"] or 0),
             "resourceFormat": str(row["resource_format"] or ""),
@@ -1818,7 +1837,7 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "filename": str(row["filename"] or ""),
         "mediaType": str(row["media_type"] or "photo"),
         "capturedAt": str(row["captured_at"] or ""),
-        "locationLabel": str(row["location_label"] or ""),
+        "locationLabel": _location_label_for_row(row),
         "rating": int(row["rating"] or 0),
         "color": str(row["color"] or ""),
         "placementState": str(row["placement_state"] or "picked"),

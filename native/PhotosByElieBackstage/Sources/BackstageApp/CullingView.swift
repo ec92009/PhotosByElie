@@ -174,6 +174,12 @@ struct CullingView: View {
         }
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            quickLook.activate()
+        }
+        .onDisappear {
+            quickLook.deactivate()
+        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {

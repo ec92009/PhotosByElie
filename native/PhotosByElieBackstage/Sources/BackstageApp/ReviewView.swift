@@ -389,6 +389,12 @@ struct ReviewView: View {
         }
         .background(SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit"))
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
+        .onAppear {
+            quickLook.activate()
+        }
+        .onDisappear {
+            quickLook.deactivate()
+        }
         .sheet(item: $visualComparisonTarget) { target in
             if let item = model.reviewItems.first(where: { $0.id == target.id }) {
                 VisualRepairComparisonView(

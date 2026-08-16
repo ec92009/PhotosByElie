@@ -517,6 +517,39 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.moveReviewSelection(by: delta, extending: false)", review_presenter)
         self.assertIn("coordinator.dismiss()", review_presenter)
 
+    def test_quick_look_owner_lifecycle_dismisses_stale_coordinator(self):
+        adapter = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+
+        for filename in ("CullingView.swift", "ReviewView.swift"):
+            source = (
+                NATIVE / "Sources" / "BackstageApp" / filename
+            ).read_text(encoding="utf-8")
+            self.assertRegex(
+                source,
+                r"\.onAppear\s*\{\s*quickLook\.activate\(\)\s*\}",
+            )
+            self.assertRegex(
+                source,
+                r"\.onDisappear\s*\{\s*quickLook\.deactivate\(\)\s*\}",
+            )
+
+        self.assertIn("private var isOwnerActive = true", adapter)
+        self.assertIn("func activate()", adapter)
+        deactivate = adapter.split("func deactivate()", 1)[1].split(
+            "func present(", 1
+        )[0]
+        self.assertIn("isOwnerActive = false", deactivate)
+        self.assertIn("dismiss()", deactivate)
+        present = adapter.split("func present(", 1)[1].split(
+            "func dismiss()", 1
+        )[0]
+        self.assertIn("guard isOwnerActive else { return }", present)
+
     def test_fixture_policy_controls_adapt_to_the_available_width(self):
         source = backstage_ui_source()
         for marker in (

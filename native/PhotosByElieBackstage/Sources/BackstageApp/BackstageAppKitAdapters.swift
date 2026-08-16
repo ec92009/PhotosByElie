@@ -81,6 +81,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         return window
     }()
     private var isMetadataPanelConfigured = false
+    private var isOwnerActive = true
     private static let quickLookFrameAutosaveName =
         "PhotosByElieBackstage.QuickLookWindow"
 
@@ -93,12 +94,22 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         QLPreviewPanel.shared()?.isVisible == true
     }
 
+    func activate() {
+        isOwnerActive = true
+    }
+
+    func deactivate() {
+        isOwnerActive = false
+        dismiss()
+    }
+
     func present(
         urls: [URL],
         startingAt index: Int = 0,
         metadata: [BackstageQuickLookMetadata] = [],
         onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil
     ) {
+        guard isOwnerActive else { return }
         items = urls.map { $0 as NSURL }
         self.metadata = metadata
         guard let panel = QLPreviewPanel.shared() else { return }

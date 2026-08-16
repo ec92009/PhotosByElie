@@ -941,7 +941,22 @@ def _load_local_modules(runtime_root: Path):
     # invariant instead of a best-effort path hint.
     sys.path[:] = [entry for entry in sys.path if str(Path(entry or ".").resolve()) != scripts_path]
     sys.path.insert(0, scripts_path)
-    for module_name in ("local_server", "sidecar_server"):
+    # Purge every runtime-owned module name, not just the two connector entry
+    # points. Those entry points import a sizeable sibling graph (for example
+    # import_source_anchor). Keeping one transitive sibling cached from the
+    # mutable data checkout can make an otherwise attested runtime execute an
+    # incompatible mix of revisions.
+    runtime_module_names: set[str] = set()
+    for source_path in scripts_root.rglob("*.py"):
+        relative_path = source_path.relative_to(scripts_root)
+        if relative_path.name == "__init__.py":
+            if relative_path.parent.parts:
+                runtime_module_names.add(".".join(relative_path.parent.parts))
+        else:
+            runtime_module_names.add(".".join(relative_path.with_suffix("").parts))
+            runtime_module_names.add(source_path.stem)
+
+    for module_name in sorted(runtime_module_names):
         loaded = sys.modules.get(module_name)
         loaded_file = getattr(loaded, "__file__", "") if loaded is not None else ""
         if loaded_file:
@@ -960,6 +975,18 @@ def _load_local_modules(runtime_root: Path):
         except ValueError as error:
             raise RuntimeError(
                 f"Installed connector runtime did not supply {module_name}: {loaded_file}"
+            ) from error
+
+    for module_name in sorted(runtime_module_names):
+        loaded = sys.modules.get(module_name)
+        loaded_file = getattr(loaded, "__file__", "") if loaded is not None else ""
+        if not loaded_file:
+            continue
+        try:
+            Path(loaded_file).resolve().relative_to(scripts_root)
+        except ValueError as error:
+            raise RuntimeError(
+                f"Installed connector runtime retained mutable sibling {module_name}: {loaded_file}"
             ) from error
 
     return (

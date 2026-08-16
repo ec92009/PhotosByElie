@@ -50,9 +50,14 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             runtime_scripts.mkdir()
             checkout_scripts.mkdir()
             (runtime_scripts / "local_server.py").write_text(
+                "from import_source_anchor import source_identity_from_row\n"
                 "new_owner_connector_result = 'runtime-connector'\n"
                 "new_owner_sidecar_decision_result = 'runtime-decision'\n"
-                "apply_public_photo_moderation = 'runtime-moderation'\n",
+                "apply_public_photo_moderation = source_identity_from_row\n",
+                encoding="utf-8",
+            )
+            (runtime_scripts / "import_source_anchor.py").write_text(
+                "source_identity_from_row = 'runtime-moderation'\n",
                 encoding="utf-8",
             )
             (runtime_scripts / "sidecar_server.py").write_text(
@@ -70,14 +75,20 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 "_preview_cache_path = 'checkout-cache'\n",
                 encoding="utf-8",
             )
+            (checkout_scripts / "import_source_anchor.py").write_text(
+                "checkout_only = True\n",
+                encoding="utf-8",
+            )
             original_path = list(sys.path)
             original_modules = {
-                name: sys.modules.get(name) for name in ("local_server", "sidecar_server")
+                name: sys.modules.get(name)
+                for name in ("local_server", "sidecar_server", "import_source_anchor")
             }
             try:
                 sys.path.insert(0, str(checkout_scripts))
                 importlib.import_module("local_server")
                 importlib.import_module("sidecar_server")
+                importlib.import_module("import_source_anchor")
 
                 loaded = _load_local_modules(Path(runtime_temp))
 
@@ -93,6 +104,11 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 )
                 self.assertTrue(
                     Path(sys.modules["sidecar_server"].__file__).resolve().is_relative_to(
+                        runtime_scripts.resolve()
+                    )
+                )
+                self.assertTrue(
+                    Path(sys.modules["import_source_anchor"].__file__).resolve().is_relative_to(
                         runtime_scripts.resolve()
                     )
                 )

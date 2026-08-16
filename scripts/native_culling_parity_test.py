@@ -648,10 +648,13 @@ class NativeCullingParityTest(unittest.TestCase):
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",
             culling,
         )
-        self.assertNotIn("GeometryReader { viewport in", culling)
+        self.assertIn("GeometryReader { viewport in", culling)
         self.assertNotIn("viewport.safeAreaInsets", culling)
         self.assertNotIn(".padding(.top, topInset)", culling)
         self.assertNotIn(".padding(.bottom, bottomInset)", culling)
+        self.assertIn("width: viewport.size.width", culling)
+        self.assertIn("height: viewport.size.height", culling)
+        self.assertGreaterEqual(culling.count("height: viewport.size.height"), 3)
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", culling)
 
     def test_culling_filters_are_visible_immediate_and_stale_safe(self):
@@ -807,8 +810,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "228.6")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "98")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "228.9")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "101")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn('source "$release_metadata"', bridge_installer)
         self.assertIn("PBE_BACKSTAGE_INFO_PLIST", bridge_installer)

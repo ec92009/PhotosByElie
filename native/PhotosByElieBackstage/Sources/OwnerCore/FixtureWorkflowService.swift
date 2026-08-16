@@ -57,6 +57,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
+    public var locationLabel: String
     public var pixelWidth: Int
     public var pixelHeight: Int
     public var resourceFormat: String
@@ -75,6 +76,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename: String,
         mediaType: String,
         capturedAt: String = "",
+        locationLabel: String = "",
         pixelWidth: Int = 0,
         pixelHeight: Int = 0,
         resourceFormat: String = "",
@@ -92,6 +94,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
+        self.locationLabel = locationLabel
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
         self.resourceFormat = resourceFormat
@@ -111,6 +114,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? json["kind"]?.stringValue ?? ""
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        locationLabel = json["locationLabel"]?.stringValue ?? ""
         pixelWidth = json["pixelWidth"]?.intValue ?? 0
         pixelHeight = json["pixelHeight"]?.intValue ?? 0
         resourceFormat = json["resourceFormat"]?.stringValue ?? ""
@@ -527,6 +531,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var title: String
     public var caption: String
     public var keywords: [String]
+    public var locationLabel: String
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
@@ -559,6 +564,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         title: String,
         caption: String = "",
         keywords: [String],
+        locationLabel: String = "",
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
@@ -590,6 +596,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.title = title
         self.caption = caption
         self.keywords = keywords
+        self.locationLabel = locationLabel
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
@@ -623,6 +630,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         title = json["title"]?.stringValue ?? ""
         caption = json["caption"]?.stringValue ?? ""
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        locationLabel = json["locationLabel"]?.stringValue ?? ""
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? "photo"
         capturedAt = json["capturedAt"]?.stringValue ?? ""

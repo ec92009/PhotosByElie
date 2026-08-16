@@ -237,7 +237,7 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
-    def test_culling_and_review_use_seeded_location_keywords_until_metadata_is_local(self):
+    def test_culling_and_review_keep_photos_keywords_and_expose_location_separately(self):
         upsert_assets(self.root, [{
             "localIdentifier": "asset-gps",
             "filename": "IMG_4497.HEIC",
@@ -264,9 +264,10 @@ class FixturePipelineTest(unittest.TestCase):
             fixture["fixtureId"],
             search="IMG_4497",
         )["items"][0]
-        expected_seed_keywords = ["Travel", "Fuengirola", "Andalusia", "Spain"]
-        self.assertEqual(culling_item["keywords"], expected_seed_keywords)
-        self.assertEqual(review_item["keywords"], expected_seed_keywords)
+        self.assertEqual(culling_item["keywords"], ["Travel"])
+        self.assertEqual(review_item["keywords"], ["Travel"])
+        self.assertEqual(culling_item["locationLabel"], "Fuengirola, Andalusia, Spain")
+        self.assertEqual(review_item["locationLabel"], "Fuengirola, Andalusia, Spain")
 
         record_decision(
             self.root,
@@ -277,23 +278,21 @@ class FixturePipelineTest(unittest.TestCase):
                 "keywords": [],
             },
         )
-        self.assertEqual(
-            fixture_culling_window(
-                self.root,
-                fixture["fixtureId"],
-                view="picked",
-                search="IMG_4497",
-            )["items"][0]["keywords"],
-            [],
-        )
-        self.assertEqual(
-            fixture_review_window(
-                self.root,
-                fixture["fixtureId"],
-                search="IMG_4497",
-            )["items"][0]["keywords"],
-            [],
-        )
+        culling_after_decision = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="picked",
+            search="IMG_4497",
+        )["items"][0]
+        review_after_decision = fixture_review_window(
+            self.root,
+            fixture["fixtureId"],
+            search="IMG_4497",
+        )["items"][0]
+        self.assertEqual(culling_after_decision["keywords"], [])
+        self.assertEqual(review_after_decision["keywords"], [])
+        self.assertEqual(culling_after_decision["locationLabel"], "Fuengirola, Andalusia, Spain")
+        self.assertEqual(review_after_decision["locationLabel"], "Fuengirola, Andalusia, Spain")
 
     def test_culling_universe_is_still_only_even_with_stale_video_filters(self):
         upsert_assets(self.root, [{

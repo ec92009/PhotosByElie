@@ -7,6 +7,7 @@ struct BackstageQuickLookMetadata: Equatable {
     var filename: String
     var title: String
     var keywords: [String]
+    var locationLabel: String
     var capturedAt: String
     var rating: Int
     var color: String
@@ -267,6 +268,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         addMetadataRow("File", value: item.filename)
         addMetadataRow("Title", value: item.title.isEmpty ? "Untitled" : item.title)
         addMetadataRow(
+            "Location",
+            value: item.locationLabel.isEmpty ? "None" : item.locationLabel
+        )
+        addMetadataRow(
             "Keywords",
             value: item.keywords.isEmpty ? "None" : item.keywords.joined(separator: ", ")
         )
@@ -288,7 +293,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
         let placement = currentMetadataPlacement
         let gap: CGFloat = 8
-        let metadataHeight: CGFloat = 250
+        let metadataHeight: CGFloat = 280
         let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
         var panelFrame = panel.frame
 

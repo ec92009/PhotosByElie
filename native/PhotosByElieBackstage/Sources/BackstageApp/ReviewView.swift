@@ -120,6 +120,7 @@ private enum ReviewQuickLookPresenter {
             filename: item.filename,
             title: draft?.title ?? item.title,
             keywords: draft?.keywords ?? item.keywords,
+            locationLabel: item.locationLabel,
             capturedAt: item.capturedAt,
             rating: item.rating,
             color: item.color,

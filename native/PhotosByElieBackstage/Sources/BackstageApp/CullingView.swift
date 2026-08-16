@@ -139,6 +139,7 @@ private enum CullingQuickLookPresenter {
             filename: asset.filename,
             title: asset.title,
             keywords: asset.keywords,
+            locationLabel: asset.locationLabel,
             capturedAt: asset.capturedAt,
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
@@ -767,6 +768,10 @@ struct CullingView: View {
             metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
             metadataRow("Dimensions", value: formattedDimensions(asset))
             metadataRow("Original size", value: formattedOriginalSize(asset.originalByteCount))
+            metadataRow(
+                "Location",
+                value: asset.locationLabel.isEmpty ? "No location" : asset.locationLabel
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text("Keywords")
                     .font(.caption.weight(.semibold))

@@ -1572,6 +1572,7 @@ def fixture_culling_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   a.location_label,
                    COALESCE(a.pixel_width, 0) pixel_width,
                    COALESCE(a.pixel_height, 0) pixel_height,
                    COALESCE(
@@ -1605,11 +1606,7 @@ def fixture_culling_window(
                    CASE
                      WHEN COALESCE(global_decision.metadata_state, 'unreviewed') <> 'unreviewed'
                        THEN COALESCE(global_decision.keywords_json, '[]')
-                     ELSE COALESCE(
-                       NULLIF(a.metadata_seed_keywords_json, ''),
-                       NULLIF(a.photos_keywords_json, ''),
-                       '[]'
-                     )
+                     ELSE COALESCE(NULLIF(a.photos_keywords_json, ''), '[]')
                    END keywords_json
             FROM {from_sql}
             WHERE {view_where_sql}
@@ -1627,6 +1624,7 @@ def fixture_culling_window(
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or "photo"),
             "capturedAt": str(row["captured_at"] or ""),
+            "locationLabel": str(row["location_label"] or ""),
             "pixelWidth": int(row["pixel_width"] or 0),
             "pixelHeight": int(row["pixel_height"] or 0),
             "resourceFormat": str(row["resource_format"] or ""),
@@ -1820,6 +1818,7 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "filename": str(row["filename"] or ""),
         "mediaType": str(row["media_type"] or "photo"),
         "capturedAt": str(row["captured_at"] or ""),
+        "locationLabel": str(row["location_label"] or ""),
         "rating": int(row["rating"] or 0),
         "color": str(row["color"] or ""),
         "placementState": str(row["placement_state"] or "picked"),
@@ -1954,6 +1953,7 @@ def fixture_review_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   a.location_label,
                    latest_source_version.version_id source_version_id,
                    current_decision.placement_state,
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
@@ -1961,11 +1961,7 @@ def fixture_review_window(
                    CASE
                      WHEN COALESCE(decision.metadata_state, 'unreviewed') <> 'unreviewed'
                        THEN COALESCE(decision.keywords_json, '[]')
-                     ELSE COALESCE(
-                       NULLIF(a.metadata_seed_keywords_json, ''),
-                       NULLIF(a.photos_keywords_json, ''),
-                       '[]'
-                     )
+                     ELSE COALESCE(NULLIF(a.photos_keywords_json, ''), '[]')
                    END keywords_json,
                    COALESCE(decision.rating, 0) rating,
                    COALESCE(decision.color, '') color,

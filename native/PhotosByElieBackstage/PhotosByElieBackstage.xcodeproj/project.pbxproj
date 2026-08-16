@@ -734,7 +734,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 96;
+				CURRENT_PROJECT_VERSION = 97;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -744,7 +744,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 228.4;
+				MARKETING_VERSION = 228.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;
@@ -757,7 +757,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 96;
+				CURRENT_PROJECT_VERSION = 97;
 				ENABLE_DEBUG_DYLIB = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PhotosByElie Backstage";
@@ -767,7 +767,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 228.4;
+				MARKETING_VERSION = 228.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.photosbyelie.backstage.canvas;
 				PRODUCT_NAME = PhotosByElieBackstage;
 				SDKROOT = macosx;

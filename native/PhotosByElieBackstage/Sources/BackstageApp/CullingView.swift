@@ -194,19 +194,22 @@ struct CullingView: View {
         VStack(alignment: .leading, spacing: 12) {
             cullingHeader
             cullingGrid
+            cullingFooter
         }
         .padding()
         .frame(minWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // The footer owns the action, status, and keyboard-help copy. The inset
-        // reserves its height from the grid so resizing cannot cover it.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                Divider()
-                cullingActions
-            }
-            .padding(.top, 8)
+    }
+
+    private var cullingFooter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+            cullingActions
         }
+        .padding(.top, 8)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .bottomLeading)
+        .layoutPriority(2)
     }
 
     private var cullingHeader: some View {

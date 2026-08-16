@@ -596,7 +596,6 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".clipped()", grid)
         self.assertIn(".id(cullingViewportIdentity)", grid)
         self.assertIn(".padding(.top, 12)", grid)
-        self.assertIn(".safeAreaInset(edge: .bottom, spacing: 0)", culling)
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
         self.assertIn(".layoutPriority(2)", culling)
         self.assertNotIn(".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)", culling)
@@ -605,7 +604,13 @@ class NativeCullingParityTest(unittest.TestCase):
             "private var cullingHeader", 1
         )[0]
         self.assertIn("cullingActions", workspace)
+        self.assertIn("cullingHeader", workspace)
+        self.assertIn("cullingGrid", workspace)
+        self.assertIn("cullingFooter", workspace)
+        self.assertLess(workspace.index("cullingHeader"), workspace.index("cullingGrid"))
+        self.assertLess(workspace.index("cullingGrid"), workspace.index("cullingFooter"))
         self.assertNotIn(".clipped()", workspace)
+        self.assertNotIn(".safeAreaInset(edge: .bottom, spacing: 0)", culling)
         self.assertIn(".frame(minWidth: 480)", culling)
         self.assertIn(
             ".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)",

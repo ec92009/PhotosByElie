@@ -932,13 +932,43 @@ class WorkerClient:
 
 
 def _load_local_modules(runtime_root: Path):
-    scripts_path = str(runtime_root / "scripts")
-    if scripts_path not in sys.path:
-        sys.path.insert(0, scripts_path)
-    from local_server import apply_public_photo_moderation, new_owner_connector_result, new_owner_sidecar_decision_result
-    from sidecar_server import _preview_cache_path, _run_backstage_photos_preview_task
+    scripts_root = (runtime_root / "scripts").resolve(strict=True)
+    scripts_path = str(scripts_root)
+    # The data checkout is deliberately the mutable Owner.sqlite root, not an
+    # executable-code source.  A long-lived connector can nevertheless have
+    # that checkout's scripts directory earlier in sys.path (or retain one of
+    # its modules from an older action).  Make the installed runtime an
+    # invariant instead of a best-effort path hint.
+    sys.path[:] = [entry for entry in sys.path if str(Path(entry or ".").resolve()) != scripts_path]
+    sys.path.insert(0, scripts_path)
+    for module_name in ("local_server", "sidecar_server"):
+        loaded = sys.modules.get(module_name)
+        loaded_file = getattr(loaded, "__file__", "") if loaded is not None else ""
+        if loaded_file:
+            try:
+                Path(loaded_file).resolve().relative_to(scripts_root)
+            except ValueError:
+                sys.modules.pop(module_name, None)
 
-    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_backstage_photos_preview_task, apply_public_photo_moderation
+    import local_server
+    import sidecar_server
+
+    for module_name, module in (("local_server", local_server), ("sidecar_server", sidecar_server)):
+        loaded_file = Path(str(getattr(module, "__file__", ""))).resolve()
+        try:
+            loaded_file.relative_to(scripts_root)
+        except ValueError as error:
+            raise RuntimeError(
+                f"Installed connector runtime did not supply {module_name}: {loaded_file}"
+            ) from error
+
+    return (
+        local_server.new_owner_connector_result,
+        local_server.new_owner_sidecar_decision_result,
+        sidecar_server._preview_cache_path,
+        sidecar_server._run_backstage_photos_preview_task,
+        local_server.apply_public_photo_moderation,
+    )
 
 
 def _load_lifecycle_gateway(repo_root: Path):

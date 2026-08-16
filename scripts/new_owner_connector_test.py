@@ -1,5 +1,6 @@
 import unittest
 import hashlib
+import importlib
 import json
 from pathlib import Path
 import sqlite3
@@ -18,6 +19,7 @@ from scripts.new_owner_connector import (
     WorkerClient,
     _allowed_local_status_origin,
     _launch_sidecar_workspace,
+    _load_local_modules,
     _local_status_payload,
     _local_sidecar_open_action,
     _action_is_read_only,
@@ -40,6 +42,66 @@ import waste_basket_gateway as lifecycle_gateway
 class UploadRegistrationScopeTest(unittest.TestCase):
     def setUp(self):
         self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+    def test_runtime_modules_replace_mutable_checkout_shadows(self):
+        with TemporaryDirectory() as runtime_temp, TemporaryDirectory() as checkout_temp:
+            runtime_scripts = Path(runtime_temp) / "scripts"
+            checkout_scripts = Path(checkout_temp) / "scripts"
+            runtime_scripts.mkdir()
+            checkout_scripts.mkdir()
+            (runtime_scripts / "local_server.py").write_text(
+                "new_owner_connector_result = 'runtime-connector'\n"
+                "new_owner_sidecar_decision_result = 'runtime-decision'\n"
+                "apply_public_photo_moderation = 'runtime-moderation'\n",
+                encoding="utf-8",
+            )
+            (runtime_scripts / "sidecar_server.py").write_text(
+                "_preview_cache_path = 'runtime-cache'\n"
+                "_run_backstage_photos_preview_task = 'runtime-preview'\n",
+                encoding="utf-8",
+            )
+            (checkout_scripts / "local_server.py").write_text(
+                "new_owner_connector_result = 'checkout-connector'\n"
+                "new_owner_sidecar_decision_result = 'checkout-decision'\n"
+                "apply_public_photo_moderation = 'checkout-moderation'\n",
+                encoding="utf-8",
+            )
+            (checkout_scripts / "sidecar_server.py").write_text(
+                "_preview_cache_path = 'checkout-cache'\n",
+                encoding="utf-8",
+            )
+            original_path = list(sys.path)
+            original_modules = {
+                name: sys.modules.get(name) for name in ("local_server", "sidecar_server")
+            }
+            try:
+                sys.path.insert(0, str(checkout_scripts))
+                importlib.import_module("local_server")
+                importlib.import_module("sidecar_server")
+
+                loaded = _load_local_modules(Path(runtime_temp))
+
+                self.assertEqual(
+                    loaded,
+                    (
+                        "runtime-connector",
+                        "runtime-decision",
+                        "runtime-cache",
+                        "runtime-preview",
+                        "runtime-moderation",
+                    ),
+                )
+                self.assertTrue(
+                    Path(sys.modules["sidecar_server"].__file__).resolve().is_relative_to(
+                        runtime_scripts.resolve()
+                    )
+                )
+            finally:
+                sys.path[:] = original_path
+                for name, module in original_modules.items():
+                    sys.modules.pop(name, None)
+                    if module is not None:
+                        sys.modules[name] = module
 
     def test_launch_agent_does_not_throttle_interactive_owner_reads(self):
         template = (

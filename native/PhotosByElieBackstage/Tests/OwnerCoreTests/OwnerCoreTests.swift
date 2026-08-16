@@ -6,6 +6,60 @@ import Testing
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
+    @Test("Visual repair scope is limited to RE roots and descendants")
+    func visualRepairScopeGuards() {
+        let re = FixtureNode(
+            id: "fixture-re",
+            name: "RE",
+            templateKey: "real-estate",
+            children: [FixtureNode(id: "fixture-re-child", name: "La Concha")]
+        )
+        let expo = FixtureNode(id: "fixture-expo", name: "Expo", templateKey: "expo")
+        #expect(VisualRepairScope.isREReview(path: [re]))
+        #expect(VisualRepairScope.isREReview(path: [re, re.children[0]]))
+        #expect(!VisualRepairScope.isREReview(path: [expo]))
+        #expect(!VisualRepairScope.isREReview(path: []))
+    }
+
+    @Test("Visual comparison stays read-only and exposes missing proposal state")
+    func visualRepairComparisonState() {
+        let unavailable = VisualRepairComparisonState(
+            originalReference: "immutable-source-version://source-1"
+        )
+        #expect(unavailable.isReadOnly)
+        #expect(!unavailable.proposalAvailable)
+        #expect(unavailable.proposedReference.isEmpty)
+        #expect(unavailable.message.contains("not configured"))
+
+        let proposal = VisualRepairProposal(
+            id: "proposal-1",
+            fixtureID: "fixture-re",
+            assetID: "asset-1",
+            sourceVersionID: "source-1",
+            defectCategories: [.contrast],
+            ladderRung: 1,
+            modelLadder: [VisualRepairModelLadderRung(model: "gpt-5.4-mini", effort: "low")],
+            requestedGeneratorModel: "gpt-5.4-mini",
+            resolvedModel: "gpt-5.4-mini",
+            reasoningEffort: "low",
+            vision: true,
+            attempt: 1,
+            status: .draft,
+            originalReference: "immutable-source-version://source-1",
+            derivedReference: "synthetic://visual-repair/derived/one",
+            derivedAvailable: true,
+            generatorReference: "synthetic-generator://synthetic"
+        )
+        let comparison = VisualRepairComparisonState(
+            originalReference: proposal.originalReference,
+            proposal: proposal
+        )
+        #expect(comparison.isReadOnly)
+        #expect(!comparison.proposalAvailable)
+        #expect(comparison.proposedReference.isEmpty)
+        #expect(comparison.message.contains("not configured"))
+    }
+
     @Test("Decodes the published action page fixture")
     func decodesActionPage() throws {
         let url = try #require(Bundle.module.url(forResource: "action-page", withExtension: "json", subdirectory: "Fixtures"))

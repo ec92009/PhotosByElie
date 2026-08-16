@@ -14,6 +14,7 @@
 		18635E94AED6F0F74792CD27 /* CullingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74526F4B1ADCEAE9881A458 /* CullingView.swift */; };
 		1A87044DE6560F9EDE957523 /* OwnerCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EEA8352484A30C52C52D650 /* OwnerCoreTests.swift */; };
 		1DC5B1F0D74089B35C517977 /* FixtureWorkflowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */; };
+		0D7B4A0E4C5F0B6D1D0D1440 /* VisualRepairProposalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7B4A0E4C5F0B6D1D0D1441 /* VisualRepairProposalService.swift */; };
 		1ED369EC57AD5245AAC08D8F /* owner-api-examples.json in Resources */ = {isa = PBXBuildFile; fileRef = 2E049889FFB8A0BF84C78303 /* owner-api-examples.json */; };
 		2123229D75449CF4AC397DFC /* BackstageHoverHelp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EFF756CB24FBF86D119683F /* BackstageHoverHelp.swift */; };
 		21B5A107EDBB9257F55504E0 /* OwnerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C246863F54D8DD907520A7F /* OwnerAPIClient.swift */; };
@@ -149,6 +150,7 @@
 		8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureDeliveryService.swift; sourceTree = "<group>"; };
 		928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureWorkflowService.swift; sourceTree = "<group>"; };
+		0D7B4A0E4C5F0B6D1D0D1441 /* VisualRepairProposalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualRepairProposalService.swift; sourceTree = "<group>"; };
 		937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerContract.generated.swift; sourceTree = "<group>"; };
 		9EFF756CB24FBF86D119683F /* BackstageHoverHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelp.swift; sourceTree = "<group>"; };
 		AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelpTests.swift; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 				8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */,
 				3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */,
 				928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */,
+				0D7B4A0E4C5F0B6D1D0D1441 /* VisualRepairProposalService.swift */,
 				EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */,
 				3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */,
 				8A0F0E197FD86EC46D20B800 /* MetadataGiveBackService.swift */,
@@ -491,6 +494,7 @@
 				C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */,
 				798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */,
 				1DC5B1F0D74089B35C517977 /* FixtureWorkflowService.swift in Sources */,
+				0D7B4A0E4C5F0B6D1D0D1440 /* VisualRepairProposalService.swift in Sources */,
 				475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */,
 				CE890E5906913FF1CEAB3B1A /* LifecycleService.swift in Sources */,
 				24656154924A698C1CB836B8 /* MetadataGiveBackService.swift in Sources */,

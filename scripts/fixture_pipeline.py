@@ -1804,6 +1804,7 @@ def _photo_library_identifier(row: sqlite3.Row) -> str:
 def _review_item(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "assetId": str(row["asset_id"]),
+        "sourceVersionId": str(row["source_version_id"] or ""),
         "photoLibraryIdentifier": _photo_library_identifier(row),
         "title": str(row["title"] or ""),
         "caption": str(row["caption"] or ""),
@@ -1893,6 +1894,14 @@ def fixture_review_window(
               ON editorial.asset_id = a.asset_id
             JOIN asset_delivery_state AS delivery
               ON delivery.asset_id = a.asset_id
+            LEFT JOIN asset_source_versions AS latest_source_version
+              ON latest_source_version.version_id = (
+                SELECT source_version.version_id
+                FROM asset_source_versions AS source_version
+                WHERE source_version.asset_id = a.asset_id
+                ORDER BY source_version.created_at DESC, source_version.version_id DESC
+                LIMIT 1
+              )
         """
         proposal_join = """
             LEFT JOIN asset_ai_proposals AS available_proposal
@@ -1937,6 +1946,7 @@ def fixture_review_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   latest_source_version.version_id source_version_id,
                    current_decision.placement_state,
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
                    COALESCE(decision.caption, '') caption,

@@ -6,6 +6,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
     public var parentID: String?
     public var state: String
     public var templateKey: String
+    public var tags: [String]
     public var children: [FixtureNode]
 
     public var isArchived: Bool { state == "archived" }
@@ -17,6 +18,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
         parentID: String? = nil,
         state: String = "active",
         templateKey: String = "",
+        tags: [String] = [],
         children: [FixtureNode] = []
     ) {
         self.id = id
@@ -24,6 +26,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
         self.parentID = parentID
         self.state = state
         self.templateKey = templateKey
+        self.tags = tags
         self.children = children
     }
 
@@ -35,6 +38,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         state = json["state"]?.stringValue ?? (archivedAt.isEmpty ? "active" : "archived")
         templateKey = json["templateKey"]?.stringValue ?? ""
+        tags = json["tags"]?.arrayValue?.compactMap(\.stringValue) ?? []
         children = (json["children"]?.arrayValue ?? []).compactMap {
             guard let object = $0.objectValue else { return nil }
             return FixtureNode(json: object)
@@ -518,6 +522,7 @@ public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, I
 
 public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var id: String
+    public var sourceVersionID: String
     public var photoLibraryIdentifier: String
     public var title: String
     public var caption: String
@@ -550,6 +555,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public init(
         id: String,
         photoLibraryIdentifier: String,
+        sourceVersionID: String = "",
         title: String,
         caption: String = "",
         keywords: [String],
@@ -579,6 +585,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         deliveryState: String = "not-ready"
     ) {
         self.id = id
+        self.sourceVersionID = sourceVersionID
         self.photoLibraryIdentifier = photoLibraryIdentifier
         self.title = title
         self.caption = caption
@@ -611,6 +618,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
 
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? ""
+        sourceVersionID = json["sourceVersionId"]?.stringValue ?? ""
         photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? id
         title = json["title"]?.stringValue ?? ""
         caption = json["caption"]?.stringValue ?? ""

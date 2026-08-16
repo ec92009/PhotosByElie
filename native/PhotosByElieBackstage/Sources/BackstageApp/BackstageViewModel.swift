@@ -282,6 +282,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var fixtureAIStatus: FixtureAIStatus?
     @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
     @Published var reviewProposalConflictIDs: Set<String> = []
+    @Published var reviewVisualProposals: [String: VisualRepairProposal] = [:]
+    @Published var visualRepairDefectCategories: Set<VisualRepairDefectCategory> = []
+    @Published var visualRepairStatus = "Production visual generation is not configured; comparison remains read-only."
+    @Published var isLoadingVisualRepairProposals = false
     @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
     @Published var isRunningAIPass = false
@@ -350,6 +354,7 @@ final class BackstageViewModel: ObservableObject {
     let accessService: AccessControlService
     let decisionService: SidecarDecisionService
     let metadataReviewService: MetadataReviewService
+    let visualRepairService: VisualRepairProposalService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let updateService: BackstageUpdateService
@@ -437,6 +442,20 @@ final class BackstageViewModel: ObservableObject {
             && pbeOwnerFixtureSession == nil
     }
 
+    var isREReviewScope: Bool {
+        VisualRepairScope.isREReview(path: fixtures.path(to: selectedFixtureID))
+    }
+
+    func visualRepairComparisonState(for item: FixtureReviewItem) -> VisualRepairComparisonState {
+        let originalReference = item.sourceVersionID.isEmpty
+            ? "immutable-source-asset://\(item.id)"
+            : "immutable-source-version://\(item.sourceVersionID)"
+        return VisualRepairComparisonState(
+            originalReference: originalReference,
+            proposal: reviewVisualProposals[item.id]
+        )
+    }
+
     var fixtureEffectivePolicySummary: String {
         let policy = fixtureEffectivePolicy
         return [
@@ -497,6 +516,10 @@ final class BackstageViewModel: ObservableObject {
         self.accessService = AccessControlService(api: api)
         self.decisionService = SidecarDecisionService(api: api)
         self.metadataReviewService = MetadataReviewService(runner: runner)
+        self.visualRepairService = VisualRepairProposalService(
+            runner: runner,
+            connectorIdentity: LocalOwnerConnectorIdentity()
+        )
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost
@@ -2354,7 +2377,19 @@ final class BackstageViewModel: ObservableObject {
             let scope = reviewProposalAvailableOnly
                 ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
                 : (queueScope.isEmpty ? "No states" : queueScope)
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) photos • oldest first."
+            let mediaScope: String
+            switch reviewMediaFilters {
+            case let filters where filters == Set(CullingMediaFilter.selectableCases):
+                mediaScope = "items"
+            case let filters where filters == [.photos]:
+                mediaScope = "photos"
+            case let filters where filters == [.videos]:
+                mediaScope = "videos"
+            default:
+                mediaScope = "items"
+            }
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
+            await refreshVisualRepairProposals(for: window.items)
             await refreshAIStatus()
         } catch {
             guard requestSerial == reviewWindowRequestSerial else { return }
@@ -2369,6 +2404,74 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             reviewStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func toggleVisualRepairCategory(_ category: VisualRepairDefectCategory) {
+        if visualRepairDefectCategories.contains(category) {
+            visualRepairDefectCategories.remove(category)
+        } else {
+            visualRepairDefectCategories.insert(category)
+        }
+    }
+
+    /// The local domain and persistence path accept only an injected synthetic
+    /// generator. Production visual generation remains an explicit gate until
+    /// a bounded, privacy-reviewed provider is configured.
+    var visualRepairGenerationConfigured: Bool { false }
+
+    func refreshVisualRepairProposals(for items: [FixtureReviewItem]) async {
+        guard isREReviewScope else {
+            reviewVisualProposals = [:]
+            isLoadingVisualRepairProposals = false
+            visualRepairStatus = "Visual repair drafts are limited to the RE fixture review subtree."
+            return
+        }
+        isLoadingVisualRepairProposals = true
+        defer { isLoadingVisualRepairProposals = false }
+        do {
+            let proposals = try await visualRepairService.proposals(
+                fixtureID: selectedFixtureID,
+                assetIDs: items.map(\.id)
+            )
+            reviewVisualProposals = proposals.reduce(into: [String: VisualRepairProposal]()) { result, proposal in
+                guard result[proposal.assetID] == nil else { return }
+                result[proposal.assetID] = proposal
+            }
+            visualRepairStatus = proposals.isEmpty
+                ? "No visual repair draft is available. Production visual generation is not configured."
+                : "Loaded \(proposals.count.formatted()) visual repair draft\(proposals.count == 1 ? "" : "s") for read-only comparison."
+        } catch {
+            reviewVisualProposals = [:]
+            visualRepairStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func decideVisualRepair(
+        _ decision: VisualRepairDecision,
+        for assetID: String
+    ) async {
+        guard isREReviewScope,
+              let proposal = reviewVisualProposals[assetID] else {
+            visualRepairStatus = "No RE visual repair draft is available for this item."
+            return
+        }
+        if decision == .regenerate, !visualRepairGenerationConfigured {
+            visualRepairStatus = "Regeneration is unavailable until a privacy-reviewed visual generator is configured."
+            return
+        }
+        do {
+            let updated = try await visualRepairService.decide(
+                decision,
+                fixtureID: selectedFixtureID,
+                proposalID: proposal.id,
+                generator: decision == .regenerate ? "synthetic" : "",
+                idempotencyKey: "backstage-visual-\(decision.rawValue)-\(proposal.id)"
+            )
+            reviewVisualProposals[assetID] = updated
+            visualRepairStatus = "Recorded visual draft \(decision.rawValue); comparison remains read-only."
+        } catch {
+            visualRepairStatus = userFacingMessage(for: error)
         }
     }
 

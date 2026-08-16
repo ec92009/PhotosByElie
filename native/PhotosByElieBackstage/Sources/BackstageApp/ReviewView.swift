@@ -129,10 +129,27 @@ private enum ReviewQuickLookPresenter {
     }
 }
 
+private struct ReviewVisualComparisonTarget: Identifiable {
+    let id: String
+}
+
 struct ReviewView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @State private var visualComparisonTarget: ReviewVisualComparisonTarget?
+
+    private func openReviewPreview() {
+        if model.isREReviewScope {
+            guard let item = model.focusedReviewItem else {
+                model.reviewStatus = "Select a Review item before opening comparison."
+                return
+            }
+            visualComparisonTarget = ReviewVisualComparisonTarget(id: item.id)
+        } else {
+            ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
+        }
+    }
 
     var body: some View {
         HSplitView {
@@ -314,7 +331,7 @@ struct ReviewView: View {
                         return .handled
                     }
                     .onKeyPress(.space) {
-                        ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
+                        openReviewPreview()
                         return .handled
                     }
                     .overlay {
@@ -363,7 +380,7 @@ struct ReviewView: View {
                 ReviewInspector(
                     model: model,
                     openQuickLook: {
-                        ReviewQuickLookPresenter.present(model: model, coordinator: quickLook)
+                        openReviewPreview()
                     }
                 )
                     .frame(minWidth: 300, idealWidth: 380, maxWidth: 480)
@@ -372,6 +389,21 @@ struct ReviewView: View {
         }
         .background(SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit"))
         .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
+        .sheet(item: $visualComparisonTarget) { target in
+            if let item = model.reviewItems.first(where: { $0.id == target.id }) {
+                VisualRepairComparisonView(
+                    item: item,
+                    original: model.reviewThumbnails[item.id],
+                    proposal: model.reviewVisualProposals[item.id]
+                )
+            } else {
+                ContentUnavailableView(
+                    "Comparison unavailable",
+                    systemImage: "photo.on.rectangle.angled",
+                    description: Text("The Review item is no longer in the current window.")
+                )
+            }
+        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
@@ -599,6 +631,132 @@ private struct ReviewAssetRow: View {
     }
 }
 
+private struct VisualRepairComparisonView: View {
+    let item: FixtureReviewItem
+    let original: NSImage?
+    let proposal: VisualRepairProposal?
+    @Environment(\.dismiss) private var dismiss
+
+    private var proposedImage: NSImage? {
+        guard let proposal,
+              proposal.derivedAvailable,
+              VisualRepairComparisonState.isRenderableReference(proposal.derivedReference),
+              let url = URL(string: proposal.derivedReference)
+        else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
+    }
+
+    private var state: VisualRepairComparisonState {
+        let originalReference = item.sourceVersionID.isEmpty
+            ? "immutable-source-asset://\(item.id)"
+            : "immutable-source-version://\(item.sourceVersionID)"
+        return VisualRepairComparisonState(
+            originalReference: originalReference,
+            proposal: proposal,
+            proposedImageAvailable: proposedImage != nil
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Visual repair comparison")
+                        .font(.title2.bold())
+                    Text(item.filename)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("Read only")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                    .backstageHelp("Close the read-only visual repair comparison without changing the Review item.")
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                comparisonPanel(
+                    title: "Original · immutable",
+                    image: original,
+                    symbol: "photo",
+                    detail: state.originalReference,
+                    accessibility: "Original immutable source image"
+                )
+                comparisonPanel(
+                    title: "Proposed · draft only",
+                    image: proposedImage,
+                    symbol: state.proposalAvailable ? "sparkles" : "questionmark.circle",
+                    detail: state.proposalAvailable
+                        ? state.proposedReference
+                        : "No rendered proposal is available",
+                    accessibility: "Proposed visual repair draft, read only"
+                )
+            }
+
+            if let proposal {
+                Text(proposal.defectCategories.map(\.label).joined(separator: " · "))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text("Attempt \(proposal.attempt) · \(proposal.resolvedModel) · \(proposal.reasoningEffort) · \(proposal.status.rawValue)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(state.message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Text("This comparison cannot edit the original, title, keywords, rating, fixture decision, upload, or publication state.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(22)
+        .frame(minWidth: 760, minHeight: 470)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func comparisonPanel(
+        title: String,
+        image: NSImage?,
+        symbol: String,
+        detail: String,
+        accessibility: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            Group {
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    VStack(spacing: 10) {
+                        Image(systemName: symbol)
+                            .font(.system(size: 36))
+                        Text(detail)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 250)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 250, maxHeight: 300)
+            .background(.quaternary.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .accessibilityLabel(accessibility)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct ReviewInspector: View {
     @ObservedObject var model: BackstageViewModel
     let openQuickLook: () -> Void
@@ -732,12 +890,77 @@ private struct ReviewInspector: View {
                     Text("Prepare the reasons and optional note, then press Needs AI for the selection or Propagate for the two-hour shoot.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if model.isREReviewScope {
+                        Divider()
+                        Text("Visual repair drafts")
+                            .font(.headline)
+                        FlowLayout(spacing: 6) {
+                            ForEach(VisualRepairDefectCategory.allCases) { category in
+                                Button {
+                                    model.toggleVisualRepairCategory(category)
+                                } label: {
+                                    Label(
+                                        category.label,
+                                        systemImage: model.visualRepairDefectCategories.contains(category)
+                                            ? "checkmark.circle.fill"
+                                            : "circle"
+                                    )
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(model.visualRepairDefectCategories.contains(category) ? .orange : nil)
+                                .backstageHelp("Select the \(category.label) defect category for a future visual repair draft.")
+                            }
+                        }
+                        if let proposal = model.reviewVisualProposals[item.id] {
+                            let hasRenderedProposal = proposal.derivedAvailable
+                                && VisualRepairComparisonState.isRenderableReference(proposal.derivedReference)
+                            Label(
+                                hasRenderedProposal
+                                    ? "Draft available for read-only comparison · attempt \(proposal.attempt)"
+                                    : "Draft recorded; rendered comparison unavailable · attempt \(proposal.attempt)",
+                                systemImage: hasRenderedProposal ? "sparkles" : "questionmark.circle"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            if proposal.status == .draft {
+                                HStack(spacing: 8) {
+                                    Button("Accept draft") {
+                                        Task { await model.decideVisualRepair(.accept, for: item.id) }
+                                    }
+                                    .disabled(!hasRenderedProposal)
+                                    .backstageHelp("Record acceptance of this visual draft only; it will not replace the source or change title, keywords, delivery, or publication.")
+                                    Button("Reject draft") {
+                                        Task { await model.decideVisualRepair(.reject, for: item.id) }
+                                    }
+                                    .backstageHelp("Reject and hide this derived visual reference while retaining its audit provenance.")
+                                    Button("Regenerate unavailable") {}
+                                        .disabled(true)
+                                        .backstageHelp("Regeneration stays unavailable until a privacy-reviewed visual generator is configured.")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        } else {
+                            Text("No visual draft is available for this source version.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Request visual draft unavailable") {}
+                            .disabled(true)
+                            .backstageHelp("Production visual generation is not configured. Synthetic generation is test-only and never processes real private source media.")
+                        Text(model.visualRepairStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Divider()
-                    Button("Quick Look") {
+                    Button(model.isREReviewScope ? "Compare original / proposal" : "Quick Look") {
                         openQuickLook()
                     }
                     .keyboardShortcut(.space, modifiers: [])
-                    .backstageHelp("Open the focused Review item in Quick Look without applying a Review action.")
+                    .backstageHelp(
+                        model.isREReviewScope
+                            ? "Open a read-only original versus visual proposal comparison without applying a Review action."
+                            : "Open the focused Review item in Quick Look without applying a Review action."
+                    )
                 } else {
                     ContentUnavailableView(
                         "No photo selected",

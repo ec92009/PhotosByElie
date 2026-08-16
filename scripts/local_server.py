@@ -472,6 +472,11 @@ from fixture_pipeline import (  # noqa: E402
     set_fixture_asset_state,
     request_ai_run_cancel,
 )
+from visual_repair_proposals import (  # noqa: E402
+    decide_visual_repair_proposal,
+    list_visual_repair_proposals,
+    request_visual_repair_proposal,
+)
 from fixture_policy import (  # noqa: E402
     apply_fixture_policy_migration,
     configure_fixture as configure_fixture_policy,
@@ -3161,6 +3166,43 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 actor="owner-connector",
             ),
         })
+    elif mode == "fixture-visual-repair-proposal-list":
+        result.update({
+            "readOnly": True,
+            "visualRepairProposals": list_visual_repair_proposals(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                asset_ids=manifest.get("assetIds") or [],
+                include_history=bool(manifest.get("includeHistory")),
+            ),
+        })
+    elif mode == "fixture-visual-repair-proposal-request":
+        result.update({
+            "readOnly": False,
+            "visualRepairProposal": request_visual_repair_proposal(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                str(manifest.get("assetId") or ""),
+                str(manifest.get("sourceVersionId") or ""),
+                manifest.get("defectCategories") or [],
+                generator=str(manifest.get("generator") or ""),
+                requested_generator_model=str(manifest.get("requestedGeneratorModel") or ""),
+                idempotency_key=str(manifest.get("idempotencyKey") or ""),
+            ),
+        })
+    elif mode == "fixture-visual-repair-proposal-decide":
+        result.update({
+            "readOnly": False,
+            "visualRepairProposal": decide_visual_repair_proposal(
+                repo_root,
+                str(manifest.get("proposalId") or ""),
+                str(manifest.get("decision") or ""),
+                fixture_id=str(manifest.get("fixtureId") or ""),
+                reason=str(manifest.get("reason") or ""),
+                generator=str(manifest.get("generator") or ""),
+                idempotency_key=str(manifest.get("idempotencyKey") or ""),
+            ),
+        })
     elif mode == "fixture-ai-status":
         result.update({"readOnly": True, "ai": ai_run_status(repo_root)})
     elif mode == "fixture-ai-proposals-ready":
@@ -3640,6 +3682,9 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-deliverable-link": "Linked a ready fixture deliverable without sending a client message.",
         "fixture-publication-plan": "Prepared exact public-catalog eligibility without rebuilding or deploying the site.",
         "fixture-lifecycle-list": "Loaded the private lifecycle ledger without changing any media.",
+        "fixture-visual-repair-proposal-list": "Loaded RE visual repair drafts without changing source or review state.",
+        "fixture-visual-repair-proposal-request": "Recorded a synthetic RE visual repair draft; no image bytes were generated or retained.",
+        "fixture-visual-repair-proposal-decide": "Recorded the RE visual repair draft decision without publishing, uploading, or replacing a source.",
         "fixture-upload-run-adoption-plan": "Previewed the exact completed Upload Bridge items eligible for fixture adoption; nothing changed.",
         "fixture-upload-run-adoption-commit": "Adopted checksum-verified completed upload items into the chosen fixture and reconstructed their R2 receipts.",
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",

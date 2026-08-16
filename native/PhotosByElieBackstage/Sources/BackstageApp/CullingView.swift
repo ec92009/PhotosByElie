@@ -485,16 +485,12 @@ struct CullingView: View {
 
     private var cullingActions: some View {
         VStack(alignment: .leading, spacing: 4) {
-            cullingDestinationActions
-            cullingDecisionActions
+            if !model.cullingSelection.selectedIDs.isEmpty {
+                cullingDestinationActions
+                cullingDecisionActions
+            }
             cullingHistoryActions
-            BackstageFeedbackView(
-                message: model.cullingStatus,
-                isWorking: model.isLoadingFixtureCulling
-                    || model.isLoadingCullingDecisions
-                    || model.isApplyingCullingDecision
-                    || model.isLoadingPreview
-            )
+            cullingStatusFeedback
             cullingOperationProgress
             Text("P include • H exclude • X Waste Basket • U clear • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
@@ -504,6 +500,21 @@ struct CullingView: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .bottomLeading)
         .layoutPriority(2)
+    }
+
+    @ViewBuilder
+    private var cullingStatusFeedback: some View {
+        let isWorking = model.isLoadingFixtureCulling
+            || model.isLoadingCullingDecisions
+            || model.isApplyingCullingDecision
+            || model.isLoadingPreview
+        if isWorking {
+            BackstageFeedbackView(message: model.cullingStatus, isWorking: true)
+        } else {
+            Text(model.cullingStatus)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var cullingDestinationActions: some View {
@@ -523,7 +534,6 @@ struct CullingView: View {
 
     private var cullingDecisionActions: some View {
         FlowLayout(spacing: 4) {
-            Text("\(model.cullingSelection.selectedIDs.count) selected")
             cullingPlacementPicker
             Button("Apply fixture decision") {
                 Task { await model.applyPickShortcut(model.cullingPickAction) }
@@ -592,6 +602,8 @@ struct CullingView: View {
 
     private var cullingHistoryActions: some View {
         HStack(spacing: 6) {
+            Text("\(model.cullingSelection.selectedIDs.count) selected")
+                .foregroundStyle(.secondary)
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(model.cullingHistory.isEmpty)
@@ -602,9 +614,10 @@ struct CullingView: View {
                 Task { await model.refreshCullingDecisions() }
             }
             .backstageHelp("Reload the latest persisted ratings, colors, and fixture decisions for the visible assets.")
-            Button("Clear selection") { model.clearCullingSelection() }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
+            if !model.cullingSelection.selectedIDs.isEmpty {
+                Button("Clear selection") { model.clearCullingSelection() }
+                    .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
+            }
         }
     }
 

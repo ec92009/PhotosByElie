@@ -167,6 +167,12 @@ class FixtureConnectorTest(unittest.TestCase):
     def test_connector_lists_private_lifecycle_titles_without_mutation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(root, [{
+                "localIdentifier": "photo-hidden",
+                "filename": "IMG_4228.HEIC",
+                "mediaType": "photo",
+                "creationDate": "2026-07-24T18:45:00Z",
+            }])
             with owner_state_db.connect(root) as connection:
                 connection.execute(
                     """INSERT INTO media_lifecycle
@@ -204,6 +210,14 @@ class FixtureConnectorTest(unittest.TestCase):
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["title"],
             "Private saved title",
+        )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["filename"],
+            "IMG_4228.HEIC",
+        )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["capturedAt"],
+            "2026-07-24T18:45:00Z",
         )
 
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):

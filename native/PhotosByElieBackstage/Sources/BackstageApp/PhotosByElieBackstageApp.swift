@@ -561,15 +561,39 @@ private struct LifecycleView: View {
                 isWorking: model.isRunningLifecycle
             )
             Table(model.lifecycleItems, selection: $model.selectedLifecycleIDs) {
+                TableColumn("Preview") { item in
+                    Group {
+                        if let thumbnail = model.cullingThumbnails[item.mediaID] {
+                            Image(nsImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Image(systemName: "photo")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: 64, height: 48)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .accessibilityLabel(item.filename.isEmpty ? "Preview" : "Preview of \(item.filename)")
+                    .task { model.requestThumbnail(for: item.mediaID) }
+                }
+                .width(76)
+                TableColumn("Filename") { item in
+                    Text(item.filename.isEmpty ? item.mediaID : item.filename)
+                        .lineLimit(1)
+                        .help(item.filename.isEmpty ? item.mediaID : item.filename)
+                }
                 TableColumn("Title") { item in
-                    Text(item.title.isEmpty ? item.mediaID : item.title)
+                    Text(item.title.isEmpty ? "Untitled" : item.title)
+                        .lineLimit(1)
+                        .help(item.title.isEmpty ? "Untitled" : item.title)
                 }
                 TableColumn("State") { item in
                     Text(item.state == "hidden" ? "Recoverable" : "Active global tombstone")
                         .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
                 }
-                TableColumn("Collection", value: \.sourceSlug)
-                TableColumn("Kind", value: \.mediaType)
+                TableColumn("Captured", value: \.capturedAt)
                 TableColumn("Updated", value: \.updatedAt)
                 TableColumn("") { item in
                 }

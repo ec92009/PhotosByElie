@@ -437,6 +437,7 @@ from fixture_pipeline import (  # noqa: E402
     adopt_upload_run,
     archive_fixture,
     connect as fixture_connect,
+    connect_read_only as fixture_connect_read_only,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -3582,11 +3583,47 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         # here rewrites every discarded row and Owner settings on each list
         # request, which makes a native read mutate the live Owner database.
         lifecycle = media_lifecycle_snapshot(repo_root, sync_compat=False)
+        lifecycle_states = [
+            item for item in lifecycle.get("states") or []
+            if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
+        ]
+        indexed_assets: dict[str, dict[str, str]] = {}
+        lifecycle_ids = [
+            str(item.get("media_id") or "").strip()
+            for item in lifecycle_states
+            if str(item.get("media_id") or "").strip()
+        ]
+        if lifecycle_ids:
+            try:
+                with fixture_connect_read_only(repo_root) as connection:
+                    for start in range(0, len(lifecycle_ids), 500):
+                        batch = lifecycle_ids[start:start + 500]
+                        placeholders = ",".join("?" for _ in batch)
+                        rows = connection.execute(
+                            f"""SELECT asset_id, filename, captured_at
+                                FROM sidecar_assets
+                                WHERE asset_id IN ({placeholders})""",
+                            batch,
+                        ).fetchall()
+                        indexed_assets.update({
+                            str(row["asset_id"]): {
+                                "filename": str(row["filename"] or ""),
+                                "capturedAt": str(row["captured_at"] or ""),
+                            }
+                            for row in rows
+                        })
+            except (OSError, sqlite3.Error):
+                # Lifecycle browsing remains available when the read-only Photos
+                # index is absent or temporarily unavailable. Owner.sqlite stays
+                # authoritative for lifecycle state; identity enrichment is best-effort.
+                indexed_assets = {}
         all_states = [
             {
                 "mediaId": str(item.get("media_id") or ""),
                 "state": str(item.get("lifecycle_state") or ""),
                 "title": str(item.get("title") or ""),
+                "filename": indexed_assets.get(str(item.get("media_id") or ""), {}).get("filename", ""),
+                "capturedAt": indexed_assets.get(str(item.get("media_id") or ""), {}).get("capturedAt", ""),
                 "mediaType": str(item.get("media_type") or ""),
                 "sourceSlug": str(item.get("source_slug") or item.get("previous_slug") or ""),
                 "hiddenAt": str(item.get("hidden_at") or ""),
@@ -3594,8 +3631,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "restoredAt": str(item.get("restored_at") or ""),
                 "updatedAt": str(item.get("updated_at") or ""),
             }
-            for item in lifecycle.get("states") or []
-            if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
+            for item in lifecycle_states
         ]
         requested_states = {
             str(value or "").strip()

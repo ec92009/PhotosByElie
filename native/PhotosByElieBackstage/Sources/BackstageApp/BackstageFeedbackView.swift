@@ -18,14 +18,14 @@ struct BackstageFeedbackView: View {
                     .accessibilityHidden(true)
             }
             Text(message)
-                .font(.callout)
+                .font(.caption)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .foregroundStyle(Color.white)
-        .background(Color.black, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .background(Color.black, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(isWorking ? "Working. \(message)" : message)
         .accessibilityValue(isWorking ? "In progress" : "Ready")

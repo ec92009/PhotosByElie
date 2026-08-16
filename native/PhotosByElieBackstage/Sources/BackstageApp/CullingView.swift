@@ -197,29 +197,30 @@ struct CullingView: View {
     }
 
     private var cullingWorkspacePane: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             cullingHeader
             cullingGrid
             cullingFooter
         }
-        .padding()
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .frame(minWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var cullingFooter: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             Divider()
             cullingActions
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .bottomLeading)
         .layoutPriority(2)
     }
 
     private var cullingHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             cullingTitleBar
             BackstageFeedbackView(
                 message: model.photoStatus,
@@ -242,7 +243,7 @@ struct CullingView: View {
                 Spacer()
                 cullingHeaderActions
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 cullingHeading
                 cullingHeaderActions
             }
@@ -483,7 +484,7 @@ struct CullingView: View {
     }
 
     private var cullingActions: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             cullingDestinationActions
             cullingDecisionActions
             cullingHistoryActions
@@ -495,17 +496,18 @@ struct CullingView: View {
                     || model.isLoadingPreview
             )
             cullingOperationProgress
-            Text("Shortcuts: P include in fixture • H exclude from fixture • X move to recoverable Waste Basket • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P include • H exclude • X Waste Basket • U clear • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
+        .controlSize(.small)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .bottomLeading)
         .layoutPriority(2)
     }
 
     private var cullingDestinationActions: some View {
-        HStack {
+        HStack(spacing: 6) {
             Button("Open in Review") { model.sendCullingSelection(to: .review) }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
                 .backstageHelp("Open Review and carry the current Culling selection into that workspace.")
@@ -520,7 +522,7 @@ struct CullingView: View {
     }
 
     private var cullingDecisionActions: some View {
-        FlowLayout(spacing: 8) {
+        FlowLayout(spacing: 4) {
             Text("\(model.cullingSelection.selectedIDs.count) selected")
             cullingPlacementPicker
             Button("Apply fixture decision") {
@@ -589,7 +591,7 @@ struct CullingView: View {
     }
 
     private var cullingHistoryActions: some View {
-        HStack {
+        HStack(spacing: 6) {
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(model.cullingHistory.isEmpty)

@@ -1602,7 +1602,15 @@ def fixture_culling_window(
                    COALESCE(global_decision.rating, 0) rating,
                    COALESCE(global_decision.color, '') color,
                    COALESCE(global_decision.metadata_state, 'unreviewed') editorial_state,
-                   COALESCE(global_decision.keywords_json, '[]') keywords_json
+                   CASE
+                     WHEN COALESCE(global_decision.metadata_state, 'unreviewed') <> 'unreviewed'
+                       THEN COALESCE(global_decision.keywords_json, '[]')
+                     ELSE COALESCE(
+                       NULLIF(a.metadata_seed_keywords_json, ''),
+                       NULLIF(a.photos_keywords_json, ''),
+                       '[]'
+                     )
+                   END keywords_json
             FROM {from_sql}
             WHERE {view_where_sql}
             ORDER BY a.captured_at DESC, a.asset_id
@@ -1951,9 +1959,13 @@ def fixture_review_window(
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
                    COALESCE(decision.caption, '') caption,
                    CASE
-                     WHEN decision.keywords_json IS NOT NULL AND decision.keywords_json != '[]'
-                       THEN decision.keywords_json
-                     ELSE COALESCE(a.photos_keywords_json, '[]')
+                     WHEN COALESCE(decision.metadata_state, 'unreviewed') <> 'unreviewed'
+                       THEN COALESCE(decision.keywords_json, '[]')
+                     ELSE COALESCE(
+                       NULLIF(a.metadata_seed_keywords_json, ''),
+                       NULLIF(a.photos_keywords_json, ''),
+                       '[]'
+                     )
                    END keywords_json,
                    COALESCE(decision.rating, 0) rating,
                    COALESCE(decision.color, '') color,

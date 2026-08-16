@@ -237,6 +237,64 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
+    def test_culling_and_review_use_seeded_location_keywords_until_metadata_is_local(self):
+        upsert_assets(self.root, [{
+            "localIdentifier": "asset-gps",
+            "filename": "IMG_4497.HEIC",
+            "mediaType": "photo",
+            "creationDate": "2026-08-05T17:40:00Z",
+            "photosKeywords": ["Travel"],
+            "location": {
+                "city": "Fuengirola",
+                "region": "Andalusia",
+                "country": "Spain",
+            },
+        }])
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, fixture["fixtureId"], ["asset-gps"], "picked")
+
+        culling_item = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="picked",
+            search="IMG_4497",
+        )["items"][0]
+        review_item = fixture_review_window(
+            self.root,
+            fixture["fixtureId"],
+            search="IMG_4497",
+        )["items"][0]
+        expected_seed_keywords = ["Travel", "Fuengirola", "Andalusia", "Spain"]
+        self.assertEqual(culling_item["keywords"], expected_seed_keywords)
+        self.assertEqual(review_item["keywords"], expected_seed_keywords)
+
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-gps",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": [],
+            },
+        )
+        self.assertEqual(
+            fixture_culling_window(
+                self.root,
+                fixture["fixtureId"],
+                view="picked",
+                search="IMG_4497",
+            )["items"][0]["keywords"],
+            [],
+        )
+        self.assertEqual(
+            fixture_review_window(
+                self.root,
+                fixture["fixtureId"],
+                search="IMG_4497",
+            )["items"][0]["keywords"],
+            [],
+        )
+
     def test_culling_universe_is_still_only_even_with_stale_video_filters(self):
         upsert_assets(self.root, [{
             "localIdentifier": "asset-video",

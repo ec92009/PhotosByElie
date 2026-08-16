@@ -275,6 +275,10 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(review_item["keywords"], ["Travel"])
         self.assertEqual(culling_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
         self.assertEqual(review_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(
+            search_assets(self.root, {"query": "IMG_4497"})["items"][0]["locationLabel"],
+            "Fuengirola, Costa del Sol, Spain",
+        )
 
         record_decision(
             self.root,

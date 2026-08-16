@@ -3525,7 +3525,7 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
         "pixelWidth": int(row["pixel_width"] or 0), "pixelHeight": int(row["pixel_height"] or 0),
         "title": row["decision_title"] or row["photos_title"] or "", "keywords": _read_json(row["decision_keywords"], []) or _read_json(row["photos_keywords_json"], []),
         "caption": row["decision_caption"] or "", "camera": camera, "lens": lens,
-        "locationLabel": row["location_label"] or "", "rating": int(row["rating"] or 0), "color": row["color"] or "",
+        "locationLabel": _location_label_for_row(row), "rating": int(row["rating"] or 0), "color": row["color"] or "",
         "pickState": row["pick_state"], "metadataState": row["metadata_state"],
         "missingFields": [field for field, value in (("camera", camera), ("lens", lens)) if not value],
         "exactIdentity": raw.get("localIdentifier") or source_anchor,

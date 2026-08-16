@@ -809,17 +809,17 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "229.2")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "105")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "229.3")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "106")
         self.assertIn('source "$release_metadata"', build_script)
-        self.assertIn('source "$release_metadata"', bridge_installer)
-        self.assertIn("PBE_BACKSTAGE_INFO_PLIST", bridge_installer)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
         self.assertNotIn("Backstage and Photos Bridge", build_script)
-        self.assertIn('PBE_PHOTOS_BRIDGE_VERSION="${PBE_PHOTOS_BRIDGE_VERSION:-141.10}"', bridge_installer)
-        self.assertIn('PBE_PHOTOS_BRIDGE_BUILD="${PBE_PHOTOS_BRIDGE_BUILD:-1}"', bridge_installer)
-        self.assertNotIn("Print :PBEPhotosBridge", bridge_installer)
+        self.assertIn("PhotosByElie Photos Bridge is retired (PBB-92).", bridge_installer)
+        self.assertIn("exit 64", bridge_installer)
+        self.assertNotIn("swiftc", bridge_installer)
+        self.assertNotIn("codesign", bridge_installer)
+        self.assertNotIn("open ", bridge_installer)
         self.assertNotIn("SIDECAR_VERSION", build_script)
         self.assertNotIn("SIDECAR_VERSION", bridge_installer)
         self.assertIn(
@@ -832,18 +832,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'identifier "com.photosbyelie.backstage"',
             build_script,
         )
-        self.assertIn('identity="${PBE_CODESIGN_IDENTITY:-}"', bridge_installer)
-        self.assertIn("Developer ID Application:", bridge_installer)
-        self.assertIn("Apple Development:", bridge_installer)
-        self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', bridge_installer)
-        self.assertIn(
-            "Photos Bridge installation is blocked because ad-hoc rebuilds can lose Photos and Keychain authorization.",
-            bridge_installer,
-        )
-        self.assertIn("--options runtime --sign", bridge_installer)
-        self.assertIn("Signature=adhoc", bridge_installer)
-
-    def test_bridge_installer_refuses_a_silent_downgrade(self):
+    def test_bridge_installer_fails_closed_without_touching_a_legacy_bundle(self):
         installer = ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
         with tempfile.TemporaryDirectory() as temporary_directory:
             app = Path(temporary_directory) / "PhotosByElie Photos Bridge.app"
@@ -869,8 +858,8 @@ class NativeCullingParityTest(unittest.TestCase):
                 check=False,
             )
 
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("Preserved newer Photos Bridge 999.0 build 999", result.stdout)
+            self.assertEqual(result.returncode, 64, result.stderr)
+            self.assertIn("PhotosByElie Photos Bridge is retired", result.stderr)
             self.assertEqual(marker.read_text(encoding="utf-8"), "newer helper\n")
 
     def test_backstage_control_cli_is_structured_and_does_not_use_cua(self):
@@ -900,7 +889,9 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, control)
         self.assertNotIn("PhotosBridgeHealthService", control)
-        self.assertNotIn("PhotosByElie Photos Bridge.app", control)
+        self.assertIn("RetiredPhotosBridgeService", control)
+        self.assertNotIn("NSWorkspace", control)
+        self.assertNotIn("Process()", control)
         self.assertIn('arguments.first == "--control"', launcher)
         self.assertIn("Darwin.exit(exitCode)", launcher)
         self.assertIn("/usr/bin/open -n -j", wrapper)

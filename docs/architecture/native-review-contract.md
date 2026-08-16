@@ -122,8 +122,8 @@ returns without opening Photos Bridge or rendering pixels.
 
 The scheduled pass or the explicit **Run AI pass now** action prepares missing
 bounded JPEGs at the start of that separate pass. Missing previews are sent
-through one signed `preview-many` bridge request, recorded in Owner state, and
-then consumed by proposal generation. Proposal generation remains draft-only;
+through one signed Backstage `preview-many` IPC request, recorded in Owner
+state, and then consumed by proposal generation. Proposal generation remains draft-only;
 it cannot approve, hide, publish, or change canonical metadata.
 
 ## Audit and undo

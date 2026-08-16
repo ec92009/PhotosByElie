@@ -2,15 +2,17 @@
 
 Date: 2026-07-04
 
-Status: obsolete historical snapshot. Sidecar is not a supported product,
+Status: obsolete historical snapshot. Sidecar and the standalone Photos Bridge
+were retired by PBB-92. Sidecar is not a supported product,
 authority, client, or launch path. Backstage is the supported Owner client;
 OwnerCore/`Owner.sqlite` and the PBB-79 gateway are the active state and
 lifecycle boundaries. Retained Sidecar-named schemas, services, routes, and
 action kinds are compatibility identifiers pending separately audited removal.
 
 The remainder of this document records the former design for migration and
-rollback archaeology only. Its present-tense statements must not be read as
-current architecture.
+rollback archaeology only. Its present-tense statements and runnable commands
+must not be read or executed as current architecture. Backstage itself is now
+the sole signed PhotoKit/TCC process.
 
 ## Version
 
@@ -47,36 +49,14 @@ Sidecar v0 uses the existing repo shape:
 This keeps the UI fast to prototype, Python responsible for local orchestration
 and SQLite, and Swift responsible only for Apple Photos/PhotoKit boundaries.
 
-## Apple Photos Permissions
+## Apple Photos Permissions (retired design)
 
-macOS Photos access is granted to the identity that actually touches PhotoKit.
-For Sidecar, that identity must be `PhotosByElie Photos Bridge.app`, not an
-incidental `swift`, `python3`, Terminal, Codex, or `launchd` process. Sidecar
-therefore installs and launches the Swift bridge through the app bundle:
-
-```bash
-open -W -n "$HOME/Applications/PhotosByElie Photos Bridge.app" --args <bridge-command>
-```
-
-Do not invoke `swift scripts/apple_photos_bridge.swift ...` directly from
-Sidecar UI code, scheduled tasks, or Codex automations. Direct Swift invocation
-uses the caller's TCC identity and can report `Photos access needed` even when
-`PhotosByElie Photos Bridge.app` already has Full Access in System Settings >
-Privacy & Security > Photos.
-
-The canonical Sidecar paths are:
-
-- `scripts/sidecar_server.py` preview/video/index helpers, which call the app
-  bundle before touching PhotoKit.
-- `python3 scripts/sidecar_maintenance.py photos-index-sync`, which delegates
-  to the same app-bundled index helper.
-- `scripts/install_sidecar_scheduled_tasks.zsh`, only as a local LaunchAgent
-  fallback for those maintenance entrypoints.
-
-If Photos access fails, first confirm the failing path launched the app bundle.
-Only after that should the operator revisit macOS Photos permissions. Granting
-Full Access to `PhotosByElie Photos Bridge.app` does not automatically authorize
-a raw Swift or Python process that bypasses the bundle.
+This section formerly described a separately installed permission-bearing
+Bridge app. That launch path is retired and deliberately unavailable. Current
+Backstage builds perform PhotoKit work through authenticated in-process IPC and
+hold the stable Photos/TCC identity themselves. Do not install, launch, repair,
+or grant permissions to `PhotosByElie Photos Bridge.app`; Backstage retires any
+live copy recoverably at cold launch.
 
 ## Product Boundary
 

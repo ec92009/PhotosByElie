@@ -2,7 +2,12 @@
 
 PBE-134 defines the safe local update boundary for the private macOS Backstage
 operator app. The update path is deliberately separate from the public Owner
-gallery, Photos Bridge write-back, fixture state, and `Owner.sqlite`.
+gallery, Backstage's PhotoKit write-back, fixture state, and `Owner.sqlite`.
+
+PBB-92 makes Backstage and its embedded PhotoKit capability one release unit.
+The updater must never install, restore, or launch a standalone Photos Bridge
+artifact. A cold launch recoverably retires any legacy live Bridge bundle,
+including `.previous` and `.rollback` siblings.
 
 ## Manifest
 

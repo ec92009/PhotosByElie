@@ -99,9 +99,9 @@ fixture identity, audit chain, and lifecycle writer.
 
 Background Mac connectors retain their scoped credentials and may claim only
 allowlisted, targeted work. They do not grant browser Owner authority. Apple
-Photos, `Owner.sqlite`, source files, and the signed Photos Bridge remain behind
-the Mac boundary; cloud APIs carry identities, opaque action records, and audit
-receipts rather than raw local paths or database access.
+Photos, `Owner.sqlite`, source files, and Backstage's signed PhotoKit IPC remain
+behind the Mac boundary; cloud APIs carry identities, opaque action records,
+and audit receipts rather than raw local paths or database access.
 
 Sidecar is obsolete as a product, authority, and launch path. Historical
 `sidecar-*` action kinds, database type names, and compatibility routes may

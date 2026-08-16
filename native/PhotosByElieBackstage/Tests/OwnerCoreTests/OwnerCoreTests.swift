@@ -3532,6 +3532,68 @@ struct OwnerCoreTests {
     }
 }
 
+@Suite("Retired Photos Bridge lifecycle")
+struct RetiredPhotosBridgeLifecycleTests {
+    @Test("Launch retirement moves every legacy live root into one recoverable archive")
+    func retiresAllLegacyLiveRoots() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbb-92-retirement-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let retirementRoot = applications.appendingPathComponent("Retired", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        for name in RetiredPhotosBridgeService.liveArtifactNames {
+            let artifact = applications.appendingPathComponent(name, isDirectory: true)
+            try FileManager.default.createDirectory(at: artifact, withIntermediateDirectories: true)
+            try Data(name.utf8).write(to: artifact.appendingPathComponent("marker"))
+        }
+        let historical = applications.appendingPathComponent(
+            "PhotosByElie Retired Bridge Artifacts/older-audit",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: historical, withIntermediateDirectories: true)
+
+        let result = try RetiredPhotosBridgeService(
+            applicationsDirectory: applications,
+            retirementRoot: retirementRoot,
+            retirementFolderName: "candidate-229.3"
+        ).retireInstalledArtifacts()
+
+        #expect(result.retiredNames == RetiredPhotosBridgeService.liveArtifactNames)
+        let archive = try #require(result.archiveDirectory)
+        for name in RetiredPhotosBridgeService.liveArtifactNames {
+            #expect(!FileManager.default.fileExists(
+                atPath: applications.appendingPathComponent(name).path
+            ))
+            #expect(FileManager.default.fileExists(
+                atPath: archive.appendingPathComponent(name + "/marker").path
+            ))
+        }
+        #expect(FileManager.default.fileExists(atPath: historical.path))
+    }
+
+    @Test("Launch retirement is a no-op when no legacy live root exists")
+    func noLegacyRootIsNoOp() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbb-92-noop-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let retirementRoot = applications.appendingPathComponent("Retired", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = try RetiredPhotosBridgeService(
+            applicationsDirectory: applications,
+            retirementRoot: retirementRoot,
+            retirementFolderName: "candidate-229.3"
+        ).retireInstalledArtifacts()
+
+        #expect(result.archiveDirectory == nil)
+        #expect(result.retiredNames.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: retirementRoot.path))
+    }
+}
+
 @Suite("PBE Owner host and session contract")
 struct PBEOwnerHostContractTests {
     private let sessionJSON = """

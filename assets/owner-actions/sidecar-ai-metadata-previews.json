@@ -1,11 +1,10 @@
 {
-  "bridgeApp": "/Users/ecohen/Applications/PhotosByElie Photos Bridge.app",
   "contactSheet": "",
   "exportedCount": 0,
   "failedCount": 0,
   "generatedAt": "2026-07-24T03:12:16.943306Z",
   "items": [],
-  "message": "Preview export uses PhotosByElie Photos Bridge.app through LaunchServices; do not replace this with raw Swift.",
+  "message": "Preview export uses the authenticated Backstage IPC endpoint; Backstage must be running on this Mac.",
   "mode": "picked-only-ai-preview-export",
   "ok": true,
   "plannedCount": 0,

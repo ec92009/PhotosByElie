@@ -3,12 +3,25 @@ import AppKit
 import SwiftUI
 
 public struct BackstageApplication: App {
-    @StateObject private var model = BackstageViewModel()
+    @StateObject private var model: BackstageViewModel
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
     private var navigationSidebarVisible = true
 
-    public init() {}
+    public init() {
+        // PBB-92: a current Backstage launch is the final authority over any
+        // helper left by an older install or rollback. Retirement is
+        // recoverable and intentionally does not touch historical archives.
+        do {
+            _ = try RetiredPhotosBridgeService().retireInstalledArtifacts()
+        } catch {
+            NSLog(
+                "PBB-92 could not retire a legacy Photos Bridge artifact: %@",
+                error.localizedDescription
+            )
+        }
+        _model = StateObject(wrappedValue: BackstageViewModel())
+    }
 
     public var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {

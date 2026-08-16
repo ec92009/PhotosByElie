@@ -16,9 +16,9 @@ the authoritative store for every mutation.
 - Max claims an exact action with its connector credential, validates the
   target and action kind, performs the local mutation, and completes or fails
   the action in the Worker.
-- Apple Photos mutations continue through the signed Photos Bridge app. The
-  native Backstage app may use PhotoKit for reads, selection, and exports, but
-  it does not create a second metadata writer.
+- Apple Photos mutations continue through Backstage's signed, authenticated
+  PhotoKit IPC surface. Backstage is the sole Photos/TCC process and metadata
+  writer; the standalone Photos Bridge app is retired.
 - Legacy Worker routes remain compatibility adapters during migration. New
   clients use the formal `/api/v1` surface.
 
@@ -35,10 +35,10 @@ the authoritative store for every mutation.
 | Fixtures | Root/sub-fixture hierarchy, seed, rename/move/archive/reopen | `Owner.sqlite`, through Worker action ledger | `/actions` plus `/fixtures/seed` | Fixture browser and create/move/archive flows |
 | Universal search | Catalog and Photos-index search | `Owner.sqlite` and local Photos index | `/actions` | Native search and fixture assignment |
 | Sidecar culling | Query, apply, batch apply, upsert | Worker sidecar state + local receipts | `/sidecar/decisions/*` | Keyboard culling and batch decisions |
-| Metadata review | Title/keyword proposals, accept/undo, blacklist | `Owner.sqlite`; Photos Bridge give-back | `/actions` | Compare, edit, approve, undo, blacklist |
+| Metadata review | Title/keyword proposals, accept/undo, blacklist | `Owner.sqlite`; Backstage PhotoKit give-back | `/actions` | Compare, edit, approve, undo, blacklist |
 | Waste Basket | X to recoverable entry, restore, confirmed empty, explicit tombstone restore | `Owner.sqlite` Waste Basket gateway and receipts | `/actions` plus connector/local gateway | Multi-select lifecycle workspace with confirmation gate |
 | Upload bridge | Queue, R2 upload, collision/receipt accounting | `Owner.sqlite`, private/public R2 | `/actions` | Upload queue with progress and cancellation |
-| Apple Photos give-back | Signed-app batch read, explicit batch mutation, re-read verification and independently retryable receipts | Signed Photos Bridge app | `/actions` | Native dry run, explicit commit, verified/failed receipts and failed-only retry |
+| Apple Photos give-back | Signed-app batch read, explicit batch mutation, re-read verification and independently retryable receipts | Signed Backstage PhotoKit IPC | `/actions` | Native dry run, explicit commit, verified/failed receipts and failed-only retry |
 | Delivery | PDF/video assembly, status, view/download | Worker + R2 | `/deliverables*`, `/jobs*` | Delivery builder and download/share view |
 | Sharing | Delivery links and fixture/gallery access | Worker + D1/R2 | `/delivery-links`, `/acs/*` | Share sheet and access assignment |
 | Publication | Static catalog generation, validation, deploy | Max connector and GitHub Pages | `/actions` | Rehearsal report and explicit publish action |

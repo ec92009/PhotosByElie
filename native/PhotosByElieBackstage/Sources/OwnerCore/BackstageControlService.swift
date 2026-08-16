@@ -1,5 +1,95 @@
 import Foundation
 
+public struct RetiredPhotosBridgeArtifacts: Sendable, Equatable {
+    public var archiveDirectory: URL?
+    public var retiredNames: [String]
+
+    public init(archiveDirectory: URL?, retiredNames: [String]) {
+        self.archiveDirectory = archiveDirectory
+        self.retiredNames = retiredNames
+    }
+}
+
+/// Recoverably removes the retired standalone PhotoKit helper from the only
+/// locations that old Backstage install and rollback flows used as live roots.
+/// Historical archives remain untouched for audit and recovery.
+public struct RetiredPhotosBridgeService {
+    public static let liveArtifactNames = [
+        "PhotosByElie Photos Bridge.app",
+        "PhotosByElie Photos Bridge.app.previous",
+        "PhotosByElie Photos Bridge.app.rollback",
+    ]
+
+    private let fileManager: FileManager
+    private let applicationsDirectory: URL
+    private let retirementRoot: URL
+    private let retirementFolderName: String
+
+    public init(
+        fileManager: FileManager = .default,
+        applicationsDirectory: URL? = nil,
+        retirementRoot: URL? = nil,
+        retirementFolderName: String? = nil
+    ) {
+        let applications = applicationsDirectory
+            ?? fileManager.homeDirectoryForCurrentUser
+                .appendingPathComponent("Applications", isDirectory: true)
+        self.fileManager = fileManager
+        self.applicationsDirectory = applications.standardizedFileURL
+        self.retirementRoot = (retirementRoot
+            ?? applications.appendingPathComponent(
+                "PhotosByElie Retired Bridge Artifacts",
+                isDirectory: true
+            )).standardizedFileURL
+        self.retirementFolderName = retirementFolderName ?? Self.makeRetirementFolderName()
+    }
+
+    @discardableResult
+    public func retireInstalledArtifacts() throws -> RetiredPhotosBridgeArtifacts {
+        let sources = Self.liveArtifactNames.compactMap { name -> (String, URL)? in
+            let url = applicationsDirectory.appendingPathComponent(name, isDirectory: true)
+            let exists = fileManager.fileExists(atPath: url.path)
+                || (try? fileManager.destinationOfSymbolicLink(atPath: url.path)) != nil
+            return exists ? (name, url) : nil
+        }
+        guard !sources.isEmpty else {
+            return RetiredPhotosBridgeArtifacts(archiveDirectory: nil, retiredNames: [])
+        }
+
+        let archiveDirectory = retirementRoot.appendingPathComponent(
+            retirementFolderName,
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: archiveDirectory,
+            withIntermediateDirectories: true
+        )
+
+        var retiredNames: [String] = []
+        for (name, source) in sources {
+            let destination = archiveDirectory.appendingPathComponent(name, isDirectory: true)
+            guard !fileManager.fileExists(atPath: destination.path) else {
+                throw CocoaError(.fileWriteFileExists)
+            }
+            try fileManager.moveItem(at: source, to: destination)
+            retiredNames.append(name)
+        }
+        return RetiredPhotosBridgeArtifacts(
+            archiveDirectory: archiveDirectory,
+            retiredNames: retiredNames
+        )
+    }
+
+    private static func makeRetirementFolderName() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return "backstage-launch-\(formatter.string(from: Date()))-\(UUID().uuidString)"
+    }
+}
+
 public struct BackstageReleaseIdentity: Codable, Sendable, Equatable {
     public var bundleIdentifier: String
     public var version: String

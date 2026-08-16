@@ -17,7 +17,8 @@ class SidecarParityInventoryTest(unittest.TestCase):
             "PhotosByElie Backstage",
             "only operator UI",
             "Photos Bridge",
-            "headless",
+            "sole signed",
+            "never recreates it",
             "Owner.sqlite",
             "Immutable fixture snapshot",
             "Selection and navigation",
@@ -31,6 +32,7 @@ class SidecarParityInventoryTest(unittest.TestCase):
             "No ticket may call a capability complete merely because the browser Sidecar can",
             contract,
         )
+        self.assertNotIn("Photos Bridge remains the sole Photos writer", contract)
 
     def test_shared_page_keeps_global_culling_controls(self):
         html = (ROOT / "sidecar.html").read_text(encoding="utf-8")

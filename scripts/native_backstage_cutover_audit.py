@@ -15,6 +15,10 @@ from typing import Any
 
 BACKSTAGE_APP = "PhotosByElie Backstage.app"
 BRIDGE_APP = "PhotosByElie Photos Bridge.app"
+RETIRED_RUNTIME_FILES = (
+    "scripts/apple_photos_bridge.swift",
+    "scripts/install_sidecar_photos_bridge_app.zsh",
+)
 LEGACY_APPS = ("PhotosByElie Owner.app", "PhotosByElie Sidecar.app")
 REQUIRED_LAUNCH_AGENT = "com.photosbyelie.owner-connector.plist"
 
@@ -87,10 +91,29 @@ def collect_inventory(
         for path in launch_agents.glob("*photosbyelie*.plist")
         if path.is_file()
     )
+
+    runtime_roots = [
+        applications / BACKSTAGE_APP / "Contents" / "Resources" / "OwnerRuntime",
+    ]
+    connector_config = home / ".config" / "photosbyelie" / "connector.json"
+    if connector_config.is_file():
+        try:
+            connector_payload = json.loads(connector_config.read_text(encoding="utf-8"))
+            runtime_root = connector_payload.get("runtimeRoot")
+            if isinstance(runtime_root, str) and runtime_root:
+                runtime_roots.append(Path(runtime_root).expanduser())
+        except (OSError, TypeError, json.JSONDecodeError):
+            pass
+    retired_runtime_artifacts = sorted(
+        str(root / relative)
+        for root in runtime_roots
+        for relative in RETIRED_RUNTIME_FILES
+        if (root / relative).exists()
+    )
     checks = {
         "backstageInstalled": app_state[BACKSTAGE_APP]["installed"],
-        "photosBridgeInstalled": app_state[BRIDGE_APP]["installed"],
-        "photosBridgeHeadless": app_state[BRIDGE_APP].get("headless") is True,
+        "photosBridgeAbsent": not app_state[BRIDGE_APP]["installed"],
+        "retiredRuntimeArtifactsAbsent": not retired_runtime_artifacts,
         "legacyOperatorAppsAbsent": not any(
             app_state[name]["installed"] for name in LEGACY_APPS
         ),
@@ -121,6 +144,7 @@ def collect_inventory(
         "applications": app_state,
         "launchAgents": launch_agent_names,
         "services": services,
+        "retiredRuntimeArtifacts": retired_runtime_artifacts,
         "checks": checks,
         "ok": all(checks.values()),
     }

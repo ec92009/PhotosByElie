@@ -42,10 +42,25 @@ PBE_OWNER_HOST_REQUIRED_FILES = frozenset(
         "scripts/waste_basket_gateway.py",
     }
 )
+RETIRED_RUNTIME_FILES = frozenset(
+    {
+        "scripts/apple_photos_bridge.swift",
+        "scripts/install_sidecar_photos_bridge_app.zsh",
+    }
+)
 
 
 class ConnectorRuntimeError(RuntimeError):
     """Raised when a connector runtime cannot be safely created or trusted."""
+
+
+def _runtime_path_allowed(path: PurePosixPath) -> bool:
+    rendered = str(path)
+    return (
+        rendered not in RETIRED_RUNTIME_FILES
+        and not path.name.endswith("_test.py")
+        and not path.name.startswith("test_")
+    )
 
 
 @dataclass(frozen=True)
@@ -241,6 +256,7 @@ def _commit_runtime_entries(
     host_entries = [
         entry
         for entry in all_entries
+        if _runtime_path_allowed(entry.path)
         if any(
             _host_pathspec_matches(pathspec, str(entry.path))
             for pathspec in host_pathspecs
@@ -255,7 +271,11 @@ def _commit_runtime_entries(
     runtime_entries = [
         entry
         for entry in all_entries
-        if str(entry.path).startswith("scripts/") or str(entry.path) in set(host_paths)
+        if (
+            str(entry.path).startswith("scripts/")
+            or str(entry.path) in set(host_paths)
+        )
+        and _runtime_path_allowed(entry.path)
     ]
     entries_by_path = {str(entry.path): entry for entry in runtime_entries}
     entries = [entries_by_path[path] for path in sorted(entries_by_path)]

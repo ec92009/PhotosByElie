@@ -28,6 +28,10 @@ REQUIRED_FIXTURE_SCRIPTS = {
     "sidecar_state_db.py",
     "waste_basket_gateway.py",
 }
+RETIRED_FIXTURE_SCRIPTS = {
+    "apple_photos_bridge.swift",
+    "install_sidecar_photos_bridge_app.zsh",
+}
 
 
 class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
@@ -62,6 +66,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.copy2(source, destination)
             else:
                 destination.write_text(f'"""Disposable fixture for {name}."""\n', encoding="utf-8")
+        for name in sorted(RETIRED_FIXTURE_SCRIPTS):
+            (scripts_root / name).write_text("retired resurrection fixture\n", encoding="utf-8")
+        (scripts_root / "connector_runtime_test.py").write_text(
+            "raise AssertionError('tests must not ship')\n",
+            encoding="utf-8",
+        )
         (source_root / "gallery.html").write_text(
             "<!doctype html><title>Runtime fixture</title>\n",
             encoding="utf-8",
@@ -207,6 +217,11 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.rmtree(source_root)
                 self.assertFalse(source_root.exists())
                 self.assertTrue((runtime_root / "scripts" / "new_owner_connector.py").is_file())
+                for name in RETIRED_FIXTURE_SCRIPTS:
+                    self.assertFalse((runtime_root / "scripts" / name).exists())
+                self.assertFalse(
+                    (runtime_root / "scripts" / "connector_runtime_test.py").exists()
+                )
                 self.assertTrue((runtime_root / "gallery.html").is_file())
                 runtime_manifest = json.loads(
                     (runtime_root / "connector-runtime-manifest.json").read_text(encoding="utf-8")

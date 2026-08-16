@@ -3557,7 +3557,7 @@ struct RetiredPhotosBridgeLifecycleTests {
         let result = try RetiredPhotosBridgeService(
             applicationsDirectory: applications,
             retirementRoot: retirementRoot,
-            retirementFolderName: "candidate-229.3"
+            retirementFolderName: "candidate-229.4"
         ).retireInstalledArtifacts()
 
         #expect(result.retiredNames == RetiredPhotosBridgeService.liveArtifactNames)
@@ -3585,7 +3585,7 @@ struct RetiredPhotosBridgeLifecycleTests {
         let result = try RetiredPhotosBridgeService(
             applicationsDirectory: applications,
             retirementRoot: retirementRoot,
-            retirementFolderName: "candidate-229.3"
+            retirementFolderName: "candidate-229.4"
         ).retireInstalledArtifacts()
 
         #expect(result.archiveDirectory == nil)

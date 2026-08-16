@@ -56,7 +56,7 @@ final class BackstageSelectionController: ObservableObject {
 }
 
 @MainActor
-final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcurrency QLPreviewPanelDataSource {
+final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowDelegate, @preconcurrency QLPreviewPanelDataSource {
     private var items: [NSURL] = []
     private var metadata: [BackstageQuickLookMetadata] = []
     private var shortcutMonitor: Any?
@@ -95,6 +95,13 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         QLPreviewPanel.shared()?.isVisible == true
     }
 
+    static func isConfiguredQuickLookPanel(
+        _ sender: NSWindow,
+        configuredPanel: NSWindow?
+    ) -> Bool {
+        sender === configuredPanel
+    }
+
     func activate() {
         isOwnerActive = true
     }
@@ -114,6 +121,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         items = urls.map { $0 as NSURL }
         self.metadata = metadata
         guard let panel = QLPreviewPanel.shared() else { return }
+        configureQuickLookFrame(panel)
         panel.dataSource = self
         panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
         panel.reloadData()
@@ -124,14 +132,33 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
     }
 
     func dismiss() {
+        let panel = configuredPreviewPanel ?? QLPreviewPanel.shared()
         metadataWindow.parent?.removeChildWindow(metadataWindow)
         metadataWindow.orderOut(nil)
-        QLPreviewPanel.shared()?.orderOut(nil)
+        panel?.orderOut(nil)
+        panel?.delegate = nil
+        configuredPreviewPanel = nil
         items = []
         metadata = []
         previewIndexObservation = nil
         removePreviewPanelObservers()
         removeShortcutMonitor()
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard let panel = sender as? QLPreviewPanel,
+              Self.isConfiguredQuickLookPanel(
+                  panel,
+                  configuredPanel: configuredPreviewPanel
+              )
+        else {
+            return true
+        }
+
+        // Route the red close control through the same cleanup path as Escape
+        // so Quick Look closes without terminating or destabilizing Backstage.
+        dismiss()
+        return false
     }
 
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
@@ -225,6 +252,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, @preconcu
         panel.setFrameAutosaveName(Self.quickLookFrameAutosaveName)
         _ = panel.setFrameUsingName(Self.quickLookFrameAutosaveName)
         configuredPreviewPanel = panel
+        panel.delegate = self
     }
 
     private func configureMetadataPanel() {

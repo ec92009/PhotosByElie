@@ -1,11 +1,49 @@
+import AppKit
 import CryptoKit
 import Foundation
 import SQLite3
 import Testing
+@testable import BackstageUI
 @testable import OwnerCore
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
+    @Test("Quick Look close handling is scoped to the configured panel")
+    @MainActor
+    func quickLookCloseHandlingIsScoped() {
+        let configuredPanel = NSWindow(
+            contentRect: .zero,
+            styleMask: [],
+            backing: .buffered,
+            defer: true
+        )
+        let otherWindow = NSWindow(
+            contentRect: .zero,
+            styleMask: [],
+            backing: .buffered,
+            defer: true
+        )
+
+        #expect(
+            BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                configuredPanel,
+                configuredPanel: configuredPanel
+            )
+        )
+        #expect(
+            !BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                otherWindow,
+                configuredPanel: configuredPanel
+            )
+        )
+        #expect(
+            !BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                configuredPanel,
+                configuredPanel: nil
+            )
+        )
+    }
+
     @Test("Visual repair scope is limited to RE roots and descendants")
     func visualRepairScopeGuards() {
         let re = FixtureNode(

@@ -1259,11 +1259,6 @@ final class BackstageViewModel: ObservableObject {
     ) async {
         guard cullingThumbnails[assetID] == nil else { return }
         let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
-        if let image = localPreviewImage(at: thumbnailFallbackPaths[assetID]) {
-            cacheCullingThumbnail(image, for: assetID)
-            cullingThumbnailFailures.removeValue(forKey: assetID)
-            return
-        }
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
@@ -1292,6 +1287,15 @@ final class BackstageViewModel: ObservableObject {
             }
         }
         if !Task.isCancelled {
+            // Retained derivatives are a legacy recovery path only. Normal
+            // Waste Basket previews must come from the local Apple Photos
+            // library, so a watermarked public artifact cannot mask an APL
+            // access or identity failure.
+            if let image = localPreviewImage(at: thumbnailFallbackPaths[assetID]) {
+                cacheCullingThumbnail(image, for: assetID)
+                cullingThumbnailFailures.removeValue(forKey: assetID)
+                return
+            }
             cullingThumbnailFailures[assetID] = lastFailure
         }
     }
@@ -3689,25 +3693,38 @@ final class BackstageViewModel: ObservableObject {
                 return receipt.destination
             }
 
+            var photosError: Error?
+            do {
+                let preview = try await renderedJPEGPreviewForAsset(
+                    forAssetID: item.mediaID,
+                    preferredIdentifier: item.photoLibraryIdentifier,
+                    maxPixelSize: 4_000
+                )
+                let destination = directory
+                    .appendingPathComponent(item.mediaID.replacingOccurrences(of: "/", with: "_"))
+                    .appendingPathExtension("jpg")
+                try preview.jpegData.write(to: destination, options: .atomic)
+                lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Apple Photos."
+                return destination
+            } catch {
+                photosError = error
+            }
+
+            // Retained derivatives are only a legacy recovery path for a
+            // lifecycle row whose Apple Photos identity is no longer
+            // resolvable. They are public watermarked artifacts and must not
+            // win over the local Apple Photos library.
             if let localURL = lifecyclePreviewURL(
                 quickLookPath: item.quickLookPath,
                 previewPath: item.previewPath
             ) {
-                lifecycleStatus = "Prepared one private Waste Basket Quick Look item from the retained JPG preview."
+                lifecycleStatus = "Prepared one legacy Waste Basket Quick Look item from the retained JPG fallback."
                 return localURL
             }
-
-            let preview = try await renderedJPEGPreviewForAsset(
-                forAssetID: item.mediaID,
-                preferredIdentifier: item.photoLibraryIdentifier,
-                maxPixelSize: 4_000
-            )
-            let destination = directory
-                .appendingPathComponent(item.mediaID.replacingOccurrences(of: "/", with: "_"))
-                .appendingPathExtension("jpg")
-            try preview.jpegData.write(to: destination, options: .atomic)
-            lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Photos."
-            return destination
+            if let photosError {
+                throw photosError
+            }
+            throw PhotoLibraryError.previewUnavailable(item.mediaID)
         } catch {
             lifecycleStatus = "Waste Basket Quick Look unavailable: \(userFacingMessage(for: error))"
             return nil

@@ -1108,6 +1108,16 @@ class NativeCullingParityTest(unittest.TestCase):
             "mediaIDs: ids",
         ):
             self.assertIn(marker, model)
+        self.assertLess(
+            model.index("renderedJPEGPreviewForAsset("),
+            model.index("lifecyclePreviewURL(", model.index("renderedJPEGPreviewForAsset(")),
+        )
+        self.assertLess(
+            model.index("previewForAsset(", model.index("func loadThumbnail(")),
+            model.index("localPreviewImage(at: thumbnailFallbackPaths", model.index("func loadThumbnail(")),
+        )
+        self.assertIn("from Apple Photos.", model)
+        self.assertIn("legacy Waste Basket Quick Look item", model)
         for marker in (
             "mediaIDs: [String] = []",
             "mediaIDs: mediaIDs",

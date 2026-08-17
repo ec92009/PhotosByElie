@@ -599,13 +599,28 @@ private struct LifecycleView: View {
                     .disabled(model.isRunningLifecycle)
                     .backstageHelp("Reload the private lifecycle ledger and current Waste Basket contents.")
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
-                    .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecyclePendingActionID != nil
+                            || model.selectedLifecycleIDs.isEmpty
+                    )
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
                 Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
-                    .disabled(model.isRunningLifecycle || model.selectedRecoverableLifecycleIDs.isEmpty)
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecyclePendingActionID != nil
+                            || model.selectedRecoverableLifecycleIDs.isEmpty
+                    )
                     .backstageHelp("Review the explicit confirmation for changing only the selected recoverable items into global tombstones; active tombstones and unselected items are untouched.")
                 Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
-                    .disabled(model.isRunningLifecycle || model.lifecycleItems.allSatisfy { $0.state != "hidden" })
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecyclePendingActionID != nil
+                            || model.lifecycleItems.allSatisfy { $0.state != "hidden" }
+                    )
                     .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
             Text(model.lifecycleCountSummary)
@@ -615,6 +630,8 @@ private struct LifecycleView: View {
             BackstageFeedbackView(
                 message: model.lifecycleStatus,
                 isWorking: model.isRunningLifecycle
+                    || model.lifecycleQueueing
+                    || model.lifecyclePendingActionID != nil
             )
             Table(
                 sortedLifecycleItems,

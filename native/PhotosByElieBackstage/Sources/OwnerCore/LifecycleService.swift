@@ -91,6 +91,25 @@ public actor LifecycleService {
         )
     }
 
+    /// Queue an X transition and return before the connector drains the
+    /// lifecycle outbox. The caller owns terminal-state monitoring.
+    public func enqueueMoveToWasteBasket(
+        mediaIDs: [String],
+        fixtureID: String = "",
+        galleryID: String = "",
+        source: String = "backstage-culling"
+    ) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await enqueueModeration(
+            operation: "waste-basket-x",
+            mediaIDs: ids,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID
+        )
+    }
+
     public func emptyWasteBasket(
         mediaIDs: [String] = [],
         confirmed: Bool,
@@ -101,11 +120,37 @@ public actor LifecycleService {
         }
         return try await submitModeration(
             operation: "waste-basket-empty",
-            mediaIDs: mediaIDs,
+            mediaIDs: clean(mediaIDs),
             source: "backstage-waste-basket",
             confirmed: true,
             confirmationToken: confirmationToken
         )
+    }
+
+    /// Queue a scoped or global Empty Waste Basket transition and return
+    /// before local reconciliation and remote acknowledgement finish.
+    public func enqueueEmptyWasteBasket(
+        mediaIDs: [String] = [],
+        confirmed: Bool,
+        confirmationToken: String = "EMPTY_WASTE_BASKET"
+    ) async throws -> OwnerAction {
+        guard confirmed, confirmationToken == "EMPTY_WASTE_BASKET" else {
+            throw LifecycleServiceError.emptyRequiresConfirmation
+        }
+        return try await enqueueModeration(
+            operation: "waste-basket-empty",
+            mediaIDs: clean(mediaIDs),
+            source: "backstage-waste-basket",
+            confirmed: true,
+            confirmationToken: confirmationToken
+        )
+    }
+
+    public func awaitCompletion(
+        of action: OwnerAction,
+        completionTimeout: Duration? = nil
+    ) async throws -> OwnerAction {
+        try await runner.awaitCompletion(of: action, completionTimeout: completionTimeout)
     }
 
     public func restoreTombstone(mediaIDs: [String]) async throws -> OwnerAction {
@@ -155,6 +200,58 @@ public actor LifecycleService {
         confirmationToken: String = "",
         explicitTombstoneRestore: Bool = false
     ) async throws -> OwnerAction {
+        let (request, requestKey) = moderationRequest(
+            operation: operation,
+            mediaIDs: mediaIDs,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID,
+            confirmed: confirmed,
+            confirmationToken: confirmationToken,
+            explicitTombstoneRestore: explicitTombstoneRestore
+        )
+        return try await runner.submit(
+            request,
+            idempotencyKey: requestKey
+        )
+    }
+
+    private func enqueueModeration(
+        operation: String,
+        mediaIDs: [String],
+        source: String,
+        fixtureID: String = "",
+        galleryID: String = "",
+        confirmed: Bool = false,
+        confirmationToken: String = "",
+        explicitTombstoneRestore: Bool = false
+    ) async throws -> OwnerAction {
+        let (request, requestKey) = moderationRequest(
+            operation: operation,
+            mediaIDs: mediaIDs,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID,
+            confirmed: confirmed,
+            confirmationToken: confirmationToken,
+            explicitTombstoneRestore: explicitTombstoneRestore
+        )
+        return try await runner.enqueue(
+            request,
+            idempotencyKey: requestKey
+        )
+    }
+
+    private func moderationRequest(
+        operation: String,
+        mediaIDs: [String],
+        source: String,
+        fixtureID: String = "",
+        galleryID: String = "",
+        confirmed: Bool = false,
+        confirmationToken: String = "",
+        explicitTombstoneRestore: Bool = false
+    ) -> (OwnerActionCreate, String) {
         let requestKey = "native-lifecycle:\(operation):\(UUID().uuidString)"
         var payload: [String: JSONValue] = [
             "operation": .string(operation),
@@ -174,9 +271,6 @@ public actor LifecycleService {
             target: connectorID,
             payload: payload
         )
-        return try await runner.submit(
-            request,
-            idempotencyKey: requestKey
-        )
+        return (request, requestKey)
     }
 }

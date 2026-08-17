@@ -509,6 +509,8 @@ struct CullingView: View {
         let isWorking = model.isLoadingFixtureCulling
             || model.isLoadingCullingDecisions
             || model.isApplyingCullingDecision
+            || model.cullingWasteBasketQueueing
+            || model.cullingWasteBasketPendingActionID != nil
             || model.isLoadingPreview
         if isWorking {
             BackstageFeedbackView(message: model.cullingStatus, isWorking: true)
@@ -550,7 +552,12 @@ struct CullingView: View {
             Button("X Waste Basket") {
                 Task { await model.moveCullingSelectionToWasteBasket() }
             }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .disabled(
+                model.cullingSelection.selectedIDs.isEmpty
+                    || model.isApplyingCullingDecision
+                    || model.cullingWasteBasketQueueing
+                    || model.cullingWasteBasketPendingActionID != nil
+            )
             .accessibilityLabel("X move selected items to the recoverable Waste Basket")
             .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
             cullingRatingPicker

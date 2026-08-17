@@ -378,10 +378,13 @@ struct ReviewView: View {
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
                         .backstageHelp("Deselect every Review item without changing titles, keywords, or workflow states.")
                 }
-                BackstageFeedbackView(
-                    message: model.reviewStatus,
-                    isWorking: model.isRunningReview || model.isRunningAIPass
-                )
+                    BackstageFeedbackView(
+                        message: model.reviewStatus,
+                        isWorking: model.isRunningReview
+                            || model.reviewWasteBasketQueueing
+                            || model.reviewWasteBasketPendingActionID != nil
+                            || model.isRunningAIPass
+                    )
             }
             .padding()
             .frame(minWidth: 480)
@@ -849,6 +852,11 @@ private struct ReviewInspector: View {
                         Button("Waste Basket") {
                             Task { await model.moveReviewSelectionToWasteBasket() }
                         }
+                        .disabled(
+                            model.isRunningReview
+                                || model.reviewWasteBasketQueueing
+                                || model.reviewWasteBasketPendingActionID != nil
+                        )
                         .keyboardShortcut("x", modifiers: [])
                         .backstageHelp("Move the selected Review assets to the recoverable Waste Basket through the shared lifecycle gateway.")
                         Button("Unpick") {
@@ -870,7 +878,10 @@ private struct ReviewInspector: View {
                     HStack(spacing: 8) {
                         BackstageFeedbackView(
                             message: model.reviewStatus,
-                            isWorking: model.isRunningReview || model.isRunningAIPass
+                            isWorking: model.isRunningReview
+                                || model.reviewWasteBasketQueueing
+                                || model.reviewWasteBasketPendingActionID != nil
+                                || model.isRunningAIPass
                         )
                     }
                     Divider()

@@ -123,6 +123,17 @@ public actor OwnerActionRunner {
         )
     }
 
+    /// Create the durable action and return as soon as the Worker has accepted
+    /// it. Callers that need terminal state can monitor the returned action
+    /// with `awaitCompletion(of:)` from a background task.
+    public func enqueue(
+        _ request: OwnerActionCreate,
+        idempotencyKey: String = UUID().uuidString
+    ) async throws -> OwnerAction {
+        let envelope = try await api.createAction(request, idempotencyKey: idempotencyKey)
+        return envelope.action
+    }
+
     public func awaitCompletion(
         of queued: OwnerAction,
         completionTimeout: Duration? = nil

@@ -913,8 +913,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.9")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "119")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.11")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "121")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
@@ -1102,8 +1102,23 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, app)
         for marker in (
             "@Published var lifecycleCountSummary",
+            "@Published private(set) var lifecycleQueueing",
+            "@Published private(set) var lifecyclePendingActionID",
+            "@Published private(set) var cullingWasteBasketQueueing",
+            "@Published private(set) var cullingWasteBasketPendingActionID",
+            "@Published private(set) var reviewWasteBasketQueueing",
+            "@Published private(set) var reviewWasteBasketPendingActionID",
+            "lifecycleMonitorTask: Task<Void, Never>?",
+            "cullingWasteBasketMonitorTask: Task<Void, Never>?",
+            "reviewWasteBasketMonitorTask: Task<Void, Never>?",
             "var selectedRecoverableLifecycleIDs: [String]",
             "func emptyWasteBasketSelection() async",
+            "enqueueEmptyWasteBasket(",
+            "enqueueMoveToWasteBasket(",
+            "lifecycleService.awaitCompletion(of: action)",
+            "Submitting Delete Selected for",
+            "Queued X for",
+            "Delete Selected queued as action",
             "func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL?",
             "private func exportOriginalForAsset(",
             "thumbnailPreferredIdentifiers",
@@ -1122,6 +1137,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "mediaIDs: [String] = []",
             "mediaIDs: mediaIDs",
             'operation: \"waste-basket-empty\"',
+            "public func awaitCompletion(",
         ):
             self.assertIn(marker, lifecycle)
         self.assertIn("photoLibraryIdentifier", lifecycle)
@@ -1181,6 +1197,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "model.isLoadingFixtureCulling",
             "model.isLoadingCullingDecisions",
             "model.isApplyingCullingDecision",
+            "model.cullingWasteBasketPendingActionID",
             "model.isLoadingPreview",
         ):
             self.assertIn(flag, culling)
@@ -1193,10 +1210,9 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertGreaterEqual(review.count("message: model.reviewStatus"), 2)
         self.assertGreaterEqual(review.count("BackstageFeedbackView("), 2)
-        self.assertIn(
-            "isWorking: model.isRunningReview || model.isRunningAIPass",
-            review,
-        )
+        self.assertIn("isWorking: model.isRunningReview", review)
+        self.assertIn("model.reviewWasteBasketPendingActionID", review)
+        self.assertIn("model.isRunningAIPass", review)
         self.assertNotIn("Text(model.reviewStatus)", review)
 
         self.assertIn("BackstageFeedbackView(", upload)

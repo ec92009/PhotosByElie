@@ -604,6 +604,26 @@ struct OwnerCoreTests {
         )
     }
 
+    @Test("Owner action enqueue returns before terminal polling")
+    func ownerActionEnqueueReturnsQueuedAction() async throws {
+        let runner = OwnerActionRunner(
+            api: PendingOwnerActionAPI(),
+            waker: DelayedWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let action = try await runner.enqueue(
+            OwnerActionCreate(
+                actionKind: "photo-moderation",
+                target: "max",
+                payload: ["operation": .string("waste-basket-x")]
+            )
+        )
+
+        #expect(action.id == "owner-action-pending-fixture-tree")
+        #expect(action.state == .queued)
+    }
+
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
         #expect(OwnerContract.openAPIVersion == "1.1.0")
@@ -2973,6 +2993,54 @@ struct OwnerCoreTests {
         #expect(finalRequests[3].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
         #expect(finalRequests[4].payload["operation"]?.stringValue == "waste-basket-empty")
         #expect(finalRequests[4].payload["photoIds"]?.arrayValue?.isEmpty == true)
+    }
+
+    @Test("Native lifecycle queues X and Empty before terminal reconciliation")
+    func nativeLifecycleQueuesDestructiveActions() async throws {
+        let queuedX = OwnerAction(
+            id: "owner-action-lifecycle-queued-x",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let queuedEmpty = OwnerAction(
+            id: "owner-action-lifecycle-queued-empty",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [queuedX, queuedEmpty])
+        let service = LifecycleService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let x = try await service.enqueueMoveToWasteBasket(
+            mediaIDs: [" photo-2 ", "photo-1", "photo-2"],
+            fixtureID: "fixture-expo"
+        )
+        let empty = try await service.enqueueEmptyWasteBasket(
+            mediaIDs: ["photo-2"],
+            confirmed: true
+        )
+
+        #expect(x.state == .queued)
+        #expect(empty.state == .queued)
+        #expect(try await service.awaitCompletion(of: x).state == .completed)
+        #expect(try await service.awaitCompletion(of: empty).state == .completed)
+
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        #expect(requests[0].payload["operation"]?.stringValue == "waste-basket-x")
+        #expect(requests[0].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-1", "photo-2"])
+        #expect(requests[0].payload["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(requests[1].payload["operation"]?.stringValue == "waste-basket-empty")
+        #expect(requests[1].payload["confirmed"]?.boolValue == true)
+        #expect(requests[1].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
     }
 
     @Test("Native delivery keeps fixture upload and publication as separate actions")

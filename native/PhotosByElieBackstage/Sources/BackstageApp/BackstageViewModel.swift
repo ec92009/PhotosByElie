@@ -1155,7 +1155,11 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func requestThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
+    func requestThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil,
+        preferRenderedJPEG: Bool = false
+    ) {
         if let preferredIdentifier = preferredIdentifier?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !preferredIdentifier.isEmpty {
@@ -1177,7 +1181,8 @@ final class BackstageViewModel: ObservableObject {
             }
             await self.loadThumbnail(
                 for: assetID,
-                preferredIdentifier: preferredIdentifier
+                preferredIdentifier: preferredIdentifier,
+                preferRenderedJPEG: preferRenderedJPEG
             )
         }
     }
@@ -1249,7 +1254,8 @@ final class BackstageViewModel: ObservableObject {
 
     func loadThumbnail(
         for assetID: String,
-        preferredIdentifier: String? = nil
+        preferredIdentifier: String? = nil,
+        preferRenderedJPEG: Bool = false
     ) async {
         guard cullingThumbnails[assetID] == nil else { return }
         let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
@@ -1257,11 +1263,20 @@ final class BackstageViewModel: ObservableObject {
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
-                let preview = try await previewForAsset(
-                    forAssetID: assetID,
-                    preferredIdentifier: preferredIdentifier,
-                    maxPixelSize: 180
-                )
+                let preview: PhotoPreview
+                if preferRenderedJPEG {
+                    preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: assetID,
+                        preferredIdentifier: preferredIdentifier,
+                        maxPixelSize: 180
+                    )
+                } else {
+                    preview = try await previewForAsset(
+                        forAssetID: assetID,
+                        preferredIdentifier: preferredIdentifier,
+                        maxPixelSize: 180
+                    )
+                }
                 guard let image = NSImage(data: preview.jpegData) else {
                     lastFailure = .previewUnavailable
                     if attempt < 2 {

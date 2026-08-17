@@ -674,7 +674,8 @@ private struct LifecycleView: View {
                     .task {
                         model.requestThumbnail(
                             for: item.mediaID,
-                            preferredIdentifier: item.photoLibraryIdentifier
+                            preferredIdentifier: item.photoLibraryIdentifier,
+                            preferRenderedJPEG: true
                         )
                     }
                 }

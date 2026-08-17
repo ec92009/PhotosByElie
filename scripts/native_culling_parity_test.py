@@ -260,7 +260,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ui = backstage_ui_source()
         self.assertIn("private var cullingThumbnailTasks:", model)
         self.assertIn("private var cullingThumbnailTaskTokens:", model)
-        self.assertIn("func requestThumbnail(for assetID:", model)
+        self.assertIn("func requestThumbnail(\n        for assetID:", model)
         self.assertIn("for attempt in 0..<3", model)
         self.assertIn("cullingThumbnailTasks[assetID]?.cancel()", model)
         self.assertIn("cullingThumbnailTaskTokens.removeValue(forKey: assetID)", model)

@@ -13,9 +13,11 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+import scripts.new_owner_connector as new_owner_connector
 from scripts.new_owner_connector import (
     ConnectorConfig,
     InteractivePollingLease,
+    WorkerRequestError,
     WorkerClient,
     _allowed_local_status_origin,
     _launch_sidecar_workspace,
@@ -909,6 +911,44 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             ),
             "aborted",
         )
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM owner_connector_lifecycle_arm_intents"
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_deterministic_remote_identity_rejection_retires_pre_mutation_intent(self):
+        members = lifecycle_gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
+        request = {
+            "operationId": "owner-action:identity-rejected",
+            "operation": "empty",
+            "denied": True,
+            "items": members,
+        }
+        intent = new_owner_connector._persist_lifecycle_arm_intent(
+            self.config,
+            "empty",
+            ["asset-1"],
+            request,
+        )
+
+        class RejectingWorker:
+            def request(self, *_args, **_kwargs):
+                raise WorkerRequestError(
+                    "Lifecycle arm membership must exactly match the activated canonical manifest.",
+                    status=409,
+                    code="lifecycle_identity_conflict",
+                )
+
+        with self.assertRaisesRegex(WorkerRequestError, "activated canonical manifest"):
+            new_owner_connector._reconcile_lifecycle_arm_intent(
+                self.config,
+                RejectingWorker(),
+                lifecycle_gateway,
+                intent,
+            )
         with sqlite3.connect(self.db) as connection:
             self.assertEqual(
                 connection.execute(

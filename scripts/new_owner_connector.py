@@ -852,6 +852,15 @@ def start_local_status_server(
     thread.start()
 
 
+class WorkerRequestError(RuntimeError):
+    """A Worker response that includes an HTTP status and stable error code."""
+
+    def __init__(self, message: str, *, status: int = 0, code: str = "") -> None:
+        super().__init__(message)
+        self.status = int(status)
+        self.code = str(code or "").strip()
+
+
 class WorkerClient:
     def __init__(self, config: ConnectorConfig):
         self.config = config
@@ -890,14 +899,21 @@ class WorkerClient:
                 detail = json.loads(error.read().decode("utf-8") or "{}")
             except (json.JSONDecodeError, UnicodeDecodeError):
                 detail = {}
-            message = detail.get("error", {}).get("message") if isinstance(detail.get("error"), dict) else detail.get("error")
-            raise RuntimeError(message or f"Worker returned HTTP {error.code} for {path}.") from error
+            remote_error = detail.get("error")
+            message = remote_error.get("message") if isinstance(remote_error, dict) else remote_error
+            code = remote_error.get("code") if isinstance(remote_error, dict) else ""
+            raise WorkerRequestError(
+                message or f"Worker returned HTTP {error.code} for {path}.",
+                status=error.code,
+                code=code,
+            ) from error
         except (URLError, OSError, json.JSONDecodeError) as error:
             raise RuntimeError(f"Worker request failed for {path}: {error}") from error
         if body.get("ok") is False or body.get("error"):
-            error = body.get("error")
-            message = error.get("message") if isinstance(error, dict) else str(error)
-            raise RuntimeError(message or "Worker request failed.")
+            remote_error = body.get("error")
+            message = remote_error.get("message") if isinstance(remote_error, dict) else str(remote_error)
+            code = remote_error.get("code") if isinstance(remote_error, dict) else ""
+            raise WorkerRequestError(message or "Worker request failed.", code=code)
         return body
 
     def heartbeat(self) -> dict:
@@ -1147,7 +1163,19 @@ def _reconcile_lifecycle_arm_intent(
 ) -> dict[str, Any]:
     """Replay an uncertain arm and clear intent only after its receipt is durable."""
     operation_id = intent["operationId"]
-    arm = _lifecycle_request(client, "arm", operation_id, intent["request"])
+    try:
+        arm = _lifecycle_request(client, "arm", operation_id, intent["request"])
+    except WorkerRequestError as error:
+        # A deterministic identity rejection means the remote authority
+        # explicitly refused to create a barrier. Nothing can be committed
+        # locally, and retaining this initiating intent would make every
+        # background poll replay the same permanent failure forever. Keep the
+        # Owner action failure as the audit record, but retire only this
+        # pre-mutation retry intent. Transport errors and 5xx/partial errors
+        # remain durable for replay.
+        if error.status == 409 and error.code == "lifecycle_identity_conflict":
+            _clear_lifecycle_arm_intent(config, intent)
+        raise
     gateway.record_deployed_lifecycle_arm(
         config.repo_root,
         intent["operation"],

@@ -249,6 +249,24 @@ class FixtureConnectorTest(unittest.TestCase):
             "photos-hidden",
         )
 
+    def test_lifecycle_preview_index_uses_retained_jpg_derivatives(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            preview_root = root / "assets" / "owner-actions" / "sidecar-upload-runs" / "run-1" / "public-artifacts" / "expo"
+            preview_root.mkdir(parents=True)
+            (preview_root / "photo-1_900.jpg").write_bytes(b"thumbnail")
+            (preview_root / "photo-1_1800.jpg").write_bytes(b"quick-look")
+            (preview_root / "video-1_900.jpg").write_bytes(b"video")
+
+            indexed = local_server._lifecycle_local_preview_index(root, [
+                {"media_id": "photo-1", "media_type": "photo"},
+                {"media_id": "video-1", "media_type": "video"},
+            ])
+
+        self.assertEqual(Path(indexed["photo-1"]["previewPath"]).name, "photo-1_900.jpg")
+        self.assertEqual(Path(indexed["photo-1"]["quickLookPath"]).name, "photo-1_1800.jpg")
+        self.assertNotIn("video-1", indexed)
+
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

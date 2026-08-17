@@ -690,8 +690,22 @@ def _snapshot(
     asset_id: str,
     captured_at: str,
 ) -> str:
+    return _snapshot_payloads(
+        connection,
+        entry_id,
+        captured_at,
+        _provenance_rows(connection, asset_id),
+    )
+
+
+def _snapshot_payloads(
+    connection: sqlite3.Connection,
+    entry_id: str,
+    captured_at: str,
+    provenance_rows: list[tuple[str, str, dict[str, Any]]],
+) -> str:
     digest_items: list[dict[str, Any]] = []
-    for table, relation_key, payload in _provenance_rows(connection, asset_id):
+    for table, relation_key, payload in provenance_rows:
         row_json = _json(payload)
         row_hash = hashlib.sha256(row_json.encode("utf-8")).hexdigest()
         connection.execute(
@@ -704,6 +718,122 @@ def _snapshot(
         )
         digest_items.append({"relation": table, "key": relation_key, "sha256": row_hash})
     return _hash(digest_items)
+
+
+def _adopt_legacy_lifecycle_entries(
+    connection: sqlite3.Connection,
+    requested_ids: Iterable[Any],
+    *,
+    lifecycle_states: set[str],
+) -> list[str]:
+    """Adopt pre-gateway lifecycle rows at an explicit mutation boundary.
+
+    Older Backstage/Sidecar paths wrote ``media_lifecycle`` directly. They
+    remain visible in the private ledger, but have no immutable PBB-79 entry,
+    which used to make an explicit Empty action fail before it reached the
+    gateway. Adoption captures the exact existing rows as provenance; it does
+    not change their lifecycle state or touch source/R2/catalog data.
+    """
+    states = sorted({state for state in lifecycle_states if state in {"hidden", "discarded"}})
+    if not states or not _table_exists(connection, "media_lifecycle"):
+        return []
+    ids = _unique_ids(requested_ids)
+    placeholders = ",".join("?" for _ in states)
+    if ids:
+        id_placeholders = ",".join("?" for _ in ids)
+        rows = connection.execute(
+            f"""SELECT * FROM media_lifecycle
+                WHERE media_id IN ({id_placeholders})
+                  AND lifecycle_state IN ({placeholders})
+                ORDER BY media_id""",
+            [*ids, *states],
+        ).fetchall()
+    else:
+        rows = connection.execute(
+            f"""SELECT * FROM media_lifecycle
+                WHERE lifecycle_state IN ({placeholders})
+                ORDER BY media_id""",
+            states,
+        ).fetchall()
+
+    adopted: list[str] = []
+    now = _now()
+    for lifecycle_row in rows:
+        asset_id = str(lifecycle_row["media_id"] or "").strip()
+        if not asset_id:
+            continue
+        existing = connection.execute(
+            "SELECT entry_id FROM owner_waste_basket_entries WHERE asset_id = ? ORDER BY created_at DESC LIMIT 1",
+            (asset_id,),
+        ).fetchone()
+        if existing is not None:
+            continue
+        provenance_rows = _provenance_rows(connection, asset_id)
+        captured_at = next(
+            (
+                str(lifecycle_row[name] or "").strip()
+                for name in ("hidden_at", "discarded_at", "updated_at")
+                if name in lifecycle_row.keys() and str(lifecycle_row[name] or "").strip()
+            ),
+            now,
+        )
+        entry_id = f"wbe-legacy-{hashlib.sha256(asset_id.encode('utf-8')).hexdigest()[:32]}"
+        connection.execute(
+            """INSERT INTO owner_waste_basket_entries
+              (entry_id, asset_id, state, source, actor, fixture_id, gallery_id, reason,
+               provenance_sha256, captured_at, created_at, updated_at)
+              VALUES (?, ?, 'recoverable', 'legacy-media-lifecycle',
+                      'legacy-lifecycle-adoption', ?, '', ?, ?, ?, ?, ?)""",
+            (
+                entry_id,
+                asset_id,
+                str(lifecycle_row["source_slug"] or lifecycle_row["previous_slug"] or "").strip(),
+                "Adopted legacy media_lifecycle row before explicit Waste Basket mutation.",
+                _hash([{"relation": table, "key": key, "row": row} for table, key, row in provenance_rows]),
+                captured_at,
+                now,
+                now,
+            ),
+        )
+        provenance_sha256 = _snapshot_payloads(
+            connection,
+            entry_id,
+            captured_at,
+            provenance_rows,
+        )
+        connection.execute(
+            "UPDATE owner_waste_basket_entries SET provenance_sha256 = ? WHERE entry_id = ?",
+            (provenance_sha256, entry_id),
+        )
+        adopted.append(asset_id)
+    return adopted
+
+
+def _adopt_legacy_lifecycle_for_operation(
+    repo_root: Path,
+    operation: str,
+    requested_ids: Iterable[Any],
+    db_path: Path | None = None,
+) -> list[str]:
+    states = {"discarded"} if operation == "tombstone-restore" else {"hidden"}
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        adopted = _adopt_legacy_lifecycle_entries(
+            connection,
+            requested_ids,
+            lifecycle_states=states,
+        )
+        if adopted:
+            connection.commit()
+        else:
+            connection.rollback()
+        return adopted
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _validate_source(
@@ -952,6 +1082,24 @@ def derive_deployed_lifecycle_members(
                     if bucket and object_key:
                         bindings.add((bucket, object_key))
             if not bindings:
+                legacy_media = connection.execute(
+                    """SELECT public_preview_keys_json, private_keys_json
+                       FROM media_lifecycle WHERE media_id = ?""",
+                    (asset_id,),
+                ).fetchone()
+                if legacy_media is not None:
+                    for bucket, column in (("public", "public_preview_keys_json"), ("private", "private_keys_json")):
+                        try:
+                            keys = json.loads(str(legacy_media[column] or "[]"))
+                        except (TypeError, ValueError, json.JSONDecodeError):
+                            keys = []
+                        if isinstance(keys, list):
+                            bindings.update(
+                                (bucket, str(key).strip())
+                                for key in keys
+                                if str(key or "").strip()
+                            )
+            if not bindings:
                 raise WasteBasketError(f"canonical R2 mapping is missing for {asset_id}")
             members.append({
                 "canonicalAssetId": asset_id,
@@ -972,6 +1120,13 @@ def resolve_deployed_lifecycle_asset_ids(
     """Resolve lifecycle targets to canonical local asset IDs from Owner.sqlite."""
     normalized_operation = str(operation or "").strip().lower()
     requested = _unique_ids(requested_ids)
+    if normalized_operation in {"empty", "restore", "tombstone-restore"}:
+        _adopt_legacy_lifecycle_for_operation(
+            repo_root,
+            normalized_operation,
+            requested,
+            db_path,
+        )
     if normalized_operation == "empty" and not requested:
         connection = _connect(repo_root, db_path)
         try:
@@ -1780,6 +1935,8 @@ def _restore_operation(
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
     context = {"operation": operation, "fixtureId": str(fixture_id or "")}
     key = _normalize_request_key(operation, ids, normalized_source, request_key, context)
+    if operation in {"restore", "tombstone-restore"}:
+        _adopt_legacy_lifecycle_for_operation(repo_root, operation, ids, db_path)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
         entries = _resolve_entries(
@@ -1991,6 +2148,7 @@ def empty_waste_basket(
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
     context = {"reason": reason, "confirmation": EMPTY_CONFIRMATION_TOKEN}
     key = _normalize_request_key("empty", ids, normalized_source, request_key, context)
+    _adopt_legacy_lifecycle_for_operation(repo_root, "empty", ids, db_path)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
         entries = _resolve_entries(connection, ids)

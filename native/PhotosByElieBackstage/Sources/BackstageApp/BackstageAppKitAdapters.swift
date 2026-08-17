@@ -119,14 +119,17 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil
     ) {
         guard isOwnerActive else { return }
+        guard !urls.isEmpty else { return }
         items = urls.map { $0 as NSURL }
         self.metadata = metadata
         guard let panel = QLPreviewPanel.shared() else { return }
+        NSApp.activate(ignoringOtherApps: true)
         configureQuickLookFrame(panel)
         panel.dataSource = self
         panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
         panel.reloadData()
         panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
         installMetadataPanel(in: panel)
         observePreviewIndex(in: panel)
         installShortcutMonitor(onShortcut: onShortcut)

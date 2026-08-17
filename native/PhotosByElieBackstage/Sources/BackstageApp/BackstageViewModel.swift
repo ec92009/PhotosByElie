@@ -369,6 +369,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingThumbnailTaskTokens: [String: UUID] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
     private var thumbnailPreferredIdentifiers: [String: String] = [:]
+    private var thumbnailFallbackPaths: [String: String] = [:]
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -1155,11 +1156,16 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func requestThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
+    func requestThumbnail(for assetID: String, preferredIdentifier: String? = nil, fallbackPath: String? = nil) {
         if let preferredIdentifier = preferredIdentifier?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !preferredIdentifier.isEmpty {
             thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+        }
+        if let fallbackPath = fallbackPath?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !fallbackPath.isEmpty {
+            thumbnailFallbackPaths[assetID] = fallbackPath
         }
         guard cullingThumbnails[assetID] == nil,
               cullingThumbnailTasks[assetID] == nil
@@ -1253,6 +1259,11 @@ final class BackstageViewModel: ObservableObject {
     ) async {
         guard cullingThumbnails[assetID] == nil else { return }
         let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+        if let image = localPreviewImage(at: thumbnailFallbackPaths[assetID]) {
+            cacheCullingThumbnail(image, for: assetID)
+            cullingThumbnailFailures.removeValue(forKey: assetID)
+            return
+        }
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
@@ -1270,11 +1281,7 @@ final class BackstageViewModel: ObservableObject {
                     }
                     break
                 }
-                if cullingThumbnails.count >= 300,
-                   let oldest = cullingThumbnails.keys.first {
-                    cullingThumbnails.removeValue(forKey: oldest)
-                }
-                cullingThumbnails[assetID] = image
+                cacheCullingThumbnail(image, for: assetID)
                 cullingThumbnailFailures.removeValue(forKey: assetID)
                 scheduleThumbnailUpgrade(for: assetID)
                 return
@@ -1299,6 +1306,25 @@ final class BackstageViewModel: ObservableObject {
             for: assetID,
             preferredIdentifier: preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
         )
+    }
+
+    private func cacheCullingThumbnail(_ image: NSImage, for assetID: String) {
+        if cullingThumbnails.count >= 300,
+           let oldest = cullingThumbnails.keys.first,
+           oldest != assetID {
+            cullingThumbnails.removeValue(forKey: oldest)
+        }
+        cullingThumbnails[assetID] = image
+    }
+
+    private func localPreviewImage(at path: String?) -> NSImage? {
+        guard let path,
+              !path.isEmpty,
+              path.hasPrefix("/"),
+              ["jpg", "jpeg"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()),
+              let image = NSImage(contentsOf: URL(fileURLWithPath: path)),
+              image.isValid else { return nil }
+        return image
     }
 
     private func cancelCullingThumbnailWork() {
@@ -3663,7 +3689,15 @@ final class BackstageViewModel: ObservableObject {
                 return receipt.destination
             }
 
-            let preview = try await previewForAsset(
+            if let localURL = lifecyclePreviewURL(
+                quickLookPath: item.quickLookPath,
+                previewPath: item.previewPath
+            ) {
+                lifecycleStatus = "Prepared one private Waste Basket Quick Look item from the retained JPG preview."
+                return localURL
+            }
+
+            let preview = try await renderedJPEGPreviewForAsset(
                 forAssetID: item.mediaID,
                 preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 4_000
@@ -3678,6 +3712,23 @@ final class BackstageViewModel: ObservableObject {
             lifecycleStatus = "Waste Basket Quick Look unavailable: \(userFacingMessage(for: error))"
             return nil
         }
+    }
+
+    private func lifecyclePreviewURL(quickLookPath: String, previewPath: String) -> URL? {
+        for path in [quickLookPath, previewPath] {
+            guard !path.isEmpty,
+                  path.hasPrefix("/"),
+                  ["jpg", "jpeg"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
+            else { continue }
+            let url = URL(fileURLWithPath: path)
+            guard FileManager.default.fileExists(atPath: url.path),
+                  let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true,
+                  (values.fileSize ?? 0) > 0
+            else { continue }
+            return url
+        }
+        return nil
     }
 
     func prepareQuickLookURLs() async -> [URL] {
@@ -5128,6 +5179,31 @@ final class BackstageViewModel: ObservableObject {
         ) {
             do {
                 return try await photoLibrary.cullingPreview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func renderedJPEGPreviewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.renderedJPEGPreview(
                     localIdentifier: identifier,
                     maxPixelSize: maxPixelSize
                 )

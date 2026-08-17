@@ -106,6 +106,7 @@ public protocol PhotoLibraryServing: Sendable {
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
+    func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt
     func exportOriginal(
         localIdentifier: String,
@@ -118,6 +119,10 @@ public protocol PhotoLibraryServing: Sendable {
 
 public extension PhotoLibraryServing {
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
+    }
+
+    func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
     }
 
@@ -341,6 +346,25 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
 
         return try await requestFullPreview(
             for: asset,
+            localIdentifier: localIdentifier,
+            maxPixelSize: maxPixelSize
+        )
+    }
+
+    public func renderedJPEGPreview(
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        try requireAccess()
+        let asset = try asset(localIdentifier)
+        if let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
+            return try await requestRenderedJPEGPreview(
+                resource: renderedJPEG,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize
+            )
+        }
+        return try await preview(
             localIdentifier: localIdentifier,
             maxPixelSize: maxPixelSize
         )

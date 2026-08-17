@@ -838,6 +838,56 @@ class WasteBasketGatewayTests(unittest.TestCase):
         self.assertEqual(restored["operation"], "tombstone-restore")
         self.assertFalse(gateway.is_globally_blocked(self.root, "asset-1", self.db))
 
+    def test_explicit_empty_adopts_legacy_hidden_rows_and_uses_legacy_preview_keys(self) -> None:
+        self._seed_asset("legacy-hidden")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """UPDATE media_lifecycle
+                   SET lifecycle_state = 'hidden', hidden_at = ?, previous_state = 'active',
+                       public_preview_keys_json = ?, private_keys_json = '[]'
+                 WHERE media_id = ?""",
+                (NOW, json.dumps(["expo/legacy-hidden_900.jpg"]), "legacy-hidden"),
+            )
+            connection.execute(
+                "DELETE FROM r2_objects WHERE photo_id = ?",
+                ("legacy-hidden",),
+            )
+            connection.commit()
+
+        members = gateway.derive_deployed_lifecycle_members(self.root, ["legacy-hidden"], self.db)
+        self.assertEqual(
+            members[0]["bindings"],
+            [{"bucket": "public", "objectKey": "expo/legacy-hidden_900.jpg"}],
+        )
+        emptied = gateway.empty_waste_basket(
+            self.root,
+            confirmed=True,
+            confirmation_token=gateway.EMPTY_CONFIRMATION_TOKEN,
+            request_key="legacy-empty-1",
+            db_path=self.db,
+        )
+        self.assertEqual(emptied["assetIds"], ["legacy-hidden"])
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            entry = connection.execute(
+                "SELECT state FROM owner_waste_basket_entries WHERE asset_id = ?",
+                ("legacy-hidden",),
+            ).fetchone()
+            self.assertEqual(entry["state"], "tombstoned")
+            self.assertEqual(
+                connection.execute(
+                    "SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?",
+                    ("legacy-hidden",),
+                ).fetchone()["lifecycle_state"],
+                "discarded",
+            )
+            self.assertGreater(
+                connection.execute(
+                    "SELECT count(*) FROM owner_waste_basket_provenance WHERE entry_id = (SELECT entry_id FROM owner_waste_basket_entries WHERE asset_id = ?)",
+                    ("legacy-hidden",),
+                ).fetchone()[0],
+                0,
+            )
+
     def test_direct_bypasses_are_rejected_even_with_legacy_marker(self) -> None:
         with self.assertRaises(ValueError):
             owner_state_db.record_media_lifecycle_discarded(

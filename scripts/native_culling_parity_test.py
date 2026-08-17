@@ -48,6 +48,13 @@ class NativeCullingParityTest(unittest.TestCase):
             "CullingThumbnailFailure(error: error)",
             "cullingThumbnailFailures[assetID] = lastFailure",
             "func retryThumbnail(for assetID: String)",
+            "cullingThumbnailUpgradeTasks: [String: Task<Void, Never>]",
+            "cullingVisibleAssetIDs = Set<String>()",
+            "func cullingAssetDidAppear(_ assetID: String)",
+            "func cullingAssetDidDisappear(_ assetID: String)",
+            "func cullingScrollPhaseChanged(isScrolling: Bool)",
+            "Task.sleep(for: Self.cullingThumbnailUpgradeDelay)",
+            "maxPixelSize: Self.cullingThumbnailUpgradePixelSize",
         ):
             self.assertIn(marker, model)
         for marker in (
@@ -64,6 +71,11 @@ class NativeCullingParityTest(unittest.TestCase):
             "if let thumbnailFailure",
             "Button(thumbnailFailure.actionTitle)",
             "Loading preview…",
+            "CullingScrollPhaseObserver(model: model)",
+            "model.cullingAssetDidAppear(asset.id)",
+            "model.cullingAssetDidDisappear(asset.id)",
+            ".onScrollPhaseChange",
+            "phase.isScrolling",
         ):
             self.assertIn(marker, source)
 
@@ -208,7 +220,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("private var cullingThumbnailTasks:", model)
         self.assertIn("func requestThumbnail(for assetID:", model)
         self.assertIn("for attempt in 0..<3", model)
-        self.assertIn("model.requestThumbnail(for: asset.id)", ui)
+        self.assertIn("model.cullingAssetDidAppear(asset.id)", ui)
         self.assertIn("model.requestReviewThumbnail(for: item)", ui)
 
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):

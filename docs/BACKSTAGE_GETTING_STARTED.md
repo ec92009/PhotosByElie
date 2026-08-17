@@ -297,6 +297,9 @@ audited Owner action path.
    registers newly seen items in Owner, and marks no-longer-present items as
    unavailable only after the complete scan. Reconciliation preserves all
    existing culling decisions, approvals, and tombstones.
+   Visible cards load a bounded thumbnail first and opportunistically upgrade
+   after scrolling settles. A failed card stops its spinner and offers an
+   individual retry; Quick Look remains an independent preview path.
 2. When working from a saved fixture pool, confirm the pool name and immutable
    asset count above the list. Search and the Decision, Rating, and Color
    filters only narrow that pool; the total and matching counts remain visible.

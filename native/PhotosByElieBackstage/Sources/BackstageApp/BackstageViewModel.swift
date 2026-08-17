@@ -365,6 +365,9 @@ final class BackstageViewModel: ObservableObject {
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
+    private var cullingVisibleAssetIDs = Set<String>()
+    private var isCullingScrolling = false
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
@@ -380,6 +383,8 @@ final class BackstageViewModel: ObservableObject {
         "PhotosByElieBackstage.cullingPreviewPanelVisible"
     private static let reviewPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.reviewPreviewPanelVisible"
+    private static let cullingThumbnailUpgradeDelay = Duration.milliseconds(650)
+    private static let cullingThumbnailUpgradePixelSize = 900
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -802,6 +807,7 @@ final class BackstageViewModel: ObservableObject {
         cullingFilterTask?.cancel()
         cullingBackfillTask?.cancel()
         cullingWindowRequestSerial += 1
+        cancelCullingThumbnailWork()
         cullingPool = nil
         fixtureCullingWindow = nil
         fixtureCullingMediaAvailability = nil
@@ -1157,6 +1163,67 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func cullingAssetDidAppear(_ assetID: String) {
+        guard !assetID.isEmpty else { return }
+        cullingVisibleAssetIDs.insert(assetID)
+        requestThumbnail(for: assetID)
+        scheduleThumbnailUpgrade(for: assetID)
+    }
+
+    func cullingAssetDidDisappear(_ assetID: String) {
+        cullingVisibleAssetIDs.remove(assetID)
+        cullingThumbnailUpgradeTasks[assetID]?.cancel()
+        cullingThumbnailUpgradeTasks.removeValue(forKey: assetID)
+    }
+
+    func cullingScrollPhaseChanged(isScrolling: Bool) {
+        isCullingScrolling = isScrolling
+        guard !isScrolling else {
+            cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
+            cullingThumbnailUpgradeTasks.removeAll()
+            return
+        }
+        for assetID in cullingVisibleAssetIDs {
+            scheduleThumbnailUpgrade(for: assetID)
+        }
+    }
+
+    private func scheduleThumbnailUpgrade(for assetID: String) {
+        guard cullingThumbnailUpgradeTasks[assetID] == nil,
+              cullingVisibleAssetIDs.contains(assetID),
+              !isCullingScrolling
+        else { return }
+        cullingThumbnailUpgradeTasks[assetID] = Task { [weak self] in
+            guard let self else { return }
+            defer { self.cullingThumbnailUpgradeTasks[assetID] = nil }
+            try? await Task.sleep(for: Self.cullingThumbnailUpgradeDelay)
+            guard !Task.isCancelled,
+                  self.cullingVisibleAssetIDs.contains(assetID),
+                  !self.isCullingScrolling,
+                  self.cullingThumbnails[assetID] != nil
+            else { return }
+            await self.upgradeThumbnail(for: assetID)
+        }
+    }
+
+    private func upgradeThumbnail(for assetID: String) async {
+        do {
+            let preview = try await previewForAsset(
+                forAssetID: assetID,
+                maxPixelSize: Self.cullingThumbnailUpgradePixelSize
+            )
+            guard !Task.isCancelled,
+                  cullingVisibleAssetIDs.contains(assetID),
+                  !isCullingScrolling,
+                  let image = NSImage(data: preview.jpegData)
+            else { return }
+            cullingThumbnails[assetID] = image
+        } catch {
+            // A high-resolution upgrade is opportunistic. Keep the bounded
+            // low-resolution thumbnail and its existing retry/failure state.
+        }
+    }
+
     func loadThumbnail(for assetID: String) async {
         guard cullingThumbnails[assetID] == nil else { return }
         var lastFailure = CullingThumbnailFailure.previewUnavailable
@@ -1181,6 +1248,7 @@ final class BackstageViewModel: ObservableObject {
                 }
                 cullingThumbnails[assetID] = image
                 cullingThumbnailFailures.removeValue(forKey: assetID)
+                scheduleThumbnailUpgrade(for: assetID)
                 return
             } catch {
                 lastFailure = CullingThumbnailFailure(error: error)
@@ -1199,6 +1267,15 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         requestThumbnail(for: assetID)
+    }
+
+    private func cancelCullingThumbnailWork() {
+        cullingThumbnailTasks.values.forEach { $0.cancel() }
+        cullingThumbnailTasks.removeAll()
+        cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
+        cullingThumbnailUpgradeTasks.removeAll()
+        cullingVisibleAssetIDs.removeAll()
+        isCullingScrolling = false
     }
 
     func exportSelected(to directory: URL) async {
@@ -1686,6 +1763,7 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection = OwnerSelectionModel(orderedIDs: fixturePool.assets.map(\.id))
         selectedPhotoIDs = []
         photoPreview = nil
+        cancelCullingThumbnailWork()
         cullingThumbnails = [:]
         cullingThumbnailFailures = [:]
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
@@ -1696,6 +1774,7 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
+        cancelCullingThumbnailWork()
         cullingThumbnails = [:]
         cullingThumbnailFailures = [:]
         Task { await loadFixtureCullingWindow() }
@@ -1716,6 +1795,7 @@ final class BackstageViewModel: ObservableObject {
             fixtureCullingWindow = nil
             clearCullingSelection()
             photoPreview = nil
+            cancelCullingThumbnailWork()
             cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
         }
         defer {

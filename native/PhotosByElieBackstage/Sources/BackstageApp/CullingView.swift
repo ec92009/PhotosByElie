@@ -392,6 +392,7 @@ struct CullingView: View {
         }
         .focusable()
         .overlay { cullingGridOverlay }
+        .modifier(CullingScrollPhaseObserver(model: model))
     }
 
     private var cullingGridCards: some View {
@@ -427,7 +428,10 @@ struct CullingView: View {
                 }
                 .onAppear {
                     guard !isPreviewMode else { return }
-                    model.requestThumbnail(for: asset.id)
+                    model.cullingAssetDidAppear(asset.id)
+                }
+                .onDisappear {
+                    model.cullingAssetDidDisappear(asset.id)
                 }
             }
         }
@@ -917,6 +921,21 @@ private struct CullingDisplayKeyCommands: ViewModifier {
         guard let color = colors[value] else { return .ignored }
         Task { await model.applyColorShortcut(color) }
         return .handled
+    }
+}
+
+private struct CullingScrollPhaseObserver: ViewModifier {
+    @ObservedObject var model: BackstageViewModel
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.onScrollPhaseChange { _, phase in
+                model.cullingScrollPhaseChanged(isScrolling: phase.isScrolling)
+            }
+        } else {
+            content
+        }
     }
 }
 

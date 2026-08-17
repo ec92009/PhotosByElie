@@ -623,11 +623,11 @@ private struct LifecycleView: View {
             ) {
                 TableColumn("Preview") { item in
                     Group {
-                        if let thumbnail = model.cullingThumbnails[item.mediaID] {
+                        if let thumbnail = model.lifecycleThumbnails[item.mediaID] {
                             Image(nsImage: thumbnail)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                        } else if let failure = model.cullingThumbnailFailures[item.mediaID] {
+                        } else if let failure = model.lifecycleThumbnailFailures[item.mediaID] {
                             VStack(spacing: 3) {
                                 Image(systemName: failure.systemImage)
                                 Text(failure.title)
@@ -637,13 +637,13 @@ private struct LifecycleView: View {
                                     if failure.offersPhotosAccess {
                                         Task {
                                             await model.authorizeAndLoadPhotos()
-                                            model.retryThumbnail(
+                                            model.retryLifecycleThumbnail(
                                                 for: item.mediaID,
                                                 preferredIdentifier: item.photoLibraryIdentifier
                                             )
                                         }
                                     } else {
-                                        model.retryThumbnail(
+                                        model.retryLifecycleThumbnail(
                                             for: item.mediaID,
                                             preferredIdentifier: item.photoLibraryIdentifier
                                         )
@@ -671,11 +671,10 @@ private struct LifecycleView: View {
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .accessibilityLabel(item.filename.isEmpty ? "Preview" : "Preview of \(item.filename)")
-                    .task {
-                        model.requestThumbnail(
+                    .task(id: item.mediaID) {
+                        model.requestLifecycleThumbnail(
                             for: item.mediaID,
-                            preferredIdentifier: item.photoLibraryIdentifier,
-                            preferRenderedJPEG: true
+                            preferredIdentifier: item.photoLibraryIdentifier
                         )
                     }
                 }

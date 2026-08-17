@@ -913,8 +913,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.7")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "117")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.9")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "119")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
@@ -1086,13 +1086,15 @@ class NativeCullingParityTest(unittest.TestCase):
             'Button("Delete Selected", role: .destructive)',
             "model.selectedRecoverableLifecycleIDs.isEmpty",
             "Text(model.lifecycleCountSummary)",
-            "model.cullingThumbnailFailures[item.mediaID]",
+            "model.lifecycleThumbnailFailures[item.mediaID]",
             "ProgressView()",
-            "model.retryThumbnail(",
+            "model.retryLifecycleThumbnail(",
             'Button("Quick Look")',
             "model.prepareLifecycleQuickLookURL(for: item)",
             ".onKeyPress(.space)",
             "preferredIdentifier: item.photoLibraryIdentifier",
+            "model.lifecycleThumbnails[item.mediaID]",
+            "model.requestLifecycleThumbnail(",
             'TableColumn("Filename", value: \\.filename)',
             'TableColumn("Title", value: \\.title)',
             'TableColumn("State", value: \\.state)',

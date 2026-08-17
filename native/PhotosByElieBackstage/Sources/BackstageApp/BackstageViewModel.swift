@@ -304,6 +304,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var isSavingMetadataModelLadder = false
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
+    // Waste Basket previews are independent from the scrolling Culling cache.
+    // Quick Look, fixture refreshes, and Culling window changes must not evict
+    // a lifecycle row that is still visible.
+    @Published var lifecycleThumbnails: [String: NSImage] = [:]
+    @Published var lifecycleThumbnailFailures: [String: CullingThumbnailFailure] = [:]
     @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
     @Published var lifecycleCountSummary = "0 recoverable • 0 active global tombstones"
     @Published var isRunningLifecycle = false
@@ -369,6 +374,9 @@ final class BackstageViewModel: ObservableObject {
     private var cullingThumbnailTaskTokens: [String: UUID] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
     private var thumbnailPreferredIdentifiers: [String: String] = [:]
+    private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
+    private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -1185,6 +1193,90 @@ final class BackstageViewModel: ObservableObject {
                 preferRenderedJPEG: preferRenderedJPEG
             )
         }
+    }
+
+    func requestLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) {
+        if let preferredIdentifier = preferredIdentifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !preferredIdentifier.isEmpty {
+            lifecycleThumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+        }
+        guard lifecycleThumbnails[assetID] == nil,
+              lifecycleThumbnailTasks[assetID] == nil
+        else { return }
+        let preferredIdentifier = lifecycleThumbnailPreferredIdentifiers[assetID]
+        let taskToken = UUID()
+        lifecycleThumbnailTaskTokens[assetID] = taskToken
+        lifecycleThumbnailTasks[assetID] = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.lifecycleThumbnailTaskTokens[assetID] == taskToken {
+                    self.lifecycleThumbnailTaskTokens[assetID] = nil
+                    self.lifecycleThumbnailTasks[assetID] = nil
+                }
+            }
+            await self.loadLifecycleThumbnail(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier
+            )
+        }
+    }
+
+    func loadLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) async {
+        guard lifecycleThumbnails[assetID] == nil else { return }
+        let preferredIdentifier = preferredIdentifier
+            ?? lifecycleThumbnailPreferredIdentifiers[assetID]
+        var lastFailure = CullingThumbnailFailure.previewUnavailable
+        for attempt in 0..<3 {
+            guard !Task.isCancelled else { return }
+            do {
+                let preview = try await renderedJPEGPreviewForAsset(
+                    forAssetID: assetID,
+                    preferredIdentifier: preferredIdentifier,
+                    maxPixelSize: 180
+                )
+                guard let image = NSImage(data: preview.jpegData) else {
+                    lastFailure = .previewUnavailable
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180))
+                        continue
+                    }
+                    break
+                }
+                lifecycleThumbnails[assetID] = image
+                lifecycleThumbnailFailures.removeValue(forKey: assetID)
+                return
+            } catch {
+                lastFailure = CullingThumbnailFailure(error: error)
+                guard !Task.isCancelled, attempt < 2 else { break }
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+            }
+        }
+        if !Task.isCancelled {
+            lifecycleThumbnailFailures[assetID] = lastFailure
+        }
+    }
+
+    func retryLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) {
+        guard lifecycleThumbnails[assetID] == nil else { return }
+        lifecycleThumbnailTasks[assetID]?.cancel()
+        lifecycleThumbnailTasks[assetID] = nil
+        lifecycleThumbnailTaskTokens[assetID] = nil
+        lifecycleThumbnailFailures.removeValue(forKey: assetID)
+        requestLifecycleThumbnail(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+                ?? lifecycleThumbnailPreferredIdentifiers[assetID]
+        )
     }
 
     func cullingAssetDidAppear(_ asset: FixtureAsset) {

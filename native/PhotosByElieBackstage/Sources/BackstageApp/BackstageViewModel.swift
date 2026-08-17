@@ -366,6 +366,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var cullingThumbnailTaskTokens: [String: UUID] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
     private var thumbnailPreferredIdentifiers: [String: String] = [:]
     private var cullingVisibleAssetIDs = Set<String>()
@@ -1164,25 +1165,35 @@ final class BackstageViewModel: ObservableObject {
               cullingThumbnailTasks[assetID] == nil
         else { return }
         let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
+        let taskToken = UUID()
+        cullingThumbnailTaskTokens[assetID] = taskToken
         cullingThumbnailTasks[assetID] = Task { [weak self] in
             guard let self else { return }
+            defer {
+                if self.cullingThumbnailTaskTokens[assetID] == taskToken {
+                    self.cullingThumbnailTaskTokens[assetID] = nil
+                    self.cullingThumbnailTasks[assetID] = nil
+                }
+            }
             await self.loadThumbnail(
                 for: assetID,
                 preferredIdentifier: preferredIdentifier
             )
-            self.cullingThumbnailTasks[assetID] = nil
         }
     }
 
-    func cullingAssetDidAppear(_ assetID: String) {
-        guard !assetID.isEmpty else { return }
-        cullingVisibleAssetIDs.insert(assetID)
-        requestThumbnail(for: assetID)
-        scheduleThumbnailUpgrade(for: assetID)
+    func cullingAssetDidAppear(_ asset: FixtureAsset) {
+        guard !asset.id.isEmpty else { return }
+        cullingVisibleAssetIDs.insert(asset.id)
+        requestThumbnail(for: asset.id, preferredIdentifier: asset.photoLibraryIdentifier)
+        scheduleThumbnailUpgrade(for: asset.id)
     }
 
     func cullingAssetDidDisappear(_ assetID: String) {
         cullingVisibleAssetIDs.remove(assetID)
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks.removeValue(forKey: assetID)
+        cullingThumbnailTaskTokens.removeValue(forKey: assetID)
         cullingThumbnailUpgradeTasks[assetID]?.cancel()
         cullingThumbnailUpgradeTasks.removeValue(forKey: assetID)
     }
@@ -1282,6 +1293,7 @@ final class BackstageViewModel: ObservableObject {
         guard cullingThumbnails[assetID] == nil else { return }
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailTaskTokens[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         requestThumbnail(
             for: assetID,
@@ -1292,6 +1304,7 @@ final class BackstageViewModel: ObservableObject {
     private func cancelCullingThumbnailWork() {
         cullingThumbnailTasks.values.forEach { $0.cancel() }
         cullingThumbnailTasks.removeAll()
+        cullingThumbnailTaskTokens.removeAll()
         cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
         cullingThumbnailUpgradeTasks.removeAll()
         cullingVisibleAssetIDs.removeAll()

@@ -428,7 +428,7 @@ struct CullingView: View {
                 }
                 .onAppear {
                     guard !isPreviewMode else { return }
-                    model.cullingAssetDidAppear(asset.id)
+                    model.cullingAssetDidAppear(asset)
                 }
                 .onDisappear {
                     model.cullingAssetDidDisappear(asset.id)

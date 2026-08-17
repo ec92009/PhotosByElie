@@ -1,3 +1,4 @@
+import AppKit
 import CryptoKit
 import Foundation
 import ImageIO
@@ -187,6 +188,10 @@ public extension PhotoLibraryServing {
 }
 
 public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
+    private static let thumbnailRequestMaxPixelSize = 900
+    private static let thumbnailRequestTimeout = Duration.seconds(10)
+    private static let fullPreviewRequestTimeout = Duration.seconds(55)
+
     public init() {}
 
     public func authorization() -> PhotoLibraryAccess {
@@ -287,25 +292,158 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoPreview {
         try requireAccess()
         let asset = try asset(localIdentifier)
+
+        if maxPixelSize <= Self.thumbnailRequestMaxPixelSize {
+            return try await requestThumbnailPreview(
+                for: asset,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize
+            )
+        }
+
+        return try await requestFullPreview(
+            for: asset,
+            localIdentifier: localIdentifier,
+            maxPixelSize: maxPixelSize
+        )
+    }
+
+    private func requestThumbnailPreview(
+        for asset: PHAsset,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let isFastThumbnail = maxPixelSize <= 180
+        options.deliveryMode = isFastThumbnail ? .fastFormat : .highQualityFormat
+        options.resizeMode = isFastThumbnail ? .fast : .exact
+        options.version = .current
+        let targetSize = CGSize(
+            width: CGFloat(max(64, min(8_192, maxPixelSize))),
+            height: CGFloat(max(64, min(8_192, maxPixelSize)))
+        )
+        let manager = PHImageManager.default()
+        let gate = PhotoKitPreviewResultGate()
+
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<PhotoPreview, Error>) in
+                gate.installContinuation(continuation)
+                let requestID = manager.requestImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,
+                    options: options
+                ) { image, info in
+                    if let error = info?[PHImageErrorKey] as? Error {
+                        gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(error.localizedDescription)))
+                    } else if info?[PHImageCancelledKey] as? Bool == true {
+                        gate.resume(with: .failure(CancellationError()))
+                    } else if let image {
+                        if !isFastThumbnail,
+                           info?[PHImageResultIsDegradedKey] as? Bool == true {
+                            return
+                        }
+                        do {
+                            gate.resume(with: .success(try Self.previewFromImage(
+                                image,
+                                localIdentifier: localIdentifier,
+                                maxPixelSize: maxPixelSize
+                            )))
+                        } catch {
+                            gate.resume(with: .failure(error))
+                        }
+                    } else {
+                        gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                    }
+                }
+                gate.installRequest(requestID, manager: manager)
+                gate.installTimeout(Task {
+                    do {
+                        try await Task.sleep(for: Self.thumbnailRequestTimeout)
+                    } catch {
+                        return
+                    }
+                    gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                })
+            }
+        }, onCancel: {
+            gate.cancel()
+        })
+    }
+
+    private func requestFullPreview(
+        for asset: PHAsset,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true
         options.deliveryMode = .highQualityFormat
         options.version = .current
+        let manager = PHImageManager.default()
+        let gate = PhotoKitPreviewResultGate()
 
-        let sourceData: Data = try await withCheckedThrowingContinuation { continuation in
-            PHImageManager.default().requestImageDataAndOrientation(
-                for: asset,
-                options: options
-            ) { data, _, _, info in
-                if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.resume(throwing: PhotoLibraryError.previewUnavailable(error.localizedDescription))
-                } else if let data {
-                    continuation.resume(returning: data)
-                } else {
-                    continuation.resume(throwing: PhotoLibraryError.previewUnavailable(localIdentifier))
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<PhotoPreview, Error>) in
+                gate.installContinuation(continuation)
+                let requestID = manager.requestImageDataAndOrientation(
+                    for: asset,
+                    options: options
+                ) { data, _, _, info in
+                    if let error = info?[PHImageErrorKey] as? Error {
+                        gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(error.localizedDescription)))
+                    } else if info?[PHImageCancelledKey] as? Bool == true {
+                        gate.resume(with: .failure(CancellationError()))
+                    } else if let data {
+                        do {
+                            gate.resume(with: .success(try Self.previewFromImageData(
+                                data,
+                                localIdentifier: localIdentifier,
+                                maxPixelSize: maxPixelSize
+                            )))
+                        } catch {
+                            gate.resume(with: .failure(error))
+                        }
+                    } else {
+                        gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                    }
                 }
+                gate.installRequest(requestID, manager: manager)
+                gate.installTimeout(Task {
+                    do {
+                        try await Task.sleep(for: Self.fullPreviewRequestTimeout)
+                    } catch {
+                        return
+                    }
+                    gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                })
             }
+        }, onCancel: {
+            gate.cancel()
+        })
+    }
+
+    private static func previewFromImage(
+        _ image: NSImage,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) throws -> PhotoPreview {
+        guard let sourceData = image.tiffRepresentation else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
         }
+        return try previewFromImageData(
+            sourceData,
+            localIdentifier: localIdentifier,
+            maxPixelSize: maxPixelSize
+        )
+    }
+
+    private static func previewFromImageData(
+        _ sourceData: Data,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) throws -> PhotoPreview {
         guard let source = CGImageSourceCreateWithData(sourceData as CFData, nil),
               let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -670,6 +808,77 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             hasher.update(data: data)
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+/// Completes one PhotoKit preview request exactly once, including the case
+/// where PhotoKit never calls its result handler for a cloud-backed asset.
+private final class PhotoKitPreviewResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<PhotoPreview, Error>?
+    private var requestID: PHImageRequestID?
+    private weak var manager: PHImageManager?
+    private var timeoutTask: Task<Void, Never>?
+    private var finished = false
+
+    func installContinuation(_ continuation: CheckedContinuation<PhotoPreview, Error>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func installRequest(_ requestID: PHImageRequestID, manager: PHImageManager) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            manager.cancelImageRequest(requestID)
+            return
+        }
+        self.requestID = requestID
+        self.manager = manager
+        lock.unlock()
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            task.cancel()
+            return
+        }
+        timeoutTask = task
+        lock.unlock()
+    }
+
+    func resume(with result: Result<PhotoPreview, Error>) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let continuation = self.continuation
+        self.continuation = nil
+        let timeoutTask = self.timeoutTask
+        self.timeoutTask = nil
+        let requestID = self.requestID
+        let manager = self.manager
+        lock.unlock()
+
+        timeoutTask?.cancel()
+        if let requestID, let manager {
+            manager.cancelImageRequest(requestID)
+        }
+        continuation?.resume(with: result)
+    }
+
+    func cancel() {
+        resume(with: .failure(CancellationError()))
     }
 }
 

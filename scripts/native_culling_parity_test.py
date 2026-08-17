@@ -50,7 +50,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "func retryThumbnail(for assetID: String,",
             "cullingThumbnailUpgradeTasks: [String: Task<Void, Never>]",
             "cullingVisibleAssetIDs = Set<String>()",
-            "func cullingAssetDidAppear(_ assetID: String)",
+            "func cullingAssetDidAppear(_ asset: FixtureAsset)",
             "func cullingAssetDidDisappear(_ assetID: String)",
             "func cullingScrollPhaseChanged(isScrolling: Bool)",
             "Task.sleep(for: Self.cullingThumbnailUpgradeDelay)",
@@ -72,7 +72,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "Button(thumbnailFailure.actionTitle)",
             "Loading preview…",
             "CullingScrollPhaseObserver(model: model)",
-            "model.cullingAssetDidAppear(asset.id)",
+            "model.cullingAssetDidAppear(asset)",
             "model.cullingAssetDidDisappear(asset.id)",
             ".onScrollPhaseChange",
             "phase.isScrolling",
@@ -250,7 +250,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn("if model.isBlockingFixtureCullingLoad", ui)
 
-    def test_thumbnail_requests_outlive_transient_card_task_cancellation(self):
+    def test_thumbnail_requests_cancel_when_cards_leave_the_viewport(self):
         model = (
             NATIVE
             / "Sources"
@@ -259,10 +259,29 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         ui = backstage_ui_source()
         self.assertIn("private var cullingThumbnailTasks:", model)
+        self.assertIn("private var cullingThumbnailTaskTokens:", model)
         self.assertIn("func requestThumbnail(for assetID:", model)
         self.assertIn("for attempt in 0..<3", model)
-        self.assertIn("model.cullingAssetDidAppear(asset.id)", ui)
+        self.assertIn("cullingThumbnailTasks[assetID]?.cancel()", model)
+        self.assertIn("cullingThumbnailTaskTokens.removeValue(forKey: assetID)", model)
+        self.assertIn("model.cullingAssetDidAppear(asset)", ui)
         self.assertIn("model.requestReviewThumbnail(for: item)", ui)
+
+    def test_photokit_thumbnail_requests_are_bounded_and_cancellable(self):
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "requestImage(",
+            "options.deliveryMode = isFastThumbnail ? .fastFormat : .highQualityFormat",
+            "PHImageResultIsDegradedKey",
+            "options.resizeMode = isFastThumbnail ? .fast : .exact",
+            "PhotoKitPreviewResultGate",
+            "thumbnailRequestTimeout",
+            "withTaskCancellationHandler",
+            "manager.cancelImageRequest",
+        ):
+            self.assertIn(marker, photo_library)
 
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
         model = (
@@ -878,8 +897,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.2")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "112")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "114")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

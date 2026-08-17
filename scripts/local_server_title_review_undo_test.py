@@ -1495,6 +1495,46 @@ class TitleReviewUndoTests(unittest.TestCase):
                     },
                 })
 
+    def test_public_empty_forwards_trusted_deployed_lifecycle_to_gateway(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            trusted_arm = {
+                "operationId": "owner-action:synthetic-empty",
+                "operationDigest": "synthetic-digest",
+                "operation": "empty",
+                "denied": True,
+                "revision": 3,
+                "state": "armed",
+                "members": [],
+            }
+            with (
+                patch.object(
+                    local_server,
+                    "empty_waste_basket_gateway",
+                    return_value={"ok": True, "operation": "empty", "assetIds": ["asset-1"]},
+                ) as empty_gateway,
+                patch.object(
+                    local_server,
+                    "project_lifecycle_catalog_state",
+                    return_value={"projected_ids": ["asset-1"], "projection": {"state": "applied"}},
+                ),
+            ):
+                result = local_server.apply_photo_action(Path(temp_dir), {
+                    "action": "waste-basket-empty",
+                    "photo_ids": ["asset-1"],
+                    "confirmed": True,
+                    "confirmation_token": "EMPTY_WASTE_BASKET",
+                    "source": "backstage-waste-basket",
+                    "actor": "backstage",
+                    "request_key": trusted_arm["operationId"],
+                    "_trusted_deployed_lifecycle": trusted_arm,
+                })
+
+            self.assertTrue(result["authoritative_committed"])
+            self.assertIs(
+                empty_gateway.call_args.kwargs["deployed_lifecycle"],
+                trusted_arm,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12873,6 +12873,7 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             request_key=payload.get("request_key") or payload.get("requestKey") or "",
             owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
         )
         authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
         projection_result = project_lifecycle_catalog_state(repo_root, "empty", authoritative_ids)

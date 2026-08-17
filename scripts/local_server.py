@@ -2265,70 +2265,6 @@ def _owner_sqlite_path(repo_root: Path) -> Path:
     return repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
 
 
-def _lifecycle_local_preview_index(
-    repo_root: Path,
-    lifecycle_states: list[dict],
-) -> dict[str, dict[str, str]]:
-    """Find retained JPG derivatives for read-only Waste Basket rows.
-
-    Historical lifecycle rows can outlive their PhotoKit local identifiers. The
-    sidecar upload run artifacts are already retained Owner evidence and are
-    safe to expose as file URLs; this index does not create, copy, or rewrite
-    any artifact.
-    """
-    artifact_root = (repo_root / OWNER_ACTION_ROOT / "sidecar-upload-runs").resolve()
-    if not artifact_root.is_dir():
-        return {}
-    wanted = {
-        str(item.get("media_id") or "").strip(): str(item.get("media_type") or "").strip().lower()
-        for item in lifecycle_states
-        if str(item.get("media_id") or "").strip()
-        and "/" not in str(item.get("media_id") or "")
-        and "\\" not in str(item.get("media_id") or "")
-        and str(item.get("media_type") or "").strip().lower() != "video"
-    }
-    if not wanted:
-        return {}
-    selected: dict[tuple[str, str], tuple[int, str]] = {}
-    try:
-        for path in artifact_root.rglob("*"):
-            if not path.is_file() or path.suffix.lower() not in {".jpg", ".jpeg"}:
-                continue
-            try:
-                relative = path.resolve().relative_to(artifact_root)
-                stat = path.stat()
-            except (OSError, ValueError):
-                continue
-            stem = path.stem
-            derivative = ""
-            media_id = ""
-            for suffix in ("_1800", "_900"):
-                if stem.endswith(suffix):
-                    derivative = suffix[1:]
-                    media_id = stem[:-len(suffix)]
-                    break
-            if derivative not in {"900", "1800"} or media_id not in wanted:
-                continue
-            key = (media_id, derivative)
-            candidate = (int(stat.st_mtime_ns), relative.as_posix())
-            if key not in selected or candidate > selected[key]:
-                selected[key] = candidate
-    except OSError:
-        return {}
-
-    indexed: dict[str, dict[str, str]] = {}
-    for media_id in wanted:
-        preview = selected.get((media_id, "900")) or selected.get((media_id, "1800"))
-        quick_look = selected.get((media_id, "1800")) or preview
-        if preview is None or quick_look is None:
-            continue
-        indexed[media_id] = {
-            "previewPath": str(artifact_root / preview[1]),
-            "quickLookPath": str(artifact_root / quick_look[1]),
-        }
-    return indexed
-
-
 def _connect_owner_sqlite_readonly(repo_root: Path) -> sqlite3.Connection:
     path = _owner_sqlite_path(repo_root)
     if not path.exists():
@@ -3729,7 +3665,6 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 # index is absent or temporarily unavailable. Owner.sqlite stays
                 # authoritative for lifecycle state; identity enrichment is best-effort.
                 indexed_assets = {}
-        local_preview_paths = _lifecycle_local_preview_index(repo_root, lifecycle_states)
         all_states = [
             {
                 "mediaId": str(item.get("media_id") or ""),
@@ -3746,12 +3681,6 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "discardedAt": str(item.get("discarded_at") or ""),
                 "restoredAt": str(item.get("restored_at") or ""),
                 "updatedAt": str(item.get("updated_at") or ""),
-                "previewPath": local_preview_paths.get(
-                    str(item.get("media_id") or ""), {}
-                ).get("previewPath", ""),
-                "quickLookPath": local_preview_paths.get(
-                    str(item.get("media_id") or ""), {}
-                ).get("quickLookPath", ""),
             }
             for item in lifecycle_states
         ]

@@ -11,8 +11,6 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
     public var mediaType: String
     public var sourceSlug: String
     public var updatedAt: String
-    public var previewPath: String
-    public var quickLookPath: String
 
     init(json: [String: JSONValue]) {
         mediaID = json["mediaId"]?.stringValue ?? ""
@@ -26,8 +24,6 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
         mediaType = json["mediaType"]?.stringValue ?? ""
         sourceSlug = json["sourceSlug"]?.stringValue ?? ""
         updatedAt = json["updatedAt"]?.stringValue ?? ""
-        previewPath = json["previewPath"]?.stringValue ?? ""
-        quickLookPath = json["quickLookPath"]?.stringValue ?? ""
     }
 }
 

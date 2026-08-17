@@ -913,8 +913,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.6")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "116")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.7")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "117")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
@@ -1108,16 +1108,14 @@ class NativeCullingParityTest(unittest.TestCase):
             "mediaIDs: ids",
         ):
             self.assertIn(marker, model)
-        self.assertLess(
-            model.index("renderedJPEGPreviewForAsset("),
-            model.index("lifecyclePreviewURL(", model.index("renderedJPEGPreviewForAsset(")),
-        )
-        self.assertLess(
-            model.index("previewForAsset(", model.index("func loadThumbnail(")),
-            model.index("localPreviewImage(at: thumbnailFallbackPaths", model.index("func loadThumbnail(")),
-        )
+        self.assertIn("renderedJPEGPreviewForAsset(", model)
+        self.assertNotIn("thumbnailFallbackPaths", model)
+        self.assertNotIn("lifecyclePreviewURL(", model)
         self.assertIn("from Apple Photos.", model)
-        self.assertIn("legacy Waste Basket Quick Look item", model)
+        self.assertNotIn("retained JPG", model)
+        self.assertNotIn("fallbackPath:", app)
+        self.assertNotIn("previewPath", lifecycle)
+        self.assertNotIn("quickLookPath", lifecycle)
         for marker in (
             "mediaIDs: [String] = []",
             "mediaIDs: mediaIDs",

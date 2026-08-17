@@ -367,6 +367,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
+    private var thumbnailPreferredIdentifiers: [String: String] = [:]
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -1153,13 +1154,22 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func requestThumbnail(for assetID: String) {
+    func requestThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
+        if let preferredIdentifier = preferredIdentifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !preferredIdentifier.isEmpty {
+            thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+        }
         guard cullingThumbnails[assetID] == nil,
               cullingThumbnailTasks[assetID] == nil
         else { return }
+        let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
         cullingThumbnailTasks[assetID] = Task { [weak self] in
             guard let self else { return }
-            await self.loadThumbnail(for: assetID)
+            await self.loadThumbnail(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier
+            )
             self.cullingThumbnailTasks[assetID] = nil
         }
     }
@@ -1211,6 +1221,7 @@ final class BackstageViewModel: ObservableObject {
         do {
             let preview = try await previewForAsset(
                 forAssetID: assetID,
+                preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
                 maxPixelSize: Self.cullingThumbnailUpgradePixelSize
             )
             guard !Task.isCancelled,
@@ -1225,14 +1236,19 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadThumbnail(for assetID: String) async {
+    func loadThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) async {
         guard cullingThumbnails[assetID] == nil else { return }
+        let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
                 let preview = try await previewForAsset(
                     forAssetID: assetID,
+                    preferredIdentifier: preferredIdentifier,
                     maxPixelSize: 180
                 )
                 guard let image = NSImage(data: preview.jpegData) else {
@@ -1262,12 +1278,15 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func retryThumbnail(for assetID: String) {
+    func retryThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
         guard cullingThumbnails[assetID] == nil else { return }
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
-        requestThumbnail(for: assetID)
+        requestThumbnail(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+        )
     }
 
     private func cancelCullingThumbnailWork() {
@@ -3608,6 +3627,46 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL? {
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent(
+            "com.photosbyelie.backstage/WasteBasketQuickLook",
+            isDirectory: true
+        )
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            if item.mediaType == "video" {
+                let receipt = try await exportOriginalForAsset(
+                    forAssetID: item.mediaID,
+                    preferredIdentifier: item.photoLibraryIdentifier,
+                    to: directory
+                )
+                lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Photos."
+                return receipt.destination
+            }
+
+            let preview = try await previewForAsset(
+                forAssetID: item.mediaID,
+                preferredIdentifier: item.photoLibraryIdentifier,
+                maxPixelSize: 4_000
+            )
+            let destination = directory
+                .appendingPathComponent(item.mediaID.replacingOccurrences(of: "/", with: "_"))
+                .appendingPathExtension("jpg")
+            try preview.jpegData.write(to: destination, options: .atomic)
+            lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Photos."
+            return destination
+        } catch {
+            lifecycleStatus = "Waste Basket Quick Look unavailable: \(userFacingMessage(for: error))"
+            return nil
+        }
+    }
+
     func prepareQuickLookURLs() async -> [URL] {
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
@@ -5033,6 +5092,31 @@ final class BackstageViewModel: ObservableObject {
                 return try await photoLibrary.preview(
                     localIdentifier: identifier,
                     maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func exportOriginalForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        to directory: URL
+    ) async throws -> PhotoExportReceipt {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.exportOriginal(
+                    localIdentifier: identifier,
+                    to: directory
                 )
             } catch {
                 if error is CancellationError || Task.isCancelled {

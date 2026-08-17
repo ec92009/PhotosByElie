@@ -47,7 +47,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "cullingThumbnailFailures: [String: CullingThumbnailFailure]",
             "CullingThumbnailFailure(error: error)",
             "cullingThumbnailFailures[assetID] = lastFailure",
-            "func retryThumbnail(for assetID: String)",
+            "func retryThumbnail(for assetID: String,",
             "cullingThumbnailUpgradeTasks: [String: Task<Void, Never>]",
             "cullingVisibleAssetIDs = Set<String>()",
             "func cullingAssetDidAppear(_ assetID: String)",
@@ -878,8 +878,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "111")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.2")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "112")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
@@ -1053,7 +1053,11 @@ class NativeCullingParityTest(unittest.TestCase):
             "Text(model.lifecycleCountSummary)",
             "model.cullingThumbnailFailures[item.mediaID]",
             "ProgressView()",
-            "model.retryThumbnail(for: item.mediaID)",
+            "model.retryThumbnail(",
+            'Button("Quick Look")',
+            "model.prepareLifecycleQuickLookURL(for: item)",
+            ".onKeyPress(.space)",
+            "preferredIdentifier: item.photoLibraryIdentifier",
             'TableColumn("Filename", value: \\.filename)',
             'TableColumn("Title", value: \\.title)',
             'TableColumn("State", value: \\.state)',
@@ -1063,6 +1067,9 @@ class NativeCullingParityTest(unittest.TestCase):
             "@Published var lifecycleCountSummary",
             "var selectedRecoverableLifecycleIDs: [String]",
             "func emptyWasteBasketSelection() async",
+            "func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL?",
+            "private func exportOriginalForAsset(",
+            "thumbnailPreferredIdentifiers",
             "mediaIDs: ids",
         ):
             self.assertIn(marker, model)
@@ -1072,6 +1079,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'operation: \"waste-basket-empty\"',
         ):
             self.assertIn(marker, lifecycle)
+        self.assertIn("photoLibraryIdentifier", lifecycle)
 
     def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
         app = (

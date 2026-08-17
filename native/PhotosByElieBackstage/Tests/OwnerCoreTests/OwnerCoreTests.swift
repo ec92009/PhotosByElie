@@ -2898,6 +2898,7 @@ struct OwnerCoreTests {
                         "title": "Private saved title",
                         "filename": "IMG_4228.HEIC",
                         "capturedAt": "2026-07-24T18:45:00Z",
+                        "photoLibraryIdentifier": "photos-hidden",
                         "mediaType": "photo",
                         "sourceSlug": "france",
                         "updatedAt": "2026-07-25T00:00:00Z",
@@ -2945,6 +2946,7 @@ struct OwnerCoreTests {
         #expect(state.items.map(\.title) == ["Private saved title"])
         #expect(state.items.map(\.filename) == ["IMG_4228.HEIC"])
         #expect(state.items.map(\.capturedAt) == ["2026-07-24T18:45:00Z"])
+        #expect(state.items.map(\.photoLibraryIdentifier) == ["photos-hidden"])
         _ = try await service.restore(mediaIDs: ["photo-hidden"])
 
         let requests = await api.requests()

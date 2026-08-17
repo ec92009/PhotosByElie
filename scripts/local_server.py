@@ -3596,17 +3596,65 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         if lifecycle_ids:
             try:
                 with fixture_connect_read_only(repo_root) as connection:
+                    table_names = {
+                        str(row["name"])
+                        for row in connection.execute(
+                            """
+                            SELECT name
+                            FROM sqlite_master
+                            WHERE type = 'table'
+                              AND name IN ('sidecar_assets', 'sidecar_upload_bridge_run_items')
+                            """
+                        ).fetchall()
+                    }
                     for start in range(0, len(lifecycle_ids), 500):
                         batch = lifecycle_ids[start:start + 500]
                         placeholders = ",".join("?" for _ in batch)
-                        rows = connection.execute(
-                            f"""SELECT asset_id, filename, captured_at
-                                FROM sidecar_assets
-                                WHERE asset_id IN ({placeholders})""",
-                            batch,
-                        ).fetchall()
+                        if table_names == {"sidecar_assets", "sidecar_upload_bridge_run_items"}:
+                            rows = connection.execute(
+                                f"""
+                                WITH bridge_candidates AS (
+                                    SELECT
+                                        b.photo_id,
+                                        b.asset_id,
+                                        b.filename,
+                                        ROW_NUMBER() OVER (
+                                            PARTITION BY b.photo_id
+                                            ORDER BY
+                                                CASE
+                                                    WHEN b.upload_status = 'uploaded' AND b.status = 'uploaded' THEN 0
+                                                    WHEN b.upload_status = 'uploaded' OR b.status = 'uploaded' THEN 1
+                                                    ELSE 2
+                                                END,
+                                                COALESCE(b.updated_at, b.created_at, '') DESC,
+                                                b.run_item_id DESC
+                                        ) AS row_number
+                                    FROM sidecar_upload_bridge_run_items AS b
+                                    WHERE b.photo_id IN ({placeholders})
+                                )
+                                SELECT
+                                    bridge.photo_id AS media_id,
+                                    bridge.asset_id AS photo_library_identifier,
+                                    COALESCE(NULLIF(bridge.filename, ''), sidecar.filename, '') AS filename,
+                                    COALESCE(sidecar.captured_at, '') AS captured_at
+                                FROM bridge_candidates AS bridge
+                                LEFT JOIN sidecar_assets AS sidecar
+                                  ON sidecar.asset_id = bridge.asset_id
+                                WHERE bridge.row_number = 1
+                                """,
+                                batch,
+                            ).fetchall()
+                        else:
+                            rows = connection.execute(
+                                f"""SELECT asset_id AS media_id, '' AS photo_library_identifier,
+                                           filename, captured_at
+                                    FROM sidecar_assets
+                                    WHERE asset_id IN ({placeholders})""",
+                                batch,
+                            ).fetchall()
                         indexed_assets.update({
-                            str(row["asset_id"]): {
+                            str(row["media_id"]): {
+                                "photoLibraryIdentifier": str(row["photo_library_identifier"] or ""),
                                 "filename": str(row["filename"] or ""),
                                 "capturedAt": str(row["captured_at"] or ""),
                             }
@@ -3624,6 +3672,9 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "title": str(item.get("title") or ""),
                 "filename": indexed_assets.get(str(item.get("media_id") or ""), {}).get("filename", ""),
                 "capturedAt": indexed_assets.get(str(item.get("media_id") or ""), {}).get("capturedAt", ""),
+                "photoLibraryIdentifier": indexed_assets.get(
+                    str(item.get("media_id") or ""), {}
+                ).get("photoLibraryIdentifier", ""),
                 "mediaType": str(item.get("media_type") or ""),
                 "sourceSlug": str(item.get("source_slug") or item.get("previous_slug") or ""),
                 "hiddenAt": str(item.get("hidden_at") or ""),

@@ -168,10 +168,10 @@ class FixtureConnectorTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             sidecar_state_db.upsert_assets(root, [{
-                "localIdentifier": "photo-hidden",
-                "filename": "IMG_4228.HEIC",
-                "mediaType": "photo",
-                "creationDate": "2026-07-24T18:45:00Z",
+                "localIdentifier": "photos-hidden",
+                "filename": "Hidden.MOV",
+                "mediaType": "video",
+                "creationDate": "2026-07-24T10:00:00Z",
             }])
             with owner_state_db.connect(root) as connection:
                 connection.execute(
@@ -179,7 +179,7 @@ class FixtureConnectorTest(unittest.TestCase):
                        (media_id, lifecycle_state, source_slug, title, media_type,
                         source_paths_json, public_preview_keys_json, private_keys_json,
                         updated_at)
-                       VALUES (?, 'hidden', 'france', 'Private saved title', 'photo',
+                       VALUES (?, 'hidden', 'france', 'Private saved title', 'video',
                                '[]', '[]', '[]', ?)""",
                     ("photo-hidden", "2026-07-25T00:00:00Z"),
                 )
@@ -191,6 +191,31 @@ class FixtureConnectorTest(unittest.TestCase):
                        VALUES (?, 'discarded', 'spain', 'Discarded audit title', 'photo',
                                '[]', '[]', '[]', ?)""",
                     ("photo-discarded", "2026-07-25T00:00:01Z"),
+                )
+                connection.commit()
+
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    """INSERT INTO sidecar_upload_bridge_runs
+                       (run_id, mode, status, execute_upload, limit_count, created_at, updated_at)
+                       VALUES (?, 'upload', 'completed', 1, 1, ?, ?)""",
+                    ("bridge-lifecycle", "2026-07-25T00:00:00Z", "2026-07-25T00:00:00Z"),
+                )
+                connection.execute(
+                    """INSERT INTO sidecar_upload_bridge_run_items
+                       (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                        status, upload_status, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 'uploaded', 'uploaded', ?, ?)""",
+                    (
+                        "bridge-item-lifecycle",
+                        "bridge-lifecycle",
+                        "photos-hidden",
+                        "photo-hidden",
+                        "Hidden.MOV",
+                        "video",
+                        "2026-07-25T00:00:00Z",
+                        "2026-07-25T00:00:00Z",
+                    ),
                 )
                 connection.commit()
 
@@ -213,11 +238,15 @@ class FixtureConnectorTest(unittest.TestCase):
         )
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["filename"],
-            "IMG_4228.HEIC",
+            "Hidden.MOV",
         )
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["capturedAt"],
-            "2026-07-24T18:45:00Z",
+            "2026-07-24T10:00:00Z",
+        )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["photoLibraryIdentifier"],
+            "photos-hidden",
         )
 
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):

@@ -7,6 +7,7 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
     public var title: String
     public var filename: String
     public var capturedAt: String
+    public var photoLibraryIdentifier: String
     public var mediaType: String
     public var sourceSlug: String
     public var updatedAt: String
@@ -17,6 +18,9 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
         title = json["title"]?.stringValue ?? ""
         filename = json["filename"]?.stringValue ?? ""
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue
+            ?? json["photo_library_identifier"]?.stringValue
+            ?? ""
         mediaType = json["mediaType"]?.stringValue ?? ""
         sourceSlug = json["sourceSlug"]?.stringValue ?? ""
         updatedAt = json["updatedAt"]?.stringValue ?? ""

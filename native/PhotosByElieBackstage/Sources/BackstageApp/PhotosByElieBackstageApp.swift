@@ -548,6 +548,7 @@ private struct PublicationView: View {
 
 private struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @State private var confirmingEmpty = false
     @State private var confirmingDeleteSelected = false
     @State private var lifecycleSortOrder = [
@@ -558,12 +559,39 @@ private struct LifecycleView: View {
         model.lifecycleItems.sorted(using: lifecycleSortOrder)
     }
 
+    private func openQuickLook(for item: LifecycleItem) {
+        Task { @MainActor in
+            guard let url = await model.prepareLifecycleQuickLookURL(for: item) else {
+                return
+            }
+            quickLook.present(
+                urls: [url],
+                metadata: [
+                    BackstageQuickLookMetadata(
+                        assetID: item.mediaID,
+                        filename: item.filename.isEmpty ? item.mediaID : item.filename,
+                        title: item.title.isEmpty ? "Untitled" : item.title,
+                        keywords: [],
+                        locationLabel: item.sourceSlug,
+                        capturedAt: item.capturedAt,
+                        rating: 0,
+                        color: "",
+                        state: item.state == "hidden"
+                            ? "Recoverable"
+                            : "Active global tombstone",
+                        shortcutHint: "Escape closes Quick Look"
+                    )
+                ]
+            )
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Waste Basket").font(.largeTitle.bold())
-                    Text("X is recoverable. Only a confirmed Empty Waste Basket action activates global tombstones.")
+                    Text("X is recoverable. Click Quick Look or select a row and press Space to inspect it; only a confirmed Empty Waste Basket action activates global tombstones.")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -609,10 +637,16 @@ private struct LifecycleView: View {
                                     if failure.offersPhotosAccess {
                                         Task {
                                             await model.authorizeAndLoadPhotos()
-                                            model.retryThumbnail(for: item.mediaID)
+                                            model.retryThumbnail(
+                                                for: item.mediaID,
+                                                preferredIdentifier: item.photoLibraryIdentifier
+                                            )
                                         }
                                     } else {
-                                        model.retryThumbnail(for: item.mediaID)
+                                        model.retryThumbnail(
+                                            for: item.mediaID,
+                                            preferredIdentifier: item.photoLibraryIdentifier
+                                        )
                                     }
                                 }
                                 .controlSize(.small)
@@ -637,7 +671,12 @@ private struct LifecycleView: View {
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .accessibilityLabel(item.filename.isEmpty ? "Preview" : "Preview of \(item.filename)")
-                    .task { model.requestThumbnail(for: item.mediaID) }
+                    .task {
+                        model.requestThumbnail(
+                            for: item.mediaID,
+                            preferredIdentifier: item.photoLibraryIdentifier
+                        )
+                    }
                 }
                 .width(76)
                 TableColumn("Filename", value: \.filename) { item in
@@ -656,9 +695,14 @@ private struct LifecycleView: View {
                 }
                 TableColumn("Captured", value: \.capturedAt)
                 TableColumn("Updated", value: \.updatedAt)
-                TableColumn("") { item in
+                TableColumn("Actions") { item in
+                    Button("Quick Look") {
+                        openQuickLook(for: item)
+                    }
+                    .disabled(model.isRunningLifecycle)
+                    .backstageHelp("Open this Waste Basket item in private read-only Quick Look without changing lifecycle state.")
                 }
-                .width(90)
+                .width(100)
             }
             .overlay {
                 if model.isRunningLifecycle && model.lifecycleItems.isEmpty {
@@ -670,6 +714,15 @@ private struct LifecycleView: View {
                         description: Text("Recoverable and active global-tombstone items will appear here.")
                     )
                 }
+            }
+            .onKeyPress(.space) {
+                guard let item = sortedLifecycleItems.first(where: {
+                    model.selectedLifecycleIDs.contains($0.id)
+                }) else {
+                    return .ignored
+                }
+                openQuickLook(for: item)
+                return .handled
             }
         }
         .padding()

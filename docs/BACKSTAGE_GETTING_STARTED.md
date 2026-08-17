@@ -339,17 +339,18 @@ audited Owner action path.
 10. Choose **Undo** or press Command-Z to reverse the latest decision batch.
    Backstage keeps up to 100 session steps and restores the earlier cloud
    decision state and selection.
-11. **Send to Metadata** and **Send to Uploads** retain the current selection
-    while switching to that separate workspace. Neither button publishes or
-    uploads by itself.
+11. **Send to Metadata** retains the current selection while switching to the
+    authoritative title-and-keyword review workspace. It does not approve or
+    publish by itself. Review and Uploads remain available from the sidebar;
+    their owning workspaces retain the shared selection.
 
-Opening a pool or choosing **Reload decisions** rehydrates pick, rating, and
-color state from the canonical cloud ledger. The pool order and scope remain
-unchanged.
+Opening a pool or using **Refresh previews** rehydrates pick, rating, and color
+state from the canonical cloud ledger. The pool order and scope remain
+unchanged; there is no separate footer reload command.
 
-**Export originals…** asks for a destination folder and exports verified
-original resources. It is separate from fixture upload and catalog
-publication.
+The Culling header **Workflows** menu can open Review or ask for a destination
+folder to export verified original resources. These actions are separate from
+fixture upload and catalog publication.
 
 ## Review
 

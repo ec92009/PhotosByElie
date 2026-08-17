@@ -517,31 +517,38 @@ struct CullingView: View {
 
     private var cullingDestinationActions: some View {
         HStack(spacing: 6) {
-            Button("Open in Review") { model.sendCullingSelection(to: .review) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Review and carry the current Culling selection into that workspace.")
             Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Metadata and carry the current Culling selection into its editing workflow.")
-            Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Uploads and carry the current Culling selection into the publication tray.")
+                .accessibilityLabel("Send selection to Metadata")
+                .accessibilityHint("Metadata is the authoritative title and keyword review handoff; this does not approve or publish the selection.")
+                .backstageHelp("Send selected assets to Metadata, the authoritative title and keyword review surface. This does not approve or publish them.")
+            Text("Review and Uploads remain available from the sidebar.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             Spacer()
         }
     }
 
     private var cullingDecisionActions: some View {
         FlowLayout(spacing: 4) {
-            cullingPlacementPicker
-            Button("Apply fixture decision") {
-                Task { await model.applyPickShortcut(model.cullingPickAction) }
+            Button("P Include") {
+                Task { await model.applyPickShortcut(.pick) }
             }
-            .disabled(
-                model.cullingSelection.selectedIDs.isEmpty
-                    || model.isApplyingCullingDecision
-                    || !model.hasCurrentCullingFixture
-            )
-            .backstageHelp("Apply the selected Include, Exclude, or Undecided fixture decision to every selected asset.")
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("P Include selected items")
+            .backstageHelp("Instantly include the explicit selection in the current fixture. The existing audited fixture writer reports affected, skipped, and failed items.")
+            Button("H Exclude") {
+                Task { await model.applyPickShortcut(.reject) }
+            }
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("H Exclude selected items")
+            .backstageHelp("Instantly exclude the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
+            Button("X Waste Basket") {
+                Task { await model.moveCullingSelectionToWasteBasket() }
+            }
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("X move selected items to the recoverable Waste Basket")
+            .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
             cullingRatingPicker
             Button("Apply rating") {
                 Task { await model.applyRating() }
@@ -554,29 +561,7 @@ struct CullingView: View {
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
             .backstageHelp("Apply the chosen color label to every selected asset.")
-            Button("Quick Look") {
-                CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
-            }
-            .keyboardShortcut(.space, modifiers: [])
-            .disabled(model.cullingSelection.selectedIDs.isEmpty)
-            .backstageHelp("Open the focused selected asset in Quick Look without changing its Culling decision.")
-            Button("Export originals…") {
-                guard let directory = chooseExportDirectory() else { return }
-                Task { await model.exportSelected(to: directory) }
-            }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty)
-            .backstageHelp("Choose a folder and export the original files for all selected assets.")
         }
-        .labelsHidden()
-    }
-
-    private var cullingPlacementPicker: some View {
-        Picker("Fixture decision", selection: $model.cullingPickAction) {
-            ForEach(SidecarPickAction.allCases, id: \.self) { action in
-                Text(cullingPickLabel(action)).tag(action)
-            }
-        }
-        .frame(width: 180)
     }
 
     private var cullingRatingPicker: some View {
@@ -608,10 +593,6 @@ struct CullingView: View {
                 .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()
-            Button("Reload decisions") {
-                Task { await model.refreshCullingDecisions() }
-            }
-            .backstageHelp("Reload the latest persisted ratings, colors, and fixture decisions for the visible assets.")
             if !model.cullingSelection.selectedIDs.isEmpty {
                 Button("Clear selection") { model.clearCullingSelection() }
                     .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
@@ -642,14 +623,6 @@ struct CullingView: View {
                     .disabled(model.cullingCancellationRequested)
                     .backstageHelp("Request cancellation of the Culling operation currently in progress.")
             }
-        }
-    }
-
-    private func cullingPickLabel(_ action: SidecarPickAction) -> String {
-        switch action {
-        case .pick: "Include"
-        case .reject: "Exclude"
-        case .unpick: "Undecided"
         }
     }
 
@@ -712,6 +685,19 @@ struct CullingView: View {
 
     private var cullingHeaderActions: some View {
         HStack {
+            Menu("Workflows") {
+                Button("Open in Review") { model.sendCullingSelection(to: .review) }
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    .backstageHelp("Open the owning Review workspace for the explicit Culling selection without changing its decisions.")
+                Button("Export selected originals…") {
+                    guard let directory = chooseExportDirectory() else { return }
+                    Task { await model.exportSelected(to: directory) }
+                }
+                .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Choose a destination for verified original resources from the explicit Culling selection; this does not upload or publish them.")
+            }
+            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+            .accessibilityLabel("Culling workflows")
             if model.cullingPool != nil {
                 Button("All Photos") {
                     model.showAllPhotosInCulling()

@@ -98,7 +98,12 @@ class NativeCullingParityTest(unittest.TestCase):
             "Select burst",
             "Search title, file, or keyword",
             "Send to Metadata",
-            "Send to Uploads",
+            "Metadata, the authoritative title and keyword review surface",
+            "Review and Uploads remain available from the sidebar.",
+            'Button("P Include")',
+            'Button("H Exclude")',
+            'Button("X Waste Basket")',
+            'Menu("Workflows")',
             "thumbnail: model.cullingThumbnails",
             'onKeyPress("p")',
             'onKeyPress("h")',
@@ -613,7 +618,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
 
         grid_start = culling.index("ScrollViewReader")
-        grid_end = culling.index('Button("Open in Review")')
+        grid_end = culling.index("private var cullingActions")
         header = culling[:grid_start]
         grid = culling[grid_start:grid_end]
         actions = culling[grid_end:]
@@ -629,6 +634,17 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".padding(.top, 12)", grid)
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
         self.assertIn(".layoutPriority(2)", culling)
+        footer = culling.split("private var cullingDecisionActions", 1)[1].split(
+            "private var cullingRatingPicker", 1
+        )[0]
+        self.assertIn('Button("P Include")', footer)
+        self.assertIn('Button("H Exclude")', footer)
+        self.assertIn('Button("X Waste Basket")', footer)
+        self.assertNotIn('Button("Quick Look")', footer)
+        self.assertNotIn('Button("Open in Review")', footer)
+        self.assertNotIn('Button("Export originals…")', footer)
+        self.assertNotIn('Button("Reload decisions")', footer)
+        self.assertIn('Menu("Workflows")', culling)
         self.assertNotIn(".frame(maxWidth: .infinity, minHeight: 240, maxHeight: .infinity)", culling)
         self.assertNotIn("GeometryReader { paneGeometry in", culling)
         workspace = culling.split("private var cullingWorkspacePane", 1)[1].split(
@@ -1381,7 +1397,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "Review picked",
             "Select burst",
             "Send to Metadata",
-            "Send to Uploads",
+            "authoritative title-and-keyword review workspace",
+            "Review and Uploads remain available from the sidebar;",
         ):
             self.assertIn(marker, guide)
 

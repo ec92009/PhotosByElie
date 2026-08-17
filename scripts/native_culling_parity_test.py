@@ -993,6 +993,45 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertNotIn("Text(model.nativeUploadStatus)", upload)
 
+    def test_waste_basket_supports_bounded_previews_sorting_and_scoped_delete(self):
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        lifecycle = (
+            NATIVE / "Sources" / "OwnerCore" / "LifecycleService.swift"
+        ).read_text(encoding="utf-8")
+
+        for marker in (
+            "private var sortedLifecycleItems: [LifecycleItem]",
+            "sortOrder: $lifecycleSortOrder",
+            'Button("Delete Selected", role: .destructive)',
+            "model.selectedRecoverableLifecycleIDs.isEmpty",
+            "Text(model.lifecycleCountSummary)",
+            "model.cullingThumbnailFailures[item.mediaID]",
+            "ProgressView()",
+            "model.retryThumbnail(for: item.mediaID)",
+            'TableColumn("Filename", value: \\.filename)',
+            'TableColumn("Title", value: \\.title)',
+            'TableColumn("State", value: \\.state)',
+        ):
+            self.assertIn(marker, app)
+        for marker in (
+            "@Published var lifecycleCountSummary",
+            "var selectedRecoverableLifecycleIDs: [String]",
+            "func emptyWasteBasketSelection() async",
+            "mediaIDs: ids",
+        ):
+            self.assertIn(marker, model)
+        for marker in (
+            "mediaIDs: [String] = []",
+            "mediaIDs: mediaIDs",
+            'operation: \"waste-basket-empty\"',
+        ):
+            self.assertIn(marker, lifecycle)
+
     def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"

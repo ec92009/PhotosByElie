@@ -448,7 +448,17 @@ The Waste Basket has two intentionally different normal actions:
 - **Empty Waste Basket** changes recoverable entries into active global
   tombstones only after explicit confirmation.
 
-Use **Refresh**, select the items to restore, and choose **Put back**.
+The table uses bounded Photos thumbnails: while a preview is loading it says
+**Loading preview…**, and a failed preview offers **Retry preview** without
+fetching the original just to populate the list. Select a column heading to
+sort; equal values retain a deterministic ledger order. Command-click,
+Shift-click, and keyboard selection work across refresh. **Delete Selected**
+applies the guarded tombstone transition only to selected recoverable rows;
+the larger count line distinguishes recoverable entries from active global
+tombstones. Use **Refresh**, select the items to restore, and choose
+**Put back**. **Empty Waste Basket** remains the explicit all-recoverable-items
+path.
+
 Emptying retains source media, R2 objects, and history. A tombstoned item can
 return only through the separate explicit tombstone-restore path; ordinary X
 and restore remain idempotent and auditable.

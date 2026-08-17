@@ -88,6 +88,7 @@ public actor LifecycleService {
     }
 
     public func emptyWasteBasket(
+        mediaIDs: [String] = [],
         confirmed: Bool,
         confirmationToken: String = "EMPTY_WASTE_BASKET"
     ) async throws -> OwnerAction {
@@ -96,7 +97,7 @@ public actor LifecycleService {
         }
         return try await submitModeration(
             operation: "waste-basket-empty",
-            mediaIDs: [],
+            mediaIDs: mediaIDs,
             source: "backstage-waste-basket",
             confirmed: true,
             confirmationToken: confirmationToken

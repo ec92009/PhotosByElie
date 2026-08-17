@@ -305,6 +305,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
     @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
+    @Published var lifecycleCountSummary = "0 recoverable • 0 active global tombstones"
     @Published var isRunningLifecycle = false
     @Published var deliveryPlan: FixtureDeliveryPlan?
     @Published var selectedDeliveryIDs: Set<String> = []
@@ -3999,6 +4000,7 @@ final class BackstageViewModel: ObservableObject {
             let ledger = try await lifecycleService.ledger()
             lifecycleItems = ledger.items
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
+            lifecycleCountSummary = "\(ledger.hiddenCount.formatted()) recoverable • \(ledger.discardedCount.formatted()) active global tombstone\(ledger.discardedCount == 1 ? "" : "s")"
             lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
@@ -4030,6 +4032,33 @@ final class BackstageViewModel: ObservableObject {
         do {
             let action = try await lifecycleService.emptyWasteBasket(confirmed: true)
             lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
+            await loadLifecycle()
+        } catch {
+            lifecycleStatus = userFacingMessage(for: error)
+        }
+    }
+
+    var selectedRecoverableLifecycleIDs: [String] {
+        lifecycleItems
+            .filter { selectedLifecycleIDs.contains($0.id) && $0.state == "hidden" }
+            .map(\.id)
+            .sorted()
+    }
+
+    func emptyWasteBasketSelection() async {
+        let ids = selectedRecoverableLifecycleIDs
+        guard !ids.isEmpty else {
+            lifecycleStatus = "Select one or more recoverable items before choosing Delete Selected."
+            return
+        }
+        isRunningLifecycle = true
+        defer { isRunningLifecycle = false }
+        do {
+            let action = try await lifecycleService.emptyWasteBasket(
+                mediaIDs: ids,
+                confirmed: true
+            )
+            lifecycleStatus = "Deleted \(ids.count.formatted()) selected recoverable item\(ids.count == 1 ? "" : "s") through action \(action.id). Source media and R2 objects were retained."
             await loadLifecycle()
         } catch {
             lifecycleStatus = userFacingMessage(for: error)

@@ -549,6 +549,14 @@ private struct PublicationView: View {
 private struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
     @State private var confirmingEmpty = false
+    @State private var confirmingDeleteSelected = false
+    @State private var lifecycleSortOrder = [
+        KeyPathComparator(\LifecycleItem.updatedAt, order: .reverse),
+    ]
+
+    private var sortedLifecycleItems: [LifecycleItem] {
+        model.lifecycleItems.sorted(using: lifecycleSortOrder)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -565,24 +573,64 @@ private struct LifecycleView: View {
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
                     .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
+                Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
+                    .disabled(model.isRunningLifecycle || model.selectedRecoverableLifecycleIDs.isEmpty)
+                    .backstageHelp("Review the explicit confirmation for changing only the selected recoverable items into global tombstones; active tombstones and unselected items are untouched.")
                 Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
                     .disabled(model.isRunningLifecycle || model.lifecycleItems.allSatisfy { $0.state != "hidden" })
                     .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
+            Text(model.lifecycleCountSummary)
+                .font(.headline)
+                .monospacedDigit()
+                .accessibilityLabel("Waste Basket counts")
             BackstageFeedbackView(
                 message: model.lifecycleStatus,
                 isWorking: model.isRunningLifecycle
             )
-            Table(model.lifecycleItems, selection: $model.selectedLifecycleIDs) {
+            Table(
+                sortedLifecycleItems,
+                selection: $model.selectedLifecycleIDs,
+                sortOrder: $lifecycleSortOrder
+            ) {
                 TableColumn("Preview") { item in
                     Group {
                         if let thumbnail = model.cullingThumbnails[item.mediaID] {
                             Image(nsImage: thumbnail)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                        } else if let failure = model.cullingThumbnailFailures[item.mediaID] {
+                            VStack(spacing: 3) {
+                                Image(systemName: failure.systemImage)
+                                Text(failure.title)
+                                    .font(.caption2.weight(.semibold))
+                                    .lineLimit(1)
+                                Button(failure.actionTitle) {
+                                    if failure.offersPhotosAccess {
+                                        Task {
+                                            await model.authorizeAndLoadPhotos()
+                                            model.retryThumbnail(for: item.mediaID)
+                                        }
+                                    } else {
+                                        model.retryThumbnail(for: item.mediaID)
+                                    }
+                                }
+                                .controlSize(.small)
+                                .backstageHelp(
+                                    failure.offersPhotosAccess
+                                        ? "Request Photos permission for Backstage, then retry this Waste Basket thumbnail."
+                                        : "Retry this individual Waste Basket thumbnail without changing its lifecycle state."
+                                )
+                            }
+                            .foregroundStyle(.secondary)
                         } else {
-                            Image(systemName: "photo")
-                                .foregroundStyle(.secondary)
+                            VStack(spacing: 3) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Loading preview…")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.secondary)
                         }
                     }
                     .frame(width: 64, height: 48)
@@ -592,17 +640,17 @@ private struct LifecycleView: View {
                     .task { model.requestThumbnail(for: item.mediaID) }
                 }
                 .width(76)
-                TableColumn("Filename") { item in
+                TableColumn("Filename", value: \.filename) { item in
                     Text(item.filename.isEmpty ? item.mediaID : item.filename)
                         .lineLimit(1)
                         .help(item.filename.isEmpty ? item.mediaID : item.filename)
                 }
-                TableColumn("Title") { item in
+                TableColumn("Title", value: \.title) { item in
                     Text(item.title.isEmpty ? "Untitled" : item.title)
                         .lineLimit(1)
                         .help(item.title.isEmpty ? "Untitled" : item.title)
                 }
-                TableColumn("State") { item in
+                TableColumn("State", value: \.state) { item in
                     Text(item.state == "hidden" ? "Recoverable" : "Active global tombstone")
                         .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
                 }
@@ -639,6 +687,20 @@ private struct LifecycleView: View {
                 .backstageHelp("Close this confirmation and keep every recoverable item in the Waste Basket.")
         } message: {
             Text("This changes recoverable Waste Basket entries into active global tombstones. Explicit tombstone restore remains a separate audited path.")
+        }
+        .confirmationDialog(
+            "Delete selected recoverable items?",
+            isPresented: $confirmingDeleteSelected
+        ) {
+            Button("Delete Selected", role: .destructive) {
+                confirmingDeleteSelected = false
+                Task { await model.emptyWasteBasketSelection() }
+            }
+            .backstageHelp("Confirm changing only the selected recoverable items into active global tombstones. Source media, R2 objects, and history remain retained.")
+            Button("Cancel", role: .cancel) { confirmingDeleteSelected = false }
+                .backstageHelp("Close this confirmation without changing any selected lifecycle item.")
+        } message: {
+            Text("Only selected recoverable items are affected. Active tombstones and unselected items remain unchanged; the normal lifecycle safeguards and audit receipt still apply.")
         }
     }
 }

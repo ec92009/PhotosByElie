@@ -8,7 +8,8 @@ enum CullingPreviewFixtures {
     static func model(
         previewPanelVisible: Bool = true,
         loading: Bool = false,
-        missingThumbnail: Bool = false
+        missingThumbnail: Bool = false,
+        failedThumbnail: Bool = false
     ) -> BackstageViewModel {
         let model = BackstageViewModel()
         let assets = sampleAssets
@@ -63,6 +64,10 @@ enum CullingPreviewFixtures {
         )
         if missingThumbnail {
             model.cullingThumbnails["expo-1"] = nil
+        }
+        if failedThumbnail {
+            model.cullingThumbnails["expo-1"] = nil
+            model.cullingThumbnailFailures["expo-1"] = .previewUnavailable
         }
         model.cullingSelection = OwnerSelectionModel(
             orderedIDs: assets.map(\.id),
@@ -215,6 +220,14 @@ enum CullingPreviewFixtures {
 #Preview("Culling — Thumbnail Pending") {
     CullingView(
         model: CullingPreviewFixtures.model(missingThumbnail: true),
+        isPreviewMode: true
+    )
+    .frame(width: 1_200, height: 760)
+}
+
+#Preview("Culling — Thumbnail Failure") {
+    CullingView(
+        model: CullingPreviewFixtures.model(failedThumbnail: true),
         isPreviewMode: true
     )
     .frame(width: 1_200, height: 760)

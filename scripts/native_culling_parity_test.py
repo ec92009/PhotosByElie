@@ -79,6 +79,18 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
 
+    def test_culling_preview_fixture_exposes_stable_failed_thumbnail_retry_state(self):
+        preview = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingPreview.swift"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "failedThumbnail: Bool = false",
+            "if failedThumbnail",
+            'model.cullingThumbnailFailures[\"expo-1\"] = .previewUnavailable',
+            '#Preview(\"Culling — Thumbnail Failure\")',
+        ):
+            self.assertIn(marker, preview)
+
     def test_owner_core_owns_filter_window_burst_and_hierarchy_rules(self):
         source = (
             NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"
@@ -866,8 +878,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "110")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "111")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

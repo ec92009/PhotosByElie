@@ -27,6 +27,7 @@ const exactRoutes = new Map([
   ["/sidecar/decisions/upsert", "/api/owner/sidecar/decisions/upsert"],
   ["/lifecycle/seed", "/api/owner/lifecycle/seed"],
   ["/lifecycle/activate", "/api/owner/lifecycle/activate"],
+  ["/lifecycle/reconcile", "/api/owner/lifecycle/reconcile"],
   ["/lifecycle/arm", "/api/owner/lifecycle/arm"],
   ["/lifecycle/local-commit", "/api/owner/lifecycle/local-commit"],
   ["/lifecycle/apply", "/api/owner/lifecycle/apply"],

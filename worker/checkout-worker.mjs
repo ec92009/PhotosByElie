@@ -2815,12 +2815,12 @@ export const createPhotosByElieWorker = ({
   };
 
   const lifecycleOwnerCommand = async (request, command) => {
-    await requireOwnerConnector(request);
+    const connector = await requireOwnerConnector(request);
     if (!lifecycleDenyStore?.[command]) {
       return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable.");
     }
     const payload = await parseJson(request);
-    const result = await lifecycleDenyStore[command](payload);
+    const result = await lifecycleDenyStore[command]({ ...payload, actorId: connector.connectorId });
     return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
   };
 
@@ -4005,6 +4005,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/sidecar/decisions/upsert") return await upsertSidecarDecisions(request);
       if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
+      if (request.method === "POST" && path === "/owner/lifecycle/reconcile") return await lifecycleOwnerCommand(request, "reconcileManifest");
       if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");
       if (request.method === "POST" && path === "/owner/lifecycle/apply") return await lifecycleOwnerCommand(request, "applyBatch");

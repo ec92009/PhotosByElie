@@ -23,6 +23,7 @@ class TransactionalD1 {
     this.failAt = failAt;
     this.beforeBatch = null;
     this.sqlite.exec(readFileSync(new URL("../migrations/0012_lifecycle_deny_plane.sql", import.meta.url), "utf8"));
+    this.sqlite.exec(readFileSync(new URL("../migrations/0013_lifecycle_manifest_reconciliation.sql", import.meta.url), "utf8"));
   }
   prepare(sql) { return new D1Statement(this.sqlite, sql); }
   batch(statements) {
@@ -177,6 +178,61 @@ test("seed replay survives activation but conflicting reuse is rejected", async 
     { code: "lifecycle_seed_conflict" },
   );
   assert.equal(database.count("pbe_lifecycle_media_identity"), 1);
+});
+
+test("ready manifest reconciliation extends authority atomically and replays", async () => {
+  const database = new TransactionalD1();
+  const store = await readyStore(database);
+  const extension = {
+    ...member("two"),
+    bindings: [
+      { bucket: "private", objectKey: "masters/two.jpg" },
+      { bucket: "public", objectKey: "gallery/two.jpg" },
+    ],
+  };
+  const previous = await summarizeLifecycleManifest([member()]);
+  const next = await summarizeLifecycleManifest([member(), extension]);
+  const seedId = "manifest-repair-seed";
+  const seedMembers = [{
+    canonicalAssetId: extension.canonicalAssetId,
+    canonicalMediaId: extension.canonicalMediaId,
+    bindings: extension.bindings,
+  }];
+  const seedDigest = await canonicalDigest({ seedId, members: seedMembers });
+  const request = {
+    repairId: "manifest-repair-1",
+    actorId: "max",
+    previousActivationId: "activation-ready",
+    previousActivationDigest: previous.activationDigest,
+    previousMediaCount: previous.expectedMediaCount,
+    previousBindingCount: previous.expectedBindingCount,
+    activationId: "activation-reconciled",
+    activationDigest: next.activationDigest,
+    expectedMediaCount: next.expectedMediaCount,
+    expectedBindingCount: next.expectedBindingCount,
+    seedId,
+    seedDigest,
+    items: seedMembers,
+  };
+
+  const applied = await store.reconcileManifest(request);
+  assert.equal(applied.state, "applied");
+  assert.equal(applied.mediaCount, 2);
+  assert.equal(applied.bindingCount, 3);
+  assert.equal(applied.addedMediaCount, 1);
+  assert.equal(applied.addedBindingCount, 2);
+  assert.equal(database.count("pbe_lifecycle_media_identity"), 2);
+  assert.equal(database.count("pbe_lifecycle_media_bindings"), 3);
+  assert.equal(database.count("pbe_lifecycle_projection"), 2);
+  assert.equal(database.count("pbe_lifecycle_manifest_reconciliations"), 1);
+  await store.assertObjectAllowed({ bucket: "private", objectKey: "masters/two.jpg" });
+  await assert.doesNotReject(store.armBatch({
+    operationId: "op-reconciled",
+    operation: "empty",
+    denied: true,
+    items: [extension],
+  }));
+  assert.deepEqual(await store.reconcileManifest(request), applied);
 });
 
 test("one failed arm statement rolls back the whole operation", async () => {

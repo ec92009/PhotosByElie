@@ -1548,6 +1548,11 @@ final class BackstageViewModel: ObservableObject {
         reviewItems.map(\.id).filter(reviewSelection.selectedIDs.contains)
     }
 
+    var canSelectReviewBurstCandidates: Bool {
+        !isRunningReview
+            && !CullingWorkspace.reviewBurstRejectCandidates(in: reviewItems).isEmpty
+    }
+
     var focusedReviewItem: FixtureReviewItem? {
         let id = reviewSelection.focusedID ?? selectedReviewAssetIDs.first
         return reviewItems.first(where: { $0.id == id })
@@ -2572,6 +2577,39 @@ final class BackstageViewModel: ObservableObject {
     func selectAllReviewItems() {
         reviewSelection.selectAll()
         syncReviewDraft()
+    }
+
+    func selectReviewBurstCandidates() {
+        let items = reviewItems
+        guard !items.isEmpty else {
+            reviewStatus = isRunningReview
+                ? "Wait for the Review queue to finish loading."
+                : "No Review items are loaded."
+            return
+        }
+        let ids = CullingWorkspace.reviewBurstRejectCandidates(in: items)
+        guard !ids.isEmpty else {
+            reviewStatus = "No adjacent capture-time bursts found in the current Review filter."
+            return
+        }
+
+        preserveCurrentReviewDraft()
+        let orderedIDs = items.map(\.id)
+        let focusedID = reviewSelection.focusedID.flatMap {
+            orderedIDs.contains($0) ? $0 : nil
+        } ?? ids.first
+        let anchorID = reviewSelection.anchorID.flatMap {
+            orderedIDs.contains($0) ? $0 : nil
+        } ?? ids.first
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(ids),
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        reviewScrollTargetID = focusedID
+        syncReviewDraft()
+        reviewStatus = "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across Review capture-time bursts; each second frame remains unselected. Choose Hide to apply the audited Review action."
     }
 
     func clearReviewSelection() {

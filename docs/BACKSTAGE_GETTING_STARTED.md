@@ -367,6 +367,13 @@ Available** is active, completing the proposal does not remove that card if its
 new **Approved** or **Hidden** state is also selected; the next explicit reload
 reapplies the proposal filter.
 
+When the current fixture and Review filters contain capture-time burst groups,
+**Select burst** (or **B**) selects likely duplicate frames while leaving the
+probable second-frame survivor unselected. This changes selection only; use
+**Hide** to apply the existing audited Review action, and use **Undo** to
+reverse that decision batch. The current fixture, ordered queue, focused item,
+and Quick Look context remain intact.
+
 1. Edit the title or keywords directly. Changes autosave after a short pause.
    The down arrow beside either field propagates only that field through the
    intended two-hour shoot window.

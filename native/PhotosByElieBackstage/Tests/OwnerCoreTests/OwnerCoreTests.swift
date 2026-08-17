@@ -950,6 +950,53 @@ struct OwnerCoreTests {
         #expect(CullingWorkspace.burstRejectCandidates(in: []).isEmpty)
     }
 
+    @Test("Review burst selection keeps the likely survivor and ignores singleton gaps")
+    func reviewBurstRejectCandidates() {
+        let items = [
+            FixtureReviewItem(
+                id: "review-first",
+                photoLibraryIdentifier: "photos-review-first",
+                title: "First",
+                keywords: [],
+                filename: "first.jpg",
+                capturedAt: "2026-08-17T10:00:00Z"
+            ),
+            FixtureReviewItem(
+                id: "review-keeper",
+                photoLibraryIdentifier: "photos-review-keeper",
+                title: "Keeper",
+                keywords: [],
+                filename: "keeper.jpg",
+                capturedAt: "2026-08-17T10:00:01Z"
+            ),
+            FixtureReviewItem(
+                id: "review-third",
+                photoLibraryIdentifier: "photos-review-third",
+                title: "Third",
+                keywords: [],
+                filename: "third.jpg",
+                capturedAt: "2026-08-17T10:00:02Z"
+            ),
+            FixtureReviewItem(
+                id: "review-singleton",
+                photoLibraryIdentifier: "photos-review-singleton",
+                title: "Singleton",
+                keywords: [],
+                filename: "singleton.jpg",
+                capturedAt: "2026-08-17T10:01:00Z"
+            ),
+        ]
+
+        #expect(
+            CullingWorkspace.reviewBurstRejectCandidates(in: items)
+                == ["review-first", "review-third"]
+        )
+        #expect(
+            CullingWorkspace.reviewBurstRejectCandidates(in: Array(items.suffix(1)))
+                .isEmpty
+        )
+    }
+
     @Test("Burst capture dates parse durable Owner timestamps")
     func burstCaptureDateParsing() throws {
         let standard = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38Z"))

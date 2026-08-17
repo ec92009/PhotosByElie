@@ -184,6 +184,11 @@ struct ReviewView: View {
                         }
                         .disabled(model.isRunningReview)
                         .backstageHelp("Reload the current Review page, filters, proposals, and persisted states from Owner.")
+                        Button("Select burst") {
+                            model.selectReviewBurstCandidates()
+                        }
+                        .disabled(!model.canSelectReviewBurstCandidates)
+                        .backstageHelp("Select likely duplicate frames in each current Review capture burst while keeping the probable best frame unselected. This changes selection only; choose Hide to apply the audited Review action.")
                     }
                 }
                 if let summary = model.fixtureReviewWindow?.summary {
@@ -325,6 +330,10 @@ struct ReviewView: View {
                     }
                     .onKeyPress("x") {
                         Task { await model.moveReviewSelectionToWasteBasket() }
+                        return .handled
+                    }
+                    .onKeyPress("b") {
+                        model.selectReviewBurstCandidates()
                         return .handled
                     }
                     .onKeyPress("u") {

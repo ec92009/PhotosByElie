@@ -141,6 +141,35 @@ class NativeCullingParityTest(unittest.TestCase):
             source,
         )
 
+    def test_review_exposes_selection_only_burst_action(self):
+        review = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        workspace = (
+            NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            'Button("Select burst")',
+            "model.canSelectReviewBurstCandidates",
+            "model.selectReviewBurstCandidates()",
+            'onKeyPress("b")',
+        ):
+            self.assertIn(marker, review)
+        for marker in (
+            "var canSelectReviewBurstCandidates: Bool",
+            "func selectReviewBurstCandidates()",
+            "CullingWorkspace.reviewBurstRejectCandidates(in: items)",
+            "reviewScrollTargetID = focusedID",
+        ):
+            self.assertIn(marker, model)
+        self.assertIn(
+            "func reviewBurstRejectCandidates(",
+            workspace,
+        )
+
     def test_window_and_preview_layout_persist_between_launches(self):
         app = backstage_ui_source()
         model = (

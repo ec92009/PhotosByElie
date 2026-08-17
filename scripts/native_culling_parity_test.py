@@ -268,6 +268,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.requestReviewThumbnail(for: item)", ui)
 
     def test_photokit_thumbnail_requests_are_bounded_and_cancellable(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
         photo_library = (
             NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
         ).read_text(encoding="utf-8")
@@ -280,8 +286,18 @@ class NativeCullingParityTest(unittest.TestCase):
             "thumbnailRequestTimeout",
             "withTaskCancellationHandler",
             "manager.cancelImageRequest",
+            "func cullingPreview(localIdentifier: String, maxPixelSize: Int)",
+            "preferredRenderedJPEGResource(for asset: PHAsset)",
+            "resourceFormat($0) == \"JPEG\"",
+            "PHAssetResourceManager.default()",
+            "requestData(",
+            "PhotoKitResourcePreviewResultGate",
+            "manager.cancelDataRequest",
         ):
             self.assertIn(marker, photo_library)
+
+        self.assertIn("cullingPreviewForAsset(", model)
+        self.assertIn("photoLibrary.cullingPreview(", model)
 
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
         model = (
@@ -897,8 +913,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "114")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "115")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

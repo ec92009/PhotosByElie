@@ -1230,7 +1230,7 @@ final class BackstageViewModel: ObservableObject {
 
     private func upgradeThumbnail(for assetID: String) async {
         do {
-            let preview = try await previewForAsset(
+            let preview = try await cullingPreviewForAsset(
                 forAssetID: assetID,
                 preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
                 maxPixelSize: Self.cullingThumbnailUpgradePixelSize
@@ -5103,6 +5103,31 @@ final class BackstageViewModel: ObservableObject {
         ) {
             do {
                 return try await photoLibrary.preview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func cullingPreviewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.cullingPreview(
                     localIdentifier: identifier,
                     maxPixelSize: maxPixelSize
                 )

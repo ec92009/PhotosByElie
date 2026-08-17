@@ -105,6 +105,7 @@ public protocol PhotoLibraryServing: Sendable {
     func fetch(limit: Int) async -> [PhotoLibraryItem]
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
+    func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt
     func exportOriginal(
         localIdentifier: String,
@@ -116,6 +117,10 @@ public protocol PhotoLibraryServing: Sendable {
 }
 
 public extension PhotoLibraryServing {
+    func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
+    }
+
     func exportOriginal(
         localIdentifier: String,
         to directory: URL,
@@ -190,6 +195,7 @@ public extension PhotoLibraryServing {
 public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     private static let thumbnailRequestMaxPixelSize = 900
     private static let thumbnailRequestTimeout = Duration.seconds(10)
+    private static let cullingJPEGRequestTimeout = Duration.seconds(10)
     private static let fullPreviewRequestTimeout = Duration.seconds(55)
 
     public init() {}
@@ -308,6 +314,38 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         )
     }
 
+    public func cullingPreview(
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        try requireAccess()
+        let asset = try asset(localIdentifier)
+
+        if maxPixelSize > 180,
+           maxPixelSize <= Self.thumbnailRequestMaxPixelSize,
+            let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
+            return try await requestRenderedJPEGPreview(
+                resource: renderedJPEG,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize
+            )
+        }
+
+        if maxPixelSize <= Self.thumbnailRequestMaxPixelSize {
+            return try await requestThumbnailPreview(
+                for: asset,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize
+            )
+        }
+
+        return try await requestFullPreview(
+            for: asset,
+            localIdentifier: localIdentifier,
+            maxPixelSize: maxPixelSize
+        )
+    }
+
     private func requestThumbnailPreview(
         for asset: PHAsset,
         localIdentifier: String,
@@ -361,6 +399,56 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 gate.installTimeout(Task {
                     do {
                         try await Task.sleep(for: Self.thumbnailRequestTimeout)
+                    } catch {
+                        return
+                    }
+                    gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                })
+            }
+        }, onCancel: {
+            gate.cancel()
+        })
+    }
+
+    private func requestRenderedJPEGPreview(
+        resource: PHAssetResource,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let manager = PHAssetResourceManager.default()
+        let gate = PhotoKitResourcePreviewResultGate()
+
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<PhotoPreview, Error>) in
+                gate.installContinuation(continuation)
+                let requestID = manager.requestData(
+                    for: resource,
+                    options: options,
+                    dataReceivedHandler: { data in
+                        gate.append(data)
+                    },
+                    completionHandler: { error in
+                        if let error {
+                            gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(error.localizedDescription)))
+                            return
+                        }
+                        do {
+                            gate.resume(with: .success(try Self.previewFromImageData(
+                                gate.dataSnapshot(),
+                                localIdentifier: localIdentifier,
+                                maxPixelSize: maxPixelSize
+                            )))
+                        } catch {
+                            gate.resume(with: .failure(error))
+                        }
+                    }
+                )
+                gate.installRequest(requestID, manager: manager)
+                gate.installTimeout(Task {
+                    do {
+                        try await Task.sleep(for: Self.cullingJPEGRequestTimeout)
                     } catch {
                         return
                     }
@@ -721,6 +809,28 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
     }
 
+    private func preferredRenderedJPEGResource(for asset: PHAsset) -> PHAssetResource? {
+        PHAssetResource.assetResources(for: asset)
+            .filter { resourceFormat($0) == "JPEG" }
+            .sorted { lhs, rhs in
+                let lhsPriority = imageResourceTypePriority(lhs)
+                let rhsPriority = imageResourceTypePriority(rhs)
+                if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
+                return lhs.originalFilename < rhs.originalFilename
+            }
+            .first
+    }
+
+    private func imageResourceTypePriority(_ resource: PHAssetResource) -> Int {
+        switch resource.type {
+        case .fullSizePhoto: return 0
+        case .photo: return 1
+        case .alternatePhoto: return 2
+        case .adjustmentBasePhoto: return 3
+        default: return 9
+        }
+    }
+
     private func renderedJPEGFilename(_ resource: PHAssetResource?, index: Int) -> String {
         let fallback = "apple-photos-\(index)"
         let source = resource?.originalFilename ?? fallback
@@ -873,6 +983,95 @@ private final class PhotoKitPreviewResultGate: @unchecked Sendable {
         timeoutTask?.cancel()
         if let requestID, let manager {
             manager.cancelImageRequest(requestID)
+        }
+        continuation?.resume(with: result)
+    }
+
+    func cancel() {
+        resume(with: .failure(CancellationError()))
+    }
+}
+
+/// Completes one JPEG resource request exactly once and cancels it when the
+/// Culling idle-upgrade task leaves the viewport or times out.
+private final class PhotoKitResourcePreviewResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<PhotoPreview, Error>?
+    private var requestID: PHAssetResourceDataRequestID?
+    private weak var manager: PHAssetResourceManager?
+    private var timeoutTask: Task<Void, Never>?
+    private var data = Data()
+    private var finished = false
+
+    func installContinuation(_ continuation: CheckedContinuation<PhotoPreview, Error>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func append(_ chunk: Data) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        data.append(chunk)
+        lock.unlock()
+    }
+
+    func dataSnapshot() -> Data {
+        lock.lock()
+        let snapshot = data
+        lock.unlock()
+        return snapshot
+    }
+
+    func installRequest(_ requestID: PHAssetResourceDataRequestID, manager: PHAssetResourceManager) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            manager.cancelDataRequest(requestID)
+            return
+        }
+        self.requestID = requestID
+        self.manager = manager
+        lock.unlock()
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            task.cancel()
+            return
+        }
+        timeoutTask = task
+        lock.unlock()
+    }
+
+    func resume(with result: Result<PhotoPreview, Error>) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let continuation = self.continuation
+        self.continuation = nil
+        let timeoutTask = self.timeoutTask
+        self.timeoutTask = nil
+        let requestID = self.requestID
+        let manager = self.manager
+        lock.unlock()
+
+        timeoutTask?.cancel()
+        if let requestID, let manager {
+            manager.cancelDataRequest(requestID)
         }
         continuation?.resume(with: result)
     }

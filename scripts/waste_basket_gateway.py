@@ -1343,13 +1343,38 @@ def deployed_lifecycle_abort_proof(
         mutation_status = str(mutation["status"]) if mutation else "absent"
         if mutation_status not in {"absent", "failed"}:
             return None
+        # The Worker validates the canonical arm receipt, not the full HTTP
+        # response persisted by the connector. The response also contains
+        # transport fields such as ``ok`` and therefore cannot be hashed
+        # directly into an abort proof.
+        stored_arm = json.loads(str(operation["arm_receipt_json"]))
+        members = sorted(
+            stored_arm.get("members") or [],
+            key=lambda item: str(item.get("canonicalMediaId") or ""),
+        )
+        arm_receipt = {
+            "operationId": str(operation["operation_id"]),
+            "operationDigest": str(operation["operation_digest"]),
+            "operation": str(operation["operation"]),
+            "denied": bool(stored_arm.get("denied")),
+            "revision": int(stored_arm.get("revision") or 0),
+            "state": "armed",
+            "members": [
+                {
+                    "canonicalMediaId": str(member.get("canonicalMediaId") or "").strip(),
+                    "canonicalAssetId": str(member.get("canonicalAssetId") or "").strip(),
+                    "revision": int(member.get("revision") or 0),
+                }
+                for member in members
+            ],
+        }
         proof_body = {
             "operationId": operation_id,
             "operationDigest": operation_digest,
             "operation": str(operation["operation"]),
             "localLifecycleState": "armed",
             "localMutationStatus": mutation_status,
-            "armReceiptDigest": _hash(json.loads(str(operation["arm_receipt_json"]))),
+            "armReceiptDigest": _hash(arm_receipt),
             "localMutationCommitted": False,
         }
         return {
@@ -2070,6 +2095,10 @@ def _empty_one(
         item = _entry_payload(entry, "already-tombstoned")
         _receipt(connection, operation_id=operation_id, entry=entry, before=item, after=item, state="already-applied", now=now)
         return item
+    # Legacy lifecycle adoption can produce a recoverable entry without the
+    # newer sidecar asset/decision rows. Materialize those parent rows before
+    # writing the FK-dependent decision and tombstone records.
+    _ensure_asset_rows(connection, asset_id, now)
     connection.execute(
         """
         UPDATE sidecar_decisions

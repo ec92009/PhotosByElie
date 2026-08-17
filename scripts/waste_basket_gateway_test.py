@@ -274,11 +274,13 @@ class WasteBasketGatewayTests(unittest.TestCase):
             json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         return {
+            "ok": True,
             "operationId": operation_id,
             "operationDigest": digest,
             "operation": operation,
             "denied": denied,
             "revision": revision,
+            "state": "armed",
             "members": [{
                 "canonicalAssetId": item["canonicalAssetId"],
                 "canonicalMediaId": item["canonicalMediaId"],
@@ -664,7 +666,7 @@ class WasteBasketGatewayTests(unittest.TestCase):
         self.assertEqual(first["kind"], "owner-sqlite-no-local-commit-v1")
         self.assertEqual(
             first["proofDigest"],
-            "e2125d2819062d75a7cf4b9421b99756c2a61f06af15975dfbd503831fd6c477",
+            "d38789c3b4a245e996a8384bd8c0d4864bff6e13002833765fb6ae577846e0f3",
         )
         gateway.move_to_waste_basket(
             self.root,
@@ -886,6 +888,48 @@ class WasteBasketGatewayTests(unittest.TestCase):
                     ("legacy-hidden",),
                 ).fetchone()[0],
                 0,
+            )
+
+    def test_explicit_empty_materializes_sidecar_parents_for_orphaned_legacy_rows(self) -> None:
+        asset_id = "legacy-orphaned-sidecar"
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """
+                INSERT INTO media_lifecycle
+                  (media_id, lifecycle_state, previous_state, source_slug, title,
+                   hidden_at, updated_at)
+                VALUES (?, 'hidden', 'active', 'expo', 'Legacy orphan', ?, ?)
+                """,
+                (asset_id, NOW, NOW),
+            )
+            connection.commit()
+
+        emptied = gateway.empty_waste_basket(
+            self.root,
+            [asset_id],
+            confirmed=True,
+            confirmation_token=gateway.EMPTY_CONFIRMATION_TOKEN,
+            request_key="legacy-orphaned-empty-1",
+            db_path=self.db,
+        )
+        self.assertEqual(emptied["state"], "tombstoned")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            self.assertIsNotNone(
+                connection.execute(
+                    "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (asset_id,)
+                ).fetchone()
+            )
+            self.assertIsNotNone(
+                connection.execute(
+                    "SELECT 1 FROM sidecar_decisions WHERE asset_id = ?", (asset_id,)
+                ).fetchone()
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT tombstone_state FROM sidecar_tombstones WHERE asset_id = ?",
+                    (asset_id,),
+                ).fetchone()[0],
+                "active",
             )
 
     def test_direct_bypasses_are_rejected_even_with_legacy_marker(self) -> None:

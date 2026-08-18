@@ -148,9 +148,14 @@ public actor LifecycleService {
 
     public func awaitCompletion(
         of action: OwnerAction,
-        completionTimeout: Duration? = nil
+        completionTimeout: Duration? = nil,
+        onUpdate: (@Sendable (OwnerAction) -> Void)? = nil
     ) async throws -> OwnerAction {
-        try await runner.awaitCompletion(of: action, completionTimeout: completionTimeout)
+        try await runner.awaitCompletion(
+            of: action,
+            completionTimeout: completionTimeout,
+            onUpdate: onUpdate
+        )
     }
 
     public func restoreTombstone(mediaIDs: [String]) async throws -> OwnerAction {

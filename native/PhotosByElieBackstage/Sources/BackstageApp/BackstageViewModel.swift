@@ -262,6 +262,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isApplyingCullingDecision = false
     @Published private(set) var cullingWasteBasketQueueing = false
     @Published private(set) var cullingWasteBasketPendingActionID: String?
+    @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -282,6 +283,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isRunningReview = false
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionID: String?
+    @Published private(set) var reviewWasteBasketPendingAction: OwnerAction?
     @Published var reviewScrollTargetID: String?
     @Published var fixtureAIStatus: FixtureAIStatus?
     @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
@@ -318,6 +320,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var isRunningLifecycle = false
     @Published private(set) var lifecycleQueueing = false
     @Published private(set) var lifecyclePendingActionID: String?
+    @Published private(set) var lifecyclePendingAction: OwnerAction?
     @Published var deliveryPlan: FixtureDeliveryPlan?
     @Published var selectedDeliveryIDs: Set<String> = []
     @Published var deliveryStatus = "Choose a fixture and load its delivery plan."
@@ -547,6 +550,32 @@ final class BackstageViewModel: ObservableObject {
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost
         self.openExternalURL = openExternalURL
+    }
+
+    private func pendingLifecycleActionStatus(
+        _ operation: String,
+        action: OwnerAction,
+        availability: String
+    ) -> String {
+        let state = action.state.rawValue
+        let phase = action.diagnosticPhaseName
+        var message = operation
+            + " action "
+            + action.id
+            + " remains durable ("
+            + state
+            + "); current phase: "
+            + phase
+            + "."
+        if let detail = action.progress?.detail, !detail.isEmpty {
+            message += " " + detail + "."
+        }
+        if let elapsed = action.diagnosticPhaseElapsedMs {
+            message += " Last recorded phase "
+                + elapsed.formatted(.number.precision(.fractionLength(0...1)))
+                + " ms."
+        }
+        return message + " " + availability
     }
 
     @discardableResult
@@ -2511,10 +2540,22 @@ final class BackstageViewModel: ObservableObject {
                 )
                 self.cullingWasteBasketQueueing = false
                 self.cullingWasteBasketPendingActionID = action.id
+                self.cullingWasteBasketPendingAction = action
                 self.cullingStatus = "Queued X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). Culling remains available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action)
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.cullingWasteBasketPendingAction = update
+                            self.cullingStatus = self.pendingLifecycleActionStatus(
+                                "Culling X",
+                                action: update,
+                                availability: "Culling remains available while it completes."
+                            )
+                        }
+                    }
                     self.cullingWasteBasketPendingActionID = nil
+                    self.cullingWasteBasketPendingAction = nil
                     self.cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
                     if !self.selectedFixtureID.isEmpty, self.cullingPool == nil {
                         await self.loadFixtureCullingWindow()
@@ -2540,15 +2581,21 @@ final class BackstageViewModel: ObservableObject {
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
-                        self.cullingStatus = "X action \(action.id) is still running; it remains durable and can be checked in Activity."
+                        self.cullingStatus = self.pendingLifecycleActionStatus(
+                            "Culling X",
+                            action: self.cullingWasteBasketPendingAction ?? action,
+                            availability: "Culling remains available; check Activity for the full receipt."
+                        )
                     } else {
                         self.cullingWasteBasketPendingActionID = nil
+                        self.cullingWasteBasketPendingAction = nil
                         self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
                         onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.cullingWasteBasketQueueing = false
+                self.cullingWasteBasketPendingAction = nil
                 self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
                 onTerminal?(false, nil)
             }
@@ -2958,10 +3005,22 @@ final class BackstageViewModel: ObservableObject {
                 )
                 self.reviewWasteBasketQueueing = false
                 self.reviewWasteBasketPendingActionID = action.id
+                self.reviewWasteBasketPendingAction = action
                 self.reviewStatus = "Queued X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") as action \(action.id). Review remains available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action)
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.reviewWasteBasketPendingAction = update
+                            self.reviewStatus = self.pendingLifecycleActionStatus(
+                                "Review X",
+                                action: update,
+                                availability: "Review remains available while it completes."
+                            )
+                        }
+                    }
                     self.reviewWasteBasketPendingActionID = nil
+                    self.reviewWasteBasketPendingAction = nil
                     guard var window = self.fixtureReviewWindow else {
                         self.reviewStatus = "Review window is no longer available; X action \(action.id) completed."
                         self.reviewWasteBasketMonitorTask = nil
@@ -2990,15 +3049,21 @@ final class BackstageViewModel: ObservableObject {
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
-                        self.reviewStatus = "X action \(action.id) is still running; it remains durable and can be checked in Activity."
+                        self.reviewStatus = self.pendingLifecycleActionStatus(
+                            "Review X",
+                            action: self.reviewWasteBasketPendingAction ?? action,
+                            availability: "Review remains available; check Activity for the full receipt."
+                        )
                     } else {
                         self.reviewWasteBasketPendingActionID = nil
+                        self.reviewWasteBasketPendingAction = nil
                         self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
                         onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.reviewWasteBasketQueueing = false
+                self.reviewWasteBasketPendingAction = nil
                 self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
                 onTerminal?(false, nil)
             }
@@ -4394,23 +4459,41 @@ final class BackstageViewModel: ObservableObject {
                 let action = try await self.lifecycleService.enqueueEmptyWasteBasket(confirmed: true)
                 self.lifecycleQueueing = false
                 self.lifecyclePendingActionID = action.id
+                self.lifecyclePendingAction = action
                 self.lifecycleStatus = "Empty Waste Basket queued as action \(action.id). Browsing and Quick Look remain available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action)
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.lifecyclePendingAction = update
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Empty Waste Basket",
+                                action: update,
+                                availability: "Browsing and Quick Look remain available while it completes."
+                            )
+                        }
+                    }
                     self.lifecyclePendingActionID = nil
+                    self.lifecyclePendingAction = nil
                     self.lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
                     await self.loadLifecycle()
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
-                        self.lifecycleStatus = "Empty Waste Basket action \(action.id) is still running; it remains durable and can be checked in Activity."
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Empty Waste Basket",
+                            action: self.lifecyclePendingAction ?? action,
+                            availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
+                        )
                     } else {
                         self.lifecyclePendingActionID = nil
+                        self.lifecyclePendingAction = nil
                         self.lifecycleStatus = self.userFacingMessage(for: error)
                     }
                 }
             } catch {
                 self.lifecycleQueueing = false
+                self.lifecyclePendingAction = nil
                 self.lifecycleStatus = self.userFacingMessage(for: error)
             }
             self.lifecycleMonitorTask = nil
@@ -4447,23 +4530,41 @@ final class BackstageViewModel: ObservableObject {
                 )
                 self.lifecycleQueueing = false
                 self.lifecyclePendingActionID = action.id
+                self.lifecyclePendingAction = action
                 self.lifecycleStatus = "Delete Selected queued as action \(action.id). Browsing and Quick Look remain available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action)
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.lifecyclePendingAction = update
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Delete Selected",
+                                action: update,
+                                availability: "Browsing and Quick Look remain available while it completes."
+                            )
+                        }
+                    }
                     self.lifecyclePendingActionID = nil
+                    self.lifecyclePendingAction = nil
                     self.lifecycleStatus = "Deleted \(ids.count.formatted()) selected recoverable item\(ids.count == 1 ? "" : "s") through action \(action.id). Source media and R2 objects were retained."
                     await self.loadLifecycle()
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
-                        self.lifecycleStatus = "Delete Selected action \(action.id) is still running; it remains durable and can be checked in Activity."
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Delete Selected",
+                            action: self.lifecyclePendingAction ?? action,
+                            availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
+                        )
                     } else {
                         self.lifecyclePendingActionID = nil
+                        self.lifecyclePendingAction = nil
                         self.lifecycleStatus = self.userFacingMessage(for: error)
                     }
                 }
             } catch {
                 self.lifecycleQueueing = false
+                self.lifecyclePendingAction = nil
                 self.lifecycleStatus = self.userFacingMessage(for: error)
             }
             self.lifecycleMonitorTask = nil

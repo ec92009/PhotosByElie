@@ -3043,6 +3043,93 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
     }
 
+    @Test("Owner action decoding preserves connector phase timing receipts")
+    func decodesConnectorPhaseTimingReceipts() throws {
+        let action = try JSONDecoder.ownerAPI.decode(
+            OwnerAction.self,
+            from: Data(
+                """
+                {
+                  "id": "owner-action-lifecycle-timing",
+                  "actionKind": "photo-moderation",
+                  "target": "max",
+                  "state": "completed",
+                  "timing": {
+                    "queuedAt": "2026-08-18T10:00:00.000Z",
+                    "completedAt": "2026-08-18T10:00:00.500Z",
+                    "connector": {
+                      "schema": "photosbyelie.ownerActionTiming.v1",
+                      "actionId": "owner-action-lifecycle-timing",
+                      "startedAt": "2026-08-18T10:00:00.100Z",
+                      "endedAt": "2026-08-18T10:00:00.500Z",
+                      "elapsedMs": 400.0,
+                      "outcome": "submitted",
+                      "phases": {
+                        "action.execute": {
+                          "startedAt": "2026-08-18T10:00:00.100Z",
+                          "endedAt": "2026-08-18T10:00:00.150Z",
+                          "elapsedMs": 50.0,
+                          "outcome": "ok"
+                        },
+                        "lifecycle.local-moderation": {
+                          "startedAt": "2026-08-18T10:00:00.200Z",
+                          "endedAt": "2026-08-18T10:00:00.500Z",
+                          "elapsedMs": 300.0,
+                          "outcome": "ok"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.utf8
+            )
+        )
+
+        #expect(action.connectorTiming?.schema == "photosbyelie.ownerActionTiming.v1")
+        #expect(action.connectorTiming?.latestPhaseName == "lifecycle.local-moderation")
+        #expect(action.connectorTiming?.slowestPhaseName == "lifecycle.local-moderation")
+        #expect(action.connectorTiming?.slowestPhaseElapsedMs == 300.0)
+        #expect(action.diagnosticPhaseName == "lifecycle.local-moderation")
+        #expect(action.diagnosticPhaseElapsedMs == 300.0)
+    }
+
+    @Test("Owner action completion reports queued and terminal updates")
+    func ownerActionCompletionReportsUpdates() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-update-receipt",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            progress: OwnerProgress(
+                phase: "projection-update",
+                completed: 1,
+                total: 1,
+                percent: 100
+            )
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let runner = OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let recorder = OwnerActionUpdateRecorder()
+
+        _ = try await runner.awaitCompletion(
+            of: OwnerAction(
+                id: terminal.id,
+                actionKind: terminal.actionKind,
+                target: terminal.target,
+                state: .queued
+            ),
+            onUpdate: { action in recorder.append(action) }
+        )
+
+        #expect(recorder.states == [.queued, .completed])
+        #expect(recorder.phases == ["queued", "projection-update"])
+    }
+
     @Test("Native delivery keeps fixture upload and publication as separate actions")
     func nativeFixtureDeliveryAndPublication() async throws {
         let deliveryPlan = OwnerAction(
@@ -4533,6 +4620,29 @@ private struct DelayedWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         try await Task.sleep(for: .seconds(10))
         return nil
+    }
+}
+
+private final class OwnerActionUpdateRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [OwnerAction] = []
+
+    func append(_ action: OwnerAction) {
+        lock.lock()
+        values.append(action)
+        lock.unlock()
+    }
+
+    var states: [OwnerActionState] {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.map(\.state)
+    }
+
+    var phases: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.map(\.diagnosticPhaseName)
     }
 }
 

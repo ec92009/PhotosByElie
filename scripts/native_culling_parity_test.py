@@ -403,6 +403,54 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn("case .previous:", selection)
 
+    def test_lifecycle_actions_surface_async_phase_receipts(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        owner_models = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerModels.swift"
+        ).read_text(encoding="utf-8")
+        runner = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerActionRunner.swift"
+        ).read_text(encoding="utf-8")
+        lifecycle = (
+            NATIVE / "Sources" / "OwnerCore" / "LifecycleService.swift"
+        ).read_text(encoding="utf-8")
+
+        for marker in (
+            "OwnerActionPhaseTiming",
+            "OwnerConnectorTiming",
+            "connectorTiming",
+            "diagnosticPhaseName",
+            "diagnosticPhaseElapsedMs",
+            "failedAt",
+        ):
+            self.assertIn(marker, owner_models)
+        self.assertIn("onUpdate: (@Sendable (OwnerAction) -> Void)? = nil", runner)
+        self.assertIn("onUpdate?(action)", runner)
+        self.assertIn("onUpdate: (@Sendable (OwnerAction) -> Void)? = nil", lifecycle)
+        for marker in (
+            "pendingLifecycleActionStatus(",
+            "cullingWasteBasketPendingAction = update",
+            "reviewWasteBasketPendingAction = update",
+            "lifecyclePendingAction = update",
+            "Culling remains available while it completes.",
+            "Review remains available while it completes.",
+            "Browsing and Quick Look remain available while it completes.",
+        ):
+            self.assertIn(marker, model)
+        app = backstage_ui_source()
+        for marker in (
+            'TableColumn("Phase")',
+            "action.diagnosticPhaseName",
+            "action.diagnosticPhaseElapsedMs",
+        ):
+            self.assertIn(marker, app)
+        self.assertGreaterEqual(
+            model.count("awaitCompletion(of: action) { [weak self] update in"),
+            4,
+        )
+
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
         model = (
             NATIVE

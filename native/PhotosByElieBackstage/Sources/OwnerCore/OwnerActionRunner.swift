@@ -136,10 +136,12 @@ public actor OwnerActionRunner {
 
     public func awaitCompletion(
         of queued: OwnerAction,
-        completionTimeout: Duration? = nil
+        completionTimeout: Duration? = nil,
+        onUpdate: (@Sendable (OwnerAction) -> Void)? = nil
     ) async throws -> OwnerAction {
         let deadline = clock.now.advanced(by: completionTimeout ?? timeout)
         var action = queued
+        onUpdate?(action)
 
         // The local connector wake is only an acceleration hint. Fire it in
         // the background and let the durable Worker poll remain the source of
@@ -172,6 +174,7 @@ public actor OwnerActionRunner {
             let remaining = deadline - clock.now
             try await clock.sleep(for: min(pollInterval, remaining))
             action = try await api.getAction(id: action.id)
+            onUpdate?(action)
         }
     }
 

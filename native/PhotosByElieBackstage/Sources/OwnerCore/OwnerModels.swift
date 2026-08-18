@@ -148,6 +148,98 @@ public struct OwnerProgress: Codable, Sendable, Equatable {
     }
 }
 
+public struct OwnerActionPhaseTiming: Codable, Sendable, Equatable {
+    public var startedAt: Date?
+    public var endedAt: Date?
+    public var elapsedMs: Double?
+    public var outcome: String?
+    public var errorType: String?
+
+    public init(
+        startedAt: Date? = nil,
+        endedAt: Date? = nil,
+        elapsedMs: Double? = nil,
+        outcome: String? = nil,
+        errorType: String? = nil
+    ) {
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.elapsedMs = elapsedMs
+        self.outcome = outcome
+        self.errorType = errorType
+    }
+}
+
+public struct OwnerConnectorTiming: Codable, Sendable, Equatable {
+    public var schema: String?
+    public var actionID: String?
+    public var startedAt: Date?
+    public var endedAt: Date?
+    public var elapsedMs: Double?
+    public var outcome: String?
+    public var errorType: String?
+    public var phases: [String: OwnerActionPhaseTiming]
+
+    public init(
+        schema: String? = nil,
+        actionID: String? = nil,
+        startedAt: Date? = nil,
+        endedAt: Date? = nil,
+        elapsedMs: Double? = nil,
+        outcome: String? = nil,
+        errorType: String? = nil,
+        phases: [String: OwnerActionPhaseTiming] = [:]
+    ) {
+        self.schema = schema
+        self.actionID = actionID
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.elapsedMs = elapsedMs
+        self.outcome = outcome
+        self.errorType = errorType
+        self.phases = phases
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schema
+        case actionID = "actionId"
+        case startedAt
+        case endedAt
+        case elapsedMs
+        case outcome
+        case errorType
+        case phases
+    }
+
+    public var latestPhaseName: String? {
+        phases.keys.sorted { left, right in
+            let leftDate = phases[left]?.startedAt ?? .distantPast
+            let rightDate = phases[right]?.startedAt ?? .distantPast
+            if leftDate == rightDate { return left < right }
+            return leftDate < rightDate
+        }.last
+    }
+
+    public var latestPhaseTiming: OwnerActionPhaseTiming? {
+        guard let latestPhaseName else { return nil }
+        return phases[latestPhaseName]
+    }
+
+    public var slowestPhaseName: String? {
+        phases
+            .compactMap { name, timing in timing.elapsedMs.map { (name, $0) } }
+            .max { left, right in
+                if left.1 == right.1 { return left.0 > right.0 }
+                return left.1 < right.1
+            }?.0
+    }
+
+    public var slowestPhaseElapsedMs: Double? {
+        guard let slowestPhaseName else { return nil }
+        return phases[slowestPhaseName]?.elapsedMs
+    }
+}
+
 public struct OwnerActionTiming: Codable, Sendable, Equatable {
     public var queuedAt: Date?
     public var locallyAwakenedAt: Date?
@@ -155,6 +247,8 @@ public struct OwnerActionTiming: Codable, Sendable, Equatable {
     public var executedAt: Date?
     public var completedAt: Date?
     public var cancelledAt: Date?
+    public var failedAt: Date?
+    public var connector: OwnerConnectorTiming?
 
     public init(
         queuedAt: Date? = nil,
@@ -162,7 +256,9 @@ public struct OwnerActionTiming: Codable, Sendable, Equatable {
         claimedAt: Date? = nil,
         executedAt: Date? = nil,
         completedAt: Date? = nil,
-        cancelledAt: Date? = nil
+        cancelledAt: Date? = nil,
+        failedAt: Date? = nil,
+        connector: OwnerConnectorTiming? = nil
     ) {
         self.queuedAt = queuedAt
         self.locallyAwakenedAt = locallyAwakenedAt
@@ -170,6 +266,8 @@ public struct OwnerActionTiming: Codable, Sendable, Equatable {
         self.executedAt = executedAt
         self.completedAt = completedAt
         self.cancelledAt = cancelledAt
+        self.failedAt = failedAt
+        self.connector = connector
     }
 }
 
@@ -188,6 +286,40 @@ public struct OwnerAction: Codable, Identifiable, Sendable, Equatable {
     public var error: [String: JSONValue]?
     public var progress: OwnerProgress?
     public var timing: OwnerActionTiming?
+
+    /// The connector receipt is nested in the Worker timing envelope for
+    /// completed/failed actions. Keep this fallback for older responses that
+    /// returned it only inside the result payload.
+    public var connectorTiming: OwnerConnectorTiming? {
+        if let connector = timing?.connector {
+            return connector
+        }
+        guard let value = result?["timing"]?.objectValue?["connector"] else {
+            return nil
+        }
+        return try? JSONDecoder.ownerAPI.decode(
+            OwnerConnectorTiming.self,
+            from: JSONEncoder.ownerAPI.encode(value)
+        )
+    }
+
+    public var diagnosticPhaseName: String {
+        if let phase = progress?.phase, !phase.isEmpty {
+            return phase
+        }
+        if state == .completed || state == .failed,
+           let slowestPhase = connectorTiming?.slowestPhaseName {
+            return slowestPhase
+        }
+        return connectorTiming?.latestPhaseName ?? state.rawValue
+    }
+
+    public var diagnosticPhaseElapsedMs: Double? {
+        if state == .completed || state == .failed {
+            return connectorTiming?.slowestPhaseElapsedMs
+        }
+        return connectorTiming?.latestPhaseTiming?.elapsedMs
+    }
 
     public init(
         id: String,

@@ -921,6 +921,21 @@ private struct ActivityView: View {
                 TableColumn("Kind", value: \.actionKind)
                 TableColumn("Target", value: \.target)
                 TableColumn("State") { Text($0.state.rawValue.capitalized) }
+                TableColumn("Phase") { action in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(action.diagnosticPhaseName)
+                        if let elapsed = action.diagnosticPhaseElapsedMs {
+                            Text(
+                                elapsed.formatted(.number.precision(.fractionLength(0...1)))
+                                    + " ms"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        }
+                    }
+                }
+                .width(min: 140, ideal: 220)
                 TableColumn("Updated") { action in
                     Text(
                         (action.updatedAt ?? action.createdAt)?

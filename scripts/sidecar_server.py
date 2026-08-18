@@ -44,6 +44,7 @@ from sidecar_state_db import (
     record_decisions,
     sidecar_sync_status,
     summary,
+    is_jpeg_source_row,
     upload_bridge_plan,
     upload_plan,
     upsert_assets,
@@ -326,6 +327,8 @@ def _import_index_jsonl(repo_root: Path, path: Path, total_count: int, prune_mis
                 continue
             row = json.loads(clean)
             if not isinstance(row, dict):
+                continue
+            if not is_jpeg_source_row(row):
                 continue
             asset_id = _asset_id_from_row(row)
             if asset_id:
@@ -878,7 +881,10 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 date_to=date_to,
             )
             if payload.get("ok"):
-                rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
+                rows = [
+                    row for row in payload.get("items") or []
+                    if isinstance(row, dict) and is_jpeg_source_row(row)
+                ]
                 upsert_assets(Path.cwd(), rows)
                 _invalidate_summary_cache()
                 payload["items"] = merge_state(Path.cwd(), rows)

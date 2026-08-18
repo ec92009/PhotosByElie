@@ -50,7 +50,7 @@ from fixture_pipeline import (
     editorial_version_hash,
 )
 from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
-from sidecar_state_db import connect, record_decision, upsert_assets
+from sidecar_state_db import connect, is_jpeg_source_row, record_decision, upsert_assets
 
 
 def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:
@@ -96,6 +96,56 @@ class FixturePipelineTest(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_source_index_requires_a_real_jpeg_resource(self):
+        raw_only = {
+            "localIdentifier": "raw-only",
+            "filename": "20220807 153244 00170.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW"],
+            "resourceFormat": "RAW",
+            "preferredResourceFilename": "20220807 153244 00170.dng",
+            "preferredResourceFormat": "RAW",
+            "fallbackResourceFilename": "20220807 153244 00170.dng",
+            "fallbackResourceFormat": "RAW",
+            "localJPEGFallbackAvailable": True,
+            "resources": [{
+                "originalFilename": "20220807 153244 00170.dng",
+                "uniformTypeIdentifier": "com.adobe.raw-image",
+                "format": "RAW",
+            }],
+        }
+        self.assertFalse(is_jpeg_source_row(raw_only))
+        self.assertEqual(upsert_assets(self.root, [raw_only]), 0)
+        with connect(self.root) as connection:
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT asset_id FROM sidecar_assets WHERE asset_id = ?",
+                    ("raw-only",),
+                ).fetchone()
+            )
+
+        jpeg_backed = {
+            "localIdentifier": "jpeg-backed",
+            "filename": "20220807 153244 00171.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW", "JPEG"],
+            "resourceFormat": "RAW+JPEG",
+            "preferredResourceFormat": "RAW",
+            "fallbackResourceFilename": "20220807 153244 00171.jpg",
+            "fallbackResourceFormat": "JPEG",
+            "resources": [
+                {"originalFilename": "20220807 153244 00171.dng", "format": "RAW"},
+                {"originalFilename": "20220807 153244 00171.jpg", "format": "JPEG"},
+            ],
+        }
+        self.assertTrue(is_jpeg_source_row(jpeg_backed))
+        self.assertEqual(upsert_assets(self.root, [jpeg_backed]), 1)
+
+        # Existing non-Photos callers use compact rows without resource
+        # metadata; retain that compatibility while the Photos path remains
+        # strict whenever PhotoKit resource metadata is present.
+        self.assertTrue(is_jpeg_source_row({"localIdentifier": "legacy", "filename": "legacy.jpg"}))
 
     def test_recursive_tree_keeps_stable_ids_and_rejects_cycles(self):
         root = create_fixture(self.root, "RE", fixture_id="root")

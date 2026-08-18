@@ -220,22 +220,24 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     public func fetch(limit: Int = 200) async -> [PhotoLibraryItem] {
         guard [.authorized, .limited].contains(authorization()) else { return [] }
         let options = PHFetchOptions()
-        options.fetchLimit = max(1, min(5_000, limit))
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         // Backstage source intake is still-photo only. Real-estate videos are
         // generated deliverables built from approved stills and do not belong
-        // in the PhotoKit culling/preview universe.
+        // in the PhotoKit culling/preview universe. A RAW-only PHAsset also
+        // stays out: PBB/PBE require an actual JPEG resource in Photos.
         let result = PHAsset.fetchAssets(with: .image, options: options)
         var items: [PhotoLibraryItem] = []
         result.enumerateObjects { asset, _, stop in
-            let resources = PHAssetResource.assetResources(for: asset)
+            guard let renderedJPEG = preferredRenderedJPEGResource(for: asset) else {
+                return
+            }
             items.append(PhotoLibraryItem(
                 id: asset.localIdentifier,
-                filename: resources.first?.originalFilename ?? asset.localIdentifier,
+                filename: renderedJPEG.originalFilename,
                 creationDate: asset.creationDate,
                 mediaType: asset.mediaType == .video ? "video" : "photo"
             ))
-            if items.count >= limit { stop.pointee = true }
+            if items.count >= max(1, min(5_000, limit)) { stop.pointee = true }
         }
         return items
     }
@@ -261,22 +263,26 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         if !predicates.isEmpty {
             options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         }
-        options.fetchLimit = safeOffset + safeLimit
-
         // Backstage source intake is still-photo only. Generated real-estate
-        // videos are downstream deliverables and never enter this index.
+        // videos are downstream deliverables and never enter this index. A
+        // RAW-only PHAsset is excluded because PBB/PBE require an actual JPEG.
         let assets = PHAsset.fetchAssets(with: .image, options: options)
-        var selected: [PHAsset] = []
-        assets.enumerateObjects { asset, index, stop in
-            if index < safeOffset { return }
-            guard selected.count < safeLimit else {
-                stop.pointee = true
-                return
+        // Filter before applying offset/limit. Applying pagination to the raw
+        // Photos result first would make a page appear short and could skip
+        // valid JPEG-backed assets after a run of RAW-only assets.
+        var jpegAssets: [PHAsset] = []
+        assets.enumerateObjects { asset, _, _ in
+            if preferredRenderedJPEGResource(for: asset) != nil {
+                jpegAssets.append(asset)
             }
-            selected.append(asset)
         }
+        let pageStart = min(safeOffset, jpegAssets.count)
+        let pageEnd = min(pageStart + safeLimit, jpegAssets.count)
+        let selected = pageStart < pageEnd
+            ? Array(jpegAssets[pageStart..<pageEnd])
+            : []
         let rows = selected.enumerated().map { index, asset in
-            libraryIndexRow(asset, index: safeOffset + index + 1)
+            libraryIndexRow(asset, index: pageStart + index + 1)
         }
         let payload: [String: Any] = [
             "ok": true,
@@ -284,14 +290,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "limit": safeLimit,
             "offset": safeOffset,
             "count": rows.count,
-            "fetchedCount": assets.count,
-            "skippedCount": min(safeOffset, assets.count),
+            "fetchedCount": jpegAssets.count,
+            "skippedCount": pageStart,
             "dateFrom": photoLibraryISODate(dateFrom),
             "dateTo": photoLibraryISODate(dateTo),
             "items": rows,
             "notes": [
                 "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
                 "Sidecar culling decisions are local-first. Photos keyword/title write-back is staged separately.",
+                "RAW-only Photos assets without an actual JPEG resource are excluded from PBB/PBE source intake.",
             ],
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
@@ -491,25 +498,38 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true
         options.deliveryMode = .highQualityFormat
+        options.resizeMode = .exact
         options.version = .current
+        let targetSize = CGSize(
+            width: CGFloat(max(64, min(8_192, maxPixelSize))),
+            height: CGFloat(max(64, min(8_192, maxPixelSize)))
+        )
         let manager = PHImageManager.default()
         let gate = PhotoKitPreviewResultGate()
 
         return try await withTaskCancellationHandler(operation: {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<PhotoPreview, Error>) in
                 gate.installContinuation(continuation)
-                let requestID = manager.requestImageDataAndOrientation(
+                // requestImage asks Photos for its rendered/current raster.
+                // requestImageDataAndOrientation can return the source RAW
+                // bytes for a RAW-only PHAsset, which bypasses Photos'
+                // developed color rendering and produces a blue cast.
+                let requestID = manager.requestImage(
                     for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,
                     options: options
-                ) { data, _, _, info in
+                ) { image, info in
                     if let error = info?[PHImageErrorKey] as? Error {
                         gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(error.localizedDescription)))
                     } else if info?[PHImageCancelledKey] as? Bool == true {
                         gate.resume(with: .failure(CancellationError()))
-                    } else if let data {
+                    } else if info?[PHImageResultIsDegradedKey] as? Bool == true {
+                        return
+                    } else if let image {
                         do {
-                            gate.resume(with: .success(try Self.previewFromImageData(
-                                data,
+                            gate.resume(with: .success(try Self.previewFromImage(
+                                image,
                                 localIdentifier: localIdentifier,
                                 maxPixelSize: maxPixelSize
                             )))
@@ -662,8 +682,8 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     private func libraryIndexRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         let resources = PHAssetResource.assetResources(for: asset)
         let preferred = preferredOriginalResource(for: asset)
-        let fallback = resources.first(where: isJPEGConvertibleImageResource)
-        let displayResource = fallback ?? preferred
+        let renderedJPEG = preferredRenderedJPEGResource(for: asset)
+        let displayResource = renderedJPEG ?? preferred
         let cloudIdentifier = cloudIdentifier(for: asset.localIdentifier)
         let assetIdentifier = cloudIdentifier.isEmpty ? asset.localIdentifier : cloudIdentifier
         let formats = resources.map(resourceFormat)
@@ -673,7 +693,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let formatCounts = formats.reduce(into: [String: Int]()) { counts, format in
             counts[format, default: 0] += 1
         }
-        let eligible = true
+        let eligible = renderedJPEG != nil
         var row: [String: Any] = [
             "index": index,
             "assetId": assetIdentifier,
@@ -683,7 +703,9 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 ? "apple-photos://\(asset.localIdentifier)"
                 : "apple-photos-cloud://\(cloudIdentifier)",
             "localSourceAnchor": "apple-photos://\(asset.localIdentifier)",
-            "filename": renderedJPEGFilename(displayResource, index: index),
+            "filename": renderedJPEG.map { renderedJPEGFilename($0, index: index) }
+                ?? displayResource?.originalFilename
+                ?? asset.localIdentifier,
             "mediaType": "photo",
             "creationDate": photoLibraryISODate(asset.creationDate),
             "modificationDate": photoLibraryISODate(asset.modificationDate),
@@ -699,13 +721,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "resourceFormatCounts": formatCounts,
             "preferredResourceFilename": preferred?.originalFilename ?? "",
             "preferredResourceFormat": preferred.map(resourceFormat) ?? "",
-            "fallbackResourceFilename": fallback?.originalFilename ?? "",
-            "fallbackResourceFormat": fallback.map(resourceFormat) ?? "",
-            "localJPEGFallbackAvailable": fallback != nil,
+            "fallbackResourceFilename": renderedJPEG?.originalFilename ?? "",
+            "fallbackResourceFormat": renderedJPEG.map(resourceFormat) ?? "",
+            "localJPEGFallbackAvailable": renderedJPEG != nil,
             "eligible": eligible,
-            "exportStrategy": "rendered_jpeg",
-            "status": "candidate",
-            "reason": "Photos still image will import as the current rendered JPG from Photos.",
+            "exportStrategy": eligible ? "rendered_jpeg" : "unsupported",
+            "status": eligible ? "candidate" : "unsupported",
+            "reason": eligible
+                ? "Photos still image will import as the current rendered JPG from Photos."
+                : "Photos asset has no actual JPEG resource; PBB/PBE source intake excludes it.",
         ]
         if let location = locationRow(asset) {
             row["location"] = location

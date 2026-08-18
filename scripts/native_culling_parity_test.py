@@ -309,6 +309,33 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertIn("cullingPreviewForAsset(", model)
         self.assertIn("photoLibrary.cullingPreview(", model)
+        full_preview = photo_library.split(
+            "private func requestFullPreview(", 1
+        )[1].split("private static func previewFromImage(", 1)[0]
+        self.assertIn("manager.requestImage(", full_preview)
+        self.assertIn("PHImageResultIsDegradedKey", full_preview)
+        self.assertNotIn("requestImageDataAndOrientation(", full_preview)
+
+    def test_photo_index_excludes_raw_only_assets_before_pagination(self):
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        fetch_source = photo_library.split("public func fetch(", 1)[1].split(
+            "public func libraryIndex(", 1
+        )[0]
+        index_source = photo_library.split("public func libraryIndex(", 1)[1].split(
+            "public func preview(", 1
+        )[0]
+        row_source = photo_library.split("private func libraryIndexRow(", 1)[1].split(
+            "private func resourceRows(", 1
+        )[0]
+        self.assertIn("guard let renderedJPEG = preferredRenderedJPEGResource(for: asset) else", fetch_source)
+        self.assertIn("var jpegAssets: [PHAsset] = []", index_source)
+        self.assertIn("if preferredRenderedJPEGResource(for: asset) != nil", index_source)
+        self.assertIn("let pageStart = min(safeOffset, jpegAssets.count)", index_source)
+        self.assertNotIn("options.fetchLimit = safeOffset + safeLimit", index_source)
+        self.assertIn("RAW-only Photos assets without an actual JPEG resource are excluded", index_source)
+        self.assertIn("Photos asset has no actual JPEG resource; PBB/PBE source intake excludes it.", row_source)
 
     def test_quick_look_h_preserves_an_existing_multi_selection(self):
         culling = (
@@ -935,8 +962,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.11")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "121")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.13")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "123")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

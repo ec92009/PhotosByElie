@@ -543,6 +543,75 @@ def _asset_id(row: dict[str, Any]) -> str:
     return str(row.get("assetId") or row.get("cloudIdentifier") or row.get("asset_id") or row.get("localIdentifier") or "").strip()
 
 
+def _format_values(value: Any) -> list[str]:
+    """Return normalized format tokens from a source metadata value."""
+    if isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = [value]
+    tokens: list[str] = []
+    for item in values:
+        text = str(item or "").strip()
+        if text:
+            tokens.extend(part.strip() for part in re.split(r"[+,/|]+", text) if part.strip())
+    return tokens
+
+
+def is_jpeg_source_row(row: dict[str, Any]) -> bool:
+    """Accept only source rows backed by an actual JPEG Photos resource.
+
+    Native Backstage rows carry resource metadata. A top-level ``.jpg``
+    filename is deliberately not evidence: RAW-only PhotoKit assets can have
+    a synthetic JPG display name. Minimal legacy/test rows without any
+    resource metadata remain accepted for compatibility with non-Photos
+    callers; once resource metadata is present, JPEG must be explicit.
+    """
+    explicit_metadata = False
+    format_tokens: list[str] = []
+    for key in (
+        "resourceFormats",
+        "resourceFormat",
+        "preferredResourceFormat",
+        "fallbackResourceFormat",
+    ):
+        if key not in row:
+            continue
+        explicit_metadata = True
+        format_tokens.extend(_format_values(row.get(key)))
+
+    resources = row.get("resources")
+    if isinstance(resources, list):
+        explicit_metadata = True
+        for resource in resources:
+            if not isinstance(resource, dict):
+                continue
+            typed_values: list[Any] = []
+            for key in (
+                "format",
+                "resourceFormat",
+                "uniformTypeIdentifier",
+                "uti",
+                "fileExtension",
+            ):
+                if key in resource:
+                    typed_values.append(resource.get(key))
+            if typed_values:
+                format_tokens.extend(_format_values(typed_values))
+            elif resource.get("originalFilename"):
+                # Use a resource filename only when the resource supplied no
+                # stronger type/UTI field. Never inspect the row's synthetic
+                # display filename here.
+                format_tokens.extend(_format_values(resource.get("originalFilename")))
+
+    for token in format_tokens:
+        normalized = token.casefold().strip()
+        if normalized in {"jpeg", "jpg", "jpe"} or "jpeg" in normalized:
+            return True
+        if normalized.endswith((".jpg", ".jpeg", ".jpe")):
+            return True
+    return not explicit_metadata
+
+
 def _number(value: Any) -> float | None:
     try:
         return float(value)
@@ -740,6 +809,8 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
     with connect(repo_root) as conn:
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         for row in rows:
+            if not is_jpeg_source_row(row):
+                continue
             asset_id = _asset_id(row)
             if not asset_id:
                 continue

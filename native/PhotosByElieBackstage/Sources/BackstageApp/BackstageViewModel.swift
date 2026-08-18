@@ -1160,7 +1160,12 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Loading preview…"
         defer { isLoadingPreview = false }
         do {
-            let preview = try await previewForAsset(
+            // The focused pane is the high-resolution culling preview. When
+            // Photos contains a rendered JPG alongside a RAW resource, the
+            // generic PhotoKit image-data request may choose the RAW resource
+            // and surface its unrendered color profile. Keep this path on the
+            // same rendered-JPG source as the idle thumbnail upgrade.
+            let preview = try await renderedJPEGPreviewForAsset(
                 forAssetID: id,
                 maxPixelSize: 1_600
             )

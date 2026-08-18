@@ -296,8 +296,30 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, photo_library)
 
+        focused_preview = model.split("func loadPreview() async", 1)[1].split(
+            "func requestThumbnail(", 1
+        )[0]
+        self.assertIn("renderedJPEGPreviewForAsset(", focused_preview)
+        self.assertNotIn("previewForAsset(", focused_preview)
+        culling_preview = photo_library.split(
+            "public func cullingPreview(", 1
+        )[1].split("public func renderedJPEGPreview(", 1)[0]
+        self.assertIn("if maxPixelSize > 180,", culling_preview)
+        self.assertNotIn("maxPixelSize <= Self.thumbnailRequestMaxPixelSize,\n            let renderedJPEG", culling_preview)
+
         self.assertIn("cullingPreviewForAsset(", model)
         self.assertIn("photoLibrary.cullingPreview(", model)
+
+    def test_quick_look_h_preserves_an_existing_multi_selection(self):
+        culling = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingView.swift"
+        ).read_text(encoding="utf-8")
+        placement = culling.split("private static func applyPlacement(", 1)[1].split(
+            "private static func refreshMetadata(", 1
+        )[0]
+        self.assertIn("model.cullingSelection.selectedIDs.contains(assetID)", placement)
+        self.assertIn("model.clickCullingAsset(assetID, modifiers: [])", placement)
+        self.assertIn("await model.applyPickShortcut(action)", placement)
 
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
         model = (

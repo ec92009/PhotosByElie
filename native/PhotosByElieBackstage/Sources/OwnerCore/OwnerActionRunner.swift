@@ -141,11 +141,14 @@ public actor OwnerActionRunner {
         let deadline = clock.now.advanced(by: completionTimeout ?? timeout)
         var action = queued
 
-        // Fast path: the local connector fetches and validates this exact
-        // Worker-created action. Failure or timeout is intentionally ignored;
-        // its durable poller remains the fallback.
-        if let awakened = await wake(actionID: action.id, before: deadline) {
-            action = awakened
+        // The local connector wake is only an acceleration hint. Fire it in
+        // the background and let the durable Worker poll remain the source of
+        // truth, so a slow PhotoKit/SQLite/connector operation never blocks
+        // the native action monitor or its UI.
+        let waker = self.waker
+        let actionID = action.id
+        Task.detached(priority: .utility) {
+            _ = try? await waker.wake(actionID: actionID)
         }
 
         while true {
@@ -172,23 +175,4 @@ public actor OwnerActionRunner {
         }
     }
 
-    private func wake(
-        actionID: String,
-        before deadline: ContinuousClock.Instant
-    ) async -> OwnerAction? {
-        let waker = self.waker
-        let clock = self.clock
-        return await withTaskGroup(of: OwnerAction?.self) { group in
-            group.addTask {
-                try? await waker.wake(actionID: actionID)
-            }
-            group.addTask {
-                try? await clock.sleep(until: deadline)
-                return nil
-            }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
-        }
-    }
 }

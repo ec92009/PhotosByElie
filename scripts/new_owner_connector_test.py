@@ -25,6 +25,7 @@ from scripts.new_owner_connector import (
     _local_status_payload,
     _local_sidecar_open_action,
     _action_is_read_only,
+    _new_action_timing,
     _owner_waste_basket_url,
     _sidecar_job_public_payload,
     _upload_and_register,
@@ -218,6 +219,14 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual([item[1] for item in client.transitions], ["claim", "complete"])
         self.assertTrue(client.transitions[0][2]["locallyAwakenedAt"])
         self.assertTrue(client.transitions[1][2]["timing"]["executedAt"])
+        connector_timing = client.transitions[1][2]["timing"]["connector"]
+        self.assertEqual(connector_timing["schema"], "photosbyelie.ownerActionTiming.v1")
+        self.assertGreaterEqual(connector_timing["elapsedMs"], 0)
+        self.assertEqual(
+            set(("action.fetch", "action.claim", "action.execute", "action.complete"))
+            - set(connector_timing["phases"]),
+            set(),
+        )
 
     def test_fixture_tree_is_a_read_only_connector_action(self):
         self.assertTrue(_action_is_read_only({
@@ -272,7 +281,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                         }
                     return {"action": dict(self.records[action_id])}
 
-        def fake_execute(_config, action):
+        def fake_execute(_config, action, **_kwargs):
             if action["id"] == "owner-action-write":
                 mutation_started.set()
                 self.assertTrue(release_mutation.wait(2))
@@ -428,10 +437,18 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"), local_status_port=port)
         client = object()
         lease = InteractivePollingLease()
-        with patch("scripts.new_owner_connector.process_exact_action", return_value=({
-            "id": "owner-action-test",
-            "state": "completed",
-        }, True)) as process:
+        started = threading.Event()
+        release = threading.Event()
+
+        def fake_process(*args, **kwargs):
+            started.set()
+            release.wait(2)
+            return ({
+                "id": "owner-action-test",
+                "state": "completed",
+            }, True)
+
+        with patch("scripts.new_owner_connector.process_exact_action", side_effect=fake_process) as process:
             start_local_status_server(config, lease, client)
             deadline = time.time() + 2
             while True:
@@ -450,8 +467,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 headers={"Content-Type": "application/json", "Origin": "https://photos-by-elie.com"},
             )
             with urlopen(request, timeout=1) as response:
+                self.assertEqual(response.status, 202)
                 body = json.loads(response.read())
             self.assertTrue(body["ok"])
+            self.assertTrue(body["diagnostics"]["accepted"])
+            self.assertIsNone(body["action"])
+            self.assertTrue(started.wait(1))
+            release.set()
             process.assert_called_once_with(config, client, "owner-action-test", local_wake=True)
 
             bad_request = Request(
@@ -826,6 +848,7 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             "scripts.new_owner_connector._load_local_modules",
             return_value=(None, None, None, None, apply),
         ):
+            timing = _new_action_timing("owner-action:action-1")
             result = execute_action(self.config, {
                 "id": "action-1",
                 "type": "photo-moderation",
@@ -836,7 +859,7 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                     "requestKey": "attacker-request-key",
                     "source": "backstage-culling",
                 },
-            })
+            }, action_timing=timing)
 
         arm_call = worker.calls[0]
         self.assertEqual(arm_call[0], "arm")
@@ -849,6 +872,10 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         self.assertEqual(calls[0][0]["request_key"], "owner-action:action-1")
         self.assertNotIn("requestKey", calls[0][0])
         self.assertEqual(calls[0][1]["operationId"], "owner-action:action-1")
+        self.assertEqual(result["timing"]["connector"], timing)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.remote.arm.owner-action:action-1"]["elapsedMs"], 0)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.local-moderation"]["elapsedMs"], 0)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.outbox.replay"]["elapsedMs"], 0)
         self.assertEqual(result["lifecycle"]["replay"][-1]["state"], "locally_acked")
         self.assertEqual(
             [item[2] for item in worker.calls],

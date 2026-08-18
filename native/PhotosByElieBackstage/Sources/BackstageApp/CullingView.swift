@@ -98,7 +98,14 @@ private enum CullingQuickLookPresenter {
         coordinator: BackstageQuickLookCoordinator
     ) {
         let wasVisible = model.visibleCullingAssets.contains { $0.id == assetID }
-        model.clickCullingAsset(assetID, modifiers: [])
+        // Quick Look can be opened from a command-click multi-selection. Do
+        // not collapse that selection merely because the focused Quick Look
+        // item is the target of H/P; the action must apply to the complete
+        // explicit selection. Select the item only when it was not already
+        // part of the selection.
+        if !model.cullingSelection.selectedIDs.contains(assetID) {
+            model.clickCullingAsset(assetID, modifiers: [])
+        }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
             await model.applyPickShortcut(action)

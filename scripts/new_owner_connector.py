@@ -75,6 +75,8 @@ ALLOWED_LOCAL_STATUS_ORIGINS = {
 ACTION_MUTATION_LOCK = threading.Lock()
 ACTION_LOCKS_GUARD = threading.Lock()
 ACTION_LOCKS: dict[str, tuple[threading.Lock, int]] = {}
+ACTION_WAKE_GUARD = threading.Lock()
+ACTION_WAKE_ACTIVE: set[str] = set()
 READ_ONLY_FIXTURE_MODES = {
     "asset-upload-plan",
     "fixture-access-effective",
@@ -104,6 +106,55 @@ LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip()
 
 def _utc_iso_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+ACTION_TIMING_SCHEMA = "photosbyelie.ownerActionTiming.v1"
+
+
+def _new_action_timing(action_id: str = "") -> dict[str, Any]:
+    return {
+        "schema": ACTION_TIMING_SCHEMA,
+        "actionId": str(action_id or ""),
+        "startedAt": _utc_iso_now(),
+        "phases": {},
+    }
+
+
+@contextmanager
+def _timed_phase(timing: dict[str, Any] | None, name: str):
+    """Record one wall-clock and monotonic duration without changing control flow."""
+    if timing is None:
+        yield
+        return
+    phase: dict[str, Any] = {"startedAt": _utc_iso_now()}
+    timing.setdefault("phases", {})[name] = phase
+    started = time.perf_counter()
+    try:
+        yield
+    except BaseException as error:
+        phase["outcome"] = "error"
+        phase["errorType"] = type(error).__name__
+        raise
+    else:
+        phase["outcome"] = "ok"
+    finally:
+        phase["endedAt"] = _utc_iso_now()
+        phase["elapsedMs"] = round((time.perf_counter() - started) * 1000, 1)
+
+
+def _finish_action_timing(
+    timing: dict[str, Any],
+    started: float,
+    *,
+    outcome: str,
+    error: BaseException | None = None,
+) -> dict[str, Any]:
+    timing["endedAt"] = _utc_iso_now()
+    timing["elapsedMs"] = round((time.perf_counter() - started) * 1000, 1)
+    timing["outcome"] = outcome
+    if error is not None:
+        timing["errorType"] = type(error).__name__
+    return timing
 
 
 @dataclass(frozen=True)
@@ -171,6 +222,29 @@ def _action_lock(action_id: str):
                 ACTION_LOCKS.pop(action_id, None)
             elif current_lock is lock:
                 ACTION_LOCKS[action_id] = (lock, current_users - 1)
+
+
+def _run_local_action_wake(
+    config: ConnectorConfig,
+    client: "WorkerClient",
+    action_id: str,
+) -> None:
+    """Run a direct wake off the HTTP handler so the UI never waits on X work."""
+    with ACTION_WAKE_GUARD:
+        if action_id in ACTION_WAKE_ACTIVE:
+            return
+        ACTION_WAKE_ACTIVE.add(action_id)
+    try:
+        process_exact_action(config, client, action_id, local_wake=True)
+    except Exception as error:  # noqa: BLE001 - the durable action records failure.
+        print(
+            f"{action_id}: async local wake failed: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+    finally:
+        with ACTION_WAKE_GUARD:
+            ACTION_WAKE_ACTIVE.discard(action_id)
 
 
 def _action_is_read_only(action: dict) -> bool:
@@ -681,16 +755,23 @@ def start_local_status_server(
                 action_id = str(payload.get("actionId") or "").strip()
                 if not action_id.startswith("owner-action-") or len(action_id) > 96:
                     raise ValueError("A valid opaque actionId is required.")
-                action, _processed = process_exact_action(config, client, action_id, local_wake=True)
+                thread = threading.Thread(
+                    target=_run_local_action_wake,
+                    args=(config, client, action_id),
+                    name=f"pbe-owner-action-wake-{action_id[-12:]}",
+                    daemon=True,
+                )
+                thread.start()
                 body = json.dumps({
                     "ok": True,
-                    "action": action,
+                    "action": None,
                     "diagnostics": {
                         "fastPath": True,
+                        "accepted": True,
                         "localWakeMs": round((time.perf_counter() - wake_started) * 1000, 1),
                     },
                 }, separators=(",", ":")).encode("utf-8")
-                status = 200
+                status = 202
             except ValueError as error:
                 body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
                 status = 400
@@ -1032,14 +1113,20 @@ def _lifecycle_request(
     phase: str,
     operation_id: str,
     payload: dict[str, Any],
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict:
     """Send one replay-safe lifecycle phase under a stable idempotency key."""
-    return client.request(
-        "POST",
-        f"/api/v1/lifecycle/{phase}",
-        payload,
-        idempotency_key=_lifecycle_phase_key(operation_id, phase),
-    )
+    with _timed_phase(
+        action_timing,
+        f"lifecycle.remote.{phase}.{operation_id}",
+    ):
+        return client.request(
+            "POST",
+            f"/api/v1/lifecycle/{phase}",
+            payload,
+            idempotency_key=_lifecycle_phase_key(operation_id, phase),
+        )
 
 
 def _lifecycle_arm_intent_database(config: ConnectorConfig) -> Path:
@@ -1160,11 +1247,19 @@ def _reconcile_lifecycle_arm_intent(
     client: WorkerClient,
     gateway: Any,
     intent: dict[str, Any],
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Replay an uncertain arm and clear intent only after its receipt is durable."""
     operation_id = intent["operationId"]
     try:
-        arm = _lifecycle_request(client, "arm", operation_id, intent["request"])
+        arm = _lifecycle_request(
+            client,
+            "arm",
+            operation_id,
+            intent["request"],
+            action_timing=action_timing,
+        )
     except WorkerRequestError as error:
         # A deterministic identity rejection means the remote authority
         # explicitly refused to create a barrier. Nothing can be committed
@@ -1189,12 +1284,20 @@ def _reconcile_lifecycle_arm_intent(
 def drain_deployed_lifecycle_outbox(
     config: ConnectorConfig,
     client: WorkerClient,
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Replay durable lifecycle phases independently of cloud action state."""
     gateway = _load_lifecycle_gateway(config.repo_root)
     drained: list[dict[str, Any]] = []
     for intent in _pending_lifecycle_arm_intents(config):
-        arm = _reconcile_lifecycle_arm_intent(config, client, gateway, intent)
+        arm = _reconcile_lifecycle_arm_intent(
+            config,
+            client,
+            gateway,
+            intent,
+            action_timing=action_timing,
+        )
         drained.append({"operationId": intent["operationId"], "state": "armed", "remote": arm})
     for pending in gateway.pending_deployed_lifecycle_operations(config.repo_root):
         operation_id = pending["operationId"]
@@ -1216,11 +1319,17 @@ def drain_deployed_lifecycle_outbox(
             )
             if proof is None:
                 continue
-            remote = _lifecycle_request(client, "abort", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-                "proof": proof,
-            })
+            remote = _lifecycle_request(
+                client,
+                "abort",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                    "proof": proof,
+                },
+                action_timing=action_timing,
+            )
             gateway.abort_deployed_lifecycle_arm_locally(
                 config.repo_root, operation_id, digest
             )
@@ -1228,11 +1337,23 @@ def drain_deployed_lifecycle_outbox(
             continue
         durable = gateway.deployed_lifecycle_outbox(config.repo_root, operation_id)
         if state == "locally_committed":
-            _lifecycle_request(client, "local-commit", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-            })
-            remote = _lifecycle_request(client, "apply", operation_id, durable)
+            _lifecycle_request(
+                client,
+                "local-commit",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                },
+                action_timing=action_timing,
+            )
+            remote = _lifecycle_request(
+                client,
+                "apply",
+                operation_id,
+                durable,
+                action_timing=action_timing,
+            )
             gateway.acknowledge_deployed_lifecycle(
                 config.repo_root,
                 operation_id,
@@ -1242,10 +1363,16 @@ def drain_deployed_lifecycle_outbox(
             state = "deployed_applied"
             drained.append({"operationId": operation_id, "state": state, "remote": remote})
         if state == "deployed_applied":
-            remote = _lifecycle_request(client, "ack", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-            })
+            remote = _lifecycle_request(
+                client,
+                "ack",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                },
+                action_timing=action_timing,
+            )
             gateway.acknowledge_deployed_lifecycle(
                 config.repo_root,
                 operation_id,
@@ -1606,6 +1733,7 @@ def execute_action(
     action: dict,
     *,
     lifecycle_client: WorkerClient | None = None,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict:
     action_type = str(action.get("type") or "").strip()
     if action_type == "owner-connector-check":
@@ -1696,14 +1824,16 @@ def execute_action(
         if operation in lifecycle_operations:
             lifecycle_operation, denied = lifecycle_operations[operation]
             gateway = _load_lifecycle_gateway(config.repo_root)
-            authoritative_ids = gateway.resolve_deployed_lifecycle_asset_ids(
-                config.repo_root, lifecycle_operation, photo_ids
-            )
+            with _timed_phase(action_timing, "lifecycle.resolve.authoritative-ids"):
+                authoritative_ids = gateway.resolve_deployed_lifecycle_asset_ids(
+                    config.repo_root, lifecycle_operation, photo_ids
+                )
             if len(authoritative_ids) > 100:
                 raise RuntimeError("Lifecycle moderation accepts at most 100 authoritative assets per Owner action")
-            authoritative_members = gateway.derive_deployed_lifecycle_members(
-                config.repo_root, authoritative_ids
-            )
+            with _timed_phase(action_timing, "lifecycle.resolve.members"):
+                authoritative_members = gateway.derive_deployed_lifecycle_members(
+                    config.repo_root, authoritative_ids
+                )
             operation_id = f"owner-action:{str(action.get('id') or '').strip()}"
             if operation_id == "owner-action:":
                 raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
@@ -1714,15 +1844,21 @@ def execute_action(
                 "denied": denied,
                 "items": authoritative_members,
             }
-            arm_intent = _persist_lifecycle_arm_intent(
-                config,
-                lifecycle_operation,
-                authoritative_ids,
-                arm_request,
-            )
-            lifecycle_arm = _reconcile_lifecycle_arm_intent(
-                config, active_lifecycle_client, gateway, arm_intent
-            )
+            with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
+                arm_intent = _persist_lifecycle_arm_intent(
+                    config,
+                    lifecycle_operation,
+                    authoritative_ids,
+                    arm_request,
+                )
+            with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
+                lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                    config,
+                    active_lifecycle_client,
+                    gateway,
+                    arm_intent,
+                    action_timing=action_timing,
+                )
             photo_ids = authoritative_ids
             moderation_payload["photo_ids"] = authoritative_ids
             moderation_payload["request_key"] = operation_id
@@ -1762,18 +1898,24 @@ def execute_action(
             moderation_payload.pop("requestKey", None)
             moderation_payload["request_key"] = lifecycle_arm["operationId"]
         if lifecycle_arm:
-            result = apply_public_photo_moderation(
-                config.repo_root,
-                moderation_payload,
-                trusted_deployed_lifecycle=lifecycle_arm,
-            )
+            with _timed_phase(action_timing, "lifecycle.local-moderation"):
+                result = apply_public_photo_moderation(
+                    config.repo_root,
+                    moderation_payload,
+                    trusted_deployed_lifecycle=lifecycle_arm,
+                )
         else:
             result = apply_public_photo_moderation(config.repo_root, moderation_payload)
         lifecycle_result = None
         if lifecycle_arm and active_lifecycle_client:
-            replay = drain_deployed_lifecycle_outbox(config, active_lifecycle_client)
+            with _timed_phase(action_timing, "lifecycle.outbox.replay"):
+                replay = drain_deployed_lifecycle_outbox(
+                    config,
+                    active_lifecycle_client,
+                    action_timing=action_timing,
+                )
             lifecycle_result = {"arm": lifecycle_arm, "replay": replay}
-        return {
+        result_payload = {
             "connectorId": config.connector_id,
             "type": action_type,
             "operation": operation,
@@ -1782,6 +1924,9 @@ def execute_action(
             "lifecycle": lifecycle_result,
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
+        if action_timing is not None:
+            result_payload["timing"] = {"connector": action_timing}
+        return result_payload
     if action_type == "sidecar-culling-review":
         local = connector_result(config.repo_root, {"action": action, "connectorId": config.connector_id})
         manifest = action.get("payload", {}).get("manifest", {}) if isinstance(action.get("payload"), dict) else {}
@@ -1835,33 +1980,67 @@ def process_exact_action(
 ) -> tuple[dict, bool]:
     """Claim and execute one Worker-authorized action exactly once on this Mac."""
     with _action_lock(action_id):
-        action = client.action(action_id)
+        timing = _new_action_timing(action_id)
+        timing_started = time.perf_counter()
+        try:
+            with _timed_phase(timing, "action.fetch"):
+                action = client.action(action_id)
+        except Exception as error:
+            _finish_action_timing(timing, timing_started, outcome="error", error=error)
+            raise
         if action.get("state") in {"completed", "failed", "cancelled"}:
             return action, False
         locally_awakened_at = _utc_iso_now() if local_wake else ""
         try:
-            if action.get("state") == "queued":
-                claim_payload = {"locallyAwakenedAt": locally_awakened_at} if locally_awakened_at else {}
-                action = client.transition(action_id, "claim", claim_payload).get("action") or action
+            with _timed_phase(timing, "action.claim"):
+                if action.get("state") == "queued":
+                    claim_payload = {"locallyAwakenedAt": locally_awakened_at} if locally_awakened_at else {}
+                    action = client.transition(action_id, "claim", claim_payload).get("action") or action
             if action.get("state") != "claimed":
+                _finish_action_timing(timing, timing_started, outcome="not-claimed")
                 return action, False
             if action.get("claim", {}).get("connectorId") != config.connector_id:
                 raise RuntimeError("Worker action is not claimed by this connector.")
-            if _action_is_read_only(action):
-                result = execute_action(config, action)
-            else:
-                with ACTION_MUTATION_LOCK:
-                    result = execute_action(config, action)
+            with _timed_phase(timing, "action.execute"):
+                if _action_is_read_only(action):
+                    result = execute_action(config, action, action_timing=timing)
+                else:
+                    with ACTION_MUTATION_LOCK:
+                        result = execute_action(config, action, action_timing=timing)
+            if isinstance(result, dict):
+                result.setdefault("timing", {})["connector"] = timing
             executed_at = _utc_iso_now()
+            complete_started_at = _utc_iso_now()
+            timing.setdefault("phases", {})["action.complete"] = {
+                "startedAt": complete_started_at,
+                "endedAt": complete_started_at,
+                "elapsedMs": 0.0,
+                "outcome": "submitted",
+            }
+            _finish_action_timing(timing, timing_started, outcome="submitted")
             completed = client.transition(
                 action_id,
                 "complete",
-                {"result": result, "timing": {"executedAt": executed_at}},
+                {
+                    "result": result,
+                    "timing": {
+                        "executedAt": executed_at,
+                        "connector": timing,
+                    },
+                },
             ).get("action") or action
             return completed, True
         except Exception as error:  # noqa: BLE001 - failure must be recorded in the cloud ledger.
+            _finish_action_timing(timing, timing_started, outcome="error", error=error)
             try:
-                client.transition(action_id, "fail", {"message": str(error)[:500]})
+                client.transition(
+                    action_id,
+                    "fail",
+                    {
+                        "message": str(error)[:500],
+                        "timing": {"connector": timing},
+                    },
+                )
             except Exception:
                 pass
             print(f"{action_id}: {error}", file=sys.stderr, flush=True)

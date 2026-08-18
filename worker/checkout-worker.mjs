@@ -3245,6 +3245,9 @@ export const createPhotosByElieWorker = ({
       const executedAt = Number.isFinite(Date.parse(String(suppliedTiming.executedAt || "")))
         ? new Date(String(suppliedTiming.executedAt)).toISOString()
         : "";
+      const suppliedConnectorTiming = suppliedTiming.connector && typeof suppliedTiming.connector === "object"
+        ? suppliedTiming.connector
+        : null;
       next = {
         ...action,
         state: "completed",
@@ -3253,6 +3256,7 @@ export const createPhotosByElieWorker = ({
         completedAt: timestamp,
         timing: {
           ...(action.timing && typeof action.timing === "object" ? action.timing : {}),
+          ...(suppliedConnectorTiming ? { connector: suppliedConnectorTiming } : {}),
           ...(executedAt ? { executedAt } : {}),
           completedAt: timestamp,
         },
@@ -3297,6 +3301,10 @@ export const createPhotosByElieWorker = ({
         return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
       }
       const message = String(payload.message || payload.error?.message || payload.error || "Owner action failed.").trim().slice(0, 500);
+      const suppliedTiming = payload.timing && typeof payload.timing === "object" ? payload.timing : {};
+      const suppliedConnectorTiming = suppliedTiming.connector && typeof suppliedTiming.connector === "object"
+        ? suppliedTiming.connector
+        : null;
       next = {
         ...action,
         state: "failed",
@@ -3305,6 +3313,11 @@ export const createPhotosByElieWorker = ({
         },
         failedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
         failedAt: timestamp,
+        timing: {
+          ...(action.timing && typeof action.timing === "object" ? action.timing : {}),
+          ...(suppliedConnectorTiming ? { connector: suppliedConnectorTiming } : {}),
+          failedAt: timestamp,
+        },
         updatedAt: timestamp,
       };
       next.history = ownerActionHistory(action, {

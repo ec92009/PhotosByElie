@@ -327,8 +327,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let asset = try asset(localIdentifier)
 
         if maxPixelSize > 180,
-           maxPixelSize <= Self.thumbnailRequestMaxPixelSize,
-            let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
+           let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
             return try await requestRenderedJPEGPreview(
                 resource: renderedJPEG,
                 localIdentifier: localIdentifier,

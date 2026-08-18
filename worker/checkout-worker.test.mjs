@@ -1347,7 +1347,24 @@ test("background Owner connectors use scoped credentials and report health", asy
 
   const completeResponse = await worker.fetch(jsonRequest(
     `https://worker.test/owner/connector/actions/${queued.id}/complete`,
-    { result: { recordsPrepared: 24 }, timing: { executedAt: "2026-07-22T10:00:01.000Z" } },
+    {
+      result: { recordsPrepared: 24 },
+      timing: {
+        executedAt: "2026-07-22T10:00:01.000Z",
+        connector: {
+          schema: "photosbyelie.ownerActionTiming.v1",
+          actionId: queued.id,
+          phases: {
+            "action.execute": {
+              startedAt: "2026-07-22T10:00:00.100Z",
+              endedAt: "2026-07-22T10:00:00.900Z",
+              elapsedMs: 800,
+              outcome: "ok",
+            },
+          },
+        },
+      },
+    },
     connectorHeaders
   ));
   const completed = (await completeResponse.json()).action;
@@ -1355,6 +1372,8 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(completed.completedBy, "connector:david");
   assert.equal(completed.result.recordsPrepared, 24);
   assert.equal(completed.timing.executedAt, "2026-07-22T10:00:01.000Z");
+  assert.equal(completed.timing.connector.schema, "photosbyelie.ownerActionTiming.v1");
+  assert.equal(completed.timing.connector.phases["action.execute"].elapsedMs, 800);
   assert.ok(completed.timing.completedAt);
 
   const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {

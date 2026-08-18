@@ -45,6 +45,7 @@ from sidecar_state_db import (
     sidecar_sync_status,
     summary,
     is_jpeg_source_row,
+    mark_invalid_source_assets_missing,
     upload_bridge_plan,
     upload_plan,
     upsert_assets,
@@ -95,6 +96,7 @@ INDEX_JOB: dict = {
     "indexedCount": 0,
     "importedCount": 0,
     "totalCount": 0,
+    "invalidSourceMarkedCount": 0,
     "progress": 0,
     "error": "",
     "updatedAt": "",
@@ -388,7 +390,10 @@ def _write_backstage_library_index(
                 code = str(payload.get("code") or "library_index_failed")
                 message = str(payload.get("error") or "Backstage could not index the Photos library.")
                 raise RuntimeError(f"{code}: {message}")
-            rows = [row for row in payload.get("items") or [] if isinstance(row, dict)]
+            rows = [
+                row for row in payload.get("items") or []
+                if isinstance(row, dict) and is_jpeg_source_row(row)
+            ]
             for row in rows:
                 stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
             stream.flush()
@@ -414,7 +419,9 @@ def _write_backstage_library_index(
 def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: str = "") -> None:
     index_dir = repo_root / SIDECAR_INDEX_ROOT
     index_path = index_dir / f"photos-index-{int(time.time())}-{job_id}.jsonl"
+    invalid_source_count = 0
     try:
+        invalid_source_count = mark_invalid_source_assets_missing(repo_root)
         _set_index_job(
             ok=True,
             status="running",
@@ -429,6 +436,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             startedAt=_utc_now(),
             completedAt="",
             missingMarkedCount=0,
+            invalidSourceMarkedCount=invalid_source_count,
         )
         index_payload = _write_backstage_library_index(
             repo_root,
@@ -450,6 +458,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             progress=1,
             completedAt=_utc_now(),
             missingMarkedCount=missing_count,
+            invalidSourceMarkedCount=invalid_source_count,
             sidecarSummary=_summary_snapshot(repo_root, force=True),
         )
     except Exception as error:
@@ -459,6 +468,7 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             stage="Failed",
             error=str(error),
             completedAt=_utc_now(),
+            invalidSourceMarkedCount=invalid_source_count,
         )
 
 

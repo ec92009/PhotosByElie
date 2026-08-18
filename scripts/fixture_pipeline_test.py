@@ -50,7 +50,13 @@ from fixture_pipeline import (
     editorial_version_hash,
 )
 from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
-from sidecar_state_db import connect, is_jpeg_source_row, record_decision, upsert_assets
+from sidecar_state_db import (
+    connect,
+    is_jpeg_source_row,
+    mark_invalid_source_assets_missing,
+    record_decision,
+    upsert_assets,
+)
 
 
 def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:
@@ -146,6 +152,33 @@ class FixturePipelineTest(unittest.TestCase):
         # metadata; retain that compatibility while the Photos path remains
         # strict whenever PhotoKit resource metadata is present.
         self.assertTrue(is_jpeg_source_row({"localIdentifier": "legacy", "filename": "legacy.jpg"}))
+
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                INSERT INTO sidecar_assets (
+                  asset_id, source_anchor, media_type, filename, raw_json,
+                  indexed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "stale-raw-only",
+                    "apple-photos://stale-raw-only",
+                    "photo",
+                    "stale.jpg",
+                    json.dumps(raw_only),
+                    "2026-08-18T10:00:00Z",
+                    "2026-08-18T10:00:00Z",
+                ),
+            )
+        self.assertEqual(mark_invalid_source_assets_missing(self.root), 1)
+        with connect(self.root) as connection:
+            self.assertTrue(
+                connection.execute(
+                    "SELECT missing_at FROM sidecar_assets WHERE asset_id = ?",
+                    ("stale-raw-only",),
+                ).fetchone()["missing_at"]
+            )
 
     def test_recursive_tree_keeps_stable_ids_and_rejects_cycles(self):
         root = create_fixture(self.root, "RE", fixture_id="root")

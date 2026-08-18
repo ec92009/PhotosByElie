@@ -612,6 +612,33 @@ def is_jpeg_source_row(row: dict[str, Any]) -> bool:
     return not explicit_metadata
 
 
+def mark_invalid_source_assets_missing(repo_root: Path) -> int:
+    """Hide previously indexed Photos rows that are not JPEG-backed.
+
+    This repairs databases populated before the source boundary existed. The
+    row and its decisions remain recoverable: a later valid JPEG-backed index
+    row can clear ``missing_at`` through the normal upsert path.
+    """
+    now = now_iso()
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            "SELECT asset_id, raw_json FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchall()
+        invalid = [
+            str(row["asset_id"])
+            for row in rows
+            if not is_jpeg_source_row(_read_json_text(row["raw_json"], {}))
+        ]
+        for start in range(0, len(invalid), 500):
+            batch = invalid[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            conn.execute(
+                f"UPDATE sidecar_assets SET missing_at = ?, updated_at = ? WHERE asset_id IN ({placeholders})",
+                [now, now, *batch],
+            )
+    return len(invalid)
+
+
 def _number(value: Any) -> float | None:
     try:
         return float(value)

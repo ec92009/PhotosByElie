@@ -354,7 +354,10 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         self.assertIn("model.cullingSelection.selectedIDs.contains(assetID)", placement)
         self.assertIn("model.clickCullingAsset(assetID, modifiers: [])", placement)
-        self.assertIn("await model.applyPickShortcut(", placement)
+        self.assertIn("let succeeded = await model.applyPickShortcut(", placement)
+        self.assertIn("guard succeeded else", placement)
+        self.assertIn("advanceAfterSuccessfulDecision(", placement)
+        self.assertIn("filter { $0 != assetID }", placement)
 
         presenter = culling.split("private enum CullingQuickLookPresenter", 1)[1].split(
             "struct CullingView", 1
@@ -753,7 +756,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.applyRatingShortcut(value)", culling)
         self.assertIn("await model.applyColorShortcut(value)", culling)
         self.assertIn("direction == .previous ? -1 : 1", culling)
-        self.assertIn("if wasVisible && !remainsVisible", culling)
+        self.assertIn("guard wasVisible && !remainsVisible else", culling)
         self.assertIn("present(model: model, coordinator: coordinator, direction: direction)", culling)
 
         review_presenter = app.split("private enum ReviewQuickLookPresenter", 1)[1].split(
@@ -1454,6 +1457,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
         self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
         self.assertIn("model.updateCullingGridWidth", culling)
+        self.assertIn("width: CGFloat(model.cullingGridColumnWidth)", culling)
+        self.assertIn(".clipped()", culling)
         self.assertIn("Button(\"−\") { decreaseCullingThumbnailSize() }", culling)
         self.assertIn("Button(\"+\") { increaseCullingThumbnailSize() }", culling)
         self.assertIn(".disabled(!model.canDecreaseCullingThumbnailSize)", culling)
@@ -1465,6 +1470,32 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(
             "guard width >= CullingGridLayout.minimumColumnWidth else { return }",
             model,
+        )
+        self.assertIn("var cullingGridColumnWidth: Double", model)
+
+    def test_culling_actions_use_stable_selection_and_audited_receipts(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        selection = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerSelectionModel.swift"
+        ).read_text(encoding="utf-8")
+        lifecycle = (
+            NATIVE / "Sources" / "OwnerCore" / "LifecycleService.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("cullingSelection.selectedInDisplayOrder", model)
+        self.assertIn("public var selectedInDisplayOrder", selection)
+        self.assertIn("LifecycleActionReceipt.summarize(", model)
+        self.assertIn("Affected \\(affected.formatted())", lifecycle)
+        self.assertIn("skipped \\(skipped.formatted())", lifecycle)
+        self.assertIn("failed \\(failed.formatted())", lifecycle)
+        self.assertIn("return await applyFixturePlacement(", model)
+        self.assertNotIn(
+            "guard await preparePhotosMutation() else",
+            model.split("private func applyFixturePlacement(", 1)[1].split(
+                "private func undoDecisions", 1
+            )[0],
         )
 
     def test_culling_preview_is_bounded_and_collapsible(self):

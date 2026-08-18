@@ -136,7 +136,7 @@ private enum CullingQuickLookPresenter {
         coordinator: BackstageQuickLookCoordinator,
         removalDirection: OwnerSelectionDirection
     ) {
-        let wasVisible = model.visibleCullingAssets.contains { $0.id == assetID }
+        let previousIDs = model.visibleCullingAssets.map(\.id)
         // Quick Look can be opened from a command-click multi-selection. Do
         // not collapse that selection merely because the focused Quick Look
         // item is the target of H/P; the action must apply to the complete
@@ -147,25 +147,52 @@ private enum CullingQuickLookPresenter {
         }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
-            await model.applyPickShortcut(
+            let succeeded = await model.applyPickShortcut(
                 action,
                 removalDirection: removalDirection
             )
             guard coordinator.isVisible else { return }
-            let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
-            if wasVisible && !remainsVisible {
-                if model.focusedCullingAssetID == nil {
-                    coordinator.dismiss()
-                } else {
-                    present(
-                        model: model,
-                        coordinator: coordinator,
-                        direction: removalDirection
-                    )
-                }
-            } else {
+            guard succeeded else {
                 refreshMetadata(assetID, model: model, coordinator: coordinator)
+                return
             }
+            advanceAfterSuccessfulDecision(
+                assetID: assetID,
+                previousIDs: previousIDs,
+                model: model,
+                coordinator: coordinator,
+                direction: removalDirection
+            )
+        }
+    }
+
+    private static func advanceAfterSuccessfulDecision(
+        assetID: String,
+        previousIDs: [String],
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection
+    ) {
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: [assetID],
+            anchorID: assetID,
+            focusedID: assetID
+        )
+        // H/P are completed editorial decisions, so Quick Look advances even
+        // when the current filters continue to show the acted-on item.
+        let remainingIDs = model.visibleCullingAssets.map(\.id).filter { $0 != assetID }
+        let replacement = selection.replaceItems(
+            remainingIDs,
+            selectingSuccessorAfterRemoving: assetID,
+            direction: direction
+        )
+        model.cullingSelection = selection
+        model.selectedPhotoIDs = selection.selectedIDs
+        if replacement != nil {
+            present(model: model, coordinator: coordinator, direction: direction)
+        } else {
+            coordinator.dismiss()
         }
     }
 
@@ -536,6 +563,11 @@ struct CullingView: View {
                     isFocused: model.cullingSelection.focusedID == asset.id,
                     usesFill: model.cullingUsesFill
                 )
+                .frame(
+                    width: CGFloat(model.cullingGridColumnWidth),
+                    alignment: .topLeading
+                )
+                .clipped()
                 .id(asset.id)
                 .contentShape(Rectangle())
                 .onTapGesture {

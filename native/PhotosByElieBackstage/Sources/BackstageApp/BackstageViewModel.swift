@@ -1707,7 +1707,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var selectedCullingAssetIDs: [String] {
-        visibleCullingAssets.map(\.id).filter(cullingSelection.selectedIDs.contains)
+        cullingSelection.selectedInDisplayOrder
     }
 
     func cullingSelectionHasColor(_ color: SidecarColor) -> Bool {
@@ -1883,6 +1883,13 @@ final class BackstageViewModel: ObservableObject {
     var canDecreaseCullingThumbnailSize: Bool {
         cullingGridDensity < CullingGridLayout.maximumColumnsThatFit(
             width: cullingGridAvailableWidth
+        )
+    }
+
+    var cullingGridColumnWidth: Double {
+        CullingGridLayout.columnWidth(
+            width: max(cullingGridAvailableWidth, CullingGridLayout.minimumColumnWidth),
+            columns: cullingGridDensity
         )
     }
 
@@ -2497,10 +2504,11 @@ final class BackstageViewModel: ObservableObject {
         await applyColor()
     }
 
+    @discardableResult
     func applyPickShortcut(
         _ action: SidecarPickAction,
         removalDirection: OwnerSelectionDirection = .next
-    ) async {
+    ) async -> Bool {
         let semanticAction: FixtureCullingAction = switch action {
         case .pick: .include
         case .reject: .exclude
@@ -2512,19 +2520,20 @@ final class BackstageViewModel: ObservableObject {
         ) {
         case .unavailable:
             cullingStatus = "Choose a current fixture before using P, H, or U. X still moves the asset to the recoverable Waste Basket."
+            return false
         case let .fixtureState(state):
             let label = switch state {
             case .picked: "Include"
             case .hidden: "Exclude"
             case .undecided: "Clear fixture decision"
             }
-            await applyFixturePlacement(
+            return await applyFixturePlacement(
                 state,
                 label: label,
                 removalDirection: removalDirection
             )
         case .globalTombstone:
-            return
+            return false
         }
     }
 
@@ -2563,7 +2572,7 @@ final class BackstageViewModel: ObservableObject {
                 self.cullingWasteBasketPendingAction = action
                 self.cullingStatus = "Queued X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). Culling remains available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                    let completedAction = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             self.cullingWasteBasketPendingAction = update
@@ -2576,7 +2585,11 @@ final class BackstageViewModel: ObservableObject {
                     }
                     self.cullingWasteBasketPendingActionID = nil
                     self.cullingWasteBasketPendingAction = nil
-                    self.cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
+                    let receipt = LifecycleActionReceipt.summarize(
+                        completedAction,
+                        requestedCount: ids.count
+                    )
+                    self.cullingStatus = "Culling X completed through action \(action.id). \(receipt.statusSummary). Every affected item remains recoverable in Waste Basket."
                     if !self.selectedFixtureID.isEmpty, self.cullingPool == nil {
                         await self.loadFixtureCullingWindow()
                     } else {
@@ -2609,14 +2622,24 @@ final class BackstageViewModel: ObservableObject {
                     } else {
                         self.cullingWasteBasketPendingActionID = nil
                         self.cullingWasteBasketPendingAction = nil
-                        self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                        let receipt = LifecycleActionReceipt(
+                            affected: 0,
+                            skipped: 0,
+                            failed: ids.count
+                        )
+                        self.cullingStatus = "Waste Basket move failed. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
                         onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.cullingWasteBasketQueueing = false
                 self.cullingWasteBasketPendingAction = nil
-                self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                let receipt = LifecycleActionReceipt(
+                    affected: 0,
+                    skipped: 0,
+                    failed: ids.count
+                )
+                self.cullingStatus = "Waste Basket move failed. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
                 onTerminal?(false, nil)
             }
             self.cullingWasteBasketMonitorTask = nil
@@ -4149,19 +4172,16 @@ final class BackstageViewModel: ObservableObject {
         return current
     }
 
+    @discardableResult
     private func applyFixturePlacement(
         _ state: FixturePlacementState,
         label: String,
         removalDirection: OwnerSelectionDirection = .next
-    ) async {
+    ) async -> Bool {
         let ids = selectedCullingAssetIDs
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             cullingStatus = "Choose a fixture and select one or more Photos items."
-            return
-        }
-        guard await preparePhotosMutation() else {
-            cullingStatus = photosMutationReadinessMessage()
-            return
+            return false
         }
         let selectedBefore = cullingSelection.selectedIDs
         let focusedBefore = cullingSelection.focusedID ?? ids.last
@@ -4215,7 +4235,9 @@ final class BackstageViewModel: ObservableObject {
             } else {
                 replaceCullingItems()
             }
-            cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
+            let skipped = max(0, ids.count - changes.count)
+            cullingStatus = "\(label) saved. Affected \(changes.count.formatted()) • skipped \(skipped.formatted()) • failed 0."
+            return true
         } catch {
             for (id, previousState) in previousStates {
                 if let previousState {
@@ -4239,7 +4261,8 @@ final class BackstageViewModel: ObservableObject {
                     await self?.loadPreview()
                 }
             }
-            cullingStatus = userFacingMessage(for: error)
+            cullingStatus = "\(label) failed. Affected 0 • skipped 0 • failed \(ids.count.formatted()). \(userFacingMessage(for: error))"
+            return false
         }
     }
 

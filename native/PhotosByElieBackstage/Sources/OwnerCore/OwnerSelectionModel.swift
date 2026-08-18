@@ -23,6 +23,16 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
         self.focusedID = focusedID
     }
 
+    /// The explicit selection in the same stable order as the current grid.
+    ///
+    /// Callers should not rebuild action targets from a separately recomputed
+    /// filtered collection: a refresh can briefly make the button look enabled
+    /// while yielding an empty action target. The selection model already owns
+    /// the authoritative ordered item snapshot for zero, one, and batch actions.
+    public var selectedInDisplayOrder: [ID] {
+        orderedIDs.filter(selectedIDs.contains)
+    }
+
     public mutating func replaceItems(_ ids: [ID]) {
         orderedIDs = ids
         selectedIDs.formIntersection(ids)

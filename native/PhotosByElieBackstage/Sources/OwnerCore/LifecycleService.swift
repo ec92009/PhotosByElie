@@ -39,6 +39,53 @@ public enum LifecycleServiceError: Error, Sendable, Equatable {
     case emptyRequiresConfirmation
 }
 
+public struct LifecycleActionReceipt: Sendable, Equatable {
+    public var affected: Int
+    public var skipped: Int
+    public var failed: Int
+
+    public init(affected: Int, skipped: Int, failed: Int) {
+        self.affected = max(0, affected)
+        self.skipped = max(0, skipped)
+        self.failed = max(0, failed)
+    }
+
+    public static func summarize(_ action: OwnerAction, requestedCount: Int) -> Self {
+        let requested = max(0, requestedCount)
+        let topLevel = action.result ?? [:]
+        let payload = topLevel["result"]?.objectValue ?? topLevel
+        let items = payload["items"]?.arrayValue?.compactMap(\.objectValue) ?? []
+        guard !items.isEmpty else {
+            return action.state == .completed
+                ? Self(affected: requested, skipped: 0, failed: 0)
+                : Self(affected: 0, skipped: 0, failed: requested)
+        }
+
+        var affected = 0
+        var skipped = 0
+        var failed = 0
+        for item in items {
+            switch item["status"]?.stringValue?.lowercased() ?? "" {
+            case "already-applied", "already-recoverable", "skipped":
+                skipped += 1
+            case "failed", "error", "conflict":
+                failed += 1
+            default:
+                affected += 1
+            }
+        }
+        let accounted = affected + skipped + failed
+        if accounted < requested {
+            failed += requested - accounted
+        }
+        return Self(affected: affected, skipped: skipped, failed: failed)
+    }
+
+    public var statusSummary: String {
+        "Affected \(affected.formatted()) • skipped \(skipped.formatted()) • failed \(failed.formatted())"
+    }
+}
+
 public actor LifecycleService {
     private let runner: OwnerActionRunner
     private let connectorID: String

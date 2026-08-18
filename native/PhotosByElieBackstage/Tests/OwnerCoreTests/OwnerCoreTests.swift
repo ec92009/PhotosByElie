@@ -679,6 +679,19 @@ struct OwnerCoreTests {
         #expect(selection.anchorID == "asset-6")
     }
 
+    @Test("Explicit action targets preserve zero, one, and many display order")
+    func explicitSelectionActionTargets() {
+        var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d"])
+        #expect(selection.selectedInDisplayOrder.isEmpty)
+
+        selection.click("c", extending: false, toggling: false)
+        #expect(selection.selectedInDisplayOrder == ["c"])
+
+        selection.click("a", extending: false, toggling: true)
+        selection.click("d", extending: false, toggling: true)
+        #expect(selection.selectedInDisplayOrder == ["a", "c", "d"])
+    }
+
     @Test("Filtered decisions select the next surviving card")
     func filteredDecisionSelectsSuccessor() {
         var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d"])
@@ -712,6 +725,13 @@ struct OwnerCoreTests {
         #expect(CullingGridLayout.clampedColumnCount(3, width: 1_000) == 3)
         #expect(CullingGridLayout.columnWidth(width: 360, columns: 4) == 84)
         #expect(CullingGridLayout.columnWidth(width: 500, columns: 4) == 119)
+        for width in stride(from: 84.0, through: 1_200.0, by: 37.0) {
+            let columns = CullingGridLayout.clampedColumnCount(10, width: width)
+            let occupied = CullingGridLayout.columnWidth(width: width, columns: columns)
+                * Double(columns)
+                + CullingGridLayout.spacing * Double(columns - 1)
+            #expect(occupied <= width + 0.001)
+        }
     }
 
     @Test("Ten-item culling rehearsal preserves scope and composes filters")
@@ -3041,6 +3061,41 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["operation"]?.stringValue == "waste-basket-empty")
         #expect(requests[1].payload["confirmed"]?.boolValue == true)
         #expect(requests[1].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
+    }
+
+    @Test("Lifecycle receipts report affected skipped and failed X items")
+    func lifecycleActionReceipts() {
+        let mixed = OwnerAction(
+            id: "owner-action-lifecycle-receipt",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": [
+                    "items": [
+                        ["status": "applied"],
+                        ["status": "already-recoverable"],
+                        ["status": "conflict"],
+                    ],
+                ],
+            ]
+        )
+        #expect(
+            LifecycleActionReceipt.summarize(mixed, requestedCount: 3)
+                == LifecycleActionReceipt(affected: 1, skipped: 1, failed: 1)
+        )
+
+        let completedWithoutItems = OwnerAction(
+            id: "owner-action-lifecycle-fallback",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        #expect(
+            LifecycleActionReceipt.summarize(completedWithoutItems, requestedCount: 2)
+                == LifecycleActionReceipt(affected: 2, skipped: 0, failed: 0)
+        )
     }
 
     @Test("Owner action decoding preserves connector phase timing receipts")

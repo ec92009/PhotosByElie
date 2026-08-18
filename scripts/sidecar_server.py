@@ -204,7 +204,7 @@ def _run_backstage_photos_library_index(
     offset: int,
     date_from: str = "",
     date_to: str = "",
-    timeout: float = 60,
+    timeout: float = 300,
 ) -> dict:
     """Request one bounded PhotoKit index page from the running Backstage app."""
 
@@ -214,7 +214,7 @@ def _run_backstage_photos_library_index(
             offset,
             date_from=date_from or None,
             date_to=date_to or None,
-            timeout=min(60.0, max(0.1, float(timeout))),
+            timeout=min(300.0, max(0.1, float(timeout))),
         )
     except BackstagePhotosClientError as error:
         return error.as_payload(mode="library-index")
@@ -382,7 +382,7 @@ def _write_backstage_library_index(
                 offset,
                 date_from=date_from,
                 date_to=date_to,
-                timeout=60,
+                timeout=300,
             )
             if payload.get("ok") is not True:
                 code = str(payload.get("code") or "library_index_failed")

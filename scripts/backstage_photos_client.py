@@ -36,6 +36,7 @@ MAX_REQUEST_BYTES = 16_384
 MAX_PREVIEW_BYTES = 8 * 1_024 * 1_024
 MAX_RESPONSE_BYTES = 12 * 1_024 * 1_024
 DEFAULT_TIMEOUT_SECONDS = 60.0
+DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS = 300.0
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 1_800.0
 DEFAULT_METADATA_TIMEOUT_SECONDS = 300.0
 MAX_EXPORT_FILENAME_BYTES = 1_024
@@ -109,7 +110,7 @@ def request_library_index(
     date_from: str | None = None,
     date_to: str | None = None,
     descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    timeout: float = DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS,
 ) -> dict:
     """Request a bounded PhotoKit library-index page from Backstage."""
 
@@ -389,8 +390,8 @@ def _validate_library_arguments(
             or any(unicodedata.category(char) == "Cc" for char in value)
         ):
             raise BackstagePhotosClientError("invalid_library_date", f"{name} is invalid.")
-    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_TIMEOUT_SECONDS:
-        raise BackstagePhotosClientError("invalid_timeout", "The library-index timeout must be between 0 and 60 seconds.")
+    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS:
+        raise BackstagePhotosClientError("invalid_timeout", "The library-index timeout must be between 0 and 300 seconds.")
 
 
 def _read_descriptor(descriptor_path: Path) -> dict:

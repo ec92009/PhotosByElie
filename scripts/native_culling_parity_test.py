@@ -316,6 +316,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("PHImageResultIsDegradedKey", full_preview)
         self.assertNotIn("requestImageDataAndOrientation(", full_preview)
 
+        ipc_protocol = (
+            NATIVE / "Sources" / "OwnerCore" / "BackstagePreviewIPCProtocol.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("libraryIndexOperationTimeout: Duration = .seconds(300)", ipc_protocol)
+        self.assertIn("let operationTimeout = limits.libraryIndexOperationTimeout", ipc_protocol)
+
     def test_photo_index_excludes_raw_only_assets_before_pagination(self):
         photo_library = (
             NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
@@ -962,8 +968,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.13")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "123")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.14")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "124")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

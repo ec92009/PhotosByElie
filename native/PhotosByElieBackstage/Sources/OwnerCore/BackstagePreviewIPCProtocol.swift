@@ -62,6 +62,7 @@ public struct BackstagePreviewIPCLimits: Sendable {
     public var maximumPreviewBytes: Int
     public var maximumResponseBytes: Int
     public var operationTimeout: Duration
+    public var libraryIndexOperationTimeout: Duration
     public var exportOperationTimeout: Duration
     public var metadataOperationTimeout: Duration
 
@@ -70,6 +71,7 @@ public struct BackstagePreviewIPCLimits: Sendable {
         maximumPreviewBytes: Int = BackstagePreviewIPCConstants.maximumPreviewBytes,
         maximumResponseBytes: Int = BackstagePreviewIPCConstants.maximumResponseBytes,
         operationTimeout: Duration = .seconds(55),
+        libraryIndexOperationTimeout: Duration = .seconds(300),
         exportOperationTimeout: Duration = .seconds(1_800),
         metadataOperationTimeout: Duration = .seconds(300)
     ) {
@@ -77,6 +79,7 @@ public struct BackstagePreviewIPCLimits: Sendable {
         self.maximumPreviewBytes = maximumPreviewBytes
         self.maximumResponseBytes = maximumResponseBytes
         self.operationTimeout = operationTimeout
+        self.libraryIndexOperationTimeout = libraryIndexOperationTimeout
         self.exportOperationTimeout = exportOperationTimeout
         self.metadataOperationTimeout = metadataOperationTimeout
     }
@@ -480,7 +483,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         dateTo: Date?
     ) async throws -> Data {
         let photoLibrary = photoLibrary
-        let operationTimeout = limits.operationTimeout
+        let operationTimeout = limits.libraryIndexOperationTimeout
         return try await withCheckedThrowingContinuation { continuation in
             let gate = LibraryIndexResultGate(continuation)
             Task {

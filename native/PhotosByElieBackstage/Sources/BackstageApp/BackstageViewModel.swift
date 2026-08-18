@@ -1710,6 +1710,17 @@ final class BackstageViewModel: ObservableObject {
         visibleCullingAssets.map(\.id).filter(cullingSelection.selectedIDs.contains)
     }
 
+    func cullingSelectionHasColor(_ color: SidecarColor) -> Bool {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else { return false }
+        return ids.allSatisfy { id in
+            let currentColor = cullingStates[id]?.color
+                ?? cullingAssets.first(where: { $0.id == id })?.color
+                ?? ""
+            return currentColor == color.rawValue
+        }
+    }
+
     var hasCurrentCullingFixture: Bool {
         !selectedFixtureID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -2475,6 +2486,15 @@ final class BackstageViewModel: ObservableObject {
             ids.map { SidecarDecision.color($0, value: cullingColor) },
             label: cullingColor == .none ? "Clear color" : "\(cullingColor.label) color"
         )
+    }
+
+    func toggleCullingColor(_ color: SidecarColor) async {
+        guard !selectedCullingAssetIDs.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        cullingColor = cullingSelectionHasColor(color) ? .none : color
+        await applyColor()
     }
 
     func applyPickShortcut(

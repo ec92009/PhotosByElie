@@ -603,14 +603,12 @@ struct CullingView: View {
 
     private var cullingActions: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if !model.cullingSelection.selectedIDs.isEmpty {
-                cullingDestinationActions
-                cullingDecisionActions
-            }
+            cullingDestinationActions
+            cullingDecisionActions
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P include • H exclude • X Waste Basket • U clear • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P include • H exclude • X Waste Basket • U clear • Rating buttons 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -676,42 +674,86 @@ struct CullingView: View {
             )
             .accessibilityLabel("X move selected items to the recoverable Waste Basket")
             .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
-            cullingRatingPicker
-            Button("Apply rating") {
-                Task { await model.applyRating() }
-            }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .backstageHelp("Apply the chosen star rating to every selected asset.")
-            cullingColorPicker
-            Button("Apply color") {
-                Task { await model.applyColor() }
-            }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .backstageHelp("Apply the chosen color label to every selected asset.")
-        }
-    }
-
-    private var cullingRatingPicker: some View {
-        Picker("Rating", selection: $model.cullingRating) {
+            Text("Rating")
+                .font(.caption.weight(.semibold))
             ForEach(0...5, id: \.self) { rating in
-                Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
-                    .tag(rating)
+                cullingRatingAssignmentButton(rating)
+            }
+            Text("Color")
+                .font(.caption.weight(.semibold))
+            ForEach(SidecarColor.allCases.filter { $0 != .none }, id: \.self) { color in
+                cullingColorAssignmentButton(color)
             }
         }
-        .frame(width: 170)
-        .accessibilityLabel("Rating to assign")
-        .accessibilityHint("Choose one rating, then use Apply rating for the explicit Culling selection.")
     }
 
-    private var cullingColorPicker: some View {
-        Picker("Color", selection: $model.cullingColor) {
-            ForEach(SidecarColor.allCases, id: \.self) {
-                Text($0.label).tag($0)
+    private func cullingRatingAssignmentButton(_ rating: Int) -> some View {
+        Button {
+            Task { await model.applyRatingShortcut(rating) }
+        } label: {
+            Group {
+                if rating == 0 {
+                    Image(systemName: "star.slash")
+                } else {
+                    Text("\(rating)★")
+                }
             }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(rating == 0 ? Color.secondary : Color.yellow)
+            .frame(minWidth: 30, minHeight: 22)
         }
-        .frame(width: 145)
-        .accessibilityLabel("Color to assign")
-        .accessibilityHint("Choose one color, including No color, then use Apply color for the explicit Culling selection.")
+        .buttonStyle(.bordered)
+        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+        .accessibilityLabel(rating == 0 ? "Clear rating" : "Assign \(rating) stars")
+        .backstageHelp(rating == 0
+            ? "Clear the rating on every selected asset."
+            : "Assign \(rating) stars to every selected asset.")
+    }
+
+    private func cullingColorAssignmentButton(_ color: SidecarColor) -> some View {
+        let isSelected = model.cullingSelectionHasColor(color)
+        return Button {
+            Task { await model.toggleCullingColor(color) }
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(cullingAssignmentColor(color))
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(width: 24, height: 22)
+            .padding(2)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(isSelected ? Color.accentColor.opacity(0.35) : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(isSelected ? Color.accentColor : Color.secondary, lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+        .accessibilityLabel("Assign \(color.label) color")
+        .accessibilityValue(isSelected
+            ? "Applied to every selected asset; press again to clear."
+            : "Not applied to every selected asset.")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .backstageHelp("Assign \(color.label) to every selected asset; press again to clear that color.")
+    }
+
+    private func cullingAssignmentColor(_ color: SidecarColor) -> Color {
+        switch color {
+        case .none: .clear
+        case .red: .red
+        case .yellow: .yellow
+        case .green: .green
+        case .blue: .blue
+        case .purple: .purple
+        }
     }
 
     private var cullingHistoryActions: some View {

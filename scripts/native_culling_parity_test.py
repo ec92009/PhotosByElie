@@ -880,7 +880,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(".frame(maxWidth: .infinity, alignment: .bottomLeading)", culling)
         self.assertIn(".layoutPriority(2)", culling)
         footer = culling.split("private var cullingDecisionActions", 1)[1].split(
-            "private var cullingRatingPicker", 1
+            "private var cullingHistoryActions", 1
         )[0]
         self.assertIn('Button("P Include")', footer)
         self.assertIn('Button("H Exclude")', footer)
@@ -957,8 +957,14 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
-    def test_assignment_controls_use_compact_pickers_and_preserve_keyboard_contract(self):
+    def test_assignment_controls_use_direct_rating_buttons_and_toggle_colors(self):
         app = backstage_ui_source()
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
         adapter = (
             NATIVE
             / "Sources"
@@ -968,23 +974,23 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = app.split("private var cullingDecisionActions", 1)[1].split(
             "private var cullingHistoryActions", 1
         )[0]
-        rating_picker = culling.split("private var cullingRatingPicker", 1)[1].split(
-            "private var cullingColorPicker", 1
+        actions = app.split("private var cullingActions", 1)[1].split(
+            "private var cullingDestinationActions", 1
         )[0]
-        color_picker = culling.split("private var cullingColorPicker", 1)[1]
-
-        self.assertIn('Picker("Rating", selection: $model.cullingRating)', rating_picker)
-        self.assertIn('Picker("Color", selection: $model.cullingColor)', color_picker)
-        self.assertIn('Button("Apply rating")', culling)
-        self.assertIn('Button("Apply color")', culling)
-        self.assertIn("Rating to assign", rating_picker)
-        self.assertIn("Color to assign", color_picker)
-        self.assertIn("model.cullingSelection.selectedIDs.isEmpty", culling)
-        self.assertNotIn('Button("1 star', culling)
-        self.assertNotIn('Button("2 star', culling)
-        self.assertNotIn('Button("3 star', culling)
-        self.assertNotIn('Button("4 star', culling)
-        self.assertNotIn('Button("5 star', culling)
+        self.assertIn('ForEach(0...5, id: \\.self)', culling)
+        self.assertIn("cullingRatingAssignmentButton(rating)", culling)
+        self.assertIn("SidecarColor.allCases.filter { $0 != .none }", culling)
+        self.assertIn("cullingColorAssignmentButton(color)", culling)
+        self.assertNotIn('Picker("Rating"', culling)
+        self.assertNotIn('Picker("Color"', culling)
+        self.assertNotIn('Button("Apply rating")', culling)
+        self.assertNotIn('Button("Apply color")', culling)
+        self.assertIn("model.applyRatingShortcut(rating)", culling)
+        self.assertIn("model.toggleCullingColor(color)", culling)
+        self.assertIn("cullingSelectionHasColor", model)
+        self.assertIn("func toggleCullingColor", model)
+        self.assertIn("Rating buttons 0–5", actions)
+        self.assertIn("Color buttons toggle", actions)
         self.assertIn('case "0": .rating(0)', adapter)
         self.assertIn('case "5": .rating(5)', adapter)
         self.assertIn('case "6": .color(.red)', adapter)

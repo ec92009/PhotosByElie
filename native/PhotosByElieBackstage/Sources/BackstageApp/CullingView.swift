@@ -699,6 +699,8 @@ struct CullingView: View {
             }
         }
         .frame(width: 170)
+        .accessibilityLabel("Rating to assign")
+        .accessibilityHint("Choose one rating, then use Apply rating for the explicit Culling selection.")
     }
 
     private var cullingColorPicker: some View {
@@ -708,6 +710,8 @@ struct CullingView: View {
             }
         }
         .frame(width: 145)
+        .accessibilityLabel("Color to assign")
+        .accessibilityHint("Choose one color, including No color, then use Apply color for the explicit Culling selection.")
     }
 
     private var cullingHistoryActions: some View {

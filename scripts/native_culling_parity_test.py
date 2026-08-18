@@ -909,6 +909,39 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
+    def test_assignment_controls_use_compact_pickers_and_preserve_keyboard_contract(self):
+        app = backstage_ui_source()
+        adapter = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+        culling = app.split("private var cullingDecisionActions", 1)[1].split(
+            "private var cullingHistoryActions", 1
+        )[0]
+        rating_picker = culling.split("private var cullingRatingPicker", 1)[1].split(
+            "private var cullingColorPicker", 1
+        )[0]
+        color_picker = culling.split("private var cullingColorPicker", 1)[1]
+
+        self.assertIn('Picker("Rating", selection: $model.cullingRating)', rating_picker)
+        self.assertIn('Picker("Color", selection: $model.cullingColor)', color_picker)
+        self.assertIn('Button("Apply rating")', culling)
+        self.assertIn('Button("Apply color")', culling)
+        self.assertIn("Rating to assign", rating_picker)
+        self.assertIn("Color to assign", color_picker)
+        self.assertIn("model.cullingSelection.selectedIDs.isEmpty", culling)
+        self.assertNotIn('Button("1 star', culling)
+        self.assertNotIn('Button("2 star', culling)
+        self.assertNotIn('Button("3 star', culling)
+        self.assertNotIn('Button("4 star', culling)
+        self.assertNotIn('Button("5 star', culling)
+        self.assertIn('case "0": .rating(0)', adapter)
+        self.assertIn('case "5": .rating(5)', adapter)
+        self.assertIn('case "6": .color(.red)', adapter)
+        self.assertIn('case "9": .color(.blue)', adapter)
+
     def test_source_workflows_are_still_only_without_media_controls(self):
         app = backstage_ui_source()
         model = (

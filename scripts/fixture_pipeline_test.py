@@ -55,6 +55,7 @@ from sidecar_state_db import (
     is_jpeg_source_row,
     mark_invalid_source_assets_missing,
     record_decision,
+    restore_heic_source_assets_missing_at,
     upsert_assets,
 )
 
@@ -103,7 +104,7 @@ class FixturePipelineTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_source_index_requires_a_real_jpeg_resource(self):
+    def test_source_index_requires_a_real_jpeg_or_heic_resource(self):
         raw_only = {
             "localIdentifier": "raw-only",
             "filename": "20220807 153244 00170.jpg",
@@ -148,6 +149,22 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertTrue(is_jpeg_source_row(jpeg_backed))
         self.assertEqual(upsert_assets(self.root, [jpeg_backed]), 1)
 
+        heic_backed = {
+            "localIdentifier": "heic-backed",
+            "filename": "IMG_4497.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW", "HEIC"],
+            "resourceFormat": "RAW+HEIC",
+            "preferredResourceFilename": "IMG_4497.HEIC",
+            "preferredResourceFormat": "HEIC",
+            "resources": [
+                {"originalFilename": "IMG_4497.dng", "format": "RAW"},
+                {"originalFilename": "IMG_4497.HEIC", "format": "HEIC"},
+            ],
+        }
+        self.assertTrue(is_jpeg_source_row(heic_backed))
+        self.assertEqual(upsert_assets(self.root, [heic_backed]), 1)
+
         # Existing non-Photos callers use compact rows without resource
         # metadata; retain that compatibility while the Photos path remains
         # strict whenever PhotoKit resource metadata is present.
@@ -177,6 +194,36 @@ class FixturePipelineTest(unittest.TestCase):
                 connection.execute(
                     "SELECT missing_at FROM sidecar_assets WHERE asset_id = ?",
                     ("stale-raw-only",),
+                ).fetchone()["missing_at"]
+            )
+
+            connection.execute(
+                """
+                INSERT INTO sidecar_assets (
+                  asset_id, source_anchor, media_type, filename, raw_json,
+                  missing_at, indexed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "stale-heic",
+                    "apple-photos://stale-heic",
+                    "photo",
+                    "stale-heic.jpg",
+                    json.dumps(heic_backed),
+                    "repair-stamp",
+                    "2026-08-18T10:00:00Z",
+                    "2026-08-18T10:00:00Z",
+                ),
+            )
+        self.assertEqual(
+            restore_heic_source_assets_missing_at(self.root, "repair-stamp"),
+            1,
+        )
+        with connect(self.root) as connection:
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT missing_at FROM sidecar_assets WHERE asset_id = ?",
+                    ("stale-heic",),
                 ).fetchone()["missing_at"]
             )
 

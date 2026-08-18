@@ -557,15 +557,8 @@ def _format_values(value: Any) -> list[str]:
     return tokens
 
 
-def is_jpeg_source_row(row: dict[str, Any]) -> bool:
-    """Accept only source rows backed by an actual JPEG Photos resource.
-
-    Native Backstage rows carry resource metadata. A top-level ``.jpg``
-    filename is deliberately not evidence: RAW-only PhotoKit assets can have
-    a synthetic JPG display name. Minimal legacy/test rows without any
-    resource metadata remain accepted for compatibility with non-Photos
-    callers; once resource metadata is present, JPEG must be explicit.
-    """
+def _source_format_tokens(row: dict[str, Any]) -> tuple[bool, list[str]]:
+    """Return whether source metadata is explicit and its normalized tokens."""
     explicit_metadata = False
     format_tokens: list[str] = []
     for key in (
@@ -602,22 +595,55 @@ def is_jpeg_source_row(row: dict[str, Any]) -> bool:
                 # stronger type/UTI field. Never inspect the row's synthetic
                 # display filename here.
                 format_tokens.extend(_format_values(resource.get("originalFilename")))
+    return explicit_metadata, format_tokens
 
-    for token in format_tokens:
-        normalized = token.casefold().strip()
-        if normalized in {"jpeg", "jpg", "jpe"} or "jpeg" in normalized:
-            return True
-        if normalized.endswith((".jpg", ".jpeg", ".jpe")):
-            return True
+
+def _source_token_matches(token: str, accepted_formats: set[str]) -> bool:
+    normalized = token.casefold().strip()
+    if "JPEG" in accepted_formats and (
+        normalized in {"jpeg", "jpg", "jpe"}
+        or "jpeg" in normalized
+        or normalized.endswith((".jpg", ".jpeg", ".jpe"))
+    ):
+        return True
+    if "HEIC" in accepted_formats and (
+        normalized in {"heic", "heif", "hif"}
+        or "heic" in normalized
+        or "heif" in normalized
+        or normalized.endswith((".heic", ".heif", ".hif"))
+    ):
+        return True
+    return False
+
+
+def _row_has_source_format(row: dict[str, Any], source_format: str) -> bool:
+    _explicit_metadata, format_tokens = _source_format_tokens(row)
+    return any(_source_token_matches(token, {source_format}) for token in format_tokens)
+
+
+def is_jpeg_source_row(row: dict[str, Any]) -> bool:
+    """Accept source rows backed by a JPEG or HEIC Photos resource.
+
+    Native Backstage rows carry resource metadata. A top-level ``.jpg``
+    filename is deliberately not evidence: RAW-only PhotoKit assets can have
+    a synthetic JPG display name. HEIC is intentionally accepted because
+    Photos can safely render it as the JPG consumed by PBB/PBE. Minimal
+    legacy/test rows without any resource metadata remain accepted for
+    compatibility with non-Photos callers; once resource metadata is present,
+    JPEG or HEIC must be explicit.
+    """
+    explicit_metadata, format_tokens = _source_format_tokens(row)
+    if any(_source_token_matches(token, {"JPEG", "HEIC"}) for token in format_tokens):
+        return True
     return not explicit_metadata
 
 
 def mark_invalid_source_assets_missing(repo_root: Path) -> int:
-    """Hide previously indexed Photos rows that are not JPEG-backed.
+    """Hide previously indexed rows that are not JPEG/HEIC-backed stills.
 
     This repairs databases populated before the source boundary existed. The
-    row and its decisions remain recoverable: a later valid JPEG-backed index
-    row can clear ``missing_at`` through the normal upsert path.
+    The row and its decisions remain recoverable: a later valid JPEG/HEIC
+    index row can clear ``missing_at`` through the normal upsert path.
     """
     now = now_iso()
     with connect(repo_root) as conn:
@@ -637,6 +663,41 @@ def mark_invalid_source_assets_missing(repo_root: Path) -> int:
                 [now, now, *batch],
             )
     return len(invalid)
+
+
+def restore_heic_source_assets_missing_at(repo_root: Path, missing_at: str) -> int:
+    """Restore HEIC photo rows marked by one bounded source-repair pass.
+
+    This is deliberately scoped to the repair timestamp supplied by the
+    caller. It reverses the earlier over-broad JPEG-only quarantine for HEIC
+    stills without reviving videos or RAW/NEF/DNG-only rows.
+    """
+    now = now_iso()
+    restored: list[str] = []
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT asset_id, media_type, raw_json
+            FROM sidecar_assets
+            WHERE missing_at = ?
+            """,
+            (missing_at,),
+        ).fetchall()
+        for row in rows:
+            media_type = str(row["media_type"] or "").casefold()
+            if "video" in media_type:
+                continue
+            raw = _read_json_text(row["raw_json"], {})
+            if _row_has_source_format(raw, "HEIC"):
+                restored.append(str(row["asset_id"]))
+        for start in range(0, len(restored), 500):
+            batch = restored[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            conn.execute(
+                f"UPDATE sidecar_assets SET missing_at = NULL, updated_at = ? WHERE asset_id IN ({placeholders}) AND missing_at = ?",
+                [now, *batch, missing_at],
+            )
+    return len(restored)
 
 
 def _number(value: Any) -> float | None:

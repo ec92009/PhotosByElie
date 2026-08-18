@@ -224,16 +224,17 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         // Backstage source intake is still-photo only. Real-estate videos are
         // generated deliverables built from approved stills and do not belong
         // in the PhotoKit culling/preview universe. A RAW-only PHAsset also
-        // stays out: PBB/PBE require an actual JPEG resource in Photos.
+        // stays out: PBB/PBE accept a JPEG or HEIC source that Photos can
+        // safely render as the JPG consumed by the apps.
         let result = PHAsset.fetchAssets(with: .image, options: options)
         var items: [PhotoLibraryItem] = []
         result.enumerateObjects { asset, _, stop in
-            guard let renderedJPEG = preferredRenderedJPEGResource(for: asset) else {
+            guard let acceptedSource = preferredAcceptedStillResource(for: asset) else {
                 return
             }
             items.append(PhotoLibraryItem(
                 id: asset.localIdentifier,
-                filename: renderedJPEG.originalFilename,
+                filename: renderedJPEGFilename(acceptedSource, index: items.count + 1),
                 creationDate: asset.creationDate,
                 mediaType: asset.mediaType == .video ? "video" : "photo"
             ))
@@ -265,21 +266,22 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
         // Backstage source intake is still-photo only. Generated real-estate
         // videos are downstream deliverables and never enter this index. A
-        // RAW-only PHAsset is excluded because PBB/PBE require an actual JPEG.
+        // RAW-only PHAsset is excluded because PBB/PBE require a JPEG or HEIC
+        // source that Photos can render safely as JPG.
         let assets = PHAsset.fetchAssets(with: .image, options: options)
         // Filter before applying offset/limit. Applying pagination to the raw
         // Photos result first would make a page appear short and could skip
-        // valid JPEG-backed assets after a run of RAW-only assets.
-        var jpegAssets: [PHAsset] = []
+        // valid JPEG/HEIC-backed assets after a run of RAW-only assets.
+        var acceptedAssets: [PHAsset] = []
         assets.enumerateObjects { asset, _, _ in
-            if preferredRenderedJPEGResource(for: asset) != nil {
-                jpegAssets.append(asset)
+            if preferredAcceptedStillResource(for: asset) != nil {
+                acceptedAssets.append(asset)
             }
         }
-        let pageStart = min(safeOffset, jpegAssets.count)
-        let pageEnd = min(pageStart + safeLimit, jpegAssets.count)
+        let pageStart = min(safeOffset, acceptedAssets.count)
+        let pageEnd = min(pageStart + safeLimit, acceptedAssets.count)
         let selected = pageStart < pageEnd
-            ? Array(jpegAssets[pageStart..<pageEnd])
+            ? Array(acceptedAssets[pageStart..<pageEnd])
             : []
         let rows = selected.enumerated().map { index, asset in
             libraryIndexRow(asset, index: pageStart + index + 1)
@@ -290,7 +292,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "limit": safeLimit,
             "offset": safeOffset,
             "count": rows.count,
-            "fetchedCount": jpegAssets.count,
+            "fetchedCount": acceptedAssets.count,
             "skippedCount": pageStart,
             "dateFrom": photoLibraryISODate(dateFrom),
             "dateTo": photoLibraryISODate(dateTo),
@@ -298,7 +300,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "notes": [
                 "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
                 "Sidecar culling decisions are local-first. Photos keyword/title write-back is staged separately.",
-                "RAW-only Photos assets without an actual JPEG resource are excluded from PBB/PBE source intake.",
+                "RAW-only Photos assets without a JPEG or HEIC resource are excluded from PBB/PBE source intake.",
             ],
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
@@ -337,6 +339,18 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
            let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
             return try await requestRenderedJPEGPreview(
                 resource: renderedJPEG,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize
+            )
+        }
+
+        // HEIC has no local JPEG resource to stream directly. Ask Photos for
+        // its current rendered image instead of reading the RAW side of a
+        // paired asset; Photos performs the safe HEIC-to-JPG rendering here.
+        if maxPixelSize > 180,
+           preferredAcceptedStillResource(for: asset) != nil {
+            return try await requestFullPreview(
+                for: asset,
                 localIdentifier: localIdentifier,
                 maxPixelSize: maxPixelSize
             )
@@ -682,8 +696,9 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     private func libraryIndexRow(_ asset: PHAsset, index: Int) -> [String: Any] {
         let resources = PHAssetResource.assetResources(for: asset)
         let preferred = preferredOriginalResource(for: asset)
+        let acceptedSource = preferredAcceptedStillResource(for: asset)
         let renderedJPEG = preferredRenderedJPEGResource(for: asset)
-        let displayResource = renderedJPEG ?? preferred
+        let displayResource = renderedJPEG ?? acceptedSource ?? preferred
         let cloudIdentifier = cloudIdentifier(for: asset.localIdentifier)
         let assetIdentifier = cloudIdentifier.isEmpty ? asset.localIdentifier : cloudIdentifier
         let formats = resources.map(resourceFormat)
@@ -693,7 +708,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let formatCounts = formats.reduce(into: [String: Int]()) { counts, format in
             counts[format, default: 0] += 1
         }
-        let eligible = renderedJPEG != nil
+        let eligible = acceptedSource != nil
         var row: [String: Any] = [
             "index": index,
             "assetId": assetIdentifier,
@@ -703,9 +718,9 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 ? "apple-photos://\(asset.localIdentifier)"
                 : "apple-photos-cloud://\(cloudIdentifier)",
             "localSourceAnchor": "apple-photos://\(asset.localIdentifier)",
-            "filename": renderedJPEG.map { renderedJPEGFilename($0, index: index) }
-                ?? displayResource?.originalFilename
-                ?? asset.localIdentifier,
+            "filename": eligible
+                ? renderedJPEGFilename(renderedJPEG ?? acceptedSource, index: index)
+                : displayResource?.originalFilename ?? asset.localIdentifier,
             "mediaType": "photo",
             "creationDate": photoLibraryISODate(asset.creationDate),
             "modificationDate": photoLibraryISODate(asset.modificationDate),
@@ -719,8 +734,12 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "resourceFormat": distinctFormats.isEmpty ? "Unknown" : distinctFormats.joined(separator: "+"),
             "resourceFormats": distinctFormats,
             "resourceFormatCounts": formatCounts,
-            "preferredResourceFilename": preferred?.originalFilename ?? "",
-            "preferredResourceFormat": preferred.map(resourceFormat) ?? "",
+            "preferredResourceFilename": acceptedSource?.originalFilename
+                ?? preferred?.originalFilename
+                ?? "",
+            "preferredResourceFormat": acceptedSource.map(resourceFormat)
+                ?? preferred.map(resourceFormat)
+                ?? "",
             "fallbackResourceFilename": renderedJPEG?.originalFilename ?? "",
             "fallbackResourceFormat": renderedJPEG.map(resourceFormat) ?? "",
             "localJPEGFallbackAvailable": renderedJPEG != nil,
@@ -729,7 +748,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "status": eligible ? "candidate" : "unsupported",
             "reason": eligible
                 ? "Photos still image will import as the current rendered JPG from Photos."
-                : "Photos asset has no actual JPEG resource; PBB/PBE source intake excludes it.",
+                : "Photos asset has no JPEG or HEIC resource; PBB/PBE source intake excludes it.",
         ]
         if let location = locationRow(asset) {
             row["location"] = location
@@ -851,9 +870,27 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
 
     private func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
         switch resourceFormat(resource) {
-        case "RAW", "HEIC", "JPEG", "PNG", "TIFF": return true
+        case "HEIC", "JPEG": return true
         default: return false
         }
+    }
+
+    private func preferredAcceptedStillResource(for asset: PHAsset) -> PHAssetResource? {
+        let resources = PHAssetResource.assetResources(for: asset)
+        for format in ["JPEG", "HEIC"] {
+            if let resource = resources
+                .filter({ resourceFormat($0) == format })
+                .sorted(by: { lhs, rhs in
+                    let lhsPriority = imageResourceTypePriority(lhs)
+                    let rhsPriority = imageResourceTypePriority(rhs)
+                    if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
+                    return lhs.originalFilename < rhs.originalFilename
+                })
+                .first {
+                return resource
+            }
+        }
+        return nil
     }
 
     private func preferredRenderedJPEGResource(for asset: PHAsset) -> PHAssetResource? {

@@ -287,6 +287,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "withTaskCancellationHandler",
             "manager.cancelImageRequest",
             "func cullingPreview(localIdentifier: String, maxPixelSize: Int)",
+            "preferredAcceptedStillResource(for asset: PHAsset)",
+            "for format in [\"JPEG\", \"HEIC\"]",
             "preferredRenderedJPEGResource(for asset: PHAsset)",
             "resourceFormat($0) == \"JPEG\"",
             "PHAssetResourceManager.default()",
@@ -335,13 +337,13 @@ class NativeCullingParityTest(unittest.TestCase):
         row_source = photo_library.split("private func libraryIndexRow(", 1)[1].split(
             "private func resourceRows(", 1
         )[0]
-        self.assertIn("guard let renderedJPEG = preferredRenderedJPEGResource(for: asset) else", fetch_source)
-        self.assertIn("var jpegAssets: [PHAsset] = []", index_source)
-        self.assertIn("if preferredRenderedJPEGResource(for: asset) != nil", index_source)
-        self.assertIn("let pageStart = min(safeOffset, jpegAssets.count)", index_source)
+        self.assertIn("guard let acceptedSource = preferredAcceptedStillResource(for: asset) else", fetch_source)
+        self.assertIn("var acceptedAssets: [PHAsset] = []", index_source)
+        self.assertIn("if preferredAcceptedStillResource(for: asset) != nil", index_source)
+        self.assertIn("let pageStart = min(safeOffset, acceptedAssets.count)", index_source)
         self.assertNotIn("options.fetchLimit = safeOffset + safeLimit", index_source)
-        self.assertIn("RAW-only Photos assets without an actual JPEG resource are excluded", index_source)
-        self.assertIn("Photos asset has no actual JPEG resource; PBB/PBE source intake excludes it.", row_source)
+        self.assertIn("RAW-only Photos assets without a JPEG or HEIC resource are excluded", index_source)
+        self.assertIn("Photos asset has no JPEG or HEIC resource; PBB/PBE source intake excludes it.", row_source)
 
     def test_quick_look_h_preserves_an_existing_multi_selection(self):
         culling = (
@@ -894,6 +896,8 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn('format: "mediaType == %d"', bridge)
         self.assertIn('code: "source_video_unsupported"', bridge)
+        self.assertIn('return format == "JPEG" || format == "HEIC"', bridge)
+        self.assertIn('asset.mediaType == .image && !imageFallbackResourceCandidates(asset).isEmpty', bridge)
         self.assertNotIn('case "video":', bridge)
         self.assertNotIn("writeLocalVideoPosterPreviewJPEG", bridge)
         self.assertNotIn("writeVideoResource", bridge)
@@ -968,8 +972,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.15")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "125")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "230.16")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "126")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

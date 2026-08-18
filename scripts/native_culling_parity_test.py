@@ -354,7 +354,54 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         self.assertIn("model.cullingSelection.selectedIDs.contains(assetID)", placement)
         self.assertIn("model.clickCullingAsset(assetID, modifiers: [])", placement)
-        self.assertIn("await model.applyPickShortcut(action)", placement)
+        self.assertIn("await model.applyPickShortcut(", placement)
+
+        presenter = culling.split("private enum CullingQuickLookPresenter", 1)[1].split(
+            "struct CullingView", 1
+        )[0]
+        review = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
+        ).read_text(encoding="utf-8")
+        review_presenter = review.split("private enum ReviewQuickLookPresenter", 1)[1].split(
+            "private struct ReviewVisualComparisonTarget", 1
+        )[0]
+        for source, status in (
+            (presenter, "Quick Look opens one selected Culling item at a time."),
+            (review_presenter, "Quick Look opens one selected Review item at a time."),
+        ):
+            self.assertIn("guard ids.count == 1 else", source)
+            self.assertIn(status, source)
+            self.assertIn("direction: OwnerSelectionDirection = .next", source)
+            self.assertIn("direction == .previous ? -1 : 1", source)
+            self.assertIn("case .wasteBasket:", source)
+
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        lifecycle = app.split("private struct LifecycleView", 1)[1].split(
+            "private struct ActivityView", 1
+        )[0]
+        self.assertIn(
+            "Quick Look opens one selected Waste Basket item at a time.",
+            lifecycle,
+        )
+        self.assertIn("case .pick:", lifecycle)
+        self.assertIn("case .wasteBasket:", lifecycle)
+        self.assertIn("moveQuickLook(", lifecycle)
+        self.assertIn("Put back is available only for a recoverable Waste Basket item.", lifecycle)
+        self.assertIn("Shortcuts: ←/→/↑/↓ navigate", lifecycle)
+
+        selection = (
+            NATIVE
+            / "Sources"
+            / "OwnerCore"
+            / "OwnerSelectionModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "direction: OwnerSelectionDirection = .next",
+            selection,
+        )
+        self.assertIn("case .previous:", selection)
 
     def test_review_loading_is_canvas_visible_and_cancellation_safe(self):
         model = (
@@ -430,9 +477,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "prepareNativeUploadQuickLookURL(for: item)",
             "quickLook.present(",
             "BackstageQuickLookMetadata(",
-            "moveUploadQuickLook(from: assetID, by: -1)",
-            "moveUploadQuickLook(from: assetID, by: 1)",
-            "←/→ navigate • H hide • R return to Review",
+            "model.selectedDeliveryIDs.count == 1",
+            "moveUploadQuickLook(from: assetID, direction: .previous)",
+            "moveUploadQuickLook(from: assetID, direction: .next)",
+            "←/→/↑/↓ navigate • H hide • R return to Review",
             "keywords: item.keywords",
             'Button("Hide…")',
             'Button("Load next 200")',
@@ -618,9 +666,13 @@ class NativeCullingParityTest(unittest.TestCase):
         for shortcut in (
             "case 123: return .previous",
             "case 124: return .next",
+            "case 126: return .previous",
+            "case 125: return .next",
             'case "p": .pick',
             'case "h": .hide',
+            'case "x": .wasteBasket',
             'case "a": .approve',
+            'case "0": .rating(0)',
             'case "1": .rating(1)',
             'case "5": .rating(5)',
             'case "6": .color(.red)',
@@ -649,12 +701,12 @@ class NativeCullingParityTest(unittest.TestCase):
         culling = app.split("private enum CullingQuickLookPresenter", 1)[1].split(
             "private enum ReviewQuickLookPresenter", 1
         )[0]
-        self.assertIn("await model.applyPickShortcut(action)", culling)
+        self.assertIn("await model.applyPickShortcut(", culling)
         self.assertIn("await model.applyRatingShortcut(value)", culling)
         self.assertIn("await model.applyColorShortcut(value)", culling)
-        self.assertIn("model.moveCullingSelection(by: delta, extending: false)", culling)
+        self.assertIn("direction == .previous ? -1 : 1", culling)
         self.assertIn("if wasVisible && !remainsVisible", culling)
-        self.assertIn("present(model: model, coordinator: coordinator)", culling)
+        self.assertIn("present(model: model, coordinator: coordinator, direction: direction)", culling)
 
         review_presenter = app.split("private enum ReviewQuickLookPresenter", 1)[1].split(
             "struct ReviewView", 1
@@ -662,7 +714,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("applyReviewAction(", review_presenter)
         self.assertIn(".approve", review_presenter)
         self.assertIn(".hide", review_presenter)
-        self.assertIn("model.moveReviewSelection(by: delta, extending: false)", review_presenter)
+        self.assertIn("direction == .previous ? -1 : 1", review_presenter)
         self.assertIn("coordinator.dismiss()", review_presenter)
 
     def test_quick_look_owner_lifecycle_dismisses_stale_coordinator(self):
@@ -722,7 +774,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "cullingCancellationRequested",
             "completed batches remain audited and undoable",
             "FixtureCullingSemantics.mutation(",
-            "await applyFixturePlacement(state, label: label)",
+            "await applyFixturePlacement(",
             "X still moves the asset to the recoverable Waste Basket",
         ):
             self.assertIn(marker, source)
@@ -1576,9 +1628,12 @@ class NativeCullingParityTest(unittest.TestCase):
             1,
         )[0]
         self.assertIn('.onKeyPress("h")', upload)
-        self.assertIn("hideCurrentUploadQuickLook(assetID: assetID)", upload)
+        self.assertIn("hideCurrentUploadQuickLook(", upload)
         self.assertIn("await model.hideSelectedUploads()", upload)
-        self.assertIn("presentUploadQuickLook(next)", upload)
+        self.assertIn("presentUploadQuickLook(next, direction: removalDirection)", upload)
+        self.assertIn("removalDirection: OwnerSelectionDirection", upload)
+        self.assertIn("directionalUploadReplacement(", upload)
+        self.assertIn("direction: removalDirection", upload)
         self.assertIn("H hide", upload)
 
     def test_upload_preview_returns_current_item_to_review_and_advances(self):
@@ -1588,9 +1643,11 @@ class NativeCullingParityTest(unittest.TestCase):
             1,
         )[0]
         self.assertIn('.onKeyPress("r")', upload)
-        self.assertIn("returnCurrentUploadQuickLookToReview(assetID: assetID)", upload)
+        self.assertIn("returnCurrentUploadQuickLookToReview(", upload)
         self.assertIn("await model.returnSelectedUploadsToReview()", upload)
-        self.assertIn("presentUploadQuickLook(next)", upload)
+        self.assertIn("presentUploadQuickLook(next, direction: removalDirection)", upload)
+        self.assertIn("removalDirection: OwnerSelectionDirection", upload)
+        self.assertIn("directionalUploadReplacement(", upload)
         self.assertIn("R return to Review", upload)
 
     def test_metadata_uses_canonical_thumbnail_and_quick_look(self):

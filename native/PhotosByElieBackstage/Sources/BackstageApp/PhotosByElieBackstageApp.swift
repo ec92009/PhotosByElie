@@ -560,30 +560,153 @@ private struct LifecycleView: View {
     }
 
     private func openQuickLook(for item: LifecycleItem) {
+        guard model.selectedLifecycleIDs.count <= 1 else {
+            model.lifecycleStatus = "Quick Look opens one selected Waste Basket item at a time."
+            return
+        }
+        model.selectedLifecycleIDs = [item.id]
+        presentQuickLook(for: item)
+    }
+
+    private func presentQuickLook(
+        for item: LifecycleItem,
+        direction: OwnerSelectionDirection = .next
+    ) {
         Task { @MainActor in
             guard let url = await model.prepareLifecycleQuickLookURL(for: item) else {
                 return
             }
             quickLook.present(
                 urls: [url],
-                metadata: [
-                    BackstageQuickLookMetadata(
-                        assetID: item.mediaID,
-                        filename: item.filename.isEmpty ? item.mediaID : item.filename,
-                        title: item.title.isEmpty ? "Untitled" : item.title,
-                        keywords: [],
-                        locationLabel: item.sourceSlug,
-                        capturedAt: item.capturedAt,
-                        rating: 0,
-                        color: "",
-                        state: item.state == "hidden"
-                            ? "Recoverable"
-                            : "Active global tombstone",
-                        shortcutHint: "Escape closes Quick Look"
-                    )
-                ]
+                metadata: [lifecycleQuickLookMetadata(for: item)],
+                onShortcut: { shortcut, assetID in
+                    switch shortcut {
+                    case .previous:
+                        moveQuickLook(
+                            from: assetID,
+                            direction: .previous
+                        )
+                    case .next:
+                        moveQuickLook(
+                            from: assetID,
+                            direction: .next
+                        )
+                    case .pick:
+                        restoreQuickLookItem(
+                            assetID: assetID,
+                            direction: direction
+                        )
+                    case .wasteBasket:
+                        guard !model.isRunningLifecycle,
+                              !model.lifecycleQueueing,
+                              model.lifecyclePendingActionID == nil
+                        else { return false }
+                        model.selectedLifecycleIDs = [assetID]
+                        confirmingDeleteSelected = true
+                    case .hide, .approve, .returnToReview, .unpick, .rating, .color:
+                        return false
+                    }
+                    return true
+                }
             )
         }
+    }
+
+    private func lifecycleQuickLookMetadata(
+        for item: LifecycleItem
+    ) -> BackstageQuickLookMetadata {
+        BackstageQuickLookMetadata(
+            assetID: item.mediaID,
+            filename: item.filename.isEmpty ? item.mediaID : item.filename,
+            title: item.title.isEmpty ? "Untitled" : item.title,
+            keywords: [],
+            locationLabel: item.sourceSlug,
+            capturedAt: item.capturedAt,
+            rating: 0,
+            color: "",
+            state: item.state == "hidden"
+                ? "Recoverable"
+                : "Active global tombstone",
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P put back • X delete selected recoverable • Escape closes"
+        )
+    }
+
+    private func moveQuickLook(
+        from assetID: String,
+        direction: OwnerSelectionDirection
+    ) {
+        let items = sortedLifecycleItems
+        guard let index = items.firstIndex(where: { $0.id == assetID }) else {
+            return
+        }
+        let nextIndex = index + (direction == .previous ? -1 : 1)
+        guard items.indices.contains(nextIndex) else { return }
+        let next = items[nextIndex]
+        model.selectedLifecycleIDs = [next.id]
+        presentQuickLook(for: next, direction: direction)
+    }
+
+    private func restoreQuickLookItem(
+        assetID: String,
+        direction: OwnerSelectionDirection
+    ) {
+        guard model.lifecycleItems.contains(where: {
+            $0.id == assetID && $0.state == "hidden"
+        }) else {
+            model.lifecycleStatus = "Put back is available only for a recoverable Waste Basket item."
+            return
+        }
+        guard !model.isRunningLifecycle,
+              !model.lifecycleQueueing,
+              model.lifecyclePendingActionID == nil
+        else { return }
+        let before = sortedLifecycleItems
+        model.selectedLifecycleIDs = [assetID]
+        Task { @MainActor in
+            await model.restoreLifecycleSelection()
+            guard quickLook.isVisible else { return }
+            let remaining = sortedLifecycleItems
+            guard !remaining.contains(where: { $0.id == assetID && $0.state == "hidden" }) else {
+                if let item = remaining.first(where: { $0.id == assetID }) {
+                    quickLook.updateMetadata(lifecycleQuickLookMetadata(for: item))
+                }
+                return
+            }
+            guard let next = lifecycleReplacement(
+                from: before,
+                removing: assetID,
+                remaining: remaining,
+                direction: direction
+            ) else {
+                quickLook.dismiss()
+                return
+            }
+            model.selectedLifecycleIDs = [next.id]
+            presentQuickLook(for: next, direction: direction)
+        }
+    }
+
+    private func lifecycleReplacement(
+        from items: [LifecycleItem],
+        removing assetID: String,
+        remaining: [LifecycleItem],
+        direction: OwnerSelectionDirection
+    ) -> LifecycleItem? {
+        guard let removedIndex = items.firstIndex(where: { $0.id == assetID }) else {
+            return remaining.first
+        }
+        let preferredIDs: [String]
+        switch direction {
+        case .next:
+            preferredIDs = Array(items.dropFirst(removedIndex + 1).map(\.id))
+                + Array(items[..<removedIndex].reversed().map(\.id))
+        case .previous:
+            preferredIDs = Array(items[..<removedIndex].reversed().map(\.id))
+                + Array(items.dropFirst(removedIndex + 1).map(\.id))
+        }
+        return preferredIDs.lazy.compactMap { preferredID in
+            remaining.first(where: { $0.id == preferredID })
+        }.first ?? remaining.first
     }
 
     var body: some View {
@@ -733,6 +856,12 @@ private struct LifecycleView: View {
                 }
             }
             .onKeyPress(.space) {
+                guard model.selectedLifecycleIDs.count == 1 else {
+                    model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
+                        ? "Select one Waste Basket item before opening Quick Look."
+                        : "Quick Look opens one selected Waste Basket item at a time."
+                    return .handled
+                }
                 guard let item = sortedLifecycleItems.first(where: {
                     model.selectedLifecycleIDs.contains($0.id)
                 }) else {

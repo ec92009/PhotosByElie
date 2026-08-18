@@ -9,10 +9,18 @@ import SwiftUI
 private enum ReviewQuickLookPresenter {
     static func present(
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection = .next
     ) {
         let ids = model.selectedReviewAssetIDs
-        guard !ids.isEmpty else { return }
+        guard !ids.isEmpty else {
+            model.reviewStatus = "Select one Review item before opening Quick Look."
+            return
+        }
+        guard ids.count == 1 else {
+            model.reviewStatus = "Quick Look opens one selected Review item at a time."
+            return
+        }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
             let urls = await model.prepareReviewQuickLookURLs()
@@ -30,14 +38,14 @@ private enum ReviewQuickLookPresenter {
                     switch shortcut {
                     case .previous:
                         navigate(
-                            by: -1,
+                            direction: .previous,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
                         )
                     case .next:
                         navigate(
-                            by: 1,
+                            direction: .next,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
@@ -47,14 +55,23 @@ private enum ReviewQuickLookPresenter {
                             .approve,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction
                         )
                     case .hide:
                         applyReviewAction(
                             .hide,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction
+                        )
+                    case .wasteBasket:
+                        applyWasteBasket(
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator,
+                            removalDirection: direction
                         )
                     case .unpick:
                         model.clickReviewItem(assetID, modifiers: [])
@@ -70,38 +87,76 @@ private enum ReviewQuickLookPresenter {
     }
 
     private static func navigate(
-        by delta: Int,
+        direction: OwnerSelectionDirection,
         from assetID: String,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator
     ) {
         model.clickReviewItem(assetID, modifiers: [])
-        model.moveReviewSelection(by: delta, extending: false)
+        model.moveReviewSelection(
+            by: direction == .previous ? -1 : 1,
+            extending: false
+        )
         guard model.focusedReviewItem?.id != assetID, coordinator.isVisible else { return }
-        present(model: model, coordinator: coordinator)
+        present(model: model, coordinator: coordinator, direction: direction)
     }
 
     private static func applyReviewAction(
         _ action: FixtureReviewAction,
         assetID: String,
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection
     ) {
         let wasVisible = model.reviewItems.contains { $0.id == assetID }
         model.clickReviewItem(assetID, modifiers: [])
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
-            await model.applyReviewAction(action)
+            await model.applyReviewAction(
+                action,
+                removalDirection: removalDirection
+            )
             guard coordinator.isVisible else { return }
             let remainsVisible = model.reviewItems.contains { $0.id == assetID }
             if wasVisible && !remainsVisible {
                 if model.focusedReviewItem == nil {
                     coordinator.dismiss()
                 } else {
-                    present(model: model, coordinator: coordinator)
+                    present(
+                        model: model,
+                        coordinator: coordinator,
+                        direction: removalDirection
+                    )
                 }
             } else if let item = metadata(for: assetID, model: model) {
                 coordinator.updateMetadata(item)
+            }
+        }
+    }
+
+    private static func applyWasteBasket(
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection
+    ) {
+        model.clickReviewItem(assetID, modifiers: [])
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            await model.moveReviewSelectionToWasteBasket(
+                removalDirection: removalDirection
+            ) { succeeded, replacementID in
+                guard coordinator.isVisible else { return }
+                guard succeeded else { return }
+                if replacementID != nil {
+                    present(
+                        model: model,
+                        coordinator: coordinator,
+                        direction: removalDirection
+                    )
+                } else {
+                    coordinator.dismiss()
+                }
             }
         }
     }
@@ -125,7 +180,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: state,
-            shortcutHint: "Shortcuts: ←/→ navigate • A approve • H hide • U unpick"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick"
         )
     }
 }

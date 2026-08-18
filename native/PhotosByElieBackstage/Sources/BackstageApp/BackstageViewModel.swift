@@ -2448,7 +2448,10 @@ final class BackstageViewModel: ObservableObject {
         )
     }
 
-    func applyPickShortcut(_ action: SidecarPickAction) async {
+    func applyPickShortcut(
+        _ action: SidecarPickAction,
+        removalDirection: OwnerSelectionDirection = .next
+    ) async {
         let semanticAction: FixtureCullingAction = switch action {
         case .pick: .include
         case .reject: .exclude
@@ -2466,13 +2469,20 @@ final class BackstageViewModel: ObservableObject {
             case .hidden: "Exclude"
             case .undecided: "Clear fixture decision"
             }
-            await applyFixturePlacement(state, label: label)
+            await applyFixturePlacement(
+                state,
+                label: label,
+                removalDirection: removalDirection
+            )
         case .globalTombstone:
             return
         }
     }
 
-    func moveCullingSelectionToWasteBasket() async {
+    func moveCullingSelectionToWasteBasket(
+        removalDirection: OwnerSelectionDirection = .next,
+        onTerminal: ((Bool, String?) -> Void)? = nil
+    ) async {
         guard !isApplyingCullingDecision,
               !cullingWasteBasketQueueing,
               cullingWasteBasketPendingActionID == nil else {
@@ -2486,6 +2496,8 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Select one or more Photos items."
             return
         }
+        let previousIDs = visibleCullingAssets.map(\.id)
+        let focusedID = cullingSelection.focusedID ?? ids.first
         let fixtureID = selectedFixtureID
         cullingWasteBasketQueueing = true
         cullingStatus = "Submitting X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Culling remains available."
@@ -2506,6 +2518,24 @@ final class BackstageViewModel: ObservableObject {
                     self.cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
                     if !self.selectedFixtureID.isEmpty, self.cullingPool == nil {
                         await self.loadFixtureCullingWindow()
+                    } else {
+                        self.replaceCullingItems()
+                    }
+                    if let focusedID {
+                        var selection = OwnerSelectionModel(
+                            orderedIDs: previousIDs,
+                            selectedIDs: [focusedID],
+                            anchorID: focusedID,
+                            focusedID: focusedID
+                        )
+                        let replacement = selection.replaceItems(
+                            self.visibleCullingAssets.map(\.id),
+                            selectingSuccessorAfterRemoving: focusedID,
+                            direction: removalDirection
+                        )
+                        self.cullingSelection = selection
+                        self.selectedPhotoIDs = selection.selectedIDs
+                        onTerminal?(true, replacement)
                     }
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
@@ -2514,11 +2544,13 @@ final class BackstageViewModel: ObservableObject {
                     } else {
                         self.cullingWasteBasketPendingActionID = nil
                         self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                        onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.cullingWasteBasketQueueing = false
                 self.cullingStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                onTerminal?(false, nil)
             }
             self.cullingWasteBasketMonitorTask = nil
         }
@@ -2894,7 +2926,10 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func moveReviewSelectionToWasteBasket() async {
+    func moveReviewSelectionToWasteBasket(
+        removalDirection: OwnerSelectionDirection = .next,
+        onTerminal: ((Bool, String?) -> Void)? = nil
+    ) async {
         guard !isRunningReview,
               !reviewWasteBasketQueueing,
               reviewWasteBasketPendingActionID == nil else {
@@ -2910,6 +2945,7 @@ final class BackstageViewModel: ObservableObject {
         }
         let fixtureID = selectedFixtureID
         let focusedID = reviewSelection.focusedID ?? ids.first
+        let previousIDs = reviewItems.map(\.id)
         reviewWasteBasketQueueing = true
         reviewStatus = "Submitting X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s")… Review remains available."
         reviewWasteBasketMonitorTask = Task { @MainActor [weak self] in
@@ -2934,17 +2970,23 @@ final class BackstageViewModel: ObservableObject {
                     window.items.removeAll { ids.contains($0.id) }
                     self.fixtureReviewWindow = window
                     let orderedIDs = self.reviewItems.map(\.id)
-                    let replacementID = orderedIDs.contains(focusedID ?? "")
-                        ? focusedID
-                        : orderedIDs.first
-                    self.reviewSelection = OwnerSelectionModel(
-                        orderedIDs: orderedIDs,
-                        selectedIDs: Set(replacementID.map { [$0] } ?? []),
-                        anchorID: replacementID,
-                        focusedID: replacementID
+                    var selection = OwnerSelectionModel(
+                        orderedIDs: previousIDs,
+                        selectedIDs: Set(focusedID.map { [$0] } ?? []),
+                        anchorID: focusedID,
+                        focusedID: focusedID
                     )
+                    let replacementID = focusedID.flatMap {
+                        selection.replaceItems(
+                            orderedIDs,
+                            selectingSuccessorAfterRemoving: $0,
+                            direction: removalDirection
+                        )
+                    }
+                    self.reviewSelection = selection
                     self.syncReviewDraft()
                     self.reviewStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to Waste Basket through action \(action.id)."
+                    onTerminal?(true, replacementID)
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
@@ -2952,11 +2994,13 @@ final class BackstageViewModel: ObservableObject {
                     } else {
                         self.reviewWasteBasketPendingActionID = nil
                         self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                        onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.reviewWasteBasketQueueing = false
                 self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                onTerminal?(false, nil)
             }
             self.reviewWasteBasketMonitorTask = nil
         }
@@ -2972,7 +3016,11 @@ final class BackstageViewModel: ObservableObject {
         scheduleReviewMetadataAutosave()
     }
 
-    func applyReviewAction(_ action: FixtureReviewAction, propagate: Bool = false) async {
+    func applyReviewAction(
+        _ action: FixtureReviewAction,
+        propagate: Bool = false,
+        removalDirection: OwnerSelectionDirection = .next
+    ) async {
         guard !isRunningReview else {
             reviewStatus = "Finish the current Review action first."
             return
@@ -3075,11 +3123,22 @@ final class BackstageViewModel: ObservableObject {
             }
             retainReviewResultInCurrentWindow(result, action: action)
             let orderedIDs = reviewItems.map(\.id)
-            let replacementID = orderedIDs.contains(anchor)
-                ? anchor
-                : orderedIDs.indices.contains(oldIndex)
-                    ? orderedIDs[oldIndex]
-                    : orderedIDs.last
+            let replacementID: String?
+            if orderedIDs.contains(anchor) {
+                replacementID = anchor
+            } else {
+                switch removalDirection {
+                case .next:
+                    replacementID = orderedIDs.indices.contains(oldIndex)
+                        ? orderedIDs[oldIndex]
+                        : orderedIDs.last
+                case .previous:
+                    let previousIndex = oldIndex - 1
+                    replacementID = orderedIDs.indices.contains(previousIndex)
+                        ? orderedIDs[previousIndex]
+                        : orderedIDs.first
+                }
+            }
             let retainedSelection = Set(ids).intersection(orderedIDs)
             reviewSelection = OwnerSelectionModel(
                 orderedIDs: orderedIDs,
@@ -4007,7 +4066,8 @@ final class BackstageViewModel: ObservableObject {
 
     private func applyFixturePlacement(
         _ state: FixturePlacementState,
-        label: String
+        label: String,
+        removalDirection: OwnerSelectionDirection = .next
     ) async {
         let ids = selectedCullingAssetIDs
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
@@ -4030,7 +4090,8 @@ final class BackstageViewModel: ObservableObject {
         if let focusedBefore {
             _ = cullingSelection.replaceItems(
                 visibleIDs,
-                selectingSuccessorAfterRemoving: focusedBefore
+                selectingSuccessorAfterRemoving: focusedBefore,
+                direction: removalDirection
             )
         } else {
             cullingSelection.replaceItems(visibleIDs)

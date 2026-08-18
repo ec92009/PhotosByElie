@@ -313,6 +313,12 @@ struct UploadView: View {
             quickLook.dismiss()
             return
         }
+        guard model.selectedDeliveryIDs.count == 1 else {
+            model.nativeUploadStatus = model.selectedDeliveryIDs.isEmpty
+                ? "Select one Upload item before opening Quick Look."
+                : "Quick Look opens one selected Upload item at a time."
+            return
+        }
         guard let item = sortedItems(plan).first(where: {
             model.selectedDeliveryIDs.contains($0.id)
         }) else {
@@ -321,7 +327,10 @@ struct UploadView: View {
         presentUploadQuickLook(item)
     }
 
-    private func presentUploadQuickLook(_ item: NativeUploadPlanItem) {
+    private func presentUploadQuickLook(
+        _ item: NativeUploadPlanItem,
+        direction: OwnerSelectionDirection = .next
+    ) {
         Task {
             guard let url = await model.prepareNativeUploadQuickLookURL(for: item) else {
                 return
@@ -338,7 +347,7 @@ struct UploadView: View {
                 rating: decision?.rating ?? source?.rating ?? 0,
                 color: decision?.color ?? source?.color ?? "",
                 state: item.deliveryState,
-                shortcutHint: "Shortcuts: ←/→ navigate • H hide • R return to Review"
+                shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • R return to Review"
             )
             quickLook.present(
                 urls: [url],
@@ -347,14 +356,20 @@ struct UploadView: View {
                     guard !model.isRunningDelivery else { return false }
                     switch shortcut {
                     case .previous:
-                        moveUploadQuickLook(from: assetID, by: -1)
+                        moveUploadQuickLook(from: assetID, direction: .previous)
                     case .next:
-                        moveUploadQuickLook(from: assetID, by: 1)
+                        moveUploadQuickLook(from: assetID, direction: .next)
                     case .hide:
-                        hideCurrentUploadQuickLook(assetID: assetID)
+                        hideCurrentUploadQuickLook(
+                            assetID: assetID,
+                            removalDirection: direction
+                        )
                     case .returnToReview:
-                        returnCurrentUploadQuickLookToReview(assetID: assetID)
-                    case .pick, .approve, .unpick, .rating, .color:
+                        returnCurrentUploadQuickLookToReview(
+                            assetID: assetID,
+                            removalDirection: direction
+                        )
+                    case .pick, .approve, .unpick, .rating, .color, .wasteBasket:
                         return false
                     }
                     return true
@@ -363,30 +378,31 @@ struct UploadView: View {
         }
     }
 
-    private func moveUploadQuickLook(from assetID: String, by delta: Int) {
+    private func moveUploadQuickLook(
+        from assetID: String,
+        direction: OwnerSelectionDirection
+    ) {
         guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
         guard let index = items.firstIndex(where: { $0.id == assetID }) else {
             return
         }
-        let nextIndex = index + delta
+        let nextIndex = index + (direction == .previous ? -1 : 1)
         guard items.indices.contains(nextIndex) else { return }
         let next = items[nextIndex]
         model.selectedDeliveryIDs = [next.id]
-        presentUploadQuickLook(next)
+        presentUploadQuickLook(next, direction: direction)
     }
 
-    private func hideCurrentUploadQuickLook(assetID: String) {
+    private func hideCurrentUploadQuickLook(
+        assetID: String,
+        removalDirection: OwnerSelectionDirection
+    ) {
         guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
-        guard let currentIndex = items.firstIndex(where: { $0.id == assetID }) else {
+        guard items.contains(where: { $0.id == assetID }) else {
             return
         }
-        let preferredNextID = items.indices.contains(currentIndex + 1)
-            ? items[currentIndex + 1].id
-            : items.indices.contains(currentIndex - 1)
-                ? items[currentIndex - 1].id
-                : nil
         model.selectedDeliveryIDs = [assetID]
         Task {
             await model.hideSelectedUploads()
@@ -395,29 +411,30 @@ struct UploadView: View {
                 return
             }
             let remaining = sortedItems(updatedPlan)
-            let next = preferredNextID.flatMap { preferredID in
-                remaining.first(where: { $0.id == preferredID })
-            } ?? remaining.first
+            let next = directionalUploadReplacement(
+                from: items,
+                removing: assetID,
+                remaining: remaining,
+                direction: removalDirection
+            )
             guard let next else {
                 quickLook.dismiss()
                 return
             }
             model.selectedDeliveryIDs = [next.id]
-            presentUploadQuickLook(next)
+            presentUploadQuickLook(next, direction: removalDirection)
         }
     }
 
-    private func returnCurrentUploadQuickLookToReview(assetID: String) {
+    private func returnCurrentUploadQuickLookToReview(
+        assetID: String,
+        removalDirection: OwnerSelectionDirection
+    ) {
         guard let plan = model.nativeUploadPlan else { return }
         let items = sortedItems(plan)
-        guard let currentIndex = items.firstIndex(where: { $0.id == assetID }) else {
+        guard items.contains(where: { $0.id == assetID }) else {
             return
         }
-        let preferredNextID = items.indices.contains(currentIndex + 1)
-            ? items[currentIndex + 1].id
-            : items.indices.contains(currentIndex - 1)
-                ? items[currentIndex - 1].id
-                : nil
         model.selectedDeliveryIDs = [assetID]
         Task {
             await model.returnSelectedUploadsToReview()
@@ -426,16 +443,42 @@ struct UploadView: View {
                 return
             }
             let remaining = sortedItems(updatedPlan)
-            let next = preferredNextID.flatMap { preferredID in
-                remaining.first(where: { $0.id == preferredID })
-            } ?? remaining.first
+            let next = directionalUploadReplacement(
+                from: items,
+                removing: assetID,
+                remaining: remaining,
+                direction: removalDirection
+            )
             guard let next else {
                 quickLook.dismiss()
                 return
             }
             model.selectedDeliveryIDs = [next.id]
-            presentUploadQuickLook(next)
+            presentUploadQuickLook(next, direction: removalDirection)
         }
+    }
+
+    private func directionalUploadReplacement(
+        from items: [NativeUploadPlanItem],
+        removing assetID: String,
+        remaining: [NativeUploadPlanItem],
+        direction: OwnerSelectionDirection
+    ) -> NativeUploadPlanItem? {
+        guard let removedIndex = items.firstIndex(where: { $0.id == assetID }) else {
+            return remaining.first
+        }
+        let preferredIDs: [String]
+        switch direction {
+        case .next:
+            preferredIDs = Array(items.dropFirst(removedIndex + 1).map(\.id))
+                + Array(items[..<removedIndex].reversed().map(\.id))
+        case .previous:
+            preferredIDs = Array(items[..<removedIndex].reversed().map(\.id))
+                + Array(items.dropFirst(removedIndex + 1).map(\.id))
+        }
+        return preferredIDs.lazy.compactMap { preferredID in
+            remaining.first(where: { $0.id == preferredID })
+        }.first ?? remaining.first
     }
 }
 

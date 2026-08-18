@@ -20,6 +20,7 @@ enum BackstageQuickLookShortcut: Equatable {
     case next
     case pick
     case hide
+    case wasteBasket
     case approve
     case returnToReview
     case unpick
@@ -203,14 +204,18 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         switch event.keyCode {
         case 123: return .previous
         case 124: return .next
+        case 126: return .previous
+        case 125: return .next
         default: break
         }
         return switch event.charactersIgnoringModifiers?.lowercased() {
         case "p": .pick
         case "h": .hide
+        case "x": .wasteBasket
         case "a": .approve
         case "r": .returnToReview
         case "u": .unpick
+        case "0": .rating(0)
         case "1": .rating(1)
         case "2": .rating(2)
         case "3": .rating(3)

@@ -9,10 +9,18 @@ import SwiftUI
 private enum CullingQuickLookPresenter {
     static func present(
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection = .next
     ) {
         let ids = model.selectedCullingAssetIDs
-        guard !ids.isEmpty else { return }
+        guard !ids.isEmpty else {
+            model.cullingStatus = "Select one Culling item before opening Quick Look."
+            return
+        }
+        guard ids.count == 1 else {
+            model.cullingStatus = "Quick Look opens one selected Culling item at a time."
+            return
+        }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
             let urls = await model.prepareQuickLookURLs()
@@ -30,14 +38,14 @@ private enum CullingQuickLookPresenter {
                     switch shortcut {
                     case .previous:
                         navigate(
-                            by: -1,
+                            direction: .previous,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
                         )
                     case .next:
                         navigate(
-                            by: 1,
+                            direction: .next,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
@@ -47,28 +55,55 @@ private enum CullingQuickLookPresenter {
                             .pick,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction
                         )
                     case .hide:
                         applyPlacement(
                             .reject,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction
+                        )
+                    case .wasteBasket:
+                        applyWasteBasket(
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator,
+                            removalDirection: direction
                         )
                     case let .rating(value):
+                        let previousIDs = model.visibleCullingAssets.map(\.id)
+                        let wasVisible = previousIDs.contains(assetID)
                         model.clickCullingAsset(assetID, modifiers: [])
                         Task { [weak model, weak coordinator] in
                             guard let model, let coordinator else { return }
                             await model.applyRatingShortcut(value)
-                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                            advanceOrRefresh(
+                                assetID: assetID,
+                                previousIDs: previousIDs,
+                                wasVisible: wasVisible,
+                                model: model,
+                                coordinator: coordinator,
+                                direction: direction
+                            )
                         }
                     case let .color(value):
+                        let previousIDs = model.visibleCullingAssets.map(\.id)
+                        let wasVisible = previousIDs.contains(assetID)
                         model.clickCullingAsset(assetID, modifiers: [])
                         Task { [weak model, weak coordinator] in
                             guard let model, let coordinator else { return }
                             await model.applyColorShortcut(value)
-                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                            advanceOrRefresh(
+                                assetID: assetID,
+                                previousIDs: previousIDs,
+                                wasVisible: wasVisible,
+                                model: model,
+                                coordinator: coordinator,
+                                direction: direction
+                            )
                         }
                     case .approve, .returnToReview, .unpick:
                         return false
@@ -80,22 +115,26 @@ private enum CullingQuickLookPresenter {
     }
 
     private static func navigate(
-        by delta: Int,
+        direction: OwnerSelectionDirection,
         from assetID: String,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator
     ) {
         model.clickCullingAsset(assetID, modifiers: [])
-        model.moveCullingSelection(by: delta, extending: false)
+        model.moveCullingSelection(
+            by: direction == .previous ? -1 : 1,
+            extending: false
+        )
         guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
-        present(model: model, coordinator: coordinator)
+        present(model: model, coordinator: coordinator, direction: direction)
     }
 
     private static func applyPlacement(
         _ action: SidecarPickAction,
         assetID: String,
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection
     ) {
         let wasVisible = model.visibleCullingAssets.contains { $0.id == assetID }
         // Quick Look can be opened from a command-click multi-selection. Do
@@ -108,18 +147,88 @@ private enum CullingQuickLookPresenter {
         }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
-            await model.applyPickShortcut(action)
+            await model.applyPickShortcut(
+                action,
+                removalDirection: removalDirection
+            )
             guard coordinator.isVisible else { return }
             let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
             if wasVisible && !remainsVisible {
                 if model.focusedCullingAssetID == nil {
                     coordinator.dismiss()
                 } else {
-                    present(model: model, coordinator: coordinator)
+                    present(
+                        model: model,
+                        coordinator: coordinator,
+                        direction: removalDirection
+                    )
                 }
             } else {
                 refreshMetadata(assetID, model: model, coordinator: coordinator)
             }
+        }
+    }
+
+    private static func applyWasteBasket(
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection
+    ) {
+        if !model.cullingSelection.selectedIDs.contains(assetID) {
+            model.clickCullingAsset(assetID, modifiers: [])
+        }
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            await model.moveCullingSelectionToWasteBasket(
+                removalDirection: removalDirection
+            ) { succeeded, replacementID in
+                guard coordinator.isVisible else { return }
+                guard succeeded else { return }
+                if replacementID != nil {
+                    present(
+                        model: model,
+                        coordinator: coordinator,
+                        direction: removalDirection
+                    )
+                } else {
+                    coordinator.dismiss()
+                }
+            }
+        }
+    }
+
+    private static func advanceOrRefresh(
+        assetID: String,
+        previousIDs: [String],
+        wasVisible: Bool,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection
+    ) {
+        guard coordinator.isVisible else { return }
+        let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
+        guard wasVisible && !remainsVisible else {
+            refreshMetadata(assetID, model: model, coordinator: coordinator)
+            return
+        }
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: [assetID],
+            anchorID: assetID,
+            focusedID: assetID
+        )
+        let replacement = selection.replaceItems(
+            model.visibleCullingAssets.map(\.id),
+            selectingSuccessorAfterRemoving: assetID,
+            direction: direction
+        )
+        model.cullingSelection = selection
+        model.selectedPhotoIDs = selection.selectedIDs
+        if replacement != nil {
+            present(model: model, coordinator: coordinator, direction: direction)
+        } else {
+            coordinator.dismiss()
         }
     }
 
@@ -151,7 +260,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: ←/→ navigate • H exclude • P include • 1–5 rating • 6–9 color"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H exclude • P include • X Waste Basket • 0–5 rating • 6–9 color"
         )
     }
 }

@@ -35,6 +35,7 @@ from scripts.new_owner_connector import (
     drain_hosted_lifecycle_requests,
     execute_action,
     next_poll_interval,
+    process_direct_action,
     process_exact_action,
     process_once,
     start_local_status_server,
@@ -329,6 +330,102 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             release_mutation.set()
             write_thread.join(2)
             self.assertFalse(write_thread.is_alive())
+
+    def test_process_once_prioritizes_fixture_tree_over_maintenance(self):
+        config = ConnectorConfig("https://worker.test", "max", "x" * 32, Path("/tmp/repo"))
+        order = []
+
+        class FakeClient:
+            def __init__(self):
+                self.records = {
+                    "owner-action-maintenance": {
+                        "id": "owner-action-maintenance",
+                        "type": "sidecar-photos-index-sync",
+                        "state": "queued",
+                        "createdAt": "2026-08-19T19:01:00Z",
+                    },
+                    "owner-action-tree": {
+                        "id": "owner-action-tree",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "createdAt": "2026-08-19T19:00:00Z",
+                        "payload": {"manifest": {"mode": "fixture-tree-list"}},
+                    },
+                }
+
+            def heartbeat(self):
+                return {"ok": True}
+
+            def actions(self):
+                return [dict(self.records["owner-action-maintenance"]), dict(self.records["owner-action-tree"])]
+
+            def action(self, action_id):
+                return dict(self.records[action_id])
+
+            def transition(self, action_id, transition, payload=None):
+                record = self.records[action_id]
+                if transition == "claim":
+                    record = {**record, "state": "claimed", "claim": {"connectorId": "max"}}
+                elif transition == "complete":
+                    record = {
+                        **record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                self.records[action_id] = record
+                return {"action": dict(record)}
+
+        def fake_execute(_config, action, **_kwargs):
+            order.append(action["id"])
+            return {"id": action["id"]}
+
+        with patch("scripts.new_owner_connector.drain_deployed_lifecycle_outbox", return_value=[]), \
+             patch("scripts.new_owner_connector.drain_hosted_lifecycle_requests", return_value=[]), \
+             patch("scripts.new_owner_connector.execute_action", side_effect=fake_execute):
+            self.assertEqual(process_once(config, FakeClient()), 2)
+
+        self.assertEqual(order, ["owner-action-tree", "owner-action-maintenance"])
+
+    def test_direct_read_only_wake_runs_while_maintenance_process_lock_is_held(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            class FakeClient:
+                def __init__(self):
+                    self.record = {
+                        "id": "owner-action-tree",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "payload": {"manifest": {"mode": "fixture-tree-list"}},
+                    }
+
+                def action(self, _action_id):
+                    return dict(self.record)
+
+                def transition(self, _action_id, transition, payload=None):
+                    if transition == "claim":
+                        self.record = {
+                            **self.record,
+                            "state": "claimed",
+                            "claim": {"connectorId": "max"},
+                        }
+                    elif transition == "complete":
+                        self.record = {
+                            **self.record,
+                            "state": "completed",
+                            "result": (payload or {}).get("result", {}),
+                        }
+                    return {"action": dict(self.record)}
+
+            with _connector_process_lock(config) as acquired:
+                self.assertTrue(acquired)
+                with patch(
+                    "scripts.new_owner_connector.execute_action",
+                    return_value={"fixtures": []},
+                ):
+                    self.assertEqual(process_direct_action(config, FakeClient(), "owner-action-tree"), 1)
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

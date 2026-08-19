@@ -995,7 +995,6 @@ final class BackstageViewModel: ObservableObject {
             authenticationStatus = "Authenticated with this Mac's revocable device credential."
             await refreshActions()
             await loadFixtures()
-            await syncPhotosIncrementally()
         case .renewalFailed:
             authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
             status = "Retry Owner session"

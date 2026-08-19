@@ -260,6 +260,17 @@ def _action_is_read_only(action: dict) -> bool:
     return str(manifest.get("mode") or "").strip() in READ_ONLY_FIXTURE_MODES
 
 
+def _action_queue_sort_key(action: dict) -> tuple[int, float]:
+    """Put interactive read-only work ahead of maintenance in a drain."""
+    priority = 0 if _action_is_read_only(action) else 1
+    raw_created_at = str(action.get("createdAt") or action.get("updatedAt") or "").strip()
+    try:
+        created_at = datetime.fromisoformat(raw_created_at.replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError, OverflowError):
+        created_at = 0.0
+    return priority, -created_at
+
+
 def load_config(path: Path) -> ConnectorConfig:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -2062,7 +2073,7 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
         hosted_before = drain_hosted_lifecycle_requests(config, client)
     client.heartbeat()
     processed = 0
-    for action in client.actions():
+    for action in sorted(client.actions(), key=_action_queue_sort_key):
         action_id = str(action.get("id") or "").strip()
         if not action_id:
             continue
@@ -2118,6 +2129,20 @@ def _connector_process_lock(config: ConnectorConfig):
         handle.close()
 
 
+def process_direct_action(config: ConnectorConfig, client: WorkerClient, action_id: str) -> int:
+    """Execute one woken action, allowing read-only work beside maintenance."""
+    action = client.action(action_id)
+    if _action_is_read_only(action):
+        _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
+        return int(did_process)
+
+    with _connector_process_lock(config) as acquired:
+        if not acquired:
+            return 0
+        _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
+        return int(did_process)
+
+
 def next_poll_interval(base_interval: int, current_interval: int, processed: int, *, interactive: bool = False) -> int:
     """Back off while idle, but stay responsive during an interactive Owner lease."""
     base = max(2, min(300, int(base_interval)))
@@ -2128,8 +2153,11 @@ def next_poll_interval(base_interval: int, current_interval: int, processed: int
     return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
 
 
-def _run_connector(config: ConnectorConfig, *, once: bool) -> int:
+def _run_connector(config: ConnectorConfig, *, once: bool, action_id: str = "") -> int:
     client = WorkerClient(config)
+    if action_id:
+        client.heartbeat()
+        return process_direct_action(config, client, action_id)
     polling_lease = InteractivePollingLease()
     if not once:
         start_local_status_server(config, polling_lease, client)
@@ -2185,6 +2213,11 @@ def main() -> int:
         action="store_true",
         help="Verify config and installed runtime locally, print redacted JSON, and exit without network access.",
     )
+    parser.add_argument(
+        "--action-id",
+        default="",
+        help="Wake and execute one durable action instead of draining the queue.",
+    )
     args = parser.parse_args()
     if (
         os.environ.get("PBE_ON_DEMAND_OWNER_CONNECTOR") == "1"
@@ -2192,6 +2225,8 @@ def main() -> int:
         and not args.status
     ):
         raise SystemExit("On-demand Owner connector launches must use --once.")
+    if args.action_id and not args.once:
+        raise SystemExit("--action-id requires --once.")
     # launchd starts with a deliberately small PATH. Keep the normal local
     # toolchain discoverable to child Sidecar and maintenance processes.
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]
@@ -2210,6 +2245,8 @@ def main() -> int:
             )
         )
         return 0
+    if args.action_id:
+        return _run_connector(config, once=True, action_id=args.action_id)
     with _connector_process_lock(config) as acquired:
         if not acquired:
             return 0

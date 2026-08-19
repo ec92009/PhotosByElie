@@ -152,6 +152,7 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
             plan.scriptURL.path,
             "--config", plan.configURL.path,
             "--once",
+            "--action-id", actionID,
         ]
         process.currentDirectoryURL = plan.dataRoot
         var environment = ProcessInfo.processInfo.environment

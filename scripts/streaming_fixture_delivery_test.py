@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -117,6 +118,34 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertEqual(rows["ub-dead-stale"]["status"], "interrupted")
         self.assertEqual(rows["ub-dead-stale"]["recovery_state"], "recovered")
         self.assertIsNone(rows["ub-dead-stale"]["lease_expires_at"])
+
+    def test_upload_bridge_recovery_observes_a_worker_that_died_in_another_process(self):
+        worker = subprocess.Popen([sys.executable, "-c", "pass"])
+        worker_pid = worker.pid
+        worker.wait(timeout=5)
+        now = datetime(2026, 8, 19, 18, 0, tzinfo=timezone.utc)
+        old = (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                INSERT INTO sidecar_upload_bridge_runs
+                  (run_id, mode, status, execute_upload, limit_count, started_at,
+                   summary_json, created_at, updated_at, worker_pid, worker_token)
+                VALUES (?, 'execute-batch', 'running', 1, 1, ?, '{}', ?, ?, ?, ?)
+                """,
+                ("ub-cross-process-dead", old, old, old, worker_pid, "upload-worker-cross-process"),
+            )
+            conn.commit()
+
+        result = reconcile_stale_upload_bridge_runs(self.root, now=now)
+        self.assertEqual(result["recoveredCount"], 1)
+        with connect(self.root) as conn:
+            row = conn.execute(
+                "SELECT status, recovery_state FROM sidecar_upload_bridge_runs WHERE run_id = ?",
+                ("ub-cross-process-dead",),
+            ).fetchone()
+        self.assertEqual(row["status"], "interrupted")
+        self.assertEqual(row["recovery_state"], "recovered")
 
     def test_empty_fixture_scope_never_falls_back_to_global_queue(self):
         batch = prepare_upload_bridge_execute_batch(self.root, limit=30, asset_ids=[])

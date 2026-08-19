@@ -6,6 +6,7 @@ import plistlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.native_backstage_cutover_audit import (
     BACKSTAGE_APP,
@@ -34,9 +35,6 @@ class NativeBackstageCutoverAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             _make_app(home, BACKSTAGE_APP, "com.photosbyelie.backstage")
-            agents = home / "Library" / "LaunchAgents"
-            agents.mkdir(parents=True)
-            (agents / REQUIRED_LAUNCH_AGENT).write_text("test", encoding="utf-8")
 
             payload = collect_inventory(home, live_probes=False)
 
@@ -44,15 +42,46 @@ class NativeBackstageCutoverAuditTests(unittest.TestCase):
             self.assertTrue(payload["checks"]["legacyOperatorAppsAbsent"])
             self.assertTrue(payload["checks"]["photosBridgeAbsent"])
             self.assertTrue(payload["checks"]["retiredRuntimeArtifactsAbsent"])
+            self.assertTrue(payload["checks"]["ownerLaunchAgentAbsent"])
+
+    def test_legacy_owner_launchagent_fails_inventory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            _make_app(home, BACKSTAGE_APP, "com.photosbyelie.backstage")
+            agents = home / "Library" / "LaunchAgents"
+            agents.mkdir(parents=True)
+            (agents / REQUIRED_LAUNCH_AGENT).write_text("rollback only", encoding="utf-8")
+
+            payload = collect_inventory(home, live_probes=False)
+
+            self.assertFalse(payload["ok"])
+            self.assertFalse(payload["checks"]["ownerLaunchAgentAbsent"])
+
+    def test_on_demand_live_boundary_accepts_closed_legacy_ports(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            _make_app(home, BACKSTAGE_APP, "com.photosbyelie.backstage")
+            with (
+                patch(
+                    "scripts.native_backstage_cutover_audit._http_probe",
+                    side_effect=[
+                        {"reachable": False, "status": None},
+                        {"reachable": True, "status": 410},
+                    ],
+                ),
+                patch("scripts.native_backstage_cutover_audit._listening_pids", return_value=[]),
+            ):
+                payload = collect_inventory(home, live_probes=True)
+
+            self.assertTrue(payload["ok"])
+            self.assertTrue(payload["checks"]["legacyConnectorAbsent"])
+            self.assertTrue(payload["checks"]["legacyRouteDisabled"])
 
     def test_visible_legacy_app_fails_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             _make_app(home, BACKSTAGE_APP, "com.photosbyelie.backstage")
             _make_app(home, LEGACY_APPS[0], "com.photosbyelie.owner")
-            agents = home / "Library" / "LaunchAgents"
-            agents.mkdir(parents=True)
-            (agents / REQUIRED_LAUNCH_AGENT).write_text("test", encoding="utf-8")
 
             payload = collect_inventory(home, live_probes=False)
 
@@ -78,10 +107,6 @@ class NativeBackstageCutoverAuditTests(unittest.TestCase):
                 "retired\n",
                 encoding="utf-8",
             )
-            agents = home / "Library" / "LaunchAgents"
-            agents.mkdir(parents=True)
-            (agents / REQUIRED_LAUNCH_AGENT).write_text("test", encoding="utf-8")
-
             payload = collect_inventory(home, live_probes=False)
 
             self.assertFalse(payload["ok"])

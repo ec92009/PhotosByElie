@@ -24,7 +24,8 @@ web applications. `Owner.sqlite` remains the private curation source of truth.
 - Photos Bridge is installed at
   `/Users/ecohen/Applications/PhotosByElie Photos Bridge.app` with
   `LSUIElement=true`; it has no normal operator window or Dock presence.
-- The Max connector is healthy on port `8766`.
+- The legacy Max connector status service is absent from port `8766`; normal
+  Owner work is now launched on demand by signed Backstage.
 - The obsolete Sidecar listener is absent from port `8011`.
 - `/photosbyelie/open-sidecar` returns `410` unless the explicit
   `PBE_ENABLE_LEGACY_SIDECAR=1` rehearsal rollback flag is present.

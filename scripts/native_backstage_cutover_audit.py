@@ -117,29 +117,22 @@ def collect_inventory(
         "legacyOperatorAppsAbsent": not any(
             app_state[name]["installed"] for name in LEGACY_APPS
         ),
-        "onlyRequiredLaunchAgent": launch_agent_names == [REQUIRED_LAUNCH_AGENT],
+        "ownerLaunchAgentAbsent": REQUIRED_LAUNCH_AGENT not in launch_agent_names,
     }
     services: dict[str, Any] = {"liveProbes": live_probes}
     if live_probes:
         services["connector"] = _http_probe(connector_url)
         services["legacyRoute"] = _http_probe(legacy_route_url)
         services["sidecarListenerPids"] = _listening_pids(8011)
-        try:
-            connector_payload = json.loads(services["connector"].get("body", ""))
-        except (TypeError, json.JSONDecodeError):
-            connector_payload = {}
         checks.update(
             {
-                "connectorHealthy": (
-                    services["connector"].get("status") == 200
-                    and connector_payload.get("ok") is True
-                ),
-                "legacyRouteDisabled": services["legacyRoute"].get("status") == 410,
+                "legacyConnectorAbsent": services["connector"].get("status") != 200,
+                "legacyRouteDisabled": services["legacyRoute"].get("status") in {None, 410},
                 "sidecarListenerAbsent": not services["sidecarListenerPids"],
             }
         )
     return {
-        "schema": "photosbyelie.native-backstage-cutover-audit.v1",
+        "schema": "photosbyelie.native-backstage-cutover-audit.v2",
         "home": str(home),
         "applications": app_state,
         "launchAgents": launch_agent_names,

@@ -719,6 +719,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_sha256 TEXT NOT NULL DEFAULT ''"
         )
+    photos_sync_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(photos_sync_runs)").fetchall()
+    }
+    for column, ddl in {
+        "worker_pid": "ALTER TABLE photos_sync_runs ADD COLUMN worker_pid INTEGER",
+        "worker_token": "ALTER TABLE photos_sync_runs ADD COLUMN worker_token TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "ALTER TABLE photos_sync_runs ADD COLUMN lease_expires_at TEXT",
+        "recovery_state": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_state TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_reason TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_checked_at TEXT",
+    }.items():
+        if column not in photos_sync_columns:
+            conn.execute(ddl)
     reconciliation_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(r2_reconciliation_runs)").fetchall()

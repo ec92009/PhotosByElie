@@ -2,6 +2,7 @@ import sys
 import tempfile
 import unittest
 import hashlib
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,7 +52,7 @@ class FixtureConnectorTest(unittest.TestCase):
         )
         self.assertEqual(attempts, 3)
 
-    def test_photos_sync_recovery_marks_only_stale_running_rows(self):
+    def test_photos_sync_recovery_does_not_terminalize_legacy_rows_by_age(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             with connect(root) as connection:
@@ -92,22 +93,62 @@ class FixtureConnectorTest(unittest.TestCase):
                 now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
                 stale_after_seconds=60 * 60,
             )
-            self.assertEqual(result["recoveredCount"], 1)
-            self.assertEqual(result["recoveredRunIds"], ["stale-run"])
+            self.assertEqual(result["recoveredCount"], 0)
+            self.assertEqual(result["reviewedCount"], 1)
+            self.assertEqual(result["reviewRunIds"], ["stale-run"])
 
             with connect(root) as connection:
                 rows = {
                     row["run_id"]: row
                     for row in connection.execute(
-                        "SELECT run_id, status, stage, error_text, completed_at FROM photos_sync_runs"
+                        """
+                        SELECT run_id, status, stage, error_text, completed_at,
+                               recovery_state, recovery_reason
+                        FROM photos_sync_runs
+                        """
                     )
                 }
-            self.assertEqual(rows["stale-run"]["status"], "failed")
-            self.assertEqual(rows["stale-run"]["stage"], "Recovered after interruption")
-            self.assertIn("worker heartbeat", rows["stale-run"]["error_text"])
-            self.assertEqual(rows["stale-run"]["completed_at"], "2026-08-19T12:00:00Z")
+            self.assertEqual(rows["stale-run"]["status"], "running")
+            self.assertEqual(rows["stale-run"]["recovery_state"], "needs-review")
+            self.assertIn("no durable worker PID/token", rows["stale-run"]["recovery_reason"])
+            self.assertIsNone(rows["stale-run"]["completed_at"])
             self.assertEqual(rows["fresh-run"]["status"], "running")
             self.assertEqual(rows["completed-run"]["status"], "completed")
+
+    def test_photos_sync_recovery_terminalizes_only_a_verified_dead_worker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, worker_pid, worker_token,
+                      created_at, updated_at
+                    ) VALUES (
+                      'dead-worker', 'running', 'Reading Apple Photos metadata',
+                      ?, 'worker-token-dead', '2026-08-19T10:00:00Z',
+                      '2026-08-19T10:00:00Z'
+                    )
+                    """,
+                    (os.getpid(),),
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 1)
+            self.assertEqual(result["recoveredRunIds"], ["dead-worker"])
+
+            with connect(root) as connection:
+                row = connection.execute(
+                    "SELECT status, recovery_state, recovery_reason FROM photos_sync_runs WHERE run_id = 'dead-worker'"
+                ).fetchone()
+            self.assertEqual(row["status"], "failed")
+            self.assertEqual(row["recovery_state"], "recovered")
+            self.assertIn("no longer active", row["recovery_reason"])
 
     def test_photos_sync_worker_persists_failure_receipt(self):
         with tempfile.TemporaryDirectory() as temp_dir:

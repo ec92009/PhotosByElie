@@ -4,6 +4,7 @@ import unittest
 import hashlib
 import os
 import sqlite3
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -149,6 +150,36 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertEqual(row["status"], "failed")
             self.assertEqual(row["recovery_state"], "recovered")
             self.assertIn("no longer active", row["recovery_reason"])
+
+    def test_photos_sync_recovery_observes_a_worker_that_died_in_another_process(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            worker = subprocess.Popen([sys.executable, "-c", "pass"])
+            worker_pid = worker.pid
+            worker.wait(timeout=5)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, worker_pid, worker_token,
+                      created_at, updated_at
+                    ) VALUES (
+                      'cross-process-dead-worker', 'running', 'Reading Apple Photos metadata',
+                      ?, 'worker-token-cross-process', '2026-08-19T10:00:00Z',
+                      '2026-08-19T10:00:00Z'
+                    )
+                    """,
+                    (worker_pid,),
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 1)
+            self.assertEqual(result["recoveredRunIds"], ["cross-process-dead-worker"])
 
     def test_photos_sync_worker_persists_failure_receipt(self):
         with tempfile.TemporaryDirectory() as temp_dir:

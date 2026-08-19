@@ -378,8 +378,9 @@
     }
 
     clearPendingAction(session);
-    if (status === "failed") {
+    if (["failed", "blocked"].includes(status)) {
       const pendingActionError = actionFailureMessage(payload);
+      const disposition = status === "blocked" ? "blocked" : "failed";
       return {
         pendingAction: null,
         pendingActionRefreshing: false,
@@ -387,7 +388,7 @@
         lifecycle: fallbackLifecycle,
         lifecycleRetrying: false,
         lifecycleRetryError: "",
-        message: `The last lifecycle action failed: ${pendingActionError} New actions are available again.`,
+        message: `The last lifecycle action is ${disposition}: ${pendingActionError} New actions are available again.`,
       };
     }
     if (status === "idle") {
@@ -723,7 +724,7 @@
       if (["queued", "running"].includes(actionStatusState(pendingStatus))) {
         throw new Error("A previous PBE Owner action is still safely queued. No new action was sent.");
       }
-      if (actionStatusState(pendingStatus) === "failed") {
+      if (["failed", "blocked"].includes(actionStatusState(pendingStatus))) {
         throw new Error(actionFailureMessage(pendingStatus));
       }
     }
@@ -757,7 +758,7 @@
     applyActionStatus(result);
     if (result.resumed) {
       const resumedStatus = await refreshPendingAction();
-      const detail = actionStatusState(resumedStatus) === "failed"
+      const detail = ["failed", "blocked"].includes(actionStatusState(resumedStatus))
         ? actionFailureMessage(resumedStatus)
         : "A previous PBE Owner action was already active. No new action was sent.";
       throw new Error(detail);
@@ -776,7 +777,7 @@
         continue;
       }
       applyActionStatus(status);
-      if (actionStatusState(status) === "failed") {
+      if (["failed", "blocked"].includes(actionStatusState(status))) {
         throw new Error(actionFailureMessage(status));
       }
       return status;

@@ -1398,6 +1398,13 @@ def drain_hosted_lifecycle_requests(
     for pending in gateway.pending_hosted_lifecycle_requests(config.repo_root):
         request_id = str(pending["requestId"])
         claimed = gateway.claim_hosted_lifecycle_request(config.repo_root, request_id)
+        if claimed.get("state") != "running":
+            drained.append({
+                "requestId": request_id,
+                "state": claimed.get("state") or "failed",
+                **({"error": claimed["error"]} if claimed.get("error") else {}),
+            })
+            continue
         operation_id = f"owner-action:hosted-lifecycle:{request_id}"
         prior_result = gateway.deployed_lifecycle_local_result(
             config.repo_root, operation_id

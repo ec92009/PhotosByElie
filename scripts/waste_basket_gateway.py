@@ -32,6 +32,7 @@ import sidecar_state_db
 DEFAULT_DB = sidecar_state_db.DEFAULT_DB
 EMPTY_CONFIRMATION_TOKEN = "EMPTY_WASTE_BASKET"
 MAX_ASSET_IDS = 500
+MAX_HOSTED_LIFECYCLE_ATTEMPTS = 3
 
 NORMAL_SOURCES = {
     "backstage-culling",
@@ -264,9 +265,11 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
           result_json          TEXT NOT NULL DEFAULT '{}',
           error_text           TEXT NOT NULL DEFAULT '',
           attempt_count        INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+          disposition          TEXT NOT NULL DEFAULT '',
           created_at           TEXT NOT NULL,
           updated_at           TEXT NOT NULL,
-          completed_at         TEXT
+          completed_at         TEXT,
+          blocked_at           TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_state
           ON owner_hosted_lifecycle_requests(state, created_at, request_id);
@@ -285,6 +288,15 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
           END;
         """
     )
+    hosted_columns = _columns(connection, "owner_hosted_lifecycle_requests")
+    if "disposition" not in hosted_columns:
+        connection.execute(
+            "ALTER TABLE owner_hosted_lifecycle_requests ADD COLUMN disposition TEXT NOT NULL DEFAULT ''"
+        )
+    if "blocked_at" not in hosted_columns:
+        connection.execute(
+            "ALTER TABLE owner_hosted_lifecycle_requests ADD COLUMN blocked_at TEXT"
+        )
     connection.commit()
     return connection
 
@@ -295,20 +307,56 @@ def ensure_schema(repo_root: Path, db_path: Path | None = None) -> None:
 
 
 def _hosted_request_payload(row: sqlite3.Row) -> dict[str, Any]:
+    storage_state = str(row["state"])
+    disposition = str(row["disposition"] or "")
+    state = "blocked" if storage_state == "failed" and disposition == "blocked" else storage_state
+    error = str(row["error_text"] or "")
+    next_action = ""
+    if state == "blocked":
+        next_action = (
+            "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action."
+            if _is_missing_canonical_r2_error(error)
+            else "Inspect the recorded error, repair the cause, then submit a new Owner action."
+        )
     return {
         "requestId": str(row["request_id"]),
         "sessionId": str(row["session_id"]),
         "fixtureId": str(row["fixture_id"]),
         "operation": str(row["operation"]),
         "assetIds": json.loads(str(row["asset_ids_json"])),
-        "state": str(row["state"]),
+        "state": state,
+        "storageState": storage_state,
+        "disposition": disposition,
         "result": json.loads(str(row["result_json"] or "{}")),
-        "error": str(row["error_text"] or ""),
+        "error": error,
         "attemptCount": int(row["attempt_count"] or 0),
+        "maxAttempts": MAX_HOSTED_LIFECYCLE_ATTEMPTS,
+        "nextAction": next_action,
         "createdAt": str(row["created_at"]),
         "updatedAt": str(row["updated_at"]),
         "completedAt": str(row["completed_at"] or ""),
+        "blockedAt": str(row["blocked_at"] or ""),
     }
+
+
+def _is_missing_canonical_r2_error(error: str) -> bool:
+    normalized = str(error or "").casefold()
+    return (
+        "canonical r2 mapping is missing" in normalized
+        or "unsupported or incomplete r2 mapping" in normalized
+    )
+
+
+def _blocked_hosted_lifecycle_error(error: str, attempt_count: int) -> str:
+    base = str(error or "Hosted lifecycle request retry budget exhausted.").strip()
+    if _is_missing_canonical_r2_error(base):
+        action = "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action."
+    else:
+        action = "Inspect this error, repair the cause, then submit a new Owner action."
+    return (
+        f"{base} Automatic retries stopped after {attempt_count} attempts. "
+        f"{action}"
+    )[:1000]
 
 
 def queue_hosted_lifecycle_request(
@@ -554,24 +602,58 @@ def claim_hosted_lifecycle_request(
     request_id: str,
     db_path: Path | None = None,
 ) -> dict[str, Any]:
+    normalized_request_id = str(request_id or "").strip()
     connection = _connect(repo_root, db_path)
     try:
         connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request is not claimable")
+        if str(row["state"]) not in {"queued", "running"}:
+            raise WasteBasketError("hosted lifecycle request is not claimable")
+        attempt_count = int(row["attempt_count"] or 0)
+        if attempt_count >= MAX_HOSTED_LIFECYCLE_ATTEMPTS:
+            now = _now()
+            connection.execute(
+                """UPDATE owner_hosted_lifecycle_requests
+                   SET state = 'failed', disposition = 'blocked',
+                       error_text = ?, updated_at = ?, completed_at = ?, blocked_at = ?
+                   WHERE request_id = ? AND state IN ('queued', 'running')""",
+                (
+                    _blocked_hosted_lifecycle_error(
+                        str(row["error_text"] or ""), attempt_count
+                    ),
+                    now,
+                    now,
+                    now,
+                    normalized_request_id,
+                ),
+            )
+            blocked = connection.execute(
+                "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+                (normalized_request_id,),
+            ).fetchone()
+            connection.commit()
+            return _hosted_request_payload(blocked)
         connection.execute(
             """UPDATE owner_hosted_lifecycle_requests
                SET state = 'running', attempt_count = attempt_count + 1,
-                   error_text = '', updated_at = ?
+                   disposition = '', error_text = '', updated_at = ?,
+                   completed_at = NULL, blocked_at = NULL
                WHERE request_id = ? AND state IN ('queued', 'running')""",
-            (_now(), str(request_id or "").strip()),
+            (_now(), normalized_request_id),
         )
-        row = connection.execute(
+        claimed = connection.execute(
             "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
-            (str(request_id or "").strip(),),
+            (normalized_request_id,),
         ).fetchone()
-        if row is None or str(row["state"]) not in {"running", "completed"}:
+        if claimed is None or str(claimed["state"]) != "running":
             raise WasteBasketError("hosted lifecycle request is not claimable")
         connection.commit()
-        return _hosted_request_payload(row)
+        return _hosted_request_payload(claimed)
     except Exception:
         connection.rollback()
         raise
@@ -588,32 +670,48 @@ def finish_hosted_lifecycle_request(
     retryable: bool = False,
     db_path: Path | None = None,
 ) -> dict[str, Any]:
+    normalized_request_id = str(request_id or "").strip()
     connection = _connect(repo_root, db_path)
     try:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
-            "SELECT state FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
-            (str(request_id or "").strip(),),
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
         ).fetchone()
         if row is None:
             raise WasteBasketError("hosted lifecycle request does not exist")
         if str(row["state"]) == "completed":
-            completed = connection.execute(
-                "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
-            ).fetchone()
             connection.rollback()
-            return _hosted_request_payload(completed)
+            return _hosted_request_payload(row)
+        if str(row["state"]) == "failed" and str(row["disposition"] or "") == "blocked":
+            connection.rollback()
+            return _hosted_request_payload(row)
         now = _now()
-        state = "queued" if error and retryable else "failed" if error else "completed"
+        attempt_count = int(row["attempt_count"] or 0)
+        error_text = str(error or "").strip()
+        blocked = bool(error_text and retryable and attempt_count >= MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        state = "failed" if error_text and not retryable else "failed" if blocked else "queued" if error_text else "completed"
+        disposition = "blocked" if blocked else ""
+        stored_error = _blocked_hosted_lifecycle_error(error_text, attempt_count) if blocked else error_text[:1000]
         connection.execute(
             """UPDATE owner_hosted_lifecycle_requests
-               SET state = ?, result_json = ?, error_text = ?, updated_at = ?, completed_at = ?
+               SET state = ?, disposition = ?, result_json = ?, error_text = ?,
+                   updated_at = ?, completed_at = ?, blocked_at = ?
                WHERE request_id = ?""",
-            (state, _json(result or {}), str(error or "")[:1000], now,
-             now if state in {"completed", "failed"} else None, str(request_id or "").strip()),
+            (
+                state,
+                disposition,
+                _json(result or {}),
+                stored_error,
+                now,
+                now if state in {"completed", "failed"} else None,
+                now if blocked else None,
+                normalized_request_id,
+            ),
         )
         completed = connection.execute(
-            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
         ).fetchone()
         connection.commit()
         return _hosted_request_payload(completed)

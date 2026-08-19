@@ -377,6 +377,66 @@ class WasteBasketGatewayTests(unittest.TestCase):
         )
         self.assertEqual(replay["result"], {"ok": True, "restored": ["asset-1"]})
 
+    def test_hosted_retry_budget_blocks_with_an_actionable_disposition(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="bounded-missing-r2", db_path=self.db,
+        )
+        error = "canonical R2 mapping is missing for asset-1"
+        for attempt in range(gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS):
+            claimed = gateway.claim_hosted_lifecycle_request(
+                self.root, queued["requestId"], self.db
+            )
+            self.assertEqual(claimed["attemptCount"], attempt + 1)
+            finished = gateway.finish_hosted_lifecycle_request(
+                self.root,
+                queued["requestId"],
+                error=error,
+                retryable=True,
+                db_path=self.db,
+            )
+            if attempt + 1 < gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS:
+                self.assertEqual(finished["state"], "queued")
+            else:
+                self.assertEqual(finished["state"], "blocked")
+                self.assertEqual(finished["disposition"], "blocked")
+                self.assertEqual(finished["attemptCount"], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+                self.assertIn("Repair the canonical R2 mapping", finished["nextAction"])
+
+        with sqlite3.connect(self.db) as connection:
+            row = connection.execute(
+                """SELECT state, disposition, attempt_count, completed_at, blocked_at
+                   FROM owner_hosted_lifecycle_requests WHERE request_id = ?""",
+                (queued["requestId"],),
+            ).fetchone()
+        self.assertEqual(row[0], "failed")
+        self.assertEqual(row[1], "blocked")
+        self.assertEqual(row[2], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        self.assertTrue(row[3])
+        self.assertTrue(row[4])
+
+    def test_existing_over_budget_request_is_blocked_without_another_attempt(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="legacy-over-budget", db_path=self.db,
+        )
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                """UPDATE owner_hosted_lifecycle_requests
+                   SET state = 'running', attempt_count = ?,
+                       error_text = 'canonical R2 mapping is missing for asset-1'
+                   WHERE request_id = ?""",
+                (gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS + 1000, queued["requestId"]),
+            )
+        blocked = gateway.claim_hosted_lifecycle_request(
+            self.root, queued["requestId"], self.db
+        )
+        self.assertEqual(blocked["state"], "blocked")
+        self.assertEqual(blocked["attemptCount"], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS + 1000)
+        self.assertIn("Automatic retries stopped", blocked["error"])
+
     def test_active_hosted_request_is_recovered_without_replaying_a_new_intent(self) -> None:
         with patch.object(gateway.uuid, "uuid4", return_value=uuid.UUID(int=(1 << 128) - 1)):
             queued = gateway.queue_hosted_lifecycle_request(

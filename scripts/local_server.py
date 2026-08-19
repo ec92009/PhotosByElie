@@ -1480,12 +1480,18 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             result["state"] = "completed"
             self._send_json(HTTPStatus.OK, result)
             return
-        if status["state"] == "failed":
+        if status["state"] in {"failed", "blocked"}:
             self._send_json(HTTPStatus.OK, {
                 "ok": True,
                 "requestId": request_id,
-                "state": "failed",
+                "state": status["state"],
                 "error": status.get("error") or "The trusted connector could not complete this action.",
+                **({
+                    "disposition": status.get("disposition"),
+                    "attemptCount": status.get("attemptCount"),
+                    "maxAttempts": status.get("maxAttempts"),
+                    "nextAction": status.get("nextAction"),
+                } if status["state"] == "blocked" else {}),
             })
             return
         self._send_json(HTTPStatus.OK, {

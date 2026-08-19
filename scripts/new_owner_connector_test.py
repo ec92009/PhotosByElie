@@ -1223,6 +1223,40 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         self.assertEqual(third, [])
         self.assertEqual(execute.call_count, 1)
 
+    def test_hosted_missing_r2_retries_are_bounded_and_blocked(self):
+        queued = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="connector-missing-r2",
+            db_path=self.db,
+        )
+        with patch(
+            "scripts.new_owner_connector.execute_action",
+            side_effect=RuntimeError("canonical R2 mapping is missing for asset-1"),
+        ) as execute:
+            drained = [
+                drain_hosted_lifecycle_requests(self.config, self.FakeWorker(self))
+                for _ in range(lifecycle_gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+            ]
+            after_block = drain_hosted_lifecycle_requests(
+                self.config, self.FakeWorker(self)
+            )
+
+        self.assertEqual(execute.call_count, lifecycle_gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        self.assertEqual([item[0]["state"] for item in drained], [
+            "queued", "queued", "blocked",
+        ])
+        self.assertEqual(after_block, [])
+        status = lifecycle_gateway.hosted_lifecycle_request_status(
+            self.root,
+            queued["requestId"],
+            session_id="session-one",
+            fixture_id="fixture-1",
+            db_path=self.db,
+        )
+        self.assertEqual(status["state"], "blocked")
+        self.assertEqual(status["disposition"], "blocked")
+        self.assertIn("Repair the canonical R2 mapping", status["nextAction"])
+
     def test_hosted_queue_restart_finishes_committed_outbox_without_remutating(self):
         queued = lifecycle_gateway.queue_hosted_lifecycle_request(
             self.root, operation="waste-basket-x", asset_ids=["asset-1"],

@@ -535,6 +535,24 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 self.assertEqual(failed["state"], "failed")
                 self.assertEqual(failed["error"], "trusted connector failed safely")
 
+                hosted_status.return_value = {
+                    "requestId": "hlr-opaque-one",
+                    "state": "blocked",
+                    "disposition": "blocked",
+                    "attemptCount": 3,
+                    "maxAttempts": 3,
+                    "nextAction": "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action.",
+                    "error": "canonical R2 mapping is missing for photo-one. Automatic retries stopped after 3 attempts.",
+                }
+                with urlopen(queued_status) as response:
+                    blocked = json.loads(response.read())
+                self.assertEqual(response.status, 200)
+                self.assertTrue(blocked["ok"])
+                self.assertEqual(blocked["state"], "blocked")
+                self.assertEqual(blocked["disposition"], "blocked")
+                self.assertEqual(blocked["attemptCount"], 3)
+                self.assertIn("Repair the canonical R2 mapping", blocked["nextAction"])
+
                 projection_retry_payload = {
                     "requestId": "hlr-opaque-one",
                     "projectionToken": "f" * 64,

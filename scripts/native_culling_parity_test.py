@@ -1114,8 +1114,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "231.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "128")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "231.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "129")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

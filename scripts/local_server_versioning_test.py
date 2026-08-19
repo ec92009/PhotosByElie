@@ -83,6 +83,16 @@ class RetiredApplePhotosImportTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("does not install a second Photos helper", package_readme)
 
+    def test_legacy_owner_connector_install_requires_explicit_rollback_opt_in(self):
+        root = Path(__file__).resolve().parents[1]
+        installer = (root / "scripts" / "install_new_owner_connector.zsh").read_text(encoding="utf-8")
+        package_command = (
+            root / "assets" / "connector-package" / "Install PhotosByElie Connector.command"
+        ).read_text(encoding="utf-8")
+        for source in (installer, package_command):
+            self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT", source)
+            self.assertIn("exit 64", source)
+
 
 if __name__ == "__main__":
     unittest.main()

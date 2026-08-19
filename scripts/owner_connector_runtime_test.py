@@ -118,6 +118,7 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "PBE_CONNECTOR_RUNTIME_PARENT": str(fixture_root / "application-support"),
             "PBE_CONNECTOR_RUNTIME_REVISION": "HEAD",
             "PBE_CONNECTOR_SKIP_ACTIVATION": "1",
+            "PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT": "1",
             "PBE_CONNECTOR_TOKEN": "fixture-token-xxxxxxxxxxxxxxxxxxxxxxxx",
             "PYTHONDONTWRITEBYTECODE": "1",
             "TMPDIR": str(temporary),
@@ -307,6 +308,33 @@ raise SystemExit(connector.main())
                 self.assertIn("runtime is invalid", rejected.stderr.lower())
             finally:
                 self._make_tree_writable(runtime_root)
+
+    def test_installer_is_retired_without_explicit_rollback_opt_in(self):
+        with TemporaryDirectory() as temporary_directory:
+            fixture_root = Path(temporary_directory)
+            source_root = self._make_source_fixture(fixture_root)
+            data_root = fixture_root / "stable-data"
+            data_root.mkdir()
+            env = self._installer_environment(fixture_root, data_root)
+            env.pop("PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT")
+
+            retired = self._run_installer(source_root, env)
+
+            self.assertEqual(retired.returncode, 64)
+            self.assertIn("installer is retired", retired.stderr.lower())
+            self.assertFalse((Path(env["PBE_CONNECTOR_CONFIG_DIR"]) / "connector.json").exists())
+            self.assertFalse(
+                (
+                    Path(env["PBE_CONNECTOR_RUNTIME_PARENT"])
+                    / env["PBE_CONNECTOR_RUNTIME_NAME"]
+                ).exists()
+            )
+            self.assertFalse(
+                (
+                    Path(env["PBE_CONNECTOR_LAUNCH_AGENTS_DIR"])
+                    / "com.photosbyelie.owner-connector.plist"
+                ).exists()
+            )
 
     def test_installer_renames_a_sealed_runtime_on_bsd_mv(self):
         with TemporaryDirectory() as temporary_directory:

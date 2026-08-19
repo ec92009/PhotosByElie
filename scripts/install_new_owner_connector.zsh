@@ -1,6 +1,12 @@
 #!/bin/zsh
 set -euo pipefail
 
+if [[ "${PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT:-0}" != "1" ]]; then
+  print -u2 "The always-on Owner connector installer is retired. Use signed PhotosByElie Backstage for on-demand work."
+  print -u2 "For a deliberate rollback rehearsal only, set PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT=1."
+  exit 64
+fi
+
 repo_root="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 connector_id="${2:-$(scutil --get ComputerName 2>/dev/null || hostname)}"
 connector_id="$(printf '%s' "$connector_id" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9._-')"

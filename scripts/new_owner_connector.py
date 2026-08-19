@@ -13,6 +13,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import fcntl
 import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -49,6 +50,7 @@ INTERACTIVE_POLL_INTERVAL_SECONDS = 5
 INTERACTIVE_POLL_LEASE_SECONDS = 15
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
+ON_DEMAND_CONNECTOR_LOCK_NAME = ".owner-connector-on-demand.lock"
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
@@ -2077,6 +2079,45 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
     ])
 
 
+@contextmanager
+def _connector_process_lock(config: ConnectorConfig):
+    """Allow only one local connector process to drain Owner work at a time.
+
+    Native Backstage and its hosted loopback Owner UI are separate launchers.
+    The in-process locks above cannot serialize their child processes, so use a
+    short-lived advisory lock in the mutable Owner data root. A second bounded
+    wake exits without touching Worker or SQLite; the process holding the lock
+    remains the sole drain owner.
+    """
+    lock_path = config.repo_root / "assets" / "owner-actions" / ON_DEMAND_CONNECTOR_LOCK_NAME
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = lock_path.open("a+", encoding="utf-8")
+    except OSError as error:
+        raise RuntimeError(f"Could not prepare the local Owner connector lock: {error}") from error
+
+    acquired = False
+    try:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            acquired = True
+        except BlockingIOError:
+            yield False
+            return
+        try:
+            os.fchmod(handle.fileno(), 0o600)
+        except OSError:
+            pass
+        yield True
+    finally:
+        if acquired:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+        handle.close()
+
+
 def next_poll_interval(base_interval: int, current_interval: int, processed: int, *, interactive: bool = False) -> int:
     """Back off while idle, but stay responsive during an interactive Owner lease."""
     base = max(2, min(300, int(base_interval)))
@@ -2085,6 +2126,53 @@ def next_poll_interval(base_interval: int, current_interval: int, processed: int
     if processed:
         return base
     return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
+
+
+def _run_connector(config: ConnectorConfig, *, once: bool) -> int:
+    client = WorkerClient(config)
+    polling_lease = InteractivePollingLease()
+    if not once:
+        start_local_status_server(config, polling_lease, client)
+    poll_interval = config.interval_seconds
+    next_full_poll_at = 0.0
+    while True:
+        interactive = polling_lease.active()
+        if not once and not interactive:
+            try:
+                if client.interactive():
+                    polling_lease.touch()
+                    interactive = True
+            except Exception:
+                pass
+        if once or interactive or time.monotonic() >= next_full_poll_at:
+            try:
+                processed = process_once(config, client)
+                if processed:
+                    print(f"Processed {processed} Owner action(s).", flush=True)
+                poll_interval = next_poll_interval(
+                    config.interval_seconds,
+                    poll_interval,
+                    processed,
+                    interactive=interactive,
+                )
+            except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
+                print(str(error), file=sys.stderr, flush=True)
+                poll_interval = next_poll_interval(
+                    config.interval_seconds,
+                    poll_interval,
+                    0,
+                    interactive=interactive,
+                )
+                if once:
+                    return 1
+            next_full_poll_at = time.monotonic() + poll_interval
+        if once:
+            return 0
+        wait_seconds = min(
+            INTERACTIVE_POLL_INTERVAL_SECONDS,
+            max(0.1, next_full_poll_at - time.monotonic()),
+        )
+        polling_lease.wait(wait_seconds)
 
 
 def main() -> int:
@@ -2122,50 +2210,10 @@ def main() -> int:
             )
         )
         return 0
-    client = WorkerClient(config)
-    polling_lease = InteractivePollingLease()
-    if not args.once:
-        start_local_status_server(config, polling_lease, client)
-    poll_interval = config.interval_seconds
-    next_full_poll_at = 0.0
-    while True:
-        interactive = polling_lease.active()
-        if not args.once and not interactive:
-            try:
-                if client.interactive():
-                    polling_lease.touch()
-                    interactive = True
-            except Exception:
-                pass
-        if args.once or interactive or time.monotonic() >= next_full_poll_at:
-            try:
-                processed = process_once(config, client)
-                if processed:
-                    print(f"Processed {processed} Owner action(s).", flush=True)
-                poll_interval = next_poll_interval(
-                    config.interval_seconds,
-                    poll_interval,
-                    processed,
-                    interactive=interactive,
-                )
-            except Exception as error:  # noqa: BLE001 - daemon retries transient network/auth failures.
-                print(str(error), file=sys.stderr, flush=True)
-                poll_interval = next_poll_interval(
-                    config.interval_seconds,
-                    poll_interval,
-                    0,
-                    interactive=interactive,
-                )
-                if args.once:
-                    return 1
-            next_full_poll_at = time.monotonic() + poll_interval
-        if args.once:
+    with _connector_process_lock(config) as acquired:
+        if not acquired:
             return 0
-        wait_seconds = min(
-            INTERACTIVE_POLL_INTERVAL_SECONDS,
-            max(0.1, next_full_poll_at - time.monotonic()),
-        )
-        polling_lease.wait(wait_seconds)
+        return _run_connector(config, once=args.once)
 
 
 if __name__ == "__main__":

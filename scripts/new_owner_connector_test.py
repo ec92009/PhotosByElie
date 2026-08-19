@@ -26,6 +26,7 @@ from scripts.new_owner_connector import (
     _local_status_payload,
     _local_sidecar_open_action,
     _action_is_read_only,
+    _connector_process_lock,
     _new_action_timing,
     _owner_waste_basket_url,
     _sidecar_job_public_payload,
@@ -138,6 +139,23 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             with self.assertRaises(SystemExit) as raised:
                 new_owner_connector.main()
         self.assertIn("must use --once", str(raised.exception))
+
+    def test_bounded_connector_drain_uses_a_shared_nonblocking_process_lock(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            with _connector_process_lock(config) as first:
+                self.assertTrue(first)
+                with _connector_process_lock(config) as second:
+                    self.assertFalse(second)
+
+            with _connector_process_lock(config) as reacquired:
+                self.assertTrue(reacquired)
+
+            lock_path = root / "assets" / "owner-actions" / ".owner-connector-on-demand.lock"
+            self.assertEqual(lock_path.stat().st_mode & 0o777, 0o600)
 
     def test_registration_is_limited_to_uploaded_action_assets(self):
         calls = []

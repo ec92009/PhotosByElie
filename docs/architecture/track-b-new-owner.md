@@ -64,7 +64,10 @@ The normal cutover target is not an always-on `com.photosbyelie.owner-connector`
 LaunchAgent. Signed Backstage starts the connector runtime with `--once` only
 when it has created or is monitoring an explicit Owner action; the PBE local
 host uses the same short-lived drain for a hosted lifecycle request and
-coalesces repeated browser wakes. The Worker action ledger and `Owner.sqlite`
+coalesces repeated browser wakes. Every bounded drain takes the same
+non-blocking per-Mac lock under `assets/owner-actions`, so native and hosted
+wakes cannot execute concurrent connector processes against `Owner.sqlite`.
+The Worker action ledger and `Owner.sqlite`
 outbox remain authoritative, so a child that finishes, crashes, or is stopped
 does not erase queued work. Closing Backstage or its local host leaves the
 durable action available for the next Backstage launch.

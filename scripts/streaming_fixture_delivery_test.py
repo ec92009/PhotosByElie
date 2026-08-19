@@ -1,8 +1,11 @@
 import json
+from datetime import datetime, timedelta, timezone
+import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -17,6 +20,7 @@ from sidecar_state_db import (
     prepare_upload_bridge_execute_batch,
     queue_upload_bridge,
     record_decision,
+    reconcile_stale_upload_bridge_runs,
     upload_plan,
     upsert_assets,
 )
@@ -65,10 +69,54 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         self.assertEqual(batch["count"], 1)
         self.assertEqual(batch["items"][0]["assetId"], "asset-2")
         self.assertEqual(batch["summary"]["scopedAssetCount"], 1)
+        with connect(self.root) as conn:
+            run = conn.execute(
+                "SELECT worker_pid, worker_token, lease_expires_at FROM sidecar_upload_bridge_runs WHERE run_id = ?",
+                (batch["runId"],),
+            ).fetchone()
+        self.assertEqual(run["worker_pid"], os.getpid())
+        self.assertTrue(run["worker_token"])
+        self.assertTrue(run["lease_expires_at"])
 
         plan = upload_plan(self.root, asset_ids=["asset-1"])
         self.assertEqual(plan["count"], 0)
         self.assertEqual(plan["bridgeQueuedCount"], 1)
+
+    def test_stale_upload_bridge_recovery_respects_legacy_boundary(self):
+        now = datetime(2026, 8, 19, 18, 0, tzinfo=timezone.utc)
+        old = (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+        with connect(self.root) as conn:
+            conn.executemany(
+                """
+                INSERT INTO sidecar_upload_bridge_runs
+                  (run_id, mode, status, execute_upload, limit_count, started_at,
+                   summary_json, created_at, updated_at, worker_pid, worker_token)
+                VALUES (?, 'execute-batch', 'running', 1, 1, ?, '{}', ?, ?, ?, ?)
+                """,
+                [
+                    ("ub-legacy-stale", old, old, old, None, ""),
+                    ("ub-dead-stale", old, old, old, 4242, "upload-worker-test"),
+                ],
+            )
+            conn.commit()
+
+        with mock.patch("sidecar_state_db._sidecar_workflow_process_alive", return_value=False):
+            result = reconcile_stale_upload_bridge_runs(self.root, now=now)
+        self.assertEqual(result["reviewedCount"], 1)
+        self.assertEqual(result["recoveredCount"], 1)
+        with connect(self.root) as conn:
+            rows = {
+                row["run_id"]: row
+                for row in conn.execute(
+                    "SELECT run_id, status, recovery_state, lease_expires_at FROM sidecar_upload_bridge_runs WHERE run_id IN (?, ?)",
+                    ("ub-legacy-stale", "ub-dead-stale"),
+                ).fetchall()
+            }
+        self.assertEqual(rows["ub-legacy-stale"]["status"], "running")
+        self.assertEqual(rows["ub-legacy-stale"]["recovery_state"], "needs-review")
+        self.assertEqual(rows["ub-dead-stale"]["status"], "interrupted")
+        self.assertEqual(rows["ub-dead-stale"]["recovery_state"], "recovered")
+        self.assertIsNone(rows["ub-dead-stale"]["lease_expires_at"])
 
     def test_empty_fixture_scope_never_falls_back_to_global_queue(self):
         batch = prepare_upload_bridge_execute_batch(self.root, limit=30, asset_ids=[])

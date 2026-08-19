@@ -35,6 +35,8 @@ DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_BRIDGE_RUN_ROOT = Path("assets/owner-actions/sidecar-upload-runs")
+UPLOAD_BRIDGE_STALE_AFTER_SECONDS = 60 * 60
+UPLOAD_BRIDGE_LEASE_SECONDS = 15 * 60
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
@@ -198,6 +200,138 @@ COUNTRY_GPS_HINTS: tuple[dict[str, Any], ...] = (
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _sidecar_workflow_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _sidecar_workflow_process_alive(pid: object) -> bool:
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return False
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _upload_bridge_lease_expiry(timestamp: datetime) -> str:
+    return (timestamp + timedelta(seconds=UPLOAD_BRIDGE_LEASE_SECONDS)).isoformat().replace("+00:00", "Z")
+
+
+def reconcile_stale_upload_bridge_runs(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = UPLOAD_BRIDGE_STALE_AFTER_SECONDS,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Classify interrupted Upload Bridge runs without guessing about legacy workers.
+
+    New runs carry a worker PID and token. A stale run with a recorded worker
+    whose process is verifiably gone is terminalized as interrupted. Older
+    rows lack that evidence and remain running with an explicit needs-review
+    recovery state instead of being rewritten by age alone.
+    """
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    recovered: list[str] = []
+    reviewed: list[str] = []
+    skipped = 0
+    with connect(repo_root, db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT run_id, status, updated_at, worker_pid, worker_token,
+                   recovery_state
+            FROM sidecar_upload_bridge_runs
+            WHERE status = 'running'
+            ORDER BY updated_at, run_id
+            """
+        ).fetchall()
+        for row in rows:
+            updated = _sidecar_workflow_timestamp(row["updated_at"])
+            if updated is None or (current - updated).total_seconds() < max(0, stale_after_seconds):
+                continue
+            run_id = str(row["run_id"] or "")
+            worker_pid = int(row["worker_pid"] or 0)
+            worker_token = str(row["worker_token"] or "").strip()
+            if worker_pid <= 0 or not worker_token:
+                if str(row["recovery_state"] or ""):
+                    continue
+                update = conn.execute(
+                    """
+                    UPDATE sidecar_upload_bridge_runs
+                    SET recovery_state = 'needs-review',
+                        recovery_reason = ?, recovery_checked_at = ?
+                    WHERE run_id = ? AND status = 'running'
+                      AND COALESCE(recovery_state, '') = ''
+                    """,
+                    (
+                        "Legacy Upload Bridge run has no durable worker PID/token; "
+                        f"last update was {int((current - updated).total_seconds())} seconds ago and needs explicit review.",
+                        timestamp,
+                        run_id,
+                    ),
+                )
+                if update.rowcount:
+                    reviewed.append(run_id)
+                continue
+            if _sidecar_workflow_process_alive(worker_pid):
+                skipped += 1
+                continue
+            update = conn.execute(
+                """
+                UPDATE sidecar_upload_bridge_runs
+                SET status = 'interrupted',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?),
+                    updated_at = ?,
+                    lease_expires_at = NULL,
+                    recovery_state = 'recovered',
+                    recovery_reason = ?,
+                    recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND worker_pid = ? AND worker_token = ?
+                """,
+                (
+                    "Upload Bridge worker process ended before a terminal receipt was persisted.",
+                    timestamp,
+                    timestamp,
+                    "Recorded Upload Bridge worker process is no longer alive; "
+                    f"last update was {int((current - updated).total_seconds())} seconds ago.",
+                    timestamp,
+                    run_id,
+                    worker_pid,
+                    worker_token,
+                ),
+            )
+            if update.rowcount:
+                recovered.append(run_id)
+        conn.commit()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredRunIds": recovered,
+        "reviewedCount": len(reviewed),
+        "reviewRunIds": reviewed,
+        "skippedCount": skipped,
+    }
 
 
 def _json_text(value: Any) -> str:
@@ -376,7 +510,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           spool_root     TEXT,
           summary_json   TEXT NOT NULL DEFAULT '{}',
           created_at     TEXT,
-          updated_at     TEXT
+          updated_at     TEXT,
+          worker_pid     INTEGER,
+          worker_token   TEXT NOT NULL DEFAULT '',
+          lease_expires_at TEXT,
+          recovery_state TEXT NOT NULL DEFAULT '',
+          recovery_reason TEXT NOT NULL DEFAULT '',
+          recovery_checked_at TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_runs_status
@@ -537,6 +677,21 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     for column, definition in upload_item_column_defaults.items():
         if column not in upload_item_columns:
             conn.execute(f"ALTER TABLE sidecar_upload_bridge_run_items ADD COLUMN {column} {definition}")
+    upload_run_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(sidecar_upload_bridge_runs)").fetchall()
+    }
+    upload_run_column_defaults = {
+        "worker_pid": "INTEGER",
+        "worker_token": "TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "TEXT",
+        "recovery_state": "TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "TEXT",
+    }
+    for column, definition in upload_run_column_defaults.items():
+        if column not in upload_run_columns:
+            conn.execute(f"ALTER TABLE sidecar_upload_bridge_runs ADD COLUMN {column} {definition}")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
@@ -2671,12 +2826,16 @@ def prepare_upload_bridge_execute_batch(
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
+    recovery = reconcile_stale_upload_bridge_runs(repo_root)
     requested_limit = max(1, min(int(limit or 1), 5000))
     scan_limit = 5000 if not allow_r2_overwrite else requested_limit
     scan_limit = max(scan_limit, requested_limit)
     run_id = _upload_bridge_run_id()
     run_mode = "execute-batch"
     now = now_iso()
+    worker_pid = os.getpid()
+    worker_token = f"upload-worker-{uuid.uuid4().hex}"
+    lease_expires_at = _upload_bridge_lease_expiry(datetime.now(timezone.utc))
     planning_started = time.perf_counter()
     base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
     if not base_root.is_absolute():
@@ -2827,8 +2986,8 @@ def prepare_upload_bridge_execute_batch(
             """
             INSERT INTO sidecar_upload_bridge_runs
               (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
-               summary_json, created_at, updated_at)
-            VALUES (?, ?, 'running', 1, ?, ?, ?, ?, ?, ?)
+               summary_json, created_at, updated_at, worker_pid, worker_token, lease_expires_at)
+            VALUES (?, ?, 'running', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
@@ -2839,6 +2998,9 @@ def prepare_upload_bridge_execute_batch(
                 _json_text(summary_payload),
                 now,
                 now,
+                worker_pid,
+                worker_token,
+                lease_expires_at,
             ),
         )
 
@@ -2902,6 +3064,7 @@ def prepare_upload_bridge_execute_batch(
         "count": len(ledger_items),
         "items": ledger_items,
         "summary": summary_payload,
+        "recovery": recovery,
         "message": f"Planned {len(ledger_items):,} Upload Bridge item(s) with one R2 coverage pass.",
     }
 
@@ -3125,7 +3288,8 @@ def finish_upload_bridge_execute_batch(
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_runs
-            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?,
+                updated_at = ?, lease_expires_at = NULL
             WHERE run_id = ?
             """,
             (status, completed_at, error_text, _json_text(summary), completed_at, run_id),
@@ -3156,6 +3320,7 @@ def run_upload_bridge_export_dry_run(
     exported master and generated watermarked public previews are uploaded to
     their planned R2 keys, while Owner catalog registration remains out of scope.
     """
+    recovery = reconcile_stale_upload_bridge_runs(repo_root)
     requested_limit = max(1, min(int(limit or 1), 5000))
     safe_limit = 1
     scan_limit = 5000 if execute_upload and not allow_r2_overwrite else safe_limit
@@ -3164,6 +3329,9 @@ def run_upload_bridge_export_dry_run(
     run_mode = "execute" if execute_upload else "export-dry-run"
     execute_int = 1 if execute_upload else 0
     now = now_iso()
+    worker_pid = os.getpid()
+    worker_token = f"upload-worker-{uuid.uuid4().hex}"
+    lease_expires_at = _upload_bridge_lease_expiry(datetime.now(timezone.utc))
     base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
     if not base_root.is_absolute():
         base_root = repo_root / base_root
@@ -3298,8 +3466,8 @@ def run_upload_bridge_export_dry_run(
             """
             INSERT INTO sidecar_upload_bridge_runs
               (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
-               summary_json, created_at, updated_at)
-            VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?)
+               summary_json, created_at, updated_at, worker_pid, worker_token, lease_expires_at)
+            VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
@@ -3311,6 +3479,9 @@ def run_upload_bridge_export_dry_run(
                 _json_text({"bridgeQueuedCount": len(selected_rows), "r2UploadPerformed": False, "executeUpload": execute_upload}),
                 now,
                 now,
+                worker_pid,
+                worker_token,
+                lease_expires_at,
             ),
         )
         ledger_items: list[dict[str, Any]] = []
@@ -3492,7 +3663,8 @@ def run_upload_bridge_export_dry_run(
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_runs
-            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?,
+                updated_at = ?, lease_expires_at = NULL
             WHERE run_id = ?
             """,
             (
@@ -3537,6 +3709,7 @@ def run_upload_bridge_export_dry_run(
         "count": len(ledger_items),
         "items": [item],
         "summary": run_summary,
+        "recovery": recovery,
         "message": (
             "Apple Photos export and guarded R2 upload completed; Owner catalog registration was not performed."
             if execute_upload

@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -82,6 +83,8 @@ DEFAULT_TITLE_KEYWORD_MODEL_LADDER = [
 ]
 CODEX_REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"})
 MODEL_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
+IMPORT_OPERATION_STALE_AFTER_SECONDS = 60 * 60
+IMPORT_OPERATION_LEASE_SECONDS = 15 * 60
 
 
 def now_iso() -> str:
@@ -465,7 +468,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           queued_at        TEXT,
           started_at       TEXT,
           completed_at     TEXT,
-          updated_at       TEXT
+          updated_at       TEXT,
+          worker_pid       INTEGER,
+          worker_token     TEXT NOT NULL DEFAULT '',
+          lease_expires_at TEXT,
+          recovery_state   TEXT NOT NULL DEFAULT '',
+          recovery_reason  TEXT NOT NULL DEFAULT '',
+          recovery_checked_at TEXT
         ) WITHOUT ROWID;
 
         CREATE TABLE IF NOT EXISTS access_users (
@@ -508,6 +517,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_access_users_tier ON access_users(tier, updated_at);
         """
     )
+    import_operation_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(import_operations)").fetchall()
+    }
+    for column, definition in {
+        "worker_pid": "INTEGER",
+        "worker_token": "TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "TEXT",
+        "recovery_state": "TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "TEXT",
+    }.items():
+        if column not in import_operation_columns:
+            conn.execute(f"ALTER TABLE import_operations ADD COLUMN {column} {definition}")
     for column, ddl in {
         "generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model TEXT",
         "requested_generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN requested_generator_model TEXT",
@@ -833,6 +856,12 @@ def _import_operation_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
         "startedAt": row["started_at"] or "",
         "completedAt": row["completed_at"] or "",
         "updatedAt": row["updated_at"] or "",
+        "workerPid": int(row["worker_pid"] or 0),
+        "workerToken": row["worker_token"] or "",
+        "leaseExpiresAt": row["lease_expires_at"] or "",
+        "recoveryState": row["recovery_state"] or "",
+        "recoveryReason": row["recovery_reason"] or "",
+        "recoveryCheckedAt": row["recovery_checked_at"] or "",
     }
 
 
@@ -856,9 +885,10 @@ def record_import_operation(
               operation_id, operation_label, state, source_kind, source_json,
               destination_kind, destination_json, filters_json, outputs_json,
               preflight_json, task_json, error_text, created_at, queued_at,
-              started_at, completed_at, updated_at
+              started_at, completed_at, updated_at, worker_pid, worker_token,
+              lease_expires_at, recovery_state, recovery_reason, recovery_checked_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(operation_id) DO UPDATE SET
               operation_label = excluded.operation_label,
               state = excluded.state,
@@ -874,6 +904,21 @@ def record_import_operation(
               queued_at = COALESCE(excluded.queued_at, import_operations.queued_at),
               started_at = COALESCE(excluded.started_at, import_operations.started_at),
               completed_at = COALESCE(excluded.completed_at, import_operations.completed_at),
+              worker_pid = COALESCE(excluded.worker_pid, import_operations.worker_pid),
+              worker_token = CASE
+                WHEN excluded.worker_token <> '' THEN excluded.worker_token
+                ELSE import_operations.worker_token
+              END,
+              lease_expires_at = COALESCE(excluded.lease_expires_at, import_operations.lease_expires_at),
+              recovery_state = CASE
+                WHEN excluded.recovery_state <> '' THEN excluded.recovery_state
+                ELSE import_operations.recovery_state
+              END,
+              recovery_reason = CASE
+                WHEN excluded.recovery_reason <> '' THEN excluded.recovery_reason
+                ELSE import_operations.recovery_reason
+              END,
+              recovery_checked_at = COALESCE(excluded.recovery_checked_at, import_operations.recovery_checked_at),
               updated_at = excluded.updated_at
             """,
             (
@@ -894,6 +939,12 @@ def record_import_operation(
                 str(operation.get("startedAt") or operation.get("started_at") or "") or None,
                 str(operation.get("completedAt") or operation.get("completed_at") or "") or None,
                 timestamp,
+                int(operation.get("workerPid") or operation.get("worker_pid") or 0) or None,
+                str(operation.get("workerToken") or operation.get("worker_token") or "").strip(),
+                str(operation.get("leaseExpiresAt") or operation.get("lease_expires_at") or "").strip() or None,
+                str(operation.get("recoveryState") or operation.get("recovery_state") or "").strip(),
+                str(operation.get("recoveryReason") or operation.get("recovery_reason") or "").strip(),
+                str(operation.get("recoveryCheckedAt") or operation.get("recovery_checked_at") or "").strip() or None,
             ),
         )
         if owns_conn:
@@ -937,6 +988,140 @@ def update_import_operation(
         if owns_conn:
             conn.commit()
             conn.close()
+
+
+def _workflow_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _workflow_process_alive(pid: object) -> bool:
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return False
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _import_operation_lease_expiry(timestamp: datetime) -> str:
+    return (
+        timestamp + timedelta(seconds=IMPORT_OPERATION_LEASE_SECONDS)
+    ).isoformat().replace("+00:00", "Z")
+
+
+def reconcile_stale_import_operations(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = IMPORT_OPERATION_STALE_AFTER_SECONDS,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Classify interrupted import rows without guessing about legacy workers.
+
+    New operations carry a worker PID and token. A stale row with a recorded
+    worker whose process is verifiably gone is terminalized as failed. Older
+    rows lack that evidence and remain queued/running with an explicit
+    ``needs-review`` recovery state instead of being rewritten by age alone.
+    """
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    recovered: list[str] = []
+    reviewed: list[str] = []
+    skipped = 0
+    with connect(repo_root, db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT operation_id, state, updated_at, worker_pid, worker_token,
+                   recovery_state
+            FROM import_operations
+            WHERE state IN ('queued', 'running')
+            ORDER BY updated_at, operation_id
+            """
+        ).fetchall()
+        for row in rows:
+            updated = _workflow_timestamp(row["updated_at"])
+            if updated is None or (current - updated).total_seconds() < max(0, stale_after_seconds):
+                continue
+            operation_id = str(row["operation_id"] or "")
+            worker_pid = int(row["worker_pid"] or 0)
+            worker_token = str(row["worker_token"] or "").strip()
+            if worker_pid <= 0 or not worker_token:
+                if str(row["recovery_state"] or ""):
+                    continue
+                update = conn.execute(
+                    """
+                    UPDATE import_operations
+                    SET recovery_state = 'needs-review',
+                        recovery_reason = ?, recovery_checked_at = ?
+                    WHERE operation_id = ? AND state IN ('queued', 'running')
+                      AND COALESCE(recovery_state, '') = ''
+                    """,
+                    (
+                        "Legacy import row has no durable worker PID/token; "
+                        f"last update was {int((current - updated).total_seconds())} seconds ago and needs explicit review.",
+                        timestamp,
+                        operation_id,
+                    ),
+                )
+                if update.rowcount:
+                    reviewed.append(operation_id)
+                continue
+            if _workflow_process_alive(worker_pid):
+                skipped += 1
+                continue
+            update = conn.execute(
+                """
+                UPDATE import_operations
+                SET state = 'failed',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?),
+                    updated_at = ?,
+                    lease_expires_at = NULL,
+                    recovery_state = 'recovered',
+                    recovery_reason = ?,
+                    recovery_checked_at = ?
+                WHERE operation_id = ? AND state IN ('queued', 'running')
+                  AND worker_pid = ? AND worker_token = ?
+                """,
+                (
+                    "Import worker process ended before a terminal receipt was persisted.",
+                    timestamp,
+                    timestamp,
+                    "Recorded import worker process is no longer alive; "
+                    f"last update was {int((current - updated).total_seconds())} seconds ago.",
+                    timestamp,
+                    operation_id,
+                    worker_pid,
+                    worker_token,
+                ),
+            )
+            if update.rowcount:
+                recovered.append(operation_id)
+        conn.commit()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredOperationIds": recovered,
+        "reviewedCount": len(reviewed),
+        "reviewOperationIds": reviewed,
+        "skippedCount": skipped,
+    }
 
 
 ACCESS_USER_TIERS = {"user", "re_client", "owner"}

@@ -116,6 +116,13 @@ Backstage is the only normal launch owner: it runs the sealed connector once
 for native actions, while its loopback PBE host does the same for hosted
 lifecycle actions. No idle status server or polling process is required.
 
+Import and Upload Bridge rows also carry a durable worker PID, opaque worker
+token, lease expiry, and recovery receipt for new runs. A stale legacy row that
+has no durable worker identity is preserved as `needs-review`; only a new row
+whose recorded worker is verifiably gone may be terminalized as interrupted or
+failed. This keeps historical ghost-looking rows visible without inventing a
+completion or failure decision from age alone.
+
 Sidecar is obsolete as a product, authority, and launch path. Historical
 `sidecar-*` action kinds, database type names, and compatibility routes may
 remain until a separately audited migration removes them; they do not identify

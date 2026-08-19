@@ -219,6 +219,12 @@ contract.
 7. On sign-out, clear bearer state and Keychain, close the database, and
    discard cached private previews.
 
+Import and Upload Bridge recovery follows the same durable boundary: new work
+records their worker identity and lease, while historical rows without that
+evidence remain explicitly `needs-review` until an operator decides their
+disposition. A missing process alone never turns an identity-free legacy row
+into a claimed success or failure.
+
 ## Reversible browser cutover
 
 The public Owner page declares its active writer on the `body` element:

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from functools import partial
 import hashlib
 import os
@@ -481,6 +481,7 @@ from owner_state_db import (  # noqa: E402
     mark_access_user_published as mark_access_user_published_db,
     media_lifecycle_snapshot,
     record_import_operation as record_import_operation_db,
+    reconcile_stale_import_operations,
     update_import_operation as update_import_operation_db,
     upsert_access_user as upsert_access_user_db,
     upsert_r2_object_state,
@@ -10655,7 +10656,19 @@ def _record_legacy_folder_import_operation(
 ) -> dict:
     if not task or task.get("operation") != "repair":
         return {}
+    reconcile_stale_import_operations(repo_root)
     mode = "selected_folder" if source_root else "fixed_anchors"
+    task_state = str(task.get("state") or "queued").strip().lower()
+    operation_state = task_state if task_state in {"queued", "running", "done", "failed", "cancelled"} else "queued"
+    worker_pid = int(
+        task.get("external_pid")
+        or task.get("currentChildPid")
+        or os.getpid()
+    )
+    worker_token = f"import-worker-{uuid.uuid4().hex}"
+    worker_lease = (
+        datetime.now(timezone.utc) + timedelta(seconds=15 * 60)
+    ).isoformat().replace("+00:00", "Z")
     source = {
         "kind": "legacy_folder",
         "mode": mode,
@@ -10671,7 +10684,7 @@ def _record_legacy_folder_import_operation(
         repo_root,
         {
             "label": f"Legacy folder -> expo: {source_root.name if source_root else 'fixed anchors'}",
-            "state": "queued",
+            "state": operation_state,
             "sourceKind": "legacy_folder",
             "source": source,
             "destinationKind": "expo",
@@ -10688,6 +10701,9 @@ def _record_legacy_folder_import_operation(
                 "watermarkPublicPreviews": True,
             },
             "task": task,
+            "workerPid": worker_pid if operation_state in {"queued", "running"} else 0,
+            "workerToken": worker_token if operation_state in {"queued", "running"} else "",
+            "leaseExpiresAt": worker_lease if operation_state in {"queued", "running"} else "",
         },
     )
     return operation

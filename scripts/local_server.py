@@ -318,11 +318,24 @@ def _start_on_demand_owner_connector(repo_root: Path) -> dict[str, object]:
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
+    return {
+        "started": True,
+        "active": True,
+        "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+    }
+
+
+def _wake_on_demand_owner_connector_for_hosted_request(
+    repo_root: Path,
+    queued: dict,
+) -> dict[str, object]:
+    if queued.get("state") not in {"queued", "running"}:
         return {
-            "started": True,
-            "active": True,
-            "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+            "started": False,
+            "active": False,
+            "reason": "no-drain-needed",
         }
+    return _start_on_demand_owner_connector(repo_root)
 
 
 def _local_machine_names() -> list[str]:
@@ -1497,7 +1510,10 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 fixture_id=str(session["fixtureId"]),
                 request_key=request_key,
             )
-            connector_wake = _start_on_demand_owner_connector(Path.cwd())
+            connector_wake = _wake_on_demand_owner_connector_for_hosted_request(
+                Path.cwd(),
+                queued,
+            )
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return

@@ -34,6 +34,7 @@ from scripts.local_server import (
     pbe_owner_action_payload,
     pbe_owner_fixture_gallery,
     _start_on_demand_owner_connector,
+    _wake_on_demand_owner_connector_for_hosted_request,
 )
 
 
@@ -106,6 +107,27 @@ class PBEOwnerSessionTests(unittest.TestCase):
         self.assertTrue(launch_kwargs["start_new_session"])
         self.assertEqual(launch_kwargs["env"]["PBE_REPO_ROOT"], str(root.resolve()))
         self.assertEqual(launch_kwargs["env"]["PBE_ON_DEMAND_OWNER_CONNECTOR"], "1")
+
+    def test_terminal_hosted_replay_does_not_wake_connector(self) -> None:
+        with patch(
+            "scripts.local_server._start_on_demand_owner_connector",
+            return_value={"started": True, "active": True, "pid": 4242},
+        ) as wake:
+            self.assertEqual(
+                _wake_on_demand_owner_connector_for_hosted_request(
+                    Path("/synthetic"),
+                    {"state": "queued"},
+                )["active"],
+                True,
+            )
+            self.assertEqual(
+                _wake_on_demand_owner_connector_for_hosted_request(
+                    Path("/synthetic"),
+                    {"state": "completed"},
+                ),
+                {"started": False, "active": False, "reason": "no-drain-needed"},
+            )
+        wake.assert_called_once_with(Path("/synthetic"))
 
     def test_checkout_identity_rejects_dirty_hidden_or_stray_host_code(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

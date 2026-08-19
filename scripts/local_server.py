@@ -215,6 +215,8 @@ R2_BACKGROUND_LOCK = threading.Lock()
 PHOTOS_INCREMENTAL_SYNC_LOCK = threading.Lock()
 ON_DEMAND_CONNECTOR_LOCK = threading.Lock()
 ON_DEMAND_CONNECTOR_PROCESS: subprocess.Popen[str] | None = None
+PHOTOS_SYNC_STALE_AFTER_SECONDS = 60 * 60
+PHOTOS_SYNC_DB_RETRY_DELAYS_SECONDS = (0.25, 0.5, 1.0, 2.0)
 PRICE_PUBLISH_TASKS: dict[str, dict] = {}
 PRICE_PUBLISH_LOCK = threading.Lock()
 R2_SWEEP_PHASES = {
@@ -2852,6 +2854,112 @@ def _incremental_photos_sync(
     }
 
 
+def _retry_photos_sync_db_write(operation, *, delays=PHOTOS_SYNC_DB_RETRY_DELAYS_SECONDS):
+    """Retry one idempotent Photos-sync receipt write during a transient SQLite lock."""
+    for delay in (*delays, None):
+        try:
+            return operation()
+        except sqlite3.OperationalError as error:
+            message = str(error).casefold()
+            if not any(token in message for token in ("locked", "busy")) or delay is None:
+                raise
+            time.sleep(delay)
+
+
+def _photos_sync_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _reconcile_stale_photos_sync_runs(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = PHOTOS_SYNC_STALE_AFTER_SECONDS,
+) -> dict:
+    """Recover interrupted Photos-sync rows without deleting their audit receipts."""
+    database = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    if not database.is_file():
+        return {"ok": True, "recoveredCount": 0, "recoveredRunIds": [], "skippedCount": 0}
+    if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
+        return {
+            "ok": True,
+            "recoveredCount": 0,
+            "recoveredRunIds": [],
+            "skippedCount": 0,
+            "activeWorker": True,
+        }
+
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    try:
+
+        def recover() -> tuple[list[str], int]:
+            recovered: list[str] = []
+            skipped = 0
+            with fixture_connect(repo_root) as connection:
+                rows = connection.execute(
+                    """
+                    SELECT run_id, created_at, updated_at
+                    FROM photos_sync_runs
+                    WHERE status = 'running'
+                    ORDER BY updated_at, run_id
+                    """
+                ).fetchall()
+                for row in rows:
+                    heartbeat = _photos_sync_timestamp(row["updated_at"] or row["created_at"])
+                    if heartbeat is None:
+                        skipped += 1
+                        continue
+                    age_seconds = max(0, int((current - heartbeat).total_seconds()))
+                    if age_seconds < stale_after_seconds:
+                        continue
+                    run_id = str(row["run_id"])
+                    update = connection.execute(
+                        """
+                        UPDATE photos_sync_runs
+                        SET status = 'failed',
+                            stage = 'Recovered after interruption',
+                            error_text = ?,
+                            completed_at = ?,
+                            updated_at = ?
+                        WHERE run_id = ? AND status = 'running'
+                        """,
+                        (
+                            "No Photos sync worker heartbeat for "
+                            f"{age_seconds} seconds; recovered after local server restart.",
+                            timestamp,
+                            timestamp,
+                            run_id,
+                        ),
+                    )
+                    if update.rowcount:
+                        recovered.append(run_id)
+                connection.commit()
+            return recovered, skipped
+
+        recovered, skipped = _retry_photos_sync_db_write(recover)
+    finally:
+        PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredRunIds": recovered,
+        "skippedCount": skipped,
+    }
+
+
 def _photos_sync_run_status(repo_root: Path, run_id: str) -> dict:
     with fixture_connect(repo_root) as connection:
         row = connection.execute(
@@ -2886,43 +2994,51 @@ def _photos_sync_run_status(repo_root: Path, run_id: str) -> dict:
 
 def _request_photos_sync_cancel(repo_root: Path, run_id: str) -> dict:
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    with fixture_connect(repo_root) as connection:
-        row = connection.execute(
-            "SELECT status FROM photos_sync_runs WHERE run_id = ?",
-            (run_id,),
-        ).fetchone()
-        if not row:
-            raise ValueError("Photos sync run does not exist")
-        if str(row["status"]) == "running":
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET cancel_requested = 1,
-                    stage = 'Stopping after the current PhotoKit checkpoint',
-                    updated_at = ?
-                WHERE run_id = ?
-                """,
-                (timestamp, run_id),
-            )
-            connection.commit()
+
+    def request_cancel() -> None:
+        with fixture_connect(repo_root) as connection:
+            row = connection.execute(
+                "SELECT status FROM photos_sync_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if not row:
+                raise ValueError("Photos sync run does not exist")
+            if str(row["status"]) == "running":
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET cancel_requested = 1,
+                        stage = 'Stopping after the current PhotoKit checkpoint',
+                        updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (timestamp, run_id),
+                )
+                connection.commit()
+
+    _retry_photos_sync_db_write(request_cancel)
     return _photos_sync_run_status(repo_root, run_id)
 
 
 def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
     if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = 'failed', stage = 'Could not start',
-                    error_text = 'Another Apple Photos sync pass is already running.',
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (timestamp, timestamp, run_id),
-            )
-            connection.commit()
+
+        def record_busy() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = 'failed', stage = 'Could not start',
+                        error_text = 'Another Apple Photos sync pass is already running.',
+                        completed_at = ?, updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (timestamp, timestamp, run_id),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(record_busy)
         return
 
     def cancelled() -> bool:
@@ -2935,24 +3051,28 @@ def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
 
     def update_progress(values: dict) -> None:
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET stage = ?, requested_count = ?, scanned_count = ?,
-                    remaining_count = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (
-                    str(values.get("stage") or "Working"),
-                    int(values.get("requested") or 0),
-                    int(values.get("scanned") or 0),
-                    int(values.get("remaining") or 0),
-                    timestamp,
-                    run_id,
-                ),
-            )
-            connection.commit()
+
+        def write_progress() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET stage = ?, requested_count = ?, scanned_count = ?,
+                        remaining_count = ?, updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (
+                        str(values.get("stage") or "Working"),
+                        int(values.get("requested") or 0),
+                        int(values.get("scanned") or 0),
+                        int(values.get("remaining") or 0),
+                        timestamp,
+                        run_id,
+                    ),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(write_progress)
 
     try:
         result = _incremental_photos_sync(
@@ -2965,71 +3085,90 @@ def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
         terminal = "cancelled" if result.get("cancelled") else "completed"
         stage = "Stopped safely" if terminal == "cancelled" else "Completed"
         completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = ?, stage = ?, requested_count = ?, scanned_count = ?,
-                    remaining_count = ?, baseline_count = ?, unchanged_count = ?,
-                    metadata_only_count = ?, appearance_count = ?,
-                    source_missing_count = ?, source_returned_count = ?,
-                    failed_count = ?, failures_json = ?, elapsed_seconds = ?,
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (
-                    terminal,
-                    stage,
-                    int(result.get("requested") or 0),
-                    int(result.get("scanned") or 0),
-                    int(result.get("remaining") or 0),
-                    int(changes.get("baseline") or 0),
-                    int(changes.get("unchanged") or 0),
-                    int(changes.get("metadataOnly") or 0),
-                    int(changes.get("appearance") or 0),
-                    int(changes.get("sourceMissing") or 0),
-                    int(changes.get("sourceReturned") or 0),
-                    len(result.get("failures") or []),
-                    json.dumps(result.get("failures") or [], ensure_ascii=False),
-                    float(result.get("elapsedSeconds") or 0),
-                    completed_at,
-                    completed_at,
-                    run_id,
-                ),
-            )
-            connection.commit()
+
+        def record_terminal() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = ?, stage = ?, requested_count = ?, scanned_count = ?,
+                        remaining_count = ?, baseline_count = ?, unchanged_count = ?,
+                        metadata_only_count = ?, appearance_count = ?,
+                        source_missing_count = ?, source_returned_count = ?,
+                        failed_count = ?, failures_json = ?, elapsed_seconds = ?,
+                        completed_at = ?, updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (
+                        terminal,
+                        stage,
+                        int(result.get("requested") or 0),
+                        int(result.get("scanned") or 0),
+                        int(result.get("remaining") or 0),
+                        int(changes.get("baseline") or 0),
+                        int(changes.get("unchanged") or 0),
+                        int(changes.get("metadataOnly") or 0),
+                        int(changes.get("appearance") or 0),
+                        int(changes.get("sourceMissing") or 0),
+                        int(changes.get("sourceReturned") or 0),
+                        len(result.get("failures") or []),
+                        json.dumps(result.get("failures") or [], ensure_ascii=False),
+                        float(result.get("elapsedSeconds") or 0),
+                        completed_at,
+                        completed_at,
+                        run_id,
+                    ),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(record_terminal)
     except Exception as error:  # noqa: BLE001 - persist the audit receipt for retry.
         completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = 'failed', stage = 'Failed', error_text = ?,
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (str(error), completed_at, completed_at, run_id),
+
+        def record_failure() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = 'failed', stage = 'Failed', error_text = ?,
+                        completed_at = ?, updated_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (str(error), completed_at, completed_at, run_id),
+                )
+                connection.commit()
+
+        try:
+            _retry_photos_sync_db_write(record_failure)
+        except Exception as receipt_error:  # noqa: BLE001 - startup recovery handles the durable row.
+            print(
+                f"Photos sync run {run_id} failed before its receipt could be persisted: {receipt_error}",
+                file=sys.stderr,
             )
-            connection.commit()
     finally:
         PHOTOS_INCREMENTAL_SYNC_LOCK.release()
 
 
 def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
+    _reconcile_stale_photos_sync_runs(repo_root)
     bounded_limit = max(1, min(int(limit or 25), 50))
     run_id = f"photos-sync-{uuid.uuid4().hex[:16]}"
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    with fixture_connect(repo_root) as connection:
-        connection.execute(
-            """
-            INSERT INTO photos_sync_runs (
-              run_id, status, stage, requested_count, remaining_count,
-              created_at, updated_at
-            ) VALUES (?, 'running', 'Queued', ?, ?, ?, ?)
-            """,
-            (run_id, bounded_limit, bounded_limit, timestamp, timestamp),
-        )
-        connection.commit()
+
+    def create_run() -> None:
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                INSERT INTO photos_sync_runs (
+                  run_id, status, stage, requested_count, remaining_count,
+                  created_at, updated_at
+                ) VALUES (?, 'running', 'Queued', ?, ?, ?, ?)
+                """,
+                (run_id, bounded_limit, bounded_limit, timestamp, timestamp),
+            )
+            connection.commit()
+
+    _retry_photos_sync_db_write(create_run)
     worker = threading.Thread(
         target=_run_photos_sync_task,
         args=(repo_root, run_id, bounded_limit),
@@ -4314,6 +4453,15 @@ def main() -> int:
     parser.add_argument("--backstage-bootstrap-file", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
     _bootstrap_local_tool_path()
+    try:
+        recovery = _reconcile_stale_photos_sync_runs(Path.cwd())
+        if recovery.get("recoveredCount"):
+            print(
+                "Recovered interrupted Photos sync runs: "
+                f"{recovery['recoveredCount']}"
+            )
+    except Exception as error:  # noqa: BLE001 - the local server remains usable if recovery is temporarily locked.
+        print(f"Photos sync recovery check skipped: {error}", file=sys.stderr)
 
     bootstrap_secret = os.environ.pop("PBE_BACKSTAGE_BOOTSTRAP_SECRET", "")
     document_root = Path.cwd().resolve()

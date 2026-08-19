@@ -2,6 +2,8 @@ import sys
 import tempfile
 import unittest
 import hashlib
+import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,6 +35,109 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_photos_sync_db_writes_retry_transient_locks(self):
+        attempts = 0
+
+        def operation():
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise sqlite3.OperationalError("database is locked")
+            return {"ok": True}
+
+        self.assertEqual(
+            local_server._retry_photos_sync_db_write(operation, delays=(0, 0)),
+            {"ok": True},
+        )
+        self.assertEqual(attempts, 3)
+
+    def test_photos_sync_recovery_marks_only_stale_running_rows(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.executemany(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at
+                    ) VALUES (?, 'running', 'Reading Apple Photos metadata', ?, ?)
+                    """,
+                    [
+                        (
+                            "stale-run",
+                            "2026-08-19T10:00:00Z",
+                            "2026-08-19T10:00:00Z",
+                        ),
+                        (
+                            "fresh-run",
+                            "2026-08-19T11:45:00Z",
+                            "2026-08-19T11:45:00Z",
+                        ),
+                    ],
+                )
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at, completed_at
+                    ) VALUES (
+                      'completed-run', 'completed', 'Completed',
+                      '2026-08-19T08:00:00Z', '2026-08-19T08:05:00Z',
+                      '2026-08-19T08:05:00Z'
+                    )
+                    """
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 1)
+            self.assertEqual(result["recoveredRunIds"], ["stale-run"])
+
+            with connect(root) as connection:
+                rows = {
+                    row["run_id"]: row
+                    for row in connection.execute(
+                        "SELECT run_id, status, stage, error_text, completed_at FROM photos_sync_runs"
+                    )
+                }
+            self.assertEqual(rows["stale-run"]["status"], "failed")
+            self.assertEqual(rows["stale-run"]["stage"], "Recovered after interruption")
+            self.assertIn("worker heartbeat", rows["stale-run"]["error_text"])
+            self.assertEqual(rows["stale-run"]["completed_at"], "2026-08-19T12:00:00Z")
+            self.assertEqual(rows["fresh-run"]["status"], "running")
+            self.assertEqual(rows["completed-run"]["status"], "completed")
+
+    def test_photos_sync_worker_persists_failure_receipt(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at
+                    ) VALUES (
+                      'failed-worker', 'running', 'Queued',
+                      '2026-08-19T10:00:00Z', '2026-08-19T10:00:00Z'
+                    )
+                    """
+                )
+                connection.commit()
+
+            with patch.object(
+                local_server,
+                "_incremental_photos_sync",
+                side_effect=RuntimeError("PhotoKit unavailable"),
+            ):
+                local_server._run_photos_sync_task(root, "failed-worker", 25)
+
+            status = local_server._photos_sync_run_status(root, "failed-worker")
+            self.assertEqual(status["status"], "failed")
+            self.assertEqual(status["stage"], "Failed")
+            self.assertEqual(status["error"], "PhotoKit unavailable")
+            self.assertTrue(status["completedAt"])
+
     def test_connector_exposes_fixture_state_and_effective_access(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

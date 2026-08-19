@@ -33,6 +33,7 @@ from scripts.local_server import (
     move_to_waste_basket_gateway,
     pbe_owner_action_payload,
     pbe_owner_fixture_gallery,
+    _start_on_demand_owner_connector,
 )
 
 
@@ -56,6 +57,55 @@ class PBEOwnerSessionTests(unittest.TestCase):
             "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
             "expiresAt": "2033-05-18T03:35:00Z",
         }
+
+    def test_on_demand_connector_launch_is_coalesced_and_short_lived(self) -> None:
+        class FakeProcess:
+            def __init__(self, pid: int) -> None:
+                self.pid = pid
+                self.running = True
+
+            def poll(self) -> int | None:
+                return None if self.running else 0
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets/owner-actions").mkdir(parents=True)
+            (root / "assets/owner-actions/Owner.sqlite").write_bytes(b"fixture")
+            runtime_script = root / "scripts/new_owner_connector.py"
+            runtime_script.parent.mkdir()
+            runtime_script.write_text("# fixture\n", encoding="utf-8")
+            home = root / "home"
+            config = home / ".config/photosbyelie/connector.json"
+            config.parent.mkdir(parents=True)
+            config.write_text("{}\n", encoding="utf-8")
+            first = FakeProcess(4242)
+            second = FakeProcess(4343)
+            local_server.ON_DEMAND_CONNECTOR_PROCESS = None
+            try:
+                with (
+                    patch.object(local_server.Path, "home", return_value=home),
+                    patch("scripts.local_server._connector_runtime_script", return_value=runtime_script),
+                    patch("scripts.local_server.subprocess.Popen", side_effect=[first, second]) as launch,
+                ):
+                    started = _start_on_demand_owner_connector(root)
+                    coalesced = _start_on_demand_owner_connector(root)
+                    first.running = False
+                    restarted = _start_on_demand_owner_connector(root)
+            finally:
+                local_server.ON_DEMAND_CONNECTOR_PROCESS = None
+
+        self.assertEqual(started, {"started": True, "active": True, "pid": 4242})
+        self.assertEqual(coalesced, {"started": False, "active": True, "pid": 4242})
+        self.assertEqual(restarted, {"started": True, "active": True, "pid": 4343})
+        self.assertEqual(launch.call_count, 2)
+        command = launch.call_args_list[0].args[0]
+        self.assertEqual(command[-1], "--once")
+        self.assertNotIn("token", " ".join(command).lower())
+        launch_kwargs = launch.call_args_list[0].kwargs
+        self.assertEqual(launch_kwargs["cwd"], str(root.resolve()))
+        self.assertTrue(launch_kwargs["start_new_session"])
+        self.assertEqual(launch_kwargs["env"]["PBE_REPO_ROOT"], str(root.resolve()))
+        self.assertEqual(launch_kwargs["env"]["PBE_ON_DEMAND_OWNER_CONNECTOR"], "1")
 
     def test_checkout_identity_rejects_dirty_hidden_or_stray_host_code(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -318,6 +368,9 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 patch("scripts.local_server.queue_hosted_lifecycle_request", return_value={
                     "requestId": "hlr-opaque-one", "state": "queued",
                 }) as queue_lifecycle,
+                patch("scripts.local_server._start_on_demand_owner_connector", return_value={
+                    "started": True, "active": True, "pid": 4242,
+                }) as connector_wake,
                 patch("scripts.local_server.hosted_lifecycle_request_status", return_value={
                     "requestId": "hlr-opaque-one", "state": "queued", "error": "",
                 }) as hosted_status,
@@ -480,9 +533,11 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 with urlopen(lifecycle_action) as response:
                     self.assertEqual(response.status, 202)
                     queued = json.loads(response.read())
-                self.assertEqual(queued, {
-                    "ok": True, "requestId": "hlr-opaque-one", "state": "queued",
-                })
+                self.assertEqual(queued["ok"], True)
+                self.assertEqual(queued["requestId"], "hlr-opaque-one")
+                self.assertEqual(queued["state"], "queued")
+                self.assertEqual(queued["connectorWake"]["active"], True)
+                connector_wake.assert_called_once_with(Path.cwd())
                 queue_lifecycle.assert_called_once_with(
                     Path.cwd(),
                     operation="waste-basket-x",

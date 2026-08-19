@@ -60,17 +60,24 @@ sidebar it:
    session-only loopback cookie while Backstage heartbeats the Worker-backed
    lease.
 
-It runs as `com.photosbyelie.owner-connector`, keeps its per-Mac token in
-`~/.config/photosbyelie/connector.json` with mode 600, and does not serve a
-localhost Owner UI. Installation copies tracked connector code into a
-versioned, read-only, manifest-verified runtime below
-`~/Library/Application Support/PhotosByElie`. Every byte comes directly from
-one fully resolved Git commit object rather than the index or working tree, and
-the manifest records that exact full commit SHA. Committed symlinks,
-non-regular entries, unsafe paths, and invalid revisions fail closed. The
-LaunchAgent uses that runtime for code and a separately configured stable
-repository root for mutable Owner data, so dirty local edits or deleting the
-installer source checkout cannot change or break a later connector restart.
+The normal cutover target is not an always-on `com.photosbyelie.owner-connector`
+LaunchAgent. Signed Backstage starts the connector runtime with `--once` only
+when it has created or is monitoring an explicit Owner action; the PBE local
+host uses the same short-lived drain for a hosted lifecycle request and
+coalesces repeated browser wakes. The Worker action ledger and `Owner.sqlite`
+outbox remain authoritative, so a child that finishes, crashes, or is stopped
+does not erase queued work. Closing Backstage or its local host leaves the
+durable action available for the next Backstage launch.
+
+The per-Mac token remains in `~/.config/photosbyelie/connector.json` with mode
+600 and is passed only by config-file path, never copied into a Swift or shell
+argument. Installation still copies tracked connector code into a versioned,
+read-only, manifest-verified runtime below
+`~/Library/Application Support/PhotosByElie`; the existing LaunchAgent
+installer is rollback-only until the PBB-106 release and live/KV gates are
+accepted. Every runtime byte comes directly from one fully resolved Git commit
+object rather than the index or working tree, and committed symlinks,
+non-regular entries, unsafe paths, and invalid revisions fail closed.
 
 The active fixture is frozen for the session. Backstage disables fixture drift;
 the Worker, loopback host, and browser independently reject missing, changed, or
@@ -97,11 +104,14 @@ fixture identity, audit chain, and lifecycle writer.
 
 ## Connector boundary
 
-Background Mac connectors retain their scoped credentials and may claim only
-allowlisted, targeted work. They do not grant browser Owner authority. Apple
-Photos, `Owner.sqlite`, source files, and Backstage's signed PhotoKit IPC remain
-behind the Mac boundary; cloud APIs carry identities, opaque action records,
-and audit receipts rather than raw local paths or database access.
+The on-demand Mac connector retains its scoped credential and may claim only
+allowlisted, targeted work. It does not grant browser Owner authority. Apple
+Photos, `Owner.sqlite`, source files, and Backstage's signed PhotoKit IPC
+remain behind the Mac boundary; cloud APIs carry identities, opaque action
+records, and audit receipts rather than raw local paths or database access.
+Backstage is the only normal launch owner: it runs the sealed connector once
+for native actions, while its loopback PBE host does the same for hosted
+lifecycle actions. No idle status server or polling process is required.
 
 Sidecar is obsolete as a product, authority, and launch path. Historical
 `sidecar-*` action kinds, database type names, and compatibility routes may

@@ -133,6 +133,9 @@ LIFECYCLE_WRITING_ACTIONS = frozenset({
 CONNECTOR_RUNTIME_ROOT = Path(
     os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
 ).expanduser().resolve()
+ON_DEMAND_CONNECTOR_PATH = (
+    "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+)
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -210,6 +213,8 @@ OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 PHOTOS_INCREMENTAL_SYNC_LOCK = threading.Lock()
+ON_DEMAND_CONNECTOR_LOCK = threading.Lock()
+ON_DEMAND_CONNECTOR_PROCESS: subprocess.Popen[str] | None = None
 PRICE_PUBLISH_TASKS: dict[str, dict] = {}
 PRICE_PUBLISH_LOCK = threading.Lock()
 R2_SWEEP_PHASES = {
@@ -251,6 +256,73 @@ def _connector_runtime_script(name: str, fallback_root: Path | None = None) -> P
     if candidate.is_symlink() or not candidate.is_file():
         raise RuntimeError(f"Connector runtime script is missing or unsafe: {name}")
     return candidate
+
+
+def _start_on_demand_owner_connector(repo_root: Path) -> dict[str, object]:
+    """Start one short-lived connector drain for work owned by Backstage.
+
+    The PBE Owner host is itself launched by signed Backstage. It can therefore
+    wake the sealed connector runtime when a browser action is queued, without
+    recreating the former always-on LaunchAgent or placing credentials in a
+    process argument. The durable Worker/Owner ledgers remain authoritative;
+    this child is only a bounded drain/acceleration process.
+    """
+    global ON_DEMAND_CONNECTOR_PROCESS
+    with ON_DEMAND_CONNECTOR_LOCK:
+        if ON_DEMAND_CONNECTOR_PROCESS is not None:
+            if ON_DEMAND_CONNECTOR_PROCESS.poll() is None:
+                return {
+                    "started": False,
+                    "active": True,
+                    "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+                }
+            ON_DEMAND_CONNECTOR_PROCESS = None
+
+        root = repo_root.resolve()
+        runtime_script = _connector_runtime_script("new_owner_connector.py", root)
+        config_path = Path.home() / ".config" / "photosbyelie" / "connector.json"
+        owner_database = root / "assets" / "owner-actions" / "Owner.sqlite"
+        if config_path.is_symlink() or not config_path.is_file():
+            return {
+                "started": False,
+                "active": False,
+                "error": "The trusted connector configuration is unavailable on this Mac.",
+            }
+        if owner_database.is_symlink() or not owner_database.is_file():
+            return {
+                "started": False,
+                "active": False,
+                "error": "The configured Owner.sqlite data root is unavailable on this Mac.",
+            }
+
+        environment = os.environ.copy()
+        for key in tuple(environment):
+            if key.startswith("PYTHON"):
+                environment.pop(key, None)
+        environment["PATH"] = ON_DEMAND_CONNECTOR_PATH
+        environment["PBE_CONNECTOR_RUNTIME_ROOT"] = str(CONNECTOR_RUNTIME_ROOT)
+        environment["PBE_REPO_ROOT"] = str(root)
+        environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
+        ON_DEMAND_CONNECTOR_PROCESS = subprocess.Popen(
+            [
+                sys.executable,
+                str(runtime_script),
+                "--config",
+                str(config_path),
+                "--once",
+            ],
+            cwd=str(root),
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return {
+            "started": True,
+            "active": True,
+            "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+        }
 
 
 def _local_machine_names() -> list[str]:
@@ -1425,19 +1497,21 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 fixture_id=str(session["fixtureId"]),
                 request_key=request_key,
             )
+            connector_wake = _start_on_demand_owner_connector(Path.cwd())
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "pbe_owner_action_invalid", "message": str(error)}})
             return
-        except (sqlite3.Error, subprocess.CalledProcessError, OSError) as error:
+        except (sqlite3.Error, subprocess.CalledProcessError, OSError, RuntimeError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": {"code": "pbe_owner_action_failed", "message": str(error)}})
             return
         self._send_json(HTTPStatus.ACCEPTED, {
             "ok": True,
             "requestId": queued["requestId"],
             "state": queued["state"],
+            "connectorWake": connector_wake,
             **({"resumed": True} if queued.get("resumedActive") else {}),
         })
 

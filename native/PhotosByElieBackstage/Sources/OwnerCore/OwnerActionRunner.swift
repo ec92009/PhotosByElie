@@ -14,6 +14,168 @@ public protocol OwnerActionWaking: Sendable {
     func wake(actionID: String) async throws -> OwnerAction?
 }
 
+private final class OnDemandOwnerActionFileManager: @unchecked Sendable {
+    let value: FileManager
+
+    init(_ value: FileManager) {
+        self.value = value
+    }
+}
+
+/// Runs the trusted connector only for the duration of an explicit Backstage
+/// action. The process uses the sealed runtime and mutable Owner data root
+/// already resolved by the PBE host contract; credentials remain in the
+/// existing connector config and never enter Swift memory or arguments.
+public struct OnDemandOwnerActionWaker: OwnerActionWaking {
+    public struct LaunchPlan: Sendable, Equatable {
+        public var pythonExecutable: URL
+        public var scriptURL: URL
+        public var configURL: URL
+        public var runtimeRoot: URL
+        public var dataRoot: URL
+
+        public init(
+            pythonExecutable: URL,
+            scriptURL: URL,
+            configURL: URL,
+            runtimeRoot: URL,
+            dataRoot: URL
+        ) {
+            self.pythonExecutable = pythonExecutable
+            self.scriptURL = scriptURL
+            self.configURL = configURL
+            self.runtimeRoot = runtimeRoot
+            self.dataRoot = dataRoot
+        }
+    }
+
+    private let runtimeRoot: URL?
+    private let dataRoot: URL?
+    private let configURL: URL
+    private let pythonExecutable: URL
+    private let fileManagerBox: OnDemandOwnerActionFileManager
+
+    public init(
+        runtimeRoot: URL? = nil,
+        dataRoot: URL? = nil,
+        configURL: URL? = nil,
+        pythonExecutable: URL = URL(fileURLWithPath: "/usr/bin/python3"),
+        fileManager: FileManager = .default
+    ) {
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        self.runtimeRoot = runtimeRoot
+        self.dataRoot = dataRoot
+        self.configURL = configURL ?? home.appendingPathComponent(
+            ".config/photosbyelie/connector.json",
+            isDirectory: false
+        )
+        self.pythonExecutable = pythonExecutable
+        self.fileManagerBox = OnDemandOwnerActionFileManager(fileManager)
+    }
+
+    public static func makeLaunchPlan(
+        runtimeRoot: URL,
+        dataRoot: URL,
+        configURL: URL,
+        pythonExecutable: URL = URL(fileURLWithPath: "/usr/bin/python3"),
+        fileManager: FileManager = .default
+    ) throws -> LaunchPlan {
+        let runtime = runtimeRoot.standardizedFileURL
+        let data = dataRoot.standardizedFileURL
+        let config = configURL.standardizedFileURL
+        let script = runtime.appendingPathComponent(
+            "scripts/new_owner_connector.py",
+            isDirectory: false
+        )
+        let isSymbolicLink: (URL) -> Bool = { url in
+            (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true
+        }
+        guard fileManager.fileExists(atPath: pythonExecutable.path),
+              fileManager.fileExists(atPath: script.path),
+              fileManager.fileExists(atPath: config.path),
+              fileManager.fileExists(atPath: data.appendingPathComponent(
+                  "assets/owner-actions/Owner.sqlite",
+                  isDirectory: false
+              ).path),
+              !isSymbolicLink(script),
+              !isSymbolicLink(runtime),
+              !isSymbolicLink(data) else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_connector_runtime_missing",
+                message: "Backstage could not prepare its on-demand Owner connector runtime."
+            ))
+        }
+        return LaunchPlan(
+            pythonExecutable: pythonExecutable.standardizedFileURL,
+            scriptURL: script.standardizedFileURL,
+            configURL: config,
+            runtimeRoot: runtime,
+            dataRoot: data
+        )
+    }
+
+    public func wake(actionID: String) async throws -> OwnerAction? {
+        guard actionID.hasPrefix("owner-action-"), actionID.count <= 96 else {
+            throw OwnerActionRunError.invalidActionID
+        }
+        let roots = PBEOwnerRuntimeRoots.resolve(
+            environment: ProcessInfo.processInfo.environment,
+            bundleRuntimeRoot: Bundle.main.resourceURL?.appendingPathComponent(
+                "OwnerRuntime",
+                isDirectory: true
+            ),
+            connectorConfigURL: configURL,
+            homeDirectory: URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true),
+            fileManager: fileManagerBox.value
+        )
+        let resolvedRuntime = runtimeRoot ?? roots.runtimeRoot
+        let resolvedData = dataRoot ?? roots.dataRoot
+        guard let resolvedRuntime, let resolvedData else {
+            throw APIErrorEnvelope(error: .init(
+                code: "pbe_owner_connector_roots_missing",
+                message: "Backstage could not resolve its signed Owner runtime and mutable data root."
+            ))
+        }
+        let plan = try Self.makeLaunchPlan(
+            runtimeRoot: resolvedRuntime,
+            dataRoot: resolvedData,
+            configURL: configURL,
+            pythonExecutable: pythonExecutable,
+            fileManager: fileManagerBox.value
+        )
+        _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: plan.runtimeRoot)
+
+        let process = Process()
+        process.executableURL = plan.pythonExecutable
+        process.arguments = [
+            "-E", "-B",
+            plan.scriptURL.path,
+            "--config", plan.configURL.path,
+            "--once",
+        ]
+        process.currentDirectoryURL = plan.dataRoot
+        var environment = ProcessInfo.processInfo.environment
+        for key in environment.keys where key.hasPrefix("PYTHON") {
+            environment.removeValue(forKey: key)
+        }
+        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        environment["PBE_CONNECTOR_RUNTIME_ROOT"] = plan.runtimeRoot.path
+        environment["PBE_REPO_ROOT"] = plan.dataRoot.path
+        environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
+        process.environment = environment
+        process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
+        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw OwnerActionRunError.failed(
+                "The on-demand Owner connector exited with status \(process.terminationStatus)."
+            )
+        }
+        return nil
+    }
+}
+
 public struct LocalOwnerActionWaker: OwnerActionWaking {
     private let endpoints: [URL]
     private let session: URLSession
@@ -101,7 +263,7 @@ public actor OwnerActionRunner {
 
     public init(
         api: any OwnerActionServing,
-        waker: any OwnerActionWaking = LocalOwnerActionWaker(),
+        waker: any OwnerActionWaking = OnDemandOwnerActionWaker(),
         pollInterval: Duration = .milliseconds(500),
         timeout: Duration = .seconds(15 * 60)
     ) {

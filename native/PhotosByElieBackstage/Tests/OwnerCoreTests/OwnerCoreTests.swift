@@ -4150,6 +4150,48 @@ struct PBEOwnerHostContractTests {
         ))
     }
 
+    @Test("On-demand Owner connector plans require the sealed runtime and mutable Owner data")
+    func onDemandOwnerConnectorPlanIsBounded() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-on-demand-(UUID().uuidString)", isDirectory: true)
+        let runtimeRoot = root.appendingPathComponent("runtime", isDirectory: true)
+        let dataRoot = root.appendingPathComponent("data", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        let pythonURL = root.appendingPathComponent("python3")
+        try FileManager.default.createDirectory(
+            at: runtimeRoot.appendingPathComponent("scripts", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: dataRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("#!/usr/bin/env python3\n".utf8).write(
+            to: runtimeRoot.appendingPathComponent("scripts/new_owner_connector.py")
+        )
+        try Data().write(to: dataRoot.appendingPathComponent("assets/owner-actions/Owner.sqlite"))
+        try Data("{}\n".utf8).write(to: configURL)
+        try Data().write(to: pythonURL)
+
+        let plan = try OnDemandOwnerActionWaker.makeLaunchPlan(
+            runtimeRoot: runtimeRoot,
+            dataRoot: dataRoot,
+            configURL: configURL,
+            pythonExecutable: pythonURL
+        )
+        #expect(plan.scriptURL == runtimeRoot.appendingPathComponent("scripts/new_owner_connector.py"))
+        #expect(plan.dataRoot == dataRoot)
+        #expect(throws: APIErrorEnvelope.self) {
+            try OnDemandOwnerActionWaker.makeLaunchPlan(
+                runtimeRoot: runtimeRoot,
+                dataRoot: dataRoot,
+                configURL: root.appendingPathComponent("missing.json"),
+                pythonExecutable: pythonURL
+            )
+        }
+    }
+
     private func makeWritable(_ root: URL) {
         guard FileManager.default.fileExists(atPath: root.path) else { return }
         if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {

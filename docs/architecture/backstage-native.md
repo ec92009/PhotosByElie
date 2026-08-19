@@ -47,9 +47,10 @@ The Metadata screen never calls an Apple Photos mutation API. It creates a
 `sidecar-culling-review` action containing the existing
 `fixture-photos-writeback-plan` or `fixture-photos-writeback-commit` manifest.
 The Worker is the authorization, idempotency and audit gate. Backstage then
-posts only the opaque action ID to the allowlisted Max localhost wake endpoint;
-if the endpoint is unavailable, the durable connector poller picks up the same
-action.
+launches the sealed connector runtime with `--once` for that opaque action;
+the process has no local status server and exits after its bounded drain. If
+Backstage is closed or the child is unavailable, the durable Worker action
+remains queued for the next explicit Backstage launch.
 
 Python/browser/connector maintenance invokes the authenticated Backstage IPC
 surface for both batch reads and batch writes. The signed Backstage app owns

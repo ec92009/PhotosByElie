@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Background Mac connector for cloud Owner actions.
+"""Mac connector for cloud Owner actions.
 
-The connector does not serve a local web UI. It polls the authenticated Worker
-queue, performs the small set of hardware/local-file tasks this Mac supports,
-and posts results back to the cloud Owner action ledger.
+The supported Backstage path launches this process with ``--once`` for a
+bounded drain. The legacy long-running mode remains only for rollback and
+must not be used by the on-demand launch contract.
 """
 
 from __future__ import annotations
@@ -2098,6 +2098,12 @@ def main() -> int:
         help="Verify config and installed runtime locally, print redacted JSON, and exit without network access.",
     )
     args = parser.parse_args()
+    if (
+        os.environ.get("PBE_ON_DEMAND_OWNER_CONNECTOR") == "1"
+        and not args.once
+        and not args.status
+    ):
+        raise SystemExit("On-demand Owner connector launches must use --once.")
     # launchd starts with a deliberately small PATH. Keep the normal local
     # toolchain discoverable to child Sidecar and maintenance processes.
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]

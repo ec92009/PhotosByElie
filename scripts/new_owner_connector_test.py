@@ -2,6 +2,7 @@ import unittest
 import hashlib
 import importlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import socket
@@ -128,6 +129,15 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("<key>ProcessType</key>\n  <string>Standard</string>", template)
         self.assertNotIn("<string>Background</string>", template)
+
+    def test_on_demand_mode_rejects_a_long_running_invocation(self):
+        with (
+            patch.dict(os.environ, {"PBE_ON_DEMAND_OWNER_CONNECTOR": "1"}),
+            patch.object(sys, "argv", ["new_owner_connector.py"]),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                new_owner_connector.main()
+        self.assertIn("must use --once", str(raised.exception))
 
     def test_registration_is_limited_to_uploaded_action_assets(self):
         calls = []

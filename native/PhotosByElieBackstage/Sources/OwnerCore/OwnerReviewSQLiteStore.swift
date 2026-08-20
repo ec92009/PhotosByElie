@@ -43,6 +43,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         fixtureID: String,
         assetIDs: [String],
         anchorAssetID: String = "",
+        propagate: Bool = false,
         title: String? = nil,
         keywords: [String]? = nil,
         proposalID: String? = nil,
@@ -51,15 +52,22 @@ public struct OwnerReviewSQLiteStore: Sendable {
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
-        guard action == .hide || action == .approve || action == .requestAI || action == .editMetadata else {
+        guard action == .hide || action == .approve || action == .requestAI
+            || action == .editMetadata || action == .propagateTitle
+            || action == .propagateKeywords else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
         }
-        let cleanIDs = unique(assetIDs)
+        var cleanIDs = unique(assetIDs)
         let cleanAnchor = anchorAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty ? (cleanIDs.last ?? "") : anchorAssetID
         guard !cleanIDs.isEmpty, !cleanAnchor.isEmpty else {
             throw OwnerReviewSQLiteError.invalid("at least one Review asset is required")
         }
+        guard cleanIDs.contains(cleanAnchor) else {
+            throw OwnerReviewSQLiteError.invalid("the Review anchor must be one of the selected assets")
+        }
+        let shouldPropagate = propagate || action == .propagateTitle || action == .propagateKeywords
+        let includePropagationAnchor = action != .propagateTitle && action != .propagateKeywords
 
         let timestamp = ISO8601DateFormatter().string(from: now)
         let operationID = "reviewop-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(20))"
@@ -75,6 +83,18 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 bindings: [.string(fixtureID)]
             ) != nil else {
                 throw OwnerReviewSQLiteError.invalid("fixture does not exist or is archived")
+            }
+            if shouldPropagate {
+                let propagatedIDs = try propagatedAssetIDs(
+                    connection,
+                    fixtureID: fixtureID,
+                    anchorAssetID: cleanAnchor,
+                    includeAnchor: includePropagationAnchor
+                )
+                cleanIDs = unique([cleanIDs, propagatedIDs].flatMap { $0 })
+            }
+            guard !cleanIDs.isEmpty else {
+                throw OwnerReviewSQLiteError.invalid("review action has no eligible targets")
             }
 
             for assetID in cleanIDs {
@@ -131,6 +151,17 @@ public struct OwnerReviewSQLiteStore: Sendable {
             }
             let explicitTitle = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             let explicitKeywords = keywords.map { unique($0).map(JSONValue.string) }
+            let sourceDecision = try connection.queryOne(
+                "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
+                bindings: [.string(cleanAnchor)]
+            ) ?? [:]
+            let sourceMetadata = try effectiveMetadata(
+                connection,
+                assetID: cleanAnchor,
+                decision: sourceDecision
+            )
+            let sourceTitle = explicitTitle ?? sourceMetadata.title
+            let sourceKeywords = explicitKeywords.map(JSONValue.array) ?? sourceMetadata.keywords
             let cleanAIReasons = unique(aiReasons)
             let cleanAINote = aiNote.trimmingCharacters(in: .whitespacesAndNewlines)
             var pendingPlacements: [(assetID: String, state: String, eligibility: String)] = []
@@ -301,16 +332,86 @@ public struct OwnerReviewSQLiteStore: Sendable {
                     } else {
                         approvedAt = .null
                     }
+                    let requestedAt: ReviewSQLiteBinding = afterState == "requesting-ai"
+                        ? .string(timestamp)
+                        : .null
                     try connection.execute(
                         """
                         UPDATE asset_editorial_state
                         SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
-                            requested_at = NULL, approved_at = ?, updated_at = ?
+                            requested_at = ?, approved_at = ?, updated_at = ?
                         WHERE asset_id = ?
                         """,
                         bindings: [
                             .string(afterState), .string(try encodeJSON(previousReasons)),
-                            .string(previousNote), approvedAt,
+                            .string(previousNote), requestedAt, approvedAt,
+                            .string(timestamp), .string(assetID),
+                        ]
+                    )
+                } else if action == .propagateTitle || action == .propagateKeywords {
+                    let previousReview = beforeReview[assetID]?.objectValue ?? [:]
+                    let previousReasons = previousReview["aiReasons"] ?? .array([])
+                    let previousNote = previousReview["aiNote"]?.stringValue ?? ""
+                    let previousEditorial = try connection.queryOne(
+                        "SELECT approved_at FROM asset_editorial_state WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    ) ?? [:]
+                    let afterState = previousReview["editorialState"]?.stringValue ?? "unreviewed"
+
+                    if action == .propagateTitle {
+                        try connection.execute(
+                            """
+                            UPDATE sidecar_decisions
+                            SET title = ?, last_action = 'metadata', updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            bindings: [.string(sourceTitle), .string(timestamp), .string(assetID)]
+                        )
+                    } else {
+                        try connection.execute(
+                            """
+                            UPDATE sidecar_decisions
+                            SET keywords_json = ?, last_action = 'metadata', updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            bindings: [
+                                .string(try encodeJSON(sourceKeywords)),
+                                .string(timestamp), .string(assetID),
+                            ]
+                        )
+                    }
+                    if afterState == "approved" {
+                        try connection.execute(
+                            """
+                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                            VALUES (?, 'needs-upload', ?, ?)
+                            ON CONFLICT(asset_id) DO UPDATE SET
+                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
+                            """,
+                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                        )
+                    }
+                    let approvedAt: ReviewSQLiteBinding
+                    if afterState == "approved" {
+                        approvedAt = .string(timestamp)
+                    } else if let previousApprovedAt = previousEditorial["approved_at"]?.stringValue {
+                        approvedAt = .string(previousApprovedAt)
+                    } else {
+                        approvedAt = .null
+                    }
+                    let requestedAt: ReviewSQLiteBinding = afterState == "requesting-ai"
+                        ? .string(timestamp)
+                        : .null
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
+                            requested_at = ?, approved_at = ?, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [
+                            .string(afterState), .string(try encodeJSON(previousReasons)),
+                            .string(previousNote), requestedAt, approvedAt,
                             .string(timestamp), .string(assetID),
                         ]
                     )
@@ -448,11 +549,12 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 INSERT INTO fixture_review_operations (
                   operation_id, fixture_id, action, anchor_asset_id, propagated,
                   asset_ids_json, before_json, after_json, state, actor, created_at
-                ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, 'applied', ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'applied', ?, ?)
                 """,
                 bindings: [
                     .string(operationID), .string(fixtureID), .string(action.rawValue),
-                    .string(cleanAnchor), .string(try encodeJSON(.array(cleanIDs.map { .string($0) }))),
+                    .string(cleanAnchor), .number(shouldPropagate ? 1 : 0),
+                    .string(try encodeJSON(.array(cleanIDs.map { .string($0) }))),
                     .string(try encodeJSON(.array(beforeSnapshots))),
                     .string(try encodeJSON(.array(afterSnapshots))),
                     .string(actor), .string(timestamp),
@@ -464,7 +566,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 "fixtureId": .string(fixtureID),
                 "action": .string(action.rawValue),
                 "anchorAssetId": .string(cleanAnchor),
-                "propagated": .bool(false),
+                "propagated": .bool(shouldPropagate),
                 "items": .array(items),
                 "timing": timing(started: started),
             ])
@@ -869,6 +971,50 @@ private func effectiveMetadata(
     let fallbackKeywords = jsonArray(asset?["photos_keywords_json"])
     let hasKeywords = keywords.arrayValue?.isEmpty == false
     return (title.isEmpty ? fallbackTitle : title, hasKeywords ? keywords : fallbackKeywords)
+}
+
+private func propagatedAssetIDs(
+    _ connection: ReviewSQLiteConnection,
+    fixtureID: String,
+    anchorAssetID: String,
+    includeAnchor: Bool
+) throws -> [String] {
+    guard let anchor = try connection.queryOne(
+        "SELECT captured_at FROM sidecar_assets WHERE asset_id = ?",
+        bindings: [.string(anchorAssetID)]
+    ), let capturedAt = anchor["captured_at"]?.stringValue,
+    !capturedAt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return includeAnchor ? [anchorAssetID] : []
+    }
+    let comparator = includeAnchor ? ">=" : ">"
+    let rows = try connection.query(
+        """
+        SELECT asset.asset_id
+        FROM sidecar_assets AS asset
+        JOIN fixture_asset_decisions AS current_decision
+          ON current_decision.asset_id = asset.asset_id
+         AND current_decision.fixture_id = ?
+         AND current_decision.placement_state = 'picked'
+         AND current_decision.eligibility_state = 'active'
+        JOIN asset_editorial_state AS editorial
+          ON editorial.asset_id = asset.asset_id
+        WHERE (asset.missing_at IS NULL OR asset.missing_at = '')
+          AND editorial.editorial_state != 'approved'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM sidecar_tombstones AS tombstone
+            WHERE tombstone.asset_id = asset.asset_id
+              AND tombstone.tombstone_state = 'active'
+          )
+          AND datetime(asset.captured_at) \(comparator) datetime(?)
+          AND datetime(asset.captured_at) <= datetime(?, '+2 hours')
+        ORDER BY datetime(asset.captured_at), asset.asset_id
+        """,
+        bindings: [
+            .string(fixtureID), .string(capturedAt), .string(capturedAt),
+        ]
+    )
+    return rows.compactMap { $0["asset_id"]?.stringValue }
 }
 
 private func reviewState(

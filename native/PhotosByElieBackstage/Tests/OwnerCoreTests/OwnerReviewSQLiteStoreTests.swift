@@ -218,6 +218,53 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "proposed")
     }
 
+    @Test("Title propagation follows the two-hour picked cohort and exact Undo")
+    func propagateTitleAndUndoCopiedFixture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-propagate-title-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            "UPDATE asset_editorial_state SET editorial_state = 'requesting-ai', ai_reasons_json = '[\"location\"]', ai_note = 'check location', requested_at = '2026-01-01T00:00:00Z' WHERE asset_id = 'asset-2'"
+        )
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        let applied = try store.applyReview(
+            .propagateTitle,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            title: "Shared title",
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        #expect(applied.action == .propagateTitle)
+        #expect(applied.propagated)
+        #expect(applied.changes.map(\.assetID) == ["asset-1", "asset-2"])
+        #expect(applied.changes.allSatisfy { $0.review["title"]?.stringValue == "Shared title" })
+        #expect(try scalar(databaseURL, "SELECT propagated FROM fixture_review_operations WHERE operation_id = '\(applied.operationID)'") == "1")
+        #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "Shared title")
+        #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-2'") == "Shared title")
+        #expect(try scalar(databaseURL, "SELECT requested_at <> '2026-01-01T00:00:00Z' FROM asset_editorial_state WHERE asset_id = 'asset-2'") == "1")
+
+        let undone = try store.undoReview(
+            operationID: applied.operationID,
+            now: Date(timeIntervalSince1970: 1_800_000_001)
+        )
+
+        #expect(!undone.alreadyUndone)
+        #expect(undone.action == .propagateTitle)
+        #expect(undone.changes.map(\.assetID) == ["asset-1", "asset-2"])
+        #expect(undone.changes.first?.review["title"]?.stringValue == "Decision title")
+        #expect(undone.changes.last?.review["title"]?.stringValue == "Second title")
+        #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "Decision title")
+        #expect(try scalar(databaseURL, "SELECT COALESCE(title, '') FROM sidecar_decisions WHERE asset_id = 'asset-2'") == "")
+        #expect(try scalar(databaseURL, "SELECT requested_at FROM asset_editorial_state WHERE asset_id = 'asset-2'") == "2026-01-01T00:00:00Z")
+    }
+
     @Test("Undo refuses a later mutation instead of overwriting it")
     func undoConflictIsFailClosed() throws {
         let root = FileManager.default.temporaryDirectory
@@ -262,7 +309,14 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     CREATE TABLE sidecar_assets (
       asset_id TEXT PRIMARY KEY,
       photos_title TEXT,
-      photos_keywords_json TEXT NOT NULL DEFAULT '[]'
+      photos_keywords_json TEXT NOT NULL DEFAULT '[]',
+      captured_at TEXT,
+      missing_at TEXT,
+      media_type TEXT NOT NULL DEFAULT 'photo'
+    );
+    CREATE TABLE sidecar_tombstones (
+      asset_id TEXT PRIMARY KEY,
+      tombstone_state TEXT NOT NULL DEFAULT 'active'
     );
     CREATE TABLE sidecar_decisions (
       asset_id TEXT PRIMARY KEY,
@@ -365,9 +419,9 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     );
     INSERT INTO fixtures(fixture_id, parent_fixture_id, archived_at)
       VALUES ('fixture-expo', NULL, NULL);
-    INSERT INTO sidecar_assets(asset_id, photos_title, photos_keywords_json)
-      VALUES ('asset-1', 'Original title', '["Original"]'),
-             ('asset-2', 'Second title', '["Second"]');
+    INSERT INTO sidecar_assets(asset_id, photos_title, photos_keywords_json, captured_at)
+      VALUES ('asset-1', 'Original title', '["Original"]', '2026-01-01T00:00:00Z'),
+             ('asset-2', 'Second title', '["Second"]', '2026-01-01T00:30:00Z');
     INSERT INTO sidecar_decisions(asset_id, title, keywords_json, created_at, updated_at)
       VALUES ('asset-1', 'Decision title', '["Decision"]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
     INSERT INTO asset_editorial_state(asset_id, created_at, updated_at)

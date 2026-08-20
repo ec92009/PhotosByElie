@@ -377,6 +377,7 @@ final class BackstageViewModel: ObservableObject {
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
+    private var reviewAIStatusRefreshTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -394,6 +395,7 @@ final class BackstageViewModel: ObservableObject {
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
+    private var reviewAIStatusRefreshGeneration = 0
     private let preferences: UserDefaults
     private var fixtureSelectionCoordinator: FixtureSelectionCoordinator
     private static let selectedSectionPreferenceKey =
@@ -3257,7 +3259,7 @@ final class BackstageViewModel: ObservableObject {
             )
             syncReviewDraft()
             reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
-            await refreshAIStatus()
+            scheduleReviewAIStatusRefresh()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
         }
@@ -3512,7 +3514,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = result.alreadyUndone
                 ? "The Review action was already undone; the current fixture stayed \(selectedFixtureBreadcrumb)."
                 : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb)."
-            await refreshAIStatus()
+            scheduleReviewAIStatusRefresh()
         } catch {
             reviewStatus = "Undo failed: \(error)"
         }
@@ -3550,9 +3552,29 @@ final class BackstageViewModel: ObservableObject {
         await applyReviewAction(action, propagate: true)
     }
 
+    private func scheduleReviewAIStatusRefresh() {
+        reviewAIStatusRefreshTask?.cancel()
+        reviewAIStatusRefreshGeneration += 1
+        let generation = reviewAIStatusRefreshGeneration
+        aiProposalStatus = "Refreshing AI status…"
+        reviewAIStatusRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshAIStatus(forGeneration: generation)
+        }
+    }
+
     func refreshAIStatus() async {
+        await refreshAIStatus(forGeneration: nil)
+    }
+
+    private func refreshAIStatus(forGeneration generation: Int?) async {
         do {
-            fixtureAIStatus = try await fixtureService.aiStatus()
+            let status = try await fixtureService.aiStatus()
+            guard !Task.isCancelled else { return }
+            if let generation, generation != reviewAIStatusRefreshGeneration {
+                return
+            }
+            fixtureAIStatus = status
             guard let status = fixtureAIStatus else { return }
             if let run = status.run, status.active {
                 aiProposalStatus = [
@@ -3571,6 +3593,9 @@ final class BackstageViewModel: ObservableObject {
             }
         } catch {
             guard !isTransientCancellation(error) else { return }
+            if let generation, generation != reviewAIStatusRefreshGeneration {
+                return
+            }
             aiProposalStatus = "AI status unavailable: \(error)"
         }
     }

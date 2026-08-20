@@ -728,6 +728,39 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('case "u": .unpick', adapter)
         self.assertIn("QLPreviewPanel.shared()?.isVisible == true", adapter)
 
+    def test_review_undo_applies_a_normalized_receipt_before_reload_fallback(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        service = (
+            NATIVE
+            / "Sources"
+            / "OwnerCore"
+            / "FixtureWorkflowService.swift"
+        ).read_text(encoding="utf-8")
+        pipeline = (ROOT / "scripts" / "fixture_pipeline.py").read_text(
+            encoding="utf-8"
+        )
+        undo = model.split("func undoLastReviewAction()", 1)[1].split(
+            "func saveReviewMetadata()", 1
+        )[0]
+        fast_path = undo.split(
+            "if retainReviewUndoResultInCurrentWindow", 1
+        )[1].split("let window = try await fixtureService.reviewWindow", 1)[0]
+
+        self.assertIn("reviewItems: [FixtureReviewItem]", model)
+        self.assertIn("reviewItemIndexes: [String: Int]", model)
+        self.assertIn("retainReviewUndoResultInCurrentWindow", undo)
+        self.assertIn("entry.reviewItems", undo)
+        self.assertIn("entry.reviewItemIndexes", undo)
+        self.assertNotIn("fixtureService.reviewWindow", fast_path)
+        self.assertIn("change.review", model)
+        self.assertIn("public var review: [String: JSONValue]", service)
+        self.assertIn('"review": _review_item_update_from_snapshot', pipeline)
+
     def test_quick_look_supports_culling_review_shortcuts_metadata_and_advancement(self):
         app = backstage_ui_source()
         adapter = (

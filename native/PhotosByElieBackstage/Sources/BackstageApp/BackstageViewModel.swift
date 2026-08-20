@@ -52,6 +52,8 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var selectedIDs: Set<String>
     var anchorID: String?
     var focusedID: String?
+    var reviewItems: [FixtureReviewItem] = []
+    var reviewItemIndexes: [String: Int] = [:]
 }
 
 enum CullingThumbnailFailure: Equatable, Sendable {
@@ -3197,6 +3199,12 @@ final class BackstageViewModel: ObservableObject {
                 : nil
         let oldItems = reviewItems
         let oldIndex = oldItems.firstIndex(where: { $0.id == anchor }) ?? 0
+        let reviewItemsBeforeAction = oldItems.filter { ids.contains($0.id) }
+        let reviewItemIndexes = Dictionary(
+            uniqueKeysWithValues: oldItems.enumerated().compactMap { index, item in
+                ids.contains(item.id) ? (item.id, index) : nil
+            }
+        )
         let historyEntry = ReviewHistoryEntry(
             operationID: "",
             label: reviewActionLabel(action),
@@ -3209,7 +3217,9 @@ final class BackstageViewModel: ObservableObject {
             offset: reviewWindowOffset,
             selectedIDs: reviewSelection.selectedIDs,
             anchorID: reviewSelection.anchorID,
-            focusedID: reviewSelection.focusedID
+            focusedID: reviewSelection.focusedID,
+            reviewItems: reviewItemsBeforeAction,
+            reviewItemIndexes: reviewItemIndexes
         )
         if [.approve, .hide, .requestAI].contains(action) {
             reviewLastAction = action
@@ -3264,7 +3274,9 @@ final class BackstageViewModel: ObservableObject {
                         offset: historyEntry.offset,
                         selectedIDs: historyEntry.selectedIDs,
                         anchorID: historyEntry.anchorID,
-                        focusedID: historyEntry.focusedID
+                        focusedID: historyEntry.focusedID,
+                        reviewItems: historyEntry.reviewItems,
+                        reviewItemIndexes: historyEntry.reviewItemIndexes
                     )
                 )
             }
@@ -3386,6 +3398,122 @@ final class BackstageViewModel: ObservableObject {
             )
         }
         fixtureReviewWindow = window
+    }
+
+    /// Apply the exact undo receipt to the current page when it carries the
+    /// normalized Review state. This avoids a second full-window read after
+    /// the audited undo transaction while preserving the safe reload fallback
+    /// for older or incomplete receipts.
+    private func retainReviewUndoResultInCurrentWindow(
+        _ result: FixtureReviewUndoResult,
+        restoring restoredItems: [FixtureReviewItem],
+        indexes: [String: Int]
+    ) -> Bool {
+        guard !restoredItems.isEmpty,
+              !result.changes.isEmpty,
+              result.changes.allSatisfy({ !$0.review.isEmpty }),
+              var window = fixtureReviewWindow
+        else { return false }
+
+        let changesByID = Dictionary(
+            uniqueKeysWithValues: result.changes.map { ($0.assetID, $0) }
+        )
+        let existingItems = Dictionary(
+            uniqueKeysWithValues: window.items.map { ($0.id, $0) }
+        )
+        var items = window.items
+        let existingIDs = Set(items.map(\.id))
+        for restoredItem in restoredItems where !existingIDs.contains(restoredItem.id) {
+            let index = min(
+                max(0, indexes[restoredItem.id] ?? items.count),
+                items.count
+            )
+            items.insert(restoredItem, at: index)
+        }
+        for change in result.changes {
+            guard let current = existingItems[change.assetID],
+                  let restoredState = change.review["editorialState"]?.stringValue
+            else { continue }
+            window.summary.applyEditorialStateTransition(
+                from: current.editorialState,
+                to: restoredState
+            )
+        }
+        window.items = items.map { current in
+            guard let change = changesByID[current.id] else { return current }
+            return applyReviewItemUpdate(current, from: change.review)
+        }
+        fixtureReviewWindow = window
+        hydrateReviewProposalDrafts(from: window.items)
+        return true
+    }
+
+    private func applyReviewItemUpdate(
+        _ current: FixtureReviewItem,
+        from update: [String: JSONValue]
+    ) -> FixtureReviewItem {
+        var item = current
+        if let value = update["title"]?.stringValue { item.title = value }
+        if let value = update["caption"]?.stringValue { item.caption = value }
+        if let value = update["keywords"]?.arrayValue {
+            item.keywords = value.compactMap(\.stringValue)
+        }
+        if let value = update["rating"]?.intValue { item.rating = value }
+        if let value = update["color"]?.stringValue { item.color = value }
+        if let value = update["placementState"]?.stringValue {
+            item.placementState = value
+        }
+        if let value = update["editorialState"]?.stringValue {
+            item.editorialState = value
+        }
+        if let value = update["aiReasons"]?.arrayValue {
+            item.aiReasons = value.compactMap(\.stringValue)
+        }
+        if let value = update["aiNote"]?.stringValue { item.aiNote = value }
+        if let value = update["aiAttemptCount"]?.intValue {
+            item.aiAttemptCount = value
+        }
+        if let value = update["aiLastError"]?.stringValue {
+            item.aiLastError = value
+        }
+        if let value = update["proposalReady"]?.boolValue {
+            item.proposalReady = value
+        }
+        if let value = update["proposalContextAvailable"]?.boolValue {
+            item.proposalContextAvailable = value
+        }
+        if let value = update["proposalId"]?.stringValue {
+            item.proposalID = value
+        }
+        if let value = update["proposedTitle"]?.stringValue {
+            item.proposedTitle = value
+        }
+        if let value = update["proposedKeywords"]?.arrayValue {
+            item.proposedKeywords = value.compactMap(\.stringValue)
+        }
+        if let value = update["proposalReason"]?.stringValue {
+            item.proposalReason = value
+        }
+        if let value = update["proposalStatus"]?.stringValue {
+            item.proposalStatus = value
+        }
+        if let value = update["requestedGeneratorModel"]?.stringValue {
+            item.requestedGeneratorModel = value
+        }
+        if let value = update["resolvedModel"]?.stringValue {
+            item.resolvedModel = value
+        }
+        if let value = update["reasoningEffort"]?.stringValue {
+            item.reasoningEffort = value
+        }
+        if let value = update["vision"]?.boolValue { item.vision = value }
+        if let value = update["modelLadder"]?.arrayValue {
+            item.modelLadder = value.compactMap(\.stringValue)
+        }
+        if let value = update["deliveryState"]?.stringValue {
+            item.deliveryState = value
+        }
+        return item
     }
 
     /// Local action retention must honor the same filters as a fresh Owner
@@ -3516,19 +3644,29 @@ final class BackstageViewModel: ObservableObject {
                 reviewMediaFilters = [.photos]
                 reviewSearch = entry.search
                 reviewWindowOffset = entry.offset
-                let window = try await fixtureService.reviewWindow(
-                    fixtureID: entry.fixtureID,
-                    mode: entry.mode,
-                    stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
-                    proposalAvailableOnly: entry.proposalAvailableOnly,
-                    mediaFilters: [CullingMediaFilter.photos.rawValue],
-                    offset: entry.offset,
-                    limit: reviewWindowLimit,
-                    search: entry.search
+                let retainedLocally = retainReviewUndoResultInCurrentWindow(
+                    result,
+                    restoring: entry.reviewItems,
+                    indexes: entry.reviewItemIndexes
                 )
-                hydrateReviewProposalDrafts(from: window.items)
-                fixtureReviewWindow = window
-                let orderedIDs = window.items.map(\.id)
+                let orderedIDs: [String]
+                if retainedLocally {
+                    orderedIDs = reviewItems.map(\.id)
+                } else {
+                    let window = try await fixtureService.reviewWindow(
+                        fixtureID: entry.fixtureID,
+                        mode: entry.mode,
+                        stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
+                        proposalAvailableOnly: entry.proposalAvailableOnly,
+                        mediaFilters: [CullingMediaFilter.photos.rawValue],
+                        offset: entry.offset,
+                        limit: reviewWindowLimit,
+                        search: entry.search
+                    )
+                    hydrateReviewProposalDrafts(from: window.items)
+                    fixtureReviewWindow = window
+                    orderedIDs = window.items.map(\.id)
+                }
                 let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
                 let restoredFocusedID = entry.focusedID.flatMap {
                     orderedIDs.contains($0) ? $0 : nil

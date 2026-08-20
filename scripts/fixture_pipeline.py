@@ -2257,6 +2257,90 @@ def _review_asset_snapshot(
     }
 
 
+def _review_item_update_from_snapshot(
+    conn: sqlite3.Connection,
+    fixture_id: str,
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the small Review projection needed to apply an undo locally."""
+    asset_id = str(snapshot.get("assetId") or "")
+    asset = conn.execute(
+        "SELECT photos_title, photos_keywords_json FROM sidecar_assets WHERE asset_id = ?",
+        (asset_id,),
+    ).fetchone()
+    decision = snapshot.get("decision") or {}
+    editorial = snapshot.get("editorial") or {}
+    delivery = snapshot.get("delivery") or {}
+    fixture_decision = next(
+        (
+            item
+            for item in snapshot.get("fixtureDecisions") or []
+            if isinstance(item, dict) and str(item.get("fixture_id") or "") == fixture_id
+        ),
+        None,
+    ) or {}
+    proposals = [
+        item
+        for item in snapshot.get("proposals") or []
+        if isinstance(item, dict)
+    ]
+    available = [
+        item
+        for item in proposals
+        if str(item.get("status") or "") in {"ready", "loaded"}
+    ]
+    if not available and str(editorial.get("editorial_state") or "") == "requesting-ai":
+        requested_at = str(editorial.get("requested_at") or "")
+        available = [
+            item
+            for item in proposals
+            if str(item.get("status") or "") == "superseded"
+            and str(item.get("decided_at") or "") == requested_at
+        ]
+    proposal = max(
+        available,
+        key=lambda item: (
+            int(item.get("attempt") or 0),
+            str(item.get("created_at") or ""),
+            str(item.get("proposal_id") or ""),
+        ),
+        default=None,
+    )
+    decision_title = str(decision.get("title") or "").strip()
+    decision_keywords = _read_json(decision.get("keywords_json"), [])
+    if not decision_title and asset:
+        decision_title = str(asset["photos_title"] or "")
+    if not decision_keywords and asset:
+        decision_keywords = _read_json(asset["photos_keywords_json"], [])
+    proposal_status = str(proposal.get("status") or "") if proposal else ""
+    return {
+        "title": decision_title,
+        "caption": str(decision.get("caption") or ""),
+        "keywords": decision_keywords if isinstance(decision_keywords, list) else [],
+        "rating": int(decision.get("rating") or 0),
+        "color": str(decision.get("color") or ""),
+        "placementState": str(fixture_decision.get("placement_state") or "picked"),
+        "editorialState": str(editorial.get("editorial_state") or "unreviewed"),
+        "aiReasons": _read_json(editorial.get("ai_reasons_json"), []),
+        "aiNote": str(editorial.get("ai_note") or ""),
+        "aiAttemptCount": int(editorial.get("ai_attempt_count") or 0),
+        "aiLastError": str(editorial.get("ai_last_error") or ""),
+        "proposalReady": proposal_status in {"ready", "loaded"},
+        "proposalContextAvailable": proposal is not None,
+        "proposalId": str(proposal.get("proposal_id") or "") if proposal else "",
+        "proposedTitle": str(proposal.get("proposed_title") or "") if proposal else "",
+        "proposedKeywords": _read_json(proposal.get("proposed_keywords_json"), []) if proposal else [],
+        "proposalReason": str(proposal.get("reason") or "") if proposal else "",
+        "proposalStatus": proposal_status,
+        "requestedGeneratorModel": str(proposal.get("requested_generator_model") or "") if proposal else "",
+        "resolvedModel": str(proposal.get("resolved_model") or proposal.get("generator_model") or "") if proposal else "",
+        "reasoningEffort": str(proposal.get("reasoning_effort") or "") if proposal else "",
+        "vision": bool(proposal.get("vision")) if proposal else False,
+        "modelLadder": _read_json(proposal.get("model_ladder"), []) if proposal else [],
+        "deliveryState": str(delivery.get("delivery_state") or "not-ready"),
+    }
+
+
 def _upsert_snapshot_row(
     conn: sqlite3.Connection,
     table: str,
@@ -2895,6 +2979,11 @@ def undo_fixture_review_action(
                     "assetId": asset_id,
                     "before": current_snapshot,
                     "after": restored_snapshot,
+                    "review": _review_item_update_from_snapshot(
+                        conn,
+                        str(operation["fixture_id"]),
+                        restored_snapshot,
+                    ),
                 }
             )
         conn.execute(

@@ -820,6 +820,15 @@ class FixturePipelineTest(unittest.TestCase):
 
         undone = undo_fixture_review_action(self.root, approved["operationId"])
         self.assertEqual(undone["count"], 2)
+        self.assertEqual(
+            undone["items"][0]["review"]["placementState"],
+            "picked",
+        )
+        self.assertEqual(
+            undone["items"][0]["review"]["editorialState"],
+            "proposed",
+        )
+        self.assertTrue(undone["items"][0]["review"]["proposalReady"])
         with connect(self.root) as conn:
             restored_statuses = conn.execute(
                 """

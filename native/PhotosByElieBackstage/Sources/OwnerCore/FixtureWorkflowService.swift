@@ -763,11 +763,13 @@ public struct FixtureReviewChange: Identifiable, Sendable, Equatable {
     public var assetID: String
     public var before: [String: JSONValue]
     public var after: [String: JSONValue]
+    public var review: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         assetID = json["assetId"]?.stringValue ?? ""
         before = json["before"]?.objectValue ?? [:]
         after = json["after"]?.objectValue ?? [:]
+        review = json["review"]?.objectValue ?? [:]
     }
 }
 

@@ -2277,6 +2277,11 @@ struct OwnerCoreTests {
                         "assetId": "asset-oldest",
                         "before": .object(["editorialState": "requesting-ai"]),
                         "after": .object(["editorialState": "unreviewed"]),
+                        "review": .object([
+                            "placementState": "picked",
+                            "editorialState": "unreviewed",
+                            "proposalReady": false,
+                        ]),
                     ])]),
                 ]),
             ]
@@ -2336,6 +2341,7 @@ struct OwnerCoreTests {
         #expect(undone.operationID == "reviewop-test")
         #expect(!undone.alreadyUndone)
         #expect(undone.changes.map(\.assetID) == ["asset-oldest"])
+        #expect(undone.changes.first?.review["placementState"]?.stringValue == "picked")
         let requests = await api.requests()
         #expect(requests.count == 3)
         let reviewManifest = requests[0].payload["manifest"]?.objectValue

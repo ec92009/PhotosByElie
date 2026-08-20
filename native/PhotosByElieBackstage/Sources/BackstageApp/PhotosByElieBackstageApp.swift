@@ -4,6 +4,8 @@ import SwiftUI
 
 public struct BackstageApplication: App {
     @StateObject private var model: BackstageViewModel
+    @NSApplicationDelegateAdaptor(BackstageApplicationDelegate.self)
+    private var applicationDelegate
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
     private var navigationSidebarVisible = true
@@ -85,6 +87,7 @@ public struct BackstageApplication: App {
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
             .frame(minWidth: 1_120, minHeight: 720)
+            .onAppear { applicationDelegate.attach(model: model) }
             .task { model.startPreviewIPC() }
             .task { await model.bootstrapAuthentication() }
             .task { await model.runPhotosSyncLoop() }

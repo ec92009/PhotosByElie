@@ -361,6 +361,7 @@ final class BackstageViewModel: ObservableObject {
     private var nativePublicationCancellationRequested = false
     private var photosSyncCancellationRequested = false
     private var r2ReconciliationCancellationRequested = false
+    private var terminationRequested = false
 
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
@@ -5231,14 +5232,35 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func runPhotosSyncLoop() async {
-        while !Task.isCancelled {
+        while !Task.isCancelled, !terminationRequested {
             do {
                 try await Task.sleep(for: .seconds(15 * 60))
             } catch {
                 return
             }
+            guard !terminationRequested else { return }
             await syncPhotosIncrementally()
         }
+    }
+
+    func prepareForTermination() async {
+        terminationRequested = true
+
+        // These tasks only hydrate or refresh the UI. They must not keep the
+        // process alive after the window closes.
+        // Leave fixture-window reads alone. They own loading flags and may
+        // still be between a debounce and the audited query; canceling them
+        // here could strand that flag and prevent the drain from completing.
+        reviewAIStatusRefreshTask?.cancel()
+        cullingThumbnailTasks.values.forEach { $0.cancel() }
+        reviewThumbnailTasks.values.forEach { $0.cancel() }
+
+        // A delayed Review text edit is durable work even though its network
+        // action has not started yet. Flush it synchronously before draining
+        // the other active operation flags.
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
     }
 
     private func startNativePublication(assetIDs: [String]) async {

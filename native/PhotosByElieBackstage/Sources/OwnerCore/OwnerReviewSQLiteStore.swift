@@ -1337,8 +1337,6 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         title: title,
         caption: caption,
         keywords: keywords,
-        locationLabel: locationLabel,
-        locationKeywords: locationKeywords,
         filename: filename,
         mediaType: mediaType,
         capturedAt: capturedAt,
@@ -1362,7 +1360,9 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         reasoningEffort: reasoningEffort,
         vision: proposalVision,
         modelLadder: modelLadder,
-        deliveryState: deliveryState
+        deliveryState: deliveryState,
+        locationLabel: locationLabel,
+        locationKeywords: locationKeywords
     )
 }
 

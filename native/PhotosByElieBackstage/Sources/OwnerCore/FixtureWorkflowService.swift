@@ -565,8 +565,6 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         title: String,
         caption: String = "",
         keywords: [String],
-        locationLabel: String = "",
-        locationKeywords: [String] = [],
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
@@ -590,7 +588,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         reasoningEffort: String = "",
         vision: Bool = false,
         modelLadder: [String] = [],
-        deliveryState: String = "not-ready"
+        deliveryState: String = "not-ready",
+        locationLabel: String = "",
+        locationKeywords: [String] = []
     ) {
         self.id = id
         self.sourceVersionID = sourceVersionID

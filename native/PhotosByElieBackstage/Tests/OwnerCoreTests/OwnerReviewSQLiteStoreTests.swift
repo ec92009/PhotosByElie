@@ -52,6 +52,61 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(replay.changes.isEmpty)
     }
 
+    @Test("Local Review service can apply and undo through native SQLite without IPC")
+    func localServiceUsesNativeSQLite() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-native-service-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+
+        let service = LocalFixtureReviewService(
+            endpoints: [],
+            nativeDatabaseURL: databaseURL
+        )
+        let applied = try await service.applyReview(manifest: [
+            "fixtureId": .string("fixture-expo"),
+            "assetIds": .array([.string("asset-1")]),
+            "anchorAssetId": .string("asset-1"),
+            "reviewAction": .string("hide"),
+            "propagate": .bool(false),
+            "aiReasons": .array([]),
+            "aiNote": .string(""),
+        ])
+
+        #expect(applied.action == .hide)
+        #expect(applied.changes.map(\.assetID) == ["asset-1"])
+        #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "hidden")
+
+        let undone = try await service.undoReview(operationID: applied.operationID)
+        #expect(!undone.alreadyUndone)
+        #expect(undone.changes.map(\.assetID) == ["asset-1"])
+        #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
+    }
+
+    @Test("Native Review service does not create a missing database")
+    func localServiceMissingNativeDatabaseFailsClosed() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-native-missing-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        let service = LocalFixtureReviewService(
+            endpoints: [],
+            nativeDatabaseURL: databaseURL
+        )
+
+        await #expect(throws: APIErrorEnvelope.self) {
+            try await service.applyReview(manifest: [
+                "fixtureId": .string("fixture-expo"),
+                "assetIds": .array([.string("asset-1")]),
+                "reviewAction": .string("hide"),
+            ])
+        }
+        #expect(!FileManager.default.fileExists(atPath: databaseURL.path))
+    }
+
     @Test("Approve accepts the visible proposal and exact Undo restores it")
     func approveAndUndoCopiedFixture() throws {
         let root = FileManager.default.temporaryDirectory

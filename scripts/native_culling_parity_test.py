@@ -1701,7 +1701,8 @@ class NativeCullingParityTest(unittest.TestCase):
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)
         self.assertIn('Button("Needs AI")', actions)
-        self.assertIn('Button("Propagate")', actions)
+        self.assertNotIn('Button("Propagate")', actions)
+        self.assertNotIn("Propagate for the two-hour shoot", inspector)
         self.assertIn('Image(systemName: "checkmark.circle.fill")', ui)
         self.assertIn('Image(systemName: "questionmark.circle.fill")', ui)
         self.assertIn("hasDraftAIReason: false", ui)

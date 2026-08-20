@@ -924,10 +924,6 @@ private struct ReviewInspector: View {
                         }
                         .disabled(!model.canMarkReviewSelectionNeedsAI)
                         .backstageHelp("Submit the selected AI-review reasons and optional note for the selected assets.")
-                        Button("Propagate") {
-                            Task { await model.propagateLastReviewAction() }
-                        }
-                        .backstageHelp("Apply the prepared Review change to the matching assets in the active two-hour shoot scope.")
                     }
                     .buttonStyle(.borderedProminent)
                     HStack(spacing: 8) {
@@ -969,7 +965,7 @@ private struct ReviewInspector: View {
                     )
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...5)
-                    Text("Prepare the reasons and optional note, then press Needs AI for the selection or Propagate for the two-hour shoot.")
+                    Text("Prepare the reasons and optional note, then press Needs AI for the selection.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if model.isREReviewScope {

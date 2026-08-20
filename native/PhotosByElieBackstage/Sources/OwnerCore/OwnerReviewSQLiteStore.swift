@@ -249,7 +249,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
-        guard action == .hide || action == .approve || action == .requestAI
+        guard action == .hide || action == .approve || action == .returnToReview || action == .requestAI
             || action == .editMetadata || action == .propagateTitle
             || action == .propagateKeywords else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
@@ -407,6 +407,50 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         UPDATE asset_editorial_state
                         SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
                             requested_at = NULL, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [.string(timestamp), .string(assetID)]
+                    )
+                } else if action == .returnToReview {
+                    let editorial = try connection.queryOne(
+                        "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    )
+                    guard editorial?["editorial_state"]?.stringValue == "approved" else {
+                        throw OwnerReviewSQLiteError.invalid("asset is not approved: \(assetID)")
+                    }
+                    let delivery = try connection.queryOne(
+                        "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    )
+                    guard delivery?["delivery_state"]?.stringValue != "live" else {
+                        throw OwnerReviewSQLiteError.conflict(
+                            "live asset cannot return to Review: \(assetID)"
+                        )
+                    }
+                    try connection.execute(
+                        """
+                        UPDATE sidecar_decisions
+                        SET metadata_state = 'unreviewed', last_action = 'return-to-review',
+                            updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [.string(timestamp), .string(assetID)]
+                    )
+                    try connection.execute(
+                        """
+                        INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                        VALUES (?, 'not-ready', ?, ?)
+                        ON CONFLICT(asset_id) DO UPDATE SET
+                          delivery_state = 'not-ready', updated_at = excluded.updated_at
+                        """,
+                        bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                    )
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
+                            requested_at = NULL, approved_at = NULL, updated_at = ?
                         WHERE asset_id = ?
                         """,
                         bindings: [.string(timestamp), .string(assetID)]

@@ -96,6 +96,76 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "ready")
     }
 
+    @Test("Return to Review clears approval and exact Undo restores it")
+    func returnToReviewAndUndoCopiedFixture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-return-(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        _ = try store.applyReview(
+            .approve,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            proposalID: "proposal-1",
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        let returned = try store.applyReview(
+            .returnToReview,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            now: Date(timeIntervalSince1970: 1_800_000_001)
+        )
+
+        #expect(returned.action == .returnToReview)
+        #expect(returned.changes.first?.review["editorialState"]?.stringValue == "unreviewed")
+        #expect(returned.changes.first?.review["title"]?.stringValue == "Proposed title")
+        #expect(returned.changes.first?.review["deliveryState"]?.stringValue == "not-ready")
+        #expect(try scalar(databaseURL, "SELECT metadata_state FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "unreviewed")
+        #expect(try scalar(databaseURL, "SELECT approved_at IS NULL FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "1")
+        #expect(try scalar(databaseURL, "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "not-ready")
+
+        let undone = try store.undoReview(
+            operationID: returned.operationID,
+            now: Date(timeIntervalSince1970: 1_800_000_002)
+        )
+        #expect(!undone.alreadyUndone)
+        #expect(undone.action == .returnToReview)
+        #expect(undone.changes.first?.review["editorialState"]?.stringValue == "approved")
+        #expect(undone.changes.first?.review["deliveryState"]?.stringValue == "needs-upload")
+        #expect(try scalar(databaseURL, "SELECT metadata_state FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try scalar(databaseURL, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "accepted")
+
+        try execute(
+            databaseURL,
+            "UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id = 'asset-1'"
+        )
+        #expect(throws: OwnerReviewSQLiteError.self) {
+            try store.applyReview(
+                .returnToReview,
+                fixtureID: "fixture-expo",
+                assetIDs: ["asset-1"],
+                anchorAssetID: "asset-1"
+            )
+        }
+        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try scalar(databaseURL, "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "live")
+
+        #expect(throws: OwnerReviewSQLiteError.self) {
+            try store.applyReview(
+                .returnToReview,
+                fixtureID: "fixture-expo",
+                assetIDs: ["asset-2"],
+                anchorAssetID: "asset-2"
+            )
+        }
+    }
+
     @Test("Approve refuses a superseded visible proposal")
     func approveProposalConflictIsFailClosed() throws {
         let root = FileManager.default.temporaryDirectory

@@ -40,7 +40,18 @@ public protocol LocalFixtureCullingReading: Sendable {
     ) async throws -> FixtureCullingWindow?
 }
 
-public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading {
+/// Optional native Culling placement writes. Returning nil preserves the
+/// existing audited Owner-action mutation for callers without native SQLite.
+public protocol LocalFixtureCullingServing: Sendable {
+    func nativeApplyCullingState(
+        _ state: FixturePlacementState,
+        fixtureID: String,
+        assetIDs: [String],
+        reason: String
+    ) async throws -> [FixtureAssetState]?
+}
+
+public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading, LocalFixtureCullingServing {
     private let endpoints: [URL]
     private let session: URLSession
     private let helperURL: URL?
@@ -147,6 +158,22 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             mediaTypes: mediaTypes,
             ratings: ratings,
             colors: colors
+        )
+    }
+
+    public func nativeApplyCullingState(
+        _ state: FixturePlacementState,
+        fixtureID: String,
+        assetIDs: [String],
+        reason: String
+    ) throws -> [FixtureAssetState]? {
+        guard nativeDatabaseURL != nil else { return nil }
+        return try nativeCullingStore().applyState(
+            state,
+            fixtureID: fixtureID,
+            assetIDs: assetIDs,
+            actor: "owner",
+            reason: reason
         )
     }
 

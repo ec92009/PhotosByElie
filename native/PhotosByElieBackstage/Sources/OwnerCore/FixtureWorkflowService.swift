@@ -1175,6 +1175,16 @@ public actor FixtureWorkflowService {
         fixtureID: String,
         reason: String = ""
     ) async throws -> [FixtureAssetState] {
+        if let localReviewService,
+           let localCullingWriter = localReviewService as? any LocalFixtureCullingServing,
+           let localChanges = try await localCullingWriter.nativeApplyCullingState(
+               state,
+               fixtureID: fixtureID,
+               assetIDs: assetIDs,
+               reason: reason
+           ) {
+            return localChanges
+        }
         let result = try await run("fixture-state-apply", extra: [
             "fixtureId": .string(fixtureID),
             "assetIds": .array(assetIDs.map(JSONValue.string)),

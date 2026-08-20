@@ -227,6 +227,49 @@ struct OwnerCullingSQLiteStoreTests {
         )
         #expect(window.items.map(\.id) == ["asset-1"])
     }
+
+    @Test("Fixture workflow applies Culling placement through native SQLite without an Owner action")
+    func cullingWorkflowUsesNativeWrite() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-write-workflow-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+
+        let localService = LocalFixtureReviewService(
+            endpoints: [],
+            nativeDatabaseURL: databaseURL
+        )
+        let workflow = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: FailingCullingOwnerActionService(),
+                waker: FailingCullingOwnerActionWaker()
+            ),
+            localReviewService: localService
+        )
+
+        let applied = try await workflow.applyState(
+            .hidden,
+            assetIDs: ["asset-1"],
+            fixtureID: "fixture-expo",
+            reason: "native culling write test"
+        )
+        #expect(applied.map(\.assetID) == ["asset-1"])
+        #expect(applied.first?.beforePlacementState == .picked)
+        #expect(applied.first?.placementState == .hidden)
+        #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "hidden")
+
+        let restored = try await workflow.applyState(
+            applied.first?.beforePlacementState ?? .undecided,
+            assetIDs: applied.map(\.assetID),
+            fixtureID: "fixture-expo",
+            reason: "native culling undo test"
+        )
+        #expect(restored.first?.placementState == .picked)
+        #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
+        #expect(try scalar(databaseURL, "SELECT count(*) FROM fixture_asset_decision_events") == "2")
+    }
 }
 
 private struct FailingCullingOwnerActionService: OwnerActionServing {
@@ -234,17 +277,17 @@ private struct FailingCullingOwnerActionService: OwnerActionServing {
         _ action: OwnerActionCreate,
         idempotencyKey: String
     ) async throws -> OwnerActionEnvelope {
-        throw OwnerActionRunError.failed("native Culling read unexpectedly crossed the Owner action boundary")
+        throw OwnerActionRunError.failed("native Culling operation unexpectedly crossed the Owner action boundary")
     }
 
     func getAction(id: String) async throws -> OwnerAction {
-        throw OwnerActionRunError.failed("native Culling read unexpectedly polled an Owner action")
+        throw OwnerActionRunError.failed("native Culling operation unexpectedly polled an Owner action")
     }
 }
 
 private struct FailingCullingOwnerActionWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
-        throw OwnerActionRunError.failed("native Culling read unexpectedly woke the connector")
+        throw OwnerActionRunError.failed("native Culling operation unexpectedly woke the connector")
     }
 }
 

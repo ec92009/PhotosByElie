@@ -46,10 +46,12 @@ public struct OwnerReviewSQLiteStore: Sendable {
         title: String? = nil,
         keywords: [String]? = nil,
         proposalID: String? = nil,
+        aiReasons: [String] = [],
+        aiNote: String = "",
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
-        guard action == .hide || action == .approve else {
+        guard action == .hide || action == .approve || action == .requestAI else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
         }
         let cleanIDs = unique(assetIDs)
@@ -129,6 +131,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             }
             let explicitTitle = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             let explicitKeywords = keywords.map { unique($0).map(JSONValue.string) }
+            let cleanAIReasons = unique(aiReasons)
+            let cleanAINote = aiNote.trimmingCharacters(in: .whitespacesAndNewlines)
             var pendingPlacements: [(assetID: String, state: String, eligibility: String)] = []
 
             for assetID in cleanIDs {
@@ -178,6 +182,60 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         WHERE asset_id = ?
                         """,
                         bindings: [.string(timestamp), .string(assetID)]
+                    )
+                } else if action == .requestAI {
+                    let existingPlacement = try connection.queryOne(
+                        """
+                        SELECT placement_state, eligibility_state
+                        FROM fixture_asset_decisions
+                        WHERE fixture_id = ? AND asset_id = ?
+                        """,
+                        bindings: [.string(fixtureID), .string(assetID)]
+                    )
+                    let beforePlacement = existingPlacement?["placement_state"]?.stringValue ?? "undecided"
+                    let beforeEligibility = existingPlacement?["eligibility_state"]?.stringValue ?? "active"
+                    try connection.execute(
+                        """
+                        INSERT INTO fixture_asset_decisions (
+                          fixture_id, asset_id, placement_state, eligibility_state,
+                          source, last_action, created_at, updated_at
+                        ) VALUES (?, ?, 'picked', 'dormant', 'native', 'review-picked', ?, ?)
+                        ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+                          placement_state = 'picked',
+                          source = 'native',
+                          last_action = 'review-picked',
+                          updated_at = excluded.updated_at
+                        """,
+                        bindings: [
+                            .string(fixtureID), .string(assetID),
+                            .string(timestamp), .string(timestamp),
+                        ]
+                    )
+                    pendingPlacements.append((assetID, beforePlacement, beforeEligibility))
+
+                    try connection.execute(
+                        """
+                        UPDATE asset_ai_proposals
+                        SET status = 'superseded', decided_at = ?
+                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                        """,
+                        bindings: [.string(timestamp), .string(assetID)]
+                    )
+                    let hasAIRequest = !cleanAIReasons.isEmpty || !cleanAINote.isEmpty
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
+                            requested_at = ?, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [
+                            .string(hasAIRequest ? "requesting-ai" : "unreviewed"),
+                            .string(try encodeJSON(.array(cleanAIReasons.map(JSONValue.string)))),
+                            .string(hasAIRequest ? cleanAINote : ""),
+                            hasAIRequest ? .string(timestamp) : .null,
+                            .string(timestamp), .string(assetID),
+                        ]
                     )
                 } else {
                     let decision = try connection.queryOne(
@@ -254,6 +312,10 @@ public struct OwnerReviewSQLiteStore: Sendable {
             }
 
             try recomputeFixtureEligibility(connection)
+            let placementState = action == .requestAI ? "picked" : "hidden"
+            let placementReason = action == .requestAI
+                ? "native review AI request"
+                : "native review hide"
             for placement in pendingPlacements {
                 let afterEligibility = try connection.queryOne(
                     """
@@ -268,12 +330,14 @@ public struct OwnerReviewSQLiteStore: Sendable {
                     INSERT INTO fixture_asset_decision_events (
                       event_id, fixture_id, asset_id, before_state, after_state,
                       before_eligibility, after_eligibility, action, actor, reason, created_at
-                    ) VALUES (?, ?, ?, ?, 'hidden', ?, ?, 'hidden', ?, 'native review hide', ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     bindings: [
                         .string(eventID(prefix: "fde")), .string(fixtureID), .string(placement.assetID),
-                        .string(placement.state), .string(placement.eligibility),
-                        .string(afterEligibility), .string(actor), .string(timestamp),
+                        .string(placement.state), .string(placementState),
+                        .string(placement.eligibility), .string(afterEligibility),
+                        .string(placementState), .string(actor), .string(placementReason),
+                        .string(timestamp),
                     ]
                 )
             }

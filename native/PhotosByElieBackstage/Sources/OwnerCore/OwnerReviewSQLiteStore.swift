@@ -35,17 +35,21 @@ public struct OwnerReviewSQLiteStore: Sendable {
         self.busyTimeoutMilliseconds = busyTimeoutMilliseconds
     }
 
-    /// Applies the first native parity action. Other Review actions remain on
-    /// the existing connector until their individual parity slices land.
+    /// Applies the copied-fixture Review parity actions that are safe to prove
+    /// before the live writer changes. Other Review actions remain on the
+    /// existing connector until their individual parity slices land.
     public func applyReview(
         _ action: FixtureReviewAction,
         fixtureID: String,
         assetIDs: [String],
         anchorAssetID: String = "",
+        title: String? = nil,
+        keywords: [String]? = nil,
+        proposalID: String? = nil,
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
-        guard action == .hide else {
+        guard action == .hide || action == .approve else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
         }
         let cleanIDs = unique(assetIDs)
@@ -99,55 +103,154 @@ public struct OwnerReviewSQLiteStore: Sendable {
             let beforeReview = try Dictionary(uniqueKeysWithValues: cleanIDs.map {
                 ($0, try reviewState(connection, fixtureID: fixtureID, assetID: $0))
             })
+            var activeProposals: [String: [String: JSONValue]] = [:]
+            if action == .approve {
+                for assetID in cleanIDs {
+                    if let proposal = try connection.queryOne(
+                        """
+                        SELECT proposal_id, proposed_title, proposed_keywords_json
+                        FROM asset_ai_proposals
+                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                        ORDER BY attempt DESC, created_at DESC, proposal_id DESC
+                        LIMIT 1
+                        """,
+                        bindings: [.string(assetID)]
+                    ) {
+                        activeProposals[assetID] = proposal
+                    }
+                }
+                let expectedProposalID = proposalID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if !expectedProposalID.isEmpty,
+                   activeProposals[cleanAnchor]?["proposal_id"]?.stringValue != expectedProposalID {
+                    throw OwnerReviewSQLiteError.conflict(
+                        "the visible AI proposal was superseded or is no longer active; refresh Review before approving"
+                    )
+                }
+            }
+            let explicitTitle = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let explicitKeywords = keywords.map { unique($0).map(JSONValue.string) }
             var pendingPlacements: [(assetID: String, state: String, eligibility: String)] = []
 
             for assetID in cleanIDs {
-                let existingPlacement = try connection.queryOne(
-                    """
-                    SELECT placement_state, eligibility_state
-                    FROM fixture_asset_decisions
-                    WHERE fixture_id = ? AND asset_id = ?
-                    """,
-                    bindings: [.string(fixtureID), .string(assetID)]
-                )
-                let beforePlacement = existingPlacement?["placement_state"]?.stringValue ?? "undecided"
-                let beforeEligibility = existingPlacement?["eligibility_state"]?.stringValue ?? "active"
-                try connection.execute(
-                    """
-                    INSERT INTO fixture_asset_decisions (
-                      fixture_id, asset_id, placement_state, eligibility_state,
-                      source, last_action, created_at, updated_at
-                    ) VALUES (?, ?, 'hidden', 'dormant', 'native', 'review-hidden', ?, ?)
-                    ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
-                      placement_state = 'hidden',
-                      source = 'native',
-                      last_action = 'review-hidden',
-                      updated_at = excluded.updated_at
-                    """,
-                    bindings: [
-                        .string(fixtureID), .string(assetID),
-                        .string(timestamp), .string(timestamp),
-                    ]
-                )
-                pendingPlacements.append((assetID, beforePlacement, beforeEligibility))
+                if action == .hide {
+                    let existingPlacement = try connection.queryOne(
+                        """
+                        SELECT placement_state, eligibility_state
+                        FROM fixture_asset_decisions
+                        WHERE fixture_id = ? AND asset_id = ?
+                        """,
+                        bindings: [.string(fixtureID), .string(assetID)]
+                    )
+                    let beforePlacement = existingPlacement?["placement_state"]?.stringValue ?? "undecided"
+                    let beforeEligibility = existingPlacement?["eligibility_state"]?.stringValue ?? "active"
+                    try connection.execute(
+                        """
+                        INSERT INTO fixture_asset_decisions (
+                          fixture_id, asset_id, placement_state, eligibility_state,
+                          source, last_action, created_at, updated_at
+                        ) VALUES (?, ?, 'hidden', 'dormant', 'native', 'review-hidden', ?, ?)
+                        ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+                          placement_state = 'hidden',
+                          source = 'native',
+                          last_action = 'review-hidden',
+                          updated_at = excluded.updated_at
+                        """,
+                        bindings: [
+                            .string(fixtureID), .string(assetID),
+                            .string(timestamp), .string(timestamp),
+                        ]
+                    )
+                    pendingPlacements.append((assetID, beforePlacement, beforeEligibility))
 
-                try connection.execute(
-                    """
-                    UPDATE asset_ai_proposals
-                    SET status = 'superseded', decided_at = ?
-                    WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                    """,
-                    bindings: [.string(timestamp), .string(assetID)]
-                )
-                try connection.execute(
-                    """
-                    UPDATE asset_editorial_state
-                    SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
-                        requested_at = NULL, updated_at = ?
-                    WHERE asset_id = ?
-                    """,
-                    bindings: [.string(timestamp), .string(assetID)]
-                )
+                    try connection.execute(
+                        """
+                        UPDATE asset_ai_proposals
+                        SET status = 'superseded', decided_at = ?
+                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                        """,
+                        bindings: [.string(timestamp), .string(assetID)]
+                    )
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
+                            requested_at = NULL, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [.string(timestamp), .string(assetID)]
+                    )
+                } else {
+                    let decision = try connection.queryOne(
+                        "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    ) ?? [:]
+                    let activeProposal = activeProposals[assetID]
+                    let approvedTitle: String
+                    if assetID == cleanAnchor, let explicitTitle {
+                        approvedTitle = explicitTitle
+                    } else if let activeProposal {
+                        approvedTitle = activeProposal["proposed_title"]?.stringValue ?? ""
+                    } else {
+                        approvedTitle = decision["title"]?.stringValue ?? ""
+                    }
+                    let approvedKeywords: JSONValue
+                    if assetID == cleanAnchor, let explicitKeywords {
+                        approvedKeywords = .array(explicitKeywords)
+                    } else if let activeProposal {
+                        approvedKeywords = jsonArray(activeProposal["proposed_keywords_json"])
+                    } else {
+                        approvedKeywords = jsonArray(decision["keywords_json"])
+                    }
+                    try connection.execute(
+                        """
+                        UPDATE sidecar_decisions
+                        SET metadata_state = 'approved', title = ?, keywords_json = ?,
+                            last_action = 'approve', updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [
+                            .string(approvedTitle), .string(try encodeJSON(approvedKeywords)),
+                            .string(timestamp), .string(assetID),
+                        ]
+                    )
+                    if let activeProposalID = activeProposal?["proposal_id"]?.stringValue {
+                        try connection.execute(
+                            """
+                            UPDATE asset_ai_proposals
+                            SET status = 'accepted', decided_at = ?
+                            WHERE proposal_id = ?
+                            """,
+                            bindings: [.string(timestamp), .string(activeProposalID)]
+                        )
+                        try connection.execute(
+                            """
+                            UPDATE asset_ai_proposals
+                            SET status = 'superseded', decided_at = ?
+                            WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                              AND proposal_id != ?
+                            """,
+                            bindings: [.string(timestamp), .string(assetID), .string(activeProposalID)]
+                        )
+                    }
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = 'approved', ai_reasons_json = '[]', ai_note = '',
+                            requested_at = NULL, approved_at = ?, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [.string(timestamp), .string(timestamp), .string(assetID)]
+                    )
+                    try connection.execute(
+                        """
+                        INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                        VALUES (?, 'needs-upload', ?, ?)
+                        ON CONFLICT(asset_id) DO UPDATE SET
+                          delivery_state = 'needs-upload', updated_at = excluded.updated_at
+                        """,
+                        bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                    )
+                }
             }
 
             try recomputeFixtureEligibility(connection)

@@ -85,6 +85,38 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
     }
 
+    @Test("Fixture workflow reads Review through native SQLite without an Owner action")
+    func fixtureWorkflowUsesNativeReviewWindow() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-native-window-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+
+        let service = LocalFixtureReviewService(
+            endpoints: [],
+            nativeDatabaseURL: databaseURL
+        )
+        let workflow = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: FailingOwnerActionService(),
+                waker: FailingOwnerActionWaker()
+            ),
+            localReviewService: service
+        )
+
+        let window = try await workflow.reviewWindow(
+            fixtureID: "fixture-expo",
+            stateFilters: ["picked"],
+            limit: 1
+        )
+
+        #expect(window.items.map(\.id) == ["asset-1"])
+        #expect(window.summary.total == 2)
+        #expect(window.items.first?.photoLibraryIdentifier == "cloud-asset-1")
+    }
+
     @Test("Native Review service does not create a missing database")
     func localServiceMissingNativeDatabaseFailsClosed() async throws {
         let root = FileManager.default.temporaryDirectory
@@ -519,6 +551,25 @@ struct OwnerReviewSQLiteStoreTests {
         }
         #expect(try scalar(databaseURL, "SELECT state FROM fixture_review_operations WHERE operation_id = '\(applied.operationID)'") == "applied")
         #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "changed-after-hide")
+    }
+}
+
+private struct FailingOwnerActionService: OwnerActionServing {
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        throw OwnerActionRunError.failed("native Review read unexpectedly crossed the Owner action boundary")
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        throw OwnerActionRunError.failed("native Review read unexpectedly polled an Owner action")
+    }
+}
+
+private struct FailingOwnerActionWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        throw OwnerActionRunError.failed("native Review read unexpectedly woke the connector")
     }
 }
 

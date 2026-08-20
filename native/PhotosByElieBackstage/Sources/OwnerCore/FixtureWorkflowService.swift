@@ -1181,6 +1181,20 @@ public actor FixtureWorkflowService {
         limit: Int = 200,
         search: String = ""
     ) async throws -> FixtureReviewWindow {
+        if let localReviewService,
+           let localReviewReader = localReviewService as? any LocalFixtureReviewReading,
+           let localWindow = try await localReviewReader.nativeReviewWindow(
+               fixtureID: fixtureID,
+               mode: mode,
+               stateFilters: stateFilters,
+               proposalAvailableOnly: proposalAvailableOnly,
+               mediaFilters: mediaFilters,
+               offset: offset,
+               limit: limit,
+               search: search
+           ) {
+            return localWindow
+        }
         let result = try await run("fixture-review-window", extra: [
             "fixtureId": .string(fixtureID),
             "reviewMode": .string(mode.rawValue),

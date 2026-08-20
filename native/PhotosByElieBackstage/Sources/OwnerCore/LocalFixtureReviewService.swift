@@ -1,17 +1,30 @@
 import Foundation
 
-/// The narrow local IPC contract used by Backstage for Review mutations.
+/// The narrow local contract used by Backstage for Review mutations.
 ///
-/// Review reads remain Owner-action based, but Hide/Approve/etc. and Undo are
-/// already backed by one local SQLite transaction. Keeping this contract
-/// separate prevents those latency-sensitive mutations from being routed
-/// through the cloud action ledger.
+/// Keeping this contract separate prevents latency-sensitive Review work from
+/// being routed through the cloud action ledger while the migration proceeds.
 public protocol LocalFixtureReviewServing: Sendable {
     func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult
     func undoReview(operationID: String) async throws -> FixtureReviewUndoResult
 }
 
-public struct LocalFixtureReviewService: LocalFixtureReviewServing {
+/// Optional native read support for a local Review service. Returning nil means
+/// the caller should preserve its existing Owner-action read path.
+public protocol LocalFixtureReviewReading: Sendable {
+    func nativeReviewWindow(
+        fixtureID: String,
+        mode: FixtureReviewMode,
+        stateFilters: [String],
+        proposalAvailableOnly: Bool,
+        mediaFilters: [String],
+        offset: Int,
+        limit: Int,
+        search: String
+    ) async throws -> FixtureReviewWindow?
+}
+
+public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading {
     private let endpoints: [URL]
     private let session: URLSession
     private let helperURL: URL?
@@ -71,6 +84,29 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing {
             resultKey: "reviewUndo"
         )
         return FixtureReviewUndoResult(json: result)
+    }
+
+    public func nativeReviewWindow(
+        fixtureID: String,
+        mode: FixtureReviewMode,
+        stateFilters: [String],
+        proposalAvailableOnly: Bool,
+        mediaFilters: [String],
+        offset: Int,
+        limit: Int,
+        search: String
+    ) throws -> FixtureReviewWindow? {
+        guard nativeDatabaseURL != nil else { return nil }
+        return try nativeStore().reviewWindow(
+            fixtureID: fixtureID,
+            mode: mode,
+            stateFilters: stateFilters,
+            proposalAvailableOnly: proposalAvailableOnly,
+            mediaFilters: mediaFilters,
+            offset: offset,
+            limit: limit,
+            search: search
+        )
     }
 
     /// Uses the already-verified native SQLite parity store when a caller has

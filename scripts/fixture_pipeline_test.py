@@ -833,12 +833,26 @@ class FixturePipelineTest(unittest.TestCase):
             [("proposal-1", "ready"), ("proposal-2", "loaded")],
         )
 
+        with self.assertRaisesRegex(
+            ValueError,
+            "proposal was superseded or is no longer active",
+        ):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-1"],
+                "approve",
+                anchor_asset_id="asset-1",
+                proposal_id="proposal-stale",
+            )
+
         explicitly_edited = apply_fixture_review_action(
             self.root,
             root["fixtureId"],
             ["asset-1"],
             "approve",
             anchor_asset_id="asset-1",
+            proposal_id="proposal-1",
             title="Owner-edited proposal",
             keywords=["Owner", "Edited"],
         )

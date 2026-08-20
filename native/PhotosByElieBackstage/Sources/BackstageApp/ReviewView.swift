@@ -262,15 +262,11 @@ struct ReviewView: View {
                 HStack(spacing: 10) {
                     if model.readyAIProposalCount > 0 {
                         Label(
-                            "\(model.readyAIProposalCount.formatted()) new proposal\(model.readyAIProposalCount == 1 ? "" : "s") ready",
+                            "\(model.readyAIProposalCount.formatted()) proposal\(model.readyAIProposalCount == 1 ? "" : "s") available",
                             systemImage: "sparkles"
                         )
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(.orange)
-                        Button("Load proposals") {
-                            Task { await model.loadAIProposals() }
-                        }
-                        .backstageHelp("Load newly completed AI title and keyword proposals as editable Review drafts.")
                     }
                     if !model.reviewProposalConflictIDs.isEmpty {
                         Button("Replace \(model.reviewProposalConflictIDs.count) conflicting draft\(model.reviewProposalConflictIDs.count == 1 ? "" : "s")") {
@@ -489,7 +485,7 @@ struct ReviewView: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { break }
-                await model.refreshAIStatus()
+                await model.refreshReviewAIAvailability()
             }
         }
     }

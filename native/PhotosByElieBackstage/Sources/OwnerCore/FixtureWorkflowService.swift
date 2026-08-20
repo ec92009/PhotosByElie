@@ -1178,6 +1178,7 @@ public actor FixtureWorkflowService {
         propagate: Bool = false,
         title: String? = nil,
         keywords: [String]? = nil,
+        proposalID: String? = nil,
         aiReasons: [String] = [],
         aiNote: String = ""
     ) async throws -> FixtureReviewResult {
@@ -1195,6 +1196,9 @@ public actor FixtureWorkflowService {
         }
         if let keywords {
             extra["keywords"] = .array(keywords.map(JSONValue.string))
+        }
+        if let proposalID, !proposalID.isEmpty {
+            extra["proposalId"] = .string(proposalID)
         }
         let result = try await run("fixture-review-apply", extra: extra)
         return FixtureReviewResult(

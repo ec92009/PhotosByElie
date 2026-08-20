@@ -679,6 +679,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "let approvalDraft = action == .approve ? reviewProposalDrafts[anchor] : nil",
             apply_action,
         )
+        self.assertIn("let approvalProposalID = action == .approve", apply_action)
+        self.assertIn("proposalID: approvalProposalID", apply_action)
         self.assertIn("title: approvalTitle", apply_action)
         self.assertIn("keywords: approvalKeywords", apply_action)
 
@@ -1745,6 +1747,41 @@ class NativeCullingParityTest(unittest.TestCase):
             "await applyReviewAction(reviewLastAction, propagate: true)",
             propagate,
         )
+
+    def test_review_proposals_arrive_incrementally_without_batch_load(self):
+        app = backstage_ui_source()
+        review = app.split("struct ReviewView", 1)[1].split(
+            "private struct ReviewAssetRow", 1
+        )[0]
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        loader = model.split("func loadFixtureReviewWindow", 1)[1].split(
+            "func clickReviewItem", 1
+        )[0]
+        hydration = model.split(
+            "private func hydrateReviewProposalDrafts(",
+            1,
+        )[1].split("private func clearReviewDraft()", 1)[0]
+        preservation = model.split(
+            "private func preserveCurrentReviewDraft()", 1
+        )[1].split("private func scheduleReviewMetadataAutosave", 1)[0]
+
+        self.assertNotIn('Button("Load proposals")', review)
+        self.assertIn("await model.refreshReviewAIAvailability()", review)
+        self.assertIn("func refreshReviewAIAvailability()", model)
+        self.assertIn("reviewAIAvailabilityToken", model)
+        self.assertIn("reviewAIWindowRefreshPending", model)
+        self.assertIn("preservedSelectedIDs", loader)
+        self.assertIn("preservedFocusedID", loader)
+        self.assertIn("hasManualEdits", hydration)
+        self.assertIn("conflicts.insert(item.id)", hydration)
+        self.assertIn("existing.hasManualEdits", preservation)
+        self.assertNotIn("markAIProposalsLoaded", hydration)
+        self.assertIn('Button("Replace ', review)
 
     def test_every_backstage_button_has_half_second_hover_help(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"

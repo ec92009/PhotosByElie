@@ -2368,6 +2368,7 @@ def apply_fixture_review_action(
     propagate: bool = False,
     title: str | None = None,
     keywords: Iterable[Any] | None = None,
+    proposal_id: str | None = None,
     ai_reasons: Iterable[Any] | None = None,
     ai_note: str = "",
     actor: str = "owner",
@@ -2378,6 +2379,7 @@ def apply_fixture_review_action(
         raise ValueError("unsupported fixture review action")
     clean_ids = _unique(asset_ids)
     clean_anchor = str(anchor_asset_id or "").strip() or (clean_ids[-1] if clean_ids else "")
+    expected_proposal_id = str(proposal_id or "").strip()
     if not clean_anchor:
         raise ValueError("at least one review asset is required")
     timestamp = now_iso()
@@ -2435,6 +2437,16 @@ def apply_fixture_review_action(
                 """,
                 (asset_id,),
             ).fetchone()
+
+        if clean_action == "approve" and expected_proposal_id:
+            active_anchor_proposal = active_proposals[clean_anchor]
+            if (
+                not active_anchor_proposal
+                or str(active_anchor_proposal["proposal_id"]) != expected_proposal_id
+            ):
+                raise ValueError(
+                    "the visible AI proposal was superseded or is no longer active; refresh Review before approving"
+                )
 
         def effective_metadata(
             decision: sqlite3.Row,
@@ -2749,6 +2761,7 @@ def apply_fixture_review_action(
         "fixtureId": fixture_id,
         "action": clean_action,
         "anchorAssetId": clean_anchor,
+        "proposalId": expected_proposal_id,
         "propagated": bool(propagate or clean_action.startswith("propagate-")),
         "count": len(items),
         "items": items,

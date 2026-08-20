@@ -25,6 +25,7 @@ struct ReviewMetadataDraft: Sendable, Equatable {
     var title: String
     var keywords: [String]
     var proposalID: String = ""
+    var hasManualEdits: Bool = false
     var proposalReason: String = ""
     var proposalStatus: String = ""
     var requestedGeneratorModel: String = ""
@@ -396,6 +397,8 @@ final class BackstageViewModel: ObservableObject {
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
     private var reviewAIStatusRefreshGeneration = 0
+    private var reviewAIAvailabilityToken = ""
+    private var reviewAIWindowRefreshPending = false
     private let preferences: UserDefaults
     private var fixtureSelectionCoordinator: FixtureSelectionCoordinator
     private static let selectedSectionPreferenceKey =
@@ -2737,9 +2740,12 @@ final class BackstageViewModel: ObservableObject {
         }
         reviewWindowRequestSerial += 1
         let requestSerial = reviewWindowRequestSerial
+        let preservedSelectedIDs = reviewSelection.selectedIDs
+        let preservedAnchorID = reviewSelection.anchorID
+        let preservedFocusedID = reviewSelection.focusedID
         let currentID = preferredAssetID
-            ?? reviewSelection.focusedID
-            ?? selectedReviewAssetIDs.first
+            ?? preservedFocusedID
+            ?? preservedSelectedIDs.first
         preserveCurrentReviewDraft()
         isRunningReview = true
         reviewStatus = "Loading the oldest unresolved picked photos…"
@@ -2762,17 +2768,33 @@ final class BackstageViewModel: ObservableObject {
             )
             guard requestSerial == reviewWindowRequestSerial, !Task.isCancelled else { return }
             hydrateReviewProposalDrafts(from: window.items)
+            reviewAIWindowRefreshPending = false
             fixtureReviewWindow = window
             let orderedIDs = window.items.map(\.id)
             let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
                 ?? orderedIDs.first
+            let restoredSelectedIDs = preservedSelectedIDs.intersection(orderedIDs)
+            let selectedIDs: Set<String>
+            if preferredAssetID == nil, !restoredSelectedIDs.isEmpty {
+                selectedIDs = restoredSelectedIDs
+            } else {
+                selectedIDs = Set(replacementID.map { [$0] } ?? [])
+            }
+            let anchorID = preferredAssetID ?? preservedAnchorID
+            let focusID = preferredAssetID ?? preservedFocusedID
+            let restoredAnchorID = anchorID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? replacementID
+            let restoredFocusedID = focusID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? replacementID
             reviewSelection = OwnerSelectionModel(
                 orderedIDs: orderedIDs,
-                selectedIDs: Set(replacementID.map { [$0] } ?? []),
-                anchorID: replacementID,
-                focusedID: replacementID
+                selectedIDs: selectedIDs,
+                anchorID: restoredAnchorID,
+                focusedID: restoredFocusedID
             )
-            reviewScrollTargetID = replacementID
+            reviewScrollTargetID = restoredFocusedID
             syncReviewDraft()
             let queueScope = reviewStateFilters
                 .sorted { $0.rawValue < $1.rawValue }
@@ -3158,6 +3180,11 @@ final class BackstageViewModel: ObservableObject {
         // from its own active proposal, so one photo's metadata cannot leak
         // across a multi-selection or two-hour propagation scope.
         let approvalDraft = action == .approve ? reviewProposalDrafts[anchor] : nil
+        let approvalProposalID = action == .approve
+            && approvalDraft?.isProposal == true
+            && approvalDraft?.hasManualEdits == false
+            ? approvalDraft?.proposalID
+            : nil
         let approvalTitle = action == .approve
             ? (approvalDraft?.title ?? reviewTitle)
             : action == .editMetadata || action == .propagateTitle
@@ -3201,6 +3228,7 @@ final class BackstageViewModel: ObservableObject {
                 propagate: propagate,
                 title: approvalTitle,
                 keywords: approvalKeywords,
+                proposalID: approvalProposalID,
                 aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
                 aiNote: action == .requestAI ? reviewAINote : ""
             )
@@ -3585,6 +3613,7 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             fixtureAIStatus = status
+            reviewAIAvailabilityToken = Self.aiAvailabilityToken(for: status)
             guard let status = fixtureAIStatus else { return }
             if let run = status.run, status.active {
                 aiProposalStatus = [
@@ -3608,6 +3637,38 @@ final class BackstageViewModel: ObservableObject {
             }
             aiProposalStatus = "AI status unavailable: \(error)"
         }
+    }
+
+    /// Poll AI progress without making the operator press a batch-load button.
+    /// The Review window is rebuilt only when the durable ready-proposal
+    /// frontier changes; clean arrivals hydrate as drafts, while the loader
+    /// preserves the current page, selection, focus, and draft text.
+    func refreshReviewAIAvailability() async {
+        let previousToken = reviewAIAvailabilityToken
+        await refreshAIStatus()
+        let availabilityChanged = previousToken != reviewAIAvailabilityToken
+        let hasAvailableProposals = readyAIProposalCount > 0
+            || (fixtureAIStatus?.run?.proposed ?? 0) > 0
+        guard availabilityChanged || reviewAIWindowRefreshPending else { return }
+        guard hasAvailableProposals,
+              !reviewFixtureID.isEmpty,
+              fixtureReviewWindow != nil
+        else { return }
+        guard !isRunningReview else {
+            reviewAIWindowRefreshPending = true
+            return
+        }
+        reviewAIWindowRefreshPending = false
+        await loadFixtureReviewWindow()
+    }
+
+    private static func aiAvailabilityToken(for status: FixtureAIStatus) -> String {
+        [
+            String(status.ready),
+            status.run?.id ?? "",
+            String(status.run?.proposed ?? 0),
+            status.run?.status ?? "",
+        ].joined(separator: "|")
     }
 
     func runAIProposalPass() async {
@@ -3653,7 +3714,9 @@ final class BackstageViewModel: ObservableObject {
             var conflicts: Set<String> = []
             for proposal in proposals {
                 let existing = reviewProposalDrafts[proposal.assetID]
-                let hasManualConflict = existing.map { !$0.isProposal } ?? false
+                let hasManualConflict = existing.map {
+                    !$0.isProposal || $0.hasManualEdits
+                } ?? false
                 if hasManualConflict, !replacingConflicts {
                     conflicts.insert(proposal.assetID)
                     continue
@@ -3819,9 +3882,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     /// Make durable ready/loaded proposal metadata visible without changing
-    /// the proposal's audit status. Explicit "Load proposals" remains the
-    /// transition that marks a ready proposal as loaded.
+    /// the proposal's audit status. Clean arrivals replace only an untouched
+    /// proposal draft; a manual draft remains visible and is surfaced as a
+    /// conflict for the explicit replacement action.
     private func hydrateReviewProposalDrafts(from items: [FixtureReviewItem]) {
+        var conflicts = reviewProposalConflictIDs
         for item in items
         where item.proposalContextAvailable && !item.proposalID.isEmpty {
             if let existing = reviewProposalDrafts[item.id] {
@@ -3833,9 +3898,11 @@ final class BackstageViewModel: ObservableObject {
                     refreshed.reasoningEffort = item.reasoningEffort
                     refreshed.vision = item.vision
                     reviewProposalDrafts[item.id] = refreshed
+                    conflicts.remove(item.id)
                     continue
                 }
-                if !existing.isProposal {
+                if !existing.isProposal || existing.hasManualEdits {
+                    conflicts.insert(item.id)
                     continue
                 }
             }
@@ -3850,7 +3917,9 @@ final class BackstageViewModel: ObservableObject {
                 reasoningEffort: item.reasoningEffort,
                 vision: item.vision
             )
+            conflicts.remove(item.id)
         }
+        reviewProposalConflictIDs = conflicts
     }
 
     private func clearReviewDraft() {
@@ -3869,6 +3938,9 @@ final class BackstageViewModel: ObservableObject {
                 title: title,
                 keywords: keywords,
                 proposalID: existing.proposalID,
+                hasManualEdits: existing.hasManualEdits
+                    || title != existing.title
+                    || keywords != existing.keywords,
                 proposalReason: existing.proposalReason,
                 proposalStatus: existing.proposalStatus,
                 requestedGeneratorModel: existing.requestedGeneratorModel,

@@ -260,10 +260,8 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(applied.first?.placementState == .hidden)
         #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "hidden")
 
-        let restored = try await workflow.applyState(
-            applied.first?.beforePlacementState ?? .undecided,
-            assetIDs: applied.map(\.assetID),
-            fixtureID: "fixture-expo",
+        let restored = try await workflow.undoState(
+            applied,
             reason: "native culling undo test"
         )
         #expect(restored.first?.placementState == .picked)

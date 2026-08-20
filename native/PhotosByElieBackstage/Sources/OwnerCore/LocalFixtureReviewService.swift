@@ -49,6 +49,11 @@ public protocol LocalFixtureCullingServing: Sendable {
         assetIDs: [String],
         reason: String
     ) async throws -> [FixtureAssetState]?
+
+    func nativeUndoCullingState(
+        _ applied: [FixtureAssetState],
+        reason: String
+    ) async throws -> [FixtureAssetState]?
 }
 
 public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading, LocalFixtureCullingServing {
@@ -172,6 +177,18 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             state,
             fixtureID: fixtureID,
             assetIDs: assetIDs,
+            actor: "owner",
+            reason: reason
+        )
+    }
+
+    public func nativeUndoCullingState(
+        _ applied: [FixtureAssetState],
+        reason: String
+    ) throws -> [FixtureAssetState]? {
+        guard nativeDatabaseURL != nil else { return nil }
+        return try nativeCullingStore().undoState(
+            applied,
             actor: "owner",
             reason: reason
         )

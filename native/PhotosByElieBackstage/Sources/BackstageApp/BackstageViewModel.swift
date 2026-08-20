@@ -4216,15 +4216,10 @@ final class BackstageViewModel: ObservableObject {
         }
         if !entry.fixtureChanges.isEmpty {
             do {
-                let grouped = Dictionary(grouping: entry.fixtureChanges, by: \.beforePlacementState)
-                for (state, changes) in grouped {
-                    _ = try await fixtureService.applyState(
-                        state,
-                        assetIDs: changes.map(\.assetID),
-                        fixtureID: changes.first?.fixtureID ?? selectedFixtureID,
-                        reason: "Undo \(entry.label)"
-                    )
-                }
+                _ = try await fixtureService.undoState(
+                    entry.fixtureChanges,
+                    reason: "Undo \(entry.label)"
+                )
                 cullingHistory.removeLast()
                 await loadFixtureCullingWindow()
                 cullingStatus = "Undid \(entry.label)."

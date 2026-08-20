@@ -1196,6 +1196,36 @@ public actor FixtureWorkflowService {
             .map(FixtureAssetState.init(json:)) ?? []
     }
 
+    public func undoState(
+        _ applied: [FixtureAssetState],
+        reason: String = "Undo Culling"
+    ) async throws -> [FixtureAssetState] {
+        guard !applied.isEmpty else { return [] }
+        if let localReviewService,
+           let localCullingWriter = localReviewService as? any LocalFixtureCullingServing,
+           let localChanges = try await localCullingWriter.nativeUndoCullingState(
+               applied,
+               reason: reason
+           ) {
+            return localChanges
+        }
+
+        let groups = Dictionary(grouping: applied) { item in
+            "\(item.fixtureID):\(item.beforePlacementState.rawValue)"
+        }
+        var restored: [FixtureAssetState] = []
+        for group in groups.values {
+            guard let first = group.first else { continue }
+            restored.append(contentsOf: try await applyState(
+                first.beforePlacementState,
+                assetIDs: group.map(\.assetID),
+                fixtureID: first.fixtureID,
+                reason: reason
+            ))
+        }
+        return restored
+    }
+
     public func reviewWindow(
         fixtureID: String,
         mode: FixtureReviewMode = .backfill,

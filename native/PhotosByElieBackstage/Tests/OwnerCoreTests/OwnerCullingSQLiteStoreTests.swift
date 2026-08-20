@@ -89,6 +89,163 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
         #expect(try scalar(databaseURL, "SELECT count(*) FROM fixture_asset_decision_events") == "0")
     }
+
+    @Test("Culling read parity applies fixture scope, filters, search, and pagination")
+    func cullingWindowReadsCopiedFixture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-window-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+               SET source_anchor = 'apple-photos-cloud://cloud-asset-1',
+                   raw_json = '{"resourceFormat":"jpeg","originalByteCount":101}',
+                   filename = 'A.JPG',
+                   captured_at = '2026-01-01T01:00:00Z',
+                   photos_title = 'First photo',
+                   photos_keywords_json = '["Madrid"]',
+                   location_label = 'Madrid, Spain',
+                   location_keywords_json = '["Madrid","Spain"]',
+                   pixel_width = 1200,
+                   pixel_height = 800
+             WHERE asset_id = 'asset-1';
+            UPDATE sidecar_assets
+               SET source_anchor = 'apple-photos://local-asset-2',
+                   raw_json = '{"resourceFormat":"mov","originalByteCount":202}',
+                   filename = 'B.MOV',
+                   media_type = 'video',
+                   captured_at = '2026-01-01T02:00:00Z',
+                   photos_title = 'Second video',
+                   location_label = 'Paris, France'
+             WHERE asset_id = 'asset-2';
+            UPDATE sidecar_decisions
+               SET rating = 4, color = 'red', title = 'Decision video', keywords_json = '["night"]'
+             WHERE asset_id = 'asset-2';
+            INSERT INTO sidecar_upload_bridge_run_items(
+              run_item_id, asset_id, upload_keys_json, updated_at
+            ) VALUES (
+              'run-item-1', 'asset-1', '[{"kind":"private-master","bytes":1001}]',
+              '2026-01-01T07:00:00Z'
+            );
+            INSERT INTO sidecar_assets(
+              asset_id, source_anchor, raw_json, filename, captured_at,
+              photos_title, photos_keywords_json, location_label,
+              location_keywords_json
+            ) VALUES (
+              'asset-3', 'apple-photos://local-asset-3',
+              '{"resourceFormat":"jpeg"}', 'C.JPG', '2026-01-01T03:00:00Z',
+              'Palace facade', '["Granada"]', 'Alhambrá, Granada, Spain',
+              '["Alhambrá","Granada","Spain"]'
+            );
+            INSERT INTO sidecar_decisions(asset_id, title, keywords_json)
+              VALUES ('asset-3', '', '[]');
+            INSERT INTO sidecar_assets(asset_id, filename, captured_at)
+              VALUES ('asset-missing', 'Missing.JPG', '2026-01-01T04:00:00Z'),
+                     ('asset-tombstone', 'Tombstone.JPG', '2026-01-01T05:00:00Z');
+            INSERT INTO sidecar_decisions(asset_id) VALUES ('asset-missing'), ('asset-tombstone');
+            INSERT INTO fixture_asset_decisions(
+              fixture_id, asset_id, placement_state, eligibility_state, created_at, updated_at
+            ) VALUES
+              ('fixture-expo', 'asset-3', 'undecided', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+              ('fixture-expo', 'asset-missing', 'picked', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+              ('fixture-expo', 'asset-tombstone', 'picked', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            UPDATE sidecar_assets SET missing_at = '2026-01-01T06:00:00Z' WHERE asset_id = 'asset-missing';
+            INSERT INTO sidecar_tombstones(asset_id, tombstone_state)
+              VALUES ('asset-tombstone', 'active');
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let page = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            limit: 2
+        )
+        #expect(page.summary.universe == 3)
+        #expect(page.summary.undecided == 1)
+        #expect(page.summary.picked == 1)
+        #expect(page.summary.hidden == 1)
+        #expect(page.items.map(\.id) == ["asset-3", "asset-2"])
+        #expect(page.nextOffset == 2)
+        #expect(page.hasNext)
+
+        let picked = try store.cullingWindow(fixtureID: "fixture-expo", view: .picked)
+        #expect(picked.items.map(\.id) == ["asset-1"])
+        #expect(picked.items.first?.photoLibraryIdentifier == "cloud-asset-1")
+        #expect(picked.items.first?.originalByteCount == 1001)
+
+        let redVideo = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            mediaTypes: ["videos"],
+            ratings: [4],
+            colors: ["red"]
+        )
+        #expect(redVideo.items.map(\.id) == ["asset-2"])
+
+        let searched = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .undecided,
+            search: "Alhambra"
+        )
+        #expect(searched.items.map(\.id) == ["asset-3"])
+        #expect(searched.items.first?.title == "Palace facade")
+
+        let child = try store.cullingWindow(fixtureID: "fixture-child", view: .allActive)
+        #expect(child.items.map(\.id) == ["asset-1"])
+    }
+
+    @Test("Fixture workflow uses native Culling reads without an Owner action")
+    func cullingWorkflowUsesNativeRead() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-workflow-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+
+        let localService = LocalFixtureReviewService(
+            endpoints: [],
+            nativeDatabaseURL: databaseURL
+        )
+        let workflow = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: FailingCullingOwnerActionService(),
+                waker: FailingCullingOwnerActionWaker()
+            ),
+            localReviewService: localService
+        )
+
+        let window = try await workflow.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .picked,
+            limit: 1
+        )
+        #expect(window.items.map(\.id) == ["asset-1"])
+    }
+}
+
+private struct FailingCullingOwnerActionService: OwnerActionServing {
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        throw OwnerActionRunError.failed("native Culling read unexpectedly crossed the Owner action boundary")
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        throw OwnerActionRunError.failed("native Culling read unexpectedly polled an Owner action")
+    }
+}
+
+private struct FailingCullingOwnerActionWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        throw OwnerActionRunError.failed("native Culling read unexpectedly woke the connector")
+    }
 }
 
 private func makeCopiedFixtureDatabase(at url: URL) throws {
@@ -102,14 +259,42 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     CREATE TABLE fixtures (
       fixture_id TEXT PRIMARY KEY,
       parent_fixture_id TEXT,
+      candidate_mode TEXT NOT NULL DEFAULT 'inherited',
       archived_at TEXT
     );
     CREATE TABLE sidecar_assets (
-      asset_id TEXT PRIMARY KEY
+      asset_id TEXT PRIMARY KEY,
+      source_anchor TEXT NOT NULL DEFAULT '',
+      raw_json TEXT NOT NULL DEFAULT '{}',
+      filename TEXT NOT NULL DEFAULT '',
+      media_type TEXT NOT NULL DEFAULT 'photo',
+      captured_at TEXT NOT NULL DEFAULT '',
+      pixel_width INTEGER NOT NULL DEFAULT 0,
+      pixel_height INTEGER NOT NULL DEFAULT 0,
+      photos_title TEXT NOT NULL DEFAULT '',
+      photos_keywords_json TEXT NOT NULL DEFAULT '[]',
+      location_label TEXT NOT NULL DEFAULT '',
+      location_keywords_json TEXT NOT NULL DEFAULT '[]',
+      missing_at TEXT
     );
     CREATE TABLE sidecar_decisions (
       asset_id TEXT PRIMARY KEY,
-      pick_state TEXT NOT NULL DEFAULT 'undecided'
+      rating INTEGER NOT NULL DEFAULT 0,
+      color TEXT NOT NULL DEFAULT '',
+      pick_state TEXT NOT NULL DEFAULT 'undecided',
+      metadata_state TEXT NOT NULL DEFAULT 'unreviewed',
+      title TEXT NOT NULL DEFAULT '',
+      keywords_json TEXT NOT NULL DEFAULT '[]'
+    );
+    CREATE TABLE sidecar_tombstones (
+      asset_id TEXT PRIMARY KEY,
+      tombstone_state TEXT NOT NULL DEFAULT 'active'
+    );
+    CREATE TABLE sidecar_upload_bridge_run_items (
+      run_item_id TEXT PRIMARY KEY,
+      asset_id TEXT NOT NULL,
+      upload_keys_json TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE fixture_asset_decisions (
       fixture_id TEXT NOT NULL,

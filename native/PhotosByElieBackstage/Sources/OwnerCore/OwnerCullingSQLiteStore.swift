@@ -3,10 +3,11 @@ import SQLite3
 
 /// Native parity for the fixture-local Culling placement writer.
 ///
-/// This store is deliberately not wired into Backstage yet. It exercises the
-/// current fixture-state contract against a copied Owner.sqlite before the
-/// connector boundary is removed. The transaction owns placement changes,
-/// inherited eligibility recomputation, and the durable placement event.
+/// This store is wired through LocalFixtureReviewService only when the
+/// app-level resolver identifies Owner-private SQLite. Callers without that
+/// database continue through the existing audited connector path. The
+/// transaction owns placement changes, inherited eligibility recomputation,
+/// and the durable placement event.
 public enum OwnerCullingSQLiteError: Error, Equatable, LocalizedError {
     case unavailable(String)
     case invalid(String)
@@ -30,6 +31,183 @@ public struct OwnerCullingSQLiteStore: Sendable {
     ) {
         self.databaseURL = databaseURL
         self.busyTimeoutMilliseconds = busyTimeoutMilliseconds
+    }
+
+    /// Reads the effective fixture Culling universe from SQLite without
+    /// materializing a connector action or an ID-list transport payload.
+    /// Filters are applied before the bounded page is returned, while the
+    /// summary still reflects the complete filtered universe.
+    public func cullingWindow(
+        fixtureID: String,
+        view: FixtureCullingView = .undecided,
+        views: [FixtureCullingView] = [],
+        offset: Int = 0,
+        limit: Int = 200,
+        search: String = "",
+        mediaTypes: [String] = [],
+        ratings: [Int] = [],
+        colors: [String] = []
+    ) throws -> FixtureCullingWindow {
+        let cleanFixtureID = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanFixtureID.isEmpty else {
+            throw OwnerCullingSQLiteError.invalid("fixture ID is required")
+        }
+        let safeOffset = max(0, offset)
+        let safeLimit = min(500, max(1, limit))
+        let selectableViews = Set(FixtureCullingView.selectableCases.map(\.rawValue))
+        let selectedViews = Set(views.map(\.rawValue)).intersection(selectableViews)
+        let effectiveViews: Set<String>
+        if selectedViews.isEmpty {
+            effectiveViews = view == .allActive
+                ? selectableViews
+                : Set([view.rawValue])
+        } else {
+            effectiveViews = selectedViews
+        }
+        let selectedMedia = Set(mediaTypes.compactMap(cullingMediaType))
+        let selectedRatings = Set(ratings.filter { (0...5).contains($0) })
+        let selectedColors = Set(colors.map(cullingColorValue)).intersection(
+            ["", "red", "yellow", "green", "blue", "purple"]
+        )
+
+        let connection = try CullingSQLiteConnection(
+            databaseURL: databaseURL,
+            busyTimeoutMilliseconds: busyTimeoutMilliseconds,
+            readOnly: true
+        )
+        guard let fixture = try connection.queryOne(
+            "SELECT fixture_id, parent_fixture_id, candidate_mode FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            bindings: [.string(cleanFixtureID)]
+        ) else {
+            throw OwnerCullingSQLiteError.invalid("fixture does not exist or is archived")
+        }
+
+        let parentFixtureID = fixture["parent_fixture_id"]?.stringValue
+        var fromSQL = "sidecar_assets AS asset\n"
+        var bindings: [CullingSQLiteBinding] = []
+        if let parentFixtureID, !parentFixtureID.isEmpty {
+            fromSQL += """
+                JOIN fixture_asset_decisions AS parent_decision
+                  ON parent_decision.asset_id = asset.asset_id
+                 AND parent_decision.fixture_id = ?
+                 AND parent_decision.placement_state = 'picked'
+                 AND parent_decision.eligibility_state = 'active'
+                """
+            bindings.append(.string(parentFixtureID))
+        }
+        fromSQL += """
+            LEFT JOIN fixture_asset_decisions AS current_decision
+              ON current_decision.asset_id = asset.asset_id
+             AND current_decision.fixture_id = ?
+            LEFT JOIN sidecar_decisions AS global_decision
+              ON global_decision.asset_id = asset.asset_id
+            """
+        bindings.append(.string(cleanFixtureID))
+
+        let rows = try connection.query(
+            """
+            SELECT asset.asset_id,
+                   COALESCE(asset.source_anchor, '') AS source_anchor,
+                   COALESCE(asset.raw_json, '{}') AS raw_json,
+                   COALESCE(asset.filename, '') AS filename,
+                   COALESCE(asset.media_type, 'photo') AS media_type,
+                   COALESCE(asset.captured_at, '') AS captured_at,
+                   COALESCE(asset.photos_title, '') AS photos_title,
+                   COALESCE(asset.photos_keywords_json, '[]') AS photos_keywords_json,
+                   COALESCE(asset.location_label, '') AS location_label,
+                   COALESCE(asset.location_keywords_json, '[]') AS location_keywords_json,
+                   COALESCE(asset.pixel_width, 0) AS pixel_width,
+                   COALESCE(asset.pixel_height, 0) AS pixel_height,
+                   COALESCE(global_decision.title, '') AS decision_title,
+                   COALESCE(global_decision.keywords_json, '[]') AS decision_keywords_json,
+                   COALESCE(current_decision.placement_state, 'undecided') AS placement_state,
+                   COALESCE(current_decision.eligibility_state, 'active') AS eligibility_state,
+                   COALESCE(global_decision.rating, 0) AS rating,
+                   COALESCE(global_decision.color, '') AS color,
+                   COALESCE(global_decision.metadata_state, 'unreviewed') AS editorial_state,
+                   COALESCE((
+                     SELECT CAST(COALESCE(
+                       json_extract(upload.value, '$.bytes'),
+                       json_extract(upload.value, '$.existing.bytes')
+                     ) AS INTEGER)
+                     FROM sidecar_upload_bridge_run_items AS run_item,
+                          json_each(COALESCE(run_item.upload_keys_json, '[]')) AS upload
+                     WHERE run_item.asset_id = asset.asset_id
+                       AND json_extract(upload.value, '$.kind') = 'private-master'
+                       AND CAST(COALESCE(
+                         json_extract(upload.value, '$.bytes'),
+                         json_extract(upload.value, '$.existing.bytes'),
+                         0
+                       ) AS INTEGER) > 0
+                     ORDER BY run_item.updated_at DESC
+                     LIMIT 1
+                   ), CAST(COALESCE(
+                     json_extract(asset.raw_json, '$.originalByteCount'),
+                     json_extract(asset.raw_json, '$.original_byte_count'),
+                     0
+                   ) AS INTEGER)) AS original_byte_count
+            FROM \(fromSQL)
+            WHERE (asset.missing_at IS NULL OR asset.missing_at = '')
+              AND NOT EXISTS (
+                SELECT 1
+                FROM sidecar_tombstones AS tombstone
+                WHERE tombstone.asset_id = asset.asset_id
+                  AND tombstone.tombstone_state = 'active'
+              )
+            ORDER BY asset.captured_at DESC, asset.asset_id
+            """,
+            bindings: bindings
+        )
+
+        let searchTerms = cullingSearchTerms(search)
+        let filteredRows = rows.filter { row in
+            let media = cullingMediaType(row["media_type"]?.stringValue ?? "photo") ?? "photo"
+            guard selectedMedia.isEmpty || selectedMedia.count == 2 || selectedMedia.contains(media) else {
+                return false
+            }
+            let rating = row["rating"]?.intValue ?? 0
+            guard selectedRatings.isEmpty || selectedRatings.count == 6 || selectedRatings.contains(rating) else {
+                return false
+            }
+            let color = row["color"]?.stringValue ?? ""
+            guard selectedColors.isEmpty || selectedColors.count == 6 || selectedColors.contains(color) else {
+                return false
+            }
+            return cullingSearchMatches(row, terms: searchTerms)
+        }
+        let viewRows = filteredRows.filter {
+            effectiveViews.contains($0["placement_state"]?.stringValue ?? "undecided")
+        }
+        let pageStart = min(safeOffset, viewRows.count)
+        let pageEnd = min(viewRows.count, pageStart + safeLimit)
+        let page = Array(viewRows[pageStart..<pageEnd])
+        let summary = FixtureCullingSummary(json: [
+            "filtered": .number(Double(viewRows.count)),
+            "universe": .number(Double(filteredRows.count)),
+            "undecided": .number(Double(filteredRows.filter {
+                ($0["placement_state"]?.stringValue ?? "undecided") == "undecided"
+            }.count)),
+            "picked": .number(Double(filteredRows.filter {
+                ($0["placement_state"]?.stringValue ?? "") == "picked"
+            }.count)),
+            "hidden": .number(Double(filteredRows.filter {
+                ($0["placement_state"]?.stringValue ?? "") == "hidden"
+            }.count)),
+        ])
+        let outputView = effectiveViews.count == 1
+            ? (FixtureCullingView(rawValue: effectiveViews.first ?? "") ?? .allActive).rawValue
+            : FixtureCullingView.allActive.rawValue
+        return FixtureCullingWindow(json: [
+            "fixtureId": .string(cleanFixtureID),
+            "candidateMode": fixture["candidate_mode"] ?? .string("inherited"),
+            "view": .string(outputView),
+            "offset": .number(Double(safeOffset)),
+            "limit": .number(Double(safeLimit)),
+            "nextOffset": .number(Double(safeOffset + page.count)),
+            "hasNext": .bool(safeOffset + page.count < viewRows.count),
+            "summary": .object(summaryJSON(summary)),
+            "items": .array(page.map(cullingAssetJSON)),
+        ])
     }
 
     /// Applies a fixture-local placement state in one bounded SQLite
@@ -325,6 +503,123 @@ public struct OwnerCullingSQLiteStore: Sendable {
     }
 }
 
+private func cullingMediaType(_ value: String) -> String? {
+    switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "photo", "photos": return "photo"
+    case "video", "videos": return "video"
+    default: return nil
+    }
+}
+
+private func cullingColorValue(_ value: String) -> String {
+    let clean = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return clean == "none" ? "" : clean
+}
+
+private func cullingSearchTerms(_ search: String) -> [String] {
+    search
+        .components(separatedBy: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ",;")))
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .prefix(8)
+        .map(cullingFold)
+}
+
+private func cullingSearchMatches(
+    _ row: [String: JSONValue],
+    terms: [String]
+) -> Bool {
+    guard !terms.isEmpty else { return true }
+    let searchable = [
+        row["asset_id"]?.stringValue ?? "",
+        row["filename"]?.stringValue ?? "",
+        row["photos_title"]?.stringValue ?? "",
+        row["photos_keywords_json"]?.stringValue ?? "",
+        row["location_label"]?.stringValue ?? "",
+        row["location_keywords_json"]?.stringValue ?? "",
+        row["decision_title"]?.stringValue ?? "",
+        row["decision_keywords_json"]?.stringValue ?? "",
+    ].map(cullingFold).joined(separator: "\n")
+    return terms.allSatisfy(searchable.contains)
+}
+
+private func cullingFold(_ value: String) -> String {
+    value.folding(
+        options: [.caseInsensitive, .diacriticInsensitive],
+        locale: .current
+    )
+}
+
+private func cullingJSONObject(_ value: String) -> [String: JSONValue] {
+    guard let data = value.data(using: .utf8),
+          let object = try? JSONDecoder.ownerAPI.decode([String: JSONValue].self, from: data) else {
+        return [:]
+    }
+    return object
+}
+
+private func cullingStringArray(_ value: String) -> [String] {
+    guard let data = value.data(using: .utf8),
+          let array = try? JSONDecoder.ownerAPI.decode([String].self, from: data) else {
+        return []
+    }
+    return array
+}
+
+private func summaryJSON(_ summary: FixtureCullingSummary) -> [String: JSONValue] {
+    [
+        "filtered": .number(Double(summary.filtered)),
+        "universe": .number(Double(summary.universe)),
+        "undecided": .number(Double(summary.undecided)),
+        "picked": .number(Double(summary.picked)),
+        "hidden": .number(Double(summary.hidden)),
+    ]
+}
+
+private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
+    let raw = cullingJSONObject(row["raw_json"]?.stringValue ?? "{}")
+    let sourceAnchor = row["source_anchor"]?.stringValue ?? ""
+    let cloudIdentifier = sourceAnchor.hasPrefix("apple-photos-cloud://")
+        ? String(sourceAnchor.dropFirst("apple-photos-cloud://".count))
+        : ""
+    let photoLibraryIdentifier = cloudIdentifier.isEmpty
+        ? raw["cloudIdentifier"]?.stringValue
+            ?? raw["phCloudIdentifier"]?.stringValue
+            ?? raw["cloudIdentifierString"]?.stringValue
+            ?? raw["localIdentifier"]?.stringValue
+            ?? sourceAnchor.replacingOccurrences(of: "apple-photos://", with: "")
+        : cloudIdentifier
+    let photosTitle = row["photos_title"]?.stringValue ?? ""
+    let decisionTitle = row["decision_title"]?.stringValue ?? ""
+    let keywords = cullingStringArray(row["decision_keywords_json"]?.stringValue ?? "[]")
+    let rawResourceFormat = raw["resourceFormat"]?.stringValue
+        ?? raw["preferredResourceFormat"]?.stringValue
+        ?? ""
+    return .object([
+        "assetId": row["asset_id"] ?? .string(""),
+        "photoLibraryIdentifier": .string(photoLibraryIdentifier),
+        "title": .string(photosTitle.isEmpty ? decisionTitle : photosTitle),
+        "filename": row["filename"] ?? .string(""),
+        "mediaType": row["media_type"] ?? .string("photo"),
+        "capturedAt": row["captured_at"] ?? .string(""),
+        "pixelWidth": row["pixel_width"] ?? .number(0),
+        "pixelHeight": row["pixel_height"] ?? .number(0),
+        "resourceFormat": .string(rawResourceFormat),
+        "originalByteCount": row["original_byte_count"] ?? raw["originalByteCount"] ?? .number(0),
+        "placementState": row["placement_state"] ?? .string("undecided"),
+        "eligibilityState": row["eligibility_state"] ?? .string("active"),
+        "rating": row["rating"] ?? .number(0),
+        "color": row["color"] ?? .string(""),
+        "editorialState": row["editorial_state"] ?? .string("unreviewed"),
+        "keywords": .array(keywords.map(JSONValue.string)),
+        "locationLabel": row["location_label"] ?? .string(""),
+        "locationKeywords": .array(
+            cullingStringArray(row["location_keywords_json"]?.stringValue ?? "[]")
+                .map(JSONValue.string)
+        ),
+    ])
+}
+
 private enum CullingSQLiteBinding {
     case string(String)
 }
@@ -332,12 +627,16 @@ private enum CullingSQLiteBinding {
 private final class CullingSQLiteConnection {
     private let database: OpaquePointer
 
-    init(databaseURL: URL, busyTimeoutMilliseconds: Int32) throws {
+    init(
+        databaseURL: URL,
+        busyTimeoutMilliseconds: Int32,
+        readOnly: Bool = false
+    ) throws {
         var pointer: OpaquePointer?
         let result = sqlite3_open_v2(
             databaseURL.path,
             &pointer,
-            SQLITE_OPEN_READWRITE,
+            readOnly ? SQLITE_OPEN_READONLY : SQLITE_OPEN_READWRITE,
             nil
         )
         guard result == SQLITE_OK, let pointer else {

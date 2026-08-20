@@ -1097,6 +1097,21 @@ public actor FixtureWorkflowService {
         ratings: [Int] = [],
         colors: [String] = []
     ) async throws -> FixtureCullingWindow {
+        if let localReviewService,
+           let localCullingReader = localReviewService as? any LocalFixtureCullingReading,
+           let localWindow = try await localCullingReader.nativeCullingWindow(
+               fixtureID: fixtureID,
+               view: view,
+               views: views,
+               offset: offset,
+               limit: limit,
+               search: search,
+               mediaTypes: mediaTypes,
+               ratings: ratings,
+               colors: colors
+           ) {
+            return localWindow
+        }
         let result = try await run("fixture-culling-window", extra: [
             "fixtureId": .string(fixtureID),
             "view": .string(view.rawValue),

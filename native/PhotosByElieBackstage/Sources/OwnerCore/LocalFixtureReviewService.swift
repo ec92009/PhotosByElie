@@ -24,7 +24,23 @@ public protocol LocalFixtureReviewReading: Sendable {
     ) async throws -> FixtureReviewWindow?
 }
 
-public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading {
+/// Optional native Culling read support. Returning nil preserves the existing
+/// audited Owner-action query for callers without a native database.
+public protocol LocalFixtureCullingReading: Sendable {
+    func nativeCullingWindow(
+        fixtureID: String,
+        view: FixtureCullingView,
+        views: [FixtureCullingView],
+        offset: Int,
+        limit: Int,
+        search: String,
+        mediaTypes: [String],
+        ratings: [Int],
+        colors: [String]
+    ) async throws -> FixtureCullingWindow?
+}
+
+public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading {
     private let endpoints: [URL]
     private let session: URLSession
     private let helperURL: URL?
@@ -109,10 +125,34 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         )
     }
 
-    /// Uses the already-verified native SQLite parity store when a caller has
-    /// explicitly supplied the live database. Leaving this opt-in keeps the
-    /// current Python/HTTP fallback unchanged until the app-level path is
-    /// separately wired and manually accepted.
+    public func nativeCullingWindow(
+        fixtureID: String,
+        view: FixtureCullingView,
+        views: [FixtureCullingView],
+        offset: Int,
+        limit: Int,
+        search: String,
+        mediaTypes: [String],
+        ratings: [Int],
+        colors: [String]
+    ) throws -> FixtureCullingWindow? {
+        guard nativeDatabaseURL != nil else { return nil }
+        return try nativeCullingStore().cullingWindow(
+            fixtureID: fixtureID,
+            view: view,
+            views: views,
+            offset: offset,
+            limit: limit,
+            search: search,
+            mediaTypes: mediaTypes,
+            ratings: ratings,
+            colors: colors
+        )
+    }
+
+    /// Uses the already-verified native SQLite parity store when the app-level
+    /// resolver supplies the Owner-private database. Callers without that
+    /// resolved database retain the existing Python/HTTP fallback.
     private func applyViaNativeSQLite(
         _ payload: [String: JSONValue]
     ) throws -> FixtureReviewResult {
@@ -160,6 +200,22 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             ))
         }
         return OwnerReviewSQLiteStore(databaseURL: nativeDatabaseURL)
+    }
+
+    private func nativeCullingStore() throws -> OwnerCullingSQLiteStore {
+        guard let nativeDatabaseURL else {
+            throw APIErrorEnvelope(error: .init(
+                code: "native_review_database_missing",
+                message: "Backstage could not resolve the native Culling database."
+            ))
+        }
+        guard FileManager.default.fileExists(atPath: nativeDatabaseURL.path) else {
+            throw APIErrorEnvelope(error: .init(
+                code: "native_review_database_missing",
+                message: "Backstage could not find the native Culling database."
+            ))
+        }
+        return OwnerCullingSQLiteStore(databaseURL: nativeDatabaseURL)
     }
 
     private func requiredAction(

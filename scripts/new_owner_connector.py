@@ -57,6 +57,7 @@ LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
 LOCAL_ACTION_WAKE_PATH = "/photosbyelie/wake-owner-action"
 LOCAL_TITLE_KEYWORD_REVIEW_PATH = "/photosbyelie/title-keyword-review-queue"
+LOCAL_REVIEW_ACTION_PATH = "/photosbyelie/review-action"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -692,6 +693,44 @@ def _allowed_local_status_origin(origin: str) -> str:
     return ""
 
 
+def _local_review_action_result(repo_root: Path, payload: dict) -> dict:
+    """Apply one Backstage Review mutation without creating a cloud action."""
+    operation = str(payload.get("operation") or "").strip().casefold()
+    scripts_path = str(repo_root / "scripts")
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    from fixture_pipeline import apply_fixture_review_action, undo_fixture_review_action
+
+    with ACTION_MUTATION_LOCK:
+        if operation == "apply":
+            asset_ids = payload.get("assetIds")
+            if not isinstance(asset_ids, list) or not asset_ids or len(asset_ids) > 500:
+                raise ValueError("Review apply requires 1 to 500 asset IDs")
+            result = apply_fixture_review_action(
+                repo_root,
+                str(payload.get("fixtureId") or ""),
+                asset_ids,
+                str(payload.get("reviewAction") or ""),
+                anchor_asset_id=str(payload.get("anchorAssetId") or ""),
+                propagate=bool(payload.get("propagate")),
+                title=payload.get("title") if "title" in payload else None,
+                keywords=payload.get("keywords") if "keywords" in payload else None,
+                proposal_id=str(payload.get("proposalId") or ""),
+                ai_reasons=payload.get("aiReasons") or [],
+                ai_note=str(payload.get("aiNote") or ""),
+                actor="owner-backstage",
+            )
+            return {"ok": True, "source": "backstage-local", "reviewAction": result}
+        if operation == "undo":
+            result = undo_fixture_review_action(
+                repo_root,
+                str(payload.get("operationId") or ""),
+                actor="owner-backstage",
+            )
+            return {"ok": True, "source": "backstage-local", "reviewUndo": result}
+    raise ValueError("unsupported local Review operation")
+
+
 def start_local_status_server(
     config: ConnectorConfig,
     polling_lease: InteractivePollingLease,
@@ -732,6 +771,7 @@ def start_local_status_server(
                 LOCAL_WASTE_BASKET_OPEN_PATH,
                 LOCAL_ACTION_WAKE_PATH,
                 LOCAL_TITLE_KEYWORD_REVIEW_PATH,
+                LOCAL_REVIEW_ACTION_PATH,
             }:
                 self.send_response(404)
                 self.end_headers()
@@ -742,6 +782,41 @@ def start_local_status_server(
 
         def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
+            if parsed.path == LOCAL_REVIEW_ACTION_PATH:
+                if not self._allowed_origin():
+                    self.send_response(403)
+                    self._send_cors_headers()
+                    self.end_headers()
+                    return
+                try:
+                    content_length = int(self.headers.get("Content-Length") or 0)
+                except ValueError:
+                    content_length = 0
+                if content_length <= 0 or content_length > 512 * 1024:
+                    self.send_response(400)
+                    self._send_cors_headers()
+                    self.end_headers()
+                    return
+                try:
+                    payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    if not isinstance(payload, dict):
+                        raise ValueError("Local Review request must be a JSON object.")
+                    response_payload = _local_review_action_result(config.repo_root, payload)
+                    body = json.dumps(response_payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                    status = 200
+                except ValueError as error:
+                    body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                    status = 400
+                except Exception as error:  # noqa: BLE001 - return the local transaction failure to Backstage.
+                    body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                    status = 500
+                self.send_response(status)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path != LOCAL_ACTION_WAKE_PATH:
                 self.send_response(404)
                 self.end_headers()

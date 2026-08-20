@@ -34,6 +34,7 @@ from scripts.new_owner_connector import (
     drain_deployed_lifecycle_outbox,
     drain_hosted_lifecycle_requests,
     execute_action,
+    LOCAL_REVIEW_ACTION_PATH,
     next_poll_interval,
     process_direct_action,
     process_exact_action,
@@ -682,6 +683,81 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 urlopen(untrusted_request, timeout=1)
             self.assertEqual(rejected_origin.exception.code, 403)
             rejected_origin.exception.close()
+
+    def test_local_review_endpoint_uses_backstage_path_without_worker_action(self):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        config = ConnectorConfig(
+            "https://worker.test",
+            "david",
+            "x" * 32,
+            Path("/tmp/repo"),
+            local_status_port=port,
+        )
+        lease = InteractivePollingLease()
+        expected = {
+            "ok": True,
+            "source": "backstage-local",
+            "reviewAction": {"operationId": "reviewop-local"},
+        }
+        with patch(
+            "scripts.new_owner_connector._local_review_action_result",
+            return_value=expected,
+        ) as apply:
+            start_local_status_server(config, lease, object())
+            deadline = time.time() + 2
+            while True:
+                try:
+                    with urlopen(
+                        f"http://127.0.0.1:{port}/photosbyelie/connector-status",
+                        timeout=0.2,
+                    ):
+                        break
+                except OSError:
+                    if time.time() >= deadline:
+                        self.fail("local connector test server did not start")
+                    time.sleep(0.02)
+
+            request = Request(
+                f"http://127.0.0.1:{port}{LOCAL_REVIEW_ACTION_PATH}",
+                data=json.dumps({
+                    "operation": "apply",
+                    "fixtureId": "fixture-expo",
+                    "assetIds": ["asset-1"],
+                    "reviewAction": "hide",
+                    "anchorAssetId": "asset-1",
+                }).encode("utf-8"),
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": "https://photos-by-elie.com",
+                },
+            )
+            with urlopen(request, timeout=1) as response:
+                body = json.loads(response.read())
+            self.assertEqual(body, expected)
+            apply.assert_called_once_with(config.repo_root, {
+                "operation": "apply",
+                "fixtureId": "fixture-expo",
+                "assetIds": ["asset-1"],
+                "reviewAction": "hide",
+                "anchorAssetId": "asset-1",
+            })
+
+            untrusted_request = Request(
+                f"http://127.0.0.1:{port}{LOCAL_REVIEW_ACTION_PATH}",
+                data=json.dumps({"operation": "undo", "operationId": "reviewop-local"}).encode("utf-8"),
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": "https://example.com",
+                },
+            )
+            with self.assertRaises(HTTPError) as rejected:
+                urlopen(untrusted_request, timeout=1)
+            self.assertEqual(rejected.exception.code, 403)
+            rejected.exception.close()
 
     def test_local_sidecar_open_action_is_claimed_for_this_connector(self):
         action = _local_sidecar_open_action(self.config, "local-sidecar-test")

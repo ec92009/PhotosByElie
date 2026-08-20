@@ -545,7 +545,8 @@ final class BackstageViewModel: ObservableObject {
         self.metadataService = MetadataGiveBackService(runner: runner)
         self.fixtureService = fixtureService ?? FixtureWorkflowService(
             runner: runner,
-            connectorIdentity: LocalOwnerConnectorIdentity()
+            connectorIdentity: LocalOwnerConnectorIdentity(),
+            localReviewService: LocalFixtureReviewService()
         )
         self.accessService = AccessControlService(api: api)
         self.decisionService = SidecarDecisionService(api: api)

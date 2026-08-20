@@ -6,6 +6,34 @@ import Testing
 @testable import BackstageUI
 @testable import OwnerCore
 
+private actor RecordingLocalFixtureReviewService: LocalFixtureReviewServing {
+    private(set) var applyManifests: [[String: JSONValue]] = []
+    private(set) var undoOperationIDs: [String] = []
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        applyManifests.append(manifest)
+        return FixtureReviewResult(json: [
+            "operationId": "reviewop-local",
+            "fixtureId": manifest["fixtureId"] ?? "",
+            "action": manifest["reviewAction"] ?? "hide",
+            "anchorAssetId": manifest["anchorAssetId"] ?? "",
+            "propagated": manifest["propagate"] ?? false,
+            "items": [],
+        ])
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        undoOperationIDs.append(operationID)
+        return FixtureReviewUndoResult(json: [
+            "operationId": .string(operationID),
+            "fixtureId": "fixture-expo",
+            "action": "hide",
+            "alreadyUndone": false,
+            "items": [],
+        ])
+    }
+}
+
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
     @Test("PhotoKit cloud identifiers fail closed before native lookup")
@@ -2377,6 +2405,39 @@ struct OwnerCoreTests {
         #expect(undoManifest?["operationId"]?.stringValue == "reviewop-test")
         #expect(undoManifest?["includePreviews"]?.boolValue == false)
         #expect(undoManifest?["launchWorkspace"]?.boolValue == false)
+    }
+
+    @Test("Native Review mutations use the local service without an Owner action")
+    func nativeReviewMutationsUseLocalService() async throws {
+        let api = ScriptedOwnerActionAPI(completed: [])
+        let local = RecordingLocalFixtureReviewService()
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: local
+        )
+
+        let applied = try await service.applyReview(
+            .hide,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1", "asset-2"],
+            anchorAssetID: "asset-2"
+        )
+        let undone = try await service.undoReview(operationID: applied.operationID)
+
+        #expect(applied.operationID == "reviewop-local")
+        #expect(undone.operationID == "reviewop-local")
+        #expect(await api.requests().isEmpty)
+        let manifests = await local.applyManifests
+        #expect(manifests.count == 1)
+        #expect(manifests[0]["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(manifests[0]["assetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-1", "asset-2"])
+        #expect(manifests[0]["reviewAction"]?.stringValue == "hide")
+        #expect(await local.undoOperationIDs == ["reviewop-local"])
     }
 
     @Test("Native requested AI proposals remain draft-only and connector-audited")

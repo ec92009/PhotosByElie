@@ -1030,15 +1030,18 @@ public actor FixtureWorkflowService {
     private let runner: OwnerActionRunner
     private let connectorIdentity: any OwnerConnectorIdentifying
     private let fixtureTreeTimeout: Duration
+    private let localReviewService: (any LocalFixtureReviewServing)?
 
     public init(
         runner: OwnerActionRunner,
         connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max"),
-        fixtureTreeTimeout: Duration = FixtureWorkflowService.defaultFixtureTreeTimeout
+        fixtureTreeTimeout: Duration = FixtureWorkflowService.defaultFixtureTreeTimeout,
+        localReviewService: (any LocalFixtureReviewServing)? = nil
     ) {
         self.runner = runner
         self.connectorIdentity = connectorIdentity
         self.fixtureTreeTimeout = fixtureTreeTimeout
+        self.localReviewService = localReviewService
     }
 
     public func tree(includeArchived: Bool = true) async throws -> [FixtureNode] {
@@ -1206,13 +1209,22 @@ public actor FixtureWorkflowService {
         if let proposalID, !proposalID.isEmpty {
             extra["proposalId"] = .string(proposalID)
         }
-        let result = try await run("fixture-review-apply", extra: extra)
+        let result: [String: JSONValue]
+        if let localReviewService {
+            let localResult = try await localReviewService.applyReview(manifest: extra)
+            return localResult
+        } else {
+            result = try await run("fixture-review-apply", extra: extra)
+        }
         return FixtureReviewResult(
             json: result["reviewAction"]?.objectValue ?? [:]
         )
     }
 
     public func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        if let localReviewService {
+            return try await localReviewService.undoReview(operationID: operationID)
+        }
         let result = try await run("fixture-review-undo", extra: [
             "operationId": .string(operationID),
         ])

@@ -30,7 +30,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing {
         session: URLSession? = nil,
         helperURL: URL? = nil,
         repoRoot: URL? = nil,
-        nativeDatabaseURL: URL? = nil,
+        nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve(),
         usesOnDemandProcess: Bool = true
     ) {
         self.endpoints = endpoints

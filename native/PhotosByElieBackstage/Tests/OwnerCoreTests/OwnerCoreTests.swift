@@ -1144,6 +1144,49 @@ struct OwnerCoreTests {
         #expect(try scalar(databaseURL, "SELECT COUNT(*) FROM sqlite_master WHERE name = 'grdb_migrations'") == "0")
     }
 
+    @Test("Native Review database locator selects Owner-private SQLite")
+    func nativeReviewDatabaseLocator() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-locator-\(UUID().uuidString)", isDirectory: true)
+        let configuredRoot = root.appendingPathComponent("configured", isDirectory: true)
+        let environmentRoot = root.appendingPathComponent("environment", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        try FileManager.default.createDirectory(
+            at: configuredRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: environmentRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let configuredDatabase = configuredRoot.appendingPathComponent(
+            "assets/owner-actions/Owner.sqlite",
+            isDirectory: false
+        )
+        let environmentDatabase = environmentRoot.appendingPathComponent(
+            "assets/owner-actions/Owner.sqlite",
+            isDirectory: false
+        )
+        try Data("configured".utf8).write(to: configuredDatabase)
+        try Data("environment".utf8).write(to: environmentDatabase)
+        let config = try JSONSerialization.data(withJSONObject: ["repoRoot": configuredRoot.path])
+        try config.write(to: configURL)
+
+        let configured = OwnerReviewDatabaseLocator(
+            configURL: configURL,
+            environment: [:]
+        )
+        #expect(configured.resolve() == configuredDatabase.standardizedFileURL)
+
+        let environment = OwnerReviewDatabaseLocator(
+            configURL: configURL,
+            environment: ["PBE_REPO_ROOT": environmentRoot.path]
+        )
+        #expect(environment.resolve() == environmentDatabase.standardizedFileURL)
+        #expect(environment.resolve()?.path.contains("assets/owner-actions/Owner.sqlite") == true)
+    }
+
     @Test("Credential session round trips and clears device-only state")
     func credentialSessionRoundTrip() async throws {
         let vault = MemoryCredentialVault()

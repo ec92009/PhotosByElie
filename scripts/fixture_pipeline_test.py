@@ -525,6 +525,65 @@ class FixturePipelineTest(unittest.TestCase):
             {"photos": 3, "videos": 0},
         )
 
+    def test_culling_filter_changes_are_read_only_for_color_and_fixture_exclude(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            "hidden",
+        )
+        record_decision(
+            self.root,
+            {"assetId": "asset-1", "action": "color", "color": "red"},
+        )
+        with connect(self.root) as conn:
+            before = {
+                "global": tuple(conn.execute(
+                    "SELECT rating, color, pick_state FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixture": tuple(conn.execute(
+                    "SELECT placement_state, eligibility_state FROM fixture_asset_decisions WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixtureEvents": conn.execute(
+                    "SELECT count(*) FROM fixture_asset_decision_events WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()[0],
+            }
+
+        excluded = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            views=["undecided", "picked", "hidden"],
+            colors=["none", "yellow", "green", "blue", "purple"],
+        )
+        self.assertNotIn("asset-1", [item["assetId"] for item in excluded["items"]])
+
+        restored = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            views=["undecided", "picked", "hidden"],
+            colors=["none", "red", "yellow", "green", "blue", "purple"],
+        )
+        restored_item = next(
+            item for item in restored["items"] if item["assetId"] == "asset-1"
+        )
+        self.assertEqual(restored_item["color"], "red")
+        self.assertEqual(restored_item["placementState"], "hidden")
+
+        with connect(self.root) as conn:
+            after = {
+                "global": tuple(conn.execute(
+                    "SELECT rating, color, pick_state FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixture": tuple(conn.execute(
+                    "SELECT placement_state, eligibility_state FROM fixture_asset_decisions WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixtureEvents": conn.execute(
+                    "SELECT count(*) FROM fixture_asset_decision_events WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()[0],
+            }
+        self.assertEqual(after, before)
+
     def test_culling_window_includes_original_metadata_without_exporting(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")
         with connect(self.root) as conn:

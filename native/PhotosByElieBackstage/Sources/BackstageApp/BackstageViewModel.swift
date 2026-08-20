@@ -1787,13 +1787,11 @@ final class BackstageViewModel: ObservableObject {
 
     func applyCullingFilters(debounceNanoseconds: UInt64 = 0) {
         cullingWindowOffset = 0
-        cullingBackfillTask?.cancel()
-        cullingFilterTask?.cancel()
+        invalidateCullingWindowLoads()
         if !selectedFixtureID.isEmpty, cullingPool == nil {
             // Invalidate the old response immediately. Until the audited
             // fixture query completes, the grid must not fall back to the
             // unrelated recent-Photos preview cache or show stale results.
-            cullingWindowRequestSerial += 1
             fixtureCullingWindow = nil
             isLoadingFixtureCulling = true
             clearCullingSelection()
@@ -1811,6 +1809,18 @@ final class BackstageViewModel: ObservableObject {
         replaceCullingItems()
         photoPreview = nil
         cullingStatus = "\(cullingWorkspace.summary.filtered.formatted()) of \(cullingWorkspace.summary.total.formatted()) items match."
+    }
+
+    /// Prevent a read-only window request from replacing a newer local
+    /// decision after a filter transition. The next explicit load receives a
+    /// fresh serial, while the current in-memory decision remains authoritative
+    /// until the mutation result has been applied.
+    private func invalidateCullingWindowLoads() {
+        cullingWindowRequestSerial += 1
+        cullingBackfillTask?.cancel()
+        cullingBackfillTask = nil
+        cullingFilterTask?.cancel()
+        cullingFilterTask = nil
     }
 
     func scheduleCullingSearchRefresh() {
@@ -4112,6 +4122,9 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = photosMutationReadinessMessage()
             return
         }
+        if cullingPool == nil {
+            invalidateCullingWindowLoads()
+        }
         let selectedBefore = cullingSelection.selectedIDs
         isApplyingCullingDecision = true
         cullingCancellationRequested = false
@@ -4206,6 +4219,9 @@ final class BackstageViewModel: ObservableObject {
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             cullingStatus = "Choose a fixture and select one or more Photos items."
             return false
+        }
+        if cullingPool == nil {
+            invalidateCullingWindowLoads()
         }
         let selectedBefore = cullingSelection.selectedIDs
         let focusedBefore = cullingSelection.focusedID ?? ids.last

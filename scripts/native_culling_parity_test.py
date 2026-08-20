@@ -1079,6 +1079,26 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("fixtureCullingMediaAvailability = nil", apply_filters)
         self.assertNotIn("window.items.count(where:", model)
 
+    def test_culling_filter_responses_cannot_overwrite_newer_decisions(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("private func invalidateCullingWindowLoads()", model)
+        filter_slice = model.split("func applyCullingFilters", 1)[1].split(
+            "func scheduleCullingSearchRefresh", 1
+        )[0]
+        decision_slice = model.split("private func applyCullingDecisions", 1)[1].split(
+            "private func mergedCullingState", 1
+        )[0]
+        placement_slice = model.split("private func applyFixturePlacement", 1)[1].split(
+            "private func undoDecisions", 1
+        )[0]
+        for slice_ in (filter_slice, decision_slice, placement_slice):
+            self.assertIn("invalidateCullingWindowLoads()", slice_)
+
     def test_backstage_release_requires_a_stable_signing_identity(self):
         build_script = (
             NATIVE / "scripts" / "build-app.zsh"

@@ -2254,6 +2254,9 @@ struct OwnerCoreTests {
                     "action": "request-ai",
                     "anchorAssetId": "asset-oldest",
                     "propagated": true,
+                    "timing": .object([
+                        "localTransaction": .object(["durationMs": 2.0]),
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-oldest",
                         "before": .object(["editorialState": "unreviewed"]),
@@ -2273,6 +2276,9 @@ struct OwnerCoreTests {
                     "fixtureId": "fixture-expo",
                     "action": "request-ai",
                     "alreadyUndone": false,
+                    "timing": .object([
+                        "localTransaction": .object(["durationMs": 3.0]),
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-oldest",
                         "before": .object(["editorialState": "requesting-ai"]),
@@ -2337,10 +2343,12 @@ struct OwnerCoreTests {
         #expect(result.operationID == "reviewop-test")
         #expect(result.propagated)
         #expect(result.changes.map(\.assetID) == ["asset-oldest"])
+        #expect(result.timing["localTransaction"]?.objectValue?["durationMs"]?.intValue == 2)
         let undone = try await service.undoReview(operationID: result.operationID)
         #expect(undone.operationID == "reviewop-test")
         #expect(!undone.alreadyUndone)
         #expect(undone.changes.map(\.assetID) == ["asset-oldest"])
+        #expect(undone.timing["localTransaction"]?.objectValue?["durationMs"]?.intValue == 3)
         #expect(undone.changes.first?.review["placementState"]?.stringValue == "picked")
         let requests = await api.requests()
         #expect(requests.count == 3)

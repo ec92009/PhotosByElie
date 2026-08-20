@@ -780,6 +780,7 @@ public struct FixtureReviewResult: Sendable, Equatable {
     public var anchorAssetID: String
     public var propagated: Bool
     public var changes: [FixtureReviewChange]
+    public var timing: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         operationID = json["operationId"]?.stringValue ?? ""
@@ -792,6 +793,7 @@ public struct FixtureReviewResult: Sendable, Equatable {
         changes = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureReviewChange.init(json:))
+        timing = json["timing"]?.objectValue ?? [:]
     }
 }
 
@@ -801,6 +803,7 @@ public struct FixtureReviewUndoResult: Sendable, Equatable {
     public var action: FixtureReviewAction
     public var alreadyUndone: Bool
     public var changes: [FixtureReviewChange]
+    public var timing: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         operationID = json["operationId"]?.stringValue ?? ""
@@ -812,6 +815,7 @@ public struct FixtureReviewUndoResult: Sendable, Equatable {
         changes = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureReviewChange.init(json:))
+        timing = json["timing"]?.objectValue ?? [:]
     }
 }
 

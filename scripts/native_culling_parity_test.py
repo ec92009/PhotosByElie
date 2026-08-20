@@ -759,7 +759,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("fixtureService.reviewWindow", fast_path)
         self.assertIn("change.review", model)
         self.assertIn("public var review: [String: JSONValue]", service)
+        self.assertIn("public var timing: [String: JSONValue]", service)
+        self.assertIn("reviewLastTiming", model)
+        self.assertIn("clickToRefreshDurationMs", model)
         self.assertIn('"review": _review_item_update_from_snapshot', pipeline)
+        self.assertIn('"localTransaction": local_transaction_timing', pipeline)
 
     def test_quick_look_supports_culling_review_shortcuts_metadata_and_advancement(self):
         app = backstage_ui_source()

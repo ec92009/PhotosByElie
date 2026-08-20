@@ -787,6 +787,10 @@ class FixturePipelineTest(unittest.TestCase):
                 ("asset-2", "Second proposal", ["Second", "Proposal"]),
             ],
         )
+        self.assertGreaterEqual(
+            approved["timing"]["localTransaction"]["durationMs"],
+            0,
+        )
         with connect(self.root) as conn:
             decisions = conn.execute(
                 """
@@ -820,6 +824,10 @@ class FixturePipelineTest(unittest.TestCase):
 
         undone = undo_fixture_review_action(self.root, approved["operationId"])
         self.assertEqual(undone["count"], 2)
+        self.assertGreaterEqual(
+            undone["timing"]["localTransaction"]["durationMs"],
+            0,
+        )
         self.assertEqual(
             undone["items"][0]["review"]["placementState"],
             "picked",

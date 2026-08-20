@@ -2030,6 +2030,12 @@ def process_exact_action(
             if isinstance(result, dict):
                 result.setdefault("timing", {})["connector"] = timing
             executed_at = _utc_iso_now()
+            if action.get("type") == "sidecar-culling-review" and isinstance(result, dict):
+                phase_timing = dict(result.get("timing") or {})
+                owner_timing = dict(action.get("timing") or {})
+                owner_timing["executedAt"] = executed_at
+                phase_timing["ownerAction"] = owner_timing
+                result = {**result, "timing": phase_timing}
             complete_started_at = _utc_iso_now()
             timing.setdefault("phases", {})["action.complete"] = {
                 "startedAt": complete_started_at,

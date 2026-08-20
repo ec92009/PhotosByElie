@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import sqlite3
 import threading
+import time
 from typing import Any, Iterable
 import uuid
 
@@ -50,6 +51,15 @@ _SCHEMA_LOCK = threading.Lock()
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _local_transaction_timing(started_at: str, started_clock: float) -> dict[str, Any]:
+    completed_at = now_iso()
+    return {
+        "startedAt": started_at,
+        "completedAt": completed_at,
+        "durationMs": round(max(0.0, time.perf_counter() - started_clock) * 1000, 3),
+    }
 
 
 def _json(value: Any) -> str:
@@ -2468,7 +2478,10 @@ def apply_fixture_review_action(
         raise ValueError("at least one review asset is required")
     timestamp = now_iso()
     operation_id = f"reviewop-{uuid.uuid4().hex[:20]}"
+    local_transaction_timing: dict[str, Any] | None = None
     with connect(repo_root) as conn:
+        local_transaction_started_at = now_iso()
+        local_transaction_started_clock = time.perf_counter()
         fixture = conn.execute(
             """
             SELECT fixture_id, parent_fixture_id
@@ -2839,6 +2852,10 @@ def apply_fixture_review_action(
             ),
         )
         conn.commit()
+        local_transaction_timing = _local_transaction_timing(
+            local_transaction_started_at,
+            local_transaction_started_clock,
+        )
     return {
         "ok": True,
         "operationId": operation_id,
@@ -2849,6 +2866,7 @@ def apply_fixture_review_action(
         "propagated": bool(propagate or clean_action.startswith("propagate-")),
         "count": len(items),
         "items": items,
+        "timing": {"localTransaction": local_transaction_timing or {}},
     }
 
 
@@ -2863,7 +2881,10 @@ def undo_fixture_review_action(
     if not clean_operation_id:
         raise ValueError("review operation ID is required")
     timestamp = now_iso()
+    local_transaction_timing: dict[str, Any] | None = None
     with connect(repo_root) as conn:
+        local_transaction_started_at = now_iso()
+        local_transaction_started_clock = time.perf_counter()
         operation = conn.execute(
             """
             SELECT *
@@ -2995,6 +3016,10 @@ def undo_fixture_review_action(
             (timestamp, clean_operation_id),
         )
         conn.commit()
+        local_transaction_timing = _local_transaction_timing(
+            local_transaction_started_at,
+            local_transaction_started_clock,
+        )
     return {
         "ok": True,
         "operationId": clean_operation_id,
@@ -3003,6 +3028,7 @@ def undo_fixture_review_action(
         "count": len(items),
         "alreadyUndone": False,
         "items": items,
+        "timing": {"localTransaction": local_transaction_timing or {}},
     }
 
 

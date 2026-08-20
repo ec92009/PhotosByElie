@@ -257,6 +257,66 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             set(),
         )
 
+    def test_review_action_receipt_carries_owner_and_local_phase_timings(self):
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+        class FakeClient:
+            def __init__(self):
+                self.action_record = {
+                    "id": "owner-action-review-timing",
+                    "type": "sidecar-culling-review",
+                    "state": "queued",
+                    "payload": {
+                        "requestedConnector": "david",
+                        "manifest": {"mode": "fixture-review-apply"},
+                    },
+                    "timing": {"queuedAt": "2026-08-20T14:00:00Z"},
+                }
+                self.transitions = []
+
+            def action(self, action_id):
+                return dict(self.action_record)
+
+            def transition(self, action_id, transition, payload=None):
+                self.transitions.append((action_id, transition, payload or {}))
+                if transition == "claim":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "claimed",
+                        "claim": {"connectorId": "david"},
+                        "timing": {
+                            **self.action_record["timing"],
+                            "locallyAwakenedAt": "2026-08-20T14:00:01Z",
+                            "claimedAt": "2026-08-20T14:00:02Z",
+                        },
+                    }
+                elif transition == "complete":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                return {"action": dict(self.action_record)}
+
+        client = FakeClient()
+        with patch(
+            "scripts.new_owner_connector.execute_action",
+            return_value={"timing": {"localTransaction": {"durationMs": 12.5}}},
+        ):
+            action, processed = process_exact_action(
+                config,
+                client,
+                "owner-action-review-timing",
+                local_wake=True,
+            )
+
+        self.assertTrue(processed)
+        self.assertEqual(action["state"], "completed")
+        receipt = client.transitions[-1][2]["result"]["timing"]
+        self.assertEqual(receipt["localTransaction"]["durationMs"], 12.5)
+        self.assertEqual(receipt["ownerAction"]["queuedAt"], "2026-08-20T14:00:00Z")
+        self.assertTrue(receipt["ownerAction"]["executedAt"])
+
     def test_fixture_tree_is_a_read_only_connector_action(self):
         self.assertTrue(_action_is_read_only({
             "type": "sidecar-culling-review",

@@ -283,6 +283,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewAINote = ""
     @Published var reviewLastAction: FixtureReviewAction = .approve
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
+    @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionID: String?
@@ -3177,6 +3178,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Select one or more Review items."
             return
         }
+        let reviewClickStartedAt = Date()
         // Approve submits the visible anchor draft in the same audited request.
         // The Owner pipeline resolves every other selected or propagated item
         // from its own active proposal, so one photo's metadata cannot leak
@@ -3308,11 +3310,36 @@ final class BackstageViewModel: ObservableObject {
                 focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
             syncReviewDraft()
-            reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
+            recordReviewUITiming(result.timing, clickedAt: reviewClickStartedAt)
+            reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s").\(reviewTimingSuffix(result.timing))"
             scheduleReviewAIStatusRefresh()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
         }
+    }
+
+    private func recordReviewUITiming(
+        _ serverTiming: [String: JSONValue],
+        clickedAt: Date
+    ) {
+        let refreshedAt = Date()
+        let formatter = ISO8601DateFormatter()
+        var timing = serverTiming
+        var uiTiming = timing["ui"]?.objectValue ?? [:]
+        uiTiming["clickStartedAt"] = .string(formatter.string(from: clickedAt))
+        uiTiming["uiRefreshedAt"] = .string(formatter.string(from: refreshedAt))
+        uiTiming["clickToRefreshDurationMs"] = .number(
+            max(0, refreshedAt.timeIntervalSince(clickedAt) * 1000)
+        )
+        timing["ui"] = .object(uiTiming)
+        reviewLastTiming = timing
+    }
+
+    private func reviewTimingSuffix(_ timing: [String: JSONValue]) -> String {
+        guard let duration = timing["localTransaction"]?.objectValue?["durationMs"]?.intValue else {
+            return ""
+        }
+        return " Local SQLite transaction: \(duration) ms."
     }
 
     /// Keep decisions visible for the lifetime of the current Review surface.
@@ -3599,6 +3626,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Nothing to undo in this Backstage session."
             return
         }
+        let reviewClickStartedAt = Date()
         isRunningReview = true
         reviewStatus = "Undoing \(entry.label.lowercased())…"
         defer { isRunningReview = false }
@@ -3687,9 +3715,10 @@ final class BackstageViewModel: ObservableObject {
             } else if !selectedFixtureID.isEmpty {
                 await loadFixtureReviewWindow()
             }
+            recordReviewUITiming(result.timing, clickedAt: reviewClickStartedAt)
             reviewStatus = result.alreadyUndone
                 ? "The Review action was already undone; the current fixture stayed \(selectedFixtureBreadcrumb)."
-                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb)."
+                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb).\(reviewTimingSuffix(result.timing))"
             scheduleReviewAIStatusRefresh()
         } catch {
             reviewStatus = "Undo failed: \(error)"

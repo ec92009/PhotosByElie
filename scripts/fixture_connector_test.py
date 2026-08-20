@@ -313,6 +313,10 @@ class FixtureConnectorTest(unittest.TestCase):
                 requested["result"]["reviewAction"]["items"][0]["after"]["editorialState"],
                 "requesting-ai",
             )
+            self.assertGreaterEqual(
+                requested["result"]["reviewAction"]["timing"]["localTransaction"]["durationMs"],
+                0,
+            )
             self.assertNotIn(
                 "previewCapture",
                 requested["result"]["reviewAction"],
@@ -330,6 +334,10 @@ class FixtureConnectorTest(unittest.TestCase):
                     "editorial_state"
                 ],
                 "unreviewed",
+            )
+            self.assertGreaterEqual(
+                undone["result"]["reviewUndo"]["timing"]["localTransaction"]["durationMs"],
+                0,
             )
             access = local_server.new_owner_connector_result(
                 root,

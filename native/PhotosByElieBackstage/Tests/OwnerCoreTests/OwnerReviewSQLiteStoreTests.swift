@@ -168,6 +168,56 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
     }
 
+    @Test("Metadata edit preserves audit state and accepts a proposed draft on Undo")
+    func editMetadataAndUndoCopiedFixture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-metadata-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            "UPDATE asset_editorial_state SET editorial_state = 'proposed' WHERE asset_id = 'asset-1'"
+        )
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        let applied = try store.applyReview(
+            .editMetadata,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            title: "  Edited title  ",
+            keywords: ["one", "one", "two"],
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        #expect(applied.action == .editMetadata)
+        #expect(applied.changes.first?.review["editorialState"]?.stringValue == "unreviewed")
+        #expect(applied.changes.first?.review["title"]?.stringValue == "Edited title")
+        #expect(applied.changes.first?.review["keywords"]?.arrayValue?.map(\.stringValue) == ["one", "two"])
+        #expect(applied.changes.first?.review["proposalReady"]?.boolValue == false)
+        #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "Edited title")
+        #expect(try scalar(databaseURL, "SELECT keywords_json FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "[\"one\",\"two\"]")
+        #expect(try scalar(databaseURL, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "accepted")
+        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
+
+        let undone = try store.undoReview(
+            operationID: applied.operationID,
+            now: Date(timeIntervalSince1970: 1_800_000_001)
+        )
+
+        #expect(!undone.alreadyUndone)
+        #expect(undone.action == .editMetadata)
+        #expect(undone.changes.first?.review["editorialState"]?.stringValue == "proposed")
+        #expect(undone.changes.first?.review["title"]?.stringValue == "Decision title")
+        #expect(undone.changes.first?.review["proposalReady"]?.boolValue == true)
+        #expect(try scalar(databaseURL, "SELECT title FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "Decision title")
+        #expect(try scalar(databaseURL, "SELECT keywords_json FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "[\"Decision\"]")
+        #expect(try scalar(databaseURL, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "ready")
+        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "proposed")
+    }
+
     @Test("Undo refuses a later mutation instead of overwriting it")
     func undoConflictIsFailClosed() throws {
         let root = FileManager.default.temporaryDirectory

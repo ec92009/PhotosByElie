@@ -51,7 +51,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
-        guard action == .hide || action == .approve || action == .requestAI else {
+        guard action == .hide || action == .approve || action == .requestAI || action == .editMetadata else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
         }
         let cleanIDs = unique(assetIDs)
@@ -234,6 +234,83 @@ public struct OwnerReviewSQLiteStore: Sendable {
                             .string(try encodeJSON(.array(cleanAIReasons.map(JSONValue.string)))),
                             .string(hasAIRequest ? cleanAINote : ""),
                             hasAIRequest ? .string(timestamp) : .null,
+                            .string(timestamp), .string(assetID),
+                        ]
+                    )
+                } else if action == .editMetadata {
+                    let previousReview = beforeReview[assetID]?.objectValue ?? [:]
+                    var afterState = previousReview["editorialState"]?.stringValue ?? "unreviewed"
+                    let previousReasons = previousReview["aiReasons"] ?? .array([])
+                    let previousNote = previousReview["aiNote"]?.stringValue ?? ""
+                    let previousEditorial = try connection.queryOne(
+                        "SELECT approved_at FROM asset_editorial_state WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    ) ?? [:]
+
+                    if let explicitTitle {
+                        try connection.execute(
+                            """
+                            UPDATE sidecar_decisions
+                            SET title = ?, last_action = 'metadata', updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            bindings: [.string(explicitTitle), .string(timestamp), .string(assetID)]
+                        )
+                    }
+                    if let explicitKeywords {
+                        try connection.execute(
+                            """
+                            UPDATE sidecar_decisions
+                            SET keywords_json = ?, last_action = 'metadata', updated_at = ?
+                            WHERE asset_id = ?
+                            """,
+                            bindings: [
+                                .string(try encodeJSON(.array(explicitKeywords))),
+                                .string(timestamp), .string(assetID),
+                            ]
+                        )
+                    }
+
+                    if afterState == "approved" {
+                        try connection.execute(
+                            """
+                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                            VALUES (?, 'needs-upload', ?, ?)
+                            ON CONFLICT(asset_id) DO UPDATE SET
+                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
+                            """,
+                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                        )
+                    } else if afterState == "proposed" {
+                        afterState = "unreviewed"
+                        try connection.execute(
+                            """
+                            UPDATE asset_ai_proposals
+                            SET status = 'accepted', decided_at = ?
+                            WHERE asset_id = ? AND status IN ('ready', 'loaded')
+                            """,
+                            bindings: [.string(timestamp), .string(assetID)]
+                        )
+                    }
+
+                    let approvedAt: ReviewSQLiteBinding
+                    if afterState == "approved" {
+                        approvedAt = .string(timestamp)
+                    } else if let previousApprovedAt = previousEditorial["approved_at"]?.stringValue {
+                        approvedAt = .string(previousApprovedAt)
+                    } else {
+                        approvedAt = .null
+                    }
+                    try connection.execute(
+                        """
+                        UPDATE asset_editorial_state
+                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
+                            requested_at = NULL, approved_at = ?, updated_at = ?
+                        WHERE asset_id = ?
+                        """,
+                        bindings: [
+                            .string(afterState), .string(try encodeJSON(previousReasons)),
+                            .string(previousNote), approvedAt,
                             .string(timestamp), .string(assetID),
                         ]
                     )

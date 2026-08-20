@@ -223,7 +223,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingPool: FixturePool?
     @Published var fixtureCullingWindow: FixtureCullingWindow?
     @Published private(set) var fixtureCullingMediaAvailability: FixtureCullingMediaAvailability?
-    @Published var cullingViews: Set<FixtureCullingView> = Set(FixtureCullingView.selectableCases)
+    @Published var cullingViews: Set<FixtureCullingView> = [.undecided]
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
     @Published private(set) var cullingGridAvailableWidth = 0.0
@@ -517,7 +517,7 @@ final class BackstageViewModel: ObservableObject {
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
         )
         self.selection = preferences.string(forKey: Self.selectedSectionPreferenceKey)
-            .flatMap(Section.init(rawValue:)) ?? .overview
+            .flatMap(Section.init(rawValue:)) ?? .culling
         let legacyPreviewVisibility =
             preferences.object(forKey: Self.legacyPreviewPanelVisibilityPreferenceKey) == nil
                 ? true

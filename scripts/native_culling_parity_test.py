@@ -208,6 +208,27 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("setFrameAutosaveName", persistence)
         self.assertIn("splitView.autosaveName", persistence)
 
+    def test_fresh_launch_defaults_to_expo_culling_undecided_only(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("flatMap(Section.init(rawValue:)) ?? .culling", model)
+        self.assertIn(
+            "@Published var cullingViews: Set<FixtureCullingView> = [.undecided]",
+            model,
+        )
+        self.assertIn(
+            'cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id',
+            model,
+        )
+        self.assertIn(
+            "@Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]",
+            model,
+        )
+
     def test_culling_inspector_shows_capture_time_to_seconds(self):
         source = backstage_ui_source()
         self.assertIn("MMM d, yyyy 'at' HH:mm:ss", source)

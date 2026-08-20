@@ -35,6 +35,203 @@ public struct OwnerReviewSQLiteStore: Sendable {
         self.busyTimeoutMilliseconds = busyTimeoutMilliseconds
     }
 
+    /// Reads a bounded copied-fixture Review window without crossing the
+    /// connector boundary. This mirrors the Python reference contract before
+    /// the live Review service is moved to OwnerCore.
+    public func reviewWindow(
+        fixtureID: String,
+        mode: FixtureReviewMode = .backfill,
+        stateFilters: [String]? = ["picked"],
+        proposalAvailableOnly: Bool = false,
+        mediaFilters: [String] = ["photos", "videos"],
+        offset: Int = 0,
+        limit: Int = 200,
+        search: String = ""
+    ) throws -> FixtureReviewWindow {
+        let cleanFixtureID = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanFixtureID.isEmpty else {
+            throw OwnerReviewSQLiteError.invalid("fixture ID is required")
+        }
+        let safeOffset = max(0, offset)
+        let safeLimit = min(500, max(1, limit))
+        let selectedStates = normalizedReviewFilters(stateFilters)
+        let effectiveStates = stateFilters == nil
+            ? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
+            : selectedStates
+        let includeApproved = stateFilters != nil || mode == .full
+        let includeHidden = effectiveStates.contains("hidden")
+        let selectedMedia = Set(mediaFilters.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+            .intersection(["photos", "videos"])
+        let connection = try ReviewSQLiteConnection(
+            databaseURL: databaseURL,
+            busyTimeoutMilliseconds: busyTimeoutMilliseconds
+        )
+
+        guard try connection.queryOne(
+            "SELECT fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            bindings: [.string(cleanFixtureID)]
+        ) != nil else {
+            throw OwnerReviewSQLiteError.invalid("fixture does not exist or is archived")
+        }
+
+        var predicates = [
+            "(asset.missing_at IS NULL OR asset.missing_at = '')",
+            """
+            NOT EXISTS (
+              SELECT 1
+              FROM sidecar_tombstones AS tombstone
+              WHERE tombstone.asset_id = asset.asset_id
+                AND tombstone.tombstone_state = 'active'
+            )
+            """,
+            "current_decision.placement_state IN ('picked'\(includeHidden ? ", 'hidden'" : ""))",
+        ]
+        let bindings: [ReviewSQLiteBinding] = [.string(cleanFixtureID)]
+
+        if !includeApproved {
+            predicates.append("editorial.editorial_state != 'approved'")
+        }
+        if stateFilters != nil {
+            let statePredicates = effectiveStates.compactMap { state -> String? in
+                switch state {
+                case "picked":
+                    return "(current_decision.placement_state = 'picked' AND editorial.editorial_state != 'approved')"
+                case "approved":
+                    return "(current_decision.placement_state = 'picked' AND editorial.editorial_state = 'approved')"
+                case "hidden":
+                    return "current_decision.placement_state = 'hidden'"
+                default:
+                    return nil
+                }
+            }
+            predicates.append(
+                statePredicates.isEmpty ? "0 = 1" : "(" + statePredicates.joined(separator: " OR ") + ")"
+            )
+        }
+        if proposalAvailableOnly {
+            predicates.append(
+                """
+                EXISTS (
+                  SELECT 1
+                  FROM asset_ai_proposals AS available_proposal
+                  WHERE available_proposal.asset_id = asset.asset_id
+                    AND available_proposal.status IN ('ready', 'loaded')
+                )
+                """
+            )
+        }
+        if selectedMedia != ["photos", "videos"] {
+            if selectedMedia.isEmpty {
+                predicates.append("0 = 1")
+            } else if selectedMedia == ["videos"] {
+                predicates.append("lower(COALESCE(asset.media_type, 'photo')) = 'video'")
+            } else {
+                predicates.append("lower(COALESCE(asset.media_type, 'photo')) != 'video'")
+            }
+        }
+
+        let rows = try connection.query(
+            """
+            SELECT asset.asset_id,
+                   COALESCE(asset.source_anchor, '') AS source_anchor,
+                   COALESCE(asset.raw_json, '{}') AS raw_json,
+                   COALESCE(asset.filename, '') AS filename,
+                   COALESCE(asset.media_type, 'photo') AS media_type,
+                   COALESCE(asset.captured_at, '') AS captured_at,
+                   COALESCE(asset.photos_title, '') AS photos_title,
+                   COALESCE(asset.photos_keywords_json, '[]') AS photos_keywords_json,
+                   COALESCE(asset.location_label, '') AS location_label,
+                   COALESCE(asset.location_keywords_json, '[]') AS location_keywords_json,
+                   current_decision.placement_state AS placement_state,
+                   COALESCE(decision.title, '') AS decision_title,
+                   COALESCE(decision.caption, '') AS decision_caption,
+                   COALESCE(decision.keywords_json, '[]') AS decision_keywords_json,
+                   COALESCE(decision.rating, 0) AS rating,
+                   COALESCE(decision.color, '') AS color,
+                   editorial.editorial_state AS editorial_state,
+                   COALESCE(editorial.ai_reasons_json, '[]') AS ai_reasons_json,
+                   COALESCE(editorial.ai_note, '') AS ai_note,
+                   COALESCE(editorial.ai_attempt_count, 0) AS ai_attempt_count,
+                   COALESCE(editorial.ai_last_error, '') AS ai_last_error,
+                   COALESCE(editorial.ai_preview_path, '') AS ai_preview_path,
+                   available_proposal.proposal_id,
+                   COALESCE(available_proposal.proposed_title, '') AS proposal_title,
+                   COALESCE(available_proposal.proposed_keywords_json, '[]') AS proposal_keywords_json,
+                   COALESCE(available_proposal.reason, '') AS proposal_reason,
+                   COALESCE(available_proposal.status, '') AS proposal_status,
+                   COALESCE(available_proposal.requested_generator_model, '') AS proposal_requested_generator_model,
+                   COALESCE(available_proposal.resolved_model, '') AS proposal_resolved_model,
+                   COALESCE(available_proposal.reasoning_effort, '') AS proposal_reasoning_effort,
+                   COALESCE(available_proposal.vision, 0) AS proposal_vision,
+                   COALESCE(available_proposal.model_ladder, '[]') AS proposal_model_ladder,
+                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state
+            FROM sidecar_assets AS asset
+            JOIN fixture_asset_decisions AS current_decision
+              ON current_decision.asset_id = asset.asset_id
+             AND current_decision.fixture_id = ?
+             AND current_decision.eligibility_state = 'active'
+            LEFT JOIN sidecar_decisions AS decision
+              ON decision.asset_id = asset.asset_id
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = asset.asset_id
+            JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = asset.asset_id
+            LEFT JOIN asset_ai_proposals AS available_proposal
+              ON available_proposal.proposal_id = (
+                SELECT latest_proposal.proposal_id
+                FROM asset_ai_proposals AS latest_proposal
+                WHERE latest_proposal.asset_id = asset.asset_id
+                  AND (
+                    latest_proposal.status IN ('ready', 'loaded')
+                    OR (
+                      editorial.editorial_state = 'requesting-ai'
+                      AND latest_proposal.status = 'superseded'
+                      AND latest_proposal.decided_at = editorial.requested_at
+                    )
+                  )
+                ORDER BY
+                  CASE
+                    WHEN latest_proposal.status IN ('ready', 'loaded') THEN 0
+                    ELSE 1
+                  END,
+                  latest_proposal.attempt DESC,
+                  latest_proposal.created_at DESC,
+                  latest_proposal.proposal_id DESC
+                LIMIT 1
+              )
+            WHERE \(predicates.joined(separator: " AND "))
+            ORDER BY COALESCE(asset.captured_at, ''), asset.asset_id
+            """,
+            bindings: bindings
+        )
+        let searchedRows = rows.filter { reviewWindowSearchMatches($0, search: search) }
+        let items = searchedRows.map(reviewWindowItem)
+        let pageStart = min(safeOffset, items.count)
+        let pageEnd = min(items.count, pageStart + safeLimit)
+        let page = Array(items[pageStart..<pageEnd])
+        let summary = FixtureReviewSummary(
+            total: items.count,
+            unreviewed: items.filter { $0.editorialState == "unreviewed" }.count,
+            requestingAI: items.filter { $0.editorialState == "requesting-ai" }.count,
+            proposed: items.filter { $0.editorialState == "proposed" }.count,
+            approved: items.filter { $0.editorialState == "approved" }.count
+        )
+        let outputStates = stateFilters ?? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
+        return FixtureReviewWindow(
+            fixtureID: cleanFixtureID,
+            mode: mode,
+            reviewStateFilters: outputStates,
+            proposalAvailableOnly: proposalAvailableOnly,
+            mediaFilters: mediaFilters,
+            offset: safeOffset,
+            limit: safeLimit,
+            nextOffset: safeOffset + page.count,
+            hasNext: safeOffset + page.count < items.count,
+            summary: summary,
+            items: page
+        )
+    }
+
     /// Applies the copied-fixture Review parity actions that are safe to prove
     /// before the live writer changes. Other Review actions remain on the
     /// existing connector until their individual parity slices land.
@@ -1080,6 +1277,158 @@ private func reviewState(
         "modelLadder": jsonArray(proposal?["model_ladder"]),
         "deliveryState": delivery["delivery_state"] ?? .string("not-ready"),
     ])
+}
+
+private func normalizedReviewFilters(_ values: [String]?) -> [String] {
+    guard let values else { return [] }
+    var seen = Set<String>()
+    return values.compactMap { value in
+        let clean = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !clean.isEmpty, seen.insert(clean).inserted else { return nil }
+        return clean
+    }
+}
+
+private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
+    let assetID = row["asset_id"]?.stringValue ?? ""
+    let decisionTitle = row["decision_title"]?.stringValue ?? ""
+    let photosTitle = row["photos_title"]?.stringValue ?? ""
+    let decisionKeywords = jsonArray(row["decision_keywords_json"])
+    let photosKeywords = jsonArray(row["photos_keywords_json"])
+    let keywordValue = decisionKeywords.arrayValue?.isEmpty == false
+        ? decisionKeywords
+        : photosKeywords
+    let keywords = keywordValue.arrayValue?.compactMap(\.stringValue) ?? []
+    let proposalStatus = row["proposal_status"]?.stringValue ?? ""
+    let proposalID = row["proposal_id"]?.stringValue ?? ""
+    let proposalVision = row["proposal_vision"]?.boolValue
+        ?? ((row["proposal_vision"]?.intValue ?? 0) == 1)
+    let raw = reviewWindowObject(row["raw_json"])
+    let aiReasons = jsonArray(row["ai_reasons_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let proposedKeywords = jsonArray(row["proposal_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let modelLadder = jsonArray(row["proposal_model_ladder"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let locationKeywords = jsonArray(row["location_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let photoLibraryIdentifier = reviewWindowPhotoLibraryIdentifier(
+        sourceAnchor: row["source_anchor"]?.stringValue ?? "",
+        raw: raw,
+        assetID: assetID
+    )
+    let title = decisionTitle.isEmpty ? photosTitle : decisionTitle
+    let caption = row["decision_caption"]?.stringValue ?? ""
+    let filename = row["filename"]?.stringValue ?? ""
+    let mediaType = row["media_type"]?.stringValue ?? "photo"
+    let capturedAt = row["captured_at"]?.stringValue ?? ""
+    let rating = row["rating"]?.intValue ?? 0
+    let color = row["color"]?.stringValue ?? ""
+    let placementState = row["placement_state"]?.stringValue ?? "picked"
+    let editorialState = row["editorial_state"]?.stringValue ?? "unreviewed"
+    let aiNote = row["ai_note"]?.stringValue ?? ""
+    let aiAttemptCount = row["ai_attempt_count"]?.intValue ?? 0
+    let aiLastError = row["ai_last_error"]?.stringValue ?? ""
+    let proposalReason = row["proposal_reason"]?.stringValue ?? ""
+    let requestedGeneratorModel = row["proposal_requested_generator_model"]?.stringValue ?? ""
+    let resolvedModel = row["proposal_resolved_model"]?.stringValue ?? ""
+    let reasoningEffort = row["proposal_reasoning_effort"]?.stringValue ?? ""
+    let deliveryState = row["delivery_state"]?.stringValue ?? "not-ready"
+    let locationLabel = row["location_label"]?.stringValue ?? ""
+    return FixtureReviewItem(
+        id: assetID,
+        photoLibraryIdentifier: photoLibraryIdentifier,
+        title: title,
+        caption: caption,
+        keywords: keywords,
+        locationLabel: locationLabel,
+        locationKeywords: locationKeywords,
+        filename: filename,
+        mediaType: mediaType,
+        capturedAt: capturedAt,
+        rating: rating,
+        color: color,
+        placementState: placementState,
+        editorialState: editorialState,
+        aiReasons: aiReasons,
+        aiNote: aiNote,
+        aiAttemptCount: aiAttemptCount,
+        aiLastError: aiLastError,
+        proposalReady: proposalStatus == "ready" || proposalStatus == "loaded",
+        proposalContextAvailable: !proposalID.isEmpty,
+        proposalID: proposalID,
+        proposedTitle: row["proposal_title"]?.stringValue ?? "",
+        proposedKeywords: proposedKeywords,
+        proposalReason: proposalReason,
+        proposalStatus: proposalStatus,
+        requestedGeneratorModel: requestedGeneratorModel,
+        resolvedModel: resolvedModel,
+        reasoningEffort: reasoningEffort,
+        vision: proposalVision,
+        modelLadder: modelLadder,
+        deliveryState: deliveryState
+    )
+}
+
+private func reviewWindowSearchMatches(
+    _ row: [String: JSONValue],
+    search: String
+) -> Bool {
+    let terms = search
+        .split(whereSeparator: { $0.isWhitespace || $0 == "," || $0 == ";" })
+        .prefix(8)
+        .map { foldReviewSearch(String($0)) }
+        .filter { !$0.isEmpty }
+    guard !terms.isEmpty else { return true }
+    let searchable = [
+        row["asset_id"]?.stringValue ?? "",
+        row["filename"]?.stringValue ?? "",
+        row["photos_title"]?.stringValue ?? "",
+        row["photos_keywords_json"]?.stringValue ?? "",
+        row["location_label"]?.stringValue ?? "",
+        row["location_keywords_json"]?.stringValue ?? "",
+        row["decision_title"]?.stringValue ?? "",
+        row["decision_keywords_json"]?.stringValue ?? "",
+    ].map(foldReviewSearch).joined(separator: " ")
+    return terms.allSatisfy(searchable.contains)
+}
+
+private func foldReviewSearch(_ value: String) -> String {
+    value.folding(
+        options: [.diacriticInsensitive, .caseInsensitive],
+        locale: Locale(identifier: "en_US_POSIX")
+    ).lowercased()
+}
+
+private func reviewWindowObject(_ value: JSONValue?) -> [String: JSONValue] {
+    guard let value,
+          let encoded = value.stringValue?.data(using: .utf8),
+          let decoded = try? JSONDecoder().decode(JSONValue.self, from: encoded) else {
+        return [:]
+    }
+    return decoded.objectValue ?? [:]
+}
+
+private func reviewWindowPhotoLibraryIdentifier(
+    sourceAnchor: String,
+    raw: [String: JSONValue],
+    assetID: String
+) -> String {
+    if sourceAnchor.hasPrefix("apple-photos-cloud://") {
+        let cloudID = String(sourceAnchor.dropFirst("apple-photos-cloud://".count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cloudID.isEmpty { return cloudID }
+    }
+    for key in ["cloudIdentifier", "phCloudIdentifier", "cloudIdentifierString"] {
+        if let cloudID = raw[key]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !cloudID.isEmpty {
+            return cloudID
+        }
+    }
+    if let localID = raw["localIdentifier"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !localID.isEmpty {
+        return localID
+    }
+    if sourceAnchor.hasPrefix("apple-photos://") {
+        return String(sourceAnchor.dropFirst("apple-photos://".count))
+    }
+    return sourceAnchor.isEmpty ? assetID : sourceAnchor
 }
 
 private func recomputeFixtureEligibility(_ connection: ReviewSQLiteConnection) throws {

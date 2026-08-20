@@ -532,6 +532,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var caption: String
     public var keywords: [String]
     public var locationLabel: String
+    public var locationKeywords: [String]
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
@@ -565,6 +566,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         caption: String = "",
         keywords: [String],
         locationLabel: String = "",
+        locationKeywords: [String] = [],
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
@@ -597,6 +599,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.caption = caption
         self.keywords = keywords
         self.locationLabel = locationLabel
+        self.locationKeywords = locationKeywords
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
@@ -631,6 +634,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         caption = json["caption"]?.stringValue ?? ""
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         locationLabel = json["locationLabel"]?.stringValue ?? ""
+        locationKeywords = json["locationKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? "photo"
         capturedAt = json["capturedAt"]?.stringValue ?? ""
@@ -715,6 +719,9 @@ public struct FixtureReviewSummary: Sendable, Equatable {
 public struct FixtureReviewWindow: Sendable, Equatable {
     public var fixtureID: String
     public var mode: FixtureReviewMode
+    public var reviewStateFilters: [String]
+    public var proposalAvailableOnly: Bool
+    public var mediaFilters: [String]
     public var offset: Int
     public var limit: Int
     public var nextOffset: Int
@@ -725,6 +732,9 @@ public struct FixtureReviewWindow: Sendable, Equatable {
     public init(
         fixtureID: String,
         mode: FixtureReviewMode,
+        reviewStateFilters: [String] = [],
+        proposalAvailableOnly: Bool = false,
+        mediaFilters: [String] = ["photos", "videos"],
         offset: Int,
         limit: Int,
         nextOffset: Int,
@@ -734,6 +744,9 @@ public struct FixtureReviewWindow: Sendable, Equatable {
     ) {
         self.fixtureID = fixtureID
         self.mode = mode
+        self.reviewStateFilters = reviewStateFilters
+        self.proposalAvailableOnly = proposalAvailableOnly
+        self.mediaFilters = mediaFilters
         self.offset = offset
         self.limit = limit
         self.nextOffset = nextOffset
@@ -747,6 +760,10 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         mode = FixtureReviewMode(
             rawValue: json["mode"]?.stringValue ?? "backfill"
         ) ?? .backfill
+        reviewStateFilters = json["reviewStateFilters"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposalAvailableOnly = json["proposalAvailableOnly"]?.boolValue ?? false
+        mediaFilters = json["mediaFilters"]?.arrayValue?.compactMap(\.stringValue)
+            ?? ["photos", "videos"]
         offset = json["offset"]?.intValue ?? 0
         limit = json["limit"]?.intValue ?? 200
         nextOffset = json["nextOffset"]?.intValue ?? 0

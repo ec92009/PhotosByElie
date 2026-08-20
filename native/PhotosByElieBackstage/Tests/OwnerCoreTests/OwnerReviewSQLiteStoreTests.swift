@@ -265,6 +265,110 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT requested_at FROM asset_editorial_state WHERE asset_id = 'asset-2'") == "2026-01-01T00:00:00Z")
     }
 
+    @Test("Review read parity applies filters, proposal context, search, and pagination")
+    func reviewWindowReadsCopiedFixture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-window-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+               SET media_type = 'video', photos_title = 'Second video', location_label = 'Madrid, Spain'
+             WHERE asset_id = 'asset-2';
+            INSERT INTO sidecar_assets(
+              asset_id, source_anchor, raw_json, filename, photos_title,
+              photos_keywords_json, location_label, location_keywords_json,
+              captured_at, media_type
+            ) VALUES
+              ('asset-3', 'apple-photos://local-asset-3',
+               '{"localIdentifier":"local-asset-3"}', 'C.JPG',
+               'Palace facade', '["Granada"]', 'Alhambrá, Granada, Spain',
+               '["Alhambrá","Granada","Spain"]', '2026-01-01T01:00:00Z', 'photo'),
+              ('asset-missing', '', '{}', 'Missing.JPG', 'Missing', '[]', '', '[]',
+               '2026-01-01T01:30:00Z', 'photo'),
+              ('asset-tombstone', '', '{}', 'Tombstone.JPG', 'Tombstone', '[]', '', '[]',
+               '2026-01-01T02:00:00Z', 'photo');
+            INSERT INTO asset_editorial_state(asset_id, created_at, updated_at)
+              VALUES ('asset-3', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('asset-missing', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('asset-tombstone', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            INSERT INTO asset_delivery_state(asset_id, created_at, updated_at)
+              VALUES ('asset-3', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('asset-missing', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('asset-tombstone', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            INSERT INTO fixture_asset_decisions(
+              fixture_id, asset_id, placement_state, eligibility_state, created_at, updated_at
+            ) VALUES ('fixture-expo', 'asset-3', 'hidden', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('fixture-expo', 'asset-missing', 'picked', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                     ('fixture-expo', 'asset-tombstone', 'picked', 'active', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+            UPDATE sidecar_assets SET missing_at = '2026-01-01T03:00:00Z' WHERE asset_id = 'asset-missing';
+            INSERT INTO sidecar_tombstones(asset_id, tombstone_state) VALUES ('asset-tombstone', 'active');
+            INSERT INTO asset_ai_proposals(
+              proposal_id, asset_id, run_id, attempt, status, proposed_title,
+              proposed_keywords_json, reason, created_at
+            ) VALUES ('proposal-2', 'asset-2', 'run-1', 1, 'loaded', 'Video proposal',
+                      '["Madrid"]', 'Add video detail', '2026-01-01T00:30:00Z');
+            """
+        )
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        let page = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            limit: 1
+        )
+        #expect(page.reviewStateFilters == ["picked"])
+        #expect(page.mediaFilters == ["photos", "videos"])
+        #expect(page.summary.total == 2)
+        #expect(page.items.map(\.id) == ["asset-1"])
+        #expect(page.nextOffset == 1)
+        #expect(page.hasNext)
+        #expect(page.items.first?.photoLibraryIdentifier == "cloud-asset-1")
+
+        _ = try store.applyReview(
+            .approve,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            proposalID: "proposal-1",
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        let available = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            proposalAvailableOnly: true
+        )
+        #expect(available.items.map(\.id) == ["asset-2"])
+        #expect(available.items.first?.proposalID == "proposal-2")
+        #expect(available.items.first?.proposalReady == true)
+
+        let videos = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            mediaFilters: ["videos"]
+        )
+        #expect(videos.items.map(\.id) == ["asset-2"])
+
+        let hidden = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            stateFilters: ["hidden"],
+            search: "Alhambra"
+        )
+        #expect(hidden.items.map(\.id) == ["asset-3"])
+        #expect(hidden.items.first?.locationLabel == "Alhambrá, Granada, Spain")
+        #expect(hidden.items.first?.locationKeywords == ["Alhambrá", "Granada", "Spain"])
+
+        let all = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            stateFilters: nil
+        )
+        #expect(all.items.map(\.id) == ["asset-1", "asset-2", "asset-3"])
+        #expect(all.summary.approved == 1)
+    }
+
     @Test("Undo refuses a later mutation instead of overwriting it")
     func undoConflictIsFailClosed() throws {
         let root = FileManager.default.temporaryDirectory
@@ -308,8 +412,13 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     );
     CREATE TABLE sidecar_assets (
       asset_id TEXT PRIMARY KEY,
+      source_anchor TEXT NOT NULL DEFAULT '',
+      raw_json TEXT NOT NULL DEFAULT '{}',
+      filename TEXT NOT NULL DEFAULT '',
       photos_title TEXT,
       photos_keywords_json TEXT NOT NULL DEFAULT '[]',
+      location_label TEXT NOT NULL DEFAULT '',
+      location_keywords_json TEXT NOT NULL DEFAULT '[]',
       captured_at TEXT,
       missing_at TEXT,
       media_type TEXT NOT NULL DEFAULT 'photo'
@@ -338,6 +447,7 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
       ai_note TEXT NOT NULL DEFAULT '',
       ai_attempt_count INTEGER NOT NULL DEFAULT 0,
       ai_last_error TEXT NOT NULL DEFAULT '',
+      ai_preview_path TEXT NOT NULL DEFAULT '',
       requested_at TEXT,
       proposed_at TEXT,
       approved_at TEXT,
@@ -414,14 +524,19 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
       proposed_keywords_json TEXT NOT NULL DEFAULT '[]',
       confidence TEXT NOT NULL DEFAULT '',
       reason TEXT NOT NULL DEFAULT '',
+      requested_generator_model TEXT NOT NULL DEFAULT '',
+      resolved_model TEXT NOT NULL DEFAULT '',
+      reasoning_effort TEXT NOT NULL DEFAULT '',
+      vision INTEGER NOT NULL DEFAULT 0,
+      model_ladder TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL,
       decided_at TEXT
     );
     INSERT INTO fixtures(fixture_id, parent_fixture_id, archived_at)
       VALUES ('fixture-expo', NULL, NULL);
-    INSERT INTO sidecar_assets(asset_id, photos_title, photos_keywords_json, captured_at)
-      VALUES ('asset-1', 'Original title', '["Original"]', '2026-01-01T00:00:00Z'),
-             ('asset-2', 'Second title', '["Second"]', '2026-01-01T00:30:00Z');
+    INSERT INTO sidecar_assets(asset_id, source_anchor, raw_json, filename, photos_title, photos_keywords_json, captured_at)
+      VALUES ('asset-1', 'apple-photos-cloud://cloud-asset-1', '{"localIdentifier":"local-asset-1"}', 'A.JPG', 'Original title', '["Original"]', '2026-01-01T00:00:00Z'),
+             ('asset-2', 'apple-photos://local-asset-2', '{"localIdentifier":"local-asset-2"}', 'B.MOV', 'Second title', '["Second"]', '2026-01-01T00:30:00Z');
     INSERT INTO sidecar_decisions(asset_id, title, keywords_json, created_at, updated_at)
       VALUES ('asset-1', 'Decision title', '["Decision"]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
     INSERT INTO asset_editorial_state(asset_id, created_at, updated_at)

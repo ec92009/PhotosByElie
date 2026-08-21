@@ -59,7 +59,8 @@ must add a reviewed native contract instead of expanding the host implicitly.
    and deny-by-default routing. **Complete; not production-wired.**
 4. Move session/readiness/browser-handoff state into a Swift actor and preserve
    the existing cloud verification and fixture lease. **Complete as an isolated
-   native authority; cloud verifier and HTTP handler wiring pending.**
+   native authority with a native bounded cloud verifier; HTTP handler wiring
+   pending.**
 5. Implement gallery and preview reads with native SQLite/PhotoKit services;
    route mutations through `OwnerActionRunner`.
 6. Switch `PBEOwnerLocalHostService` from child-process HTTP control to the

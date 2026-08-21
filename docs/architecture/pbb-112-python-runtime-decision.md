@@ -1,11 +1,11 @@
 # PBB-112: Python in the Backstage and Owner runtime
 
-Status: implemented interactive-runtime slice; remaining connector/tooling gates
-tracked by PBB-112, 2026-08-21
+Status: architecture decision complete; remaining product-runtime replacements
+are split to PBB-106 and PBB-114, 2026-08-21
 
 This record reconciles the 2026-08-20 runtime inventory against the current
-isolated v233.1/build132 candidate at `916b9413` on 2026-08-21. The shared Max
-checkout and both installed Backstage copies were not modified.
+isolated v233.3/build134 candidate at `ba093d05` on 2026-08-21. The shared Max
+checkout and installed Backstage app were not modified.
 
 ## Decision
 
@@ -33,11 +33,11 @@ dependency of native Backstage.
 | `LocalFixtureReviewService` -> `OwnerReviewSQLiteStore` | Native Review reads, Apply, and Undo; native Culling reads and placement writes use the corresponding SQLite store | Interactive runtime-critical (Swift) | Keep the direct OwnerCore transaction. It preserves the existing SQLite tables, snapshots, receipts, conflict checks, fixture scope, and timing fields. An unresolved database fails closed; it does not select Python, HTTP, or the generic action runner. |
 | `MetadataReviewService` -> `MetadataProposalSQLiteStore` | The native Metadata proposal table and saved model ladder read authoritative `Owner.sqlite` | Interactive runtime-critical read (Swift) | Keep the read-only SQLite snapshot and fail closed when the database cannot be resolved. Approve, Reject, Block, direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. The native table must not depend on the retired localhost helper. |
 | `OwnerWorkflowRecoverySQLiteStore` | Backstage bootstrap classifies stale Photos sync and Upload Bridge bookkeeping | Interactive runtime-critical maintenance (Swift) | Keep one short native SQLite transaction. Legacy rows without durable worker identity remain nonterminal and are marked `needs-review`; only a stale row whose recorded worker is verifiably gone becomes interrupted/failed. This policy must not depend on launching the retired Python local host. |
-| `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-92/PBB-106; do not restore a daemon to support it. |
+| `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-106; do not restore a daemon to support it. |
 | `LocalOwnerActionWaker` -> localhost `wake-owner-action` | Former native fallback to the daemon/status server | Legacy/removable daemon coupling | Removed. Native Backstage has no localhost wake client; the action-scoped waker is the only production `OwnerActionWaking` implementation. |
 | `OwnerActionRunner` | Native Culling, fixture, Photos sync, uploads, delivery, publication, and proposal actions through the Worker action contract | External connector compatibility | Keep the authorization boundary and opaque action IDs. The implementation may use the action-scoped connector until its individual capability has a verified native or dedicated bridge replacement. |
 | `LocalOwnerConnectorIdentity` | Selects the connector authority attached to new Worker actions | Interactive runtime-critical (Swift) | Use the explicit non-secret authority target (`max` by default). Do not contact a daemon or read the credential-bearing connector config; a future writer migration must inject a rehearsed target. |
-| `PBEOwnerHostClient` -> `scripts/local_server.py` | PBB launches one loopback PBE Owner web host after the user presses Open | Interactive compatibility boundary | Retain temporarily for the explicit web session. PBB owns the child, fixture lease, bootstrap secret, and shutdown; closing PBB drains started durable work and terminates the host. It is not a daemon or idle dependency. |
+| `PBEOwnerHostClient` -> `scripts/local_server.py` | PBB launches one loopback PBE Owner web host after the user presses Open | Interactive compatibility boundary | Retain temporarily for the explicit web session. PBB owns the child, fixture lease, bootstrap secret, and shutdown; closing PBB drains started durable work and terminates the host. It is not a daemon or idle dependency. PBB-114 owns its native replacement. |
 | `PhotoLibraryService` and `PhotoMetadataService` | Photos authorization, previews, exports, and approved metadata writes | Interactive runtime-critical (Swift) | Keep in the signed Backstage bundle. There is no separately installed Photos helper and no Python on this path. |
 | `new_owner_connector.py` with no bounded flag | LaunchAgent/background polling, local status server, retry/backoff, and action drain | Legacy/removable daemon | Refuse by default before reading connector config. `--once` and `--action-id` remain bounded forms; a deliberate rollback may opt in with `PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1`. |
 | `new_owner_connector.py` -> `sidecar_server.py` | Legacy Sidecar browser launch when `PBE_ENABLE_LEGACY_SIDECAR=1` | Legacy compatibility | Retain only for explicit rollback/rehearsal; native Backstage must not depend on it. |
@@ -95,6 +95,18 @@ interactive transaction, snapshot validation, event recording, and guarded
 Undo contract. `scripts/fixture_pipeline.py` remains a bounded connector and
 parity/tooling implementation, not a fallback selected by native Backstage.
 
+## Timing result
+
+The original Review Hide/Undo reproduction exceeded ten seconds while crossing
+the mixed Swift/Python boundary. With the native SQLite path in signed
+v233.1/build132, the live Expo fixture completed a five-item Hide in about 1.0
+second and exact Undo in about 0.7 seconds, then a 25-item Hide in about 1.0
+second and exact Undo in about 0.65 seconds. A user-run single-item Culling and
+Review replay also passed. Read-only receipt checks showed exact undone
+operations and no net decision drift. No connector or Python process was on the
+native Review critical path, so the former unexplained multi-second process/IPC
+component is removed; PBB-111 owns the detailed acceptance evidence.
+
 ## Migration sequence
 
 1. Define and test the OwnerCore SQLite store protocol for Review/Culling state
@@ -129,14 +141,25 @@ parity/tooling implementation, not a fallback selected by native Backstage.
 - PhotoKit access continues through the signed Backstage app identity.
 - No idle LaunchAgent or daemon is required by the chosen architecture.
 
-## Remaining gates
+## Follow-up ownership
 
-This slice settles the native Review/Culling boundary, removes its hidden
+The completed decision settles the native Review/Culling boundary, removes its hidden
 Python/HTTP fallback, moves the Metadata proposal list off its localhost helper,
 removes the connector-status lookup from native identity resolution without
 loading connector credentials into Swift, removes the unused native localhost
 action-wake client, and makes the unbounded connector daemon fail closed by
 default.
-Remaining acceptance gates are the broader action-scoped connector capability
-cutover, eventual native replacement of the PBE Owner Python web host, rollback
-surface retirement, and installed Max timing/replay evidence.
+
+Python is not fundamentally required by the finished Backstage/PBE Owner
+product runtime. It remains appropriate for bounded batch, migration, repair,
+test, and release tooling. The two remaining product-runtime compatibility
+boundaries are deliberately split instead of keeping this architecture ticket
+open as an unbounded rewrite:
+
+- PBB-106 owns capability-by-capability replacement and live acceptance of the
+  action-scoped external connector, including lifecycle, KV attribution, soak,
+  rollback, and credential recovery.
+- PBB-114 owns replacing the explicit PBE Owner `local_server.py` browser-session
+  host with a Backstage-owned native host and proving close/drain/security parity.
+- PBB-92 separately retains its final controlled approved metadata-write gate
+  for the already completed standalone Photos Bridge retirement.

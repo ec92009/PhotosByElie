@@ -87,7 +87,7 @@ private func seedMetadataProposalDatabase(at url: URL) throws {
       PRIMARY KEY(media_id, attempt)
     );
     INSERT INTO owner_settings(setting_key, setting_value) VALUES(
-      'title_keyword_model_ladder',
+      'title_keyword_model_ladder_json',
       '[{"model":"gpt-5.4-mini","effort":"low","vision":true},{"model":"gpt-5.6-sol","effort":"high","vision":true}]'
     );
     INSERT INTO title_keyword_queue(

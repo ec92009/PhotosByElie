@@ -1873,6 +1873,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("127.0.0.1:8766", service)
         self.assertIn("MetadataProposalSQLiteStore", service)
         self.assertIn("SQLITE_OPEN_READONLY", store)
+        self.assertIn("title_keyword_model_ladder_json", store)
         self.assertIn("WHERE q.review_state = 'proposed'", store)
         self.assertIn("Every approval, rejection, or block remains a Worker-authorized Max action.", metadata)
 

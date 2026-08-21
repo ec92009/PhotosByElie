@@ -170,7 +170,7 @@ public struct MetadataProposalSQLiteStore: Sendable {
         let sql = """
         SELECT setting_value
         FROM owner_settings
-        WHERE setting_key = 'title_keyword_model_ladder'
+        WHERE setting_key = 'title_keyword_model_ladder_json'
         LIMIT 1
         """
         var statement: OpaquePointer?

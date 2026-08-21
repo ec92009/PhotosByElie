@@ -1877,6 +1877,17 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("WHERE q.review_state = 'proposed'", store)
         self.assertIn("Every approval, rejection, or block remains a Worker-authorized Max action.", metadata)
 
+    def test_backstage_reconciles_ghost_workflows_natively_at_bootstrap(self):
+        store = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerWorkflowRecoverySQLiteStore.swift").read_text()
+        model = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift").read_text()
+
+        self.assertIn("SQLITE_OPEN_READWRITE", store)
+        self.assertIn("recovery_state = 'needs-review'", store)
+        self.assertIn("status = 'failed'", store)
+        self.assertIn("status = 'interrupted'", store)
+        self.assertIn("await reconcileInterruptedOwnerWorkflows()", model)
+        self.assertNotIn("new_owner_connector.py", store)
+
     def test_every_backstage_button_has_half_second_hover_help(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"
         total_buttons = 0

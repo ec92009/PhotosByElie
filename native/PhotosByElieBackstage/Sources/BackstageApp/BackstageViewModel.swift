@@ -346,6 +346,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
+    @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
     @Published var isSyncingPhotos = false
     @Published var isCancellingPhotosSync = false
     @Published var r2Reconciliation: R2ReconciliationReport?
@@ -360,6 +361,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var updateState: BackstageUpdateState = .idle
     private var nativePublicationCancellationRequested = false
     private var photosSyncCancellationRequested = false
+    private var didCheckOwnerWorkflowRecovery = false
     private var r2ReconciliationCancellationRequested = false
     private var terminationRequested = false
 
@@ -378,6 +380,7 @@ final class BackstageViewModel: ObservableObject {
     let updateService: BackstageUpdateService
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
+    private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
@@ -515,7 +518,10 @@ final class BackstageViewModel: ObservableObject {
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
         updateService: BackstageUpdateService = BackstageUpdateService(),
         authenticationService: OwnerAuthenticationService? = nil,
-        fixtureService: FixtureWorkflowService? = nil
+        fixtureService: FixtureWorkflowService? = nil,
+        workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:))
     ) {
         self.preferences = preferences
         self.updateService = updateService
@@ -559,6 +565,7 @@ final class BackstageViewModel: ObservableObject {
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost
+        self.workflowRecoveryStore = workflowRecoveryStore
         self.openExternalURL = openExternalURL
     }
 
@@ -996,6 +1003,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func bootstrapAuthentication() async {
+        await reconcileInterruptedOwnerWorkflows()
         photoAccess = photoLibrary.authorization()
         isAuthenticating = true
         defer { isAuthenticating = false }
@@ -1023,6 +1031,29 @@ final class BackstageViewModel: ObservableObject {
             markFixtureSelectionUnavailable(
                 "Fixtures are unavailable while Backstage is signed out. Fixture-scoped actions are disabled."
             )
+        }
+    }
+
+    func reconcileInterruptedOwnerWorkflows() async {
+        guard !didCheckOwnerWorkflowRecovery else { return }
+        didCheckOwnerWorkflowRecovery = true
+        guard let workflowRecoveryStore else {
+            ownerWorkflowRecoveryStatus = "Workflow recovery unavailable: Owner.sqlite could not be resolved."
+            return
+        }
+        do {
+            let report = try await Task.detached(priority: .utility) {
+                try workflowRecoveryStore.reconcile()
+            }.value
+            if report.changed == 0 {
+                ownerWorkflowRecoveryStatus = "No stale Owner workflow rows needed recovery."
+            } else {
+                let recovered = report.photosRecovered + report.uploadsRecovered
+                let review = report.photosNeedsReview + report.uploadsNeedsReview
+                ownerWorkflowRecoveryStatus = "Workflow recovery: \(recovered) interrupted run\(recovered == 1 ? "" : "s") recovered; \(review) legacy run\(review == 1 ? "" : "s") marked needs review."
+            }
+        } catch {
+            ownerWorkflowRecoveryStatus = "Workflow recovery failed closed: \(userFacingMessage(for: error))"
         }
     }
 

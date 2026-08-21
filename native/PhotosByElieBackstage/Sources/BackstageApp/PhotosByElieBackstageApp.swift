@@ -920,6 +920,9 @@ private struct ActivityView: View {
                     .backstageHelp("Reload the latest audited Owner actions, progress, completion states, and failures.")
             }
             .padding()
+            BackstageFeedbackView(message: model.ownerWorkflowRecoveryStatus)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             Table(model.actions) {
                 TableColumn("Kind", value: \.actionKind)
                 TableColumn("Target", value: \.target)

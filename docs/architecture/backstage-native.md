@@ -99,9 +99,11 @@ placeholders:
 - **Metadata** can save title, caption and keyword sets, queue one or many items
   for the existing title/keyword review, replace the managed keyword
   blacklist, review pending AI proposals, and run the separate verified Apple
-  Photos give-back workflow. Native Review reads and its local editorial
-  mutations use `OwnerReviewSQLiteStore`; Photos give-back, Worker actions,
-  and other external boundaries remain action-scoped Max work.
+  Photos give-back workflow. Its proposal list and saved model ladder use the
+  read-only `MetadataProposalSQLiteStore`; proposal decisions expose no local
+  write path and remain Worker-authorized Max actions. Native Review reads and
+  its local editorial mutations use `OwnerReviewSQLiteStore`; Photos give-back,
+  Worker actions, and other external boundaries remain action-scoped Max work.
 
 External fixture, metadata, Photos, delivery, and publication operations
 create `sidecar-culling-review` or `photo-moderation` actions targeted to Max.
@@ -120,7 +122,7 @@ second state model.
 ```mermaid
 flowchart LR
   UI["BackstageApp"] --> Core["OwnerCore"]
-  Core -->|native Review/Culling transaction| DB[("Owner.sqlite")]
+  Core -->|native Review/Culling transaction and Metadata proposal read| DB[("Owner.sqlite")]
   Core -->|short lived bearer| Worker["Worker API v1"]
   Worker -->|opaque action ID| Connector["Max connector"]
   Connector --> DB[("Owner.sqlite")]

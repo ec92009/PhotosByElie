@@ -426,9 +426,12 @@ review it carefully before choosing **Replace blacklist**.
 
 ### Review AI proposals
 
-Choose **Load proposals**, compare the current and proposed metadata, and then
-choose **Approve**, **Reject**, or **Block** for each proposal. These decisions
-are audited actions; they are not direct SQLite edits.
+Choose **Load ladder & proposals**. Backstage reads the current pending proposal
+rows and saved model ladder directly from authoritative `Owner.sqlite`, without
+requiring a localhost helper or connector daemon. Compare the current and
+proposed metadata, then choose **Approve**, **Reject**, or **Block** for each
+proposal. Those decisions remain audited Max actions; the local SQLite reader
+has no write path.
 
 ### Give approved metadata back to Photos
 

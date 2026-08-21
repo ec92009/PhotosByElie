@@ -295,20 +295,14 @@ public struct MetadataModelLadderChange: Sendable, Equatable {
 
 public actor MetadataReviewService {
     private let runner: OwnerActionRunner
-    private let proposalURLs: [URL]
-    private let session: URLSession
+    private let proposalStore: MetadataProposalSQLiteStore?
 
     public init(
         runner: OwnerActionRunner,
-        proposalURLs: [URL] = [
-            URL(string: "http://localhost:8766/photosbyelie/title-keyword-review-queue")!,
-            URL(string: "http://127.0.0.1:8766/photosbyelie/title-keyword-review-queue")!,
-        ],
-        session: URLSession = .shared
+        nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve()
     ) {
         self.runner = runner
-        self.proposalURLs = proposalURLs
-        self.session = session
+        self.proposalStore = nativeDatabaseURL.map(MetadataProposalSQLiteStore.init(databaseURL:))
     }
 
     public func update(
@@ -355,20 +349,13 @@ public actor MetadataReviewService {
     }
 
     public func proposals() async throws -> MetadataProposalQueue {
-        var lastError: Error = URLError(.cannotConnectToHost)
-        for url in proposalURLs {
-            do {
-                let (data, response) = try await session.data(from: url)
-                guard let http = response as? HTTPURLResponse,
-                      (200..<300).contains(http.statusCode) else {
-                    throw URLError(.badServerResponse)
-                }
-                return try JSONDecoder.ownerAPI.decode(MetadataProposalQueue.self, from: data)
-            } catch {
-                lastError = error
-            }
+        guard let proposalStore else {
+            throw APIErrorEnvelope(error: .init(
+                code: "native_metadata_database_missing",
+                message: "Backstage could not resolve the native Metadata database."
+            ))
         }
-        throw lastError
+        return try proposalStore.proposals()
     }
 
     public func decide(

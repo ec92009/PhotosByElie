@@ -1864,6 +1864,18 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("markAIProposalsLoaded", hydration)
         self.assertIn('Button("Replace ', review)
 
+    def test_metadata_proposals_read_owner_sqlite_without_localhost_helper(self):
+        service = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/MetadataReviewService.swift").read_text()
+        store = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/MetadataProposalSQLiteStore.swift").read_text()
+        metadata = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift").read_text()
+
+        self.assertNotIn("localhost:8766", service)
+        self.assertNotIn("127.0.0.1:8766", service)
+        self.assertIn("MetadataProposalSQLiteStore", service)
+        self.assertIn("SQLITE_OPEN_READONLY", store)
+        self.assertIn("WHERE q.review_state = 'proposed'", store)
+        self.assertIn("Every approval, rejection, or block remains a Worker-authorized Max action.", metadata)
+
     def test_every_backstage_button_has_half_second_hover_help(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"
         total_buttons = 0

@@ -31,6 +31,7 @@ dependency of native Backstage.
 | Entry point or boundary | Current reachability | Classification | Decision |
 | --- | --- | --- | --- |
 | `LocalFixtureReviewService` -> `OwnerReviewSQLiteStore` | Native Review reads, Apply, and Undo; native Culling reads and placement writes use the corresponding SQLite store | Interactive runtime-critical (Swift) | Keep the direct OwnerCore transaction. It preserves the existing SQLite tables, snapshots, receipts, conflict checks, fixture scope, and timing fields. An unresolved database fails closed; it does not select Python, HTTP, or the generic action runner. |
+| `MetadataReviewService` -> `MetadataProposalSQLiteStore` | The native Metadata proposal table and saved model ladder read authoritative `Owner.sqlite` | Interactive runtime-critical read (Swift) | Keep the read-only SQLite snapshot and fail closed when the database cannot be resolved. Approve, Reject, Block, direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. The native table must not depend on the retired localhost helper. |
 | `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-92/PBB-106; do not restore a daemon to support it. |
 | `OwnerActionRunner` | Native Culling, fixture, Photos sync, uploads, delivery, publication, and proposal actions through the Worker action contract | External connector compatibility | Keep the authorization boundary and opaque action IDs. The implementation may use the action-scoped connector until its individual capability has a verified native or dedicated bridge replacement. |
 | `LocalOwnerConnectorIdentity` | Selects the connector authority attached to new Worker actions | Interactive runtime-critical (Swift) | Use the explicit non-secret authority target (`max` by default). Do not contact a daemon or read the credential-bearing connector config; a future writer migration must inject a rehearsed target. |
@@ -65,6 +66,12 @@ The remaining direct native Python process launches are:
 endpoint, or encodes a JSON Review request. It calls `OwnerReviewSQLiteStore`
 directly for the native interactive path and fails closed when the
 Owner-private database cannot be resolved.
+
+`MetadataReviewService` no longer requests the legacy
+`localhost:8766/photosbyelie/title-keyword-review-queue` endpoint. Its proposal
+list and model ladder come from a read-only `Owner.sqlite` transaction through
+`MetadataProposalSQLiteStore`; the store exposes no write method. Explicit
+proposal decisions continue through the existing audited action boundary.
 
 `scripts/new_owner_connector.py` has two materially different modes:
 
@@ -117,9 +124,10 @@ parity/tooling implementation, not a fallback selected by native Backstage.
 ## Remaining gates
 
 This slice settles the native Review/Culling boundary, removes its hidden
-Python/HTTP fallback, removes the connector-status lookup from native identity
-resolution without loading connector credentials into Swift, and makes the
-unbounded connector daemon fail closed by default.
+Python/HTTP fallback, moves the Metadata proposal list off its localhost helper,
+removes the connector-status lookup from native identity resolution without
+loading connector credentials into Swift, and makes the unbounded connector
+daemon fail closed by default.
 Remaining acceptance gates are the broader action-scoped connector capability
 cutover, eventual native replacement of the PBE Owner Python web host, rollback
 surface retirement, and installed Max timing/replay evidence.

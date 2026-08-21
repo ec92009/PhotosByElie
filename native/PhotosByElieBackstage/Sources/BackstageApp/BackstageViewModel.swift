@@ -307,7 +307,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
     @Published var metadataHistory: [MetadataHistoryEntry] = []
     @Published var metadataProposals: [MetadataProposal] = []
-    @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
+    @Published var metadataProposalStatus = "Load the local Owner.sqlite AI proposal queue to review it."
     @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
     @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
     @Published var metadataModelLadderStatus = "Every rung sends a bounded JPEG; vision is always on."

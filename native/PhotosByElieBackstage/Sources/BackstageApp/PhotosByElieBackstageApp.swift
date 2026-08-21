@@ -1689,7 +1689,7 @@ private struct MetadataGiveBackView: View {
                     Button("Load ladder & proposals") {
                         Task { await model.loadMetadataProposals() }
                     }
-                    .backstageHelp("Load pending AI metadata proposals from the local read-only Owner helper for human review.")
+                    .backstageHelp("Load pending AI metadata proposals directly from the authoritative local Owner.sqlite for human review.")
                     BackstageFeedbackView(message: model.metadataProposalStatus)
                 }
                 Table(model.metadataProposals) {
@@ -1753,7 +1753,7 @@ private struct MetadataGiveBackView: View {
                     }
                 }
                 .frame(minHeight: 180)
-                Text("Proposals are read from Owner.sqlite through the local read-only helper. Every approval, rejection, or block remains a Worker-authorized Max action.")
+                Text("Proposals are read directly from Owner.sqlite. Every approval, rejection, or block remains a Worker-authorized Max action.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -215,15 +215,22 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageApp"
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
+        coordinator = (
+            NATIVE
+            / "Sources"
+            / "OwnerCore"
+            / "FixtureSelectionCoordinator.swift"
+        ).read_text(encoding="utf-8")
         self.assertIn("flatMap(Section.init(rawValue:)) ?? .culling", model)
         self.assertIn(
             "@Published var cullingViews: Set<FixtureCullingView> = [.undecided]",
             model,
         )
         self.assertIn(
-            'cullingFixtureID = flatFixtures.first(where: { $0.id == "fixture-expo" })?.id',
+            'selectedFixtureID = fixtureSelectionCoordinator.selectedFixtureID ?? ""',
             model,
         )
+        self.assertIn('public static let expoFixtureID = "fixture-expo"', coordinator)
         self.assertIn(
             "@Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]",
             model,
@@ -747,9 +754,7 @@ class NativeCullingParityTest(unittest.TestCase):
         undo = model.split("func undoLastReviewAction()", 1)[1].split(
             "func saveReviewMetadata()", 1
         )[0]
-        fast_path = undo.split(
-            "if retainReviewUndoResultInCurrentWindow", 1
-        )[1].split("let window = try await fixtureService.reviewWindow", 1)[0]
+        fast_path = undo.split("if retainedLocally", 1)[1].split("} else {", 1)[0]
 
         self.assertIn("reviewItems: [FixtureReviewItem]", model)
         self.assertIn("reviewItemIndexes: [String: Int]", model)
@@ -1194,8 +1199,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "231.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "129")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "233.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "131")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)

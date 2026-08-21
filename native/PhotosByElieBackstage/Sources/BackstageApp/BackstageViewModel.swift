@@ -3819,7 +3819,7 @@ final class BackstageViewModel: ObservableObject {
             || (fixtureAIStatus?.run?.proposed ?? 0) > 0
         guard availabilityChanged || reviewAIWindowRefreshPending else { return }
         guard hasAvailableProposals,
-              !reviewFixtureID.isEmpty,
+              !selectedFixtureID.isEmpty,
               fixtureReviewWindow != nil
         else { return }
         guard !isRunningReview else {

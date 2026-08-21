@@ -11,7 +11,10 @@ enum CullingPreviewFixtures {
         missingThumbnail: Bool = false,
         failedThumbnail: Bool = false
     ) -> BackstageViewModel {
-        let model = BackstageViewModel()
+        // Canvas previews must never reach the user's Photos library. The
+        // fixture still exercises the real BackstageViewModel retry path, but
+        // the injected service keeps every preview request synthetic.
+        let model = BackstageViewModel(photoLibrary: PreviewPhotoLibrary())
         let assets = sampleAssets
 
         model.installFixtureTree([
@@ -198,6 +201,29 @@ enum CullingPreviewFixtures {
             using: .jpeg,
             properties: [.compressionFactor: 0.82]
         )
+    }
+}
+
+private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: 1,
+            pixelHeight: 1
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Canvas previews do not export Photos originals.")
     }
 }
 

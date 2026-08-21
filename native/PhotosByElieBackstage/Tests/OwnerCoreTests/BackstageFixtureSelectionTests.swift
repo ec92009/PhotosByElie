@@ -274,6 +274,40 @@ struct BackstageFixtureSelectionTests {
         #expect(model.photoStatus == "Photos access is required. Choose Allow Photos, then retry Refresh previews.")
     }
 
+    @Test("Culling thumbnail Retry recovers one failed card without changing decisions")
+    @MainActor
+    func cullingThumbnailRetryRecoversOneFailedCard() async {
+        let model = BackstageViewModel(photoLibrary: RetryPhotoLibrary())
+        let asset = FixturePoolAsset(
+            id: "asset-retry",
+            position: 0,
+            title: "Retry fixture",
+            filename: "retry.jpg",
+            mediaType: "photo"
+        )
+        model.cullingPool = FixturePool(
+            id: "pool-retry",
+            name: "Retry",
+            fixtureID: "fixture-retry",
+            assetCount: 1,
+            snapshotHash: "synthetic",
+            assets: [asset]
+        )
+        model.cullingThumbnails = [:]
+        model.cullingThumbnailFailures[asset.id] = .previewUnavailable
+
+        model.retryThumbnail(for: asset.id)
+
+        for _ in 0..<20 {
+            if model.cullingThumbnails[asset.id] != nil { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(model.cullingThumbnails[asset.id] != nil)
+        #expect(model.cullingThumbnailFailures[asset.id] == nil)
+        #expect(model.cullingPool?.assets.map(\.id) == [asset.id])
+    }
+
     @Test("Missing media availability still keeps Culling on photos")
     @MainActor
     func missingMediaAvailabilityFallsBackSafely() throws {
@@ -408,6 +442,29 @@ private struct InertPhotoLibrary: PhotoLibraryServing {
 
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
         throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+}
+
+private struct RetryPhotoLibrary: PhotoLibraryServing {
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: 1,
+            pixelHeight: 1
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Synthetic retry test does not export originals.")
     }
 }
 

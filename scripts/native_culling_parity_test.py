@@ -88,6 +88,9 @@ class NativeCullingParityTest(unittest.TestCase):
             "if failedThumbnail",
             'model.cullingThumbnailFailures[\"expo-1\"] = .previewUnavailable',
             '#Preview(\"Culling — Thumbnail Failure\")',
+            "BackstageViewModel(photoLibrary: PreviewPhotoLibrary())",
+            "private struct PreviewPhotoLibrary: PhotoLibraryServing",
+            "Canvas previews must never reach the user's Photos library.",
         ):
             self.assertIn(marker, preview)
 

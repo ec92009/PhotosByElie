@@ -6,7 +6,7 @@ Tracking rule: See `docs/sops/TIMELOG_SOP.md`.
 
 Started tracking: 2026-05-22 06:55 CEST
 
-Clock state: running
+Clock state: paused
 
 ## Sessions
 
@@ -767,8 +767,9 @@ Clock state: running
 | 2026-08-11 | 18:13 CEST | 18:28 CEST | 0:05 | Completed the authenticated PBE-92 buyer/wrong-account handoff, confirmed the live cross-account download-control failure, and stopped before any download; background probes, tests, Cloudflare inspection, and ticket API runtime excluded. |
 | 2026-08-11 | 18:28 CEST | 18:29 CEST | 0:01 | Authorized the PBE-92 wrong-account isolation repair and release path; background diagnosis, implementation, tests, deployment, live verification, and ticket API runtime excluded. |
 | 2026-08-21 | 18:18 CEST | 18:19 CEST | 0:01 | Resumed the PBB ticket loop and completed the PBB-105 source verification checkpoint; background implementation, tests, build, and ticket API runtime excluded. |
+| 2026-08-21 | 18:37 CEST | 18:38 CEST | 0:01 | Corrected the Tick/Tock human-gate alert cadence and paused for a pending download; background ticket investigation excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:08
+Active collaboration time used: 38:09
 Remaining budget: not set

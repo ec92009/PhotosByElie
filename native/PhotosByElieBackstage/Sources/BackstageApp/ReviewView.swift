@@ -177,6 +177,12 @@ private enum ReviewQuickLookPresenter {
             keywords: draft?.keywords ?? item.keywords,
             locationLabel: item.locationLabel,
             capturedAt: item.capturedAt,
+            sourceSize: BackstageQuickLookSourceSize(
+                mediaType: item.mediaType,
+                pixelWidth: item.pixelWidth,
+                pixelHeight: item.pixelHeight,
+                byteCount: item.originalByteCount
+            ),
             rating: item.rating,
             color: item.color,
             state: state,

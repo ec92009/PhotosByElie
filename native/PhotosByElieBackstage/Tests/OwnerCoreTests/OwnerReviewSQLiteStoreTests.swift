@@ -113,6 +113,9 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(window.items.map(\.id) == ["asset-1"])
         #expect(window.summary.total == 2)
         #expect(window.items.first?.photoLibraryIdentifier == "cloud-asset-1")
+        #expect(window.items.first?.pixelWidth == 2_048)
+        #expect(window.items.first?.pixelHeight == 4_096)
+        #expect(window.items.first?.originalByteCount == 4_000_000)
     }
 
     @Test("Native Review service does not create a missing database")
@@ -607,7 +610,9 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
       location_keywords_json TEXT NOT NULL DEFAULT '[]',
       captured_at TEXT,
       missing_at TEXT,
-      media_type TEXT NOT NULL DEFAULT 'photo'
+      media_type TEXT NOT NULL DEFAULT 'photo',
+      pixel_width INTEGER NOT NULL DEFAULT 0,
+      pixel_height INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE sidecar_tombstones (
       asset_id TEXT PRIMARY KEY,
@@ -720,9 +725,12 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     );
     INSERT INTO fixtures(fixture_id, parent_fixture_id, archived_at)
       VALUES ('fixture-expo', NULL, NULL);
-    INSERT INTO sidecar_assets(asset_id, source_anchor, raw_json, filename, photos_title, photos_keywords_json, captured_at)
-      VALUES ('asset-1', 'apple-photos-cloud://cloud-asset-1', '{"localIdentifier":"local-asset-1"}', 'A.JPG', 'Original title', '["Original"]', '2026-01-01T00:00:00Z'),
-             ('asset-2', 'apple-photos://local-asset-2', '{"localIdentifier":"local-asset-2"}', 'B.MOV', 'Second title', '["Second"]', '2026-01-01T00:30:00Z');
+    INSERT INTO sidecar_assets(
+      asset_id, source_anchor, raw_json, filename, photos_title,
+      photos_keywords_json, captured_at, pixel_width, pixel_height
+    )
+      VALUES ('asset-1', 'apple-photos-cloud://cloud-asset-1', '{"localIdentifier":"local-asset-1","originalByteCount":4000000}', 'A.JPG', 'Original title', '["Original"]', '2026-01-01T00:00:00Z', 2048, 4096),
+             ('asset-2', 'apple-photos://local-asset-2', '{"localIdentifier":"local-asset-2"}', 'B.MOV', 'Second title', '["Second"]', '2026-01-01T00:30:00Z', 3840, 2160);
     INSERT INTO sidecar_decisions(asset_id, title, keywords_json, created_at, updated_at)
       VALUES ('asset-1', 'Decision title', '["Decision"]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
     INSERT INTO asset_editorial_state(asset_id, created_at, updated_at)

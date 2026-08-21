@@ -138,6 +138,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(asset.filename, '') AS filename,
                    COALESCE(asset.media_type, 'photo') AS media_type,
                    COALESCE(asset.captured_at, '') AS captured_at,
+                   COALESCE(asset.pixel_width, 0) AS pixel_width,
+                   COALESCE(asset.pixel_height, 0) AS pixel_height,
                    COALESCE(asset.photos_title, '') AS photos_title,
                    COALESCE(asset.photos_keywords_json, '[]') AS photos_keywords_json,
                    COALESCE(asset.location_label, '') AS location_label,
@@ -164,7 +166,12 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(available_proposal.reasoning_effort, '') AS proposal_reasoning_effort,
                    COALESCE(available_proposal.vision, 0) AS proposal_vision,
                    COALESCE(available_proposal.model_ladder, '[]') AS proposal_model_ladder,
-                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state
+                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state,
+                   CAST(COALESCE(
+                     json_extract(asset.raw_json, '$.originalByteCount'),
+                     json_extract(asset.raw_json, '$.original_byte_count'),
+                     0
+                   ) AS INTEGER) AS original_byte_count
             FROM sidecar_assets AS asset
             JOIN fixture_asset_decisions AS current_decision
               ON current_decision.asset_id = asset.asset_id
@@ -1362,6 +1369,9 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
     let filename = row["filename"]?.stringValue ?? ""
     let mediaType = row["media_type"]?.stringValue ?? "photo"
     let capturedAt = row["captured_at"]?.stringValue ?? ""
+    let pixelWidth = row["pixel_width"]?.intValue ?? 0
+    let pixelHeight = row["pixel_height"]?.intValue ?? 0
+    let originalByteCount = Int64(row["original_byte_count"]?.intValue ?? 0)
     let rating = row["rating"]?.intValue ?? 0
     let color = row["color"]?.stringValue ?? ""
     let placementState = row["placement_state"]?.stringValue ?? "picked"
@@ -1384,6 +1394,9 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         filename: filename,
         mediaType: mediaType,
         capturedAt: capturedAt,
+        pixelWidth: pixelWidth,
+        pixelHeight: pixelHeight,
+        originalByteCount: originalByteCount,
         rating: rating,
         color: color,
         placementState: placementState,

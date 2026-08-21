@@ -536,6 +536,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
+    public var pixelWidth: Int
+    public var pixelHeight: Int
+    public var originalByteCount: Int64
     public var rating: Int
     public var color: String
     public var placementState: String
@@ -568,6 +571,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
+        pixelWidth: Int = 0,
+        pixelHeight: Int = 0,
+        originalByteCount: Int64 = 0,
         rating: Int = 0,
         color: String = "",
         placementState: String = "picked",
@@ -603,6 +609,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.originalByteCount = originalByteCount
         self.rating = rating
         self.color = color
         self.placementState = placementState
@@ -638,6 +647,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? "photo"
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        pixelWidth = json["pixelWidth"]?.intValue ?? 0
+        pixelHeight = json["pixelHeight"]?.intValue ?? 0
+        originalByteCount = Int64(json["originalByteCount"]?.intValue ?? 0)
         rating = json["rating"]?.intValue ?? 0
         color = json["color"]?.stringValue ?? ""
         placementState = json["placementState"]?.stringValue ?? "picked"

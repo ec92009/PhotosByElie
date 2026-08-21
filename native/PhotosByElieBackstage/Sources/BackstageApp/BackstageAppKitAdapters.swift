@@ -9,10 +9,90 @@ struct BackstageQuickLookMetadata: Equatable {
     var keywords: [String]
     var locationLabel: String
     var capturedAt: String
+    var sourceSize: BackstageQuickLookSourceSize = .unavailable
     var rating: Int
     var color: String
     var state: String
     var shortcutHint: String
+}
+
+struct BackstageQuickLookSourceSize: Equatable {
+    var mediaType: String
+    var pixelWidth: Int
+    var pixelHeight: Int
+    var byteCount: Int64
+
+    static let unavailable = BackstageQuickLookSourceSize(
+        mediaType: "photo",
+        pixelWidth: 0,
+        pixelHeight: 0,
+        byteCount: 0
+    )
+
+    var displayValue: String {
+        var components = [dimensionDisplay]
+        if !isVideo {
+            components.append(megapixelDisplay)
+        }
+        components.append(byteDisplay)
+        return components.joined(separator: " / ")
+    }
+
+    var accessibilityValue: String {
+        let kind = isVideo ? "Video source." : "Image source."
+        let dimensions = hasDimensions
+            ? "Dimensions " + String(pixelWidth) + " by " + String(pixelHeight) + " pixels."
+            : "Dimensions unavailable."
+        let megapixels = isVideo
+            ? ""
+            : (hasDimensions
+                ? megapixelNumber + " megapixels."
+                : "Megapixels unavailable.")
+        let bytes = byteCount > 0
+            ? "Source file size " + Self.formattedBytes(byteCount) + "."
+            : "Source file size unavailable."
+        return [kind, dimensions, megapixels, bytes]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private var isVideo: Bool {
+        let value = mediaType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return value == "video" || value == "movie"
+    }
+
+    private var hasDimensions: Bool {
+        pixelWidth > 0 && pixelHeight > 0
+    }
+
+    private var dimensionDisplay: String {
+        hasDimensions
+            ? String(pixelWidth) + " × " + String(pixelHeight)
+            : "Dimensions unavailable"
+    }
+
+    private var megapixelDisplay: String {
+        hasDimensions ? megapixelNumber + " MP" : "Megapixels unavailable"
+    }
+
+    private var megapixelNumber: String {
+        let megapixels = Double(pixelWidth) * Double(pixelHeight) / 1_000_000
+        if megapixels >= 10 {
+            return String(format: "%.0f", megapixels)
+        }
+        let value = String(format: "%.1f", megapixels)
+        return value.hasSuffix(".0") ? String(value.dropLast(2)) : value
+    }
+
+    private var byteDisplay: String {
+        byteCount > 0
+            ? Self.formattedBytes(byteCount)
+            : "File size unavailable"
+    }
+
+    private static func formattedBytes(_ value: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: value, countStyle: .file)
+    }
 }
 
 enum BackstageQuickLookShortcut: Equatable {
@@ -314,6 +394,11 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
             value: item.keywords.isEmpty ? "None" : item.keywords.joined(separator: ", ")
         )
         addMetadataRow("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
+        addMetadataRow(
+            "Size",
+            value: item.sourceSize.displayValue,
+            accessibilityValue: item.sourceSize.accessibilityValue
+        )
         addMetadataRow("Rating", value: item.rating == 0 ? "Unrated" : String(repeating: "★", count: item.rating))
         addMetadataRow("Color", value: item.color.isEmpty ? "None" : item.color.capitalized)
         addMetadataRow("State", value: item.state.capitalized)
@@ -331,7 +416,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
         let placement = currentMetadataPlacement
         let gap: CGFloat = 8
-        let metadataHeight: CGFloat = 280
+        let metadataHeight: CGFloat = 310
         let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
         var panelFrame = panel.frame
 
@@ -425,7 +510,11 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         previewPanelObservers = []
     }
 
-    private func addMetadataRow(_ label: String, value: String) {
+    private func addMetadataRow(
+        _ label: String,
+        value: String,
+        accessibilityValue: String? = nil
+    ) {
         let row = NSStackView()
         row.orientation = .horizontal
         row.alignment = .firstBaseline
@@ -439,6 +528,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         detail.font = .systemFont(ofSize: 12)
         detail.maximumNumberOfLines = 2
         detail.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        if let accessibilityValue {
+            detail.setAccessibilityLabel(label)
+            detail.setAccessibilityValue(accessibilityValue)
+        }
         row.addArrangedSubview(heading)
         row.addArrangedSubview(detail)
         metadataStack.addArrangedSubview(row)

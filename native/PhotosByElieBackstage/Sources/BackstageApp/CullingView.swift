@@ -284,6 +284,12 @@ private enum CullingQuickLookPresenter {
             keywords: asset.keywords,
             locationLabel: asset.locationLabel,
             capturedAt: asset.capturedAt,
+            sourceSize: BackstageQuickLookSourceSize(
+                mediaType: asset.mediaType,
+                pixelWidth: asset.pixelWidth,
+                pixelHeight: asset.pixelHeight,
+                byteCount: asset.originalByteCount
+            ),
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,

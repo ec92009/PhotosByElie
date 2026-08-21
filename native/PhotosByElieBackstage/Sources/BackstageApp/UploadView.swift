@@ -344,6 +344,12 @@ struct UploadView: View {
                 keywords: item.keywords,
                 locationLabel: source?.locationLabel ?? "",
                 capturedAt: item.capturedAt,
+                sourceSize: BackstageQuickLookSourceSize(
+                    mediaType: item.mediaType,
+                    pixelWidth: item.pixelWidth,
+                    pixelHeight: item.pixelHeight,
+                    byteCount: item.originalByteCount
+                ),
                 rating: decision?.rating ?? source?.rating ?? 0,
                 color: decision?.color ?? source?.color ?? "",
                 state: item.deliveryState,

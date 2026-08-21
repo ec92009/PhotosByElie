@@ -45,10 +45,10 @@ public struct MetadataProposalSQLiteStore: Sendable {
         }
 
         let modelLadder = readModelLadder(from: database)
-        let photoLibraryIdentifiers = try readPhotoLibraryIdentifiers(from: database)
+        let photoLibraryMetadata = try readPhotoLibraryMetadata(from: database)
         let proposals = try readProposals(
             from: database,
-            photoLibraryIdentifiers: photoLibraryIdentifiers
+            photoLibraryMetadata: photoLibraryMetadata
         )
         try execute("COMMIT", on: database)
         transactionOpen = false
@@ -63,7 +63,7 @@ public struct MetadataProposalSQLiteStore: Sendable {
 
     private func readProposals(
         from database: OpaquePointer,
-        photoLibraryIdentifiers: [String: String]
+        photoLibraryMetadata: [String: PhotoLibraryMetadata]
     ) throws -> [MetadataProposal] {
         let sql = """
         SELECT q.media_id,
@@ -143,9 +143,14 @@ public struct MetadataProposalSQLiteStore: Sendable {
                         vision: vision
                     )
 
+                let source = photoLibraryMetadata[photoID]
                 proposals.append(MetadataProposal(
                     photoID: photoID,
-                    photoLibraryIdentifier: photoLibraryIdentifiers[photoID],
+                    photoLibraryIdentifier: source?.localIdentifier,
+                    mediaType: source?.mediaType,
+                    pixelWidth: source?.pixelWidth,
+                    pixelHeight: source?.pixelHeight,
+                    originalByteCount: source?.originalByteCount,
                     batchID: batchID,
                     current: .init(
                         title: previousTitle.isEmpty ? photoID : previousTitle,
@@ -181,9 +186,17 @@ public struct MetadataProposalSQLiteStore: Sendable {
     /// is deterministic provenance, not a filename/date heuristic.
     ///
     /// Any generated-ID collision fails closed by removing the ambiguous map.
-    private func readPhotoLibraryIdentifiers(
+    private struct PhotoLibraryMetadata: Equatable {
+        var localIdentifier: String
+        var mediaType: String
+        var pixelWidth: Int
+        var pixelHeight: Int
+        var originalByteCount: Int64
+    }
+
+    private func readPhotoLibraryMetadata(
         from database: OpaquePointer
-    ) throws -> [String: String] {
+    ) throws -> [String: PhotoLibraryMetadata] {
         guard tableExists("import_operations", in: database) else { return [:] }
         let sql = """
         SELECT preflight_json
@@ -198,7 +211,7 @@ public struct MetadataProposalSQLiteStore: Sendable {
         }
         defer { sqlite3_finalize(statement) }
 
-        var identifiers: [String: String] = [:]
+        var metadata: [String: PhotoLibraryMetadata] = [:]
         var ambiguousIDs: Set<String> = []
         while true {
             switch sqlite3_step(statement) {
@@ -221,15 +234,22 @@ public struct MetadataProposalSQLiteStore: Sendable {
                     }
                     let mediaID = Self.legacyMediaID(forSourceAnchor: anchor)
                     guard !ambiguousIDs.contains(mediaID) else { continue }
-                    if let existing = identifiers[mediaID], existing != localIdentifier {
-                        identifiers.removeValue(forKey: mediaID)
+                    let source = PhotoLibraryMetadata(
+                        localIdentifier: localIdentifier,
+                        mediaType: (item["mediaType"] as? String) ?? "photo",
+                        pixelWidth: (item["pixelWidth"] as? Int) ?? 0,
+                        pixelHeight: (item["pixelHeight"] as? Int) ?? 0,
+                        originalByteCount: Int64((item["originalByteCount"] as? Int) ?? 0)
+                    )
+                    if let existing = metadata[mediaID], existing.localIdentifier != localIdentifier {
+                        metadata.removeValue(forKey: mediaID)
                         ambiguousIDs.insert(mediaID)
                     } else {
-                        identifiers[mediaID] = localIdentifier
+                        metadata[mediaID] = source
                     }
                 }
             case SQLITE_DONE:
-                return identifiers
+                return metadata
             default:
                 throw sqliteError(database, code: "native_metadata_identity_query_failed")
             }

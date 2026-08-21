@@ -1585,13 +1585,17 @@ private struct MetadataGiveBackView: View {
                         .disabled(model.selectedPhotoIDs.isEmpty)
                         .backstageHelp("Copy the currently selected Photos asset ID into this Metadata editing form.")
                     if !model.metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        metadataThumbnail(
-                            assetID: model.metadataAssetID,
-                            title: model.metadataTitle,
-                            keywords: model.metadataKeywords
-                                .split(separator: ",")
-                                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                        )
+                        metadataThumbnail(proposal: MetadataProposal(
+                            photoID: model.metadataAssetID,
+                            batchID: "",
+                            current: .init(
+                                title: model.metadataTitle,
+                                keywords: model.metadataKeywords
+                                    .split(separator: ",")
+                                    .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                            ),
+                            proposed: .init(title: "", keywords: [])
+                        ))
                     }
                 }
                 TextField("Title", text: $model.metadataTitle)
@@ -1697,12 +1701,7 @@ private struct MetadataGiveBackView: View {
                 }
                 Table(model.metadataProposals) {
                     TableColumn("Preview") { proposal in
-                        metadataThumbnail(
-                            assetID: proposal.photoId,
-                            preferredIdentifier: proposal.photoLibraryIdentifier,
-                            title: proposal.current.title,
-                            keywords: proposal.current.keywords
-                        )
+                        metadataThumbnail(proposal: proposal)
                     }
                     .width(76)
                     TableColumn("Current") { proposal in
@@ -1828,22 +1827,12 @@ private struct MetadataGiveBackView: View {
         }
     }
 
-    private func metadataThumbnail(
-        assetID: String,
-        preferredIdentifier: String? = nil,
-        title: String,
-        keywords: [String]
-    ) -> some View {
+    private func metadataThumbnail(proposal: MetadataProposal) -> some View {
         Button {
-            openMetadataQuickLook(
-                assetID: assetID,
-                preferredIdentifier: preferredIdentifier,
-                title: title,
-                keywords: keywords
-            )
+            openMetadataQuickLook(proposal: proposal)
         } label: {
             Group {
-                if let thumbnail = model.cullingThumbnails[assetID] {
+                if let thumbnail = model.cullingThumbnails[proposal.photoId] {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -1857,41 +1846,46 @@ private struct MetadataGiveBackView: View {
             .clipShape(RoundedRectangle(cornerRadius: 5))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Open preview for \(title.isEmpty ? assetID : title)")
+        .accessibilityLabel(
+            "Open preview for \(proposal.current.title.isEmpty ? proposal.photoId : proposal.current.title)"
+        )
         .backstageHelp("Open this exact Metadata asset in the canonical read-only Quick Look presentation.")
-        .task(id: assetID) {
+        .task(id: proposal.photoId) {
             model.requestThumbnail(
-                for: assetID,
-                preferredIdentifier: preferredIdentifier
+                for: proposal.photoId,
+                preferredIdentifier: proposal.photoLibraryIdentifier
             )
         }
     }
 
-    private func openMetadataQuickLook(
-        assetID: String,
-        preferredIdentifier: String? = nil,
-        title: String,
-        keywords: [String]
-    ) {
+    private func openMetadataQuickLook(proposal: MetadataProposal) {
         Task {
             guard let url = await model.prepareMetadataQuickLookURL(
-                for: assetID,
-                preferredIdentifier: preferredIdentifier
+                for: proposal.photoId,
+                preferredIdentifier: proposal.photoLibraryIdentifier
             ) else {
                 return
             }
-            let source = model.cullingAssets.first(where: { $0.id == assetID })
-            let decision = model.cullingStates[assetID]
+            let source = model.cullingAssets.first(where: { $0.id == proposal.photoId })
+            let decision = model.cullingStates[proposal.photoId]
             quickLook.present(
                 urls: [url],
                 metadata: [
                     BackstageQuickLookMetadata(
-                        assetID: assetID,
-                        filename: source?.filename ?? assetID,
-                        title: title,
-                        keywords: keywords,
+                        assetID: proposal.photoId,
+                        filename: source?.filename ?? proposal.photoId,
+                        title: proposal.current.title,
+                        keywords: proposal.current.keywords,
                         locationLabel: source?.locationLabel ?? "",
                         capturedAt: source?.capturedAt ?? "",
+                        sourceSize: BackstageQuickLookSourceSize(
+                            mediaType: source?.mediaType ?? proposal.mediaType ?? "photo",
+                            pixelWidth: source?.pixelWidth ?? proposal.pixelWidth ?? 0,
+                            pixelHeight: source?.pixelHeight ?? proposal.pixelHeight ?? 0,
+                            byteCount: source?.originalByteCount
+                                ?? proposal.originalByteCount
+                                ?? 0
+                        ),
                         rating: decision?.rating ?? source?.rating ?? 0,
                         color: decision?.color ?? source?.color ?? "",
                         state: decision?.pickState ?? source?.placementState.rawValue ?? "metadata",

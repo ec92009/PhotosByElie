@@ -232,6 +232,10 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
     /// The current Mac's PhotoKit handle when authoritative import provenance
     /// can resolve this proposal's stable media ID without guessing.
     public var photoLibraryIdentifier: String?
+    public var mediaType: String?
+    public var pixelWidth: Int?
+    public var pixelHeight: Int?
+    public var originalByteCount: Int64?
     public var batchId: String
     public var current: Values
     public var proposed: Values
@@ -242,6 +246,10 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey {
         case photoId = "photo_id"
         case photoLibraryIdentifier = "photo_library_identifier"
+        case mediaType = "media_type"
+        case pixelWidth = "pixel_width"
+        case pixelHeight = "pixel_height"
+        case originalByteCount = "original_byte_count"
         case batchId = "batch_id"
         case current, proposed
         case state
@@ -250,6 +258,10 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
     public init(
         photoID: String,
         photoLibraryIdentifier: String? = nil,
+        mediaType: String? = nil,
+        pixelWidth: Int? = nil,
+        pixelHeight: Int? = nil,
+        originalByteCount: Int64? = nil,
         batchID: String,
         current: Values,
         proposed: Values,
@@ -257,6 +269,10 @@ public struct MetadataProposal: Codable, Identifiable, Sendable, Equatable {
     ) {
         photoId = photoID
         self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.mediaType = mediaType
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.originalByteCount = originalByteCount
         batchId = batchID
         self.current = current
         self.proposed = proposed

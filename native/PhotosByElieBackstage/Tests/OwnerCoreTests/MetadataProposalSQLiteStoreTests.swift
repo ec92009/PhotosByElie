@@ -59,7 +59,7 @@ struct MetadataProposalSQLiteStoreTests {
             VALUES(
               'import-1',
               'apple_photos',
-              '{"items":[{"localIdentifier":"A539B1D5-E92F-4B43-A537-CB805512BDA6/L0/001"}]}'
+              '{"items":[{"localIdentifier":"A539B1D5-E92F-4B43-A537-CB805512BDA6/L0/001","mediaType":"photo","pixelWidth":2048,"pixelHeight":4096,"originalByteCount":4000000}]}'
             );
             UPDATE title_keyword_queue
             SET media_id = '001-221cb393d3'
@@ -74,6 +74,10 @@ struct MetadataProposalSQLiteStoreTests {
         let queue = try MetadataProposalSQLiteStore(databaseURL: databaseURL).proposals()
 
         #expect(queue.photos.first?.photoLibraryIdentifier == localIdentifier)
+        #expect(queue.photos.first?.mediaType == "photo")
+        #expect(queue.photos.first?.pixelWidth == 2_048)
+        #expect(queue.photos.first?.pixelHeight == 4_096)
+        #expect(queue.photos.first?.originalByteCount == 4_000_000)
     }
 
     @Test("Missing Metadata database fails closed")

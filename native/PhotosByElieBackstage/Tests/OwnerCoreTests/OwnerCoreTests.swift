@@ -93,6 +93,129 @@ struct OwnerCoreTests {
         )
     }
 
+    @Test("Quick Look source size is truthful for photos, video, and partial metadata")
+    func quickLookSourceSizeFormatting() {
+        let photo = BackstageQuickLookSourceSize(
+            mediaType: "photo",
+            pixelWidth: 2_048,
+            pixelHeight: 4_096,
+            byteCount: 4_000_000
+        )
+        #expect(photo.displayValue.contains("2048 × 4096"))
+        #expect(photo.displayValue.contains("8.4 MP"))
+        #expect(photo.displayValue.contains("4 MB"))
+        #expect(photo.accessibilityValue.contains("2048 by 4096 pixels"))
+
+        let video = BackstageQuickLookSourceSize(
+            mediaType: "video",
+            pixelWidth: 3_840,
+            pixelHeight: 2_160,
+            byteCount: 120_000_000
+        )
+        #expect(video.displayValue.contains("3840 × 2160"))
+        #expect(!video.displayValue.contains("MP"))
+        #expect(video.accessibilityValue.hasPrefix("Video source."))
+
+        #expect(BackstageQuickLookSourceSize.unavailable.displayValue ==
+            "Dimensions unavailable / Megapixels unavailable / File size unavailable")
+    }
+
+    @Test("Owner source metadata lookup is read-only and asset scoped")
+    func ownerSourceMetadataLookup() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-source-metadata-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        let sql = #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('photo-1', 'photo', 2048, 4096, '{"originalByteCount":4000000}'),
+          ('video-1', 'video', 3840, 2160, '{}'),
+          ('other', 'photo', 1, 1, '{}');
+        """#
+        #expect(sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let metadata = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+            .metadata(assetIDs: ["video-1", "photo-1", "photo-1"])
+
+        #expect(metadata.keys.sorted() == ["photo-1", "video-1"])
+        #expect(metadata["photo-1"] == OwnerAssetSourceMetadata(
+            mediaType: "photo",
+            pixelWidth: 2_048,
+            pixelHeight: 4_096,
+            originalByteCount: 4_000_000
+        ))
+        #expect(metadata["video-1"]?.mediaType == "video")
+        #expect(metadata["video-1"]?.originalByteCount == 0)
+    }
+
+    @Test("Upload plan enriches canonical previews from local source metadata")
+    func uploadPlanUsesLocalSourceMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("upload-source-metadata-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        let sql = #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('asset-1', 'photo', 2048, 4096, '{"originalByteCount":4000000}');
+        """#
+        #expect(sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let action = OwnerAction(
+            id: "owner-action-upload-source",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: ["uploadPlan": [
+                "fixtureId": "fixture-expo",
+                "fixtureName": "Expo",
+                "cloudAllowed": true,
+                "items": [[
+                    "assetId": "asset-1",
+                    "photoLibraryIdentifier": "photos-asset-1",
+                    "filename": "one.jpg",
+                ]],
+            ]]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [action])
+        let service = FixtureDeliveryService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            nativeDatabaseURL: databaseURL
+        )
+
+        let plan = try await service.nativeUploadPlan(fixtureID: "fixture-expo")
+
+        #expect(plan.items.first?.pixelWidth == 2_048)
+        #expect(plan.items.first?.pixelHeight == 4_096)
+        #expect(plan.items.first?.originalByteCount == 4_000_000)
+    }
+
     @Test("Visual repair scope is limited to RE roots and descendants")
     func visualRepairScopeGuards() {
         let re = FixtureNode(

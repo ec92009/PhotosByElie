@@ -1214,8 +1214,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "233.2")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "133")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "233.3")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "134")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
@@ -1973,11 +1973,12 @@ class NativeCullingParityTest(unittest.TestCase):
         metadata = ui.split("private struct MetadataGiveBackView", 1)[1]
         for marker in (
             'TableColumn("Preview")',
-            "model.cullingThumbnails[assetID]",
+            "model.cullingThumbnails[proposal.photoId]",
             "preferredIdentifier: proposal.photoLibraryIdentifier",
             "model.requestThumbnail(",
             "prepareMetadataQuickLookURL(",
             "BackstageQuickLookMetadata(",
+            "BackstageQuickLookSourceSize(",
             "quickLook.present(",
             "canonical read-only Quick Look presentation",
         ):

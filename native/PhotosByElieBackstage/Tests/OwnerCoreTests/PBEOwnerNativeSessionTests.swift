@@ -4,6 +4,57 @@ import Testing
 
 @Suite("PBE Owner native session authority")
 struct PBEOwnerNativeSessionTests {
+    @Test("Cloud verifier sends only the bearer to the fixed session endpoint")
+    func cloudVerifierRequest() async throws {
+        let session = fixtureSession(expiresAt: Date(timeIntervalSince1970: 2_000_000_600))
+        let body = try JSONEncoder.ownerAPI.encode(PBEOwnerTestSessionEnvelope(session: session))
+        let transport = PBEOwnerVerifierTransport(status: 200, body: body)
+        let endpoint = URL(string: "https://auth.example.invalid/api/v1/pbe-owner/session")!
+        let verifier = PBEOwnerCloudSessionVerifier(
+            endpoint: endpoint,
+            transport: transport,
+            timeout: 5
+        )
+
+        let verified = try await verifier.verify(token: " cloud-token-one ")
+        #expect(verified == session)
+        let request = await transport.lastRequest()
+        #expect(request?.url == endpoint)
+        #expect(request?.httpMethod == "GET")
+        #expect(request?.timeoutInterval == 5)
+        #expect(request?.value(forHTTPHeaderField: "Authorization") == "Bearer cloud-token-one")
+        #expect(request?.value(forHTTPHeaderField: "User-Agent") == PBEOwnerCloudSessionVerifier.userAgent)
+        #expect(request?.httpBody == nil)
+    }
+
+    @Test("Cloud verifier preserves bounded rejection details and fails invalid replies closed")
+    func cloudVerifierFailures() async throws {
+        let rejection = PBEOwnerVerifierTransport(
+            status: 403,
+            body: Data(#"{"error":{"code":"pbe_owner_session_inactive","message":"Session closed."}}"#.utf8)
+        )
+        let rejectedVerifier = PBEOwnerCloudSessionVerifier(transport: rejection)
+        await expectFailure(code: "pbe_owner_session_inactive") {
+            _ = try await rejectedVerifier.verify(token: "cloud-token-one")
+        }
+
+        let invalid = PBEOwnerVerifierTransport(status: 200, body: Data(#"{"ok":true}"#.utf8))
+        let invalidVerifier = PBEOwnerCloudSessionVerifier(transport: invalid)
+        await expectFailure(code: "pbe_owner_session_invalid") {
+            _ = try await invalidVerifier.verify(token: "cloud-token-one")
+        }
+
+        let unavailable = PBEOwnerVerifierTransport(error: URLError(.timedOut))
+        let unavailableVerifier = PBEOwnerCloudSessionVerifier(transport: unavailable)
+        await expectFailure(code: "pbe_owner_auth_unavailable") {
+            _ = try await unavailableVerifier.verify(token: "cloud-token-one")
+        }
+
+        await expectFailure(code: "pbe_owner_session_required") {
+            _ = try await unavailableVerifier.verify(token: " \n ")
+        }
+    }
+
     @Test("One fixture-frozen lease exchanges a single-use browser handoff")
     func browserHandoff() async throws {
         let clock = PBEOwnerTestClock()
@@ -163,6 +214,45 @@ struct PBEOwnerNativeSessionTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+}
+
+private struct PBEOwnerTestSessionEnvelope: Encodable {
+    var session: PBEOwnerSessionContract
+}
+
+private actor PBEOwnerVerifierTransport: OwnerAPITransport {
+    private let status: Int
+    private let body: Data
+    private let error: URLError?
+    private var request: URLRequest?
+
+    init(status: Int, body: Data) {
+        self.status = status
+        self.body = body
+        self.error = nil
+    }
+
+    init(error: URLError) {
+        self.status = 0
+        self.body = Data()
+        self.error = error
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        self.request = request
+        if let error { throw error }
+        return (
+            body,
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+        )
+    }
+
+    func lastRequest() -> URLRequest? { request }
 }
 
 private final class PBEOwnerTestClock: @unchecked Sendable {

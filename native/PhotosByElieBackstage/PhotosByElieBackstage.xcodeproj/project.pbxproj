@@ -46,6 +46,7 @@
 		6BB0069568385FDADDE38818 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C36FA3E49910D726A5C9C62 /* libsqlite3.tbd */; };
 		6BE053FCB45AE57072E5C5B5 /* PhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F254F524C1CA93D37BE6A86 /* PhotoLibraryService.swift */; };
 		78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */; };
+		796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */; };
 		798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */; };
 		8053F33F07AB4E516EE2751F /* UploadHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */; };
 		80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */; };
@@ -185,6 +186,7 @@
 		928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureWorkflowService.swift; sourceTree = "<group>"; };
 		937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerContract.generated.swift; sourceTree = "<group>"; };
 		98D38D7A974EE7EDE80F9EA8 /* OwnerWorkflowRecoverySQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerWorkflowRecoverySQLiteStoreTests.swift; sourceTree = "<group>"; };
+		9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerCloudSessionVerifier.swift; sourceTree = "<group>"; };
 		9EFF756CB24FBF86D119683F /* BackstageHoverHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelp.swift; sourceTree = "<group>"; };
 		A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageHoverHelpTests.swift; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 				30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */,
 				85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */,
 				1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */,
+				9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */,
 				47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */,
 				EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */,
 				FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */,
@@ -579,6 +582,7 @@
 				A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */,
 				C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */,
 				64AA4D32E9F9D922B775FAA6 /* OwnerWorkflowRecoverySQLiteStore.swift in Sources */,
+				796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */,
 				06BF9F3E1B8F2F373D4C041E /* PBEOwnerHTTPRequestParser.swift in Sources */,
 				D2FF10F005DE8E28105F5DD6 /* PBEOwnerNativeHostContract.swift in Sources */,
 				80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */,

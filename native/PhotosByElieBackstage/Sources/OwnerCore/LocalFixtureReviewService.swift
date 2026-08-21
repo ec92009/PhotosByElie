@@ -9,8 +9,10 @@ public protocol LocalFixtureReviewServing: Sendable {
     func undoReview(operationID: String) async throws -> FixtureReviewUndoResult
 }
 
-/// Optional native read support for a local Review service. Returning nil means
-/// the caller should preserve its existing Owner-action read path.
+/// Native read support for the local Review service.
+///
+/// The native Backstage path fails closed when Owner.sqlite cannot be resolved;
+/// it must not silently fall back to an Owner action or a Python process.
 public protocol LocalFixtureReviewReading: Sendable {
     func nativeReviewWindow(
         fixtureID: String,
@@ -24,8 +26,8 @@ public protocol LocalFixtureReviewReading: Sendable {
     ) async throws -> FixtureReviewWindow?
 }
 
-/// Optional native Culling read support. Returning nil preserves the existing
-/// audited Owner-action query for callers without a native database.
+/// Native Culling read support. An unavailable Owner.sqlite is an error rather
+/// than a reason to route an interactive read through the connector.
 public protocol LocalFixtureCullingReading: Sendable {
     func nativeCullingWindow(
         fixtureID: String,
@@ -40,8 +42,8 @@ public protocol LocalFixtureCullingReading: Sendable {
     ) async throws -> FixtureCullingWindow?
 }
 
-/// Optional native Culling placement writes. Returning nil preserves the
-/// existing audited Owner-action mutation for callers without native SQLite.
+/// Native Culling placement writes. An unavailable Owner.sqlite is an error
+/// rather than a reason to route an interactive mutation through the connector.
 public protocol LocalFixtureCullingServing: Sendable {
     func nativeApplyCullingState(
         _ state: FixturePlacementState,
@@ -57,65 +59,22 @@ public protocol LocalFixtureCullingServing: Sendable {
 }
 
 public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading, LocalFixtureCullingServing {
-    private let endpoints: [URL]
-    private let session: URLSession
-    private let helperURL: URL?
-    private let repoRoot: URL?
     private let nativeDatabaseURL: URL?
-    private let usesOnDemandProcess: Bool
-    private let encoder = JSONEncoder.ownerAPI
-    private let decoder = JSONDecoder.ownerAPI
 
     public init(
-        endpoints: [URL] = [
-            URL(string: "http://127.0.0.1:8766/photosbyelie/review-action")!,
-            URL(string: "http://localhost:8766/photosbyelie/review-action")!,
-        ],
-        timeout: TimeInterval = 10,
-        session: URLSession? = nil,
-        helperURL: URL? = nil,
-        repoRoot: URL? = nil,
-        nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve(),
-        usesOnDemandProcess: Bool = true
+        nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve()
     ) {
-        self.endpoints = endpoints
-        self.helperURL = helperURL
-        self.repoRoot = repoRoot
         self.nativeDatabaseURL = nativeDatabaseURL?.standardizedFileURL
-        self.usesOnDemandProcess = usesOnDemandProcess
-        if let session {
-            self.session = session
-        } else {
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = timeout
-            configuration.timeoutIntervalForResource = timeout
-            configuration.waitsForConnectivity = false
-            self.session = URLSession(configuration: configuration)
-        }
     }
 
     public func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
         var payload = manifest
         payload["operation"] = .string("apply")
-        if nativeDatabaseURL != nil {
-            return try applyViaNativeSQLite(payload)
-        }
-        let result = try await request(payload: payload, resultKey: "reviewAction")
-        return FixtureReviewResult(json: result)
+        return try applyViaNativeSQLite(payload)
     }
 
     public func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
-        if nativeDatabaseURL != nil {
-            return try undoViaNativeSQLite(operationID: operationID)
-        }
-        let result = try await request(
-            payload: [
-                "operation": .string("undo"),
-                "operationId": .string(operationID),
-            ],
-            resultKey: "reviewUndo"
-        )
-        return FixtureReviewUndoResult(json: result)
+        try undoViaNativeSQLite(operationID: operationID)
     }
 
     public func nativeReviewWindow(
@@ -128,7 +87,6 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         limit: Int,
         search: String
     ) throws -> FixtureReviewWindow? {
-        guard nativeDatabaseURL != nil else { return nil }
         return try nativeStore().reviewWindow(
             fixtureID: fixtureID,
             mode: mode,
@@ -152,7 +110,6 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         ratings: [Int],
         colors: [String]
     ) throws -> FixtureCullingWindow? {
-        guard nativeDatabaseURL != nil else { return nil }
         return try nativeCullingStore().cullingWindow(
             fixtureID: fixtureID,
             view: view,
@@ -172,7 +129,6 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         assetIDs: [String],
         reason: String
     ) throws -> [FixtureAssetState]? {
-        guard nativeDatabaseURL != nil else { return nil }
         return try nativeCullingStore().applyState(
             state,
             fixtureID: fixtureID,
@@ -186,7 +142,6 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         _ applied: [FixtureAssetState],
         reason: String
     ) throws -> [FixtureAssetState]? {
-        guard nativeDatabaseURL != nil else { return nil }
         return try nativeCullingStore().undoState(
             applied,
             actor: "owner",
@@ -194,9 +149,8 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         )
     }
 
-    /// Uses the already-verified native SQLite parity store when the app-level
-    /// resolver supplies the Owner-private database. Callers without that
-    /// resolved database retain the existing Python/HTTP fallback.
+    /// Uses the verified native SQLite parity store. An unresolved database is
+    /// reported by `nativeStore()` instead of selecting a second writer.
     private func applyViaNativeSQLite(
         _ payload: [String: JSONValue]
     ) throws -> FixtureReviewResult {
@@ -328,146 +282,4 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         ))
     }
 
-    private func request(
-        payload: [String: JSONValue],
-        resultKey: String
-    ) async throws -> [String: JSONValue] {
-        if usesOnDemandProcess {
-            return try await requestViaOnDemandProcess(payload: payload, resultKey: resultKey)
-        }
-        return try await requestViaHTTP(payload: payload, resultKey: resultKey)
-    }
-
-    private func requestViaOnDemandProcess(
-        payload: [String: JSONValue],
-        resultKey: String
-    ) async throws -> [String: JSONValue] {
-        let root = try resolvedRepoRoot()
-        let helper = (helperURL ?? root.appendingPathComponent(
-            "scripts/new_owner_connector.py",
-            isDirectory: false
-        )).standardizedFileURL
-        guard FileManager.default.fileExists(atPath: helper.path) else {
-            throw APIErrorEnvelope(error: .init(
-                code: "local_review_helper_missing",
-                message: "Backstage could not find its on-demand local Review helper."
-            ))
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = ["-E", "-B", helper.path, "--local-review-action"]
-        process.currentDirectoryURL = root
-        var environment = ProcessInfo.processInfo.environment
-        for key in environment.keys where key.hasPrefix("PYTHON") {
-            environment.removeValue(forKey: key)
-        }
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        environment["PBE_REPO_ROOT"] = root.path
-        environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
-        process.environment = environment
-
-        let input = Pipe()
-        let output = Pipe()
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        do {
-            try process.run()
-            input.fileHandleForWriting.write(try encoder.encode(payload))
-            input.fileHandleForWriting.closeFile()
-            process.waitUntilExit()
-        } catch {
-            throw APIErrorEnvelope(error: .init(
-                code: "local_review_helper_failed",
-                message: "Backstage could not start its on-demand local Review helper: \(error)"
-            ))
-        }
-
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        let decoded = (try? decoder.decode([String: JSONValue].self, from: data)) ?? [:]
-        guard process.terminationStatus == 0, decoded["ok"]?.boolValue == true else {
-            let message = decoded["error"]?.stringValue
-                ?? "The on-demand local Review helper exited with status \(process.terminationStatus)."
-            throw APIErrorEnvelope(error: .init(
-                code: "local_review_action_failed",
-                message: message
-            ))
-        }
-        guard let result = decoded[resultKey]?.objectValue else {
-            throw APIErrorEnvelope(error: .init(
-                code: "local_review_result_missing",
-                message: "The on-demand local Review helper returned no \(resultKey) result."
-            ))
-        }
-        return result
-    }
-
-    private func resolvedRepoRoot() throws -> URL {
-        if let repoRoot {
-            return repoRoot.standardizedFileURL
-        }
-        if let value = ProcessInfo.processInfo.environment["PBE_REPO_ROOT"], !value.isEmpty {
-            return URL(fileURLWithPath: value, isDirectory: true).standardizedFileURL
-        }
-        let configURL = URL(
-            fileURLWithPath: NSHomeDirectory(),
-            isDirectory: true
-        ).appendingPathComponent(
-            ".config/photosbyelie/connector.json",
-            isDirectory: false
-        )
-        guard let data = try? Data(contentsOf: configURL),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let payload = object as? [String: Any],
-              let value = payload["repoRoot"] as? String,
-              !value.isEmpty else {
-            throw APIErrorEnvelope(error: .init(
-                code: "local_review_repo_missing",
-                message: "Backstage could not resolve the local Review data root."
-            ))
-        }
-        return URL(fileURLWithPath: value, isDirectory: true).standardizedFileURL
-    }
-
-    private func requestViaHTTP(
-        payload: [String: JSONValue],
-        resultKey: String
-    ) async throws -> [String: JSONValue] {
-        let body = try encoder.encode(payload)
-        var lastError: Error = URLError(.cannotConnectToHost)
-        for endpoint in endpoints {
-            do {
-                var request = URLRequest(url: endpoint)
-                request.httpMethod = "POST"
-                request.httpBody = body
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue("https://photos-by-elie.com", forHTTPHeaderField: "Origin")
-                let (data, response) = try await session.data(for: request)
-                guard let http = response as? HTTPURLResponse else {
-                    throw URLError(.badServerResponse)
-                }
-                let decoded = try decoder.decode([String: JSONValue].self, from: data)
-                guard (200..<300).contains(http.statusCode) else {
-                    let message = decoded["error"]?.stringValue ?? "Local Review action failed."
-                    throw APIErrorEnvelope(error: .init(
-                        code: "local_review_action_failed",
-                        message: message
-                    ))
-                }
-                guard decoded["ok"]?.boolValue == true,
-                      let result = decoded[resultKey]?.objectValue else {
-                    throw APIErrorEnvelope(error: .init(
-                        code: "local_review_result_missing",
-                        message: "The local Review service returned no \(resultKey) result."
-                    ))
-                }
-                return result
-            } catch {
-                lastError = error
-            }
-        }
-        throw lastError
-    }
 }

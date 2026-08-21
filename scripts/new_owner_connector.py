@@ -105,6 +105,9 @@ READ_ONLY_FIXTURE_MODES = {
     "r2-reconciliation-plan",
 }
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
+LEGACY_CONNECTOR_DAEMON_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", "").strip() == "1"
+)
 
 
 def _utc_iso_now() -> str:
@@ -2308,6 +2311,20 @@ def main() -> int:
         raise SystemExit("On-demand Owner connector launches must use --once.")
     if args.action_id and not args.once:
         raise SystemExit("--action-id requires --once.")
+    if (
+        not args.once
+        and not args.status
+        and not args.action_id
+        and not LEGACY_CONNECTOR_DAEMON_ENABLED
+    ):
+        print(
+            "The always-on Owner connector daemon is retired. Use signed "
+            "PhotosByElie Backstage for on-demand work, or set "
+            "PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1 for a deliberate rollback rehearsal.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 64
     # launchd starts with a deliberately small PATH. Keep the normal local
     # toolchain discoverable to child Sidecar and maintenance processes.
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]

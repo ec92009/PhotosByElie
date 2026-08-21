@@ -3,6 +3,8 @@ import hashlib
 import importlib
 import json
 import os
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 import sqlite3
 import socket
@@ -49,6 +51,21 @@ import waste_basket_gateway as lifecycle_gateway
 class UploadRegistrationScopeTest(unittest.TestCase):
     def setUp(self):
         self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+    def test_unbounded_daemon_requires_explicit_legacy_opt_in_before_config_load(self):
+        output = StringIO()
+        with patch(
+            "scripts.new_owner_connector.LEGACY_CONNECTOR_DAEMON_ENABLED",
+            False,
+        ), patch(
+            "scripts.new_owner_connector.load_config"
+        ) as load_config, patch(
+            "sys.argv",
+            ["new_owner_connector.py"],
+        ), redirect_stderr(output):
+            self.assertEqual(new_owner_connector.main(), 64)
+        load_config.assert_not_called()
+        self.assertIn("always-on Owner connector daemon is retired", output.getvalue())
 
     def test_runtime_modules_replace_mutable_checkout_shadows(self):
         with TemporaryDirectory() as runtime_temp, TemporaryDirectory() as checkout_temp:
@@ -126,12 +143,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                     if module is not None:
                         sys.modules[name] = module
 
-    def test_launch_agent_does_not_throttle_interactive_owner_reads(self):
+    def test_launch_agent_is_explicit_legacy_daemon_rollback(self):
         template = (
             Path(__file__).with_name("new_owner_connector_launch_agent.plist.in")
         ).read_text(encoding="utf-8")
         self.assertIn("<key>ProcessType</key>\n  <string>Standard</string>", template)
         self.assertNotIn("<string>Background</string>", template)
+        self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", template)
 
     def test_on_demand_mode_rejects_a_long_running_invocation(self):
         with (

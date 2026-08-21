@@ -22,7 +22,9 @@ migration is rehearsed.
 - **Worker `/api/v1`** — authentication, authorization, D1/R2 access, audit,
   durable action ledger, delivery, and sharing.
 - **Max connector** — claims exact opaque actions, validates target and kind,
-  owns all private `Owner.sqlite` mutations, and reports terminal results.
+  owns external private `Owner.sqlite` mutations, and reports terminal
+  results. Native OwnerCore also owns the named transactional Review/Culling
+  SQLite stores described by PBB-112.
 - **Backstage PhotoKit services** — `PhotoLibraryService` owns authorization,
   indexing, still previews, and bounded original export. `PhotoMetadataService`
   owns the approved title, caption, and managed-keyword read/write path. There
@@ -89,21 +91,23 @@ placeholders:
   assigns inherited group membership, and disables people or archives groups
   without deleting audit history. Email addresses are normalized by the
   Worker; passwords remain case-sensitive and are never returned to the app.
-- **Culling** uses PhotoKit only to index and select local assets, then applies
-  the same pick, reject, clear-pick and 0–5 rating payloads as Sidecar through
-  the canonical `/sidecar/decisions/*` API with idempotency keys.
+- **Culling** uses PhotoKit only to index and select local assets, then reads
+  and applies fixture-local placement, rating, and color state through the
+  native OwnerCore SQLite stores. The store preserves the Owner tables,
+  audit events, conflict checks, and exact session undo without a connector
+  process.
 - **Metadata** can save title, caption and keyword sets, queue one or many items
   for the existing title/keyword review, replace the managed keyword
   blacklist, review pending AI proposals, and run the separate verified Apple
-  Photos give-back workflow. Proposal rows are read from `Owner.sqlite` through
-  the connector's read-only localhost endpoint; approve, reject and block
-  remain Worker-authorized Max actions.
+  Photos give-back workflow. Native Review reads and its local editorial
+  mutations use `OwnerReviewSQLiteStore`; Photos give-back, Worker actions,
+  and other external boundaries remain action-scoped Max work.
 
-Fixture and metadata mutations create `sidecar-culling-review` or
-`photo-moderation` actions targeted to Max. The native app posts only the
-resulting opaque action ID to the localhost wake endpoint. ACS writes remain
-Worker-authorized D1 mutations. None of these screens writes an Owner SQLite
-business row directly.
+External fixture, metadata, Photos, delivery, and publication operations
+create `sidecar-culling-review` or `photo-moderation` actions targeted to Max.
+The native app posts only the resulting opaque action ID for those operations.
+Native Review/Culling placement and editorial operations are the explicit
+OwnerCore SQLite exception; ACS writes remain Worker-authorized D1 mutations.
 
 The fixture-aware editorial state, queue, propagation, audit, and undo
 invariants are defined in
@@ -116,6 +120,7 @@ second state model.
 ```mermaid
 flowchart LR
   UI["BackstageApp"] --> Core["OwnerCore"]
+  Core -->|native Review/Culling transaction| DB[("Owner.sqlite")]
   Core -->|short lived bearer| Worker["Worker API v1"]
   Worker -->|opaque action ID| Connector["Max connector"]
   Connector --> DB[("Owner.sqlite")]
@@ -126,10 +131,13 @@ flowchart LR
   Core -. read, preview, export, metadata .-> PhotoKit
 ```
 
-`Owner.sqlite` is the only local curation authority. Native code opens it
-read-only for inspection unless running a named, transactional schema
-migration after a verified backup. Normal mutations travel through the Worker
-ledger and Max connector; no native screen writes business rows directly.
+`Owner.sqlite` is the only local curation authority. OwnerCore opens it for
+named Review/Culling transactions and read paths, using the same tables,
+snapshots, audit rows, conflict checks, and undo records as the authoritative
+workflow. Other mutations travel through the Worker ledger and Max connector;
+they are not silently folded into the local stores. If the native database
+cannot be resolved, the interactive Review/Culling path fails closed rather
+than falling back to Python, HTTP, or an always-on daemon.
 Native migrations record portable identifiers in GRDB's
 `grdb_migrations(identifier)` convention while retaining `PRAGMA user_version`
 for compatibility with the existing connector. A migration starts only after
@@ -213,7 +221,8 @@ contract.
 2. Read the Keychain device identity; re-present it for a fresh bearer or
    request enrollment.
 3. Check Worker health and Max connector status.
-4. Open `Owner.sqlite` read-only and show its schema/version.
+4. Resolve `Owner.sqlite`, inspect its schema/version, and enable the named
+   native Review/Culling stores only when the database is available.
 5. Resume non-terminal actions/jobs without resubmission.
 6. On backgrounding, cancel UI-only tasks but keep durable action IDs.
 7. On sign-out, clear bearer state and Keychain, close the database, and

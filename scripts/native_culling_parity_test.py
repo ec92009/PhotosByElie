@@ -1793,6 +1793,42 @@ class NativeCullingParityTest(unittest.TestCase):
             propagate,
         )
 
+    def test_owner_connector_is_action_scoped_and_native_review_has_no_ipc(self):
+        runner = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerActionRunner.swift"
+        ).read_text(encoding="utf-8")
+        review = (
+            NATIVE / "Sources" / "OwnerCore" / "LocalFixtureReviewService.swift"
+        ).read_text(encoding="utf-8")
+        identity = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerConnectorIdentity.swift"
+        ).read_text(encoding="utf-8")
+        connector = (ROOT / "scripts" / "new_owner_connector.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("public struct OnDemandOwnerActionWaker", runner)
+        self.assertIn("--once", runner)
+        self.assertIn("--action-id", runner)
+        self.assertIn(
+            "waker: any OwnerActionWaking = OnDemandOwnerActionWaker()",
+            runner,
+        )
+        self.assertIn("OwnerReviewSQLiteStore", review)
+        self.assertIn("nativeStore().applyReview", review)
+        self.assertIn('"native_review_database_missing"', review)
+        self.assertNotIn("requestViaOnDemandProcess", review)
+        self.assertNotIn("new_owner_connector.py", review)
+        self.assertNotIn("Process()", review)
+        self.assertIn('public init(target: String = "max")', identity)
+        self.assertNotIn("connector-status", identity)
+        self.assertNotIn("URLSession", identity)
+        self.assertNotIn("connector.json", identity)
+        self.assertIn('"--action-id"', connector)
+        self.assertIn("if args.action_id:", connector)
+        self.assertIn("LEGACY_CONNECTOR_DAEMON_ENABLED", connector)
+        self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1", connector)
+
     def test_review_proposals_arrive_incrementally_without_batch_load(self):
         app = backstage_ui_source()
         review = app.split("struct ReviewView", 1)[1].split(

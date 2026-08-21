@@ -62,7 +62,6 @@ struct OwnerReviewSQLiteStoreTests {
         try makeCopiedFixtureDatabase(at: databaseURL)
 
         let service = LocalFixtureReviewService(
-            endpoints: [],
             nativeDatabaseURL: databaseURL
         )
         let applied = try await service.applyReview(manifest: [
@@ -95,7 +94,6 @@ struct OwnerReviewSQLiteStoreTests {
         try makeCopiedFixtureDatabase(at: databaseURL)
 
         let service = LocalFixtureReviewService(
-            endpoints: [],
             nativeDatabaseURL: databaseURL
         )
         let workflow = FixtureWorkflowService(
@@ -125,7 +123,6 @@ struct OwnerReviewSQLiteStoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let databaseURL = root.appendingPathComponent("Owner.sqlite")
         let service = LocalFixtureReviewService(
-            endpoints: [],
             nativeDatabaseURL: databaseURL
         )
 
@@ -137,6 +134,19 @@ struct OwnerReviewSQLiteStoreTests {
             ])
         }
         #expect(!FileManager.default.fileExists(atPath: databaseURL.path))
+    }
+
+    @Test("Native Review refuses an unresolved database instead of falling back to IPC")
+    func localServiceUnresolvedDatabaseFailsClosed() async throws {
+        let service = LocalFixtureReviewService(nativeDatabaseURL: nil)
+
+        await #expect(throws: APIErrorEnvelope.self) {
+            try await service.applyReview(manifest: [
+                "fixtureId": .string("fixture-expo"),
+                "assetIds": .array([.string("asset-1")]),
+                "reviewAction": .string("hide"),
+            ])
+        }
     }
 
     @Test("Approve accepts the visible proposal and exact Undo restores it")

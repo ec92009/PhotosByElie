@@ -209,7 +209,6 @@ struct OwnerCullingSQLiteStoreTests {
         try makeCopiedFixtureDatabase(at: databaseURL)
 
         let localService = LocalFixtureReviewService(
-            endpoints: [],
             nativeDatabaseURL: databaseURL
         )
         let workflow = FixtureWorkflowService(
@@ -238,7 +237,6 @@ struct OwnerCullingSQLiteStoreTests {
         try makeCopiedFixtureDatabase(at: databaseURL)
 
         let localService = LocalFixtureReviewService(
-            endpoints: [],
             nativeDatabaseURL: databaseURL
         )
         let workflow = FixtureWorkflowService(

@@ -3738,6 +3738,13 @@ struct OwnerCoreTests {
         #expect(summary.requestingAI == 2)
     }
 
+    @Test("Connector identity is explicit and requires neither daemon nor credential config")
+    func connectorIdentityUsesExplicitAuthorityTarget() async {
+        #expect(await LocalOwnerConnectorIdentity().connectorID() == "max")
+        #expect(await LocalOwnerConnectorIdentity(target: "David_2").connectorID() == "david_2")
+        #expect(await LocalOwnerConnectorIdentity(target: "not valid!").connectorID() == "max")
+    }
+
     @Test("Backstage control health is native, structured, and helper-free")
     func backstageControlHealthIsMachineReadable() async throws {
         let release = BackstageReleaseIdentity(

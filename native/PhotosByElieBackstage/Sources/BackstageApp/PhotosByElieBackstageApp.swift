@@ -562,6 +562,64 @@ private struct LifecycleView: View {
         model.lifecycleItems.sorted(using: lifecycleSortOrder)
     }
 
+    private var pendingLifecycleOperationLabel: String {
+        guard let action = model.lifecyclePendingAction else {
+            return "Waste Basket action"
+        }
+        let selectedCount = action.payload?["photoIds"]?.arrayValue?.count ?? 0
+        return selectedCount == 0
+            ? "Empty Waste Basket"
+            : "Delete Selected (\(selectedCount.formatted()))"
+    }
+
+    @ViewBuilder
+    private var pendingLifecycleActionPanel: some View {
+        if model.lifecycleQueueing || model.lifecyclePendingActionID != nil {
+            HStack(alignment: .top, spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        model.lifecycleQueueing
+                            ? "Submitting Waste Basket action…"
+                            : "\(pendingLifecycleOperationLabel) is in progress"
+                    )
+                    .font(.headline)
+                    if let action = model.lifecyclePendingAction {
+                        Text(
+                            "Worker state: \(action.state.rawValue.capitalized) • Phase: \(action.diagnosticPhaseName)"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        Text("Action \(action.id)")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    Text("Browsing, Refresh, and Quick Look remain available. Only duplicate destructive submissions are disabled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("View Activity") {
+                    model.selection = .activity
+                    Task { await model.refreshActions() }
+                }
+                .backstageHelp("Open Activity to inspect the complete durable action state, progress, and receipt.")
+            }
+            .padding(10)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                model.lifecycleQueueing
+                    ? "Submitting Waste Basket action"
+                    : "\(pendingLifecycleOperationLabel) is in progress"
+            )
+            .accessibilityValue("Only duplicate destructive submissions are disabled. Browsing, Refresh, and Quick Look remain available.")
+        }
+    }
+
     private func openQuickLook(for item: LifecycleItem) {
         guard model.selectedLifecycleIDs.count <= 1 else {
             model.lifecycleStatus = "Quick Look opens one selected Waste Basket item at a time."
@@ -753,6 +811,7 @@ private struct LifecycleView: View {
                 .font(.headline)
                 .monospacedDigit()
                 .accessibilityLabel("Waste Basket counts")
+            pendingLifecycleActionPanel
             BackstageFeedbackView(
                 message: model.lifecycleStatus,
                 isWorking: model.isRunningLifecycle

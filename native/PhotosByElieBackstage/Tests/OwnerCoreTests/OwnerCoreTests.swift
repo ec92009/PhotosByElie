@@ -5054,6 +5054,30 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
 }
 @Suite("PBE Owner native host route contract")
 struct PBEOwnerNativeHostContractTests {
+    @Test("Native host parser accepts one bounded HTTP request")
+    func parsesBoundedRequest() throws {
+        let request = try PBEOwnerHTTPRequestParser().parse(Data(
+            "POST /__photosbyelie/pbe-owner/action?x=1 HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}".utf8
+        ))
+        #expect(request.method == "POST")
+        #expect(request.path == "/__photosbyelie/pbe-owner/action")
+        #expect(request.body == Data("{}".utf8))
+    }
+
+    @Test("Native host parser rejects request smuggling boundaries")
+    func rejectsAmbiguousRequests() {
+        let duplicateLength = Data(
+            "POST / HTTP/1.1\r\nContent-Length: 0\r\nContent-Length: 0\r\n\r\n".utf8
+        )
+        #expect(throws: PBEOwnerHTTPRequestParserError.duplicateSensitiveHeader("content-length")) {
+            try PBEOwnerHTTPRequestParser().parse(duplicateLength)
+        }
+        let chunked = Data("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n".utf8)
+        #expect(throws: PBEOwnerHTTPRequestParserError.unsupportedTransferEncoding) {
+            try PBEOwnerHTTPRequestParser().parse(chunked)
+        }
+    }
+
     @Test("Native host exposes only the actionable gallery session surface")
     func exactRoutes() {
         let routes = PBEOwnerNativeHostContract.routes

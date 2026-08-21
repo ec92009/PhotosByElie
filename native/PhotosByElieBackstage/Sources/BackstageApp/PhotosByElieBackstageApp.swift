@@ -1699,6 +1699,7 @@ private struct MetadataGiveBackView: View {
                     TableColumn("Preview") { proposal in
                         metadataThumbnail(
                             assetID: proposal.photoId,
+                            preferredIdentifier: proposal.photoLibraryIdentifier,
                             title: proposal.current.title,
                             keywords: proposal.current.keywords
                         )
@@ -1829,12 +1830,14 @@ private struct MetadataGiveBackView: View {
 
     private func metadataThumbnail(
         assetID: String,
+        preferredIdentifier: String? = nil,
         title: String,
         keywords: [String]
     ) -> some View {
         Button {
             openMetadataQuickLook(
                 assetID: assetID,
+                preferredIdentifier: preferredIdentifier,
                 title: title,
                 keywords: keywords
             )
@@ -1856,16 +1859,25 @@ private struct MetadataGiveBackView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Open preview for \(title.isEmpty ? assetID : title)")
         .backstageHelp("Open this exact Metadata asset in the canonical read-only Quick Look presentation.")
-        .task(id: assetID) { model.requestThumbnail(for: assetID) }
+        .task(id: assetID) {
+            model.requestThumbnail(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier
+            )
+        }
     }
 
     private func openMetadataQuickLook(
         assetID: String,
+        preferredIdentifier: String? = nil,
         title: String,
         keywords: [String]
     ) {
         Task {
-            guard let url = await model.prepareMetadataQuickLookURL(for: assetID) else {
+            guard let url = await model.prepareMetadataQuickLookURL(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier
+            ) else {
                 return
             }
             let source = model.cullingAssets.first(where: { $0.id == assetID })

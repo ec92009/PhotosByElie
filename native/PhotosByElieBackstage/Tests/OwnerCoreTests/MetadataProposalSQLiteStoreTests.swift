@@ -20,6 +20,7 @@ struct MetadataProposalSQLiteStoreTests {
         #expect(queue.photos.count == 1)
         let proposal = try #require(queue.photos.first)
         #expect(proposal.photoId == "asset-proposed")
+        #expect(proposal.photoLibraryIdentifier == nil)
         #expect(proposal.batchId == "batch-2")
         #expect(proposal.current.title == "Before")
         #expect(proposal.current.keywords == ["Madrid"])
@@ -38,6 +39,43 @@ struct MetadataProposalSQLiteStoreTests {
         #expect(queue.modelCatalog == MetadataModelLadderRung.catalog)
     }
 
+    @Test("Legacy import proposal resolves the exact PhotoKit handle from preflight provenance")
+    func resolvesLegacyImportIdentity() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("metadata-proposal-identity-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try seedMetadataProposalDatabase(at: databaseURL)
+        let localIdentifier = "A539B1D5-E92F-4B43-A537-CB805512BDA6/L0/001"
+        try execute(
+            #"""
+            CREATE TABLE import_operations(
+              operation_id TEXT PRIMARY KEY,
+              source_kind TEXT NOT NULL,
+              preflight_json TEXT
+            );
+            INSERT INTO import_operations(operation_id, source_kind, preflight_json)
+            VALUES(
+              'import-1',
+              'apple_photos',
+              '{"items":[{"localIdentifier":"A539B1D5-E92F-4B43-A537-CB805512BDA6/L0/001"}]}'
+            );
+            UPDATE title_keyword_queue
+            SET media_id = '001-221cb393d3'
+            WHERE media_id = 'asset-proposed';
+            UPDATE title_keyword_proposals
+            SET media_id = '001-221cb393d3'
+            WHERE media_id = 'asset-proposed';
+            """#,
+            at: databaseURL
+        )
+
+        let queue = try MetadataProposalSQLiteStore(databaseURL: databaseURL).proposals()
+
+        #expect(queue.photos.first?.photoLibraryIdentifier == localIdentifier)
+    }
+
     @Test("Missing Metadata database fails closed")
     func missingDatabaseFailsClosed() {
         let missing = FileManager.default.temporaryDirectory
@@ -45,6 +83,17 @@ struct MetadataProposalSQLiteStoreTests {
         #expect(throws: APIErrorEnvelope.self) {
             try MetadataProposalSQLiteStore(databaseURL: missing).proposals()
         }
+    }
+}
+
+private func execute(_ sql: String, at url: URL) throws {
+    var database: OpaquePointer?
+    guard sqlite3_open(url.path, &database) == SQLITE_OK, let database else {
+        throw OwnerDatabaseError.unavailable("test database unavailable")
+    }
+    defer { sqlite3_close(database) }
+    guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else {
+        throw OwnerDatabaseError.unavailable(String(cString: sqlite3_errmsg(database)))
     }
 }
 

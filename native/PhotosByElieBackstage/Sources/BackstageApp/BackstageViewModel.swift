@@ -5012,10 +5012,13 @@ final class BackstageViewModel: ObservableObject {
         return result
     }
 
-    func prepareMetadataQuickLookURL(for assetID: String) async -> URL? {
+    func prepareMetadataQuickLookURL(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) async -> URL? {
         let result = await prepareCanonicalQuickLookURL(
             assetID: assetID,
-            localIdentifier: photoLibraryIdentifier(for: assetID),
+            localIdentifier: preferredIdentifier ?? photoLibraryIdentifier(for: assetID),
             namespace: "MetadataQuickLook"
         )
         if result == nil {

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import SQLite3
 
 /// Reads the legacy Metadata proposal table directly from authoritative
@@ -44,7 +45,11 @@ public struct MetadataProposalSQLiteStore: Sendable {
         }
 
         let modelLadder = readModelLadder(from: database)
-        let proposals = try readProposals(from: database)
+        let photoLibraryIdentifiers = try readPhotoLibraryIdentifiers(from: database)
+        let proposals = try readProposals(
+            from: database,
+            photoLibraryIdentifiers: photoLibraryIdentifiers
+        )
         try execute("COMMIT", on: database)
         transactionOpen = false
 
@@ -56,7 +61,10 @@ public struct MetadataProposalSQLiteStore: Sendable {
         )
     }
 
-    private func readProposals(from database: OpaquePointer) throws -> [MetadataProposal] {
+    private func readProposals(
+        from database: OpaquePointer,
+        photoLibraryIdentifiers: [String: String]
+    ) throws -> [MetadataProposal] {
         let sql = """
         SELECT q.media_id,
                COALESCE(q.latest_proposed_batch_id, ''),
@@ -137,6 +145,7 @@ public struct MetadataProposalSQLiteStore: Sendable {
 
                 proposals.append(MetadataProposal(
                     photoID: photoID,
+                    photoLibraryIdentifier: photoLibraryIdentifiers[photoID],
                     batchID: batchID,
                     current: .init(
                         title: previousTitle.isEmpty ? photoID : previousTitle,
@@ -163,6 +172,102 @@ public struct MetadataProposalSQLiteStore: Sendable {
             default:
                 throw sqliteError(database, code: "native_metadata_query_failed")
             }
+        }
+    }
+
+    /// Recover the exact current-Mac PhotoKit handle retained by the original
+    /// Apple Photos import preflight. Legacy import media IDs were generated
+    /// from `apple-photos://<localIdentifier>`; recomputing that documented ID
+    /// is deterministic provenance, not a filename/date heuristic.
+    ///
+    /// Any generated-ID collision fails closed by removing the ambiguous map.
+    private func readPhotoLibraryIdentifiers(
+        from database: OpaquePointer
+    ) throws -> [String: String] {
+        guard tableExists("import_operations", in: database) else { return [:] }
+        let sql = """
+        SELECT preflight_json
+        FROM import_operations
+        WHERE source_kind = 'apple_photos'
+          AND COALESCE(preflight_json, '') <> ''
+        """
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+              let statement else {
+            throw sqliteError(database, code: "native_metadata_identity_query_failed")
+        }
+        defer { sqlite3_finalize(statement) }
+
+        var identifiers: [String: String] = [:]
+        var ambiguousIDs: Set<String> = []
+        while true {
+            switch sqlite3_step(statement) {
+            case SQLITE_ROW:
+                guard let data = text(statement, 0).data(using: .utf8),
+                      let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let items = payload["items"] as? [[String: Any]]
+                else { continue }
+                for item in items {
+                    let localIdentifier = (item["localIdentifier"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    guard !localIdentifier.isEmpty else { continue }
+                    let sourceAnchor = (item["sourceAnchor"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let anchor: String
+                    if let sourceAnchor, sourceAnchor.hasPrefix("apple-photos://") {
+                        anchor = sourceAnchor
+                    } else {
+                        anchor = "apple-photos://\(localIdentifier)"
+                    }
+                    let mediaID = Self.legacyMediaID(forSourceAnchor: anchor)
+                    guard !ambiguousIDs.contains(mediaID) else { continue }
+                    if let existing = identifiers[mediaID], existing != localIdentifier {
+                        identifiers.removeValue(forKey: mediaID)
+                        ambiguousIDs.insert(mediaID)
+                    } else {
+                        identifiers[mediaID] = localIdentifier
+                    }
+                }
+            case SQLITE_DONE:
+                return identifiers
+            default:
+                throw sqliteError(database, code: "native_metadata_identity_query_failed")
+            }
+        }
+    }
+
+    private static func legacyMediaID(forSourceAnchor sourceAnchor: String) -> String {
+        let stem = sourceAnchor
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .last
+            .map(String.init) ?? "photo"
+        let base = stem
+            .replacingOccurrences(
+                of: "[^a-zA-Z0-9]+",
+                with: "-",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+            .lowercased()
+        let digest = Insecure.SHA1.hash(data: Data(sourceAnchor.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return "\(base.isEmpty ? "photo" : base)-\(digest.prefix(10))"
+    }
+
+    private func tableExists(_ name: String, in database: OpaquePointer) -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(
+            database,
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+            -1,
+            &statement,
+            nil
+        ) == SQLITE_OK, let statement else { return false }
+        defer { sqlite3_finalize(statement) }
+        return name.withCString { pointer in
+            sqlite3_bind_text(statement, 1, pointer, -1, nil)
+            return sqlite3_step(statement) == SQLITE_ROW
         }
     }
 

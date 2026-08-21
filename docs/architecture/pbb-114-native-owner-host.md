@@ -54,7 +54,7 @@ must add a reviewed native contract instead of expanding the host implicitly.
 
 1. Freeze and test the reduced route/authority allowlist. **Complete.**
 2. Generate and package the immutable `gallery.html` web-bundle manifest.
-   **Complete in the sealed runtime; native loader wiring pending.**
+   **Complete in the sealed runtime and native dispatcher; production host wiring pending.**
 3. Add a loopback HTTP parser/listener with strict request/body/header limits
    and deny-by-default routing. **Complete; not production-wired.**
 4. Move session/readiness/browser-handoff state into a Swift actor and preserve

@@ -36,6 +36,7 @@ public enum PBEOwnerNativeHostServerError: Error, LocalizedError {
 /// dispatcher; it never serves arbitrary repository files.
 public final class PBEOwnerNativeHostServer: @unchecked Sendable {
     private let configuration: PBEOwnerNativeHostServerConfiguration
+    private let webBundle: PBEOwnerWebBundle?
     private let handler: PBEOwnerNativeHostDispatcher.Handler
     private let queue = DispatchQueue(label: "com.photosbyelie.backstage.pbe-owner-host")
     private let stateLock = NSLock()
@@ -44,9 +45,11 @@ public final class PBEOwnerNativeHostServer: @unchecked Sendable {
 
     public init(
         configuration: PBEOwnerNativeHostServerConfiguration = .init(),
+        webBundle: PBEOwnerWebBundle? = nil,
         handler: @escaping PBEOwnerNativeHostDispatcher.Handler
     ) {
         self.configuration = configuration
+        self.webBundle = webBundle
         self.handler = handler
     }
 
@@ -189,6 +192,7 @@ public final class PBEOwnerNativeHostServer: @unchecked Sendable {
                 let request = try self.configuration.parser.parse(requestData)
                 let dispatcher = PBEOwnerNativeHostDispatcher(
                     expectedHost: "127.0.0.1:\(port)",
+                    webBundle: self.webBundle,
                     handler: self.handler
                 )
                 Task {

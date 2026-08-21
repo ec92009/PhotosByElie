@@ -55,11 +55,17 @@ public struct PBEOwnerNativeHostDispatcher: Sendable {
 
     private let expectedHost: String
     private let expectedOrigin: String
+    private let webBundle: PBEOwnerWebBundle?
     private let handler: Handler
 
-    public init(expectedHost: String, handler: @escaping Handler) {
+    public init(
+        expectedHost: String,
+        webBundle: PBEOwnerWebBundle? = nil,
+        handler: @escaping Handler
+    ) {
         self.expectedHost = expectedHost
         self.expectedOrigin = "http://\(expectedHost)"
+        self.webBundle = webBundle
         self.handler = handler
     }
 
@@ -67,14 +73,27 @@ public struct PBEOwnerNativeHostDispatcher: Sendable {
         guard request.headers["host"] == expectedHost else {
             return Self.error(403, "Forbidden", code: "host_mismatch")
         }
+        if request.method == "GET", !request.body.isEmpty {
+            return Self.error(400, "Bad Request", code: "get_body_forbidden")
+        }
+        if request.method == "GET",
+           let resource = webBundle?.resource(forRequestPath: request.path) {
+            return PBEOwnerHTTPResponse(
+                statusCode: 200,
+                reasonPhrase: "OK",
+                headers: [
+                    "Content-Type": resource.mimeType,
+                    "Content-Security-Policy": "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'",
+                    "X-Content-Type-Options": "nosniff",
+                ],
+                body: resource.data
+            )
+        }
         guard let route = PBEOwnerNativeHostContract.route(
             method: request.method,
             path: request.path
         ) else {
             return Self.error(404, "Not Found", code: "route_not_found")
-        }
-        if request.method == "GET", !request.body.isEmpty {
-            return Self.error(400, "Bad Request", code: "get_body_forbidden")
         }
         if request.method == "POST" {
             let contentType = request.headers["content-type"]?.lowercased() ?? ""

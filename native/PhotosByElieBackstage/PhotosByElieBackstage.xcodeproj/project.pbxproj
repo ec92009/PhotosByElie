@@ -69,6 +69,7 @@
 		CCDCE2F11E81F2AE5DA953B8 /* BackstagePreviewIPCTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */; };
 		CD8131A150ABA38768AC91F2 /* action-page.json in Resources */ = {isa = PBXBuildFile; fileRef = 031D83FD70EDA99A4325EC56 /* action-page.json */; };
 		CE890E5906913FF1CEAB3B1A /* LifecycleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */; };
+		CFECE3B3F9C21CFCD5989E03 /* OwnerAssetSourceSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C640424A3D6239F86E519E55 /* OwnerAssetSourceSQLiteStore.swift */; };
 		DC6F2F319C249E05C19FA365 /* OwnerConnectorIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */; };
 		E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */; };
 		E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */; };
@@ -179,6 +180,7 @@
 		B31D0E07A87397F37067AA7E /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
 		B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerActionRunner.swift; sourceTree = "<group>"; };
 		BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadPreview.swift; sourceTree = "<group>"; };
+		C640424A3D6239F86E519E55 /* OwnerAssetSourceSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAssetSourceSQLiteStore.swift; sourceTree = "<group>"; };
 		CA1FB5719D1DED9B3990790E /* OwnerCullingSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCullingSQLiteStore.swift; sourceTree = "<group>"; };
 		CE1B4DAD75D5DA42F22F16F3 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		D157FCA2BE1DD356E595878B /* ReviewPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewPreview.swift; sourceTree = "<group>"; };
@@ -338,6 +340,7 @@
 				FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */,
 				B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */,
 				7C246863F54D8DD907520A7F /* OwnerAPIClient.swift */,
+				C640424A3D6239F86E519E55 /* OwnerAssetSourceSQLiteStore.swift */,
 				FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */,
 				68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */,
 				CA1FB5719D1DED9B3990790E /* OwnerCullingSQLiteStore.swift */,
@@ -540,6 +543,7 @@
 				40FCDE82D936CF0F2C7E4770 /* MetadataReviewService.swift in Sources */,
 				21B5A107EDBB9257F55504E0 /* OwnerAPIClient.swift in Sources */,
 				78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */,
+				CFECE3B3F9C21CFCD5989E03 /* OwnerAssetSourceSQLiteStore.swift in Sources */,
 				878E1EB8EDF62208CE9C8323 /* OwnerAuthenticationService.swift in Sources */,
 				DC6F2F319C249E05C19FA365 /* OwnerConnectorIdentity.swift in Sources */,
 				A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */,

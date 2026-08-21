@@ -5052,3 +5052,38 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
 
     func requests() -> [OwnerActionCreate] { created }
 }
+@Suite("PBE Owner native host route contract")
+struct PBEOwnerNativeHostContractTests {
+    @Test("Native host exposes only the actionable gallery session surface")
+    func exactRoutes() {
+        let routes = PBEOwnerNativeHostContract.routes
+        #expect(routes.count == 12)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "POST",
+            path: "/__photosbyelie/pbe-owner/browser/bootstrap"
+        )?.authority == .browserHandoff)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "GET",
+            path: "/__photosbyelie/source-preview/asset-123"
+        )?.authority == .browserSession)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "POST",
+            path: "/__photosbyelie/source-preview/asset-123"
+        ) == nil)
+    }
+
+    @Test("Legacy local Owner endpoints are not native host routes")
+    func legacyRoutesStayAbsent() {
+        for (method, path) in [
+            ("POST", "/__photosbyelie/photo-action"),
+            ("GET", "/__photosbyelie/title-keyword-review-queue"),
+            ("POST", "/__photosbyelie/r2-fix"),
+            ("POST", "/__photosbyelie/apple-photos/import"),
+            ("POST", "/__photosbyelie/source-edit"),
+            ("POST", "/__photosbyelie/publish-prices"),
+            ("POST", "/__photosbyelie/new-owner-connector"),
+        ] {
+            #expect(PBEOwnerNativeHostContract.route(method: method, path: path) == nil)
+        }
+    }
+}

@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
-import OwnerCore
 import Testing
+@testable import OwnerCore
 
 @Suite("PBE Owner native HTTP host")
 struct PBEOwnerNativeHTTPHostTests {
@@ -138,8 +138,184 @@ struct PBEOwnerNativeHTTPHostTests {
         }
     }
 
+    @Test("Native session routes preserve host, bearer, handoff, and cookie authorities")
+    func nativeSessionRoutes() async throws {
+        let readiness = PBEOwnerHostReadiness(
+            ready: true,
+            sourceIdentity: "source-one",
+            catalogIdentity: "catalog-one",
+            readinessIdentity: "readiness-one",
+            fixtureRevision: "fixture-revision-one",
+            lifecycleWriter: "pbb-79-waste-basket",
+            capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+        )
+        let cloudSession = PBEOwnerSessionContract(
+            id: "session-one",
+            state: "ready",
+            fixtureId: "expo",
+            fixtureBreadcrumb: "Expo",
+            sourceIdentity: readiness.sourceIdentity,
+            catalogIdentity: readiness.catalogIdentity,
+            readinessIdentity: readiness.readinessIdentity,
+            fixtureRevision: readiness.fixtureRevision,
+            capabilities: readiness.capabilities,
+            lifecycleWriter: readiness.lifecycleWriter,
+            createdAt: nil,
+            expiresAt: Date().addingTimeInterval(600),
+            closedAt: nil,
+            leaseExpiresAt: nil
+        )
+        let sessionHandler = PBEOwnerNativeSessionHTTPHandler(
+            bootstrapSecret: "bootstrap-one",
+            checkoutIdentity: "checkout-one",
+            verifier: PBEOwnerFixedCloudVerifier(session: cloudSession)
+        ) { fixtureID in
+            #expect(fixtureID == "expo")
+            return readiness
+        }
+        let dispatcher = PBEOwnerNativeHostDispatcher(
+            expectedHost: "127.0.0.1:9000",
+            handler: sessionHandler.handler()
+        )
+
+        let bootstrapResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/host/bootstrap",
+                headers: ["X-PBE-Host-Bootstrap": "bootstrap-one"],
+                body: #"{"expectedCheckoutIdentity":"checkout-one"}"#
+            )
+        ))
+        #expect(bootstrapResponse.statusCode == 201)
+        let bootstrap = try JSONDecoder.ownerAPI.decode(
+            PBEOwnerTestHostBootstrapEnvelope.self,
+            from: bootstrapResponse.body
+        )
+        #expect(bootstrap.checkoutIdentity == "checkout-one")
+        #expect(!bootstrap.hostAuthorization.isEmpty)
+        #expect(bootstrapResponse.body.range(of: Data("bootstrap-one".utf8)) == nil)
+
+        let replayedBootstrap = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/host/bootstrap",
+                headers: ["X-PBE-Host-Bootstrap": "bootstrap-one"],
+                body: #"{"expectedCheckoutIdentity":"checkout-one"}"#
+            )
+        ))
+        #expect(replayedBootstrap.statusCode == 401)
+
+        let unauthorizedStart = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/session/start",
+                headers: ["Authorization": "Bearer cloud-token-one"],
+                body: #"{"fixtureId":"expo"}"#
+            )
+        ))
+        #expect(unauthorizedStart.statusCode == 401)
+
+        let hostHeaders = [
+            "Authorization": "Bearer cloud-token-one",
+            "X-PBE-Host-Authorization": bootstrap.hostAuthorization,
+        ]
+        let startResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/session/start",
+                headers: hostHeaders,
+                body: #"{"fixtureId":"expo"}"#
+            )
+        ))
+        #expect(startResponse.statusCode == 201)
+        #expect(startResponse.body.range(of: Data("cloud-token-one".utf8)) == nil)
+        let started = try JSONDecoder.ownerAPI.decode(
+            PBEOwnerTestSessionEnvelope.self,
+            from: startResponse.body
+        )
+        #expect(started.session.fixtureId == "expo")
+        let fragment = try #require(started.launchUrl?.fragment)
+        let encodedTicket = try #require(fragment.split(separator: "=", maxSplits: 1).last)
+        let ticket = try #require(String(encodedTicket).removingPercentEncoding)
+
+        let browserResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/browser/bootstrap",
+                headers: ["Origin": "http://127.0.0.1:9000"],
+                body: "{\"ticket\":\"\(ticket)\"}"
+            )
+        ))
+        #expect(browserResponse.statusCode == 201)
+        #expect(browserResponse.body.range(of: Data(ticket.utf8)) == nil)
+        let setCookie = try #require(browserResponse.headers["Set-Cookie"])
+        #expect(setCookie.contains("HttpOnly"))
+        #expect(setCookie.contains("SameSite=Strict"))
+        let cookie = String(setCookie.split(separator: ";", maxSplits: 1)[0])
+
+        let statusResponse = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/pbe-owner/session HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(statusResponse.statusCode == 200)
+
+        let heartbeatResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/session/heartbeat",
+                headers: [
+                    "Cookie": cookie,
+                    "Origin": "http://127.0.0.1:9000",
+                ],
+                body: "{}"
+            )
+        ))
+        #expect(heartbeatResponse.statusCode == 200)
+
+        let hostHeartbeat = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/session/heartbeat",
+                headers: hostHeaders,
+                body: "{}"
+            )
+        ))
+        #expect(hostHeartbeat.statusCode == 200)
+        let hostHeartbeatJSON = try #require(
+            JSONSerialization.jsonObject(with: hostHeartbeat.body) as? [String: Any]
+        )
+        #expect(hostHeartbeatJSON["latestAction"] is NSNull)
+
+        let closeResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/session/close",
+                headers: [
+                    "Cookie": cookie,
+                    "Origin": "http://127.0.0.1:9000",
+                ],
+                body: "{}"
+            )
+        ))
+        #expect(closeResponse.statusCode == 200)
+        #expect(closeResponse.headers["Set-Cookie"]?.contains("Max-Age=0") == true)
+
+        let closedStatus = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/pbe-owner/session HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(closedStatus.statusCode == 401)
+    }
+
     private func request(_ raw: String) throws -> PBEOwnerHTTPRequest {
         try PBEOwnerHTTPRequestParser().parse(Data(raw.utf8))
+    }
+
+    private func jsonRequest(
+        path: String,
+        headers: [String: String] = [:],
+        body: String
+    ) -> String {
+        var lines = [
+            "POST \(path) HTTP/1.1",
+            "Host: 127.0.0.1:9000",
+            "Content-Type: application/json",
+            "Content-Length: \(body.utf8.count)",
+        ]
+        lines.append(contentsOf: headers.sorted(by: { $0.key < $1.key }).map { "\($0.key): \($0.value)" })
+        return lines.joined(separator: "\r\n") + "\r\n\r\n" + body
     }
 
     private func makeWebRuntime() throws -> URL {
@@ -173,5 +349,30 @@ struct PBEOwnerNativeHTTPHostTests {
         let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])
         try manifestData.write(to: root.appendingPathComponent("connector-runtime-manifest.json"))
         return root
+    }
+}
+
+private struct PBEOwnerTestHostBootstrapEnvelope: Decodable {
+    var checkoutIdentity: String
+    var hostAuthorization: String
+}
+
+private struct PBEOwnerTestSessionEnvelope: Decodable {
+    var session: PBEOwnerSessionContract
+    var launchUrl: URL?
+}
+
+private struct PBEOwnerFixedCloudVerifier: PBEOwnerCloudSessionVerifying {
+    var session: PBEOwnerSessionContract
+
+    func verify(token: String) async throws -> PBEOwnerSessionContract {
+        guard token == "cloud-token-one" else {
+            throw PBEOwnerNativeSessionFailure(
+                code: "pbe_owner_session_required",
+                statusCode: 401,
+                message: "Expected the test bearer."
+            )
+        }
+        return session
     }
 }

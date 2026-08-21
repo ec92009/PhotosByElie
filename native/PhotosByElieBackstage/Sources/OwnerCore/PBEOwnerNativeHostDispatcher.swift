@@ -101,7 +101,10 @@ public struct PBEOwnerNativeHostDispatcher: Sendable {
                     || contentType.hasPrefix("application/json;") else {
                 return Self.error(415, "Unsupported Media Type", code: "json_required")
             }
-            if route.authority == .browserHandoff || route.authority == .browserSession {
+            let isHostControl = !(request.headers["authorization"] ?? "").isEmpty
+                && !(request.headers["x-pbe-host-authorization"] ?? "").isEmpty
+            if route.authority == .browserHandoff
+                || (route.authority == .browserSession && !isHostControl) {
                 guard request.headers["origin"] == expectedOrigin else {
                     return Self.error(403, "Forbidden", code: "origin_mismatch")
                 }

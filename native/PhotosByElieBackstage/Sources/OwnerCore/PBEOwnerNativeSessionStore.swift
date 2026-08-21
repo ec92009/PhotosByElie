@@ -170,6 +170,24 @@ public actor PBEOwnerNativeSessionStore {
 
     public func activeFixtureID() -> String { lease?.fixtureID ?? "" }
 
+    public func requiredBrowserHandoffFixtureID(ticket: String) throws -> String {
+        let current = try activeLease()
+        guard !browserTicketHash.isEmpty,
+              constantTimeEqual(browserTicketHash, hash(clean(ticket))) else {
+            throw failure("pbe_owner_browser_handoff_invalid", 401)
+        }
+        return current.fixtureID
+    }
+
+    public func requiredBrowserFixtureID(browserSession: String) throws -> String {
+        let current = try activeLease()
+        guard !browserSessionHash.isEmpty,
+              constantTimeEqual(browserSessionHash, hash(clean(browserSession))) else {
+            throw failure("pbe_owner_session_inactive", 401)
+        }
+        return current.fixtureID
+    }
+
     private func validate(
         _ session: PBEOwnerSessionContract,
         readiness: PBEOwnerHostReadiness

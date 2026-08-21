@@ -139,6 +139,77 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingMediaFilterControls == [.photos])
     }
 
+    @Test("Review burst selection repairs stale anchor and focus")
+    @MainActor
+    func reviewBurstSelectionRepairsStaleAnchorAndFocus() {
+        let items = [
+            FixtureReviewItem(
+                id: "review-first",
+                photoLibraryIdentifier: "photos-review-first",
+                title: "First",
+                keywords: [],
+                filename: "first.jpg",
+                capturedAt: "2026-08-17T10:00:00Z"
+            ),
+            FixtureReviewItem(
+                id: "review-keeper",
+                photoLibraryIdentifier: "photos-review-keeper",
+                title: "Keeper",
+                keywords: [],
+                filename: "keeper.jpg",
+                capturedAt: "2026-08-17T10:00:01Z"
+            ),
+            FixtureReviewItem(
+                id: "review-third",
+                photoLibraryIdentifier: "photos-review-third",
+                title: "Third",
+                keywords: [],
+                filename: "third.jpg",
+                capturedAt: "2026-08-17T10:00:02Z"
+            ),
+            FixtureReviewItem(
+                id: "review-singleton",
+                photoLibraryIdentifier: "photos-review-singleton",
+                title: "Singleton",
+                keywords: [],
+                filename: "singleton.jpg",
+                capturedAt: "2026-08-17T10:01:00Z"
+            ),
+        ]
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.fixtureReviewWindow = FixtureReviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            reviewStateFilters: ["picked"],
+            offset: 0,
+            limit: 200,
+            nextOffset: 0,
+            hasNext: false,
+            summary: FixtureReviewSummary(
+                total: items.count,
+                unreviewed: items.count,
+                requestingAI: 0,
+                proposed: 0,
+                approved: 0
+            ),
+            items: items
+        )
+        model.reviewSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: ["review-singleton"],
+            anchorID: "review-singleton",
+            focusedID: "review-singleton"
+        )
+
+        model.selectReviewBurstCandidates()
+
+        #expect(model.reviewSelection.selectedIDs == ["review-first", "review-third"])
+        #expect(model.reviewSelection.anchorID == "review-first")
+        #expect(model.reviewSelection.focusedID == "review-first")
+        #expect(model.reviewSelection.selectedIDs.contains(model.reviewSelection.anchorID!))
+        #expect(model.reviewSelection.selectedIDs.contains(model.reviewSelection.focusedID!))
+    }
+
     @Test("Refresh previews reports immediate progress and prevents duplicate requests")
     @MainActor
     func refreshPhotosReportsProgressAndGuardsDuplicates() async throws {

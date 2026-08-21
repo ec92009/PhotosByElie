@@ -2943,11 +2943,12 @@ final class BackstageViewModel: ObservableObject {
 
         preserveCurrentReviewDraft()
         let orderedIDs = items.map(\.id)
+        let candidateIDs = Set(ids)
         let focusedID = reviewSelection.focusedID.flatMap {
-            orderedIDs.contains($0) ? $0 : nil
+            candidateIDs.contains($0) ? $0 : nil
         } ?? ids.first
         let anchorID = reviewSelection.anchorID.flatMap {
-            orderedIDs.contains($0) ? $0 : nil
+            candidateIDs.contains($0) ? $0 : nil
         } ?? ids.first
         reviewSelection = OwnerSelectionModel(
             orderedIDs: orderedIDs,

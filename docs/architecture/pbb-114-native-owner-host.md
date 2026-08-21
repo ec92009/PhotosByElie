@@ -1,6 +1,6 @@
 # PBB-114: Backstage-owned PBE Owner session host
 
-Status: route boundary and loopback HTTP transport fixed; session handlers pending, 2026-08-21
+Status: route boundary, loopback HTTP transport, and session authority fixed; HTTP handlers pending, 2026-08-21
 
 ## Decision
 
@@ -58,7 +58,8 @@ must add a reviewed native contract instead of expanding the host implicitly.
 3. Add a loopback HTTP parser/listener with strict request/body/header limits
    and deny-by-default routing. **Complete; not production-wired.**
 4. Move session/readiness/browser-handoff state into a Swift actor and preserve
-   the existing cloud verification and fixture lease.
+   the existing cloud verification and fixture lease. **Complete as an isolated
+   native authority; cloud verifier and HTTP handler wiring pending.**
 5. Implement gallery and preview reads with native SQLite/PhotoKit services;
    route mutations through `OwnerActionRunner`.
 6. Switch `PBEOwnerLocalHostService` from child-process HTTP control to the

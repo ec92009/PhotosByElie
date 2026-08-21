@@ -385,8 +385,8 @@ and Quick Look context remain intact.
    thumbnails are black and white. An AI-review mark carries a 30-point
    question mark.
    Quick Look shows the same basic metadata context; Left/Right moves to the
-   previous/next visible item, A approves, H hides, and U returns the current
-   item to Culling.
+   previous/next visible item, P or A approves, H hides, X moves the item to
+   the recoverable Waste Basket, and U returns the current item to Culling.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
    through the same bounded shoot window. It does not run AI.
 4. AI reasons and the optional note are only a local form until **Update AI

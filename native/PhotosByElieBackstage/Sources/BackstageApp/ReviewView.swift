@@ -50,7 +50,7 @@ private enum ReviewQuickLookPresenter {
                             model: model,
                             coordinator: coordinator
                         )
-                    case .approve:
+                    case .approve, .pick:
                         applyReviewAction(
                             .approve,
                             assetID: assetID,
@@ -77,7 +77,7 @@ private enum ReviewQuickLookPresenter {
                         model.clickReviewItem(assetID, modifiers: [])
                         coordinator.dismiss()
                         Task { [weak model] in await model?.unpickReviewSelection() }
-                    case .pick, .returnToReview, .rating, .color:
+                    case .returnToReview, .rating, .color:
                         return false
                     }
                     return true
@@ -180,7 +180,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: state,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P/A approve • H hide • X Waste Basket • U unpick"
         )
     }
 }

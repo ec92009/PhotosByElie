@@ -833,6 +833,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("applyReviewAction(", review_presenter)
         self.assertIn(".approve", review_presenter)
         self.assertIn(".hide", review_presenter)
+        self.assertIn("case .approve, .pick:", review_presenter)
+        self.assertNotIn("case .pick, .returnToReview", review_presenter)
+        self.assertIn("P/A approve", review_presenter)
         self.assertIn("direction == .previous ? -1 : 1", review_presenter)
         self.assertIn("coordinator.dismiss()", review_presenter)
 

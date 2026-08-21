@@ -1823,6 +1823,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "waker: any OwnerActionWaking = OnDemandOwnerActionWaker()",
             runner,
         )
+        self.assertNotIn("LocalOwnerActionWaker", runner)
+        self.assertNotIn("wake-owner-action", runner)
+        self.assertNotIn("localhost:8766", runner)
+        self.assertNotIn("127.0.0.1:8766", runner)
         self.assertIn("OwnerReviewSQLiteStore", review)
         self.assertIn("nativeStore().applyReview", review)
         self.assertIn('"native_review_database_missing"', review)

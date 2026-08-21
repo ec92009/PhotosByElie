@@ -34,6 +34,7 @@ dependency of native Backstage.
 | `MetadataReviewService` -> `MetadataProposalSQLiteStore` | The native Metadata proposal table and saved model ladder read authoritative `Owner.sqlite` | Interactive runtime-critical read (Swift) | Keep the read-only SQLite snapshot and fail closed when the database cannot be resolved. Approve, Reject, Block, direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. The native table must not depend on the retired localhost helper. |
 | `OwnerWorkflowRecoverySQLiteStore` | Backstage bootstrap classifies stale Photos sync and Upload Bridge bookkeeping | Interactive runtime-critical maintenance (Swift) | Keep one short native SQLite transaction. Legacy rows without durable worker identity remain nonterminal and are marked `needs-review`; only a stale row whose recorded worker is verifiably gone becomes interrupted/failed. This policy must not depend on launching the retired Python local host. |
 | `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-92/PBB-106; do not restore a daemon to support it. |
+| `LocalOwnerActionWaker` -> localhost `wake-owner-action` | Former native fallback to the daemon/status server | Legacy/removable daemon coupling | Removed. Native Backstage has no localhost wake client; the action-scoped waker is the only production `OwnerActionWaking` implementation. |
 | `OwnerActionRunner` | Native Culling, fixture, Photos sync, uploads, delivery, publication, and proposal actions through the Worker action contract | External connector compatibility | Keep the authorization boundary and opaque action IDs. The implementation may use the action-scoped connector until its individual capability has a verified native or dedicated bridge replacement. |
 | `LocalOwnerConnectorIdentity` | Selects the connector authority attached to new Worker actions | Interactive runtime-critical (Swift) | Use the explicit non-secret authority target (`max` by default). Do not contact a daemon or read the credential-bearing connector config; a future writer migration must inject a rehearsed target. |
 | `PBEOwnerHostClient` -> `scripts/local_server.py` | PBB launches one loopback PBE Owner web host after the user presses Open | Interactive compatibility boundary | Retain temporarily for the explicit web session. PBB owns the child, fixture lease, bootstrap secret, and shutdown; closing PBB drains started durable work and terminates the host. It is not a daemon or idle dependency. |
@@ -62,6 +63,12 @@ The remaining direct native Python process launches are:
   `PBEOwnerHostClient` starts `/usr/bin/python3 scripts/local_server.py ...`
   only after the user opens PBE Owner, and owns that child for the explicit
   browser session.
+
+The former native `LocalOwnerActionWaker` localhost client has been removed.
+Although no production caller constructed it, retaining the client kept the
+daemon wake endpoint in the native module and obscured the actual action-scoped
+runtime boundary. The rollback-only Python daemon may still expose its private
+endpoint when explicitly enabled, but native Backstage cannot call it.
 
 `LocalFixtureReviewService` no longer creates a `Process`, opens a local HTTP
 endpoint, or encodes a JSON Review request. It calls `OwnerReviewSQLiteStore`
@@ -127,8 +134,9 @@ parity/tooling implementation, not a fallback selected by native Backstage.
 This slice settles the native Review/Culling boundary, removes its hidden
 Python/HTTP fallback, moves the Metadata proposal list off its localhost helper,
 removes the connector-status lookup from native identity resolution without
-loading connector credentials into Swift, and makes the unbounded connector
-daemon fail closed by default.
+loading connector credentials into Swift, removes the unused native localhost
+action-wake client, and makes the unbounded connector daemon fail closed by
+default.
 Remaining acceptance gates are the broader action-scoped connector capability
 cutover, eventual native replacement of the PBE Owner Python web host, rollback
 surface retirement, and installed Max timing/replay evidence.

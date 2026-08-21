@@ -177,62 +177,6 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
     }
 }
 
-public struct LocalOwnerActionWaker: OwnerActionWaking {
-    private let endpoints: [URL]
-    private let session: URLSession
-    private let decoder = JSONDecoder.ownerAPI
-
-    public init(
-        endpoints: [URL] = [
-            URL(string: "http://127.0.0.1:8766/photosbyelie/wake-owner-action")!,
-            URL(string: "http://localhost:8766/photosbyelie/wake-owner-action")!,
-        ],
-        timeout: TimeInterval = 20
-    ) {
-        self.endpoints = endpoints
-        let configuration = URLSessionConfiguration.ephemeral
-        // Large immutable fixture snapshots can take several seconds to read
-        // and serialize locally. Keep the direct-wake request alive long
-        // enough to receive that result instead of abandoning it and falling
-        // back to a second cloud polling round trip.
-        configuration.timeoutIntervalForRequest = timeout
-        configuration.timeoutIntervalForResource = timeout
-        configuration.waitsForConnectivity = false
-        self.session = URLSession(configuration: configuration)
-    }
-
-    public func wake(actionID: String) async throws -> OwnerAction? {
-        struct RequestBody: Encodable { let actionId: String }
-        struct ResponseBody: Decodable { let action: OwnerAction? }
-
-        guard actionID.hasPrefix("owner-action-"), actionID.count <= 96 else {
-            throw OwnerActionRunError.invalidActionID
-        }
-        var lastError: Error = URLError(.cannotConnectToHost)
-        for endpoint in endpoints {
-            do {
-                var request = URLRequest(url: endpoint)
-                request.httpMethod = "POST"
-                request.httpBody = try JSONEncoder.ownerAPI.encode(RequestBody(actionId: actionID))
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                // The connector applies the same allowlist used by the public
-                // Owner page. It still receives only the opaque action ID.
-                request.setValue("https://photos-by-elie.com", forHTTPHeaderField: "Origin")
-                let (data, response) = try await session.data(for: request)
-                guard let response = response as? HTTPURLResponse,
-                      (200..<300).contains(response.statusCode) else {
-                    throw URLError(.badServerResponse)
-                }
-                return try decoder.decode(ResponseBody.self, from: data).action
-            } catch {
-                lastError = error
-            }
-        }
-        throw lastError
-    }
-}
-
 public enum OwnerActionRunError: Error, Sendable, Equatable {
     case invalidActionID
     case failed(String)

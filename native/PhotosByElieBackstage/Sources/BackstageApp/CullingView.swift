@@ -409,9 +409,14 @@ struct CullingView: View {
             Divider().frame(width: 1, height: 18)
             Text("Rating").font(.caption.weight(.semibold))
             ForEach(0...5, id: \.self) { value in
-                LightroomRatingFilterButton(
+                CullingRatingScaleButton(
                     rating: value,
-                    isSelected: model.cullingRatingFilters.contains(value)
+                    isSelected: model.cullingRatingFilters.contains(value),
+                    isDisabled: false,
+                    accessibilityLabel: value == 0 ? "Unrated" : "\(value) stars",
+                    help: value == 0
+                        ? "Show or hide unrated assets in Culling."
+                        : "Show or hide \(value)-star assets in Culling."
                 ) {
                     model.toggleCullingRatingFilter(value)
                 }
@@ -720,26 +725,17 @@ struct CullingView: View {
     }
 
     private func cullingRatingAssignmentButton(_ rating: Int) -> some View {
-        Button {
+        CullingRatingScaleButton(
+            rating: rating,
+            isSelected: model.cullingSelectionHasRating(rating),
+            isDisabled: model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision,
+            accessibilityLabel: rating == 0 ? "Clear rating" : "Assign \(rating) stars",
+            help: rating == 0
+                ? "Clear stars on selected assets (0)."
+                : "Set selected assets to \(rating) star\(rating == 1 ? "" : "s") (\(rating))."
+        ) {
             Task { await model.applyRatingShortcut(rating) }
-        } label: {
-            Group {
-                if rating == 0 {
-                    Image(systemName: "star.slash")
-                } else {
-                    Text("\(rating)★")
-                }
-            }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(rating == 0 ? Color.secondary : Color.yellow)
-            .frame(minWidth: 30, minHeight: 22)
         }
-        .buttonStyle(.bordered)
-        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-        .accessibilityLabel(rating == 0 ? "Clear rating" : "Assign \(rating) stars")
-        .backstageHelp(rating == 0
-            ? "Clear the rating on every selected asset."
-            : "Assign \(rating) stars to every selected asset.")
     }
 
     private func cullingColorAssignmentButton(_ color: SidecarColor) -> some View {
@@ -750,22 +746,19 @@ struct CullingView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(cullingAssignmentColor(color))
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(isSelected ? Color.white : Color.secondary, lineWidth: isSelected ? 2 : 1)
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
-            .frame(width: 24, height: 22)
-            .padding(2)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.accentColor.opacity(0.35) : .clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(isSelected ? Color.accentColor : Color.secondary, lineWidth: isSelected ? 2 : 1)
-            )
+            .frame(width: 20, height: 20)
+            .modifier(CullingCompactControlChrome(
+                width: CullingCompactControlMetrics.colorWidth,
+                isSelected: isSelected
+            ))
         }
         .buttonStyle(.plain)
         .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
@@ -774,7 +767,19 @@ struct CullingView: View {
             ? "Applied to every selected asset; press again to clear."
             : "Not applied to every selected asset.")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .backstageHelp("Assign \(color.label) to every selected asset; press again to clear that color.")
+        .backstageHelp(cullingColorAssignmentHelp(color))
+    }
+
+    private func cullingColorAssignmentHelp(_ color: SidecarColor) -> String {
+        let shortcut: String? = switch color {
+        case .red: "6"
+        case .yellow: "7"
+        case .green: "8"
+        case .blue: "9"
+        case .purple, .none: nil
+        }
+        let suffix = shortcut.map { " (\($0))." } ?? "."
+        return "Toggle \(color.label.lowercased()) on selected assets\(suffix)"
     }
 
     private func cullingAssignmentColor(_ color: SidecarColor) -> Color {
@@ -1284,37 +1289,60 @@ private struct CullingAssetCard: View {
 
 }
 
-private struct LightroomRatingFilterButton: View {
+private enum CullingCompactControlMetrics {
+    static let ratingWidth: CGFloat = 78
+    static let colorWidth: CGFloat = 30
+    static let height: CGFloat = 28
+    static let cornerRadius: CGFloat = 6
+}
+
+private struct CullingCompactControlChrome: ViewModifier {
+    let width: CGFloat
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .frame(width: width, height: CullingCompactControlMetrics.height)
+            .background(
+                RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
+                    .fill(isSelected ? Color.accentColor.opacity(0.20) : Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
+                    .stroke(
+                        isSelected ? Color.accentColor : Color(nsColor: .separatorColor),
+                        lineWidth: isSelected ? 2 : 1
+                    )
+            )
+    }
+}
+
+private struct CullingRatingScaleButton: View {
     let rating: Int
     let isSelected: Bool
+    let isDisabled: Bool
+    let accessibilityLabel: String
+    let help: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if rating == 0 {
-                    Image(systemName: "star.slash")
-                } else {
+            HStack(spacing: 1) {
+                ForEach(1...5, id: \.self) { value in
                     Image(systemName: "star.fill")
+                        .foregroundStyle(value <= rating ? Color.yellow : Color.secondary.opacity(0.38))
                 }
             }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(isSelected ? Color.yellow : Color.secondary)
-            .frame(width: 22, height: 22)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.accentColor.opacity(0.24) : .clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.8) : .clear)
-            )
+            .font(.system(size: 12, weight: .semibold))
+            .modifier(CullingCompactControlChrome(
+                width: CullingCompactControlMetrics.ratingWidth,
+                isSelected: isSelected
+            ))
         }
         .buttonStyle(.plain)
-        .backstageHelp(rating == 0
-            ? "Toggle whether unrated assets are included in the current Culling results."
-            : "Toggle whether \(rating)-star assets are included in the current Culling results.")
-        .accessibilityLabel(rating == 0 ? "Unrated" : "\(rating) stars")
+        .disabled(isDisabled)
+        .backstageHelp(help)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -1338,11 +1366,10 @@ private struct LightroomColorFilterButton: View {
                 }
             }
             .frame(width: 20, height: 20)
-            .padding(2)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.accentColor.opacity(0.35) : .clear)
-            )
+            .modifier(CullingCompactControlChrome(
+                width: CullingCompactControlMetrics.colorWidth,
+                isSelected: isSelected
+            ))
         }
         .buttonStyle(.plain)
         .backstageHelp("Toggle whether assets labeled \(color.label.lowercased()) are included in the current Culling results.")

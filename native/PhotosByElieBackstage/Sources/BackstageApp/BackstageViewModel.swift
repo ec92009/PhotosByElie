@@ -1750,6 +1750,17 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection.selectedInDisplayOrder
     }
 
+    func cullingSelectionHasRating(_ rating: Int) -> Bool {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else { return false }
+        return ids.allSatisfy { id in
+            let currentRating = cullingStates[id]?.rating
+                ?? cullingAssets.first(where: { $0.id == id })?.rating
+                ?? 0
+            return currentRating == rating
+        }
+    }
+
     func cullingSelectionHasColor(_ color: SidecarColor) -> Bool {
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else { return false }

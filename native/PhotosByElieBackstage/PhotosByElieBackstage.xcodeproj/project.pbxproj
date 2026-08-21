@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		019FD97632C33E0C21E8E07D /* BackstageXcodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04312A3A24851AFB3EDB66D /* BackstageXcodeApp.swift */; };
+		06BF9F3E1B8F2F373D4C041E /* PBEOwnerHTTPRequestParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */; };
 		0813EF2D6E69FFFF8D06B161 /* BackstageWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7502CEEFDBCC869E566BF28A /* BackstageWindowState.swift */; };
 		0B83725363C2BA21579362B8 /* PhotoMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */; };
 		15E52E28E0ED05A3C4EAA160 /* CullingPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27A5C736998E5CD0085DDFB /* CullingPreview.swift */; };
@@ -45,12 +46,14 @@
 		78BA7A3D14AF2634F4FE67DF /* OwnerActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6BF3154BB895E5C39B3747F /* OwnerActionRunner.swift */; };
 		798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */; };
 		8053F33F07AB4E516EE2751F /* UploadHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */; };
+		80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */; };
 		808980E6946D675224BB4745 /* BackstageHoverHelpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB09DA2CC82C31C203A11701 /* BackstageHoverHelpTests.swift */; };
 		80D469D47D09F049F250BC2F /* MetadataProposalSQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F3444A4411894A21B48E1B4 /* MetadataProposalSQLiteStoreTests.swift */; };
 		85C552A4DC7DAE3B98B0D2CE /* CullingWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */; };
 		87365082C0A6622A8755350E /* OwnerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */; };
 		878E1EB8EDF62208CE9C8323 /* OwnerAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */; };
 		88D3BAE82983A5520BD87C6A /* BackstageCodeSignatureVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E27EAC0D7AFD54514443059E /* BackstageCodeSignatureVerifier.swift */; };
+		8A483B3ECF615394AA36D3C4 /* PBEOwnerNativeHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */; };
 		909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AFF8771D0832D9829AB0B6 /* ReviewView.swift */; };
 		9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */; };
 		A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */; };
@@ -72,6 +75,7 @@
 		CFECE3B3F9C21CFCD5989E03 /* OwnerAssetSourceSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C640424A3D6239F86E519E55 /* OwnerAssetSourceSQLiteStore.swift */; };
 		D2FF10F005DE8E28105F5DD6 /* PBEOwnerNativeHostContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */; };
 		DC6F2F319C249E05C19FA365 /* OwnerConnectorIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */; };
+		DF59BAC48BF3C522B83B4DDE /* PBEOwnerNativeHostServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */; };
 		E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */; };
 		E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */; };
 		EB5F3BB74623800A27583BC1 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
@@ -145,10 +149,12 @@
 		2E049889FFB8A0BF84C78303 /* owner-api-examples.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "owner-api-examples.json"; sourceTree = "<group>"; };
 		2F3444A4411894A21B48E1B4 /* MetadataProposalSQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataProposalSQLiteStoreTests.swift; sourceTree = "<group>"; };
 		30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerReviewSQLiteStore.swift; sourceTree = "<group>"; };
+		354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostTests.swift; sourceTree = "<group>"; };
 		3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifecycleService.swift; sourceTree = "<group>"; };
 		3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureSelectionCoordinator.swift; sourceTree = "<group>"; };
 		402ECBBE805854840F33033B /* PhotosByElieBackstageApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosByElieBackstageApp.swift; sourceTree = "<group>"; };
 		45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingWorkspace.swift; sourceTree = "<group>"; };
+		47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerHTTPRequestParser.swift; sourceTree = "<group>"; };
 		49137FE1D2EA2ED58819AC14 /* PhotosByElieBackstage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotosByElieBackstage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageUpdateService.swift; sourceTree = "<group>"; };
 		4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHeaderView.swift; sourceTree = "<group>"; };
@@ -194,11 +200,13 @@
 		E74871E8B7478FC401020DCB /* OwnerDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerDatabase.swift; sourceTree = "<group>"; };
 		EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarDecisionService.swift; sourceTree = "<group>"; };
 		EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCanvasInspector.swift; sourceTree = "<group>"; };
+		EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostServer.swift; sourceTree = "<group>"; };
 		EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainVault.swift; sourceTree = "<group>"; };
 		EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostContract.swift; sourceTree = "<group>"; };
 		F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCTests.swift; sourceTree = "<group>"; };
 		F27A5C736998E5CD0085DDFB /* CullingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingPreview.swift; sourceTree = "<group>"; };
 		FA8AD5CA1281FA2C4BF57000 /* OwnerAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAuthenticationService.swift; sourceTree = "<group>"; };
+		FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostDispatcher.swift; sourceTree = "<group>"; };
 		FF8EABF201EF0173E66DCAA7 /* MetadataReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReviewService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -249,6 +257,7 @@
 				05C1D90ED6B8C10A8628C093 /* OwnerCullingSQLiteStoreTests.swift */,
 				A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */,
 				98D38D7A974EE7EDE80F9EA8 /* OwnerWorkflowRecoverySQLiteStoreTests.swift */,
+				354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */,
 				9B6F95FC0DE946577CA98F49 /* Fixtures */,
 			);
 			name = OwnerCoreTests;
@@ -351,7 +360,10 @@
 				30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */,
 				85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */,
 				1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */,
+				47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */,
 				EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */,
+				FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */,
+				EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */,
 				6F254F524C1CA93D37BE6A86 /* PhotoLibraryService.swift */,
 				6D22A8565B9B746CC8E87DED /* PhotoMetadataService.swift */,
 				EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */,
@@ -520,6 +532,7 @@
 				3FF329DD3D1B10F90A06F627 /* OwnerCullingSQLiteStoreTests.swift in Sources */,
 				247B8222C7EDA683C961F047 /* OwnerReviewSQLiteStoreTests.swift in Sources */,
 				F933F5273FBCB6B7A2578C4E /* OwnerWorkflowRecoverySQLiteStoreTests.swift in Sources */,
+				8A483B3ECF615394AA36D3C4 /* PBEOwnerNativeHostTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,7 +569,10 @@
 				A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */,
 				C67C7A0BF7DD5EBE6B74C035 /* OwnerSelectionModel.swift in Sources */,
 				64AA4D32E9F9D922B775FAA6 /* OwnerWorkflowRecoverySQLiteStore.swift in Sources */,
+				06BF9F3E1B8F2F373D4C041E /* PBEOwnerHTTPRequestParser.swift in Sources */,
 				D2FF10F005DE8E28105F5DD6 /* PBEOwnerNativeHostContract.swift in Sources */,
+				80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */,
+				DF59BAC48BF3C522B83B4DDE /* PBEOwnerNativeHostServer.swift in Sources */,
 				6BE053FCB45AE57072E5C5B5 /* PhotoLibraryService.swift in Sources */,
 				0B83725363C2BA21579362B8 /* PhotoMetadataService.swift in Sources */,
 				64B413FD3994202E49A1C3C0 /* SidecarDecisionService.swift in Sources */,

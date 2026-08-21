@@ -73,13 +73,21 @@ public struct PBEOwnerHTTPRequestParser: Sendable {
             }
             let name = String(line[..<separator]).lowercased()
             guard !name.isEmpty,
-                  name.unicodeScalars.allSatisfy({ CharacterSet.alphanumerics.contains($0) || $0 == "-" })
+                  name.utf8.allSatisfy({ byte in
+                      (byte >= 48 && byte <= 57)
+                          || (byte >= 97 && byte <= 122)
+                          || byte == 45
+                  })
             else { throw PBEOwnerHTTPRequestParserError.malformed }
             if sensitive.contains(name), headers[name] != nil {
                 throw PBEOwnerHTTPRequestParserError.duplicateSensitiveHeader(name)
             }
-            headers[name] = String(line[line.index(after: separator)...])
+            let value = String(line[line.index(after: separator)...])
                 .trimmingCharacters(in: .whitespaces)
+            guard value.unicodeScalars.allSatisfy({ scalar in
+                scalar.value == 9 || (scalar.value >= 32 && scalar.value != 127)
+            }) else { throw PBEOwnerHTTPRequestParserError.malformed }
+            headers[name] = value
         }
         guard headers["transfer-encoding"] == nil else {
             throw PBEOwnerHTTPRequestParserError.unsupportedTransferEncoding
@@ -93,6 +101,7 @@ public struct PBEOwnerHTTPRequestParser: Sendable {
         }
         guard length <= maximumBodyBytes else { throw PBEOwnerHTTPRequestParserError.bodyTooLarge }
         let body = Data(data[boundary.upperBound...])
+        guard body.count >= length else { throw PBEOwnerHTTPRequestParserError.incomplete }
         guard body.count == length else { throw PBEOwnerHTTPRequestParserError.bodyLengthMismatch }
         return PBEOwnerHTTPRequest(method: method, target: target, path: path, headers: headers, body: body)
     }

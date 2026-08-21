@@ -22,6 +22,7 @@ REQUIRED_FIXTURE_SCRIPTS = {
     "new_owner_connector_launch_agent.plist.in",
     "owner_connector_runtime.py",
     "pbe_owner_host_tracked_paths.txt",
+    "pbe_owner_web_bundle_paths.txt",
     "pbe_owner_session.py",
     "requested_ai_proposal_pass.py",
     "sidecar_server.py",
@@ -31,6 +32,15 @@ REQUIRED_FIXTURE_SCRIPTS = {
 RETIRED_FIXTURE_SCRIPTS = {
     "apple_photos_bridge.swift",
     "install_sidecar_photos_bridge_app.zsh",
+}
+FIXTURE_WEB_FILES = {
+    "gallery-commands.js",
+    "gallery.html",
+    "pbe-owner-session.js",
+    "photo.html",
+    "photos.css",
+    "shared.css",
+    "styles.css",
 }
 
 
@@ -58,6 +68,11 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                     ":(glob)scripts/**/*.py\ngallery.html\ngallery-commands.js\n",
                     encoding="utf-8",
                 )
+            elif name == "pbe_owner_web_bundle_paths.txt":
+                destination.write_text(
+                    "\n".join(sorted(FIXTURE_WEB_FILES)) + "\n",
+                    encoding="utf-8",
+                )
             elif name in {
                 "new_owner_connector.py",
                 "new_owner_connector_launch_agent.plist.in",
@@ -72,17 +87,16 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "raise AssertionError('tests must not ship')\n",
             encoding="utf-8",
         )
-        (source_root / "gallery.html").write_text(
-            "<!doctype html><title>Runtime fixture</title>\n",
-            encoding="utf-8",
-        )
-        (source_root / "gallery-commands.js").write_text(
-            "window.photosByElieGalleryCommands = { fixture: true };\n",
-            encoding="utf-8",
-        )
+        for name in sorted(FIXTURE_WEB_FILES):
+            content = (
+                "<!doctype html><title>Runtime fixture</title>\n"
+                if name.endswith(".html")
+                else "/* PBE Owner web fixture. */\n"
+            )
+            (source_root / name).write_text(content, encoding="utf-8")
         subprocess.run(["git", "init", "-q", str(source_root)], check=True)
         subprocess.run(
-            ["git", "-C", str(source_root), "add", "--", "scripts", "gallery.html", "gallery-commands.js"],
+            ["git", "-C", str(source_root), "add", "--", "scripts", *sorted(FIXTURE_WEB_FILES)],
             check=True,
         )
         subprocess.run(
@@ -230,6 +244,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 self.assertEqual(runtime_manifest["schemaVersion"], 2)
                 self.assertIn("gallery.html", runtime_manifest["pbeOwnerHost"]["files"])
                 self.assertIn("gallery-commands.js", runtime_manifest["pbeOwnerHost"]["files"])
+                web_bundle = runtime_manifest["pbeOwnerWebBundle"]
+                self.assertEqual(web_bundle["entrypoints"], ["gallery.html", "photo.html"])
+                self.assertEqual(
+                    [entry["path"] for entry in web_bundle["files"]],
+                    sorted(FIXTURE_WEB_FILES),
+                )
                 gallery_commands = runtime_root / "gallery-commands.js"
                 gallery_commands_entry = next(
                     entry for entry in runtime_manifest["files"] if entry["path"] == "gallery-commands.js"

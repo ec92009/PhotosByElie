@@ -1,0 +1,44 @@
+# Exact browser-only source scope for the Backstage-launched PBE Owner host.
+# Git pathspecs are evaluated from the repository root and expanded to exact,
+# hash-attested files in connector-runtime-manifest.json at packaging time.
+gallery.html
+photo.html
+site.webmanifest
+shared.css
+styles.css
+photos.css
+media-config.js
+photos.js
+owner-auth.js
+owner-tools.js
+site-version.js
+analytics.js
+catalog-sqlite.js
+photos-data.js
+shared-gallery-store.js
+assets/apple-photos/2025/2025-cordoba-la-mezquita/app-context.js
+assets/video-trial/cordoba/app-context.js
+assets/apple-photos/2026/2026-malaga-museo-ruso/app-context.js
+assets/apple-photos/2026/2026-nerja-caves/app-context.js
+assets/apple-photos/2025-2026-app-contexts.js
+pbe-owner-session.js
+hidden-actions.js
+reserve-store.js
+hidden-store.js
+basket-store.js
+liked-store.js
+gallery-card.js
+gallery-layout.js
+gallery-hero.js
+gallery-date-picker.js
+gallery-commands.js
+photo-gallery.js
+photo-detail.js
+basket-rail.js
+shared-gallery-visibility.mjs
+assets/branding/photosbyelie-camera-tripod-logo-512.png
+assets/branding/photosbyelie-touch-icon-180.png
+assets/branding/photosbyelie-app-icon-192.png
+assets/branding/photosbyelie-app-icon-512.png
+assets/branding/photosbyelie-maskable-icon-512.png
+assets/backgrounds/nerja-cave-bg.jpg

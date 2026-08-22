@@ -67,6 +67,27 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         load_config.assert_not_called()
         self.assertIn("always-on Owner connector daemon is retired", output.getvalue())
 
+    def test_successful_exact_action_uses_success_process_exit(self):
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector.process_direct_action",
+            return_value=1,
+        ) as process:
+            self.assertEqual(
+                new_owner_connector._run_connector(
+                    self.config,
+                    once=True,
+                    action_id="owner-action-one",
+                ),
+                0,
+            )
+
+        worker_client.return_value.heartbeat.assert_called_once_with()
+        process.assert_called_once_with(
+            self.config,
+            worker_client.return_value,
+            "owner-action-one",
+        )
+
     def test_runtime_modules_replace_mutable_checkout_shadows(self):
         with TemporaryDirectory() as runtime_temp, TemporaryDirectory() as checkout_temp:
             runtime_scripts = Path(runtime_temp) / "scripts"

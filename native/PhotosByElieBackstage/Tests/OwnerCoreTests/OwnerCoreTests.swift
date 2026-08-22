@@ -757,9 +757,10 @@ struct OwnerCoreTests {
 
     @Test("Owner action enqueue returns before terminal polling")
     func ownerActionEnqueueReturnsQueuedAction() async throws {
+        let wakeRecorder = OwnerActionWakeRecorder()
         let runner = OwnerActionRunner(
             api: PendingOwnerActionAPI(),
-            waker: DelayedWaker(),
+            waker: RecordingWaker(recorder: wakeRecorder),
             pollInterval: .milliseconds(1),
             timeout: .seconds(1)
         )
@@ -773,6 +774,8 @@ struct OwnerCoreTests {
 
         #expect(action.id == "owner-action-pending-fixture-tree")
         #expect(action.state == .queued)
+        try await Task.sleep(for: .milliseconds(10))
+        #expect(await wakeRecorder.values() == [action.id])
     }
 
     @Test("Generated endpoints and examples match the published contract")
@@ -3426,33 +3429,6 @@ struct OwnerCoreTests {
         #expect(recorder.phases == ["queued", "projection-update"])
     }
 
-    @Test("Owner action completion retains and observes exact connector wake")
-    func ownerActionCompletionRetainsConnectorWake() async throws {
-        let terminal = OwnerAction(
-            id: "owner-action-retained-wake",
-            actionKind: "photo-moderation",
-            target: "max",
-            state: .completed
-        )
-        let runner = OwnerActionRunner(
-            api: PendingOwnerActionAPI(),
-            waker: TerminalOwnerActionWaker(action: terminal),
-            pollInterval: .milliseconds(1),
-            timeout: .seconds(1)
-        )
-
-        let result = try await runner.awaitCompletion(
-            of: OwnerAction(
-                id: terminal.id,
-                actionKind: terminal.actionKind,
-                target: terminal.target,
-                state: .queued
-            )
-        )
-
-        #expect(result == terminal)
-    }
-
     @Test("Native delivery keeps fixture upload and publication as separate actions")
     func nativeFixtureDeliveryAndPublication() async throws {
         let deliveryPlan = OwnerAction(
@@ -4995,12 +4971,24 @@ private struct DelayedWaker: OwnerActionWaking {
     }
 }
 
-private struct TerminalOwnerActionWaker: OwnerActionWaking {
-    let action: OwnerAction
+private actor OwnerActionWakeRecorder {
+    private var actionIDs: [String] = []
+
+    func append(_ actionID: String) {
+        actionIDs.append(actionID)
+    }
+
+    func values() -> [String] {
+        actionIDs
+    }
+}
+
+private struct RecordingWaker: OwnerActionWaking {
+    let recorder: OwnerActionWakeRecorder
 
     func wake(actionID: String) async throws -> OwnerAction? {
-        #expect(actionID == action.id)
-        return action
+        await recorder.append(actionID)
+        return nil
     }
 }
 

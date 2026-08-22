@@ -2261,7 +2261,8 @@ def _run_connector(config: ConnectorConfig, *, once: bool, action_id: str = "") 
     client = WorkerClient(config)
     if action_id:
         client.heartbeat()
-        return process_direct_action(config, client, action_id)
+        process_direct_action(config, client, action_id)
+        return 0
     polling_lease = InteractivePollingLease()
     if not once:
         start_local_status_server(config, polling_lease, client)

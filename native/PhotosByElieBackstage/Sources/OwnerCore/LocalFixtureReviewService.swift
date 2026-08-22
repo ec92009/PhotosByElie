@@ -9,6 +9,12 @@ public protocol LocalFixtureReviewServing: Sendable {
     func undoReview(operationID: String) async throws -> FixtureReviewUndoResult
 }
 
+/// Native read support for the fixture hierarchy. Fixture selection is a
+/// local operator concern and must not depend on a cloud action round trip.
+public protocol LocalFixtureTreeReading: Sendable {
+    func nativeFixtureTree(includeArchived: Bool) async throws -> [FixtureNode]?
+}
+
 /// Native read support for the local Review service.
 ///
 /// The native Backstage path fails closed when Owner.sqlite cannot be resolved;
@@ -58,7 +64,7 @@ public protocol LocalFixtureCullingServing: Sendable {
     ) async throws -> [FixtureAssetState]?
 }
 
-public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureReviewReading, LocalFixtureCullingReading, LocalFixtureCullingServing {
+public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixtureTreeReading, LocalFixtureReviewReading, LocalFixtureCullingReading, LocalFixtureCullingServing {
     private let nativeDatabaseURL: URL?
 
     public init(
@@ -75,6 +81,12 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
 
     public func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
         try undoViaNativeSQLite(operationID: operationID)
+    }
+
+    public func nativeFixtureTree(
+        includeArchived: Bool
+    ) throws -> [FixtureNode]? {
+        try nativeFixtureStore().tree(includeArchived: includeArchived)
     }
 
     public func nativeReviewWindow(
@@ -214,6 +226,22 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             ))
         }
         return OwnerCullingSQLiteStore(databaseURL: nativeDatabaseURL)
+    }
+
+    private func nativeFixtureStore() throws -> OwnerFixtureSQLiteStore {
+        guard let nativeDatabaseURL else {
+            throw APIErrorEnvelope(error: .init(
+                code: "native_fixture_database_missing",
+                message: "Backstage could not resolve the native Fixture database."
+            ))
+        }
+        guard FileManager.default.fileExists(atPath: nativeDatabaseURL.path) else {
+            throw APIErrorEnvelope(error: .init(
+                code: "native_fixture_database_missing",
+                message: "Backstage could not find the native Fixture database."
+            ))
+        }
+        return OwnerFixtureSQLiteStore(databaseURL: nativeDatabaseURL)
     }
 
     private func requiredAction(

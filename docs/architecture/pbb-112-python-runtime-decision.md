@@ -30,12 +30,12 @@ dependency of native Backstage.
 
 | Entry point or boundary | Current reachability | Classification | Decision |
 | --- | --- | --- | --- |
-| `LocalFixtureReviewService` -> `OwnerReviewSQLiteStore` | Native Review reads, Apply, and Undo; native Culling reads and placement writes use the corresponding SQLite store | Interactive runtime-critical (Swift) | Keep the direct OwnerCore transaction. It preserves the existing SQLite tables, snapshots, receipts, conflict checks, fixture scope, and timing fields. An unresolved database fails closed; it does not select Python, HTTP, or the generic action runner. |
+| `LocalFixtureReviewService` -> native Owner SQLite stores | Native fixture-tree, Review, and Culling reads; Review Apply/Undo and Culling placement writes | Interactive runtime-critical (Swift) | Keep the direct OwnerCore transaction. It preserves the existing SQLite tables, snapshots, receipts, conflict checks, fixture scope, and timing fields. An unresolved database fails closed; it does not select Python, HTTP, or the generic action runner. Fixture selection must not wait on a cloud action or connector wake. |
 | `MetadataReviewService` -> `MetadataProposalSQLiteStore` | The native Metadata proposal table and saved model ladder read authoritative `Owner.sqlite` | Interactive runtime-critical read (Swift) | Keep the read-only SQLite snapshot and fail closed when the database cannot be resolved. Approve, Reject, Block, direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. The native table must not depend on the retired localhost helper. |
 | `OwnerWorkflowRecoverySQLiteStore` | Backstage bootstrap classifies stale Photos sync and Upload Bridge bookkeeping | Interactive runtime-critical maintenance (Swift) | Keep one short native SQLite transaction. Legacy rows without durable worker identity remain nonterminal and are marked `needs-review`; only a stale row whose recorded worker is verifiably gone becomes interrupted/failed. This policy must not depend on launching the retired Python local host. |
 | `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-106; do not restore a daemon to support it. |
 | `LocalOwnerActionWaker` -> localhost `wake-owner-action` | Former native fallback to the daemon/status server | Legacy/removable daemon coupling | Removed. Native Backstage has no localhost wake client; the action-scoped waker is the only production `OwnerActionWaking` implementation. |
-| `OwnerActionRunner` | Native Culling, fixture, Photos sync, uploads, delivery, publication, and proposal actions through the Worker action contract | External connector compatibility | Keep the authorization boundary and opaque action IDs. The implementation may use the action-scoped connector until its individual capability has a verified native or dedicated bridge replacement. |
+| `OwnerActionRunner` | Fixture mutations plus Photos sync, uploads, delivery, publication, and proposal actions through the Worker action contract | External connector compatibility | Keep the authorization boundary and opaque action IDs for work that crosses it. The implementation may use the action-scoped connector until its individual capability has a verified native or dedicated bridge replacement. The fixture-tree read no longer crosses this boundary. |
 | `LocalOwnerConnectorIdentity` | Selects the connector authority attached to new Worker actions | Interactive runtime-critical (Swift) | Use the explicit non-secret authority target (`max` by default). Do not contact a daemon or read the credential-bearing connector config; a future writer migration must inject a rehearsed target. |
 | `PBEOwnerHostClient` -> `scripts/local_server.py` | PBB launches one loopback PBE Owner web host after the user presses Open | Interactive compatibility boundary | Retain temporarily for the explicit web session. PBB owns the child, fixture lease, bootstrap secret, and shutdown; closing PBB drains started durable work and terminates the host. It is not a daemon or idle dependency. PBB-114 owns its native replacement. |
 | `PhotoLibraryService` and `PhotoMetadataService` | Photos authorization, previews, exports, and approved metadata writes | Interactive runtime-critical (Swift) | Keep in the signed Backstage bundle. There is no separately installed Photos helper and no Python on this path. |
@@ -94,6 +94,11 @@ The Swift `OwnerReviewSQLiteStore` and `OwnerCullingSQLiteStore` now own the
 interactive transaction, snapshot validation, event recording, and guarded
 Undo contract. `scripts/fixture_pipeline.py` remains a bounded connector and
 parity/tooling implementation, not a fallback selected by native Backstage.
+
+The fixture picker now reads the hierarchy through `OwnerFixtureSQLiteStore`.
+This removes a startup dependency on a queued `fixture-tree-list` action and
+prevents slower proposal/status actions from consuming the fixture refresh
+deadline. Fixture mutations remain audited Worker actions.
 
 ## Timing result
 

@@ -1074,6 +1074,13 @@ public actor FixtureWorkflowService {
     }
 
     public func tree(includeArchived: Bool = true) async throws -> [FixtureNode] {
+        if let localReviewService,
+           let localFixtureReader = localReviewService as? any LocalFixtureTreeReading,
+           let localTree = try await localFixtureReader.nativeFixtureTree(
+               includeArchived: includeArchived
+           ) {
+            return localTree
+        }
         let result = try await run("fixture-tree-list", extra: [
             "includeArchived": .bool(includeArchived),
         ], completionTimeout: fixtureTreeTimeout)

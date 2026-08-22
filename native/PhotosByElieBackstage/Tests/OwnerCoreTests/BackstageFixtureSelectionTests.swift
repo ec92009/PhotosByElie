@@ -269,6 +269,154 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewSelection.selectedIDs.contains(model.reviewSelection.focusedID!))
     }
 
+    @Test("Review Waste Basket X records a same-session Undo restore")
+    @MainActor
+    func reviewWasteBasketXRecordsUndoRestore() async throws {
+        let first = FixtureReviewItem(
+            id: "review-first",
+            photoLibraryIdentifier: "photos-review-first",
+            title: "First",
+            keywords: [],
+            filename: "first.jpg",
+            capturedAt: "2026-08-17T10:00:00Z"
+        )
+        let second = FixtureReviewItem(
+            id: "review-second",
+            photoLibraryIdentifier: "photos-review-second",
+            title: "Second",
+            keywords: [],
+            filename: "second.jpg",
+            capturedAt: "2026-08-17T10:00:01Z"
+        )
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-review-x",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+            OwnerAction(
+                id: "owner-action-review-restore",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+        ])
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.reviewMode = .full
+        model.reviewStateFilters = [.picked]
+        model.fixtureReviewWindow = FixtureReviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            reviewStateFilters: ["picked"],
+            offset: 0,
+            limit: 200,
+            nextOffset: 0,
+            hasNext: false,
+            summary: FixtureReviewSummary(
+                total: 2,
+                unreviewed: 2,
+                requestingAI: 0,
+                proposed: 0,
+                approved: 0
+            ),
+            items: [first, second]
+        )
+        model.reviewSelection = OwnerSelectionModel(
+            orderedIDs: [first.id, second.id],
+            selectedIDs: [first.id],
+            anchorID: first.id,
+            focusedID: first.id
+        )
+
+        await model.moveReviewSelectionToWasteBasket()
+        for _ in 0..<200 where model.reviewHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.reviewHistory.last?.wasteBasketMediaIDs == [first.id])
+        #expect(model.reviewItems.map(\.id) == [second.id])
+
+        await model.undoLastReviewAction()
+
+        #expect(model.reviewHistory.isEmpty)
+        #expect(model.reviewItems.map(\.id) == [first.id, second.id])
+        #expect(model.reviewSelection.selectedIDs == [first.id])
+        #expect(model.reviewStatus.contains("Restored 1 item from Waste Basket"))
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-x",
+            "waste-basket-restore",
+        ])
+    }
+
+    @Test("Waste Basket Put back keeps its completion receipt visible")
+    @MainActor
+    func wasteBasketPutBackKeepsCompletionReceiptVisible() async {
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-put-back",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+            OwnerAction(
+                id: "owner-action-ledger-refresh",
+                actionKind: "sidecar-culling-review",
+                target: "max",
+                state: .completed,
+                result: [
+                    "lifecycle": [
+                        "items": [],
+                        "hiddenCount": 0,
+                        "discardedCount": 0,
+                    ],
+                ]
+            ),
+        ])
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.lifecycleItems = [LifecycleItem(json: [
+            "mediaId": "review-first",
+            "state": "hidden",
+            "title": "First",
+        ])]
+        model.selectedLifecycleIDs = ["review-first"]
+
+        await model.restoreLifecycleSelection()
+
+        #expect(model.lifecycleItems.isEmpty)
+        #expect(model.lifecycleStatus.contains("Restored 1 item"))
+        #expect(model.lifecycleStatus.contains("owner-action-put-back"))
+    }
+
     @Test("Refresh previews reports immediate progress and prevents duplicate requests")
     @MainActor
     func refreshPhotosReportsProgressAndGuardsDuplicates() async throws {
@@ -560,6 +708,41 @@ private struct RejectingFixtureSelectionWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         throw CancellationError()
     }
+}
+
+private actor ReviewLifecycleActionAPI: OwnerActionServing {
+    private var terminalActions: [OwnerAction]
+    private var createdRequests: [OwnerActionCreate] = []
+
+    init(terminalActions: [OwnerAction]) {
+        self.terminalActions = terminalActions
+    }
+
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        let terminal = terminalActions[createdRequests.count]
+        createdRequests.append(action)
+        return OwnerActionEnvelope(
+            action: OwnerAction(
+                id: terminal.id,
+                actionKind: action.actionKind,
+                target: action.target,
+                state: .queued
+            ),
+            idempotencyReplayed: false
+        )
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        guard let action = terminalActions.first(where: { $0.id == id }) else {
+            throw URLError(.resourceUnavailable)
+        }
+        return action
+    }
+
+    func requests() -> [OwnerActionCreate] { createdRequests }
 }
 
 private struct StaticLocalFixtureTree: LocalFixtureReviewServing, LocalFixtureTreeReading {

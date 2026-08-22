@@ -41,6 +41,7 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var id = UUID()
     var operationID: String = ""
     var fixtureChanges: [FixtureAssetState] = []
+    var wasteBasketMediaIDs: [String] = []
     var label: String
     var fixtureID: String
     var mode: FixtureReviewMode
@@ -518,6 +519,7 @@ final class BackstageViewModel: ObservableObject {
         updateService: BackstageUpdateService = BackstageUpdateService(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
+        lifecycleService: LifecycleService? = nil,
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
             .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:)),
@@ -567,7 +569,7 @@ final class BackstageViewModel: ObservableObject {
             runner: runner,
             connectorIdentity: LocalOwnerConnectorIdentity()
         )
-        self.lifecycleService = LifecycleService(runner: runner)
+        self.lifecycleService = lifecycleService ?? LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost ?? PBEOwnerNativeHostService(
             api: api,
@@ -3132,6 +3134,26 @@ final class BackstageViewModel: ObservableObject {
         let fixtureID = selectedFixtureID
         let focusedID = reviewSelection.focusedID ?? ids.first
         let previousIDs = reviewItems.map(\.id)
+        let historyEntry = ReviewHistoryEntry(
+            wasteBasketMediaIDs: ids,
+            label: "Waste Basket",
+            fixtureID: selectedFixtureID,
+            mode: reviewMode,
+            stateFilters: reviewStateFilters,
+            proposalAvailableOnly: reviewProposalAvailableOnly,
+            mediaFilters: reviewMediaFilters,
+            search: reviewSearch,
+            offset: reviewWindowOffset,
+            selectedIDs: reviewSelection.selectedIDs,
+            anchorID: reviewSelection.anchorID,
+            focusedID: reviewSelection.focusedID,
+            reviewItems: reviewItems.filter { ids.contains($0.id) },
+            reviewItemIndexes: Dictionary(
+                uniqueKeysWithValues: reviewItems.enumerated().compactMap { index, item in
+                    ids.contains(item.id) ? (item.id, index) : nil
+                }
+            )
+        )
         reviewWasteBasketQueueing = true
         reviewStatus = "Submitting X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s")… Review remains available."
         reviewWasteBasketMonitorTask = Task { @MainActor [weak self] in
@@ -3160,6 +3182,10 @@ final class BackstageViewModel: ObservableObject {
                     }
                     self.reviewWasteBasketPendingActionID = nil
                     self.reviewWasteBasketPendingAction = nil
+                    self.reviewHistory.append(historyEntry)
+                    if self.reviewHistory.count > 100 {
+                        self.reviewHistory.removeFirst(self.reviewHistory.count - 100)
+                    }
                     guard var window = self.fixtureReviewWindow else {
                         self.reviewStatus = "Review window is no longer available; X action \(action.id) completed."
                         self.reviewWasteBasketMonitorTask = nil
@@ -3691,6 +3717,29 @@ final class BackstageViewModel: ObservableObject {
         reviewStatus = "Undoing \(entry.label.lowercased())…"
         defer { isRunningReview = false }
         do {
+            if !entry.wasteBasketMediaIDs.isEmpty {
+                let action = try await lifecycleService.restore(
+                    mediaIDs: entry.wasteBasketMediaIDs
+                )
+                reviewHistory.removeLast()
+                if selectedFixtureID == entry.fixtureID {
+                    reviewMode = entry.mode
+                    reviewStateFilters = entry.stateFilters
+                    reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                    reviewMediaFilters = entry.mediaFilters
+                    reviewSearch = entry.search
+                    reviewWindowOffset = entry.offset
+                    if !restoreWasteBasketReviewEntryInCurrentWindow(entry) {
+                        await loadFixtureReviewWindow(
+                            preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
+                        )
+                    }
+                } else if !selectedFixtureID.isEmpty {
+                    await loadFixtureReviewWindow()
+                }
+                reviewStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                return
+            }
             if !entry.fixtureChanges.isEmpty {
                 let grouped = Dictionary(
                     grouping: entry.fixtureChanges,
@@ -3783,6 +3832,48 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             reviewStatus = "Undo failed: \(error)"
         }
+    }
+
+    /// Reinsert same-session Review X items without a full queue reload. The
+    /// authoritative restore has already committed before this cache repair.
+    private func restoreWasteBasketReviewEntryInCurrentWindow(
+        _ entry: ReviewHistoryEntry
+    ) -> Bool {
+        guard var window = fixtureReviewWindow,
+              window.fixtureID == entry.fixtureID,
+              window.mode == entry.mode else {
+            return false
+        }
+        let restoredIDs = Set(entry.wasteBasketMediaIDs)
+        var items = window.items.filter { !restoredIDs.contains($0.id) }
+        for item in entry.reviewItems.sorted(by: {
+            entry.reviewItemIndexes[$0.id, default: .max]
+                < entry.reviewItemIndexes[$1.id, default: .max]
+        }) {
+            let index = min(entry.reviewItemIndexes[item.id, default: items.count], items.count)
+            items.insert(item, at: index)
+        }
+        window.items = items
+        fixtureReviewWindow = window
+        hydrateReviewProposalDrafts(from: entry.reviewItems)
+        let orderedIDs = items.map(\.id)
+        let selectedIDs = entry.selectedIDs.intersection(orderedIDs)
+        let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? selectedIDs.first
+            ?? orderedIDs.first
+        let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? focusedID
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: selectedIDs.isEmpty
+                ? Set(focusedID.map { [$0] } ?? [])
+                : selectedIDs,
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        reviewScrollTargetID = focusedID
+        syncReviewDraft()
+        return true
     }
 
     func saveReviewMetadata() async {
@@ -4814,8 +4905,8 @@ final class BackstageViewModel: ObservableObject {
         defer { isRunningLifecycle = false }
         do {
             let action = try await lifecycleService.restore(mediaIDs: ids)
-            lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
             await loadLifecycle()
+            lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
         }

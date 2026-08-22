@@ -217,6 +217,7 @@ struct PBEOwnerNativeHTTPHostTests {
 
     @Test("Native session routes preserve host, bearer, handoff, and cookie authorities")
     func nativeSessionRoutes() async throws {
+        let readinessCalls = PBEOwnerReadinessCallCounter()
         let readiness = PBEOwnerHostReadiness(
             ready: true,
             sourceIdentity: "source-one",
@@ -290,6 +291,7 @@ struct PBEOwnerNativeHTTPHostTests {
             }
         ) { fixtureID in
             #expect(fixtureID == "expo")
+            await readinessCalls.increment()
             return readiness
         }
         let dispatcher = PBEOwnerNativeHostDispatcher(
@@ -408,12 +410,14 @@ struct PBEOwnerNativeHTTPHostTests {
         #expect(previewResponse.statusCode == 200)
         #expect(previewResponse.headers["Content-Type"] == "image/jpeg")
         #expect(previewResponse.body == Data([0xff, 0xd8, 0x01, 0xff, 0xd9]))
+        let readinessCountAfterFirstPreview = await readinessCalls.value
 
         let encodedOpaqueID = await dispatcher.dispatch(try request(
             "GET /__photosbyelie/source-preview/asset%2Ftwo HTTP/1.1\r\n"
                 + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
         ))
         #expect(encodedOpaqueID.statusCode == 200)
+        #expect(await readinessCalls.value == readinessCountAfterFirstPreview)
 
         let pathInjection = await dispatcher.dispatch(try request(
             "GET /__photosbyelie/source-preview/asset/two HTTP/1.1\r\n"
@@ -603,5 +607,13 @@ private struct PBEOwnerFixedCloudVerifier: PBEOwnerCloudSessionVerifying {
             )
         }
         return session
+    }
+}
+
+private actor PBEOwnerReadinessCallCounter {
+    private(set) var value = 0
+
+    func increment() {
+        value += 1
     }
 }

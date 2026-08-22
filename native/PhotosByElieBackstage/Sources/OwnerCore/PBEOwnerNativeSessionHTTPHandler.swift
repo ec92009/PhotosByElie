@@ -360,7 +360,9 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 "The native PBE Owner source preview reader is not configured."
             )
         }
-        let session = try await authorizeBrowser(request)
+        let session = try await sessionStore.authorizeFrozenBrowser(
+            browserSession: try browserCookie(request)
+        )
         guard let components = URLComponents(
             string: "http://127.0.0.1\(request.target)"
         ) else {

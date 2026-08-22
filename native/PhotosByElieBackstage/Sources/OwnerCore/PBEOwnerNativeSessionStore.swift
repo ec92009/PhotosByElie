@@ -131,6 +131,22 @@ public actor PBEOwnerNativeSessionStore {
         return contract(current)
     }
 
+    /// Authorizes an immutable media read against the already-frozen browser
+    /// session. Source previews are additionally constrained by the session's
+    /// frozen gallery membership, so recomputing the full SQLite readiness
+    /// fingerprint for every image would add no authorization boundary while
+    /// serializing hundreds of otherwise independent thumbnail requests.
+    public func authorizeFrozenBrowser(
+        browserSession: String
+    ) throws -> PBEOwnerSessionContract {
+        let current = try activeLease()
+        guard !browserSessionHash.isEmpty,
+              constantTimeEqual(browserSessionHash, hash(clean(browserSession))) else {
+            throw failure("pbe_owner_session_inactive", 401)
+        }
+        return contract(current)
+    }
+
     public func authorizeHost(
         token: String,
         cloudSession: PBEOwnerSessionContract,

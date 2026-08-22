@@ -13,6 +13,7 @@ const galleryHtml = read("gallery.html");
 const photoHtml = read("photo.html");
 const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
+const galleryCardJs = read("gallery-card.js");
 const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
@@ -78,6 +79,14 @@ test("contextual gallery bar replaces the passive hint and owns view commands", 
   assert.match(photosCss, /html\[data-gallery-action-labels="true"\] \.gallery-command-label/);
   assert.match(photosCss, /html\.is-tap-first \.gallery-command-shortcut/);
   assert.match(galleryJs, /document\.body\.append\(topButton\)/);
+});
+
+test("gallery cards bound native Owner preview bursts and retry transient failures", () => {
+  assert.match(galleryCardJs, /loading="lazy" decoding="async"/);
+  assert.match(galleryCardJs, /const ownerPreviewRetryDelays = \[250, 750, 1500\]/);
+  assert.match(galleryCardJs, /source\.pathname\.startsWith\("\/__photosbyelie\/source-preview\/"\)/);
+  assert.match(galleryCardJs, /source\.searchParams\.set\("retry", String\(retry \+ 1\)\)/);
+  assert.match(galleryCardJs, /if \(retryOwnerPreview\(image\)\) return;/);
 });
 
 test("selection, round-trip state, and Quick Look follow the integrated contract", () => {

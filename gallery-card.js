@@ -187,7 +187,7 @@
     const photoAspectStyle = window.photosByEliePhotoAspectStyle?.(photo) || "";
     const photoOpenLabel = `Open ${title}`;
     const mediaHtml = `
-      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" data-caption-sample-src="${escapeHtml(sampleImage)}"${imageColorState} data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
+      ${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" decoding="async" data-caption-sample-src="${escapeHtml(sampleImage)}"${imageColorState} data-photo-card-image/>` : `<span>${title || escapeHtml(missingLabel)}</span>`}
       ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       ${originBadgeHtml(origin, originLabel, isVideo)}
@@ -218,8 +218,31 @@
     `;
   };
 
+  const ownerPreviewRetryDelays = [250, 750, 1500];
+
+  const retryOwnerPreview = (image) => {
+    if (!image?.src || !["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)) return false;
+    let source;
+    try {
+      source = new URL(image.currentSrc || image.src, window.location.href);
+    } catch {
+      return false;
+    }
+    if (source.origin !== window.location.origin
+        || !source.pathname.startsWith("/__photosbyelie/source-preview/")) return false;
+    const retry = Number(image.dataset.ownerPreviewRetry || 0);
+    if (!Number.isInteger(retry) || retry >= ownerPreviewRetryDelays.length) return false;
+    image.dataset.ownerPreviewRetry = String(retry + 1);
+    source.searchParams.set("retry", String(retry + 1));
+    window.setTimeout(() => {
+      if (image.isConnected && image.dataset.previewMissing !== "true") image.src = source.href;
+    }, ownerPreviewRetryDelays[retry]);
+    return true;
+  };
+
   const markPreviewMissing = (image) => {
     if (!image || image.dataset.previewMissing === "true") return;
+    if (retryOwnerPreview(image)) return;
     image.dataset.previewMissing = "true";
     const media = image.closest?.("[data-photo-link]");
     if (!media) return;

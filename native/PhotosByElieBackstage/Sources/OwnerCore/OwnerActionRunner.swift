@@ -184,6 +184,11 @@ public enum OwnerActionRunError: Error, Sendable, Equatable {
     case timedOut
 }
 
+private enum OwnerActionCompletionEvent: Sendable {
+    case wakeFinished(OwnerAction?)
+    case terminal(OwnerAction)
+}
+
 extension OwnerActionRunError: LocalizedError {
     public var errorDescription: String? {
         switch self {
@@ -205,6 +210,7 @@ public actor OwnerActionRunner {
     private let pollInterval: Duration
     private let timeout: Duration
     private let clock = ContinuousClock()
+    private var accelerationTasks: [String: Task<Void, Never>] = [:]
 
     public init(
         api: any OwnerActionServing,
@@ -241,15 +247,24 @@ public actor OwnerActionRunner {
         return envelope.action
     }
 
-    /// Ask the enrolled on-demand connector to claim one already-durable
-    /// action without waiting for terminal state. Worker polling remains the
-    /// source of truth and a wake failure never makes the durable action false.
+    /// Retain each one-shot wake until it exits. PBE Owner's native action
+    /// bridge uses this path without a separate terminal monitor.
     public func accelerate(_ action: OwnerAction) {
+        guard accelerationTasks[action.id] == nil else { return }
         let waker = self.waker
         let actionID = action.id
-        Task.detached(priority: .utility) {
+        let task = Task.detached(priority: .utility) {
             _ = try? await waker.wake(actionID: actionID)
         }
+        accelerationTasks[actionID] = task
+        Task { [weak self] in
+            await task.value
+            await self?.finishAcceleration(actionID)
+        }
+    }
+
+    private func finishAcceleration(_ actionID: String) {
+        accelerationTasks.removeValue(forKey: actionID)
     }
 
     public func awaitCompletion(
@@ -258,37 +273,79 @@ public actor OwnerActionRunner {
         onUpdate: (@Sendable (OwnerAction) -> Void)? = nil
     ) async throws -> OwnerAction {
         let deadline = clock.now.advanced(by: completionTimeout ?? timeout)
-        var action = queued
-        onUpdate?(action)
+        let api = self.api
+        let waker = self.waker
+        let pollInterval = self.pollInterval
+        let clock = self.clock
+        onUpdate?(queued)
 
-        // The local connector wake is only an acceleration hint. Fire it in
-        // the background and let the durable Worker poll remain the source of
-        // truth, so a slow PhotoKit/SQLite/connector operation never blocks
-        // the native action monitor or its UI.
-        accelerate(action)
+        // Keep the on-demand wake inside the structured lifetime of this
+        // monitor. It remains concurrent with Worker polling, but cannot be
+        // discarded while the durable action sits queued with no daemon.
+        return try await withThrowingTaskGroup(of: OwnerActionCompletionEvent.self) { group in
+            group.addTask(priority: .utility) {
+                do {
+                    return .wakeFinished(try await waker.wake(actionID: queued.id))
+                } catch {
+                    // A wake is an acceleration hint. The durable Worker state
+                    // remains authoritative and may still complete through an
+                    // already-running connector or a synthetic test service.
+                    return .wakeFinished(nil)
+                }
+            }
+            group.addTask {
+                var action = queued
+                while true {
+                    try Task.checkCancellation()
+                    switch action.state {
+                    case .completed:
+                        return .terminal(action)
+                    case .failed:
+                        let message = action.error?["message"]?.stringValue
+                            ?? action.error?["code"]?.stringValue
+                            ?? "Owner action failed."
+                        throw OwnerActionRunError.failed(message)
+                    case .cancelled:
+                        throw OwnerActionRunError.cancelled
+                    case .queued, .claimed, .running:
+                        break
+                    }
+                    guard clock.now < deadline else {
+                        throw OwnerActionRunError.timedOut
+                    }
+                    let remaining = deadline - clock.now
+                    try await clock.sleep(for: min(pollInterval, remaining))
+                    action = try await api.getAction(id: action.id)
+                    onUpdate?(action)
+                }
+            }
 
-        while true {
-            try Task.checkCancellation()
-            switch action.state {
-            case .completed:
-                return action
-            case .failed:
-                let message = action.error?["message"]?.stringValue
-                    ?? action.error?["code"]?.stringValue
-                    ?? "Owner action failed."
-                throw OwnerActionRunError.failed(message)
-            case .cancelled:
-                throw OwnerActionRunError.cancelled
-            case .queued, .claimed, .running:
-                break
+            while let event = try await group.next() {
+                switch event {
+                case let .terminal(action):
+                    group.cancelAll()
+                    return action
+                case let .wakeFinished(action?):
+                    onUpdate?(action)
+                    switch action.state {
+                    case .completed:
+                        group.cancelAll()
+                        return action
+                    case .failed:
+                        let message = action.error?["message"]?.stringValue
+                            ?? action.error?["code"]?.stringValue
+                            ?? "Owner action failed."
+                        throw OwnerActionRunError.failed(message)
+                    case .cancelled:
+                        throw OwnerActionRunError.cancelled
+                    case .queued, .claimed, .running:
+                        continue
+                    }
+                case .wakeFinished(nil):
+                    continue
+                }
             }
-            guard clock.now < deadline else {
-                throw OwnerActionRunError.timedOut
-            }
-            let remaining = deadline - clock.now
-            try await clock.sleep(for: min(pollInterval, remaining))
-            action = try await api.getAction(id: action.id)
-            onUpdate?(action)
+            throw OwnerActionRunError.timedOut
         }
     }
 

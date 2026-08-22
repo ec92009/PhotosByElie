@@ -3426,6 +3426,33 @@ struct OwnerCoreTests {
         #expect(recorder.phases == ["queued", "projection-update"])
     }
 
+    @Test("Owner action completion retains and observes exact connector wake")
+    func ownerActionCompletionRetainsConnectorWake() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-retained-wake",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed
+        )
+        let runner = OwnerActionRunner(
+            api: PendingOwnerActionAPI(),
+            waker: TerminalOwnerActionWaker(action: terminal),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+
+        let result = try await runner.awaitCompletion(
+            of: OwnerAction(
+                id: terminal.id,
+                actionKind: terminal.actionKind,
+                target: terminal.target,
+                state: .queued
+            )
+        )
+
+        #expect(result == terminal)
+    }
+
     @Test("Native delivery keeps fixture upload and publication as separate actions")
     func nativeFixtureDeliveryAndPublication() async throws {
         let deliveryPlan = OwnerAction(
@@ -4965,6 +4992,15 @@ private struct DelayedWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         try await Task.sleep(for: .seconds(10))
         return nil
+    }
+}
+
+private struct TerminalOwnerActionWaker: OwnerActionWaking {
+    let action: OwnerAction
+
+    func wake(actionID: String) async throws -> OwnerAction? {
+        #expect(actionID == action.id)
+        return action
     }
 }
 

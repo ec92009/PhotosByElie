@@ -286,7 +286,14 @@ def load_config(path: Path) -> ConnectorConfig:
     connector_id = _clean_connector_id(payload.get("connectorId"))
     token = str(payload.get("token") or "").strip()
     repo_root = Path(str(payload.get("repoRoot") or "")).expanduser().resolve()
-    runtime_value = str(payload.get("runtimeRoot") or "").strip()
+    # A bounded Backstage launch pins the connector to the signed runtime that
+    # shipped inside the app.  The persisted config can legitimately point at
+    # an older rollback runtime, so the explicit launch environment must win.
+    runtime_value = str(
+        os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT")
+        or payload.get("runtimeRoot")
+        or ""
+    ).strip()
     interval = max(2, min(300, int(payload.get("intervalSeconds") or DEFAULT_INTERVAL_SECONDS)))
     local_status_port = max(0, min(65535, int(payload.get("localStatusPort") or DEFAULT_LOCAL_STATUS_PORT)))
     if not worker_base.startswith("https://"):

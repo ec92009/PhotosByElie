@@ -160,6 +160,41 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 new_owner_connector.main()
         self.assertIn("must use --once", str(raised.exception))
 
+    def test_signed_runtime_environment_overrides_stale_config_runtime(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            repo_root = root / "repo"
+            stale_runtime = root / "stale-runtime"
+            signed_runtime = root / "signed-runtime"
+            repo_root.mkdir()
+            stale_runtime.mkdir()
+            signed_runtime.mkdir()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(repo_root),
+                    "runtimeRoot": str(stale_runtime),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {"PBE_CONNECTOR_RUNTIME_ROOT": str(signed_runtime)},
+            ), patch(
+                "scripts.new_owner_connector.validate_runtime"
+            ) as validate_runtime:
+                validate_runtime.return_value.revision = "a" * 40
+                validate_runtime.return_value.file_count = 12
+                validate_runtime.return_value.manifest_sha256 = "b" * 64
+                config = new_owner_connector.load_config(config_path)
+
+            validate_runtime.assert_called_once_with(signed_runtime)
+            self.assertEqual(config.runtime_root, signed_runtime.resolve())
+
     def test_bounded_connector_drain_uses_a_shared_nonblocking_process_lock(self):
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

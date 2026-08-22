@@ -188,6 +188,16 @@ struct PBEOwnerNativeHTTPHostTests {
                     mediaAvailability: .init(photos: 1, videos: 0),
                     items: []
                 )
+            },
+            previewProvider: { session, assetID in
+                #expect(session.fixtureId == "expo")
+                #expect(assetID == "asset-one")
+                return PBEOwnerNativePreview(
+                    assetId: assetID,
+                    jpegData: Data([0xff, 0xd8, 0x01, 0xff, 0xd9]),
+                    pixelWidth: 100,
+                    pixelHeight: 80
+                )
             }
         ) { fixtureID in
             #expect(fixtureID == "expo")
@@ -291,6 +301,26 @@ struct PBEOwnerNativeHTTPHostTests {
         let galleryBody = try #require(galleryJSON["gallery"] as? [String: Any])
         #expect(galleryBody["fixtureId"] as? String == "expo")
         #expect(galleryBody["readOnly"] as? Bool == true)
+
+        let unauthorizedPreview = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/source-preview/asset-one HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\n\r\n"
+        ))
+        #expect(unauthorizedPreview.statusCode == 401)
+
+        let previewResponse = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/source-preview/asset-one HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(previewResponse.statusCode == 200)
+        #expect(previewResponse.headers["Content-Type"] == "image/jpeg")
+        #expect(previewResponse.body == Data([0xff, 0xd8, 0x01, 0xff, 0xd9]))
+
+        let pathInjection = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/source-preview/asset%2Ftwo HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(pathInjection.statusCode == 400)
 
         let heartbeatResponse = await dispatcher.dispatch(try request(
             jsonRequest(

@@ -7,6 +7,10 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     public typealias GalleryProvider = @Sendable (
         PBEOwnerSessionContract
     ) async throws -> PBEOwnerNativeGallery
+    public typealias PreviewProvider = @Sendable (
+        PBEOwnerSessionContract,
+        String
+    ) async throws -> PBEOwnerNativePreview
 
     private struct HostBootstrapRequest: Decodable { var expectedCheckoutIdentity: String }
     private struct HostBootstrapEnvelope: Encodable {
@@ -57,12 +61,14 @@ public actor PBEOwnerNativeSessionHTTPHandler {
 
     private static let browserCookie = "pbe_owner_browser"
     private static let cookiePath = "/__photosbyelie/pbe-owner"
+    private static let sourcePreviewPath = "/__photosbyelie/source-preview/"
 
     private let checkoutIdentity: String
     private let sessionStore: PBEOwnerNativeSessionStore
     private let verifier: any PBEOwnerCloudSessionVerifying
     private let readinessProvider: ReadinessProvider
     private let galleryProvider: GalleryProvider?
+    private let previewProvider: PreviewProvider?
     private var bootstrapHash: String
     private var hostAuthorizationHash = ""
 
@@ -72,6 +78,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         sessionStore: PBEOwnerNativeSessionStore = .init(),
         verifier: any PBEOwnerCloudSessionVerifying = PBEOwnerCloudSessionVerifier(),
         galleryProvider: GalleryProvider? = nil,
+        previewProvider: PreviewProvider? = nil,
         readinessProvider: @escaping ReadinessProvider
     ) {
         let bootstrapSecret = Self.clean(bootstrapSecret)
@@ -79,6 +86,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         self.sessionStore = sessionStore
         self.verifier = verifier
         self.galleryProvider = galleryProvider
+        self.previewProvider = previewProvider
         self.readinessProvider = readinessProvider
         self.bootstrapHash = bootstrapSecret.isEmpty ? "" : Self.hash(bootstrapSecret)
     }
@@ -122,6 +130,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 return try await closeSession(request)
             case ("GET", "/__photosbyelie/pbe-owner/gallery"):
                 return try await gallery(request)
+            case ("GET", let path) where path.hasPrefix(Self.sourcePreviewPath):
+                return try await sourcePreview(request)
             default:
                 return await unsupportedRoute(request, route: route)
             }
@@ -312,6 +322,51 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         )
     }
 
+    private func sourcePreview(
+        _ request: PBEOwnerHTTPRequest
+    ) async throws -> PBEOwnerHTTPResponse {
+        guard let previewProvider else {
+            throw Self.failure(
+                "pbe_owner_route_not_implemented",
+                501,
+                "The native PBE Owner source preview reader is not configured."
+            )
+        }
+        let session = try await authorizeBrowser(request)
+        let assetID = String(request.path.dropFirst(Self.sourcePreviewPath.count))
+        guard !assetID.isEmpty,
+              assetID == Self.clean(assetID),
+              assetID.utf8.count <= BackstagePreviewIPCConstants.maximumAssetIDBytes,
+              !assetID.contains("/"),
+              !assetID.contains("\\"),
+              assetID.unicodeScalars.allSatisfy({
+                  !CharacterSet.controlCharacters.contains($0)
+              }) else {
+            throw Self.failure(
+                "pbe_owner_preview_asset_invalid",
+                400,
+                "The requested PBE Owner preview asset is invalid."
+            )
+        }
+        let preview = try await previewProvider(session, assetID)
+        guard preview.assetId == assetID else {
+            throw Self.failure(
+                "pbe_owner_session_mismatch",
+                409,
+                "The source preview does not match the frozen Backstage fixture."
+            )
+        }
+        return PBEOwnerHTTPResponse(
+            statusCode: 200,
+            reasonPhrase: "OK",
+            headers: [
+                "Content-Type": "image/jpeg",
+                "X-Content-Type-Options": "nosniff",
+            ],
+            body: preview.jpegData
+        )
+    }
+
     private func unsupportedRoute(
         _ request: PBEOwnerHTTPRequest,
         route: PBEOwnerNativeHostRoute
@@ -426,6 +481,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         case 400: "Bad Request"
         case 401: "Unauthorized"
         case 403: "Forbidden"
+        case 404: "Not Found"
         case 409: "Conflict"
         case 415: "Unsupported Media Type"
         case 501: "Not Implemented"

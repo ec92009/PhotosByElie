@@ -32,6 +32,44 @@ public struct PBEOwnerNativeGalleryItem: Codable, Sendable, Equatable {
     public var editorialState: String
     public var keywords: [String]
 
+    public init(
+        assetId: String,
+        photoLibraryIdentifier: String,
+        title: String,
+        filename: String,
+        mediaType: String,
+        capturedAt: String,
+        locationLabel: String,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        resourceFormat: String,
+        originalByteCount: Int64,
+        placementState: String,
+        eligibilityState: String,
+        rating: Int,
+        color: String,
+        editorialState: String,
+        keywords: [String]
+    ) {
+        self.assetId = assetId
+        self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.title = title
+        self.filename = filename
+        self.mediaType = mediaType
+        self.capturedAt = capturedAt
+        self.locationLabel = locationLabel
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.resourceFormat = resourceFormat
+        self.originalByteCount = originalByteCount
+        self.placementState = placementState
+        self.eligibilityState = eligibilityState
+        self.rating = rating
+        self.color = color
+        self.editorialState = editorialState
+        self.keywords = keywords
+    }
+
     init(_ item: FixtureAsset) {
         assetId = item.id
         photoLibraryIdentifier = item.photoLibraryIdentifier

@@ -35,7 +35,9 @@ public struct PBEOwnerHTTPResponse: Sendable, Equatable {
         var responseHeaders = headers
         responseHeaders["Content-Length"] = String(body.count)
         responseHeaders["Connection"] = "close"
-        responseHeaders["Cache-Control"] = "no-store"
+        if responseHeaders["Cache-Control"] == nil {
+            responseHeaders["Cache-Control"] = "no-store"
+        }
         var head = "HTTP/1.1 \(statusCode) \(reasonPhrase)\r\n"
         for (name, value) in responseHeaders.sorted(by: { $0.key < $1.key }) {
             head += "\(name): \(value)\r\n"

@@ -193,6 +193,26 @@ struct PBEOwnerNativeHTTPHostTests {
         #expect(bodyResponse.statusCode == 400)
     }
 
+    @Test("HTTP responses keep private preview caching while defaulting other routes to no-store")
+    func responseCachePolicy() throws {
+        let privateResponse = PBEOwnerHTTPResponse(
+            statusCode: 200,
+            reasonPhrase: "OK",
+            headers: ["Cache-Control": "private, max-age=60"],
+            body: Data("body".utf8)
+        )
+        let privateText = try #require(String(data: privateResponse.serialized(), encoding: .utf8))
+        #expect(privateText.contains("Cache-Control: private, max-age=60\r\n"))
+        #expect(!privateText.contains("Cache-Control: no-store\r\n"))
+
+        let defaultResponse = PBEOwnerHTTPResponse(
+            statusCode: 200,
+            reasonPhrase: "OK"
+        )
+        let defaultText = try #require(String(data: defaultResponse.serialized(), encoding: .utf8))
+        #expect(defaultText.contains("Cache-Control: no-store\r\n"))
+    }
+
     @Test("Web bundle rejects checksum drift and symlinked resources")
     func webBundleTampering() throws {
         let checksumRoot = try makeWebRuntime()
@@ -409,6 +429,7 @@ struct PBEOwnerNativeHTTPHostTests {
         ))
         #expect(previewResponse.statusCode == 200)
         #expect(previewResponse.headers["Content-Type"] == "image/jpeg")
+        #expect(previewResponse.headers["Cache-Control"] == "private, max-age=60")
         #expect(previewResponse.body == Data([0xff, 0xd8, 0x01, 0xff, 0xd9]))
         let readinessCountAfterFirstPreview = await readinessCalls.value
 

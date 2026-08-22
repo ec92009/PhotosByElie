@@ -408,6 +408,11 @@ public actor PBEOwnerNativeSessionHTTPHandler {
             reasonPhrase: "OK",
             headers: [
                 "Content-Type": "image/jpeg",
+                // The frozen gallery membership and opaque preview URL are
+                // stable for this short-lived browser lease. Let Safari reuse
+                // already-authorized bytes during density and Fit/Fill layout
+                // changes without extending the cache beyond that lease.
+                "Cache-Control": "private, max-age=60",
                 "X-Content-Type-Options": "nosniff",
             ],
             body: preview.jpegData

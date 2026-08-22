@@ -5,6 +5,65 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Fixture selection becomes ready before a stalled Activity refresh")
+    @MainActor
+    func fixtureSelectionPrecedesActivityRefresh() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let vault = FixtureSelectionCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-test",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "fixture-selection-access-token",
+            accessExpiresAt: Date().addingTimeInterval(3_600)
+        ))
+        let transport = StalledActivityTransport()
+        let api = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let authentication = OwnerAuthenticationService(
+            api: api,
+            session: session
+        )
+        let localFixtures = StaticLocalFixtureTree(fixtures: fixtureTree)
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .milliseconds(10)
+            ),
+            localReviewService: localFixtures
+        )
+        let model = BackstageViewModel(
+            api: api,
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences,
+            authenticationService: authentication,
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil
+        )
+
+        let bootstrap = Task { await model.bootstrapAuthentication() }
+        for _ in 0..<100 where model.selectedFixtureID != "fixture-expo" {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.selectedFixtureID == "fixture-expo")
+        #expect(model.fixtureScopedActionsAllowed)
+        for _ in 0..<100 {
+            if await transport.activityRequestCount() == 1 { break }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(await transport.activityRequestCount() == 1)
+
+        bootstrap.cancel()
+        await bootstrap.value
+    }
+
     @Test("One selection persists across launch without changing the current section or workflow history")
     @MainActor
     func authoritativeSelectionPersistsAndKeepsContext() throws {
@@ -428,6 +487,49 @@ struct BackstageFixtureSelectionTests {
                 "videos": .number(Double(videos)),
             ]),
         ])
+    }
+}
+
+private final class FixtureSelectionCredentialVault: CredentialVault, @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Data?
+
+    func read(account: String) throws -> Data? { lock.withLock { value } }
+    func write(_ data: Data, account: String) throws { lock.withLock { value = data } }
+    func delete(account: String) throws { lock.withLock { value = nil } }
+}
+
+private actor StalledActivityTransport: OwnerAPITransport {
+    private var activityRequests = 0
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        activityRequests += 1
+        try await Task.sleep(for: .seconds(60))
+        throw CancellationError()
+    }
+
+    func activityRequestCount() -> Int { activityRequests }
+}
+
+private struct RejectingFixtureSelectionWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        throw CancellationError()
+    }
+}
+
+private struct StaticLocalFixtureTree: LocalFixtureReviewServing, LocalFixtureTreeReading {
+    var fixtures: [FixtureNode]
+
+    func nativeFixtureTree(includeArchived: Bool) async throws -> [FixtureNode]? {
+        fixtures
+    }
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        throw CancellationError()
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        throw CancellationError()
     }
 }
 

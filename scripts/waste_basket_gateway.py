@@ -1268,6 +1268,121 @@ def derive_deployed_lifecycle_members(
         connection.close()
 
 
+def classify_deployed_lifecycle_scope(
+    repo_root: Path,
+    asset_ids: Iterable[Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Separate manifest-backed media from Photos assets with no cloud exposure."""
+    ids = _unique_ids(asset_ids)
+    if not ids:
+        raise WasteBasketError("lifecycle scope requires at least one asset")
+    try:
+        return {
+            "scope": "deployed",
+            "assetIds": ids,
+            "members": derive_deployed_lifecycle_members(repo_root, ids, db_path),
+        }
+    except WasteBasketError as error:
+        if not _is_missing_canonical_r2_error(str(error)):
+            raise
+        original_error = error
+
+    connection = _connect(repo_root, db_path)
+    try:
+        local_only_ids = []
+        for asset_id in ids:
+            asset_exists = connection.execute(
+                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+            cloud_evidence = connection.execute(
+                """SELECT 1
+                     FROM (
+                       SELECT 1 AS found FROM r2_objects
+                        WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
+                       UNION ALL
+                       SELECT 1 FROM public_catalog_publications WHERE asset_id = ?
+                       UNION ALL
+                       SELECT 1 FROM asset_publications
+                        WHERE asset_id = ? AND state <> 'withdrawn'
+                       UNION ALL
+                       SELECT 1 FROM asset_delivery_state
+                        WHERE asset_id = ? AND delivery_state IN ('uploading', 'live', 'failed')
+                       UNION ALL
+                       SELECT 1 FROM fixture_delivery_receipts
+                        WHERE asset_id = ? AND destination = 'r2' AND status IN ('running', 'verified', 'failed')
+                       UNION ALL
+                       SELECT 1 FROM asset_sale_references WHERE asset_id = ?
+                       UNION ALL
+                       SELECT 1 FROM r2_quarantine
+                        WHERE asset_id = ? AND state <> 'deleted'
+                       UNION ALL
+                       SELECT 1 FROM sidecar_upload_bridge_run_items
+                        WHERE asset_id = ?
+                          AND (
+                            upload_status IN ('uploaded', 'uploaded_with_skips')
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(upload_keys_json) THEN upload_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1 FROM asset_upload_run_items
+                        WHERE asset_id = ?
+                          AND (
+                            status IN ('uploading', 'verified', 'live', 'failed')
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(object_keys_json) THEN object_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1 FROM media_lifecycle
+                        WHERE media_id = ?
+                          AND (
+                            EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(public_preview_keys_json) THEN public_preview_keys_json ELSE '[]' END
+                              )
+                            )
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(private_keys_json) THEN private_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1
+                         FROM owner_waste_basket_provenance AS provenance
+                         JOIN owner_waste_basket_entries AS entry
+                           ON entry.entry_id = provenance.entry_id
+                        WHERE entry.asset_id = ? AND provenance.relation_name = 'r2_objects'
+                     )
+                    LIMIT 1""",
+                (asset_id,) * 11,
+            ).fetchone()
+            if asset_exists is not None and cloud_evidence is None:
+                local_only_ids.append(asset_id)
+    finally:
+        connection.close()
+
+    if len(local_only_ids) == len(ids):
+        return {
+            "scope": "local-only",
+            "assetIds": ids,
+            "members": [],
+            "reason": "no-cloud-media-evidence",
+        }
+    if local_only_ids:
+        raise WasteBasketError(
+            "lifecycle batch mixes deployed and local-only assets; submit separate actions"
+        )
+    raise original_error
+
+
 def resolve_deployed_lifecycle_asset_ids(
     repo_root: Path,
     operation: str,

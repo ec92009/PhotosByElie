@@ -1004,6 +1004,43 @@ class WasteBasketGatewayTests(unittest.TestCase):
             ),
         )
 
+    def test_lifecycle_scope_allows_only_assets_with_no_cloud_media_evidence(self) -> None:
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO sidecar_assets
+                     (asset_id, source_anchor, media_type, filename, raw_json, indexed_at, updated_at)
+                   VALUES ('local-only', 'apple-photos-cloud://local-only', 'photo',
+                           'local-only.jpg', '{}', ?, ?)""",
+                (NOW, NOW),
+            )
+
+        scope = gateway.classify_deployed_lifecycle_scope(
+            self.root,
+            ["local-only"],
+            self.db,
+        )
+
+        self.assertEqual(scope, {
+            "scope": "local-only",
+            "assetIds": ["local-only"],
+            "members": [],
+            "reason": "no-cloud-media-evidence",
+        })
+
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO public_catalog_publications
+                     (asset_id, source_version_hash, media_id, state, created_at, updated_at)
+                   VALUES ('local-only', 'source-v1', 'missing-media', 'failed', ?, ?)""",
+                (NOW, NOW),
+            )
+        with self.assertRaisesRegex(gateway.WasteBasketError, "canonical R2 mapping is missing"):
+            gateway.classify_deployed_lifecycle_scope(
+                self.root,
+                ["local-only"],
+                self.db,
+            )
+
     def test_explicit_empty_adopts_legacy_hidden_rows_and_uses_legacy_preview_keys(self) -> None:
         self._seed_asset("legacy-hidden")
         with sidecar_state_db.connect(self.root, self.db) as connection:

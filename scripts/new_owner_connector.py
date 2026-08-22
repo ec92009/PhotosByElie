@@ -1925,6 +1925,7 @@ def execute_action(
             "waste-basket-tombstone-restore": ("tombstone-restore", False),
         }
         lifecycle_arm = None
+        lifecycle_result = None
         active_lifecycle_client = lifecycle_client
         if operation in lifecycle_operations:
             lifecycle_operation, denied = lifecycle_operations[operation]
@@ -1936,34 +1937,46 @@ def execute_action(
             if len(authoritative_ids) > 100:
                 raise RuntimeError("Lifecycle moderation accepts at most 100 authoritative assets per Owner action")
             with _timed_phase(action_timing, "lifecycle.resolve.members"):
-                authoritative_members = gateway.derive_deployed_lifecycle_members(
+                lifecycle_scope = gateway.classify_deployed_lifecycle_scope(
                     config.repo_root, authoritative_ids
                 )
             operation_id = f"owner-action:{str(action.get('id') or '').strip()}"
             if operation_id == "owner-action:":
                 raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
-            active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
-            arm_request = {
-                "operationId": operation_id,
-                "operation": lifecycle_operation,
-                "denied": denied,
-                "items": authoritative_members,
-            }
-            with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
-                arm_intent = _persist_lifecycle_arm_intent(
-                    config,
-                    lifecycle_operation,
-                    authoritative_ids,
-                    arm_request,
-                )
-            with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
-                lifecycle_arm = _reconcile_lifecycle_arm_intent(
-                    config,
-                    active_lifecycle_client,
-                    gateway,
-                    arm_intent,
-                    action_timing=action_timing,
-                )
+            if lifecycle_scope["scope"] == "local-only":
+                if lifecycle_operation not in {"x", "restore"}:
+                    raise RuntimeError(
+                        "Local-only assets support recoverable Waste Basket X and Restore; "
+                        "global tombstone operations require deployed lifecycle eligibility"
+                    )
+                lifecycle_result = {
+                    "scope": "local-only",
+                    "remoteArmRequired": False,
+                    "reason": lifecycle_scope["reason"],
+                }
+            else:
+                active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
+                arm_request = {
+                    "operationId": operation_id,
+                    "operation": lifecycle_operation,
+                    "denied": denied,
+                    "items": lifecycle_scope["members"],
+                }
+                with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
+                    arm_intent = _persist_lifecycle_arm_intent(
+                        config,
+                        lifecycle_operation,
+                        authoritative_ids,
+                        arm_request,
+                    )
+                with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
+                    lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                        config,
+                        active_lifecycle_client,
+                        gateway,
+                        arm_intent,
+                        action_timing=action_timing,
+                    )
             photo_ids = authoritative_ids
             moderation_payload["photo_ids"] = authoritative_ids
             moderation_payload["request_key"] = operation_id
@@ -2011,7 +2024,6 @@ def execute_action(
                 )
         else:
             result = apply_public_photo_moderation(config.repo_root, moderation_payload)
-        lifecycle_result = None
         if lifecycle_arm and active_lifecycle_client:
             with _timed_phase(action_timing, "lifecycle.outbox.replay"):
                 replay = drain_deployed_lifecycle_outbox(

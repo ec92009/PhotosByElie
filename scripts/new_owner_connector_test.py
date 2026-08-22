@@ -1201,6 +1201,80 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             ],
         )
 
+    def test_connector_moves_proven_local_only_asset_without_remote_arm(self):
+        calls = []
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.move_to_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "local-only-action",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-x",
+                    "photoIds": ["asset-2"],
+                    "source": "backstage-review",
+                },
+            })
+
+        worker_client.assert_not_called()
+        self.assertEqual(calls[0][0]["request_key"], "owner-action:local-only-action")
+        self.assertIsNone(calls[0][1])
+        self.assertEqual(result["lifecycle"], {
+            "scope": "local-only",
+            "remoteArmRequired": False,
+            "reason": "no-cloud-media-evidence",
+        })
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT state FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                "recoverable",
+            )
+
+    def test_connector_rejects_local_only_global_tombstone_without_remote_arm(self):
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, None),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "global tombstone operations require deployed lifecycle eligibility",
+            ):
+                execute_action(self.config, {
+                    "id": "local-only-empty",
+                    "type": "photo-moderation",
+                    "payload": {
+                        "operation": "waste-basket-empty",
+                        "photoIds": ["asset-2"],
+                        "source": "backstage-review",
+                        "confirmed": True,
+                        "confirmationToken": "EMPTY",
+                    },
+                })
+
+        worker_client.assert_not_called()
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                0,
+            )
+
     def test_commit_then_arm_response_loss_replays_stable_intent_and_aborts(self):
         worker = self.FakeWorker(self, lose_response_once_at="arm")
         applied = []

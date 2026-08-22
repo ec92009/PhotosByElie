@@ -122,6 +122,8 @@ cat > "${contents}/Info.plist" <<PLIST
   <string>Backstage reads Photos for private culling, preview, and export workflows.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Backstage applies approved metadata updates to selected photos.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Backstage reads and applies approved title, caption, and keyword metadata in Apple Photos.</string>
   <key>PBEOwnerRuntimeRevision</key>
   <string>${runtime_revision}</string>
 </dict>

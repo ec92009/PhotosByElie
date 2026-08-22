@@ -3167,7 +3167,33 @@ final class BackstageViewModel: ObservableObject {
                 self.reviewWasteBasketQueueing = false
                 self.reviewWasteBasketPendingActionID = action.id
                 self.reviewWasteBasketPendingAction = action
-                self.reviewStatus = "Queued X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") as action \(action.id). Review remains available while it completes."
+                self.reviewHistory.append(historyEntry)
+                if self.reviewHistory.count > 100 {
+                    self.reviewHistory.removeFirst(self.reviewHistory.count - 100)
+                }
+                var replacementID: String?
+                if var window = self.fixtureReviewWindow {
+                    window.items.removeAll { ids.contains($0.id) }
+                    self.fixtureReviewWindow = window
+                    let orderedIDs = self.reviewItems.map(\.id)
+                    var selection = OwnerSelectionModel(
+                        orderedIDs: previousIDs,
+                        selectedIDs: Set(focusedID.map { [$0] } ?? []),
+                        anchorID: focusedID,
+                        focusedID: focusedID
+                    )
+                    replacementID = focusedID.flatMap {
+                        selection.replaceItems(
+                            orderedIDs,
+                            selectingSuccessorAfterRemoving: $0,
+                            direction: removalDirection
+                        )
+                    }
+                    self.reviewSelection = selection
+                    self.syncReviewDraft()
+                }
+                self.reviewStatus = "Queued X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") as action \(action.id). The local Review list is updated; durable reconciliation continues in the background."
+                onTerminal?(true, replacementID)
                 do {
                     _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
                         Task { @MainActor [weak self] in
@@ -3182,35 +3208,7 @@ final class BackstageViewModel: ObservableObject {
                     }
                     self.reviewWasteBasketPendingActionID = nil
                     self.reviewWasteBasketPendingAction = nil
-                    self.reviewHistory.append(historyEntry)
-                    if self.reviewHistory.count > 100 {
-                        self.reviewHistory.removeFirst(self.reviewHistory.count - 100)
-                    }
-                    guard var window = self.fixtureReviewWindow else {
-                        self.reviewStatus = "Review window is no longer available; X action \(action.id) completed."
-                        self.reviewWasteBasketMonitorTask = nil
-                        return
-                    }
-                    window.items.removeAll { ids.contains($0.id) }
-                    self.fixtureReviewWindow = window
-                    let orderedIDs = self.reviewItems.map(\.id)
-                    var selection = OwnerSelectionModel(
-                        orderedIDs: previousIDs,
-                        selectedIDs: Set(focusedID.map { [$0] } ?? []),
-                        anchorID: focusedID,
-                        focusedID: focusedID
-                    )
-                    let replacementID = focusedID.flatMap {
-                        selection.replaceItems(
-                            orderedIDs,
-                            selectingSuccessorAfterRemoving: $0,
-                            direction: removalDirection
-                        )
-                    }
-                    self.reviewSelection = selection
-                    self.syncReviewDraft()
                     self.reviewStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to Waste Basket through action \(action.id)."
-                    onTerminal?(true, replacementID)
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
@@ -3222,7 +3220,14 @@ final class BackstageViewModel: ObservableObject {
                     } else {
                         self.reviewWasteBasketPendingActionID = nil
                         self.reviewWasteBasketPendingAction = nil
-                        self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                        self.reviewHistory.removeAll { $0.id == historyEntry.id }
+                        if self.selectedFixtureID == historyEntry.fixtureID,
+                           !self.restoreWasteBasketReviewEntryInCurrentWindow(historyEntry) {
+                            await self.loadFixtureReviewWindow(
+                                preferredAssetID: historyEntry.focusedID ?? historyEntry.selectedIDs.first
+                            )
+                        }
+                        self.reviewStatus = "Waste Basket move failed; the local Review list was restored. \(self.userFacingMessage(for: error))"
                         onTerminal?(false, nil)
                     }
                 }
@@ -3708,6 +3713,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func undoLastReviewAction() async {
+        guard !reviewWasteBasketQueueing,
+              reviewWasteBasketPendingActionID == nil else {
+            reviewStatus = "Finish the current Waste Basket reconciliation before undoing it."
+            return
+        }
         guard let entry = reviewHistory.last else {
             reviewStatus = "Nothing to undo in this Backstage session."
             return
@@ -3718,10 +3728,15 @@ final class BackstageViewModel: ObservableObject {
         defer { isRunningReview = false }
         do {
             if !entry.wasteBasketMediaIDs.isEmpty {
-                let action = try await lifecycleService.restore(
+                reviewWasteBasketQueueing = true
+                let action = try await lifecycleService.enqueueRestore(
                     mediaIDs: entry.wasteBasketMediaIDs
                 )
+                reviewWasteBasketQueueing = false
+                reviewWasteBasketPendingActionID = action.id
+                reviewWasteBasketPendingAction = action
                 reviewHistory.removeLast()
+                var retainedLocally = false
                 if selectedFixtureID == entry.fixtureID {
                     reviewMode = entry.mode
                     reviewStateFilters = entry.stateFilters
@@ -3729,15 +3744,57 @@ final class BackstageViewModel: ObservableObject {
                     reviewMediaFilters = entry.mediaFilters
                     reviewSearch = entry.search
                     reviewWindowOffset = entry.offset
-                    if !restoreWasteBasketReviewEntryInCurrentWindow(entry) {
-                        await loadFixtureReviewWindow(
-                            preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
-                        )
-                    }
-                } else if !selectedFixtureID.isEmpty {
-                    await loadFixtureReviewWindow()
+                    retainedLocally = restoreWasteBasketReviewEntryInCurrentWindow(entry)
                 }
-                reviewStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                reviewStatus = "Queued Undo for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") as action \(action.id). The local Review list is restored; durable reconciliation continues in the background."
+                reviewWasteBasketMonitorTask = Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                            Task { @MainActor [weak self] in
+                                guard let self else { return }
+                                self.reviewWasteBasketPendingAction = update
+                                self.reviewStatus = self.pendingLifecycleActionStatus(
+                                    "Review Undo",
+                                    action: update,
+                                    availability: "Review remains available while it completes."
+                                )
+                            }
+                        }
+                        self.reviewWasteBasketPendingActionID = nil
+                        self.reviewWasteBasketPendingAction = nil
+                        if !retainedLocally {
+                            if self.selectedFixtureID == entry.fixtureID {
+                                await self.loadFixtureReviewWindow(
+                                    preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
+                                )
+                            } else if !self.selectedFixtureID.isEmpty {
+                                await self.loadFixtureReviewWindow()
+                            }
+                        }
+                        self.reviewStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                    } catch {
+                        if let ownerError = error as? OwnerActionRunError,
+                           ownerError == .timedOut {
+                            self.reviewStatus = self.pendingLifecycleActionStatus(
+                                "Review Undo",
+                                action: self.reviewWasteBasketPendingAction ?? action,
+                                availability: "Review remains available; check Activity for the full receipt."
+                            )
+                        } else {
+                            self.reviewWasteBasketPendingActionID = nil
+                            self.reviewWasteBasketPendingAction = nil
+                            if !self.reviewHistory.contains(where: { $0.id == entry.id }) {
+                                self.reviewHistory.append(entry)
+                            }
+                            if retainedLocally, self.selectedFixtureID == entry.fixtureID {
+                                self.removeWasteBasketReviewEntryFromCurrentWindow(entry)
+                            }
+                            self.reviewStatus = "Waste Basket Undo failed; the local Review list was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                        }
+                    }
+                    self.reviewWasteBasketMonitorTask = nil
+                }
                 return
             }
             if !entry.fixtureChanges.isEmpty {
@@ -3830,6 +3887,7 @@ final class BackstageViewModel: ObservableObject {
                 : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb).\(reviewTimingSuffix(result.timing))"
             scheduleReviewAIStatusRefresh()
         } catch {
+            reviewWasteBasketQueueing = false
             reviewStatus = "Undo failed: \(error)"
         }
     }
@@ -3874,6 +3932,34 @@ final class BackstageViewModel: ObservableObject {
         reviewScrollTargetID = focusedID
         syncReviewDraft()
         return true
+    }
+
+    /// Roll back an optimistic same-session Waste Basket restore after the
+    /// durable restore action reaches a terminal failure.
+    private func removeWasteBasketReviewEntryFromCurrentWindow(
+        _ entry: ReviewHistoryEntry
+    ) {
+        guard var window = fixtureReviewWindow,
+              window.fixtureID == entry.fixtureID,
+              window.mode == entry.mode else {
+            return
+        }
+        let removedIDs = Set(entry.wasteBasketMediaIDs)
+        window.items.removeAll { removedIDs.contains($0.id) }
+        fixtureReviewWindow = window
+        let orderedIDs = window.items.map(\.id)
+        let preferredIndex = entry.reviewItemIndexes.values.min() ?? 0
+        let replacementID = orderedIDs.indices.contains(preferredIndex)
+            ? orderedIDs[preferredIndex]
+            : orderedIDs.last
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(replacementID.map { [$0] } ?? []),
+            anchorID: replacementID,
+            focusedID: replacementID
+        )
+        reviewScrollTargetID = replacementID
+        syncReviewDraft()
     }
 
     func saveReviewMetadata() async {

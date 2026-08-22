@@ -303,7 +303,7 @@ struct BackstageFixtureSelectionTests {
                 state: .completed,
                 result: ["ok": true]
             ),
-        ])
+        ], terminalDelay: .milliseconds(50))
         let lifecycleService = LifecycleService(runner: OwnerActionRunner(
             api: actionAPI,
             waker: RejectingFixtureSelectionWaker(),
@@ -353,18 +353,140 @@ struct BackstageFixtureSelectionTests {
 
         #expect(model.reviewHistory.last?.wasteBasketMediaIDs == [first.id])
         #expect(model.reviewItems.map(\.id) == [second.id])
+        #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-x")
+        for _ in 0..<200 where model.reviewWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
 
         await model.undoLastReviewAction()
 
         #expect(model.reviewHistory.isEmpty)
         #expect(model.reviewItems.map(\.id) == [first.id, second.id])
         #expect(model.reviewSelection.selectedIDs == [first.id])
+        #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-restore")
+        for _ in 0..<200 where model.reviewWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
         #expect(model.reviewStatus.contains("Restored 1 item from Waste Basket"))
         let requests = await actionAPI.requests()
         #expect(requests.map { $0.payload["operation"]?.stringValue } == [
             "waste-basket-x",
             "waste-basket-restore",
         ])
+    }
+
+    @Test("Review Waste Basket optimistic Undo rolls back on terminal failure")
+    @MainActor
+    func reviewWasteBasketUndoRollsBackOnFailure() async throws {
+        let first = FixtureReviewItem(
+            id: "review-rollback-first",
+            photoLibraryIdentifier: "photos-review-rollback-first",
+            title: "First",
+            keywords: [],
+            filename: "first.jpg",
+            capturedAt: "2026-08-17T10:00:00Z"
+        )
+        let second = FixtureReviewItem(
+            id: "review-rollback-second",
+            photoLibraryIdentifier: "photos-review-rollback-second",
+            title: "Second",
+            keywords: [],
+            filename: "second.jpg",
+            capturedAt: "2026-08-17T10:00:01Z"
+        )
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-review-rollback-x",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+            OwnerAction(
+                id: "owner-action-review-rollback-restore",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .failed,
+                error: ["message": "synthetic restore failure"]
+            ),
+        ], terminalDelay: .milliseconds(50))
+        let model = reviewWasteBasketModel(
+            actionAPI: actionAPI,
+            items: [first, second],
+            selectedID: first.id
+        )
+
+        await model.moveReviewSelectionToWasteBasket()
+        for _ in 0..<300 where model.reviewHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [second.id])
+        #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-rollback-x")
+        for _ in 0..<300 where model.reviewWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        await model.undoLastReviewAction()
+        #expect(model.reviewItems.map(\.id) == [first.id, second.id])
+        #expect(model.reviewHistory.isEmpty)
+        #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-rollback-restore")
+
+        for _ in 0..<300 where model.reviewWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [second.id])
+        #expect(model.reviewHistory.last?.wasteBasketMediaIDs == [first.id])
+        #expect(model.reviewStatus.contains("Undo failed"))
+    }
+
+    @Test("Review Waste Basket optimistic X rolls back on terminal failure")
+    @MainActor
+    func reviewWasteBasketXRollsBackOnFailure() async throws {
+        let first = FixtureReviewItem(
+            id: "review-x-failure-first",
+            photoLibraryIdentifier: "photos-review-x-failure-first",
+            title: "First",
+            keywords: [],
+            filename: "first.jpg",
+            capturedAt: "2026-08-17T10:00:00Z"
+        )
+        let second = FixtureReviewItem(
+            id: "review-x-failure-second",
+            photoLibraryIdentifier: "photos-review-x-failure-second",
+            title: "Second",
+            keywords: [],
+            filename: "second.jpg",
+            capturedAt: "2026-08-17T10:00:01Z"
+        )
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-review-x-failure",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .failed,
+                error: ["message": "synthetic X failure"]
+            ),
+        ], terminalDelay: .milliseconds(50))
+        let model = reviewWasteBasketModel(
+            actionAPI: actionAPI,
+            items: [first, second],
+            selectedID: first.id
+        )
+
+        await model.moveReviewSelectionToWasteBasket()
+        for _ in 0..<300 where model.reviewHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [second.id])
+        #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-x-failure")
+
+        for _ in 0..<300 where model.reviewWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [first.id, second.id])
+        #expect(model.reviewHistory.isEmpty)
+        #expect(model.reviewSelection.selectedIDs == [first.id])
+        #expect(model.reviewStatus.contains("local Review list was restored"))
     }
 
     @Test("Waste Basket Put back keeps its completion receipt visible")
@@ -651,6 +773,56 @@ struct BackstageFixtureSelectionTests {
         ]
     }
 
+    @MainActor
+    private func reviewWasteBasketModel(
+        actionAPI: ReviewLifecycleActionAPI,
+        items: [FixtureReviewItem],
+        selectedID: String
+    ) -> BackstageViewModel {
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.reviewMode = .full
+        model.reviewStateFilters = [.picked]
+        model.fixtureReviewWindow = FixtureReviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            reviewStateFilters: ["picked"],
+            offset: 0,
+            limit: 200,
+            nextOffset: 0,
+            hasNext: false,
+            summary: FixtureReviewSummary(
+                total: items.count,
+                unreviewed: items.count,
+                requestingAI: 0,
+                proposed: 0,
+                approved: 0
+            ),
+            items: items
+        )
+        model.reviewSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: [selectedID],
+            anchorID: selectedID,
+            focusedID: selectedID
+        )
+        return model
+    }
+
     private var reviewHistoryEntry: ReviewHistoryEntry {
         ReviewHistoryEntry(
             label: "Synthetic history sentinel",
@@ -713,9 +885,11 @@ private struct RejectingFixtureSelectionWaker: OwnerActionWaking {
 private actor ReviewLifecycleActionAPI: OwnerActionServing {
     private var terminalActions: [OwnerAction]
     private var createdRequests: [OwnerActionCreate] = []
+    private let terminalDelay: Duration
 
-    init(terminalActions: [OwnerAction]) {
+    init(terminalActions: [OwnerAction], terminalDelay: Duration = .zero) {
         self.terminalActions = terminalActions
+        self.terminalDelay = terminalDelay
     }
 
     func createAction(
@@ -736,6 +910,9 @@ private actor ReviewLifecycleActionAPI: OwnerActionServing {
     }
 
     func getAction(id: String) async throws -> OwnerAction {
+        if terminalDelay != .zero {
+            try await Task.sleep(for: terminalDelay)
+        }
         guard let action = terminalActions.first(where: { $0.id == id }) else {
             throw URLError(.resourceUnavailable)
         }

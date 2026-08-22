@@ -429,7 +429,12 @@ struct ReviewView: View {
                         Task { await model.undoLastReviewAction() }
                     }
                     .keyboardShortcut("z", modifiers: .command)
-                    .disabled(model.reviewHistory.isEmpty || model.isRunningReview)
+                    .disabled(
+                        model.reviewHistory.isEmpty
+                            || model.isRunningReview
+                            || model.reviewWasteBasketQueueing
+                            || model.reviewWasteBasketPendingActionID != nil
+                    )
                     .backstageHelp("Reverse the most recent Review action made during this Backstage session.")
                     Button("Clear selection") { model.clearReviewSelection() }
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)

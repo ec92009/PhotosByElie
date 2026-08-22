@@ -121,6 +121,19 @@ public actor LifecycleService {
         )
     }
 
+    /// Queue a recoverable restore and return as soon as the Worker has
+    /// durably accepted it. The caller owns terminal-state monitoring and may
+    /// update its local presentation optimistically after this boundary.
+    public func enqueueRestore(mediaIDs: [String]) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await enqueueModeration(
+            operation: "waste-basket-restore",
+            mediaIDs: ids,
+            source: "backstage-waste-basket"
+        )
+    }
+
     public func moveToWasteBasket(
         mediaIDs: [String],
         fixtureID: String = "",

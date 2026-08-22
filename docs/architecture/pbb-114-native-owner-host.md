@@ -3,7 +3,8 @@
 Status: native production host assembled and selected by Backstage, including
 route boundary, loopback transport, session authority, SQLite readiness, frozen
 gallery, PhotoKit preview, and guarded Worker action submit/status; projection
-retry, packaged Python-host removal, and live close/drain acceptance pending,
+retry retired with the Python hosted-request ledger; packaged Python-host
+removal and live close/drain acceptance pending,
 2026-08-22
 
 ## Decision
@@ -20,7 +21,7 @@ dynamic route allowlist is encoded by `PBEOwnerNativeHostContract`:
 - session start, status, heartbeat, and close;
 - one-time browser handoff bootstrap;
 - frozen gallery read;
-- guarded action submit, action-status read, and projection retry; and
+- guarded action submit and action-status read; and
 - authenticated, asset-ID-scoped source preview reads.
 
 The browser also needs an immutable allowlisted web bundle rooted at
@@ -50,6 +51,13 @@ real-estate Owner/import, access-user administration, source edit/import,
 price publication, burst culling, connector wake, Sidecar decision, public
 media proxy, or private media proxy endpoints.
 
+The old projection-retry endpoint is also excluded. It only updated Python's
+retired hosted-request ledger and replayed the legacy static-catalog writer.
+Native Worker action results do not advertise its optimistic retry token, so
+the web UI never exposes that control; failed projection remains visible in the
+durable action result and must be recovered through an explicit maintained
+workflow rather than silently reviving the Python host architecture.
+
 Those capabilities already belong in native Backstage, a Worker-authorized
 action, bounded tooling, or an explicit legacy rollback surface. A future need
 must add a reviewed native contract instead of expanding the host implicitly.
@@ -58,16 +66,16 @@ must add a reviewed native contract instead of expanding the host implicitly.
 
 1. Freeze and test the reduced route/authority allowlist. **Complete.**
 2. Generate and package the immutable `gallery.html` web-bundle manifest.
-   **Complete in the sealed runtime and native dispatcher; production host wiring pending.**
+   **Complete in the sealed runtime and production native dispatcher.**
 3. Add a loopback HTTP parser/listener with strict request/body/header limits
-   and deny-by-default routing. **Complete; not production-wired.**
+   and deny-by-default routing. **Complete and production-wired.**
 4. Move session/readiness/browser-handoff state into a Swift actor and preserve
    the existing cloud verification and fixture lease. **Complete as an isolated
    native authority with a bounded cloud verifier and native bootstrap,
    readiness, session, heartbeat, browser-handoff, and close handlers;
    query-only SQLite readiness derives opaque source, catalog, fixture, and
    aggregate identities without lifecycle-row churn; production host wiring
-   pending. Native and Python leases are intentionally process-local and never
+   complete. Native and Python leases are intentionally process-local and never
    transfer across the cutover, so each runtime only compares identities it
    derived itself.**
 5. Implement gallery and preview reads with native SQLite/PhotoKit services;
@@ -76,8 +84,8 @@ must add a reviewed native contract instead of expanding the host implicitly.
    preview are complete as isolated native providers and authenticated HTTP
    handlers. Guarded X/restore submission and status now use
    `OwnerActionRunner`, accept no browser authority fields, scope X to the
-   displayed gallery, and scope restore to a completed same-session X action;
-   projection-only retry remains pending.**
+   displayed gallery, and scope restore to a completed same-session X action.
+   The Python-ledger projection retry route is deliberately retired.**
 6. **Backstage now defaults to `PBEOwnerNativeHostService`, which loads only
    the signed app's attested web bundle, owns the loopback listener, and never
    launches `local_server.py`.** Keep the legacy service and packaged Python

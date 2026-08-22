@@ -74,6 +74,7 @@ struct PBEOwnerNativeActionTests {
         #expect(completed["state"]?.stringValue == "completed")
         #expect(completed["authoritative_committed"]?.boolValue == true)
         #expect(completed["projection"]?.objectValue?["state"]?.stringValue == "applied")
+        #expect(completed["projectionRetry"] == nil)
 
         let restored = try await service.submit(
             session: session,

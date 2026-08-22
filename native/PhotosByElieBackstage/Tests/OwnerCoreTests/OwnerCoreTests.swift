@@ -5081,7 +5081,7 @@ struct PBEOwnerNativeHostContractTests {
     @Test("Native host exposes only the actionable gallery session surface")
     func exactRoutes() {
         let routes = PBEOwnerNativeHostContract.routes
-        #expect(routes.count == 12)
+        #expect(routes.count == 11)
         #expect(PBEOwnerNativeHostContract.route(
             method: "POST",
             path: "/__photosbyelie/pbe-owner/browser/bootstrap"
@@ -5106,6 +5106,7 @@ struct PBEOwnerNativeHostContractTests {
             ("POST", "/__photosbyelie/source-edit"),
             ("POST", "/__photosbyelie/publish-prices"),
             ("POST", "/__photosbyelie/new-owner-connector"),
+            ("POST", "/__photosbyelie/pbe-owner/action/projection-retry"),
         ] {
             #expect(PBEOwnerNativeHostContract.route(method: method, path: path) == nil)
         }

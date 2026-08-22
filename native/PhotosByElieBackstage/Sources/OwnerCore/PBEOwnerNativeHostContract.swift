@@ -53,7 +53,6 @@ public enum PBEOwnerNativeHostContract {
         .init(.get, "/__photosbyelie/pbe-owner/gallery", authority: .browserSession),
         .init(.post, "/__photosbyelie/pbe-owner/action", authority: .browserSession),
         .init(.get, "/__photosbyelie/pbe-owner/action/status", authority: .browserSession),
-        .init(.post, "/__photosbyelie/pbe-owner/action/projection-retry", authority: .browserSession),
         .init(.get, "/__photosbyelie/source-preview/", authority: .browserSession, isPrefix: true),
     ]
 

@@ -138,6 +138,33 @@ struct PBEOwnerNativeSessionTests {
         }
     }
 
+    @Test("Browser heartbeat renews the local lease only within cloud expiry")
+    func browserHeartbeatAndExpiry() async throws {
+        let clock = PBEOwnerTestClock()
+        let store = PBEOwnerNativeSessionStore(leaseDuration: 30, now: clock.now)
+        let readiness = fixtureReadiness()
+        let session = fixtureSession(expiresAt: clock.now().addingTimeInterval(60))
+        _ = try await store.start(token: "cloud-token-one", cloudSession: session, readiness: readiness)
+        let ticket = try await store.issueBrowserHandoff(token: "cloud-token-one")
+        let browser = try await store.bootstrapBrowser(ticket: ticket, readiness: readiness)
+
+        clock.advance(20)
+        let heartbeat = try await store.authorizeBrowser(
+            browserSession: browser.browserSession,
+            readiness: readiness,
+            heartbeat: true
+        )
+        #expect(heartbeat.leaseExpiresAt == clock.now().addingTimeInterval(30))
+
+        clock.advance(31)
+        await expectFailure(code: "pbe_owner_session_expired") {
+            _ = try await store.authorizeBrowser(
+                browserSession: browser.browserSession,
+                readiness: readiness
+            )
+        }
+    }
+
     @Test("Session inputs normalize while unready local state fails closed")
     func normalizedInputsAndUnreadyState() async throws {
         let clock = PBEOwnerTestClock()

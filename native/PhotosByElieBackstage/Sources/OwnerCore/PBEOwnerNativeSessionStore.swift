@@ -112,14 +112,22 @@ public actor PBEOwnerNativeSessionStore {
 
     public func authorizeBrowser(
         browserSession: String,
-        readiness: PBEOwnerHostReadiness
+        readiness: PBEOwnerHostReadiness,
+        heartbeat: Bool = false
     ) throws -> PBEOwnerSessionContract {
-        let current = try activeLease()
+        var current = try activeLease()
         guard !browserSessionHash.isEmpty,
               constantTimeEqual(browserSessionHash, hash(clean(browserSession))) else {
             throw failure("pbe_owner_session_inactive", 401)
         }
         try assertReadiness(current, readiness: readiness)
+        if heartbeat {
+            current.leaseExpiresAt = min(
+                current.cloudExpiresAt,
+                now().addingTimeInterval(leaseDuration)
+            )
+            lease = current
+        }
         return contract(current)
     }
 

@@ -293,7 +293,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 heartbeat: heartbeat
             )
         } else {
-            session = try await authorizeBrowser(request)
+            session = try await authorizeBrowser(request, heartbeat: heartbeat)
         }
         return try Self.response(SessionStatusEnvelope(session: session))
     }
@@ -334,7 +334,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     }
 
     private func authorizeBrowser(
-        _ request: PBEOwnerHTTPRequest
+        _ request: PBEOwnerHTTPRequest,
+        heartbeat: Bool = false
     ) async throws -> PBEOwnerSessionContract {
         let cookie = try browserCookie(request)
         let fixtureID = try await sessionStore.requiredBrowserFixtureID(
@@ -343,7 +344,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         let readiness = try await readinessProvider(fixtureID)
         return try await sessionStore.authorizeBrowser(
             browserSession: cookie,
-            readiness: readiness
+            readiness: readiness,
+            heartbeat: heartbeat
         )
     }
 

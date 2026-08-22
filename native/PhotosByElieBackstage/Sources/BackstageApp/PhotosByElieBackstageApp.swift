@@ -1817,6 +1817,10 @@ private struct MetadataGiveBackView: View {
                 )
                 Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
                     .foregroundStyle(.secondary)
+                LabeledContent("Write scope", value: model.metadataGiveBackScopeDescription)
+                Text("Enter an exact Asset ID in the Title, keywords, and review queue section to limit both Preview and Commit to that one item. Leave it blank only when the entire current fixture is intended.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 HStack {
                     Button("Preview changes") {
                         Task { await model.planMetadataGiveBack() }
@@ -1826,7 +1830,7 @@ private struct MetadataGiveBackView: View {
                     Button("Commit & verify") {
                         showingCommitConfirmation = true
                     }
-                    .disabled(model.isRunningMetadata)
+                    .disabled(model.isRunningMetadata || !model.metadataGiveBackCommitReady)
                     .backstageHelp("Review the separate confirmation for writing the currently planned approved metadata to Apple Photos.")
                     Button("Retry failed only") {
                         Task { await model.retryMetadataFailures() }
@@ -1861,17 +1865,17 @@ private struct MetadataGiveBackView: View {
         .onAppear { quickLook.activate() }
         .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
-            "Write approved metadata to Apple Photos?",
+            "Write approved metadata to \(model.metadataReport?.readyCount ?? 0) Apple Photos item\((model.metadataReport?.readyCount ?? 0) == 1 ? "" : "s")?",
             isPresented: $showingCommitConfirmation
         ) {
-            Button("Commit and verify", role: .destructive) {
+            Button("Commit and verify \(model.metadataReport?.readyCount ?? 0) item\((model.metadataReport?.readyCount ?? 0) == 1 ? "" : "s")", role: .destructive) {
                 Task { await model.commitMetadataGiveBack() }
             }
             .backstageHelp("Confirm the signed metadata write, then re-read every eligible Photos item before recording verified receipts.")
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without writing any metadata to Apple Photos.")
         } message: {
-            Text("The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
+            Text("Scope: \(model.metadataGiveBackScopeDescription). The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
         }
     }
 

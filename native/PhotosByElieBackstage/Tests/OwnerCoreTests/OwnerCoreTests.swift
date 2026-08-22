@@ -1761,7 +1761,10 @@ struct OwnerCoreTests {
         )
         let service = MetadataGiveBackService(runner: runner)
 
-        let report = try await service.plan(fixtureID: "fixture-family")
+        let report = try await service.plan(
+            fixtureID: "fixture-family",
+            assetIDs: ["asset-b", " asset-a ", "asset-b"]
+        )
 
         #expect(report.isDryRun)
         #expect(report.fixtureID == "fixture-family")
@@ -1782,6 +1785,10 @@ struct OwnerCoreTests {
         #expect(
             request.payload["manifest"]?.objectValue?["fixtureId"]?.stringValue
                 == "fixture-family"
+        )
+        #expect(
+            request.payload["manifest"]?.objectValue?["assetIds"]?.arrayValue?.compactMap(\.stringValue)
+                == ["asset-a", "asset-b"]
         )
     }
 

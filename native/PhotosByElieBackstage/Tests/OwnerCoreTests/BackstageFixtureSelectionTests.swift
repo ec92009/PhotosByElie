@@ -854,6 +854,20 @@ struct BackstageFixtureSelectionTests {
         #expect(model.metadataStatus.contains("Expo"))
     }
 
+    @Test("Metadata give-back scope follows the exact Asset ID field")
+    @MainActor
+    func metadataGiveBackUsesExactAssetIDScope() {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.metadataAssetID = "  asset-exact  "
+
+        #expect(model.metadataGiveBackAssetIDs == ["asset-exact"])
+        #expect(model.metadataGiveBackScopeDescription == "Exact item asset-exact")
+
+        model.metadataAssetID = "   "
+        #expect(model.metadataGiveBackAssetIDs.isEmpty)
+        #expect(model.metadataGiveBackScopeDescription == "Entire current fixture")
+    }
+
     private var fixtureTree: [FixtureNode] {
         [
             FixtureNode(id: "fixture-expo", name: "Expo"),

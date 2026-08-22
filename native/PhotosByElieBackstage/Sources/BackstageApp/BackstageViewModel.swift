@@ -182,6 +182,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
     @Published var isRunningMetadata = false
+    @Published private(set) var metadataGiveBackPlannedAssetIDs: [String]?
     @Published private(set) var fixtures: [FixtureNode] = []
     @Published private(set) var selectedFixtureID = ""
     @Published private(set) var selectedFixtureBreadcrumb = ""
@@ -881,6 +882,7 @@ final class BackstageViewModel: ObservableObject {
     /// remains untouched until the user invokes an explicit audited action.
     private func resetFixtureScopedViewState() {
         metadataReport = nil
+        metadataGiveBackPlannedAssetIDs = nil
         metadataStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped metadata give-back is unavailable."
             : "Run a metadata plan for \(selectedFixtureBreadcrumb)."
@@ -1558,6 +1560,28 @@ final class BackstageViewModel: ObservableObject {
         await runMetadata(commit: true)
     }
 
+    var metadataGiveBackAssetIDs: [String] {
+        let assetID = metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return assetID.isEmpty ? [] : [assetID]
+    }
+
+    var metadataGiveBackScopeDescription: String {
+        guard let assetID = metadataGiveBackAssetIDs.first else {
+            return "Entire current fixture"
+        }
+        return "Exact item \(assetID)"
+    }
+
+    var metadataGiveBackCommitReady: Bool {
+        guard let report = metadataReport,
+              report.isDryRun,
+              report.fixtureID == selectedFixtureID,
+              report.readyCount > 0,
+              let plannedAssetIDs = metadataGiveBackPlannedAssetIDs
+        else { return false }
+        return plannedAssetIDs == metadataGiveBackAssetIDs
+    }
+
     func retryMetadataFailures() async {
         guard let metadataReport else { return }
         guard fixtureScopedActionsAllowed else {
@@ -1566,6 +1590,7 @@ final class BackstageViewModel: ObservableObject {
         }
         guard metadataReport.fixtureID == selectedFixtureID else {
             self.metadataReport = nil
+            metadataGiveBackPlannedAssetIDs = nil
             metadataStatus = "The prior metadata report belongs to another fixture. Run a new plan for the current fixture."
             return
         }
@@ -1577,6 +1602,7 @@ final class BackstageViewModel: ObservableObject {
                 fixtureID: selectedFixtureID
             )
             self.metadataReport = retried
+            metadataGiveBackPlannedAssetIDs = nil
             metadataStatus = reportStatus(retried)
         } catch {
             metadataStatus = userFacingMessage(for: error)
@@ -6014,7 +6040,16 @@ final class BackstageViewModel: ObservableObject {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
             return
         }
+        let scopedAssetIDs = metadataGiveBackAssetIDs
+        if commit, !metadataGiveBackCommitReady {
+            metadataStatus = "Run a fresh preview for the current write scope before committing to Apple Photos."
+            return
+        }
         let operationFixtureID = selectedFixtureID
+        if !commit {
+            metadataReport = nil
+            metadataGiveBackPlannedAssetIDs = nil
+        }
         isRunningMetadata = true
         defer { isRunningMetadata = false }
         if commit, !(await preparePhotosMutation()) {
@@ -6023,14 +6058,16 @@ final class BackstageViewModel: ObservableObject {
         }
         do {
             let report = try await (commit
-                ? metadataService.commit(fixtureID: operationFixtureID)
-                : metadataService.plan(fixtureID: operationFixtureID))
+                ? metadataService.commit(fixtureID: operationFixtureID, assetIDs: scopedAssetIDs)
+                : metadataService.plan(fixtureID: operationFixtureID, assetIDs: scopedAssetIDs))
             guard selectedFixtureID == operationFixtureID else {
                 metadataReport = nil
+                metadataGiveBackPlannedAssetIDs = nil
                 metadataStatus = "The current fixture changed before metadata completed; the stale report was discarded."
                 return
             }
             metadataReport = report
+            metadataGiveBackPlannedAssetIDs = commit ? nil : scopedAssetIDs
             metadataStatus = reportStatus(report)
         } catch {
             metadataStatus = userFacingMessage(for: error)

@@ -9,7 +9,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     ) async throws -> PBEOwnerNativeGallery
     public typealias PreviewProvider = @Sendable (
         PBEOwnerSessionContract,
-        String
+        String,
+        Int
     ) async throws -> PBEOwnerNativePreview
     public typealias ActionSubmitProvider = @Sendable (
         PBEOwnerSessionContract,
@@ -375,7 +376,10 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 "The requested PBE Owner preview asset is invalid."
             )
         }
-        let preview = try await previewProvider(session, assetID)
+        let requestedSize = queryValue("size", request: request) == "detail"
+            ? BackstagePreviewIPCConstants.maximumMaxPixel
+            : 900
+        let preview = try await previewProvider(session, assetID, requestedSize)
         guard preview.assetId == assetID else {
             throw Self.failure(
                 "pbe_owner_session_mismatch",

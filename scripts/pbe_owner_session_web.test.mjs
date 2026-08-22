@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const ownerSessionSource = read("pbe-owner-session.js");
 
 const runSessionClient = ({
   search,
@@ -62,6 +63,11 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
   assert.match(read("photo-gallery.js"), /const setCollectionLabel = \(element\) => \{[\s\S]*if \(isPBEOwnerGallery\) delete element\.dataset\.i18n;/);
+});
+
+test("native Owner uses fast gallery previews and reserves full previews for detail", () => {
+  assert.match(ownerSessionSource, /galleryUrl:[^\n]+`\$\{previewUrl\}\?size=gallery`/);
+  assert.match(ownerSessionSource, /detailUrl:[^\n]+`\$\{previewUrl\}\?size=detail`/);
 });
 
 test("hosted Owner page readiness ignores a rejected public catalog", async () => {

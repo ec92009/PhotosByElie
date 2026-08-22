@@ -75,16 +75,22 @@ public struct PBEOwnerNativePreviewService: Sendable {
 
     public func provider() -> @Sendable (
         PBEOwnerSessionContract,
-        String
+        String,
+        Int
     ) async throws -> PBEOwnerNativePreview {
-        { session, assetID in
-            try await self.preview(session: session, assetID: assetID)
+        { session, assetID, maxPixelSize in
+            try await self.preview(
+                session: session,
+                assetID: assetID,
+                requestedMaxPixelSize: maxPixelSize
+            )
         }
     }
 
     public func preview(
         session: PBEOwnerSessionContract,
-        assetID: String
+        assetID: String,
+        requestedMaxPixelSize: Int? = nil
     ) async throws -> PBEOwnerNativePreview {
         let cleanAssetID = assetID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanAssetID.isEmpty,
@@ -116,12 +122,22 @@ public struct PBEOwnerNativePreviewService: Sendable {
             throw failure("pbe_owner_preview_unavailable", 503)
         }
 
+        let effectiveMaxPixelSize = max(
+            BackstagePreviewIPCConstants.minimumMaxPixel,
+            min(maxPixelSize, requestedMaxPixelSize ?? maxPixelSize)
+        )
         let preview: PhotoPreview
         do {
             preview = try await requestPool.run {
-                try await photoLibrary.renderedJPEGPreview(
+                if effectiveMaxPixelSize <= 900 {
+                    return try await photoLibrary.preview(
+                        localIdentifier: photosIdentifier,
+                        maxPixelSize: effectiveMaxPixelSize
+                    )
+                }
+                return try await photoLibrary.renderedJPEGPreview(
                     localIdentifier: photosIdentifier,
-                    maxPixelSize: maxPixelSize
+                    maxPixelSize: effectiveMaxPixelSize
                 )
             }
         } catch let error as PhotoLibraryError {
@@ -140,8 +156,8 @@ public struct PBEOwnerNativePreviewService: Sendable {
         guard preview.assetID == photosIdentifier,
               preview.pixelWidth > 0,
               preview.pixelHeight > 0,
-              preview.pixelWidth <= maxPixelSize,
-              preview.pixelHeight <= maxPixelSize,
+              preview.pixelWidth <= effectiveMaxPixelSize,
+              preview.pixelHeight <= effectiveMaxPixelSize,
               preview.jpegData.count <= maximumPreviewBytes,
               Self.isJPEG(preview.jpegData) else {
             throw failure("pbe_owner_preview_invalid", 502)

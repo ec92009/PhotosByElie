@@ -282,8 +282,8 @@
         type: mediaType,
         publicPreview: {
           allowed: mediaType !== "video",
-          galleryUrl: mediaType === "video" ? "" : previewUrl,
-          detailUrl: mediaType === "video" ? "" : previewUrl,
+          galleryUrl: mediaType === "video" ? "" : `${previewUrl}?size=gallery`,
+          detailUrl: mediaType === "video" ? "" : `${previewUrl}?size=detail`,
           dimensions,
         },
       },

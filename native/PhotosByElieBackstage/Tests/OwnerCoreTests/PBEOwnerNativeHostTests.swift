@@ -132,7 +132,7 @@ struct PBEOwnerNativeHTTPHostTests {
                 #expect(session.fixtureId == "expo")
                 return emptyGallery()
             },
-            previewProvider: { _, assetID in
+            previewProvider: { _, assetID, _ in
                 PBEOwnerNativePreview(
                     assetId: assetID,
                     jpegData: Data([0xff, 0xd8, 0x01, 0xff, 0xd9]),
@@ -266,9 +266,10 @@ struct PBEOwnerNativeHTTPHostTests {
                     items: []
                 )
             },
-            previewProvider: { session, assetID in
+            previewProvider: { session, assetID, maxPixelSize in
                 #expect(session.fixtureId == "expo")
                 #expect(assetID == "asset-one")
+                #expect(maxPixelSize == 900)
                 return PBEOwnerNativePreview(
                     assetId: assetID,
                     jpegData: Data([0xff, 0xd8, 0x01, 0xff, 0xd9]),

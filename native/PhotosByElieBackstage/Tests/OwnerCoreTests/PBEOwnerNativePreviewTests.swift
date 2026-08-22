@@ -32,6 +32,32 @@ struct PBEOwnerNativePreviewTests {
         #expect(preview.pixelHeight == 800)
     }
 
+    @Test("Gallery preview uses the bounded Photos thumbnail path")
+    func galleryPreviewSize() async throws {
+        let jpeg = Data([0xff, 0xd8, 0x01, 0xff, 0xd9])
+        let service = PBEOwnerNativePreviewService(
+            galleryProvider: { _ in gallery() },
+            photoLibrary: PBEOwnerPreviewPhotoLibraryStub { identifier, maxPixel in
+                #expect(maxPixel == 900)
+                return PhotoPreview(
+                    assetID: identifier,
+                    jpegData: jpeg,
+                    pixelWidth: 900,
+                    pixelHeight: 600
+                )
+            }
+        )
+
+        let preview = try await service.preview(
+            session: session(),
+            assetID: "asset-one",
+            requestedMaxPixelSize: 900
+        )
+
+        #expect(preview.pixelWidth == 900)
+        #expect(preview.pixelHeight == 600)
+    }
+
     @Test("Out-of-window and malformed PhotoKit replies fail closed")
     func previewFailures() async {
         let photoLibrary = PBEOwnerPreviewPhotoLibraryStub { identifier, _ in

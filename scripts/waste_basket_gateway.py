@@ -114,14 +114,74 @@ def _db_path(repo_root: Path, db_path: Path | None) -> Path:
     return selected if selected.is_absolute() else repo_root / selected
 
 
+_HOT_PATH_REQUIRED_TABLES = frozenset({
+    "sidecar_assets",
+    "sidecar_decisions",
+    "sidecar_tombstones",
+    "sidecar_pending_sync",
+    "sidecar_upload_bridge_run_items",
+    "fixture_pool_assets",
+    "fixture_asset_placements",
+    "fixture_asset_decisions",
+    "asset_editorial_state",
+    "asset_delivery_state",
+    "r2_objects",
+    "asset_publications",
+    "public_catalog_publications",
+    "asset_sale_references",
+    "r2_quarantine",
+    "fixture_delivery_receipts",
+    "asset_upload_run_items",
+    "media_lifecycle",
+    "owner_waste_basket_entries",
+    "owner_waste_basket_provenance",
+    "owner_waste_basket_operations",
+    "owner_waste_basket_receipts",
+    "owner_lifecycle_operations",
+    "owner_lifecycle_outbox",
+    "owner_hosted_lifecycle_requests",
+})
+
+
+def _hot_path_schema_is_ready(connection: sqlite3.Connection) -> bool:
+    """Recognize the complete lifecycle schema without running migrations.
+
+    Action-scoped connectors are short-lived processes, so module-level schema
+    caches cannot protect their hot path.  This bounded catalog check keeps
+    normal X/Restore work local-fast while incomplete or older databases still
+    take the full idempotent migration path below.
+    """
+    tables = {
+        str(row["name"])
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    if not _HOT_PATH_REQUIRED_TABLES.issubset(tables):
+        return False
+    hosted_columns = {
+        str(row["name"])
+        for row in connection.execute(
+            "PRAGMA table_info(owner_hosted_lifecycle_requests)"
+        ).fetchall()
+    }
+    return {"disposition", "blocked_at"}.issubset(hosted_columns)
+
+
 def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     """Open the Owner DB and ensure every related schema is present."""
     path = _db_path(repo_root, db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sidecar_state_db.connect(repo_root, path)
+    connection = sqlite3.connect(path, timeout=15)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA busy_timeout = 15000")
+    connection.execute("PRAGMA foreign_keys = ON")
+    if _hot_path_schema_is_ready(connection):
+        return connection
     # These are the same SQLite file, but each historical module owns its
     # schema helper.  Calling them here makes the gateway safe for synthetic
     # fixtures and for a partially initialized local checkout.
+    sidecar_state_db.ensure_schema(connection)
     owner_state_db.ensure_schema(connection)
     fixture_pipeline.ensure_schema(connection)
     connection.executescript(

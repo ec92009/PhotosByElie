@@ -2023,7 +2023,8 @@ def execute_action(
                     trusted_deployed_lifecycle=lifecycle_arm,
                 )
         else:
-            result = apply_public_photo_moderation(config.repo_root, moderation_payload)
+            with _timed_phase(action_timing, "lifecycle.local-moderation"):
+                result = apply_public_photo_moderation(config.repo_root, moderation_payload)
         if lifecycle_arm and active_lifecycle_client:
             with _timed_phase(action_timing, "lifecycle.outbox.replay"):
                 replay = drain_deployed_lifecycle_outbox(

@@ -1041,6 +1041,20 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 self.db,
             )
 
+    def test_complete_lifecycle_schema_skips_hot_path_migrations(self) -> None:
+        gateway.ensure_schema(self.root, self.db)
+
+        with patch.object(sidecar_state_db, "ensure_schema") as sidecar_schema, patch.object(
+            gateway.owner_state_db, "ensure_schema"
+        ) as owner_schema, patch.object(
+            gateway.fixture_pipeline, "ensure_schema"
+        ) as fixture_schema:
+            gateway.ensure_schema(self.root, self.db)
+
+        sidecar_schema.assert_not_called()
+        owner_schema.assert_not_called()
+        fixture_schema.assert_not_called()
+
     def test_explicit_empty_adopts_legacy_hidden_rows_and_uses_legacy_preview_keys(self) -> None:
         self._seed_asset("legacy-hidden")
         with sidecar_state_db.connect(self.root, self.db) as connection:

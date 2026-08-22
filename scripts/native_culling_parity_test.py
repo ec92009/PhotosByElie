@@ -144,7 +144,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
             "FixtureCullingView.selectableCases",
-            "cullingRatingFilters.contains",
+            "cullingMinimumRating",
             "CullingColorFilter.selectableCases",
         ):
             self.assertIn(marker, source)
@@ -1015,7 +1015,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Text(\"Status\")", culling)
         self.assertIn("Text(\"Rating\")", culling)
         self.assertIn("Text(\"Color\")", culling)
-        self.assertIn("CullingRatingScaleButton(", culling)
+        self.assertIn("CullingRatingSlider(", culling)
+        self.assertIn("model.cullingMinimumRating", culling)
+        self.assertIn("model.setCullingMinimumRating(rating)", culling)
         self.assertIn("LightroomColorFilterButton(", culling)
         self.assertIn("onChange(of: model.cullingSearch)", culling)
         self.assertIn("model.scheduleCullingSearchRefresh()", culling)
@@ -1033,7 +1035,7 @@ class NativeCullingParityTest(unittest.TestCase):
             model,
         )
 
-    def test_assignment_controls_use_direct_rating_buttons_and_toggle_colors(self):
+    def test_assignment_controls_use_one_rating_slider_and_toggle_colors(self):
         app = backstage_ui_source()
         model = (
             NATIVE
@@ -1053,8 +1055,9 @@ class NativeCullingParityTest(unittest.TestCase):
         actions = app.split("private var cullingActions", 1)[1].split(
             "private var cullingDestinationActions", 1
         )[0]
-        self.assertIn('ForEach(0...5, id: \\.self)', culling)
-        self.assertIn("cullingRatingAssignmentButton(rating)", culling)
+        self.assertEqual(culling.count("CullingRatingSlider("), 1)
+        self.assertNotIn('ForEach(0...5, id: \\.self)', culling)
+        self.assertNotIn("cullingRatingAssignmentButton", culling)
         self.assertIn("SidecarColor.allCases.filter { $0 != .none }", culling)
         self.assertIn("cullingColorAssignmentButton(color)", culling)
         self.assertNotIn('Picker("Rating"', culling)
@@ -1066,15 +1069,17 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("CullingCompactControlMetrics.ratingWidth", app)
         self.assertIn("CullingCompactControlMetrics.colorWidth", app)
         self.assertIn("ForEach(1...5, id: \\.self)", app)
-        self.assertIn("value <= rating ? Color.yellow", app)
-        self.assertIn("cullingSelectionHasRating", model)
+        self.assertIn("value <= displayedRating ? Color.yellow", app)
+        self.assertIn("cullingSelectionRating", model)
+        self.assertIn("func setCullingMinimumRating", model)
         self.assertIn("cullingSelectionHasColor", model)
         self.assertIn("func toggleCullingColor", model)
-        self.assertIn('"Clear stars on selected assets (0)."', culling)
+        self.assertIn('accessibilityAction(named: "Clear rating")', app)
+        self.assertIn(".accessibilityAdjustableAction", app)
         self.assertIn('case .red: "6"', culling)
         self.assertIn('case .blue: "9"', culling)
         self.assertIn("case .purple, .none: nil", culling)
-        self.assertIn("Rating buttons 0–5", actions)
+        self.assertIn("Rating slider 0–5", actions)
         self.assertIn("Color buttons toggle", actions)
         self.assertIn('case "0": .rating(0)', adapter)
         self.assertIn('case "5": .rating(5)', adapter)
@@ -1216,8 +1221,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "234.30")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "166")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "235.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "167")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1922,10 +1927,11 @@ class NativeCullingParityTest(unittest.TestCase):
             if button_count == 0:
                 continue
             help_count = source.count(".backstageHelp(")
+            adjustable_control_count = source.count(".accessibilityAdjustableAction")
             self.assertEqual(
-                button_count,
+                button_count + adjustable_control_count,
                 help_count,
-                f"{path.name} must attach one backstageHelp explanation to every Button",
+                f"{path.name} must attach one backstageHelp explanation to every Button or adjustable control",
             )
             total_buttons += button_count
 

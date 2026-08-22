@@ -1666,11 +1666,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var cullingRatingFilterLabel: String {
-        if cullingRatingFilters.count == 6 { return "All ratings" }
-        if cullingRatingFilters.count == 1, let rating = cullingRatingFilters.first {
-            return rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")"
-        }
-        return "\(cullingRatingFilters.count) ratings"
+        let rating = cullingMinimumRating
+        return rating == 0 ? "All ratings" : "\(rating)+ stars"
+    }
+
+    var cullingMinimumRating: Int {
+        cullingRatingFilters.min() ?? 0
     }
 
     var cullingColorFilterLabel: String {
@@ -1683,8 +1684,9 @@ final class BackstageViewModel: ObservableObject {
         toggle(view, in: &cullingViews)
     }
 
-    func toggleCullingRatingFilter(_ rating: Int) {
-        toggle(rating, in: &cullingRatingFilters)
+    func setCullingMinimumRating(_ rating: Int) {
+        let minimum = min(5, max(0, rating))
+        cullingRatingFilters = Set(minimum...5)
     }
 
     func toggleCullingColorFilter(_ color: CullingColorFilter) {
@@ -1796,15 +1798,19 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection.selectedInDisplayOrder
     }
 
-    func cullingSelectionHasRating(_ rating: Int) -> Bool {
+    var cullingSelectionRating: Int? {
         let ids = selectedCullingAssetIDs
-        guard !ids.isEmpty else { return false }
-        return ids.allSatisfy { id in
-            let currentRating = cullingStates[id]?.rating
+        guard let firstID = ids.first else { return nil }
+        let firstRating = cullingStates[firstID]?.rating
+            ?? cullingAssets.first(where: { $0.id == firstID })?.rating
+            ?? 0
+        guard ids.dropFirst().allSatisfy({ id in
+            let rating = cullingStates[id]?.rating
                 ?? cullingAssets.first(where: { $0.id == id })?.rating
                 ?? 0
-            return currentRating == rating
-        }
+            return rating == firstRating
+        }) else { return nil }
+        return firstRating
     }
 
     func cullingSelectionHasColor(_ color: SidecarColor) -> Bool {

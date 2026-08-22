@@ -414,18 +414,13 @@ struct CullingView: View {
             }
             Divider().frame(width: 1, height: 18)
             Text("Rating").font(.caption.weight(.semibold))
-            ForEach(0...5, id: \.self) { value in
-                CullingRatingScaleButton(
-                    rating: value,
-                    isSelected: model.cullingRatingFilters.contains(value),
-                    isDisabled: false,
-                    accessibilityLabel: value == 0 ? "Unrated" : "\(value) stars",
-                    help: value == 0
-                        ? "Show or hide unrated assets in Culling."
-                        : "Show or hide \(value)-star assets in Culling."
-                ) {
-                    model.toggleCullingRatingFilter(value)
-                }
+            CullingRatingSlider(
+                rating: model.cullingMinimumRating,
+                isDisabled: false,
+                accessibilityLabel: "Minimum rating filter",
+                help: "Click or drag across the stars to show that rating and above. Zero shows all ratings."
+            ) { rating in
+                model.setCullingMinimumRating(rating)
             }
             Divider().frame(width: 1, height: 18)
             Text("Color").font(.caption.weight(.semibold))
@@ -651,7 +646,7 @@ struct CullingView: View {
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P include • H exclude • X Waste Basket • U clear • Rating buttons 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P include • H exclude • X Waste Basket • U clear • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -719,28 +714,19 @@ struct CullingView: View {
             .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
             Text("Rating")
                 .font(.caption.weight(.semibold))
-            ForEach(0...5, id: \.self) { rating in
-                cullingRatingAssignmentButton(rating)
+            CullingRatingSlider(
+                rating: model.cullingSelectionRating,
+                isDisabled: model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision,
+                accessibilityLabel: "Selected photo rating",
+                help: "Click or drag across the stars to assign 1–5. Choose the current rating again to clear it. Shortcuts: 0–5."
+            ) { rating in
+                Task { await model.applyRatingShortcut(rating) }
             }
             Text("Color")
                 .font(.caption.weight(.semibold))
             ForEach(SidecarColor.allCases.filter { $0 != .none }, id: \.self) { color in
                 cullingColorAssignmentButton(color)
             }
-        }
-    }
-
-    private func cullingRatingAssignmentButton(_ rating: Int) -> some View {
-        CullingRatingScaleButton(
-            rating: rating,
-            isSelected: model.cullingSelectionHasRating(rating),
-            isDisabled: model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision,
-            accessibilityLabel: rating == 0 ? "Clear rating" : "Assign \(rating) stars",
-            help: rating == 0
-                ? "Clear stars on selected assets (0)."
-                : "Set selected assets to \(rating) star\(rating == 1 ? "" : "s") (\(rating))."
-        ) {
-            Task { await model.applyRatingShortcut(rating) }
         }
     }
 
@@ -1323,33 +1309,86 @@ private struct CullingCompactControlChrome: ViewModifier {
     }
 }
 
-private struct CullingRatingScaleButton: View {
-    let rating: Int
-    let isSelected: Bool
+private struct CullingRatingSlider: View {
+    let rating: Int?
     let isDisabled: Bool
     let accessibilityLabel: String
     let help: String
-    let action: () -> Void
+    let action: (Int) -> Void
+
+    @State private var pendingRating: Int?
+
+    private var displayedRating: Int {
+        pendingRating ?? rating ?? 0
+    }
+
+    private var accessibilityValue: String {
+        guard let rating else { return "Mixed" }
+        if accessibilityLabel == "Minimum rating filter" {
+            return rating == 0 ? "All ratings" : "\(rating) stars and above"
+        }
+        return rating == 0 ? "Unrated" : "\(rating) star\(rating == 1 ? "" : "s")"
+    }
 
     var body: some View {
-        Button(action: action) {
+        ZStack {
             HStack(spacing: 1) {
                 ForEach(1...5, id: \.self) { value in
                     Image(systemName: "star.fill")
-                        .foregroundStyle(value <= rating ? Color.yellow : Color.secondary.opacity(0.38))
+                        .foregroundStyle(value <= displayedRating ? Color.yellow : Color.secondary.opacity(0.38))
                 }
             }
             .font(.system(size: 12, weight: .semibold))
-            .modifier(CullingCompactControlChrome(
-                width: CullingCompactControlMetrics.ratingWidth,
-                isSelected: isSelected
-            ))
+
+            GeometryReader { geometry in
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { gesture in
+                                guard !isDisabled else { return }
+                                pendingRating = rating(at: gesture.location.x, width: geometry.size.width)
+                            }
+                            .onEnded { gesture in
+                                guard !isDisabled else { return }
+                                let selectedRating = rating(at: gesture.location.x, width: geometry.size.width)
+                                pendingRating = nil
+                                action(selectedRating == rating ? 0 : selectedRating)
+                            }
+                    )
+            }
         }
-        .buttonStyle(.plain)
+        .modifier(CullingCompactControlChrome(
+            width: CullingCompactControlMetrics.ratingWidth,
+            isSelected: rating != nil
+        ))
         .disabled(isDisabled)
         .backstageHelp(help)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityValue(accessibilityValue)
+        .accessibilityAdjustableAction { direction in
+            guard !isDisabled else { return }
+            let current = rating ?? 0
+            switch direction {
+            case .increment:
+                action(min(5, current + 1))
+            case .decrement:
+                action(max(0, current - 1))
+            @unknown default:
+                break
+            }
+        }
+        .accessibilityAction(named: "Clear rating") {
+            guard !isDisabled else { return }
+            action(0)
+        }
+    }
+
+    private func rating(at location: CGFloat, width: CGFloat) -> Int {
+        guard width > 0 else { return 0 }
+        let normalized = min(max(location / width, 0), 0.999_999)
+        return min(5, max(1, Int(normalized * 5) + 1))
     }
 }
 

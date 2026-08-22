@@ -1608,11 +1608,6 @@ private struct MetadataGiveBackView: View {
                     .backstageHelp("Run one bounded incremental Photos synchronization now and classify metadata, appearance, missing, and returned changes.")
                     if model.isSyncingPhotos {
                         ProgressView().controlSize(.small)
-                        Button(model.isCancellingPhotosSync ? "Stopping…" : "Stop safely") {
-                            Task { await model.cancelPhotosSync() }
-                        }
-                        .disabled(model.isCancellingPhotosSync)
-                        .backstageHelp("Stop after the current PhotoKit checkpoint. Completed asset classifications remain recorded and the rest retry on the next pass.")
                     }
                     BackstageFeedbackView(
                         message: model.photosSyncStatus,

@@ -210,6 +210,46 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertEqual(status["error"], "PhotoKit unavailable")
             self.assertTrue(status["completedAt"])
 
+    def test_photos_sync_start_finishes_inside_the_action_process(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root):
+                pass
+            result = {
+                "ok": True,
+                "requested": 2,
+                "scanned": 2,
+                "remaining": 0,
+                "changes": {
+                    "baseline": 1,
+                    "unchanged": 1,
+                    "metadataOnly": 0,
+                    "appearance": 0,
+                    "sourceMissing": 0,
+                    "sourceReturned": 0,
+                },
+                "failures": [],
+                "elapsedSeconds": 0.5,
+            }
+            with patch.object(local_server, "_incremental_photos_sync", return_value=result), patch.object(
+                local_server.threading,
+                "Thread",
+                side_effect=AssertionError("Photos sync must not outlive its action process"),
+            ):
+                status = local_server._start_photos_sync_run(root, limit=2)
+
+            self.assertEqual(status["status"], "completed")
+            self.assertEqual(status["scanned"], 2)
+            self.assertEqual(status["remaining"], 0)
+            self.assertTrue(status["completedAt"])
+            with connect(root) as connection:
+                row = connection.execute(
+                    "SELECT status, completed_at FROM photos_sync_runs WHERE run_id = ?",
+                    (status["runId"],),
+                ).fetchone()
+            self.assertEqual(row["status"], "completed")
+            self.assertTrue(row["completed_at"])
+
     def test_connector_exposes_fixture_state_and_effective_access(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

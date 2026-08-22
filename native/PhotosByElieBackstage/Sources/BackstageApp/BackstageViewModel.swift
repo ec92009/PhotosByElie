@@ -348,7 +348,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
     @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
     @Published var isSyncingPhotos = false
-    @Published var isCancellingPhotosSync = false
     @Published var r2Reconciliation: R2ReconciliationReport?
     @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
     @Published var isRunningR2Reconciliation = false
@@ -360,7 +359,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
     @Published var updateState: BackstageUpdateState = .idle
     private var nativePublicationCancellationRequested = false
-    private var photosSyncCancellationRequested = false
     private var didCheckOwnerWorkflowRecovery = false
     private var r2ReconciliationCancellationRequested = false
     private var terminationRequested = false
@@ -5230,26 +5228,10 @@ final class BackstageViewModel: ObservableObject {
         guard !isSyncingPhotos else { return }
         guard authentication.phase == .authenticated else { return }
         isSyncingPhotos = true
-        isCancellingPhotosSync = false
-        photosSyncCancellationRequested = false
-        defer {
-            isSyncingPhotos = false
-            isCancellingPhotosSync = false
-            photosSyncCancellationRequested = false
-        }
+        defer { isSyncingPhotos = false }
         do {
-            var report = try await deliveryService.startPhotosSync(limit: limit)
+            let report = try await deliveryService.syncPhotos(limit: limit)
             photosSyncReport = report
-            if photosSyncCancellationRequested, !report.runID.isEmpty {
-                report = try await deliveryService.cancelPhotosSync(runID: report.runID)
-                photosSyncReport = report
-            }
-            while !report.isFinished {
-                photosSyncStatus = "\(report.stage) • \(report.scanned) of \(report.requested) checked • \(report.remaining) remaining."
-                try await Task.sleep(for: .seconds(1))
-                report = try await deliveryService.photosSyncStatus(runID: report.runID)
-                photosSyncReport = report
-            }
             if report.attached {
                 photosSyncStatus = "An Apple Photos sync pass is already running."
             } else if report.status == "cancelled" {
@@ -5263,20 +5245,6 @@ final class BackstageViewModel: ObservableObject {
             }
         } catch {
             photosSyncStatus = userFacingMessage(for: error)
-        }
-    }
-
-    func cancelPhotosSync() async {
-        guard isSyncingPhotos else { return }
-        photosSyncCancellationRequested = true
-        isCancellingPhotosSync = true
-        photosSyncStatus = "Stopping safely after the current PhotoKit checkpoint…"
-        guard let runID = photosSyncReport?.runID, !runID.isEmpty else { return }
-        do {
-            photosSyncReport = try await deliveryService.cancelPhotosSync(runID: runID)
-        } catch {
-            photosSyncStatus = userFacingMessage(for: error)
-            isCancellingPhotosSync = false
         }
     }
 

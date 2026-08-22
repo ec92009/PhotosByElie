@@ -3302,12 +3302,12 @@ def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
             connection.commit()
 
     _retry_photos_sync_db_write(create_run)
-    worker = threading.Thread(
-        target=_run_photos_sync_task,
-        args=(repo_root, run_id, bounded_limit, worker_token),
-        daemon=True,
-    )
-    worker.start()
+    # The action-scoped connector exits as soon as this function returns. A
+    # daemon thread would be killed with that process and leave a durable
+    # `running` row that Backstage polls forever. Keep the bounded PhotoKit
+    # pass inside this one connector action so shutdown can wait for the work
+    # and the action always persists a terminal receipt before it exits.
+    _run_photos_sync_task(repo_root, run_id, bounded_limit, worker_token)
     return {**_photos_sync_run_status(repo_root, run_id), "started": True}
 
 

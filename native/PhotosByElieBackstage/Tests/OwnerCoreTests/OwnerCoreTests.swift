@@ -1790,6 +1790,10 @@ struct OwnerCoreTests {
             request.payload["manifest"]?.objectValue?["assetIds"]?.arrayValue?.compactMap(\.stringValue)
                 == ["asset-a", "asset-b"]
         )
+        let idempotencyKey = try #require(await api.idempotencyKeys().first)
+        #expect(idempotencyKey.count >= 8)
+        #expect(idempotencyKey.count <= 160)
+        #expect(idempotencyKey.unicodeScalars.allSatisfy { (0x21...0x7e).contains($0.value) })
     }
 
     @Test("Metadata give-back retries only independently failed asset IDs")
@@ -5051,6 +5055,7 @@ private actor PendingOwnerActionAPI: OwnerActionServing {
 private actor ScriptedOwnerActionAPI: OwnerActionServing {
     private var completed: [OwnerAction]
     private var created: [OwnerActionCreate] = []
+    private var keys: [String] = []
 
     init(completed: [OwnerAction]) {
         self.completed = completed
@@ -5061,6 +5066,7 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
         idempotencyKey: String
     ) async throws -> OwnerActionEnvelope {
         created.append(action)
+        keys.append(idempotencyKey)
         let index = created.count - 1
         let terminal = completed[index]
         return OwnerActionEnvelope(
@@ -5082,6 +5088,7 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
     }
 
     func requests() -> [OwnerActionCreate] { created }
+    func idempotencyKeys() -> [String] { keys }
 }
 @Suite("PBE Owner native host route contract")
 struct PBEOwnerNativeHostContractTests {

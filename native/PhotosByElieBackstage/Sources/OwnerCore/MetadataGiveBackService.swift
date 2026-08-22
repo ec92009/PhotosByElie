@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public struct MetadataGiveBackWrittenItem: Sendable, Equatable, Identifiable {
@@ -108,11 +109,14 @@ public actor MetadataGiveBackService {
             target: connectorID,
             payload: payload
         )
+        let scopeMaterial = ([fixtureID] + cleanIDs).joined(separator: "\u{1f}")
+        let scopeDigest = SHA256.hash(data: Data(scopeMaterial.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
         let idempotency = [
             "metadata-giveback",
             mode,
-            fixtureID.isEmpty ? "global" : fixtureID,
-            cleanIDs.joined(separator: ","),
+            String(scopeDigest.prefix(24)),
             UUID().uuidString,
         ].joined(separator: ":")
         let action = try await runner.submit(request, idempotencyKey: idempotency)

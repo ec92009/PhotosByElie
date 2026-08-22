@@ -268,7 +268,7 @@ struct PBEOwnerNativeHTTPHostTests {
             },
             previewProvider: { session, assetID, maxPixelSize in
                 #expect(session.fixtureId == "expo")
-                #expect(assetID == "asset-one")
+                #expect(["asset-one", "asset/two"].contains(assetID))
                 #expect(maxPixelSize == 900)
                 return PBEOwnerNativePreview(
                     assetId: assetID,
@@ -409,8 +409,14 @@ struct PBEOwnerNativeHTTPHostTests {
         #expect(previewResponse.headers["Content-Type"] == "image/jpeg")
         #expect(previewResponse.body == Data([0xff, 0xd8, 0x01, 0xff, 0xd9]))
 
-        let pathInjection = await dispatcher.dispatch(try request(
+        let encodedOpaqueID = await dispatcher.dispatch(try request(
             "GET /__photosbyelie/source-preview/asset%2Ftwo HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(encodedOpaqueID.statusCode == 200)
+
+        let pathInjection = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/source-preview/asset/two HTTP/1.1\r\n"
                 + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
         ))
         #expect(pathInjection.statusCode == 400)

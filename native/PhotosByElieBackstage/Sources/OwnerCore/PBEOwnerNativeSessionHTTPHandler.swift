@@ -361,12 +361,26 @@ public actor PBEOwnerNativeSessionHTTPHandler {
             )
         }
         let session = try await authorizeBrowser(request)
-        let assetID = String(request.path.dropFirst(Self.sourcePreviewPath.count))
+        guard let components = URLComponents(
+            string: "http://127.0.0.1\(request.target)"
+        ) else {
+            throw Self.failure(
+                "pbe_owner_preview_asset_invalid",
+                400,
+                "The requested PBE Owner preview asset is invalid."
+            )
+        }
+        let encodedPath = components.percentEncodedPath
+        let encodedPrefix = Self.sourcePreviewPath
+        let encodedAssetID = String(encodedPath.dropFirst(encodedPrefix.count))
+        let assetID = encodedAssetID.removingPercentEncoding ?? ""
         guard !assetID.isEmpty,
+              encodedPath.hasPrefix(encodedPrefix),
+              !encodedAssetID.contains("/"),
+              !encodedAssetID.contains("\\"),
               assetID == Self.clean(assetID),
-              assetID.utf8.count <= BackstagePreviewIPCConstants.maximumAssetIDBytes,
-              !assetID.contains("/"),
               !assetID.contains("\\"),
+              assetID.utf8.count <= BackstagePreviewIPCConstants.maximumAssetIDBytes,
               assetID.unicodeScalars.allSatisfy({
                   !CharacterSet.controlCharacters.contains($0)
               }) else {

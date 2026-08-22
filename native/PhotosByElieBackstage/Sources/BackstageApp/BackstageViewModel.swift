@@ -398,6 +398,8 @@ final class BackstageViewModel: ObservableObject {
     private var lifecycleMonitorTask: Task<Void, Never>?
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
+    private var shouldInjectNextCullingThumbnailFailure: Bool
+    private let cullingThumbnailUpgradeDelay: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
@@ -416,7 +418,6 @@ final class BackstageViewModel: ObservableObject {
         "PhotosByElieBackstage.cullingPreviewPanelVisible"
     private static let reviewPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.reviewPreviewPanelVisible"
-    private static let cullingThumbnailUpgradeDelay = Duration.milliseconds(650)
     private static let cullingThumbnailUpgradePixelSize = 900
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
@@ -519,7 +520,11 @@ final class BackstageViewModel: ObservableObject {
         fixtureService: FixtureWorkflowService? = nil,
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
-            .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:))
+            .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:)),
+        cullingThumbnailUpgradeDelay: Duration = .seconds(1),
+        injectNextCullingThumbnailFailure: Bool = ProcessInfo.processInfo.environment[
+            "PBE_CULLING_PREVIEW_FAIL_ONCE"
+        ] == "1"
     ) {
         self.preferences = preferences
         self.updateService = updateService
@@ -544,6 +549,8 @@ final class BackstageViewModel: ObservableObject {
         self.api = api
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
+        self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
+        self.shouldInjectNextCullingThumbnailFailure = injectNextCullingThumbnailFailure
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
@@ -1400,7 +1407,7 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailUpgradeTasks[assetID] = Task { [weak self] in
             guard let self else { return }
             defer { self.cullingThumbnailUpgradeTasks[assetID] = nil }
-            try? await Task.sleep(for: Self.cullingThumbnailUpgradeDelay)
+            try? await Task.sleep(for: self.cullingThumbnailUpgradeDelay)
             guard !Task.isCancelled,
                   self.cullingVisibleAssetIDs.contains(assetID),
                   !self.isCullingScrolling,
@@ -1435,6 +1442,12 @@ final class BackstageViewModel: ObservableObject {
         preferRenderedJPEG: Bool = false
     ) async {
         guard cullingThumbnails[assetID] == nil else { return }
+        if shouldInjectNextCullingThumbnailFailure {
+            shouldInjectNextCullingThumbnailFailure = false
+            cullingThumbnailFailures[assetID] = .previewUnavailable
+            cullingStatus = "Controlled preview failure ready. Retry this card; no culling decision changed."
+            return
+        }
         let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {

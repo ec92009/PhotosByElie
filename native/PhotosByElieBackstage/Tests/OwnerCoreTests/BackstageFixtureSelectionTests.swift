@@ -336,7 +336,10 @@ struct BackstageFixtureSelectionTests {
     @Test("Culling thumbnail Retry recovers one failed card without changing decisions")
     @MainActor
     func cullingThumbnailRetryRecoversOneFailedCard() async {
-        let model = BackstageViewModel(photoLibrary: RetryPhotoLibrary())
+        let model = BackstageViewModel(
+            photoLibrary: RetryPhotoLibrary(),
+            injectNextCullingThumbnailFailure: true
+        )
         let asset = FixturePoolAsset(
             id: "asset-retry",
             position: 0,
@@ -352,8 +355,16 @@ struct BackstageFixtureSelectionTests {
             snapshotHash: "synthetic",
             assets: [asset]
         )
-        model.cullingThumbnails = [:]
-        model.cullingThumbnailFailures[asset.id] = .previewUnavailable
+        model.requestThumbnail(for: asset.id)
+
+        for _ in 0..<20 {
+            if model.cullingThumbnailFailures[asset.id] != nil { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(model.cullingThumbnails[asset.id] == nil)
+        #expect(model.cullingThumbnailFailures[asset.id] == .previewUnavailable)
+        #expect(model.cullingStatus.contains("no culling decision changed"))
 
         model.retryThumbnail(for: asset.id)
 
@@ -365,6 +376,40 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingThumbnails[asset.id] != nil)
         #expect(model.cullingThumbnailFailures[asset.id] == nil)
         #expect(model.cullingPool?.assets.map(\.id) == [asset.id])
+    }
+
+    @Test("Culling thumbnail upgrade waits for scroll idle and runs once")
+    @MainActor
+    func cullingThumbnailUpgradeWaitsForScrollIdle() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .milliseconds(60)
+        )
+        let asset = FixtureAsset(
+            id: "asset-idle-upgrade",
+            title: "Idle upgrade fixture",
+            filename: "idle-upgrade.jpg",
+            mediaType: "photo"
+        )
+
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingAssetDidAppear(asset)
+        for _ in 0..<20 {
+            if model.cullingThumbnails[asset.id] != nil { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        try? await Task.sleep(for: .milliseconds(90))
+
+        #expect(photoLibrary.requestedPixelSizes() == [180])
+
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        for _ in 0..<30 {
+            if photoLibrary.requestedPixelSizes().contains(900) { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(photoLibrary.requestedPixelSizes() == [180, 900])
     }
 
     @Test("Missing media availability still keeps Culling on photos")
@@ -567,6 +612,36 @@ private struct RetryPhotoLibrary: PhotoLibraryServing {
 
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
         throw PhotoLibraryError.exportFailed("Synthetic retry test does not export originals.")
+    }
+}
+
+private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var pixelSizes: [Int] = []
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        lock.withLock { pixelSizes.append(maxPixelSize) }
+        return PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: maxPixelSize,
+            pixelHeight: maxPixelSize
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Synthetic idle-upgrade test does not export originals.")
+    }
+
+    func requestedPixelSizes() -> [Int] {
+        lock.withLock { pixelSizes }
     }
 }
 

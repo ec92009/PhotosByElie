@@ -53,7 +53,9 @@ class NativeCullingParityTest(unittest.TestCase):
             "func cullingAssetDidAppear(_ asset: FixtureAsset)",
             "func cullingAssetDidDisappear(_ assetID: String)",
             "func cullingScrollPhaseChanged(isScrolling: Bool)",
-            "Task.sleep(for: Self.cullingThumbnailUpgradeDelay)",
+            "cullingThumbnailUpgradeDelay: Duration = .seconds(1)",
+            '"PBE_CULLING_PREVIEW_FAIL_ONCE"',
+            "Task.sleep(for: self.cullingThumbnailUpgradeDelay)",
             "maxPixelSize: Self.cullingThumbnailUpgradePixelSize",
         ):
             self.assertIn(marker, model)

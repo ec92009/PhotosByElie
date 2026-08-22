@@ -68,11 +68,14 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         var gallery: PBEOwnerNativeGallery
     }
 
-    private static let browserCookie = "pbe_owner_browser"
+    // Version the cookie name when its path changes. Otherwise Safari can send
+    // both the retained legacy cookie and the new cookie on Owner routes, and
+    // the fail-closed duplicate-cookie guard correctly rejects the session.
+    private static let browserCookie = "pbe_owner_browser_v2"
     // The authenticated browser session serves both the Owner JSON routes and
     // the sibling PhotoKit preview route. Keep the cookie under the smallest
     // shared private prefix so browsers send it to both route families.
-    private static let cookiePath = "/__photosbyelie"
+    private static let cookiePath = "/__photosbyelie/"
     private static let sourcePreviewPath = "/__photosbyelie/source-preview/"
 
     private let checkoutIdentity: String

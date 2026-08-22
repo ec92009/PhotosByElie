@@ -362,15 +362,17 @@ struct PBEOwnerNativeHTTPHostTests {
         #expect(browserResponse.statusCode == 201)
         #expect(browserResponse.body.range(of: Data(ticket.utf8)) == nil)
         let setCookie = try #require(browserResponse.headers["Set-Cookie"])
+        #expect(setCookie.hasPrefix("pbe_owner_browser_v2="))
         #expect(setCookie.contains("HttpOnly"))
         #expect(setCookie.contains("SameSite=Strict"))
-        #expect(setCookie.contains("Path=/__photosbyelie;"))
+        #expect(setCookie.contains("Path=/__photosbyelie/;"))
         #expect(!setCookie.contains("Path=/__photosbyelie/pbe-owner"))
         let cookie = String(setCookie.split(separator: ";", maxSplits: 1)[0])
 
         let statusResponse = await dispatcher.dispatch(try request(
             "GET /__photosbyelie/pbe-owner/session HTTP/1.1\r\n"
-                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+                + "Host: 127.0.0.1:9000\r\n"
+                + "Cookie: pbe_owner_browser=retained-legacy; \(cookie)\r\n\r\n"
         ))
         #expect(statusResponse.statusCode == 200)
 

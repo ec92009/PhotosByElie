@@ -28,7 +28,15 @@ def patched_server_state(state, fallback_photo):
     def state_groups(_repo_root):
         return state["expo"], state["reserve"], state["hidden"]
 
-    def write_catalog_state(_repo_root, expo_groups, reserve_groups, hidden_groups):
+    def write_catalog_state(
+        _repo_root,
+        expo_groups,
+        reserve_groups,
+        hidden_groups,
+        *,
+        lifecycle_snapshot=None,
+    ):
+        del lifecycle_snapshot
         state["expo"] = expo_groups
         state["reserve"] = reserve_groups
         state["hidden"] = hidden_groups
@@ -1313,7 +1321,14 @@ class TitleReviewUndoTests(unittest.TestCase):
                 successful_writer = local_server._write_catalog_state
                 attempts = 0
 
-                def fail_once(_repo_root, expo_groups, reserve_groups, hidden_groups):
+                def fail_once(
+                    _repo_root,
+                    expo_groups,
+                    reserve_groups,
+                    hidden_groups,
+                    *,
+                    lifecycle_snapshot=None,
+                ):
                     nonlocal attempts
                     attempts += 1
                     if attempts == 1:
@@ -1321,7 +1336,13 @@ class TitleReviewUndoTests(unittest.TestCase):
                         state["reserve"] = copy.deepcopy(projected_hidden["reserve"])
                         state["hidden"] = copy.deepcopy(projected_hidden["hidden"])
                         raise OSError("synthetic static projection failure")
-                    return successful_writer(_repo_root, expo_groups, reserve_groups, hidden_groups)
+                    return successful_writer(
+                        _repo_root,
+                        expo_groups,
+                        reserve_groups,
+                        hidden_groups,
+                        lifecycle_snapshot=lifecycle_snapshot,
+                    )
 
                 local_server._write_catalog_state = fail_once
                 try:
@@ -1534,6 +1555,62 @@ class TitleReviewUndoTests(unittest.TestCase):
                 empty_gateway.call_args.kwargs["deployed_lifecycle"],
                 trusted_arm,
             )
+
+    def test_waste_basket_gateway_projects_static_state_and_reads_lifecycle_once(self):
+        photo_id = "pbe-single-pass-lifecycle-projection"
+        expo_groups = {slug: [] for slug in local_server.ORDER}
+        reserve_groups = {slug: [] for slug in local_server.ORDER}
+        hidden_groups = {slug: [] for slug in local_server.ORDER}
+        expo_groups["france"].append({
+            "id": photo_id,
+            "title": "Single-pass projection",
+            "gallerySrc": f"./assets/expo/france/{photo_id}_900.jpg",
+            "imageSrc": f"./assets/expo/france/{photo_id}_1800.jpg",
+        })
+        lifecycle_snapshot = {
+            "hiddenPhotoIds": {photo_id},
+            "discardedPhotoIds": set(),
+            "blockedPhotoIds": {photo_id},
+        }
+
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            patch.object(
+                local_server,
+                "_state_groups",
+                return_value=(expo_groups, reserve_groups, hidden_groups),
+            ) as state_groups,
+            patch.object(
+                local_server,
+                "_lifecycle_snapshot",
+                return_value=lifecycle_snapshot,
+            ) as snapshot,
+            patch.object(
+                local_server,
+                "move_to_waste_basket_gateway",
+                return_value={"ok": True, "state": "recoverable", "assetIds": [photo_id]},
+            ),
+            patch.object(
+                local_server,
+                "_write_catalog_state",
+                return_value=({}, {"ok": True, "path": "worker/photos-catalog.generated.mjs"}),
+            ) as catalog_writer,
+        ):
+            result = local_server.apply_photo_action(Path(temp_dir), {
+                "action": "waste-basket-x",
+                "photo_id": photo_id,
+                "owner_mode": True,
+                "owner_authorized": True,
+            })
+
+        self.assertEqual(result["moved_ids"], [photo_id])
+        self.assertEqual(state_groups.call_count, 1)
+        self.assertEqual(snapshot.call_count, 1)
+        self.assertIs(
+            catalog_writer.call_args.kwargs["lifecycle_snapshot"],
+            lifecycle_snapshot,
+        )
+        self.assertIn("artifact_write_ms", result["projection_timing"])
 
 
 if __name__ == "__main__":

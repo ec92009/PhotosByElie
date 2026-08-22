@@ -5125,8 +5125,11 @@ def _lifecycle_blocked_ids(repo_root: Path) -> set[str]:
     return set(_lifecycle_snapshot(repo_root).get("blockedPhotoIds") or [])
 
 
-def _assert_no_lifecycle_blocked_public_rows(repo_root: Path) -> None:
-    blocked_ids = _lifecycle_blocked_ids(repo_root)
+def _assert_no_lifecycle_blocked_public_rows(
+    repo_root: Path,
+    blocked_ids: set[str] | None = None,
+) -> None:
+    blocked_ids = blocked_ids if blocked_ids is not None else _lifecycle_blocked_ids(repo_root)
     if not blocked_ids:
         return
     public_ids = set(_public_catalog_origin_by_id(repo_root))
@@ -7328,12 +7331,20 @@ def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]
     }
 
 
-def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
+def _write_state(
+    repo_root: Path,
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_groups: dict[str, list[dict]],
+    *,
+    lifecycle_snapshot: dict | None = None,
+) -> dict:
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
-    discarded_ids = _lifecycle_discarded_ids(repo_root)
+    lifecycle_snapshot = lifecycle_snapshot or _lifecycle_snapshot(repo_root)
+    discarded_ids = set(lifecycle_snapshot.get("discardedPhotoIds") or [])
     hidden_ids = (
         {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
-        | _lifecycle_hidden_ids(repo_root)
+        | set(lifecycle_snapshot.get("hiddenPhotoIds") or [])
     )
     blocked_ids = discarded_ids | hidden_ids
     expo_groups = _groups_without_photo_ids(expo_groups, blocked_ids)
@@ -7352,7 +7363,7 @@ def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_gr
         "live-local-action",
     )
     write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
-    _assert_no_lifecycle_blocked_public_rows(repo_root)
+    _assert_no_lifecycle_blocked_public_rows(repo_root, blocked_ids)
     site = load_site_data(repo_root)
     return {
         "data": site.get("data", {}),
@@ -7386,8 +7397,21 @@ def _write_worker_catalog(repo_root: Path) -> dict:
     }
 
 
-def _write_catalog_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> tuple[dict, dict]:
-    site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+def _write_catalog_state(
+    repo_root: Path,
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_groups: dict[str, list[dict]],
+    *,
+    lifecycle_snapshot: dict | None = None,
+) -> tuple[dict, dict]:
+    site_state = _write_state(
+        repo_root,
+        expo_groups,
+        reserve_groups,
+        hidden_groups,
+        lifecycle_snapshot=lifecycle_snapshot,
+    )
     worker_catalog = _write_worker_catalog(repo_root)
     return site_state, worker_catalog
 
@@ -7400,6 +7424,8 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
     operation and immutable hosted request identity.
     """
 
+    projection_started = time.perf_counter()
+    timing: dict[str, float] = {}
     normalized_operation = str(operation or "").strip().lower()
     ids = _normalized_photo_ids(photo_ids)
     if normalized_operation not in {"x", "restore", "empty"}:
@@ -7416,9 +7442,12 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
             "site": {},
             "catalogPublication": {"state": "not-needed", "receipt": None},
         }
+    phase_started = time.perf_counter()
     try:
         expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+        timing["static_state_load_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
         return {
             "projected_ids": [],
             "catalog_publish_pending": True,
@@ -7426,12 +7455,17 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
             "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
             "site": {"ok": False, "state": "skipped-no-static-catalog"},
             "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
         }
+    timing["static_state_load_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
 
+    phase_started = time.perf_counter()
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    timing["hidden_reference_repair_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
     projected_ids: list[str] = []
     missing_ids: list[str] = []
     projected_at = datetime.now(timezone.utc).isoformat()
+    phase_started = time.perf_counter()
     for photo_id in ids:
         if normalized_operation == "x":
             if _find_photo(hidden_groups, photo_id):
@@ -7478,14 +7512,13 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
         _remove_existing(hidden_groups, photo_id)
         projected_ids.append(photo_id)
 
+    timing["catalog_projection_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    phase_started = time.perf_counter()
     try:
-        site_state, worker_catalog = _write_catalog_state(
-            repo_root,
-            expo_groups,
-            reserve_groups,
-            hidden_groups,
-        )
+        lifecycle_snapshot = _lifecycle_snapshot(repo_root)
     except Exception:  # noqa: BLE001 - authority is already committed.
+        timing["lifecycle_snapshot_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
         return {
             "projected_ids": [],
             "missing_ids": missing_ids,
@@ -7497,7 +7530,36 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
             },
             "worker_catalog": {"ok": False, "state": "pending"},
             "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
         }
+    timing["lifecycle_snapshot_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    phase_started = time.perf_counter()
+    try:
+        site_state, worker_catalog = _write_catalog_state(
+            repo_root,
+            expo_groups,
+            reserve_groups,
+            hidden_groups,
+            lifecycle_snapshot=lifecycle_snapshot,
+        )
+    except Exception:  # noqa: BLE001 - authority is already committed.
+        timing["artifact_write_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
+        return {
+            "projected_ids": [],
+            "missing_ids": missing_ids,
+            "catalog_publish_pending": True,
+            "projection": {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_failed",
+            },
+            "worker_catalog": {"ok": False, "state": "pending"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
+        }
+    timing["artifact_write_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
 
     worker_ok = worker_catalog.get("ok") is True
     if missing_ids:
@@ -7518,12 +7580,13 @@ def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: 
     return {
         "projected_ids": projected_ids,
         "missing_ids": missing_ids,
-        "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
+        "hidden_ids": sorted(lifecycle_snapshot.get("hiddenPhotoIds") or []),
         "catalog_publish_pending": True,
         "projection": projection,
         "worker_catalog": worker_catalog,
         "site": site_state,
         "catalogPublication": {"state": "pending", "receipt": None},
+        "projection_timing": timing,
     }
 
 
@@ -13173,17 +13236,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "waste-basket-empty",
         "waste-basket-tombstone-restore",
     }
-    try:
+    if action not in gateway_actions:
         expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
-    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
-        if action not in gateway_actions:
-            raise
-        # Synthetic connector/Owner SQLite tests need the authoritative
-        # gateway without a checked-out static catalog or Node helper.
-        expo_groups = {slug: [] for slug in ORDER}
-        reserve_groups = {slug: [] for slug in ORDER}
-        hidden_groups = {slug: [] for slug in ORDER}
-    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+        _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
     moved = None
 
     if action in {"waste-basket-x", "waste-basket-x-many"}:

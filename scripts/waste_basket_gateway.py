@@ -344,6 +344,7 @@ def _is_missing_canonical_r2_error(error: str) -> bool:
     return (
         "canonical r2 mapping is missing" in normalized
         or "unsupported or incomplete r2 mapping" in normalized
+        or "ambiguous canonical r2 mapping" in normalized
     )
 
 
@@ -1149,7 +1150,9 @@ def derive_deployed_lifecycle_members(
     }
     try:
         members = []
+        canonical_media_ids: set[str] = set()
         for asset_id in ids:
+            canonical_media_id = asset_id
             rows = connection.execute(
                 """SELECT bucket, object_key FROM r2_objects
                    WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
@@ -1198,10 +1201,66 @@ def derive_deployed_lifecycle_members(
                                 if str(key or "").strip()
                             )
             if not bindings:
+                # A reindexed Photos row can retain its old local identifier in
+                # raw_json. Trust that bridge only when a successful upload row
+                # and current R2 ledger entries agree on one photo identity.
+                upload_photo_ids = [
+                    str(row["photo_id"])
+                    for row in connection.execute(
+                        """WITH requested_asset AS (
+                             SELECT asset_id,
+                                    NULLIF(
+                                      json_extract(
+                                        CASE WHEN json_valid(raw_json) THEN raw_json ELSE '{}' END,
+                                        '$.localIdentifier'
+                                      ),
+                                      ''
+                                    ) AS local_identifier
+                               FROM sidecar_assets
+                              WHERE asset_id = ?
+                           )
+                           SELECT DISTINCT bridge.photo_id
+                             FROM requested_asset AS asset
+                             JOIN sidecar_upload_bridge_run_items AS bridge
+                               ON bridge.asset_id = asset.asset_id
+                               OR bridge.asset_id = asset.local_identifier
+                            WHERE bridge.status = 'uploaded'
+                              AND bridge.upload_status IN ('uploaded', 'uploaded_with_skips')
+                              AND COALESCE(bridge.photo_id, '') <> ''
+                              AND EXISTS (
+                                SELECT 1
+                                  FROM r2_objects AS object
+                                 WHERE object.photo_id = bridge.photo_id
+                                   AND object.lifecycle_state <> 'deleted_confirmed'
+                              )
+                            ORDER BY bridge.photo_id""",
+                        (asset_id,),
+                    ).fetchall()
+                ]
+                if len(upload_photo_ids) > 1:
+                    raise WasteBasketError(f"ambiguous canonical R2 mapping for {asset_id}")
+                if upload_photo_ids:
+                    canonical_media_id = upload_photo_ids[0]
+                    rows = connection.execute(
+                        """SELECT bucket, object_key FROM r2_objects
+                           WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
+                           ORDER BY bucket, object_key""",
+                        (canonical_media_id,),
+                    ).fetchall()
+                    for row in rows:
+                        bucket = bucket_names.get(str(row["bucket"] or "").strip())
+                        object_key = str(row["object_key"] or "").strip()
+                        if not bucket or not object_key:
+                            raise WasteBasketError(f"unsupported or incomplete R2 mapping for {asset_id}")
+                        bindings.add((bucket, object_key))
+            if not bindings:
                 raise WasteBasketError(f"canonical R2 mapping is missing for {asset_id}")
+            if canonical_media_id in canonical_media_ids:
+                raise WasteBasketError(f"ambiguous canonical R2 mapping for {asset_id}")
+            canonical_media_ids.add(canonical_media_id)
             members.append({
                 "canonicalAssetId": asset_id,
-                "canonicalMediaId": asset_id,
+                "canonicalMediaId": canonical_media_id,
                 "bindings": [{"bucket": bucket, "objectKey": key} for bucket, key in sorted(bindings)],
             })
         return sorted(members, key=lambda item: item["canonicalMediaId"])

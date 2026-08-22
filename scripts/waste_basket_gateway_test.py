@@ -261,6 +261,52 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 (f"expo/{asset_id}_900.jpg", asset_id, NOW, NOW, NOW),
             )
 
+    def _seed_uploaded_r2_identity(
+        self,
+        *,
+        upload_asset_id: str,
+        photo_id: str,
+    ) -> None:
+        """Record one successful durable upload identity and its current R2 objects."""
+        run_id = f"run-{photo_id}"
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT OR REPLACE INTO sidecar_upload_bridge_runs
+                     (run_id, mode, status, execute_upload, limit_count,
+                      started_at, completed_at, summary_json, created_at, updated_at)
+                   VALUES (?, 'execute', 'completed', 1, 1, ?, ?, '{}', ?, ?)""",
+                (run_id, NOW, NOW, NOW, NOW),
+            )
+            connection.execute(
+                """INSERT OR REPLACE INTO sidecar_upload_bridge_run_items
+                     (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                      queued_at, status, export_status, planned_keys_json,
+                      created_at, updated_at, upload_status, upload_keys_json)
+                   VALUES (?, ?, ?, ?, ?, 'photo', ?, 'uploaded', 'exported', '[]',
+                           ?, ?, 'uploaded', '[]')""",
+                (
+                    f"item-{photo_id}",
+                    run_id,
+                    upload_asset_id,
+                    photo_id,
+                    f"{photo_id}.jpg",
+                    NOW,
+                    NOW,
+                    NOW,
+                ),
+            )
+            for bucket, object_key, kind in (
+                ("public", f"expo/{photo_id}_900.jpg", "public-preview"),
+                ("private", f"masters/{photo_id}.jpg", "private-master"),
+            ):
+                connection.execute(
+                    """INSERT OR REPLACE INTO r2_objects
+                         (bucket, object_key, photo_id, object_kind, lifecycle_state,
+                          first_seen_at, last_seen_at, source, bytes, updated_at)
+                       VALUES (?, ?, ?, ?, 'current', ?, ?, 'synthetic-upload', 12, ?)""",
+                    (bucket, object_key, photo_id, kind, NOW, NOW, NOW),
+                )
+
     def _arm(self, operation_id: str, *, operation: str = "x", revision: int = 17) -> dict:
         members = gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
         denied = operation not in {"restore", "tombstone-restore"}
@@ -899,6 +945,64 @@ class WasteBasketGatewayTests(unittest.TestCase):
         )
         self.assertEqual(restored["operation"], "tombstone-restore")
         self.assertFalse(gateway.is_globally_blocked(self.root, "asset-1", self.db))
+
+    def test_derivation_uses_unambiguous_durable_legacy_upload_identity(self) -> None:
+        self._seed_asset("legacy-upload-id")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET raw_json = ? WHERE asset_id = 'asset-4'",
+                (json.dumps({"localIdentifier": "legacy-upload-id"}),),
+            )
+            connection.execute("DELETE FROM r2_objects WHERE photo_id = 'asset-4'")
+            connection.execute(
+                """UPDATE media_lifecycle
+                      SET public_preview_keys_json = '[]', private_keys_json = '[]'
+                    WHERE media_id = 'asset-4'"""
+            )
+        self._seed_uploaded_r2_identity(
+            upload_asset_id="legacy-upload-id",
+            photo_id="canonical-media-4",
+        )
+
+        members = gateway.derive_deployed_lifecycle_members(self.root, ["asset-4"], self.db)
+
+        self.assertEqual(members, [{
+            "canonicalAssetId": "asset-4",
+            "canonicalMediaId": "canonical-media-4",
+            "bindings": [
+                {"bucket": "private", "objectKey": "masters/canonical-media-4.jpg"},
+                {"bucket": "public", "objectKey": "expo/canonical-media-4_900.jpg"},
+            ],
+        }])
+
+    def test_derivation_rejects_ambiguous_durable_upload_identity(self) -> None:
+        self._seed_asset("legacy-upload-id")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET raw_json = ? WHERE asset_id = 'asset-4'",
+                (json.dumps({"localIdentifier": "legacy-upload-id"}),),
+            )
+            connection.execute("DELETE FROM r2_objects WHERE photo_id = 'asset-4'")
+            connection.execute(
+                """UPDATE media_lifecycle
+                      SET public_preview_keys_json = '[]', private_keys_json = '[]'
+                    WHERE media_id = 'asset-4'"""
+            )
+        for photo_id in ("canonical-media-4a", "canonical-media-4b"):
+            self._seed_uploaded_r2_identity(
+                upload_asset_id="legacy-upload-id",
+                photo_id=photo_id,
+            )
+
+        with self.assertRaisesRegex(gateway.WasteBasketError, "ambiguous canonical R2 mapping"):
+            gateway.derive_deployed_lifecycle_members(self.root, ["asset-4"], self.db)
+        self.assertIn(
+            "Repair the canonical R2 mapping",
+            gateway._blocked_hosted_lifecycle_error(
+                "ambiguous canonical R2 mapping for asset-4",
+                gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS,
+            ),
+        )
 
     def test_explicit_empty_adopts_legacy_hidden_rows_and_uses_legacy_preview_keys(self) -> None:
         self._seed_asset("legacy-hidden")

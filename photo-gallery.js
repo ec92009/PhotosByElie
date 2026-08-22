@@ -1971,8 +1971,20 @@ const commandButtonHtml = (command) => {
   `;
 };
 
+const mountPBEOwnerSessionInCommandBar = (sessionRoot = document.querySelector("[data-pbe-owner-session]")) => {
+  if (!isPBEOwnerGallery || !sessionRoot || !galleryCommandBar) return;
+  const commandScroll = galleryCommandBar.querySelector("[data-gallery-command-scroll]");
+  if (!commandScroll) return;
+  commandScroll.append(sessionRoot);
+  sessionRoot.classList.add("is-command-mounted");
+  document.body.classList.add("pbe-owner-session-command-mounted");
+};
+
 const renderGalleryCommandBar = () => {
   if (!galleryCommandBar || !galleryCommandRegistry) return;
+  const ownerSessionRoot = isPBEOwnerGallery
+    ? document.querySelector("[data-pbe-owner-session]")
+    : null;
   const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
   const commands = galleryCommandRegistry.list();
   const groups = galleryCommandModel.GROUP_ORDER
@@ -1996,6 +2008,7 @@ const renderGalleryCommandBar = () => {
       renderGalleryCommandBar();
     });
   });
+  mountPBEOwnerSessionInCommandBar(ownerSessionRoot);
   if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
   const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
   if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);

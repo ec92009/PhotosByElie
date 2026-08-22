@@ -473,7 +473,10 @@
     root.setAttribute("role", "region");
     root.setAttribute("aria-label", "PBE Owner session");
     root.innerHTML = `
-      <span class="pbe-owner-session-mark" aria-hidden="true">●</span>
+      <span class="pbe-owner-session-mark" aria-hidden="true">
+        <span class="pbe-owner-session-spinner"></span>
+        <span class="pbe-owner-session-dot">●</span>
+      </span>
       <span class="pbe-owner-session-copy">
         <strong data-pbe-owner-title>PBE Owner</strong>
         <span data-pbe-owner-message role="status" aria-live="polite"></span>
@@ -519,6 +522,7 @@
     const root = banner();
     if (!root) return;
     root.dataset.state = state.phase;
+    if (document.body?.dataset) document.body.dataset.pbeOwnerSessionState = state.phase;
     const title = root.querySelector("[data-pbe-owner-title]");
     const message = root.querySelector("[data-pbe-owner-message]");
     const closeButton = root.querySelector("[data-pbe-owner-close]");
@@ -532,13 +536,21 @@
     const retryButton = root.querySelector("[data-pbe-owner-retry]");
     if (title) title.textContent = state.ready
       ? `PBE Owner · ${state.session?.fixtureBreadcrumb || state.session?.fixtureId || "frozen fixture"}`
-      : "PBE Owner unavailable";
+      : state.phase === "checking"
+        ? "Loading PBE Owner"
+        : "PBE Owner unavailable";
     if (message) message.textContent = state.message;
-    if (closeButton) closeButton.disabled = !state.session || state.phase === "closing";
+    root.title = state.message;
+    if (closeButton) {
+      closeButton.hidden = !state.session;
+      closeButton.disabled = state.phase === "closing";
+    }
     root.dataset.pendingState = state.pendingAction?.state || "";
     root.setAttribute?.(
       "aria-busy",
-      state.pendingAction || state.pendingActionRefreshing || state.lifecycleRetrying ? "true" : "false",
+      state.phase === "checking" || state.pendingAction || state.pendingActionRefreshing || state.lifecycleRetrying
+        ? "true"
+        : "false",
     );
     if (actionRefreshButton) {
       actionRefreshButton.hidden = !state.pendingAction;
@@ -574,11 +586,15 @@
     heartbeatTimer = 0;
     browserTicket = "";
     clearPendingAction();
+    const detail = error?.message || "PBE Owner session is unavailable.";
+    const message = /(?:backstage|reopen|closed)/i.test(detail)
+      ? detail
+      : `${detail} Reopen PBE Owner from Backstage to retry.`;
     update({
       phase: "unavailable",
       ready: false,
       session: null,
-      message: error?.message || "PBE Owner session is unavailable.",
+      message,
       lifecycle: null,
       lifecycleRetrying: false,
       lifecycleRetryError: "",
@@ -645,7 +661,11 @@
   const bootstrap = async () => {
     if (!localHost || !ownerSurface) return publicState();
     const generation = ++sessionGeneration;
-    update({ phase: "checking", ready: false, message: "Validating the Backstage fixture lease…" });
+    update({
+      phase: "checking",
+      ready: false,
+      message: "Loading the frozen Backstage fixture and preparing its gallery…",
+    });
     try {
       if (browserTicket) {
         await request("/browser/bootstrap", {

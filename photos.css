@@ -9765,15 +9765,31 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   gap:10px;
   padding:9px max(14px,calc((100vw - 1200px)/2));
   color:#fff;
-  background:#003db3;
+  background:color-mix(in srgb,var(--glass-topbar-bg) 88%,#27324a 12%);
   border-bottom:1px solid rgba(255,255,255,.35);
   box-shadow:0 8px 24px rgba(0,0,0,.2);
+  backdrop-filter:blur(var(--glass-heavy-blur));
+  -webkit-backdrop-filter:blur(var(--glass-heavy-blur));
   font-family:"Space Grotesk",sans-serif;
 }
 .pbe-owner-session[data-state="checking"],
 .pbe-owner-session[data-state="closing"]{background:#27324a}
 .pbe-owner-session[data-state="unavailable"]{background:#702626}
-.pbe-owner-session-mark{font-size:18px;color:#9bc2ff}
+.pbe-owner-session-mark{display:grid;width:20px;height:20px;place-items:center;font-size:18px;color:#9bc2ff}
+.pbe-owner-session-spinner{
+  display:none;
+  width:16px;
+  height:16px;
+  border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;
+  border-radius:50%;
+}
+.pbe-owner-session[data-state="checking"] .pbe-owner-session-spinner{
+  display:block;
+  animation:pbe-owner-session-spin .8s linear infinite;
+}
+.pbe-owner-session[data-state="checking"] .pbe-owner-session-dot{display:none}
+@keyframes pbe-owner-session-spin{to{transform:rotate(360deg)}}
 .pbe-owner-session-copy{display:flex;align-items:baseline;gap:10px;min-width:0}
 .pbe-owner-session-copy strong{white-space:nowrap}
 .pbe-owner-session-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem}
@@ -9789,6 +9805,58 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   cursor:pointer;
 }
 .pbe-owner-session button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.pbe-owner-session.is-command-mounted{
+  position:static;
+  z-index:auto;
+  display:flex;
+  flex:0 0 auto;
+  flex-wrap:wrap;
+  width:auto;
+  margin-left:auto;
+  padding:0;
+  color:var(--text);
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+.pbe-owner-session.is-command-mounted .pbe-owner-session-mark{display:none}
+.pbe-owner-session.is-command-mounted .pbe-owner-session-copy{
+  max-width:240px;
+  min-height:36px;
+  padding:6px 10px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:999px;
+}
+.pbe-owner-session.is-command-mounted .pbe-owner-session-copy [data-pbe-owner-message]{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+.pbe-owner-session.is-command-mounted[data-state="unavailable"] .pbe-owner-session-copy{
+  color:#fff;
+  background:#702626;
+  border-color:rgba(255,255,255,.4);
+}
+.pbe-owner-session.is-command-mounted button{
+  min-height:36px;
+  padding:6px 10px;
+  color:var(--text);
+  background:var(--surface);
+  border-color:var(--line);
+  font-size:.72rem;
+  font-weight:850;
+}
+.pbe-owner-session.is-command-mounted button:focus-visible{outline-color:var(--text)}
+.pbe-owner-session.is-command-mounted .pbe-owner-lifecycle{flex-basis:100%}
 .pbe-owner-lifecycle{
   grid-column:2/-1;
   display:grid;
@@ -9851,7 +9919,7 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
     grid-template-columns:auto minmax(0,1fr);
     padding:10px 12px;
   }
-  body.has-pbe-owner-session main{
+  body.has-pbe-owner-session:not(.pbe-owner-session-command-mounted) main{
     margin-top:calc(var(--fixed-header-offset,86px) + var(--pbe-owner-banner-height,120px));
   }
   .pbe-owner-session-copy{display:block}
@@ -9868,4 +9936,7 @@ body.best-mix-current-home [data-home-stack].is-stack-shuffling [data-home-stack
   .pbe-owner-lifecycle [data-pbe-owner-layer-help],
   .pbe-owner-lifecycle [data-pbe-owner-retry-error]{grid-column:1/-1}
   .pbe-owner-lifecycle button{grid-column:2;grid-row:1}
+}
+@media (prefers-reduced-motion:reduce){
+  .pbe-owner-session[data-state="checking"] .pbe-owner-session-spinner{animation-duration:1.8s}
 }

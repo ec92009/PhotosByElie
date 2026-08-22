@@ -14,15 +14,37 @@ const runSessionClient = ({
   data = {},
 }) => {
   let banner = null;
+  const bannerSlots = new Map();
+  const bodyClasses = new Set();
+  const makeSlot = () => ({
+    dataset: {},
+    disabled: false,
+    hidden: false,
+    textContent: "",
+    addEventListener: () => {},
+    setAttribute(name, value) { this[name] = String(value); },
+  });
   const document = {
     documentElement: { style: { setProperty: () => {} } },
-    body: { classList: { add: () => {} }, prepend: () => {} },
+    body: {
+      dataset: {},
+      classList: {
+        add: (...names) => names.forEach((name) => bodyClasses.add(name)),
+        remove: (...names) => names.forEach((name) => bodyClasses.delete(name)),
+        contains: (name) => bodyClasses.has(name),
+      },
+      prepend: () => {},
+    },
     querySelector: (selector) => selector === "[data-pbe-owner-session]" ? banner : null,
     createElement: () => {
       banner = {
-        className: "", dataset: {}, innerHTML: "", setAttribute: () => {},
+        className: "", dataset: {}, innerHTML: "", title: "",
+        setAttribute(name, value) { this[name] = String(value); },
         getBoundingClientRect: () => ({ height: 40 }),
-        querySelector: () => null,
+        querySelector: (selector) => {
+          if (!bannerSlots.has(selector)) bannerSlots.set(selector, makeSlot());
+          return bannerSlots.get(selector);
+        },
       };
       return banner;
     },
@@ -42,7 +64,12 @@ const runSessionClient = ({
     window, document, fetch, URLSearchParams, encodeURIComponent,
     CustomEvent: class CustomEvent {}, Date, setTimeout,
   });
-  return { window, document };
+  return {
+    window,
+    document,
+    banner: () => banner,
+    bannerSlot: (selector) => bannerSlots.get(selector) || null,
+  };
 };
 
 test("gallery and detail bootstrap the Backstage session before Owner actions", () => {
@@ -52,17 +79,86 @@ test("gallery and detail bootstrap the Backstage session before Owner actions", 
     const actionsIndex = html.indexOf("hidden-actions.js");
     assert.ok(sessionIndex >= 0, `${page} loads the PBE Owner session client`);
     assert.ok(actionsIndex > sessionIndex, `${page} loads Owner actions after the session client`);
-    assert.match(html, /pbe-owner-session\.js\?v=226\.1/);
+    assert.match(html, /pbe-owner-session\.js\?v=226\.2/);
   }
   assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(
     read("photo-gallery.js"),
     /if \(isPBEOwnerGallery\) \{[\s\S]*const ownerGallery = window\.photosByElieData\?\.\[pbeOwnerGalleryKey\]/,
   );
-  assert.match(read("gallery.html"), /photo-gallery\.js\?v=226\.1/);
+  assert.match(read("gallery.html"), /photo-gallery\.js\?v=226\.2/);
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
   assert.match(read("photo-gallery.js"), /const setCollectionLabel = \(element\) => \{[\s\S]*if \(isPBEOwnerGallery\) delete element\.dataset\.i18n;/);
+});
+
+test("Owner cold launch exposes one busy loading region until the frozen fixture is ready", async () => {
+  let resolveSession;
+  const sessionResponse = new Promise((resolve) => { resolveSession = resolve; });
+  const session = {
+    id: "session-loading", state: "ready", fixtureId: "fixture-expo",
+    fixtureBreadcrumb: "Expo", expiresAt: "2030-01-01T12:00:00Z",
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const client = runSessionClient({
+    search: "?gallery=pbe-owner",
+    fetch: async (url) => {
+      if (url.endsWith("/session")) return sessionResponse;
+      if (url.endsWith("/gallery")) return response({
+        ok: true,
+        gallery: {
+          fixtureId: session.fixtureId,
+          fixtureBreadcrumb: session.fixtureBreadcrumb,
+          items: [],
+          summary: { filtered: 0 },
+        },
+      });
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  assert.equal(client.banner().dataset.state, "checking");
+  assert.equal(client.banner()["aria-busy"], "true");
+  assert.equal(client.bannerSlot("[data-pbe-owner-title]").textContent, "Loading PBE Owner");
+  assert.match(client.bannerSlot("[data-pbe-owner-message]").textContent, /Loading the frozen Backstage fixture/);
+  assert.equal(client.bannerSlot("[data-pbe-owner-close]").hidden, true);
+
+  resolveSession(response({ ok: true, session }));
+  await client.window.photosByEliePBEOwnerSessionReady;
+
+  assert.equal(client.banner().dataset.state, "ready");
+  assert.equal(client.banner()["aria-busy"], "false");
+  assert.equal(client.bannerSlot("[data-pbe-owner-title]").textContent, "PBE Owner · Expo");
+  assert.equal(client.bannerSlot("[data-pbe-owner-close]").hidden, false);
+  assert.equal(client.document.body.dataset.pbeOwnerSessionState, "ready");
+});
+
+test("Owner cold-launch failure leaves a distinct actionable non-busy state", async () => {
+  let resolveSession;
+  const sessionResponse = new Promise((resolve) => { resolveSession = resolve; });
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const client = runSessionClient({
+    search: "?gallery=pbe-owner",
+    fetch: async (url) => {
+      if (url.endsWith("/session")) return sessionResponse;
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  assert.equal(client.banner().dataset.state, "checking");
+  resolveSession(response({ ok: false, error: { message: "Load failed" } }, 503));
+  await client.window.photosByEliePBEOwnerSessionReady;
+
+  assert.equal(client.banner().dataset.state, "unavailable");
+  assert.equal(client.banner()["aria-busy"], "false");
+  assert.equal(client.bannerSlot("[data-pbe-owner-title]").textContent, "PBE Owner unavailable");
+  assert.match(client.bannerSlot("[data-pbe-owner-message]").textContent, /Reopen PBE Owner from Backstage to retry/);
+  assert.equal(client.bannerSlot("[data-pbe-owner-close]").hidden, true);
+  assert.equal(client.document.body.dataset.pbeOwnerSessionState, "unavailable");
 });
 
 test("native Owner uses fast gallery previews and reserves full previews for detail", () => {
@@ -1078,13 +1174,21 @@ test("PBE Owner status remains usable at desktop and narrow widths", () => {
   assert.match(session, /setAttribute\?\.\("aria-busy", state\.lifecycleRetrying \? "true" : "false"\)/);
   assert.match(session, /Retry repairs only the local\/static projection/);
   assert.match(session, /Backstage Uploads records a release receipt/);
+  assert.match(session, /state\.phase === "checking"[\s\S]*\? "Loading PBE Owner"/);
+  assert.match(session, /state\.phase === "checking" \|\| state\.pendingAction/);
+  assert.match(session, /Reopen PBE Owner from Backstage to retry/);
   assert.match(css, /\.pbe-owner-session\{[\s\S]*position:sticky[\s\S]*top:var\(--fixed-header-offset,86px\)[\s\S]*z-index:75/);
   assert.match(css, /\.pbe-owner-session button:focus-visible\{outline:3px solid #fff/);
+  assert.match(css, /\.pbe-owner-session-spinner\{[\s\S]*border-radius:50%/);
+  assert.match(css, /\.pbe-owner-session\[data-state="checking"\] \.pbe-owner-session-spinner\{[\s\S]*animation:pbe-owner-session-spin/);
+  assert.match(css, /\.pbe-owner-session\.is-command-mounted\{[\s\S]*position:static[\s\S]*background:transparent/);
+  assert.doesNotMatch(css, /\.pbe-owner-session\{[\s\S]{0,500}background:#003db3/);
+  assert.match(read("photo-gallery.js"), /mountPBEOwnerSessionInCommandBar[\s\S]*commandScroll\.append\(sessionRoot\)/);
   assert.match(css, /\.pbe-owner-lifecycle\{[\s\S]*grid-template-columns:auto minmax\(0,1fr\) auto/);
   assert.match(css, /\.pbe-owner-lifecycle\[hidden\]\{display:none\}/);
   assert.match(css, /@media \(max-width:700px\)[\s\S]*\.pbe-owner-session\{[\s\S]*position:fixed;[\s\S]*top:var\(--fixed-header-offset,86px\)[\s\S]*grid-template-columns:auto minmax\(0,1fr\)/);
   assert.match(css, /@media \(max-width:700px\)[\s\S]*\.pbe-owner-lifecycle\{[\s\S]*grid-template-columns:minmax\(0,1fr\) auto/);
-  assert.match(css, /body\.has-pbe-owner-session main\{[\s\S]*margin-top:calc\(var\(--fixed-header-offset,86px\) \+ var\(--pbe-owner-banner-height,120px\)\)/);
+  assert.match(css, /body\.has-pbe-owner-session:not\(\.pbe-owner-session-command-mounted\) main\{[\s\S]*margin-top:calc\(var\(--fixed-header-offset,86px\) \+ var\(--pbe-owner-banner-height,120px\)\)/);
 });
 
 test("Google browser Owner is credential provisioning only", () => {

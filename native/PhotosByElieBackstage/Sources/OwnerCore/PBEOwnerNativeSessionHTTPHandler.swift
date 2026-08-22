@@ -69,7 +69,10 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     }
 
     private static let browserCookie = "pbe_owner_browser"
-    private static let cookiePath = "/__photosbyelie/pbe-owner"
+    // The authenticated browser session serves both the Owner JSON routes and
+    // the sibling PhotoKit preview route. Keep the cookie under the smallest
+    // shared private prefix so browsers send it to both route families.
+    private static let cookiePath = "/__photosbyelie"
     private static let sourcePreviewPath = "/__photosbyelie/source-preview/"
 
     private let checkoutIdentity: String

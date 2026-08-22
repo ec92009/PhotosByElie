@@ -364,6 +364,8 @@ struct PBEOwnerNativeHTTPHostTests {
         let setCookie = try #require(browserResponse.headers["Set-Cookie"])
         #expect(setCookie.contains("HttpOnly"))
         #expect(setCookie.contains("SameSite=Strict"))
+        #expect(setCookie.contains("Path=/__photosbyelie;"))
+        #expect(!setCookie.contains("Path=/__photosbyelie/pbe-owner"))
         let cookie = String(setCookie.split(separator: ";", maxSplits: 1)[0])
 
         let statusResponse = await dispatcher.dispatch(try request(

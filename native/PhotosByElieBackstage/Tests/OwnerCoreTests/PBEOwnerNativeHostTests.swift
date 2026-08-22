@@ -87,12 +87,89 @@ struct PBEOwnerNativeHTTPHostTests {
         #expect(data == Data("{\"ok\":true}".utf8))
     }
 
+    @Test("Native service owns the web-session lifecycle without a Python host")
+    func nativeServiceLifecycle() async throws {
+        let root = try makeWebRuntime()
+        defer { try? FileManager.default.removeItem(at: root) }
+        #expect(!FileManager.default.fileExists(
+            atPath: root.appendingPathComponent("scripts/local_server.py").path
+        ))
+        let readiness = PBEOwnerHostReadiness(
+            ready: true,
+            sourceIdentity: "source-one",
+            catalogIdentity: "catalog-one",
+            readinessIdentity: "readiness-one",
+            fixtureRevision: "fixture-revision-one",
+            lifecycleWriter: "pbb-79-waste-basket",
+            capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+        )
+        let cloudSession = PBEOwnerSessionContract(
+            id: "session-one",
+            state: "ready",
+            fixtureId: "expo",
+            fixtureBreadcrumb: "Expo",
+            sourceIdentity: readiness.sourceIdentity,
+            catalogIdentity: readiness.catalogIdentity,
+            readinessIdentity: readiness.readinessIdentity,
+            fixtureRevision: readiness.fixtureRevision,
+            capabilities: readiness.capabilities,
+            lifecycleWriter: readiness.lifecycleWriter,
+            createdAt: nil,
+            expiresAt: Date().addingTimeInterval(600),
+            closedAt: nil,
+            leaseExpiresAt: nil
+        )
+        let service = PBEOwnerNativeHostService(
+            api: OwnerAPIClient(baseURL: URL(string: "https://worker.test/api/v1")!),
+            actionWaker: PBEOwnerNativeHostNoopWaker(),
+            verifier: PBEOwnerFixedCloudVerifier(session: cloudSession),
+            runtimeRoot: root,
+            readinessProvider: { fixtureID in
+                #expect(fixtureID == "expo")
+                return readiness
+            },
+            galleryProvider: { session in
+                #expect(session.fixtureId == "expo")
+                return emptyGallery()
+            },
+            previewProvider: { _, assetID in
+                PBEOwnerNativePreview(
+                    assetId: assetID,
+                    jpegData: Data([0xff, 0xd8, 0x01, 0xff, 0xd9]),
+                    pixelWidth: 100,
+                    pixelHeight: 80
+                )
+            }
+        )
+        let resolved = try await service.ensureReadiness(fixtureID: "expo")
+        #expect(resolved == readiness)
+
+        let attached = try await service.attach(
+            sessionToken: "cloud-token-one",
+            fixtureID: "expo"
+        )
+        let launchURL = try #require(attached.launchUrl)
+        #expect(launchURL.host == "127.0.0.1")
+        #expect(launchURL.port != nil)
+        var pageRequest = URLRequest(url: launchURL)
+        pageRequest.timeoutInterval = 2
+        let (page, response) = try await URLSession.shared.data(for: pageRequest)
+        #expect((response as? HTTPURLResponse)?.statusCode == 200)
+        #expect(page == Data("<h1>Gallery</h1>".utf8))
+
+        let status = try await service.status(sessionToken: "cloud-token-one")
+        #expect(status.session.id == cloudSession.id)
+        try await service.close(sessionToken: "cloud-token-one")
+        await service.stopIfLaunched()
+    }
+
     @Test("Web bundle loads and dispatches only exact attested files")
     func exactWebBundle() async throws {
         let root = try makeWebRuntime()
         defer { try? FileManager.default.removeItem(at: root) }
         let bundle = try PBEOwnerWebBundle(runtimeRoot: root)
         #expect(bundle.resourceCount == 2)
+        #expect(bundle.identity.hasPrefix("pbe-web-runtime:sha256:"))
         #expect(bundle.resource(forRequestPath: "/")?.path == "gallery.html")
         #expect(bundle.resource(forRequestPath: "/photo.html")?.path == "photo.html")
         #expect(bundle.resource(forRequestPath: "/owner.html") == nil)
@@ -463,6 +540,33 @@ struct PBEOwnerNativeHTTPHostTests {
         let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: [.sortedKeys])
         try manifestData.write(to: root.appendingPathComponent("connector-runtime-manifest.json"))
         return root
+    }
+}
+
+private func emptyGallery() -> PBEOwnerNativeGallery {
+    PBEOwnerNativeGallery(
+        ok: true,
+        readOnly: true,
+        fixtureId: "expo",
+        fixtureBreadcrumb: "Expo",
+        candidateMode: "curated",
+        view: "picked",
+        offset: 0,
+        limit: 500,
+        count: 0,
+        nextOffset: 0,
+        hasNext: false,
+        truncated: false,
+        summary: .init(filtered: 0, universe: 0, undecided: 0, picked: 0, hidden: 0),
+        mediaAvailability: .init(photos: 0, videos: 0),
+        items: []
+    )
+}
+
+private struct PBEOwnerNativeHostNoopWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        _ = actionID
+        return nil
     }
 }
 

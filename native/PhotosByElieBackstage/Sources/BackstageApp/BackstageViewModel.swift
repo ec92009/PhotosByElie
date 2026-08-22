@@ -514,7 +514,7 @@ final class BackstageViewModel: ObservableObject {
         api: OwnerAPIClient = OwnerAPIClient(),
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         preferences: UserDefaults = .standard,
-        pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
+        pbeOwnerHost: (any PBEOwnerHostServing)? = nil,
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
         updateService: BackstageUpdateService = BackstageUpdateService(),
         authenticationService: OwnerAuthenticationService? = nil,
@@ -564,7 +564,10 @@ final class BackstageViewModel: ObservableObject {
         )
         self.lifecycleService = LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
-        self.pbeOwnerHost = pbeOwnerHost
+        self.pbeOwnerHost = pbeOwnerHost ?? PBEOwnerNativeHostService(
+            api: api,
+            photoLibrary: photoLibrary
+        )
         self.workflowRecoveryStore = workflowRecoveryStore
         self.openExternalURL = openExternalURL
     }
@@ -745,6 +748,7 @@ final class BackstageViewModel: ObservableObject {
                     sessionToken: minted.sessionToken
                 )
             }
+            await pbeOwnerHost.stopIfLaunched()
             pbeOwnerSessionToken = ""
             closePBEOwnerSession()
             pbeOwnerSessionStatus = "PBE Owner unavailable: \(userFacingMessage(for: error))"

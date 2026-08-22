@@ -1,9 +1,10 @@
 # PBB-114: Backstage-owned PBE Owner session host
 
-Status: route boundary, loopback HTTP transport, session authority/HTTP handlers,
-native SQLite readiness derivation, frozen gallery read, and asset-scoped
-PhotoKit preview fixed; guarded Worker action submit/status fixed; projection
-retry and production wiring pending, 2026-08-22
+Status: native production host assembled and selected by Backstage, including
+route boundary, loopback transport, session authority, SQLite readiness, frozen
+gallery, PhotoKit preview, and guarded Worker action submit/status; projection
+retry, packaged Python-host removal, and live close/drain acceptance pending,
+2026-08-22
 
 ## Decision
 
@@ -77,7 +78,9 @@ must add a reviewed native contract instead of expanding the host implicitly.
    `OwnerActionRunner`, accept no browser authority fields, scope X to the
    displayed gallery, and scope restore to a completed same-session X action;
    projection-only retry remains pending.**
-6. Switch `PBEOwnerLocalHostService` from child-process HTTP control to the
-   native actor, then remove Python host materialization only after parity.
+6. **Backstage now defaults to `PBEOwnerNativeHostService`, which loads only
+   the signed app's attested web bundle, owns the loopback listener, and never
+   launches `local_server.py`.** Keep the legacy service and packaged Python
+   host only as explicit rollback material until route parity is complete.
 7. Verify signed Max launch, browser behavior, close/drain, crash/sleep/sign-out,
    update/rollback, and no-Python process evidence.

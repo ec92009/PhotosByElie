@@ -61,6 +61,7 @@ public struct PBEOwnerWebBundle: Sendable {
     ]
 
     private let resources: [String: PBEOwnerWebBundleResource]
+    public let identity: String
 
     public init(runtimeRoot: URL) throws {
         let root = runtimeRoot.standardizedFileURL
@@ -127,6 +128,7 @@ public struct PBEOwnerWebBundle: Sendable {
             throw PBEOwnerWebBundleError.invalidManifest("entrypoint file missing")
         }
         resources = loaded
+        identity = "pbe-web-runtime:sha256:\(Self.sha256(manifestData))"
     }
 
     public func resource(forRequestPath requestPath: String) -> PBEOwnerWebBundleResource? {

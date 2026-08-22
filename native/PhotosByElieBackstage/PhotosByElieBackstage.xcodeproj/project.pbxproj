@@ -70,6 +70,7 @@
 		A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937950FE2AE869A3475F0B18 /* OwnerContract.generated.swift */; };
 		AA8DFAFCDCA1BAD4790D3257 /* FixtureSelectionCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B72FD5CD398C18780BA0CC /* FixtureSelectionCoordinatorTests.swift */; };
 		AD2C0DE33ED78F416346305A /* PBEOwnerNativePreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8BD2D50C8FC796E6362482D /* PBEOwnerNativePreviewTests.swift */; };
+		A11400000000000000000001 /* PBEOwnerNativeHostService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11400000000000000000002 /* PBEOwnerNativeHostService.swift */; };
 		AF453AA808B073E373B241C6 /* ReviewPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D157FCA2BE1DD356E595878B /* ReviewPreview.swift */; };
 		B1ECCE47B1724100BB78DAF2 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
 		B1F0D37D3A8F1319B4553999 /* PBEOwnerWebBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5753C12C5BBA527B7693A33A /* PBEOwnerWebBundle.swift */; };
@@ -225,6 +226,7 @@
 		EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarDecisionService.swift; sourceTree = "<group>"; };
 		EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCanvasInspector.swift; sourceTree = "<group>"; };
 		EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostServer.swift; sourceTree = "<group>"; };
+		A11400000000000000000002 /* PBEOwnerNativeHostService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostService.swift; sourceTree = "<group>"; };
 		EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainVault.swift; sourceTree = "<group>"; };
 		EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostContract.swift; sourceTree = "<group>"; };
 		F0AD2BD05E1B52BE16944854 /* BackstagePreviewIPCTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstagePreviewIPCTests.swift; sourceTree = "<group>"; };
@@ -398,6 +400,7 @@
 				EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */,
 				FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */,
 				EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */,
+				A11400000000000000000002 /* PBEOwnerNativeHostService.swift */,
 				E9E5741E89E04330F551973C /* PBEOwnerNativePreviewService.swift */,
 				9793EBB7476585F954DF51F7 /* PBEOwnerNativeReadinessService.swift */,
 				F545EA389652F817B21306E5 /* PBEOwnerNativeSessionHTTPHandler.swift */,
@@ -620,6 +623,7 @@
 				D2FF10F005DE8E28105F5DD6 /* PBEOwnerNativeHostContract.swift in Sources */,
 				80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */,
 				DF59BAC48BF3C522B83B4DDE /* PBEOwnerNativeHostServer.swift in Sources */,
+				A11400000000000000000001 /* PBEOwnerNativeHostService.swift in Sources */,
 				819A7229D2EF9109A2ADE980 /* PBEOwnerNativePreviewService.swift in Sources */,
 				BB67C2D80C488302916AD38D /* PBEOwnerNativeReadinessService.swift in Sources */,
 				309259F87EBA513A4E816F0B /* PBEOwnerNativeSessionHTTPHandler.swift in Sources */,

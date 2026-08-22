@@ -445,7 +445,8 @@ struct ReviewView: View {
                         isWorking: model.isRunningReview
                             || model.reviewWasteBasketQueueing
                             || model.reviewWasteBasketPendingActionID != nil
-                            || model.isRunningAIPass
+                            || model.isRunningAIPass,
+                        autoDismissAfter: .seconds(4)
                     )
             }
             .padding()
@@ -938,7 +939,8 @@ private struct ReviewInspector: View {
                             isWorking: model.isRunningReview
                                 || model.reviewWasteBasketQueueing
                                 || model.reviewWasteBasketPendingActionID != nil
-                                || model.isRunningAIPass
+                                || model.isRunningAIPass,
+                            autoDismissAfter: .seconds(4)
                         )
                     }
                     Divider()

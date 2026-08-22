@@ -51,6 +51,7 @@ INTERACTIVE_POLL_LEASE_SECONDS = 15
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 ON_DEMAND_CONNECTOR_LOCK_NAME = ".owner-connector-on-demand.lock"
+ON_DEMAND_CONNECTOR_LOCK_WAIT_SECONDS = 15 * 60
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
@@ -2195,7 +2196,7 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
 
 
 @contextmanager
-def _connector_process_lock(config: ConnectorConfig):
+def _connector_process_lock(config: ConnectorConfig, *, wait_seconds: float = 0.0):
     """Allow only one local connector process to drain Owner work at a time.
 
     Native Backstage and its hosted loopback Owner UI are separate launchers.
@@ -2212,13 +2213,19 @@ def _connector_process_lock(config: ConnectorConfig):
         raise RuntimeError(f"Could not prepare the local Owner connector lock: {error}") from error
 
     acquired = False
+    deadline = time.monotonic() + max(0.0, float(wait_seconds))
     try:
-        try:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            acquired = True
-        except BlockingIOError:
-            yield False
-            return
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except BlockingIOError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    yield False
+                    return
+                time.sleep(min(0.05, remaining))
         try:
             os.fchmod(handle.fileno(), 0o600)
         except OSError:
@@ -2240,9 +2247,12 @@ def process_direct_action(config: ConnectorConfig, client: WorkerClient, action_
         _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
         return int(did_process)
 
-    with _connector_process_lock(config) as acquired:
+    with _connector_process_lock(
+        config,
+        wait_seconds=ON_DEMAND_CONNECTOR_LOCK_WAIT_SECONDS,
+    ) as acquired:
         if not acquired:
-            return 0
+            raise RuntimeError("Timed out waiting to run the exact Owner action.")
         _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
         return int(did_process)
 

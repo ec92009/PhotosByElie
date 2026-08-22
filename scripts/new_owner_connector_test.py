@@ -233,6 +233,31 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             lock_path = root / "assets" / "owner-actions" / ".owner-connector-on-demand.lock"
             self.assertEqual(lock_path.stat().st_mode & 0o777, 0o600)
 
+    def test_exact_action_waits_for_the_active_connector_lock(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+            started = threading.Event()
+            acquired_after_release = []
+
+            def wait_for_lock():
+                started.set()
+                with _connector_process_lock(config, wait_seconds=0.5) as acquired:
+                    acquired_after_release.append(acquired)
+
+            with _connector_process_lock(config) as first:
+                self.assertTrue(first)
+                waiter = threading.Thread(target=wait_for_lock)
+                waiter.start()
+                self.assertTrue(started.wait(1))
+                time.sleep(0.05)
+                self.assertEqual(acquired_after_release, [])
+
+            waiter.join(1)
+            self.assertFalse(waiter.is_alive())
+            self.assertEqual(acquired_after_release, [True])
+
     def test_registration_is_limited_to_uploaded_action_assets(self):
         calls = []
 

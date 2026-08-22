@@ -61,6 +61,8 @@
 		88D3BAE82983A5520BD87C6A /* BackstageCodeSignatureVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E27EAC0D7AFD54514443059E /* BackstageCodeSignatureVerifier.swift */; };
 		8A483B3ECF615394AA36D3C4 /* PBEOwnerNativeHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */; };
 		8F1FF439EC9DE861565A9989 /* PBEOwnerNativeGalleryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38A9C4AC07A902382F048C7 /* PBEOwnerNativeGalleryTests.swift */; };
+		8F2AF79C0AA7F833EEF0A952 /* PBEOwnerNativeActionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E962736DDA05974041CE0AFE /* PBEOwnerNativeActionService.swift */; };
+		8FA02DD897A92112EBE914F1 /* PBEOwnerNativeActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8482A52D159E9B4DF4B96E32 /* PBEOwnerNativeActionTests.swift */; };
 		909E15CCD13C52DB454C7FA0 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AFF8771D0832D9829AB0B6 /* ReviewView.swift */; };
 		9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */; };
 		A3B797222206927BDBF38670 /* OwnerReviewSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30DADD6E900CC4A6877FAE8E /* OwnerReviewSQLiteStore.swift */; };
@@ -186,6 +188,7 @@
 		7C246863F54D8DD907520A7F /* OwnerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerAPIClient.swift; sourceTree = "<group>"; };
 		7EEA8352484A30C52C52D650 /* OwnerCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCoreTests.swift; sourceTree = "<group>"; };
 		807D384EDDB744D5CA169522 /* backstage-release-update.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "backstage-release-update.json"; sourceTree = "<group>"; };
+		8482A52D159E9B4DF4B96E32 /* PBEOwnerNativeActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeActionTests.swift; sourceTree = "<group>"; };
 		85C9037744A2B4A8B3E9BAD7 /* OwnerSelectionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerSelectionModel.swift; sourceTree = "<group>"; };
 		88CB1E92117027223296FE1B /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		89AFF8771D0832D9829AB0B6 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
@@ -217,6 +220,7 @@
 		E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingCanvasControls.swift; sourceTree = "<group>"; };
 		E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageUpdateModels.swift; sourceTree = "<group>"; };
 		E74871E8B7478FC401020DCB /* OwnerDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerDatabase.swift; sourceTree = "<group>"; };
+		E962736DDA05974041CE0AFE /* PBEOwnerNativeActionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeActionService.swift; sourceTree = "<group>"; };
 		E9E5741E89E04330F551973C /* PBEOwnerNativePreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativePreviewService.swift; sourceTree = "<group>"; };
 		EA3AD860009B644F53D974B4 /* SidecarDecisionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarDecisionService.swift; sourceTree = "<group>"; };
 		EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCanvasInspector.swift; sourceTree = "<group>"; };
@@ -279,6 +283,7 @@
 				05C1D90ED6B8C10A8628C093 /* OwnerCullingSQLiteStoreTests.swift */,
 				A38E22A4E224C6A2C2839E4C /* OwnerReviewSQLiteStoreTests.swift */,
 				98D38D7A974EE7EDE80F9EA8 /* OwnerWorkflowRecoverySQLiteStoreTests.swift */,
+				8482A52D159E9B4DF4B96E32 /* PBEOwnerNativeActionTests.swift */,
 				F38A9C4AC07A902382F048C7 /* PBEOwnerNativeGalleryTests.swift */,
 				354699329E5DA7B608B0517E /* PBEOwnerNativeHostTests.swift */,
 				B8BD2D50C8FC796E6362482D /* PBEOwnerNativePreviewTests.swift */,
@@ -388,6 +393,7 @@
 				1F1D9808E76FE088A3D881CF /* OwnerWorkflowRecoverySQLiteStore.swift */,
 				9C39BD661FA6F7E1138E1FDB /* PBEOwnerCloudSessionVerifier.swift */,
 				47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */,
+				E962736DDA05974041CE0AFE /* PBEOwnerNativeActionService.swift */,
 				4F505E771E39A7C698C9501F /* PBEOwnerNativeGalleryService.swift */,
 				EE95A1D51BD3EA8FD716C346 /* PBEOwnerNativeHostContract.swift */,
 				FDF132AA34716E73304BE02C /* PBEOwnerNativeHostDispatcher.swift */,
@@ -565,6 +571,7 @@
 				3FF329DD3D1B10F90A06F627 /* OwnerCullingSQLiteStoreTests.swift in Sources */,
 				247B8222C7EDA683C961F047 /* OwnerReviewSQLiteStoreTests.swift in Sources */,
 				F933F5273FBCB6B7A2578C4E /* OwnerWorkflowRecoverySQLiteStoreTests.swift in Sources */,
+				8FA02DD897A92112EBE914F1 /* PBEOwnerNativeActionTests.swift in Sources */,
 				8F1FF439EC9DE861565A9989 /* PBEOwnerNativeGalleryTests.swift in Sources */,
 				8A483B3ECF615394AA36D3C4 /* PBEOwnerNativeHostTests.swift in Sources */,
 				AD2C0DE33ED78F416346305A /* PBEOwnerNativePreviewTests.swift in Sources */,
@@ -608,6 +615,7 @@
 				64AA4D32E9F9D922B775FAA6 /* OwnerWorkflowRecoverySQLiteStore.swift in Sources */,
 				796F9A9D2E03A5D964A34829 /* PBEOwnerCloudSessionVerifier.swift in Sources */,
 				06BF9F3E1B8F2F373D4C041E /* PBEOwnerHTTPRequestParser.swift in Sources */,
+				8F2AF79C0AA7F833EEF0A952 /* PBEOwnerNativeActionService.swift in Sources */,
 				35F785A271D05279001B0887 /* PBEOwnerNativeGalleryService.swift in Sources */,
 				D2FF10F005DE8E28105F5DD6 /* PBEOwnerNativeHostContract.swift in Sources */,
 				80797023946A7C44838888A1 /* PBEOwnerNativeHostDispatcher.swift in Sources */,

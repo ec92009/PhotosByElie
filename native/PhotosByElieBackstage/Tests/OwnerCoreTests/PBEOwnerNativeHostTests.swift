@@ -198,6 +198,17 @@ struct PBEOwnerNativeHTTPHostTests {
                     pixelWidth: 100,
                     pixelHeight: 80
                 )
+            },
+            actionSubmitProvider: { session, payload, key in
+                #expect(session.fixtureId == "expo")
+                #expect(payload["action"]?.stringValue == "waste-basket-x")
+                #expect(key == "browser-action-one")
+                return ["ok": true, "requestId": "owner-action-one", "state": "queued"]
+            },
+            actionStatusProvider: { session, requestID in
+                #expect(session.fixtureId == "expo")
+                #expect(requestID == "owner-action-one")
+                return ["ok": true, "requestId": "owner-action-one", "state": "running"]
             }
         ) { fixtureID in
             #expect(fixtureID == "expo")
@@ -321,6 +332,41 @@ struct PBEOwnerNativeHTTPHostTests {
                 + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
         ))
         #expect(pathInjection.statusCode == 400)
+
+        let missingIdempotency = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/action",
+                headers: [
+                    "Cookie": cookie,
+                    "Origin": "http://127.0.0.1:9000",
+                ],
+                body: #"{"action":"waste-basket-x","photo_id":"asset-one"}"#
+            )
+        ))
+        #expect(missingIdempotency.statusCode == 400)
+
+        let actionResponse = await dispatcher.dispatch(try request(
+            jsonRequest(
+                path: "/__photosbyelie/pbe-owner/action",
+                headers: [
+                    "Cookie": cookie,
+                    "Idempotency-Key": "browser-action-one",
+                    "Origin": "http://127.0.0.1:9000",
+                ],
+                body: #"{"action":"waste-basket-x","photo_id":"asset-one"}"#
+            )
+        ))
+        #expect(actionResponse.statusCode == 202)
+
+        let actionStatusResponse = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/pbe-owner/action/status?requestId=owner-action-one HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(actionStatusResponse.statusCode == 200)
+        let actionStatusJSON = try #require(
+            JSONSerialization.jsonObject(with: actionStatusResponse.body) as? [String: Any]
+        )
+        #expect(actionStatusJSON["state"] as? String == "running")
 
         let heartbeatResponse = await dispatcher.dispatch(try request(
             jsonRequest(

@@ -241,6 +241,17 @@ public actor OwnerActionRunner {
         return envelope.action
     }
 
+    /// Ask the enrolled on-demand connector to claim one already-durable
+    /// action without waiting for terminal state. Worker polling remains the
+    /// source of truth and a wake failure never makes the durable action false.
+    public func accelerate(_ action: OwnerAction) {
+        let waker = self.waker
+        let actionID = action.id
+        Task.detached(priority: .utility) {
+            _ = try? await waker.wake(actionID: actionID)
+        }
+    }
+
     public func awaitCompletion(
         of queued: OwnerAction,
         completionTimeout: Duration? = nil,
@@ -254,11 +265,7 @@ public actor OwnerActionRunner {
         // the background and let the durable Worker poll remain the source of
         // truth, so a slow PhotoKit/SQLite/connector operation never blocks
         // the native action monitor or its UI.
-        let waker = self.waker
-        let actionID = action.id
-        Task.detached(priority: .utility) {
-            _ = try? await waker.wake(actionID: actionID)
-        }
+        accelerate(action)
 
         while true {
             try Task.checkCancellation()

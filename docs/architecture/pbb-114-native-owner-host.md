@@ -2,7 +2,8 @@
 
 Status: route boundary, loopback HTTP transport, session authority/HTTP handlers,
 native SQLite readiness derivation, frozen gallery read, and asset-scoped
-PhotoKit preview fixed; action data handlers pending, 2026-08-22
+PhotoKit preview fixed; guarded Worker action submit/status fixed; projection
+retry and production wiring pending, 2026-08-22
 
 ## Decision
 
@@ -72,7 +73,10 @@ must add a reviewed native contract instead of expanding the host implicitly.
    route mutations through `OwnerActionRunner`. **The bounded, authenticated,
    picked-still-photo gallery read and its asset-scoped, bounded PhotoKit JPEG
    preview are complete as isolated native providers and authenticated HTTP
-   handlers; action handlers remain pending.**
+   handlers. Guarded X/restore submission and status now use
+   `OwnerActionRunner`, accept no browser authority fields, scope X to the
+   displayed gallery, and scope restore to a completed same-session X action;
+   projection-only retry remains pending.**
 6. Switch `PBEOwnerLocalHostService` from child-process HTTP control to the
    native actor, then remove Python host materialization only after parity.
 7. Verify signed Max launch, browser behavior, close/drain, crash/sleep/sign-out,

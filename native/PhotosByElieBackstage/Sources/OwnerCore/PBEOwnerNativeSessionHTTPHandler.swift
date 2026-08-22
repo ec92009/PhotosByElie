@@ -11,6 +11,15 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         PBEOwnerSessionContract,
         String
     ) async throws -> PBEOwnerNativePreview
+    public typealias ActionSubmitProvider = @Sendable (
+        PBEOwnerSessionContract,
+        [String: JSONValue],
+        String
+    ) async throws -> [String: JSONValue]
+    public typealias ActionStatusProvider = @Sendable (
+        PBEOwnerSessionContract,
+        String?
+    ) async throws -> [String: JSONValue]
 
     private struct HostBootstrapRequest: Decodable { var expectedCheckoutIdentity: String }
     private struct HostBootstrapEnvelope: Encodable {
@@ -69,6 +78,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     private let readinessProvider: ReadinessProvider
     private let galleryProvider: GalleryProvider?
     private let previewProvider: PreviewProvider?
+    private let actionSubmitProvider: ActionSubmitProvider?
+    private let actionStatusProvider: ActionStatusProvider?
     private var bootstrapHash: String
     private var hostAuthorizationHash = ""
 
@@ -79,6 +90,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         verifier: any PBEOwnerCloudSessionVerifying = PBEOwnerCloudSessionVerifier(),
         galleryProvider: GalleryProvider? = nil,
         previewProvider: PreviewProvider? = nil,
+        actionSubmitProvider: ActionSubmitProvider? = nil,
+        actionStatusProvider: ActionStatusProvider? = nil,
         readinessProvider: @escaping ReadinessProvider
     ) {
         let bootstrapSecret = Self.clean(bootstrapSecret)
@@ -87,6 +100,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         self.verifier = verifier
         self.galleryProvider = galleryProvider
         self.previewProvider = previewProvider
+        self.actionSubmitProvider = actionSubmitProvider
+        self.actionStatusProvider = actionStatusProvider
         self.readinessProvider = readinessProvider
         self.bootstrapHash = bootstrapSecret.isEmpty ? "" : Self.hash(bootstrapSecret)
     }
@@ -132,6 +147,10 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 return try await gallery(request)
             case ("GET", let path) where path.hasPrefix(Self.sourcePreviewPath):
                 return try await sourcePreview(request)
+            case ("POST", "/__photosbyelie/pbe-owner/action"):
+                return try await submitAction(request)
+            case ("GET", "/__photosbyelie/pbe-owner/action/status"):
+                return try await actionStatus(request)
             default:
                 return await unsupportedRoute(request, route: route)
             }
@@ -365,6 +384,54 @@ public actor PBEOwnerNativeSessionHTTPHandler {
             ],
             body: preview.jpegData
         )
+    }
+
+    private func submitAction(
+        _ request: PBEOwnerHTTPRequest
+    ) async throws -> PBEOwnerHTTPResponse {
+        guard let actionSubmitProvider else {
+            throw Self.failure(
+                "pbe_owner_route_not_implemented",
+                501,
+                "The native PBE Owner action bridge is not configured."
+            )
+        }
+        let session = try await authorizeBrowser(request)
+        let key = Self.clean(request.headers["idempotency-key"] ?? "")
+        guard !key.isEmpty else {
+            throw Self.failure(
+                "pbe_owner_idempotency_required",
+                400,
+                "Hosted PBE Owner actions require an Idempotency-Key."
+            )
+        }
+        let payload = try Self.decoder.decode(
+            [String: JSONValue].self,
+            from: request.body
+        )
+        return try Self.response(
+            try await actionSubmitProvider(session, payload, key),
+            statusCode: 202,
+            reasonPhrase: "Accepted"
+        )
+    }
+
+    private func actionStatus(
+        _ request: PBEOwnerHTTPRequest
+    ) async throws -> PBEOwnerHTTPResponse {
+        guard let actionStatusProvider else {
+            throw Self.failure(
+                "pbe_owner_route_not_implemented",
+                501,
+                "The native PBE Owner action status reader is not configured."
+            )
+        }
+        let session = try await authorizeBrowser(request)
+        let requestID = Self.clean(queryValue("requestId", request: request))
+        return try Self.response(try await actionStatusProvider(
+            session,
+            requestID.isEmpty ? nil : requestID
+        ))
     }
 
     private func unsupportedRoute(

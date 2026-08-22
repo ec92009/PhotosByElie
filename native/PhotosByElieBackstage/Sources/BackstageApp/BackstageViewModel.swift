@@ -5280,18 +5280,6 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func runPhotosSyncLoop() async {
-        while !Task.isCancelled, !terminationRequested {
-            do {
-                try await Task.sleep(for: .seconds(15 * 60))
-            } catch {
-                return
-            }
-            guard !terminationRequested else { return }
-            await syncPhotosIncrementally()
-        }
-    }
-
     func prepareForTermination() async {
         terminationRequested = true
 

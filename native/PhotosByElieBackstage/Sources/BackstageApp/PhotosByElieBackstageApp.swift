@@ -6,7 +6,6 @@ public struct BackstageApplication: App {
     @StateObject private var model: BackstageViewModel
     @NSApplicationDelegateAdaptor(BackstageApplicationDelegate.self)
     private var applicationDelegate
-    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
     private var navigationSidebarVisible = true
 
@@ -90,14 +89,9 @@ public struct BackstageApplication: App {
             .onAppear { applicationDelegate.attach(model: model) }
             .task { model.startPreviewIPC() }
             .task { await model.bootstrapAuthentication() }
-            .task { await model.runPhotosSyncLoop() }
             .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in
                 guard oldFixtureID != newFixtureID, !newFixtureID.isEmpty else { return }
                 Task { await model.refreshVisibleFixtureSurface() }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                guard phase == .active else { return }
-                Task { await model.syncPhotosIncrementally() }
             }
         }
         .commands {
@@ -1604,7 +1598,7 @@ private struct MetadataGiveBackView: View {
     var body: some View {
         Form {
             Section("Incremental Apple Photos sync") {
-                Text("A bounded low-priority pass runs at launch, whenever Backstage becomes active, and every 15 minutes. Metadata-only changes preserve approval and return to Needs Upload; rendered-image changes create a new source version and return to Review.")
+                Text("Choose Sync now to run one bounded low-priority pass. Backstage does not start Photos synchronization merely because the app launches or becomes active. Metadata-only changes preserve approval and return to Needs Upload; rendered-image changes create a new source version and return to Review.")
                     .foregroundStyle(.secondary)
                 HStack {
                     Button("Sync now") {

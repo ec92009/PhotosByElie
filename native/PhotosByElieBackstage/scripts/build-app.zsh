@@ -14,6 +14,7 @@ iconset="${output_root}/Backstage.iconset"
 icon_file="${contents}/Resources/Backstage.icns"
 owner_runtime="${contents}/Resources/OwnerRuntime"
 release_metadata="${package_root}/release-metadata.zsh"
+entitlements="${package_root}/Backstage.entitlements"
 
 if [[ ! -r "$release_metadata" ]]; then
   print -u2 "Missing native release metadata: $release_metadata"
@@ -165,10 +166,11 @@ if [[ "$identity" == "-" ]]; then
     --force \
     --deep \
     --sign "$identity" \
+    --entitlements "$entitlements" \
     --requirements '=designated => identifier "com.photosbyelie.backstage"' \
     "$app"
 else
-  codesign --force --deep --options runtime --sign "$identity" "$app"
+  codesign --force --deep --options runtime --sign "$identity" --entitlements "$entitlements" "$app"
 fi
 codesign --verify --deep --strict "$app"
 signature_details="$(codesign -dvv "$app" 2>&1)"

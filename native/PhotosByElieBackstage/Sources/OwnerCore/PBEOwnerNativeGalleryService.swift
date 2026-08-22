@@ -115,10 +115,12 @@ public struct PBEOwnerNativeGallery: Codable, Sendable, Equatable {
 public struct PBEOwnerNativeGalleryService: Sendable {
     public let ownerDatabaseURL: URL
     public let busyTimeoutMilliseconds: Int32
+    private let cache: PBEOwnerNativeGalleryCache
 
     public init(ownerDatabaseURL: URL, busyTimeoutMilliseconds: Int32 = 2_000) {
         self.ownerDatabaseURL = ownerDatabaseURL.standardizedFileURL.resolvingSymlinksInPath()
         self.busyTimeoutMilliseconds = max(0, busyTimeoutMilliseconds)
+        self.cache = PBEOwnerNativeGalleryCache()
     }
 
     public init(dataRoot: URL, busyTimeoutMilliseconds: Int32 = 2_000) {
@@ -132,10 +134,12 @@ public struct PBEOwnerNativeGalleryService: Sendable {
     }
 
     public func gallery(session: PBEOwnerSessionContract) async throws -> PBEOwnerNativeGallery {
-        let service = self
-        return try await Task.detached(priority: .userInitiated) {
-            try service.gallerySynchronously(session: session)
-        }.value
+        try await cache.gallery(session: session) {
+            let service = self
+            return try await Task.detached(priority: .userInitiated) {
+                try service.gallerySynchronously(session: session)
+            }.value
+        }
     }
 
     public func provider() -> @Sendable (PBEOwnerSessionContract) async throws -> PBEOwnerNativeGallery {
@@ -205,5 +209,32 @@ public struct PBEOwnerNativeGalleryService: Sendable {
             statusCode: statusCode,
             message: "The frozen fixture gallery is unavailable; Owner actions are disabled."
         )
+    }
+}
+
+/// A PBE Owner session freezes one exact gallery revision. Reuse that snapshot
+/// for the browser payload, card previews, and action authorization so opening
+/// a page cannot repeatedly scan the large Owner database before serving its
+/// first thumbnails.
+private actor PBEOwnerNativeGalleryCache {
+    private var galleries: [String: Task<PBEOwnerNativeGallery, Error>] = [:]
+
+    func gallery(
+        session: PBEOwnerSessionContract,
+        loader: @escaping @Sendable () async throws -> PBEOwnerNativeGallery
+    ) async throws -> PBEOwnerNativeGallery {
+        let key = [session.id, session.fixtureId, session.fixtureRevision]
+            .joined(separator: "\u{1f}")
+        if let existing = galleries[key] {
+            return try await existing.value
+        }
+        let task = Task { try await loader() }
+        galleries[key] = task
+        do {
+            return try await task.value
+        } catch {
+            galleries[key] = nil
+            throw error
+        }
     }
 }

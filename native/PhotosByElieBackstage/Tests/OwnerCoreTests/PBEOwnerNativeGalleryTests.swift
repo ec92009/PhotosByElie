@@ -57,6 +57,34 @@ struct PBEOwnerNativeGalleryTests {
         }
     }
 
+    @Test("Frozen session reuses one gallery snapshot across browser consumers")
+    func frozenSessionGalleryCache() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "pbe-native-gallery-cache-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let owner = root.appendingPathComponent("Owner.sqlite")
+        try createOwnerDatabase(at: owner)
+        let service = PBEOwnerNativeGalleryService(ownerDatabaseURL: owner)
+
+        let first = try await service.gallery(session: session())
+        try execute(
+            at: owner,
+            sql: "DELETE FROM fixture_asset_decisions WHERE asset_id = 'picked-photo'"
+        )
+        let sameFrozenSession = try await service.gallery(session: session())
+        var nextSession = session()
+        nextSession.id = "session-two"
+        nextSession.fixtureRevision = "revision-two"
+        let refreshedSession = try await service.gallery(session: nextSession)
+
+        #expect(first.items.map(\.assetId) == ["picked-photo", "picked-unreviewed"])
+        #expect(sameFrozenSession == first)
+        #expect(refreshedSession.items.map(\.assetId) == ["picked-unreviewed"])
+    }
+
     private func session() -> PBEOwnerSessionContract {
         PBEOwnerSessionContract(
             id: "session-one",

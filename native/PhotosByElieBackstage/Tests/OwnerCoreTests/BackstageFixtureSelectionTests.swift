@@ -439,6 +439,104 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewStatus.contains("Undo failed"))
     }
 
+    @Test("Review Waste Basket allows consecutive X and Undo actions")
+    @MainActor
+    func reviewWasteBasketAllowsConsecutiveActions() async throws {
+        let items = (1...3).map { index in
+            FixtureReviewItem(
+                id: "review-consecutive-\(index)",
+                photoLibraryIdentifier: "photos-review-consecutive-\(index)",
+                title: "Item \(index)",
+                keywords: [],
+                filename: "item-\(index).jpg",
+                capturedAt: "2026-08-17T10:00:0\(index)Z"
+            )
+        }
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-consecutive-x-1",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-consecutive-x-2",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-consecutive-restore-2",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-consecutive-restore-1",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+            ],
+            terminalDelay: .milliseconds(200)
+        )
+        let model = reviewWasteBasketModel(
+            actionAPI: actionAPI,
+            items: items,
+            selectedID: items[0].id
+        )
+
+        await model.moveReviewSelectionToWasteBasket()
+        for _ in 0..<300 where model.reviewHistory.count < 1 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [items[1].id, items[2].id])
+        #expect(!model.reviewWasteBasketQueueing)
+        #expect(model.reviewWasteBasketPendingActionIDs == ["owner-action-consecutive-x-1"])
+
+        await model.moveReviewSelectionToWasteBasket()
+        for _ in 0..<300 where model.reviewHistory.count < 2 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.reviewItems.map(\.id) == [items[2].id])
+        #expect(model.reviewWasteBasketPendingActionIDs.count == 2)
+        #expect(model.reviewUndoIsBlockedByPendingWasteBasketAction)
+
+        for _ in 0..<600 where !model.reviewWasteBasketPendingActionIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(!model.reviewUndoIsBlockedByPendingWasteBasketAction)
+
+        await model.undoLastReviewAction()
+        #expect(model.reviewItems.map(\.id) == [items[1].id, items[2].id])
+        #expect(model.reviewWasteBasketPendingActionIDs == ["owner-action-consecutive-restore-2"])
+        #expect(!model.reviewUndoIsBlockedByPendingWasteBasketAction)
+
+        await model.undoLastReviewAction()
+        #expect(model.reviewItems.map(\.id) == items.map(\.id))
+        #expect(model.reviewHistory.isEmpty)
+        #expect(model.reviewWasteBasketPendingActionIDs == [
+            "owner-action-consecutive-restore-1",
+            "owner-action-consecutive-restore-2",
+        ])
+
+        for _ in 0..<600 where !model.reviewWasteBasketPendingActionIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-x",
+            "waste-basket-x",
+            "waste-basket-restore",
+            "waste-basket-restore",
+        ])
+    }
+
     @Test("Review Waste Basket optimistic X rolls back on terminal failure")
     @MainActor
     func reviewWasteBasketXRollsBackOnFailure() async throws {

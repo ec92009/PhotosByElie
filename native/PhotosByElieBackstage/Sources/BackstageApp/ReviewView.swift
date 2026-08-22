@@ -433,7 +433,7 @@ struct ReviewView: View {
                         model.reviewHistory.isEmpty
                             || model.isRunningReview
                             || model.reviewWasteBasketQueueing
-                            || model.reviewWasteBasketPendingActionID != nil
+                            || model.reviewUndoIsBlockedByPendingWasteBasketAction
                     )
                     .backstageHelp("Reverse the most recent Review action made during this Backstage session.")
                     Button("Clear selection") { model.clearReviewSelection() }
@@ -917,7 +917,6 @@ private struct ReviewInspector: View {
                         .disabled(
                             model.isRunningReview
                                 || model.reviewWasteBasketQueueing
-                                || model.reviewWasteBasketPendingActionID != nil
                         )
                         .keyboardShortcut("x", modifiers: [])
                         .backstageHelp("Move the selected Review assets to the recoverable Waste Basket through the shared lifecycle gateway.")

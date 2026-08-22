@@ -55,6 +55,54 @@ struct PBEOwnerNativePreviewTests {
         }
     }
 
+    @Test("Concurrent cards share one frozen gallery read and bound PhotoKit work")
+    func concurrentCardsAreBounded() async throws {
+        let galleryReads = PBEOwnerPreviewCounter()
+        let photoReads = PBEOwnerPreviewCounter()
+        let jpeg = Data([0xff, 0xd8, 0x01, 0xff, 0xd9])
+        let service = PBEOwnerNativePreviewService(
+            galleryProvider: { _ in
+                await galleryReads.enter()
+                await galleryReads.leave()
+                return gallery()
+            },
+            photoLibrary: PBEOwnerPreviewPhotoLibraryStub { identifier, _ in
+                await photoReads.enter()
+                try await Task.sleep(for: .milliseconds(20))
+                await photoReads.leave()
+                return PhotoPreview(
+                    assetID: identifier,
+                    jpegData: jpeg,
+                    pixelWidth: 1_200,
+                    pixelHeight: 800
+                )
+            },
+            maximumConcurrentPreviews: 4
+        )
+
+        let previews = try await withThrowingTaskGroup(
+            of: PBEOwnerNativePreview.self,
+            returning: [PBEOwnerNativePreview].self
+        ) { group in
+            for _ in 0..<12 {
+                group.addTask {
+                    try await service.preview(
+                        session: session(),
+                        assetID: "asset-one"
+                    )
+                }
+            }
+            var results: [PBEOwnerNativePreview] = []
+            for try await preview in group { results.append(preview) }
+            return results
+        }
+
+        #expect(previews.count == 12)
+        #expect(await galleryReads.total == 1)
+        #expect(await photoReads.total == 12)
+        #expect(await photoReads.maximumActive == 4)
+    }
+
     private func expectFailure(
         code: String,
         operation: () async throws -> Void
@@ -128,6 +176,22 @@ private func session() -> PBEOwnerSessionContract {
         closedAt: nil,
         leaseExpiresAt: nil
     )
+}
+
+private actor PBEOwnerPreviewCounter {
+    private(set) var total = 0
+    private(set) var maximumActive = 0
+    private var active = 0
+
+    func enter() {
+        total += 1
+        active += 1
+        maximumActive = max(maximumActive, active)
+    }
+
+    func leave() {
+        active = max(0, active - 1)
+    }
 }
 
 private struct PBEOwnerPreviewPhotoLibraryStub: PhotoLibraryServing {

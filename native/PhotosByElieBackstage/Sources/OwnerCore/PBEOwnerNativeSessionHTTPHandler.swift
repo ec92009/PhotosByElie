@@ -4,6 +4,9 @@ import Security
 
 public actor PBEOwnerNativeSessionHTTPHandler {
     public typealias ReadinessProvider = @Sendable (String) async throws -> PBEOwnerHostReadiness
+    public typealias GalleryProvider = @Sendable (
+        PBEOwnerSessionContract
+    ) async throws -> PBEOwnerNativeGallery
 
     private struct HostBootstrapRequest: Decodable { var expectedCheckoutIdentity: String }
     private struct HostBootstrapEnvelope: Encodable {
@@ -47,6 +50,10 @@ public actor PBEOwnerNativeSessionHTTPHandler {
             capabilities = readiness.capabilities
         }
     }
+    private struct GalleryEnvelope: Encodable {
+        var ok = true
+        var gallery: PBEOwnerNativeGallery
+    }
 
     private static let browserCookie = "pbe_owner_browser"
     private static let cookiePath = "/__photosbyelie/pbe-owner"
@@ -55,6 +62,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
     private let sessionStore: PBEOwnerNativeSessionStore
     private let verifier: any PBEOwnerCloudSessionVerifying
     private let readinessProvider: ReadinessProvider
+    private let galleryProvider: GalleryProvider?
     private var bootstrapHash: String
     private var hostAuthorizationHash = ""
 
@@ -63,12 +71,14 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         checkoutIdentity: String,
         sessionStore: PBEOwnerNativeSessionStore = .init(),
         verifier: any PBEOwnerCloudSessionVerifying = PBEOwnerCloudSessionVerifier(),
+        galleryProvider: GalleryProvider? = nil,
         readinessProvider: @escaping ReadinessProvider
     ) {
         let bootstrapSecret = Self.clean(bootstrapSecret)
         self.checkoutIdentity = Self.clean(checkoutIdentity)
         self.sessionStore = sessionStore
         self.verifier = verifier
+        self.galleryProvider = galleryProvider
         self.readinessProvider = readinessProvider
         self.bootstrapHash = bootstrapSecret.isEmpty ? "" : Self.hash(bootstrapSecret)
     }
@@ -110,6 +120,8 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 return try await sessionStatus(request, heartbeat: true)
             case ("POST", "/__photosbyelie/pbe-owner/session/close"):
                 return try await closeSession(request)
+            case ("GET", "/__photosbyelie/pbe-owner/gallery"):
+                return try await gallery(request)
             default:
                 return await unsupportedRoute(request, route: route)
             }
@@ -246,15 +258,7 @@ public actor PBEOwnerNativeSessionHTTPHandler {
                 heartbeat: heartbeat
             )
         } else {
-            let cookie = try browserCookie(request)
-            let fixtureID = try await sessionStore.requiredBrowserFixtureID(
-                browserSession: cookie
-            )
-            let readiness = try await readinessProvider(fixtureID)
-            session = try await sessionStore.authorizeBrowser(
-                browserSession: cookie,
-                readiness: readiness
-            )
+            session = try await authorizeBrowser(request)
         }
         return try Self.response(SessionStatusEnvelope(session: session))
     }
@@ -272,6 +276,40 @@ public actor PBEOwnerNativeSessionHTTPHandler {
         var response = try Self.response(SessionEnvelope(session: session, launchUrl: nil))
         response.headers["Set-Cookie"] = Self.cookieHeader("", clear: true)
         return response
+    }
+
+    private func gallery(_ request: PBEOwnerHTTPRequest) async throws -> PBEOwnerHTTPResponse {
+        guard let galleryProvider else {
+            throw Self.failure(
+                "pbe_owner_route_not_implemented",
+                501,
+                "The native PBE Owner gallery reader is not configured."
+            )
+        }
+        let session = try await authorizeBrowser(request)
+        let gallery = try await galleryProvider(session)
+        guard Self.clean(gallery.fixtureId) == Self.clean(session.fixtureId) else {
+            throw Self.failure(
+                "pbe_owner_session_mismatch",
+                409,
+                "The hosted gallery does not match the frozen Backstage fixture."
+            )
+        }
+        return try Self.response(GalleryEnvelope(gallery: gallery))
+    }
+
+    private func authorizeBrowser(
+        _ request: PBEOwnerHTTPRequest
+    ) async throws -> PBEOwnerSessionContract {
+        let cookie = try browserCookie(request)
+        let fixtureID = try await sessionStore.requiredBrowserFixtureID(
+            browserSession: cookie
+        )
+        let readiness = try await readinessProvider(fixtureID)
+        return try await sessionStore.authorizeBrowser(
+            browserSession: cookie,
+            readiness: readiness
+        )
     }
 
     private func unsupportedRoute(

@@ -168,7 +168,27 @@ struct PBEOwnerNativeHTTPHostTests {
         let sessionHandler = PBEOwnerNativeSessionHTTPHandler(
             bootstrapSecret: "bootstrap-one",
             checkoutIdentity: "checkout-one",
-            verifier: PBEOwnerFixedCloudVerifier(session: cloudSession)
+            verifier: PBEOwnerFixedCloudVerifier(session: cloudSession),
+            galleryProvider: { session in
+                #expect(session.fixtureId == "expo")
+                return PBEOwnerNativeGallery(
+                    ok: true,
+                    readOnly: true,
+                    fixtureId: "expo",
+                    fixtureBreadcrumb: "Expo",
+                    candidateMode: "curated",
+                    view: "picked",
+                    offset: 0,
+                    limit: 500,
+                    count: 1,
+                    nextOffset: 1,
+                    hasNext: false,
+                    truncated: false,
+                    summary: .init(filtered: 1, universe: 1, undecided: 0, picked: 1, hidden: 0),
+                    mediaAvailability: .init(photos: 1, videos: 0),
+                    items: []
+                )
+            }
         ) { fixtureID in
             #expect(fixtureID == "expo")
             return readiness
@@ -253,6 +273,24 @@ struct PBEOwnerNativeHTTPHostTests {
                 + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
         ))
         #expect(statusResponse.statusCode == 200)
+
+        let unauthorizedGallery = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/pbe-owner/gallery HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\n\r\n"
+        ))
+        #expect(unauthorizedGallery.statusCode == 401)
+
+        let galleryResponse = await dispatcher.dispatch(try request(
+            "GET /__photosbyelie/pbe-owner/gallery HTTP/1.1\r\n"
+                + "Host: 127.0.0.1:9000\r\nCookie: \(cookie)\r\n\r\n"
+        ))
+        #expect(galleryResponse.statusCode == 200)
+        let galleryJSON = try #require(
+            JSONSerialization.jsonObject(with: galleryResponse.body) as? [String: Any]
+        )
+        let galleryBody = try #require(galleryJSON["gallery"] as? [String: Any])
+        #expect(galleryBody["fixtureId"] as? String == "expo")
+        #expect(galleryBody["readOnly"] as? Bool == true)
 
         let heartbeatResponse = await dispatcher.dispatch(try request(
             jsonRequest(

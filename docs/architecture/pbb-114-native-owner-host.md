@@ -1,7 +1,8 @@
 # PBB-114: Backstage-owned PBE Owner session host
 
 Status: route boundary, loopback HTTP transport, session authority/HTTP handlers,
-and native SQLite readiness derivation fixed; data handlers pending, 2026-08-22
+native SQLite readiness derivation, and frozen gallery read fixed; preview and
+action data handlers pending, 2026-08-22
 
 ## Decision
 
@@ -68,7 +69,10 @@ must add a reviewed native contract instead of expanding the host implicitly.
    transfer across the cutover, so each runtime only compares identities it
    derived itself.**
 5. Implement gallery and preview reads with native SQLite/PhotoKit services;
-   route mutations through `OwnerActionRunner`.
+   route mutations through `OwnerActionRunner`. **The bounded, authenticated,
+   picked-still-photo gallery read is complete as an isolated native SQLite
+   provider and HTTP handler; source preview and action handlers remain
+   pending.**
 6. Switch `PBEOwnerLocalHostService` from child-process HTTP control to the
    native actor, then remove Python host materialization only after parity.
 7. Verify signed Max launch, browser behavior, close/drain, crash/sleep/sign-out,

@@ -154,6 +154,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
                 WHERE tombstone.asset_id = asset.asset_id
                   AND tombstone.tombstone_state = 'active'
               )
+              AND COALESCE(global_decision.pick_state, '') <> 'hidden'
             ORDER BY asset.captured_at DESC, asset.asset_id
             """,
             bindings: bindings
@@ -591,7 +592,11 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
         : cloudIdentifier
     let photosTitle = row["photos_title"]?.stringValue ?? ""
     let decisionTitle = row["decision_title"]?.stringValue ?? ""
-    let keywords = cullingStringArray(row["decision_keywords_json"]?.stringValue ?? "[]")
+    let editorialState = row["editorial_state"]?.stringValue ?? "unreviewed"
+    let keywordsJSON = editorialState == "unreviewed"
+        ? row["photos_keywords_json"]?.stringValue ?? "[]"
+        : row["decision_keywords_json"]?.stringValue ?? "[]"
+    let keywords = cullingStringArray(keywordsJSON)
     let rawResourceFormat = raw["resourceFormat"]?.stringValue
         ?? raw["preferredResourceFormat"]?.stringValue
         ?? ""
@@ -610,7 +615,7 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
         "eligibilityState": row["eligibility_state"] ?? .string("active"),
         "rating": row["rating"] ?? .number(0),
         "color": row["color"] ?? .string(""),
-        "editorialState": row["editorial_state"] ?? .string("unreviewed"),
+        "editorialState": .string(editorialState),
         "keywords": .array(keywords.map(JSONValue.string)),
         "locationLabel": row["location_label"] ?? .string(""),
         "locationKeywords": .array(

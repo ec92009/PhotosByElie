@@ -115,6 +115,22 @@ struct BackstagePreviewIPCTests {
         #expect(library.metadataApplyCount == 1)
     }
 
+    @Test("Native Photos metadata envelopes use the public IPC operation names")
+    func nativeMetadataEnvelopeUsesIPCOperationNames() throws {
+        let items: [[String: Any]] = [["assetId": "asset-1"]]
+        let read = try JSONSerialization.jsonObject(
+            with: PhotoMetadataAutomation.responseData(items: items, commit: false)
+        ) as? [String: Any]
+        let apply = try JSONSerialization.jsonObject(
+            with: PhotoMetadataAutomation.responseData(items: items, commit: true)
+        ) as? [String: Any]
+
+        #expect(read?["mode"] as? String == BackstagePreviewIPCConstants.metadataReadManyOperation)
+        #expect(apply?["mode"] as? String == BackstagePreviewIPCConstants.metadataApplyManyOperation)
+        #expect(read?["count"] as? Int == 1)
+        #expect(apply?["count"] as? Int == 1)
+    }
+
     @Test("Authenticated original export stages a private receipt without exposing an absolute path")
     func authenticatedOriginalExportSucceeds() async throws {
         let root = FileManager.default.temporaryDirectory

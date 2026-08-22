@@ -130,9 +130,15 @@ enum PhotoMetadataAutomation {
                 ?? "Backstage could not run Photos metadata automation."
             throw PhotoMetadataAutomationError.failed(message)
         }
-        return try JSONSerialization.data(withJSONObject: [
+        return try responseData(items: items, commit: commit)
+    }
+
+    static func responseData(items: [[String: Any]], commit: Bool) throws -> Data {
+        try JSONSerialization.data(withJSONObject: [
             "ok": true,
-            "mode": commit ? "metadata-apply-many" : "metadata-read-many",
+            "mode": commit
+                ? BackstagePreviewIPCConstants.metadataApplyManyOperation
+                : BackstagePreviewIPCConstants.metadataReadManyOperation,
             "count": items.count,
             "items": items,
         ], options: [.sortedKeys])

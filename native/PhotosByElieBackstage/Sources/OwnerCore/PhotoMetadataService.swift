@@ -69,14 +69,29 @@ enum PhotoMetadataAutomation {
             managedPrefixes.some(prefix => value.startsWith(prefix));
           const readOne = request => {
             const id = String(request.assetId || '');
-            const item = photos.mediaItems.byId(id);
-            if (item.id() !== id) throw new Error(`Apple Photos asset not found: ${id}`);
-            return {
-              assetId: id,
-              title: item.name() || '',
-              caption: item.description() || '',
-              keywords: item.keywords() || [],
-            };
+            try {
+              const item = photos.mediaItems.byId(id);
+              let foundId;
+              try { foundId = item.id(); } catch (error) {
+                return {assetId: id, error: `lookup failed: ${String(error)}`};
+              }
+              if (foundId !== id) return {assetId: id, error: 'lookup returned a different Photos asset'};
+              let title;
+              try { title = item.name() || ''; } catch (error) {
+                return {assetId: id, error: `title read failed: ${String(error)}`};
+              }
+              let caption;
+              try { caption = item.description() || ''; } catch (error) {
+                return {assetId: id, error: `caption read failed: ${String(error)}`};
+              }
+              let keywords;
+              try { keywords = item.keywords() || []; } catch (error) {
+                return {assetId: id, error: `keyword read failed: ${String(error)}`};
+              }
+              return {assetId: id, title, caption, keywords};
+            } catch (error) {
+              return {assetId: id, error: `metadata read failed: ${String(error)}`};
+            }
           };
           const applyOne = request => {
             const id = String(request.assetId || '');

@@ -93,8 +93,8 @@ extension PhotoLibraryError: LocalizedError {
             return "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
         case .exportFailed:
             return "Photos could not export this asset."
-        case .metadataFailed:
-            return "Photos metadata automation failed. Retry after Backstage has Automation access to Photos."
+        case .metadataFailed(let message):
+            return "Photos metadata automation failed: \(message)"
         }
     }
 }

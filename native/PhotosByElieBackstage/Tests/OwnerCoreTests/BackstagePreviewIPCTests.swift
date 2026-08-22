@@ -131,6 +131,15 @@ struct BackstagePreviewIPCTests {
         #expect(apply?["count"] as? Int == 1)
     }
 
+    @Test("Photos metadata failures preserve the actionable native reason")
+    func metadataFailurePreservesNativeReason() {
+        let error = PhotoLibraryError.metadataFailed("Not authorized to send Apple events to Photos.")
+        #expect(
+            error.localizedDescription
+                == "Photos metadata automation failed: Not authorized to send Apple events to Photos."
+        )
+    }
+
     @Test("Authenticated original export stages a private receipt without exposing an absolute path")
     func authenticatedOriginalExportSucceeds() async throws {
         let root = FileManager.default.temporaryDirectory

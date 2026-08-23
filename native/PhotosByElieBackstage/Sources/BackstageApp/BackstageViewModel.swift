@@ -404,6 +404,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
     private var shouldInjectNextCullingThumbnailFailure: Bool
+    private var controlledFailedCullingAssetID: String?
     private let cullingThumbnailUpgradeDelay: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
@@ -1273,7 +1274,8 @@ final class BackstageViewModel: ObservableObject {
             thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
         }
         guard cullingThumbnails[assetID] == nil,
-              cullingThumbnailTasks[assetID] == nil
+              cullingThumbnailTasks[assetID] == nil,
+              !(controlledFailedCullingAssetID == assetID && cullingThumbnailFailures[assetID] != nil)
         else { return }
         let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
         let taskToken = UUID()
@@ -1451,6 +1453,7 @@ final class BackstageViewModel: ObservableObject {
         guard cullingThumbnails[assetID] == nil else { return }
         if shouldInjectNextCullingThumbnailFailure {
             shouldInjectNextCullingThumbnailFailure = false
+            controlledFailedCullingAssetID = assetID
             cullingThumbnailFailures[assetID] = .previewUnavailable
             cullingStatus = "Controlled preview failure ready. Retry this card; no culling decision changed."
             return
@@ -1499,6 +1502,9 @@ final class BackstageViewModel: ObservableObject {
 
     func retryThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
         guard cullingThumbnails[assetID] == nil else { return }
+        if controlledFailedCullingAssetID == assetID {
+            controlledFailedCullingAssetID = nil
+        }
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks[assetID] = nil
         cullingThumbnailTaskTokens[assetID] = nil

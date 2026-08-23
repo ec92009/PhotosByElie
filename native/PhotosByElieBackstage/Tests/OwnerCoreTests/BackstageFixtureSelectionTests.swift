@@ -734,6 +734,20 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingThumbnailFailures[asset.id] == .previewUnavailable)
         #expect(model.cullingStatus.contains("no culling decision changed"))
 
+        model.cullingAssetDidDisappear(asset.id)
+        model.cullingAssetDidAppear(
+            FixtureAsset(
+                id: asset.id,
+                title: asset.title,
+                filename: asset.filename,
+                mediaType: asset.mediaType
+            )
+        )
+        try? await Task.sleep(for: .milliseconds(30))
+
+        #expect(model.cullingThumbnails[asset.id] == nil)
+        #expect(model.cullingThumbnailFailures[asset.id] == .previewUnavailable)
+
         model.retryThumbnail(for: asset.id)
 
         for _ in 0..<20 {

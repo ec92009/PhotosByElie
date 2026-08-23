@@ -125,6 +125,19 @@ struct OwnerCoreTests {
         #expect(BackstageQuickLookCoordinator.previewTitle(for: url, metadata: nil) == "opaque-asset-id.jpg")
     }
 
+    @Test("Quick Look remains managed by its originating desktop Space")
+    @MainActor
+    func quickLookUsesOriginSpaceCollectionBehavior() {
+        let behavior = BackstageQuickLookCoordinator.originSpaceCollectionBehavior(
+            from: [.canJoinAllSpaces, .moveToActiveSpace, .fullScreenAuxiliary]
+        )
+
+        #expect(behavior.contains(.managed))
+        #expect(behavior.contains(.fullScreenAuxiliary))
+        #expect(!behavior.contains(.canJoinAllSpaces))
+        #expect(!behavior.contains(.moveToActiveSpace))
+    }
+
     @Test("Quick Look source size is truthful for photos, video, and partial metadata")
     func quickLookSourceSizeFormatting() {
         let photo = BackstageQuickLookSourceSize(

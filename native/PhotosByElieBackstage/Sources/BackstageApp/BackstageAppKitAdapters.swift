@@ -187,7 +187,9 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         window.hidesOnDeactivate = false
         window.ignoresMouseEvents = true
         window.isReleasedWhenClosed = false
-        window.collectionBehavior = [.fullScreenAuxiliary]
+        window.collectionBehavior = Self.originSpaceCollectionBehavior(
+            from: [.fullScreenAuxiliary]
+        )
         return window
     }()
     private var isMetadataPanelConfigured = false
@@ -237,6 +239,16 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     ) -> String {
         let filename = metadata?.filename.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return filename.isEmpty ? url.lastPathComponent : filename
+    }
+
+    static func originSpaceCollectionBehavior(
+        from behavior: NSWindow.CollectionBehavior
+    ) -> NSWindow.CollectionBehavior {
+        var result = behavior
+        result.remove(.canJoinAllSpaces)
+        result.remove(.moveToActiveSpace)
+        result.insert(.managed)
+        return result
     }
 
     func present(
@@ -392,6 +404,9 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     private func configureQuickLookFrame(_ panel: QLPreviewPanel) {
+        panel.collectionBehavior = Self.originSpaceCollectionBehavior(
+            from: panel.collectionBehavior
+        )
         guard configuredPreviewPanel !== panel else { return }
         panel.setFrameAutosaveName(Self.quickLookFrameAutosaveName)
         _ = panel.setFrameUsingName(Self.quickLookFrameAutosaveName)

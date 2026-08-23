@@ -418,7 +418,6 @@ struct CullingView: View {
                 .toggleStyle(.checkbox)
             }
             Divider().frame(width: 1, height: 18)
-            Text("Rating").font(.caption.weight(.semibold))
             CullingRatingSlider(
                 rating: model.cullingMinimumRating,
                 isDisabled: false,
@@ -428,15 +427,18 @@ struct CullingView: View {
                 model.setCullingMinimumRating(rating)
             }
             Divider().frame(width: 1, height: 18)
-            Text("Color").font(.caption.weight(.semibold))
-            ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
-                LightroomColorFilterButton(
-                    color: color,
-                    isSelected: model.cullingColorFilters.contains(color)
-                ) {
-                    model.toggleCullingColorFilter(color)
+            HStack(spacing: CullingCompactControlMetrics.groupSpacing) {
+                ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
+                    LightroomColorFilterButton(
+                        color: color,
+                        isSelected: model.cullingColorFilters.contains(color)
+                    ) {
+                        model.toggleCullingColorFilter(color)
+                    }
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Color filter")
             Button("Clear filters") { model.clearCullingFilters() }
                 .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
         }
@@ -716,8 +718,6 @@ struct CullingView: View {
             )
             .accessibilityLabel("X move selected items to the recoverable Waste Basket")
             .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
-            Text("Rating")
-                .font(.caption.weight(.semibold))
             CullingRatingSlider(
                 rating: model.cullingSelectionRating,
                 isDisabled: model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision,
@@ -726,11 +726,13 @@ struct CullingView: View {
             ) { rating in
                 Task { await model.applyRatingShortcut(rating) }
             }
-            Text("Color")
-                .font(.caption.weight(.semibold))
-            ForEach(SidecarColor.allCases.filter { $0 != .none }, id: \.self) { color in
-                cullingColorAssignmentButton(color)
+            HStack(spacing: CullingCompactControlMetrics.groupSpacing) {
+                ForEach(SidecarColor.allCases.filter { $0 != .none }, id: \.self) { color in
+                    cullingColorAssignmentButton(color)
+                }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Color assignment")
         }
     }
 
@@ -739,18 +741,11 @@ struct CullingView: View {
         return Button {
             Task { await model.toggleCullingColor(color) }
         } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(cullingAssignmentColor(color))
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isSelected ? Color.white : Color.secondary, lineWidth: isSelected ? 2 : 1)
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: 20, height: 20)
+            CullingColorSwatch(
+                fill: cullingAssignmentColor(color),
+                isSelected: isSelected,
+                showsSlash: false
+            )
             .modifier(CullingCompactControlChrome(
                 width: CullingCompactControlMetrics.colorWidth,
                 isSelected: isSelected
@@ -1291,6 +1286,9 @@ private enum CullingCompactControlMetrics {
     static let colorWidth: CGFloat = 30
     static let height: CGFloat = 28
     static let cornerRadius: CGFloat = 6
+    static let swatchSize: CGFloat = 20
+    static let swatchCornerRadius: CGFloat = 4
+    static let groupSpacing: CGFloat = 2
 }
 
 private struct CullingCompactControlChrome: ViewModifier {
@@ -1302,15 +1300,43 @@ private struct CullingCompactControlChrome: ViewModifier {
             .frame(width: width, height: CullingCompactControlMetrics.height)
             .background(
                 RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
-                    .fill(isSelected ? Color.accentColor.opacity(0.20) : Color(nsColor: .controlBackgroundColor))
+                    .fill(isSelected ? Color.primary.opacity(0.10) : Color(nsColor: .controlBackgroundColor))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
-                    .stroke(
-                        isSelected ? Color.accentColor : Color(nsColor: .separatorColor),
-                        lineWidth: isSelected ? 2 : 1
-                    )
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
             )
+    }
+}
+
+private struct CullingColorSwatch: View {
+    let fill: Color
+    let isSelected: Bool
+    let showsSlash: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: CullingCompactControlMetrics.swatchCornerRadius)
+                .fill(fill)
+            RoundedRectangle(cornerRadius: CullingCompactControlMetrics.swatchCornerRadius)
+                .stroke(
+                    isSelected ? Color.primary.opacity(0.72) : Color.secondary,
+                    lineWidth: isSelected ? 2 : 1
+                )
+            if showsSlash {
+                Image(systemName: "slash")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+            } else if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(
+            width: CullingCompactControlMetrics.swatchSize,
+            height: CullingCompactControlMetrics.swatchSize
+        )
     }
 }
 
@@ -1404,18 +1430,11 @@ private struct LightroomColorFilterButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(filterColor)
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(isSelected ? Color.white : Color.secondary, lineWidth: isSelected ? 2 : 1)
-                if color == .none {
-                    Image(systemName: "slash")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 20, height: 20)
+            CullingColorSwatch(
+                fill: filterColor,
+                isSelected: isSelected,
+                showsSlash: color == .none
+            )
             .modifier(CullingCompactControlChrome(
                 width: CullingCompactControlMetrics.colorWidth,
                 isSelected: isSelected

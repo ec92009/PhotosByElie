@@ -1096,12 +1096,18 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 1)
         self.assertNotIn("Text(\"Media\")", culling)
         self.assertIn("Text(\"Status\")", culling)
-        self.assertIn("Text(\"Rating\")", culling)
-        self.assertIn("Text(\"Color\")", culling)
+        self.assertNotIn("Text(\"Rating\")", culling)
+        self.assertNotIn("Text(\"Color\")", culling)
         self.assertIn("CullingRatingSlider(", culling)
         self.assertIn("model.cullingMinimumRating", culling)
         self.assertIn("model.setCullingMinimumRating(rating)", culling)
         self.assertIn("LightroomColorFilterButton(", culling)
+        self.assertGreaterEqual(
+            culling.count("HStack(spacing: CullingCompactControlMetrics.groupSpacing)"),
+            2,
+        )
+        self.assertIn('.accessibilityLabel("Color filter")', culling)
+        self.assertIn('.accessibilityLabel("Color assignment")', culling)
         self.assertIn("onChange(of: model.cullingSearch)", culling)
         self.assertIn("model.scheduleCullingSearchRefresh()", culling)
         self.assertIn(".saturation(isHidden ? 0 : 1)", card)
@@ -1151,6 +1157,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.toggleCullingColor(color)", culling)
         self.assertIn("CullingCompactControlMetrics.ratingWidth", app)
         self.assertIn("CullingCompactControlMetrics.colorWidth", app)
+        self.assertIn("CullingCompactControlMetrics.swatchSize", app)
+        self.assertIn("CullingCompactControlMetrics.swatchCornerRadius", app)
+        self.assertIn("CullingCompactControlMetrics.groupSpacing", app)
+        self.assertNotIn(
+            "isSelected ? Color.accentColor : Color(nsColor: .separatorColor)",
+            app,
+        )
+        self.assertIn("isSelected ? Color.primary.opacity(0.10)", app)
         self.assertIn("ForEach(1...5, id: \\.self)", app)
         self.assertIn("value <= displayedRating ? Color.yellow", app)
         self.assertIn("cullingSelectionRating", model)

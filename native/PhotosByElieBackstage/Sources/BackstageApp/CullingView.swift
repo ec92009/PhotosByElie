@@ -710,7 +710,6 @@ struct CullingView: View {
                 model.cullingSelection.selectedIDs.isEmpty
                     || model.isApplyingCullingDecision
                     || model.cullingWasteBasketQueueing
-                    || model.cullingWasteBasketPendingActionID != nil
             )
             .accessibilityLabel("X move selected items to the recoverable Waste Basket")
             .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")

@@ -269,6 +269,207 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewSelection.selectedIDs.contains(model.reviewSelection.focusedID!))
     }
 
+    @Test("Culling Waste Basket updates locally and exact Undo restores the same window")
+    @MainActor
+    func cullingWasteBasketOptimisticXAndUndo() async throws {
+        let items = (1...3).map { index in
+            FixtureAsset(
+                id: "culling-x-\(index)",
+                title: "Item \(index)",
+                filename: "item-\(index).jpg",
+                mediaType: "photo"
+            )
+        }
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-culling-x",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+            OwnerAction(
+                id: "owner-action-culling-restore",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+        ], terminalDelay: .milliseconds(50))
+        let model = cullingWasteBasketModel(
+            actionAPI: actionAPI,
+            items: items,
+            selectedIDs: [items[0].id, items[1].id],
+            focusedID: items[0].id
+        )
+
+        await model.moveCullingSelectionToWasteBasket()
+        for _ in 0..<300 where model.cullingHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.visibleCullingAssets.map(\.id) == [items[2].id])
+        #expect(model.cullingSelection.selectedIDs == [items[2].id])
+        #expect(model.cullingHistory.last?.wasteBasketMediaIDs == [items[0].id, items[1].id])
+        #expect(model.cullingWasteBasketPendingActionID == "owner-action-culling-x")
+        for _ in 0..<300 where model.cullingWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        await model.undoLastCullingDecision()
+
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.cullingSelection.selectedIDs == [items[0].id, items[1].id])
+        #expect(model.cullingSelection.focusedID == items[0].id)
+        #expect(model.cullingWasteBasketPendingActionID == "owner-action-culling-restore")
+        for _ in 0..<300 where model.cullingWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.cullingStatus.contains("Restored 2 items from Waste Basket"))
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-x",
+            "waste-basket-restore",
+        ])
+    }
+
+    @Test("Culling Waste Basket allows consecutive X and Undo actions")
+    @MainActor
+    func cullingWasteBasketAllowsConsecutiveActions() async throws {
+        let items = (1...3).map { index in
+            FixtureAsset(
+                id: "culling-consecutive-\(index)",
+                title: "Item \(index)",
+                filename: "item-\(index).jpg",
+                mediaType: "photo"
+            )
+        }
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-culling-consecutive-x-1",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-culling-consecutive-x-2",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-culling-consecutive-restore-2",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+                OwnerAction(
+                    id: "owner-action-culling-consecutive-restore-1",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+            ],
+            terminalDelay: .milliseconds(100)
+        )
+        let model = cullingWasteBasketModel(
+            actionAPI: actionAPI,
+            items: items,
+            selectedIDs: [items[0].id],
+            focusedID: items[0].id
+        )
+
+        await model.moveCullingSelectionToWasteBasket()
+        for _ in 0..<300 where model.cullingHistory.count < 1 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id, items[2].id])
+
+        await model.moveCullingSelectionToWasteBasket()
+        for _ in 0..<300 where model.cullingHistory.count < 2 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.visibleCullingAssets.map(\.id) == [items[2].id])
+        #expect(model.cullingWasteBasketPendingActionIDs.count == 2)
+
+        for _ in 0..<600 where !model.cullingWasteBasketPendingActionIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        await model.undoLastCullingDecision()
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id, items[2].id])
+        #expect(model.cullingWasteBasketPendingActionIDs == [
+            "owner-action-culling-consecutive-restore-2",
+        ])
+
+        await model.undoLastCullingDecision()
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.cullingWasteBasketPendingActionIDs == [
+            "owner-action-culling-consecutive-restore-1",
+            "owner-action-culling-consecutive-restore-2",
+        ])
+
+        for _ in 0..<600 where !model.cullingWasteBasketPendingActionIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-x",
+            "waste-basket-x",
+            "waste-basket-restore",
+            "waste-basket-restore",
+        ])
+    }
+
+    @Test("Culling Waste Basket optimistic X rolls back without replacing the window")
+    @MainActor
+    func cullingWasteBasketXRollsBackOnFailure() async throws {
+        let items = (1...2).map { index in
+            FixtureAsset(
+                id: "culling-rollback-\(index)",
+                title: "Item \(index)",
+                filename: "item-\(index).jpg",
+                mediaType: "photo"
+            )
+        }
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-culling-x-failure",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .failed,
+                error: ["message": "synthetic X failure"]
+            ),
+        ], terminalDelay: .milliseconds(50))
+        let model = cullingWasteBasketModel(
+            actionAPI: actionAPI,
+            items: items,
+            selectedIDs: [items[0].id],
+            focusedID: items[0].id
+        )
+
+        await model.moveCullingSelectionToWasteBasket()
+        for _ in 0..<300 where model.cullingHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
+
+        for _ in 0..<300 where model.cullingWasteBasketPendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.cullingSelection.selectedIDs == [items[0].id])
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.cullingStatus.contains("local Culling grid was restored"))
+    }
+
     @Test("Review Waste Basket X records a same-session Undo restore")
     @MainActor
     func reviewWasteBasketXRecordsUndoRestore() async throws {
@@ -954,6 +1155,61 @@ struct BackstageFixtureSelectionTests {
                 ]
             ),
         ]
+    }
+
+    @MainActor
+    private func cullingWasteBasketModel(
+        actionAPI: ReviewLifecycleActionAPI,
+        items: [FixtureAsset],
+        selectedIDs: Set<String>,
+        focusedID: String
+    ) -> BackstageViewModel {
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(
+            fixtureID: "fixture-expo",
+            photos: items.count,
+            videos: 0
+        )
+        window.items = items
+        window.summary = FixtureCullingSummary(json: [
+            "filtered": .number(Double(items.count)),
+            "universe": .number(Double(items.count)),
+            "undecided": .number(Double(items.count)),
+            "picked": .number(0),
+            "hidden": .number(0),
+        ])
+        model.fixtureCullingWindow = window
+        model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
+            (
+                item.id,
+                SidecarDecisionState(
+                    assetId: item.id,
+                    pickState: item.placementState.rawValue
+                )
+            )
+        })
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: selectedIDs,
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        return model
     }
 
     @MainActor

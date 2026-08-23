@@ -7,7 +7,15 @@ struct CullingHistoryEntry: Identifiable, Sendable {
     var label: String
     var changes: [SidecarDecisionChange] = []
     var fixtureChanges: [FixtureAssetState] = []
+    var wasteBasketMediaIDs: [String] = []
+    var wasteBasketActionID: String = ""
+    var fixtureID: String = ""
+    var windowOffset: Int = 0
     var selectedIDs: Set<String>
+    var anchorID: String?
+    var focusedID: String?
+    var cullingItems: [FixtureAsset] = []
+    var cullingItemIndexes: [String: Int] = [:]
 }
 
 enum MetadataHistoryKind: Sendable {
@@ -269,6 +277,7 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var cullingWasteBasketQueueing = false
     @Published private(set) var cullingWasteBasketPendingActionID: String?
     @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
+    @Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -401,9 +410,11 @@ final class BackstageViewModel: ObservableObject {
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
     private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
-    private var cullingWasteBasketMonitorTask: Task<Void, Never>?
+    private var cullingWasteBasketPendingActions: [String: OwnerAction] = [:]
+    private var cullingWasteBasketPendingActionOrder: [String] = []
     private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
     private var reviewWasteBasketPendingActionOrder: [String] = []
+    private var cullingStableWindowIndexes: [String: Int] = [:]
     private var lifecycleMonitorTask: Task<Void, Never>?
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
@@ -2242,6 +2253,11 @@ final class BackstageViewModel: ObservableObject {
             guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
             fixtureCullingMediaAvailability = window.mediaAvailability
             fixtureCullingWindow = window
+            cullingStableWindowIndexes = Dictionary(
+                uniqueKeysWithValues: window.items.enumerated().map { index, item in
+                    (item.id, window.offset + index)
+                }
+            )
             await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
@@ -2743,9 +2759,8 @@ final class BackstageViewModel: ObservableObject {
         onTerminal: ((Bool, String?) -> Void)? = nil
     ) async {
         guard !isApplyingCullingDecision,
-              !cullingWasteBasketQueueing,
-              cullingWasteBasketPendingActionID == nil else {
-            cullingStatus = cullingWasteBasketQueueing || cullingWasteBasketPendingActionID != nil
+              !cullingWasteBasketQueueing else {
+            cullingStatus = cullingWasteBasketQueueing
                 ? "This Culling X action is already queued; the Culling workspace remains available while it completes."
                 : "Finish the current Culling action first."
             return
@@ -2756,11 +2771,30 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let previousIDs = visibleCullingAssets.map(\.id)
+        for (index, id) in previousIDs.enumerated()
+        where cullingStableWindowIndexes[id] == nil {
+            cullingStableWindowIndexes[id] = (fixtureCullingWindow?.offset ?? 0) + index
+        }
         let focusedID = cullingSelection.focusedID ?? ids.first
         let fixtureID = selectedFixtureID
+        var historyEntry = CullingHistoryEntry(
+            label: "Waste Basket",
+            wasteBasketMediaIDs: ids,
+            fixtureID: fixtureID,
+            windowOffset: fixtureCullingWindow?.offset ?? cullingWindowOffset,
+            selectedIDs: cullingSelection.selectedIDs,
+            anchorID: cullingSelection.anchorID,
+            focusedID: cullingSelection.focusedID,
+            cullingItems: cullingAssets.filter { ids.contains($0.id) },
+            cullingItemIndexes: Dictionary(
+                uniqueKeysWithValues: cullingAssets.enumerated().compactMap { index, item in
+                    ids.contains(item.id) ? (item.id, index) : nil
+                }
+            )
+        )
         cullingWasteBasketQueueing = true
         cullingStatus = "Submitting X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Culling remains available."
-        cullingWasteBasketMonitorTask = Task { @MainActor [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let action = try await self.lifecycleService.enqueueMoveToWasteBasket(
@@ -2769,14 +2803,25 @@ final class BackstageViewModel: ObservableObject {
                     source: "backstage-culling"
                 )
                 self.cullingWasteBasketQueueing = false
-                self.cullingWasteBasketPendingActionID = action.id
-                self.cullingWasteBasketPendingAction = action
-                self.cullingStatus = "Queued X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). Culling remains available while it completes."
+                historyEntry.wasteBasketActionID = action.id
+                self.beginCullingWasteBasketAction(action)
+                self.cullingHistory.append(historyEntry)
+                if self.cullingHistory.count > 100 {
+                    self.cullingHistory.removeFirst(self.cullingHistory.count - 100)
+                }
+                let replacementID = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                    historyEntry,
+                    previousIDs: previousIDs,
+                    focusedID: focusedID,
+                    removalDirection: removalDirection
+                )
+                self.cullingStatus = "Queued X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). The local Culling grid is updated; durable reconciliation continues in the background."
+                onTerminal?(true, replacementID)
                 do {
                     let completedAction = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
                         Task { @MainActor [weak self] in
                             guard let self else { return }
-                            self.cullingWasteBasketPendingAction = update
+                            self.updateCullingWasteBasketAction(update)
                             self.cullingStatus = self.pendingLifecycleActionStatus(
                                 "Culling X",
                                 action: update,
@@ -2784,57 +2829,38 @@ final class BackstageViewModel: ObservableObject {
                             )
                         }
                     }
-                    self.cullingWasteBasketPendingActionID = nil
-                    self.cullingWasteBasketPendingAction = nil
+                    self.finishCullingWasteBasketAction(action.id)
                     let receipt = LifecycleActionReceipt.summarize(
                         completedAction,
                         requestedCount: ids.count
                     )
                     self.cullingStatus = "Culling X completed through action \(action.id). \(receipt.statusSummary). Every affected item remains recoverable in Waste Basket."
-                    if !self.selectedFixtureID.isEmpty, self.cullingPool == nil {
-                        await self.loadFixtureCullingWindow()
-                    } else {
-                        self.replaceCullingItems()
-                    }
-                    if let focusedID {
-                        var selection = OwnerSelectionModel(
-                            orderedIDs: previousIDs,
-                            selectedIDs: [focusedID],
-                            anchorID: focusedID,
-                            focusedID: focusedID
-                        )
-                        let replacement = selection.replaceItems(
-                            self.visibleCullingAssets.map(\.id),
-                            selectingSuccessorAfterRemoving: focusedID,
-                            direction: removalDirection
-                        )
-                        self.cullingSelection = selection
-                        self.selectedPhotoIDs = selection.selectedIDs
-                        onTerminal?(true, replacement)
-                    }
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
                         self.cullingStatus = self.pendingLifecycleActionStatus(
                             "Culling X",
-                            action: self.cullingWasteBasketPendingAction ?? action,
+                            action: self.cullingWasteBasketPendingActions[action.id] ?? action,
                             availability: "Culling remains available; check Activity for the full receipt."
                         )
                     } else {
-                        self.cullingWasteBasketPendingActionID = nil
-                        self.cullingWasteBasketPendingAction = nil
+                        self.finishCullingWasteBasketAction(action.id)
+                        self.cullingHistory.removeAll { $0.id == historyEntry.id }
+                        if self.selectedFixtureID == historyEntry.fixtureID,
+                           !self.restoreWasteBasketCullingEntryInCurrentWindow(historyEntry) {
+                            await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                        }
                         let receipt = LifecycleActionReceipt(
                             affected: 0,
                             skipped: 0,
                             failed: ids.count
                         )
-                        self.cullingStatus = "Waste Basket move failed. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
+                        self.cullingStatus = "Waste Basket move failed; the local Culling grid was restored. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
                         onTerminal?(false, nil)
                     }
                 }
             } catch {
                 self.cullingWasteBasketQueueing = false
-                self.cullingWasteBasketPendingAction = nil
                 let receipt = LifecycleActionReceipt(
                     affected: 0,
                     skipped: 0,
@@ -2843,7 +2869,6 @@ final class BackstageViewModel: ObservableObject {
                 self.cullingStatus = "Waste Basket move failed. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
                 onTerminal?(false, nil)
             }
-            self.cullingWasteBasketMonitorTask = nil
         }
     }
 
@@ -4611,6 +4636,72 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Nothing to undo in this Backstage session."
             return
         }
+        if !entry.wasteBasketMediaIDs.isEmpty {
+            guard !cullingWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID) else {
+                cullingStatus = "This Waste Basket action must finish before its Undo can be queued."
+                return
+            }
+            cullingWasteBasketQueueing = true
+            do {
+                let action = try await lifecycleService.enqueueRestore(
+                    mediaIDs: entry.wasteBasketMediaIDs
+                )
+                cullingWasteBasketQueueing = false
+                beginCullingWasteBasketAction(action)
+                cullingHistory.removeLast()
+                let restoredLocally = selectedFixtureID == entry.fixtureID
+                    && restoreWasteBasketCullingEntryInCurrentWindow(entry)
+                cullingStatus = "Queued Undo for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") as action \(action.id). The local Culling grid is restored; durable reconciliation continues in the background."
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                            Task { @MainActor [weak self] in
+                                guard let self else { return }
+                                self.updateCullingWasteBasketAction(update)
+                                self.cullingStatus = self.pendingLifecycleActionStatus(
+                                    "Culling Undo",
+                                    action: update,
+                                    availability: "Culling remains available while it completes."
+                                )
+                            }
+                        }
+                        self.finishCullingWasteBasketAction(action.id)
+                        if !restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                            await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                        }
+                        self.cullingStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                    } catch {
+                        if let ownerError = error as? OwnerActionRunError,
+                           ownerError == .timedOut {
+                            self.cullingStatus = self.pendingLifecycleActionStatus(
+                                "Culling Undo",
+                                action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                                availability: "Culling remains available; check Activity for the full receipt."
+                            )
+                        } else {
+                            self.finishCullingWasteBasketAction(action.id)
+                            if !self.cullingHistory.contains(where: { $0.id == entry.id }) {
+                                self.cullingHistory.append(entry)
+                            }
+                            if restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                                _ = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                                    entry,
+                                    previousIDs: self.visibleCullingAssets.map(\.id),
+                                    focusedID: entry.focusedID,
+                                    removalDirection: .next
+                                )
+                            }
+                            self.cullingStatus = "Waste Basket Undo failed; the local Culling grid was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                        }
+                    }
+                }
+            } catch {
+                cullingWasteBasketQueueing = false
+                cullingStatus = "Undo failed; the history step was preserved. \(userFacingMessage(for: error))"
+            }
+            return
+        }
         if !entry.fixtureChanges.isEmpty {
             do {
                 _ = try await fixtureService.undoState(
@@ -4652,6 +4743,134 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Undid \(entry.label). \(cullingHistory.count) reversible step\(cullingHistory.count == 1 ? "" : "s") remain."
         } catch {
             cullingStatus = "Undo failed; the history step was preserved. \(error)"
+        }
+    }
+
+    private func beginCullingWasteBasketAction(_ action: OwnerAction) {
+        cullingWasteBasketPendingActionIDs.insert(action.id)
+        cullingWasteBasketPendingActions[action.id] = action
+        cullingWasteBasketPendingActionOrder.removeAll { $0 == action.id }
+        cullingWasteBasketPendingActionOrder.append(action.id)
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func updateCullingWasteBasketAction(_ action: OwnerAction) {
+        guard cullingWasteBasketPendingActionIDs.contains(action.id) else { return }
+        cullingWasteBasketPendingActions[action.id] = action
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func finishCullingWasteBasketAction(_ actionID: String) {
+        cullingWasteBasketPendingActionIDs.remove(actionID)
+        cullingWasteBasketPendingActions.removeValue(forKey: actionID)
+        cullingWasteBasketPendingActionOrder.removeAll { $0 == actionID }
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func refreshLatestCullingWasteBasketAction() {
+        cullingWasteBasketPendingActionID = cullingWasteBasketPendingActionOrder.last
+        cullingWasteBasketPendingAction = cullingWasteBasketPendingActionID.flatMap {
+            cullingWasteBasketPendingActions[$0]
+        }
+    }
+
+    @discardableResult
+    private func removeWasteBasketCullingEntryFromCurrentWindow(
+        _ entry: CullingHistoryEntry,
+        previousIDs: [String],
+        focusedID: String?,
+        removalDirection: OwnerSelectionDirection
+    ) -> String? {
+        guard var window = fixtureCullingWindow,
+              window.fixtureID == entry.fixtureID,
+              window.offset == entry.windowOffset else {
+            replaceCullingItems()
+            return nil
+        }
+        let removedIDs = Set(entry.wasteBasketMediaIDs)
+        window.items.removeAll { removedIDs.contains($0.id) }
+        adjustCullingSummary(&window, for: entry.cullingItems, delta: -1)
+        fixtureCullingWindow = window
+        let orderedIDs = visibleCullingAssets.map(\.id)
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: Set(focusedID.map { [$0] } ?? []),
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        let replacementID = focusedID.flatMap {
+            selection.replaceItems(
+                orderedIDs,
+                selectingSuccessorAfterRemoving: $0,
+                direction: removalDirection
+            )
+        }
+        cullingSelection = selection
+        selectedPhotoIDs = selection.selectedIDs
+        return replacementID
+    }
+
+    private func restoreWasteBasketCullingEntryInCurrentWindow(
+        _ entry: CullingHistoryEntry
+    ) -> Bool {
+        guard var window = fixtureCullingWindow,
+              window.fixtureID == entry.fixtureID,
+              window.offset == entry.windowOffset else {
+            return false
+        }
+        let restoredIDs = Set(entry.wasteBasketMediaIDs)
+        var items = window.items.filter { !restoredIDs.contains($0.id) }
+        items.append(contentsOf: entry.cullingItems.filter { restoredItem in
+            !items.contains(where: { $0.id == restoredItem.id })
+        })
+        items.sort { left, right in
+            let leftIndex = cullingStableWindowIndexes[left.id]
+                ?? entry.cullingItemIndexes[left.id].map { entry.windowOffset + $0 }
+                ?? .max
+            let rightIndex = cullingStableWindowIndexes[right.id]
+                ?? entry.cullingItemIndexes[right.id].map { entry.windowOffset + $0 }
+                ?? .max
+            return leftIndex < rightIndex
+        }
+        window.items = items
+        adjustCullingSummary(&window, for: entry.cullingItems, delta: 1)
+        fixtureCullingWindow = window
+        let orderedIDs = visibleCullingAssets.map(\.id)
+        let selectedIDs = entry.selectedIDs.intersection(orderedIDs)
+        let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? selectedIDs.first
+            ?? orderedIDs.first
+        let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? focusedID
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: selectedIDs.isEmpty
+                ? Set(focusedID.map { [$0] } ?? [])
+                : selectedIDs,
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
+        return true
+    }
+
+    private func adjustCullingSummary(
+        _ window: inout FixtureCullingWindow,
+        for items: [FixtureAsset],
+        delta: Int
+    ) {
+        guard !items.isEmpty else { return }
+        window.summary.filtered = max(0, window.summary.filtered + (items.count * delta))
+        window.summary.universe = max(0, window.summary.universe + (items.count * delta))
+        for item in items {
+            switch item.placementState {
+            case .undecided:
+                window.summary.undecided = max(0, window.summary.undecided + delta)
+            case .picked:
+                window.summary.picked = max(0, window.summary.picked + delta)
+            case .hidden:
+                window.summary.hidden = max(0, window.summary.hidden + delta)
+            }
         }
     }
 

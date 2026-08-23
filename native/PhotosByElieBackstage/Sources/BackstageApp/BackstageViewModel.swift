@@ -338,6 +338,9 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var lifecycleQueueing = false
     @Published private(set) var lifecyclePendingActionID: String?
     @Published private(set) var lifecyclePendingAction: OwnerAction?
+    @Published private(set) var lifecycleRestoreQueueing = false
+    @Published private(set) var lifecycleRestorePendingActionID: String?
+    @Published private(set) var lifecycleRestorePendingActionIDs: Set<String> = []
     @Published var deliveryPlan: FixtureDeliveryPlan?
     @Published var selectedDeliveryIDs: Set<String> = []
     @Published var deliveryStatus = "Choose a fixture and load its delivery plan."
@@ -410,6 +413,10 @@ final class BackstageViewModel: ObservableObject {
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
     private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
+    private var lifecycleRestorePendingActions: [String: OwnerAction] = [:]
+    private var lifecycleRestorePendingActionOrder: [String] = []
+    private var lifecycleRecoverableCount = 0
+    private var lifecycleTombstoneCount = 0
     private var cullingWasteBasketPendingActions: [String: OwnerAction] = [:]
     private var cullingWasteBasketPendingActionOrder: [String] = []
     private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
@@ -5338,7 +5345,9 @@ final class BackstageViewModel: ObservableObject {
             let ledger = try await lifecycleService.ledger()
             lifecycleItems = ledger.items
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
-            lifecycleCountSummary = "\(ledger.hiddenCount.formatted()) recoverable • \(ledger.discardedCount.formatted()) active global tombstone\(ledger.discardedCount == 1 ? "" : "s")"
+            lifecycleRecoverableCount = ledger.hiddenCount
+            lifecycleTombstoneCount = ledger.discardedCount
+            refreshLifecycleCountSummary()
             lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
@@ -5346,22 +5355,107 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func restoreLifecycleSelection() async {
-        let ids = lifecycleItems
-            .filter { selectedLifecycleIDs.contains($0.id) && $0.state == "hidden" }
-            .map(\.id)
+        guard !isRunningLifecycle, !lifecycleRestoreQueueing else {
+            lifecycleStatus = lifecycleRestoreQueueing
+                ? "This Put Back action is already being queued; the Waste Basket remains available."
+                : "Finish the current Waste Basket refresh first."
+            return
+        }
+        let selectedItems = lifecycleItems.enumerated().compactMap { index, item in
+            selectedLifecycleIDs.contains(item.id) && item.state == "hidden"
+                ? (index, item)
+                : nil
+        }
+        let ids = selectedItems.map { $0.1.id }
         guard !ids.isEmpty else {
             lifecycleStatus = "Select one or more recoverable items."
             return
         }
-        isRunningLifecycle = true
-        defer { isRunningLifecycle = false }
+        let priorSelection = selectedLifecycleIDs
+        lifecycleRestoreQueueing = true
+        lifecycleStatus = "Submitting Put Back for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… The Waste Basket remains available."
         do {
-            let action = try await lifecycleService.restore(mediaIDs: ids)
-            await loadLifecycle()
-            lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
+            let action = try await lifecycleService.enqueueRestore(mediaIDs: ids)
+            lifecycleRestoreQueueing = false
+            beginLifecycleRestoreAction(action)
+            let removedIDs = Set(ids)
+            lifecycleItems.removeAll { removedIDs.contains($0.id) }
+            selectedLifecycleIDs.subtract(removedIDs)
+            lifecycleRecoverableCount = max(0, lifecycleRecoverableCount - ids.count)
+            refreshLifecycleCountSummary()
+            lifecycleStatus = "Queued Put Back for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). The selected row\(ids.count == 1 ? " is" : "s are") removed locally; durable reconciliation continues in the background."
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.updateLifecycleRestoreAction(update)
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Put Back",
+                                action: update,
+                                availability: "The remaining Waste Basket rows and Quick Look remain available."
+                            )
+                        }
+                    }
+                    self.finishLifecycleRestoreAction(action.id)
+                    self.lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Put Back",
+                            action: self.lifecycleRestorePendingActions[action.id] ?? action,
+                            availability: "The remaining Waste Basket rows and Quick Look remain available; check Activity for the full receipt."
+                        )
+                    } else {
+                        self.finishLifecycleRestoreAction(action.id)
+                        for (index, item) in selectedItems.sorted(by: { $0.0 < $1.0 }) {
+                            guard !self.lifecycleItems.contains(where: { $0.id == item.id }) else {
+                                continue
+                            }
+                            self.lifecycleItems.insert(item, at: min(index, self.lifecycleItems.count))
+                        }
+                        self.selectedLifecycleIDs.formUnion(priorSelection)
+                        self.lifecycleRecoverableCount += selectedItems.count
+                        self.refreshLifecycleCountSummary()
+                        self.lifecycleStatus = "Put Back failed; the selected Waste Basket row\(ids.count == 1 ? " was" : "s were") restored locally. \(self.userFacingMessage(for: error))"
+                    }
+                }
+            }
         } catch {
+            lifecycleRestoreQueueing = false
             lifecycleStatus = userFacingMessage(for: error)
         }
+    }
+
+    private func beginLifecycleRestoreAction(_ action: OwnerAction) {
+        lifecycleRestorePendingActionIDs.insert(action.id)
+        lifecycleRestorePendingActions[action.id] = action
+        lifecycleRestorePendingActionOrder.removeAll { $0 == action.id }
+        lifecycleRestorePendingActionOrder.append(action.id)
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func updateLifecycleRestoreAction(_ action: OwnerAction) {
+        guard lifecycleRestorePendingActionIDs.contains(action.id) else { return }
+        lifecycleRestorePendingActions[action.id] = action
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func finishLifecycleRestoreAction(_ actionID: String) {
+        lifecycleRestorePendingActionIDs.remove(actionID)
+        lifecycleRestorePendingActions.removeValue(forKey: actionID)
+        lifecycleRestorePendingActionOrder.removeAll { $0 == actionID }
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func refreshLatestLifecycleRestoreAction() {
+        lifecycleRestorePendingActionID = lifecycleRestorePendingActionOrder.last
+    }
+
+    private func refreshLifecycleCountSummary() {
+        lifecycleCountSummary = "\(lifecycleRecoverableCount.formatted()) recoverable • \(lifecycleTombstoneCount.formatted()) active global tombstone\(lifecycleTombstoneCount == 1 ? "" : "s")"
     }
 
     func emptyWasteBasket() async {

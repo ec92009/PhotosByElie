@@ -713,6 +713,7 @@ private struct LifecycleView: View {
         }
         guard !model.isRunningLifecycle,
               !model.lifecycleQueueing,
+              !model.lifecycleRestoreQueueing,
               model.lifecyclePendingActionID == nil
         else { return }
         let before = sortedLifecycleItems
@@ -780,14 +781,16 @@ private struct LifecycleView: View {
                     .disabled(
                         model.isRunningLifecycle
                             || model.lifecycleQueueing
-                            || model.lifecyclePendingActionID != nil
-                            || model.selectedLifecycleIDs.isEmpty
+                            || model.lifecycleRestoreQueueing
+                            || model.selectedRecoverableLifecycleIDs.isEmpty
                     )
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
                 Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
                     .disabled(
                         model.isRunningLifecycle
                             || model.lifecycleQueueing
+                            || model.lifecycleRestoreQueueing
+                            || model.lifecycleRestorePendingActionID != nil
                             || model.lifecyclePendingActionID != nil
                             || model.selectedRecoverableLifecycleIDs.isEmpty
                     )
@@ -796,6 +799,8 @@ private struct LifecycleView: View {
                     .disabled(
                         model.isRunningLifecycle
                             || model.lifecycleQueueing
+                            || model.lifecycleRestoreQueueing
+                            || model.lifecycleRestorePendingActionID != nil
                             || model.lifecyclePendingActionID != nil
                             || model.lifecycleItems.allSatisfy { $0.state != "hidden" }
                     )
@@ -810,6 +815,8 @@ private struct LifecycleView: View {
                 message: model.lifecycleStatus,
                 isWorking: model.isRunningLifecycle
                     || model.lifecycleQueueing
+                    || model.lifecycleRestoreQueueing
+                    || model.lifecycleRestorePendingActionID != nil
                     || model.lifecyclePendingActionID != nil
             )
             Table(

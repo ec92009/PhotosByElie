@@ -791,28 +791,18 @@ struct BackstageFixtureSelectionTests {
     @Test("Waste Basket Put back keeps its completion receipt visible")
     @MainActor
     func wasteBasketPutBackKeepsCompletionReceiptVisible() async {
-        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
-            OwnerAction(
-                id: "owner-action-put-back",
-                actionKind: "photo-moderation",
-                target: "max",
-                state: .completed,
-                result: ["ok": true]
-            ),
-            OwnerAction(
-                id: "owner-action-ledger-refresh",
-                actionKind: "sidecar-culling-review",
-                target: "max",
-                state: .completed,
-                result: [
-                    "lifecycle": [
-                        "items": [],
-                        "hiddenCount": 0,
-                        "discardedCount": 0,
-                    ],
-                ]
-            ),
-        ])
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-put-back",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .completed,
+                    result: ["ok": true]
+                ),
+            ],
+            terminalDelay: .milliseconds(50)
+        )
         let lifecycleService = LifecycleService(runner: OwnerActionRunner(
             api: actionAPI,
             waker: RejectingFixtureSelectionWaker(),
@@ -834,8 +824,73 @@ struct BackstageFixtureSelectionTests {
         await model.restoreLifecycleSelection()
 
         #expect(model.lifecycleItems.isEmpty)
+        #expect(model.selectedLifecycleIDs.isEmpty)
+        #expect(model.lifecycleRestorePendingActionID == "owner-action-put-back")
+        for _ in 0..<300 where model.lifecycleRestorePendingActionID != nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
         #expect(model.lifecycleStatus.contains("Restored 1 item"))
         #expect(model.lifecycleStatus.contains("owner-action-put-back"))
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-restore",
+        ])
+    }
+
+    @Test("Waste Basket Put back rolls failed rows into the exact local position")
+    @MainActor
+    func wasteBasketPutBackRollsBackLocally() async throws {
+        let first = LifecycleItem(json: [
+            "mediaId": "put-back-first",
+            "state": "hidden",
+            "title": "First",
+        ])
+        let second = LifecycleItem(json: [
+            "mediaId": "put-back-second",
+            "state": "hidden",
+            "title": "Second",
+        ])
+        let third = LifecycleItem(json: [
+            "mediaId": "put-back-third",
+            "state": "hidden",
+            "title": "Third",
+        ])
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-put-back-failure",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .failed,
+                    error: ["message": "synthetic Put Back failure"]
+                ),
+            ],
+            terminalDelay: .milliseconds(50)
+        )
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.lifecycleItems = [first, second, third]
+        model.selectedLifecycleIDs = [first.id, third.id]
+
+        await model.restoreLifecycleSelection()
+
+        #expect(model.lifecycleItems.map(\.id) == [second.id])
+        #expect(model.selectedLifecycleIDs.isEmpty)
+        for _ in 0..<300 where model.lifecycleRestorePendingActionID != nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.lifecycleItems.map(\.id) == [first.id, second.id, third.id])
+        #expect(model.selectedLifecycleIDs == [first.id, third.id])
+        #expect(model.lifecycleStatus.contains("restored locally"))
     }
 
     @Test("Refresh previews reports immediate progress and prevents duplicate requests")

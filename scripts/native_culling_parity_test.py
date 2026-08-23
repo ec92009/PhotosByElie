@@ -1569,10 +1569,9 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertNotIn("Text(model.fixtureStatus)", app)
 
-        for status in ("metadataReviewStatus", "metadataProposalStatus"):
-            self.assertIn("BackstageFeedbackView(", app)
-            self.assertIn(f"message: model.{status}", app)
-            self.assertNotIn(f"Text(model.{status})", app)
+        self.assertIn("BackstageFeedbackView(", app)
+        self.assertIn("message: model.metadataReviewStatus", app)
+        self.assertNotIn("Text(model.metadataReviewStatus)", app)
 
         for flag in (
             "model.isRunningFixture",
@@ -1977,18 +1976,40 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("markAIProposalsLoaded", hydration)
         self.assertIn('Button("Replace ', review)
 
-    def test_metadata_proposals_read_owner_sqlite_without_localhost_helper(self):
+    def test_metadata_reads_only_saved_model_ladder_from_owner_sqlite(self):
         service = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/MetadataReviewService.swift").read_text()
         store = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/MetadataProposalSQLiteStore.swift").read_text()
         metadata = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift").read_text()
+        model = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift").read_text()
+        review = (ROOT / "native/PhotosByElieBackstage/Sources/BackstageApp/ReviewView.swift").read_text()
 
         self.assertNotIn("localhost:8766", service)
         self.assertNotIn("127.0.0.1:8766", service)
-        self.assertIn("MetadataProposalSQLiteStore", service)
+        self.assertIn("MetadataModelLadderSQLiteStore", service)
         self.assertIn("SQLITE_OPEN_READONLY", store)
         self.assertIn("title_keyword_model_ladder_json", store)
-        self.assertIn("WHERE q.review_state = 'proposed'", store)
-        self.assertIn("Every approval, rejection, or block remains a Worker-authorized Max action.", metadata)
+        self.assertNotIn("title_keyword_queue", store)
+        self.assertNotIn("title_keyword_proposals", store)
+        for retired in (
+            'Section("AI proposal review")',
+            'Button("Queue selected for review")',
+            'Button("Load ladder & proposals")',
+            'Button("Reject")',
+            'Button("Block"',
+        ):
+            self.assertNotIn(retired, metadata)
+        for retired in (
+            "metadataProposals",
+            "metadataProposalStatus",
+            "queueMetadataReview",
+            "loadMetadataProposals",
+            "decideProposal",
+        ):
+            self.assertNotIn(retired, model)
+        self.assertIn('Button("Approve")', review)
+        self.assertIn('Button("Needs AI")', review)
+        self.assertNotIn('Button("Reject")', review)
+        self.assertNotIn('Button("Block"', review)
 
     def test_backstage_reconciles_ghost_workflows_natively_at_bootstrap(self):
         store = (ROOT / "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerWorkflowRecoverySQLiteStore.swift").read_text()
@@ -2070,9 +2091,8 @@ class NativeCullingParityTest(unittest.TestCase):
         ui = backstage_ui_source()
         metadata = ui.split("private struct MetadataGiveBackView", 1)[1]
         for marker in (
-            'TableColumn("Preview")',
-            "model.cullingThumbnails[proposal.photoId]",
-            "preferredIdentifier: proposal.photoLibraryIdentifier",
+            "model.cullingThumbnails[assetID]",
+            "preferredIdentifier: source?.photoLibraryIdentifier",
             "model.requestThumbnail(",
             "prepareMetadataQuickLookURL(",
             "BackstageQuickLookMetadata(",
@@ -2081,6 +2101,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "canonical read-only Quick Look presentation",
         ):
             self.assertIn(marker, metadata)
+        self.assertNotIn('TableColumn("Preview")', metadata)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

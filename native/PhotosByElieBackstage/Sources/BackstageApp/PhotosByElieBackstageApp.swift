@@ -1626,24 +1626,20 @@ private struct MetadataGiveBackView: View {
                     .font(.caption)
                 }
             }
-            Section("Title, keywords, and review queue") {
+            Section("Title, caption, and keywords") {
                 HStack {
                     TextField("Asset ID", text: $model.metadataAssetID)
                     Button("Use selected Photos item") { model.useSelectedPhotoForMetadata() }
                         .disabled(model.selectedPhotoIDs.isEmpty)
                         .backstageHelp("Copy the currently selected Photos asset ID into this Metadata editing form.")
                     if !model.metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        metadataThumbnail(proposal: MetadataProposal(
-                            photoID: model.metadataAssetID,
-                            batchID: "",
-                            current: .init(
-                                title: model.metadataTitle,
-                                keywords: model.metadataKeywords
-                                    .split(separator: ",")
-                                    .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                            ),
-                            proposed: .init(title: "", keywords: [])
-                        ))
+                        metadataThumbnail(
+                            assetID: model.metadataAssetID,
+                            title: model.metadataTitle,
+                            keywords: model.metadataKeywords
+                                .split(separator: ",")
+                                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                        )
                     }
                 }
                 TextField("Title", text: $model.metadataTitle)
@@ -1654,10 +1650,6 @@ private struct MetadataGiveBackView: View {
                         Task { await model.updatePhotoMetadata() }
                     }
                     .backstageHelp("Save the entered title, caption, and keywords as an audited, reversible Owner metadata edit.")
-                    Button("Queue selected for review") {
-                        Task { await model.queueMetadataReview() }
-                    }
-                    .backstageHelp("Add the entered asset to the title and keyword Review queue without approving metadata.")
                     Button("Undo last change") {
                         Task { await model.undoLastMetadataChange() }
                     }
@@ -1728,6 +1720,7 @@ private struct MetadataGiveBackView: View {
                     BackstageFeedbackView(
                         message: model.metadataModelLadderStatus,
                         isWorking: model.isSavingMetadataModelLadder
+                            || model.isLoadingMetadataModelLadder
                     )
                 }
                 if let validation = model.metadataModelLadderValidation {
@@ -1736,75 +1729,6 @@ private struct MetadataGiveBackView: View {
                         .foregroundStyle(.red)
                 }
                 Text("Supported effort strings: none, minimal, low, medium, high, xhigh, max. Known GPT-5.4/5.6 combinations are checked before save; unfamiliar model strings are checked by Codex Desktop at execution. Approval remains a separate human decision.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section("AI proposal review") {
-                HStack {
-                    Button("Load ladder & proposals") {
-                        Task { await model.loadMetadataProposals() }
-                    }
-                    .backstageHelp("Load pending AI metadata proposals directly from the authoritative local Owner.sqlite for human review.")
-                    BackstageFeedbackView(message: model.metadataProposalStatus)
-                }
-                Table(model.metadataProposals) {
-                    TableColumn("Preview") { proposal in
-                        metadataThumbnail(proposal: proposal)
-                    }
-                    .width(76)
-                    TableColumn("Current") { proposal in
-                        VStack(alignment: .leading) {
-                            Text(proposal.current.title)
-                            Text(proposal.current.keywords.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    TableColumn("AI proposal") { proposal in
-                        VStack(alignment: .leading) {
-                            Text(proposal.proposed.title)
-                            Text(proposal.proposed.keywords.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            if let reason = proposal.proposed.reason, !reason.isEmpty {
-                                Text(reason).font(.caption2).foregroundStyle(.tertiary)
-                            }
-                            if let generator = proposal.proposed.generator {
-                                Text("\(generator.label ?? generator.model) · \(generator.resolvedModel ?? "model") · \(generator.reasoningEffort ?? "effort unknown") · \(generator.vision == true ? "vision" : "text")")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                if generator.modelMaxed {
-                                    Text("Strongest configured rung; another rejection exhausts this ladder.")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                            if let state = proposal.state, let attempt = state.proposalAttempt {
-                                Text("Attempt \(attempt) · model calls \(state.modelAttempts ?? 0)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    TableColumn("Decision") { proposal in
-                        HStack {
-                            Button("Approve") {
-                                Task { await model.decideProposal(proposal, disposition: .approve) }
-                            }
-                            .backstageHelp("Approve this AI proposal as the canonical title and keywords for the asset.")
-                            Button("Reject") {
-                                Task { await model.decideProposal(proposal, disposition: .reject) }
-                            }
-                            .backstageHelp("Reject this AI proposal while leaving the asset eligible for a future revised proposal.")
-                            Button("Block", role: .destructive) {
-                                Task { await model.decideProposal(proposal, disposition: .block) }
-                            }
-                            .backstageHelp("Block this AI proposal and prevent the same unsuitable proposal from being reused.")
-                        }
-                    }
-                }
-                .frame(minHeight: 180)
-                Text("Proposals are read directly from Owner.sqlite. Every approval, rejection, or block remains a Worker-authorized Max action.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1818,7 +1742,7 @@ private struct MetadataGiveBackView: View {
                 Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
                     .foregroundStyle(.secondary)
                 LabeledContent("Write scope", value: model.metadataGiveBackScopeDescription)
-                Text("Enter an exact Asset ID in the Title, keywords, and review queue section to limit both Preview and Commit to that one item. Leave it blank only when the entire current fixture is intended.")
+                Text("Enter an exact Asset ID in the Title, caption, and keywords section to limit both Preview and Commit to that one item. Leave it blank only when the entire current fixture is intended.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {
@@ -1862,6 +1786,7 @@ private struct MetadataGiveBackView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Metadata")
+        .task { await model.loadMetadataModelLadderIfNeeded() }
         .onAppear { quickLook.activate() }
         .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
@@ -1879,12 +1804,16 @@ private struct MetadataGiveBackView: View {
         }
     }
 
-    private func metadataThumbnail(proposal: MetadataProposal) -> some View {
+    private func metadataThumbnail(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) -> some View {
         Button {
-            openMetadataQuickLook(proposal: proposal)
+            openMetadataQuickLook(assetID: assetID, title: title, keywords: keywords)
         } label: {
             Group {
-                if let thumbnail = model.cullingThumbnails[proposal.photoId] {
+                if let thumbnail = model.cullingThumbnails[assetID] {
                     Image(nsImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -1899,45 +1828,48 @@ private struct MetadataGiveBackView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "Open preview for \(proposal.current.title.isEmpty ? proposal.photoId : proposal.current.title)"
+            "Open preview for \(title.isEmpty ? assetID : title)"
         )
         .backstageHelp("Open this exact Metadata asset in the canonical read-only Quick Look presentation.")
-        .task(id: proposal.photoId) {
+        .task(id: assetID) {
+            let source = model.cullingAssets.first(where: { $0.id == assetID })
             model.requestThumbnail(
-                for: proposal.photoId,
-                preferredIdentifier: proposal.photoLibraryIdentifier
+                for: assetID,
+                preferredIdentifier: source?.photoLibraryIdentifier
             )
         }
     }
 
-    private func openMetadataQuickLook(proposal: MetadataProposal) {
+    private func openMetadataQuickLook(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) {
         Task {
+            let source = model.cullingAssets.first(where: { $0.id == assetID })
             guard let url = await model.prepareMetadataQuickLookURL(
-                for: proposal.photoId,
-                preferredIdentifier: proposal.photoLibraryIdentifier
+                for: assetID,
+                preferredIdentifier: source?.photoLibraryIdentifier
             ) else {
                 return
             }
-            let source = model.cullingAssets.first(where: { $0.id == proposal.photoId })
-            let decision = model.cullingStates[proposal.photoId]
+            let decision = model.cullingStates[assetID]
             quickLook.present(
                 urls: [url],
                 metadata: [
                     BackstageQuickLookMetadata(
-                        assetID: proposal.photoId,
-                        filename: source?.filename ?? proposal.photoId,
-                        title: proposal.current.title,
-                        keywords: proposal.current.keywords,
+                        assetID: assetID,
+                        filename: source?.filename ?? assetID,
+                        title: title,
+                        keywords: keywords,
                         locationLabel: source?.locationLabel ?? "",
                         capturedAt: source?.capturedAt ?? "",
                         sourceSize: BackstageQuickLookSourceSize(
-                            mediaType: source?.mediaType ?? proposal.mediaType ?? "photo",
-                            pixelWidth: source?.pixelWidth ?? proposal.pixelWidth ?? 0,
-                            pixelHeight: source?.pixelHeight ?? proposal.pixelHeight ?? 0,
-                            byteCount: source?.originalByteCount
-                                ?? proposal.originalByteCount
-                                ?? 0,
-                            currentImageByteCount: model.currentImageByteCount(for: proposal.photoId)
+                            mediaType: source?.mediaType ?? "photo",
+                            pixelWidth: source?.pixelWidth ?? 0,
+                            pixelHeight: source?.pixelHeight ?? 0,
+                            byteCount: source?.originalByteCount ?? 0,
+                            currentImageByteCount: model.currentImageByteCount(for: assetID)
                         ),
                         rating: decision?.rating ?? source?.rating ?? 0,
                         color: decision?.color ?? source?.color ?? "",

@@ -31,7 +31,7 @@ dependency of native Backstage.
 | Entry point or boundary | Current reachability | Classification | Decision |
 | --- | --- | --- | --- |
 | `LocalFixtureReviewService` -> native Owner SQLite stores | Native fixture-tree, Review, and Culling reads; Review Apply/Undo and Culling placement writes | Interactive runtime-critical (Swift) | Keep the direct OwnerCore transaction. It preserves the existing SQLite tables, snapshots, receipts, conflict checks, fixture scope, and timing fields. An unresolved database fails closed; it does not select Python, HTTP, or the generic action runner. Fixture selection must not wait on a cloud action or connector wake. |
-| `MetadataReviewService` -> `MetadataProposalSQLiteStore` | The native Metadata proposal table and saved model ladder read authoritative `Owner.sqlite` | Interactive runtime-critical read (Swift) | Keep the read-only SQLite snapshot and fail closed when the database cannot be resolved. Approve, Reject, Block, direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. The native table must not depend on the retired localhost helper. |
+| `MetadataReviewService` -> `MetadataModelLadderSQLiteStore` | Metadata reads only its saved model ladder from authoritative `Owner.sqlite`; native Backstage Review owns title/keyword proposal review | Interactive runtime-critical read (Swift) | Keep the read-only ladder lookup and fail closed when the database cannot be resolved. Direct metadata edits, blacklist changes, and ladder saves remain separate Worker-authorized Max actions. Historical proposal rows stay retained without a second Metadata review surface in Backstage. |
 | `OwnerWorkflowRecoverySQLiteStore` | Backstage bootstrap classifies stale Photos sync and Upload Bridge bookkeeping | Interactive runtime-critical maintenance (Swift) | Keep one short native SQLite transaction. Legacy rows without durable worker identity remain nonterminal and are marked `needs-review`; only a stale row whose recorded worker is verifiably gone becomes interrupted/failed. This policy must not depend on launching the retired Python local host. |
 | `OnDemandOwnerActionWaker` -> `scripts/new_owner_connector.py --action-id` | Native Owner action wake for broader Worker actions | External connector compatibility | Retain temporarily as an action-scoped process. Migrate or replace capability-by-capability under PBB-106; do not restore a daemon to support it. |
 | `LocalOwnerActionWaker` -> localhost `wake-owner-action` | Former native fallback to the daemon/status server | Legacy/removable daemon coupling | Removed. Native Backstage has no localhost wake client; the action-scoped waker is the only production `OwnerActionWaking` implementation. |
@@ -76,10 +76,11 @@ directly for the native interactive path and fails closed when the
 Owner-private database cannot be resolved.
 
 `MetadataReviewService` no longer requests the legacy
-`localhost:8766/photosbyelie/title-keyword-review-queue` endpoint. Its proposal
-list and model ladder come from a read-only `Owner.sqlite` transaction through
-`MetadataProposalSQLiteStore`; the store exposes no write method. Explicit
-proposal decisions continue through the existing audited action boundary.
+`localhost:8766/photosbyelie/title-keyword-review-queue` endpoint. Metadata reads
+only the saved model ladder through `MetadataModelLadderSQLiteStore`; the store
+exposes no write method. Native Backstage Review is Backstage's sole
+title/keyword proposal-review surface, while historical proposal rows remain
+retained in `Owner.sqlite`.
 
 `scripts/new_owner_connector.py` has two materially different modes:
 
@@ -149,7 +150,7 @@ component is removed; PBB-111 owns the detailed acceptance evidence.
 ## Follow-up ownership
 
 The completed decision settles the native Review/Culling boundary, removes its hidden
-Python/HTTP fallback, moves the Metadata proposal list off its localhost helper,
+Python/HTTP fallback, keeps the Metadata model-ladder read off its localhost helper,
 removes the connector-status lookup from native identity resolution without
 loading connector credentials into Swift, removes the unused native localhost
 action-wake client, and makes the unbounded connector daemon fail closed by

@@ -311,11 +311,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataBlacklist = ""
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
     @Published var metadataHistory: [MetadataHistoryEntry] = []
-    @Published var metadataProposals: [MetadataProposal] = []
-    @Published var metadataProposalStatus = "Load the local Owner.sqlite AI proposal queue to review it."
     @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
     @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
     @Published var metadataModelLadderStatus = "Every rung sends a bounded JPEG; vision is always on."
+    @Published private(set) var hasLoadedMetadataModelLadder = false
+    @Published private(set) var isLoadingMetadataModelLadder = false
     @Published var isSavingMetadataModelLadder = false
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
@@ -5004,18 +5004,6 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func queueMetadataReview() async {
-        let ids = selectedPhotoIDs.isEmpty
-            ? [metadataAssetID].filter { !$0.isEmpty }
-            : selectedCullingAssetIDs
-        do {
-            let action = try await metadataReviewService.queueReview(assetIDs: ids)
-            metadataReviewStatus = "\(ids.count) item\(ids.count == 1 ? "" : "s") queued for review by action \(action.id)."
-        } catch {
-            metadataReviewStatus = userFacingMessage(for: error)
-        }
-    }
-
     func saveMetadataBlacklist() async {
         do {
             let terms = metadataBlacklist.components(separatedBy: ",")
@@ -5063,17 +5051,19 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadMetadataProposals() async {
+    func loadMetadataModelLadderIfNeeded() async {
+        guard !hasLoadedMetadataModelLadder, !isLoadingMetadataModelLadder else { return }
+        isLoadingMetadataModelLadder = true
+        defer { isLoadingMetadataModelLadder = false }
         do {
-            let queue = try await metadataReviewService.proposals()
-            if let loaded = queue.modelLadder, !loaded.isEmpty {
+            let loaded = try await metadataReviewService.modelLadder()
+            if !loaded.isEmpty {
                 metadataModelLadder = loaded
             }
-            metadataProposals = queue.photos
-            metadataProposalStatus = "\(queue.photos.count) pending proposal\(queue.photos.count == 1 ? "" : "s") loaded from Owner.sqlite."
+            hasLoadedMetadataModelLadder = true
             metadataModelLadderStatus = "Saved ladder loaded: \(metadataModelLadder.map(\.label).joined(separator: " → "))."
         } catch {
-            metadataProposalStatus = userFacingMessage(for: error)
+            metadataModelLadderStatus = userFacingMessage(for: error)
         }
     }
 
@@ -5113,23 +5103,6 @@ final class BackstageViewModel: ObservableObject {
         let destination = index + offset
         guard metadataModelLadder.indices.contains(destination) else { return }
         metadataModelLadder.swapAt(index, destination)
-    }
-
-    func decideProposal(
-        _ proposal: MetadataProposal,
-        disposition: MetadataProposalDisposition
-    ) async {
-        do {
-            let action = try await metadataReviewService.decide(
-                proposal,
-                disposition: disposition,
-                comment: disposition == .reject ? "Rejected in native Backstage" : ""
-            )
-            metadataProposals.removeAll { $0.id == proposal.id }
-            metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
-        } catch {
-            metadataProposalStatus = userFacingMessage(for: error)
-        }
     }
 
     private func recordMetadataHistory(_ entry: MetadataHistoryEntry) {

@@ -396,9 +396,10 @@ and Quick Look context remain intact.
 
 ## Metadata
 
-The upper Metadata sections manage Owner metadata and review decisions. The
-final section writes approved metadata back to Apple Photos through Backstage's
-native PhotoKit services.
+The upper Metadata sections manage direct Owner metadata, the keyword
+blacklist, and the AI model ladder. Backstage Review is Backstage's sole
+title/keyword proposal-review surface. The final Metadata section writes approved metadata back to
+Apple Photos through Backstage's native PhotoKit services.
 
 Backstage is the only normal-release Photos authority; there is no second
 operator application or helper to install. On **Overview**, the **Signed Photos
@@ -420,18 +421,11 @@ Command-Z while Metadata is active) to restore that exact prior state through
 another audited Max action. The last 100 changes in the current Backstage
 session remain reversible; a failed undo keeps its history entry for retry.
 
-**Queue selected for review** sends the selected item or items to the existing
-metadata review queue. The keyword blacklist is replaced as one managed set;
-review it carefully before choosing **Replace blacklist**.
-
-### Review AI proposals
-
-Choose **Load ladder & proposals**. Backstage reads the current pending proposal
-rows and saved model ladder directly from authoritative `Owner.sqlite`, without
-requiring a localhost helper or connector daemon. Compare the current and
-proposed metadata, then choose **Approve**, **Reject**, or **Block** for each
-proposal. Those decisions remain audited Max actions; the local SQLite reader
-has no write path.
+The keyword blacklist is replaced as one managed set; review it carefully
+before choosing **Replace blacklist**. Metadata loads the saved AI model ladder
+directly from authoritative `Owner.sqlite` without requiring a localhost helper
+or connector daemon. Use Backstage **Review** to compare title/keyword proposals, then
+choose **Approve** or return the item through **Needs AI** with specific reasons.
 
 ### Give approved metadata back to Photos
 

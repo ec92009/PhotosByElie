@@ -3175,39 +3175,6 @@ struct OwnerCoreTests {
         #expect(manifest?["assetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-1"])
     }
 
-    @Test("Native AI proposal decisions use the audited review action")
-    func nativeProposalDecision() async throws {
-        let terminal = OwnerAction(
-            id: "owner-action-proposal",
-            actionKind: "photo-moderation",
-            target: "max",
-            state: .completed,
-            result: ["ok": true]
-        )
-        let api = ScriptedOwnerActionAPI(completed: [terminal])
-        let service = MetadataReviewService(runner: OwnerActionRunner(
-            api: api,
-            waker: UnavailableWaker(),
-            pollInterval: .milliseconds(1),
-            timeout: .seconds(1)
-        ))
-        let proposal = MetadataProposal(
-            photoID: "asset-1",
-            batchID: "batch-1",
-            current: .init(title: "Old", keywords: ["Paris"]),
-            proposed: .init(title: "New", keywords: ["Paris", "Museum"])
-        )
-
-        _ = try await service.decide(proposal, disposition: .approve)
-
-        let request = try #require(await api.requests().first)
-        #expect(request.payload["operation"]?.stringValue == "save-title-keyword-review-approvals")
-        let approval = request.payload["approvals"]?.arrayValue?.first?.objectValue
-        #expect(approval?["photo_id"]?.stringValue == "asset-1")
-        #expect(approval?["approved"]?.boolValue == true)
-        #expect(approval?["title"]?.stringValue == "New")
-    }
-
     @Test("Native model ladder saves the selected OpenAI order through Max")
     func nativeModelLadderSave() async throws {
         let terminal = OwnerAction(

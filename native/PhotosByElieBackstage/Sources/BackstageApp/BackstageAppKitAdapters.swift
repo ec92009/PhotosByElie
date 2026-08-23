@@ -21,6 +21,7 @@ struct BackstageQuickLookSourceSize: Equatable {
     var pixelWidth: Int
     var pixelHeight: Int
     var byteCount: Int64
+    var currentImageByteCount: Int64? = nil
 
     static let unavailable = BackstageQuickLookSourceSize(
         mediaType: "photo",
@@ -33,9 +34,19 @@ struct BackstageQuickLookSourceSize: Equatable {
         var components = [dimensionDisplay]
         if !isVideo {
             components.append(megapixelDisplay)
+        } else {
+            components.append(byteDisplay)
         }
-        components.append(byteDisplay)
         return components.joined(separator: " / ")
+    }
+
+    var currentImageSizeDisplayValue: String? {
+        guard !isVideo, let currentImageByteCount, currentImageByteCount > 0 else { return nil }
+        return Self.formattedBytes(currentImageByteCount)
+    }
+
+    var currentImageSizeAccessibilityValue: String? {
+        currentImageSizeDisplayValue.map { "Current image size " + $0 + "." }
     }
 
     var accessibilityValue: String {
@@ -48,9 +59,11 @@ struct BackstageQuickLookSourceSize: Equatable {
             : (hasDimensions
                 ? megapixelNumber + " megapixels."
                 : "Megapixels unavailable.")
-        let bytes = byteCount > 0
-            ? "Source file size " + Self.formattedBytes(byteCount) + "."
-            : "Source file size unavailable."
+        let bytes = isVideo
+            ? (byteCount > 0
+                ? "Source file size " + Self.formattedBytes(byteCount) + "."
+                : "Source file size unavailable.")
+            : ""
         return [kind, dimensions, megapixels, bytes]
             .filter { !$0.isEmpty }
             .joined(separator: " ")
@@ -395,10 +408,17 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         )
         addMetadataRow("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
         addMetadataRow(
-            "Size",
+            "Dimensions",
             value: item.sourceSize.displayValue,
             accessibilityValue: item.sourceSize.accessibilityValue
         )
+        if let currentImageSize = item.sourceSize.currentImageSizeDisplayValue {
+            addMetadataRow(
+                "Current image size",
+                value: currentImageSize,
+                accessibilityValue: item.sourceSize.currentImageSizeAccessibilityValue
+            )
+        }
         addMetadataRow("Rating", value: item.rating == 0 ? "Unrated" : String(repeating: "★", count: item.rating))
         addMetadataRow("Color", value: item.color.isEmpty ? "None" : item.color.capitalized)
         addMetadataRow("State", value: item.state.capitalized)

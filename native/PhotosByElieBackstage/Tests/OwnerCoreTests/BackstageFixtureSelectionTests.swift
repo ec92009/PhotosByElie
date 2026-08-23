@@ -760,38 +760,95 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingPool?.assets.map(\.id) == [asset.id])
     }
 
-    @Test("Culling thumbnail upgrade waits for scroll idle and runs once")
+    @Test("Culling thumbnail upgrades coalesce learned current sizes after scroll idle")
     @MainActor
     func cullingThumbnailUpgradeWaitsForScrollIdle() async {
         let photoLibrary = RecordingPreviewPhotoLibrary()
+        let sizeCache = RecordingCurrentImageSizeCache()
         let model = BackstageViewModel(
             photoLibrary: photoLibrary,
-            cullingThumbnailUpgradeDelay: .milliseconds(60)
+            currentImageSizeCache: sizeCache,
+            cullingThumbnailUpgradeDelay: .milliseconds(60),
+            currentImageSizeFlushDelay: .milliseconds(80)
         )
-        let asset = FixtureAsset(
+        let firstAsset = FixtureAsset(
             id: "asset-idle-upgrade",
             title: "Idle upgrade fixture",
             filename: "idle-upgrade.jpg",
             mediaType: "photo"
         )
+        let secondAsset = FixtureAsset(
+            id: "asset-idle-upgrade-2",
+            title: "Second idle upgrade fixture",
+            filename: "idle-upgrade-2.jpg",
+            mediaType: "photo"
+        )
 
         model.cullingScrollPhaseChanged(isScrolling: true)
-        model.cullingAssetDidAppear(asset)
+        model.cullingAssetDidAppear(firstAsset)
+        model.cullingAssetDidAppear(secondAsset)
         for _ in 0..<20 {
-            if model.cullingThumbnails[asset.id] != nil { break }
+            if model.cullingThumbnails.count == 2 { break }
             try? await Task.sleep(for: .milliseconds(10))
         }
         try? await Task.sleep(for: .milliseconds(90))
 
-        #expect(photoLibrary.requestedPixelSizes() == [180])
+        #expect(photoLibrary.requestedPixelSizes().filter { $0 == 180 }.count == 2)
+        #expect(sizeCache.recordedBatches().isEmpty)
 
         model.cullingScrollPhaseChanged(isScrolling: false)
-        for _ in 0..<30 {
-            if photoLibrary.requestedPixelSizes().contains(900) { break }
+        for _ in 0..<50 {
+            if sizeCache.recordedBatches().count == 1 { break }
             try? await Task.sleep(for: .milliseconds(10))
         }
 
-        #expect(photoLibrary.requestedPixelSizes() == [180, 900])
+        #expect(photoLibrary.requestedPixelSizes().filter { $0 == 900 }.count == 2)
+        #expect(sizeCache.recordedBatches() == [[
+            firstAsset.id: 900_000,
+            secondAsset.id: 900_000,
+        ]])
+        #expect(model.currentImageByteCount(for: firstAsset.id) == 900_000)
+        #expect(model.currentImageByteCount(for: secondAsset.id) == 900_000)
+    }
+
+    @Test("Focused Quick Look persists a learned current size before returning")
+    @MainActor
+    func focusedQuickLookPersistsCurrentSizePromptly() async throws {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let sizeCache = RecordingCurrentImageSizeCache()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            currentImageSizeCache: sizeCache,
+            currentImageSizeFlushDelay: .seconds(60)
+        )
+        let asset = FixturePoolAsset(
+            id: "asset-focused-preview",
+            position: 0,
+            title: "Focused preview",
+            filename: "focused-preview.jpg",
+            mediaType: "photo"
+        )
+        model.cullingPool = FixturePool(
+            id: "pool-focused-preview",
+            name: "Focused preview",
+            fixtureID: "fixture-focused-preview",
+            assetCount: 1,
+            snapshotHash: "synthetic",
+            assets: [asset]
+        )
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: [asset.id],
+            selectedIDs: [asset.id],
+            anchorID: asset.id,
+            focusedID: asset.id
+        )
+
+        let urls = await model.prepareQuickLookURLs()
+
+        #expect(urls.count == 1)
+        #expect(model.currentImageByteCount(for: asset.id) == 4_000_000)
+        #expect(sizeCache.recordedBatches() == [[asset.id: 4_000_000]])
+        #expect(photoLibrary.requestedPixelSizes().filter { $0 == 4_000 }.count == 1)
     }
 
     @Test("Missing media availability still keeps Culling on photos")
@@ -1118,7 +1175,8 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
             assetID: localIdentifier,
             jpegData: Self.previewData,
             pixelWidth: maxPixelSize,
-            pixelHeight: maxPixelSize
+            pixelHeight: maxPixelSize,
+            currentImageByteCount: maxPixelSize >= 900 ? Int64(maxPixelSize * 1_000) : nil
         )
     }
 
@@ -1128,6 +1186,31 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
 
     func requestedPixelSizes() -> [Int] {
         lock.withLock { pixelSizes }
+    }
+}
+
+private final class RecordingCurrentImageSizeCache: OwnerCurrentImageSizeCaching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValues: [String: Int64] = [:]
+    private var batches: [[String: Int64]] = []
+
+    func values(assetIDs: [String]) throws -> [String: Int64] {
+        lock.withLock {
+            Dictionary(uniqueKeysWithValues: assetIDs.compactMap { assetID in
+                storedValues[assetID].map { (assetID, $0) }
+            })
+        }
+    }
+
+    func upsert(_ values: [String: Int64], updatedAt: Date) throws {
+        lock.withLock {
+            batches.append(values)
+            storedValues.merge(values) { _, refreshed in refreshed }
+        }
+    }
+
+    func recordedBatches() -> [[String: Int64]] {
+        lock.withLock { batches }
     }
 }
 

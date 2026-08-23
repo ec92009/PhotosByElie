@@ -288,7 +288,8 @@ private enum CullingQuickLookPresenter {
                 mediaType: asset.mediaType,
                 pixelWidth: asset.pixelWidth,
                 pixelHeight: asset.pixelHeight,
-                byteCount: asset.originalByteCount
+                byteCount: asset.originalByteCount,
+                currentImageByteCount: model.currentImageByteCount(for: assetID)
             ),
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
@@ -964,7 +965,9 @@ struct CullingView: View {
             )
             metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
             metadataRow("Dimensions", value: formattedDimensions(asset))
-            metadataRow("Original size", value: formattedOriginalSize(asset.originalByteCount))
+            if let byteCount = model.currentImageByteCount(for: asset.id) {
+                metadataRow("Current image size", value: formattedCurrentImageSize(byteCount))
+            }
             metadataRow(
                 "Location",
                 value: asset.locationLabel.isEmpty ? "No location" : asset.locationLabel
@@ -1012,10 +1015,7 @@ struct CullingView: View {
         return "\(asset.pixelWidth) × \(asset.pixelHeight) • \(megapixels.formatted(.number.precision(.fractionLength(1)))) MP"
     }
 
-    private func formattedOriginalSize(_ byteCount: Int64) -> String {
-        guard byteCount > 0 else {
-            return "Unavailable without requesting the original; it may be cloud-only."
-        }
+    private func formattedCurrentImageSize(_ byteCount: Int64) -> String {
         return ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
     }
 

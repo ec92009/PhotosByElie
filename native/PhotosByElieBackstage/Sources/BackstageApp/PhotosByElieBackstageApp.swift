@@ -1936,7 +1936,8 @@ private struct MetadataGiveBackView: View {
                             pixelHeight: source?.pixelHeight ?? proposal.pixelHeight ?? 0,
                             byteCount: source?.originalByteCount
                                 ?? proposal.originalByteCount
-                                ?? 0
+                                ?? 0,
+                            currentImageByteCount: model.currentImageByteCount(for: proposal.photoId)
                         ),
                         rating: decision?.rating ?? source?.rating ?? 0,
                         color: decision?.color ?? source?.color ?? "",

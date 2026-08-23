@@ -357,6 +357,66 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("libraryIndexOperationTimeout: Duration = .seconds(300)", ipc_protocol)
         self.assertIn("let operationTimeout = limits.libraryIndexOperationTimeout", ipc_protocol)
 
+    def test_current_image_size_uses_complete_source_data_and_a_distinct_cache(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        photo_library = (
+            NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
+        ).read_text(encoding="utf-8")
+        size_store = (
+            NATIVE
+            / "Sources"
+            / "OwnerCore"
+            / "OwnerCurrentImageSizeSQLiteStore.swift"
+        ).read_text(encoding="utf-8")
+        adapters = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+        culling = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingView.swift"
+        ).read_text(encoding="utf-8")
+
+        resource_preview = photo_library.split(
+            "private func requestRenderedJPEGPreview(", 1
+        )[1].split("private func requestFullPreview(", 1)[0]
+        self.assertIn("let sourceData = gate.dataSnapshot()", resource_preview)
+        self.assertIn(
+            "currentImageByteCount: Int64(sourceData.count)",
+            resource_preview,
+        )
+        full_preview = photo_library.split(
+            "private func requestFullPreview(", 1
+        )[1].split("static func previewFromImageData(", 1)[0]
+        self.assertIn("manager.requestImage(", full_preview)
+        self.assertNotIn("currentImageByteCount:", full_preview)
+        self.assertNotIn("requestImageDataAndOrientation(", photo_library)
+
+        self.assertIn("asset_current_image_sizes", size_store)
+        self.assertIn("current_image_byte_count", size_store)
+        self.assertNotIn("originalByteCount", size_store)
+        self.assertIn("pendingCurrentImageByteCounts", model)
+        self.assertIn("scheduleCurrentImageSizeFlush()", model)
+        self.assertIn("persistPromptly: false", model)
+        self.assertIn("persistPromptly: true", model)
+
+        quick_look = model.split("func prepareQuickLookURLs() async", 1)[1].split(
+            "private func applyCullingDecisions", 1
+        )[0]
+        self.assertLess(
+            quick_look.index("await learnCurrentImageByteCount("),
+            quick_look.rindex("return urls"),
+        )
+        self.assertIn("func currentImageByteCount(for assetID:", model)
+
+        self.assertIn('"Current image size"', adapters)
+        self.assertIn("if let currentImageSize", adapters)
+        inspector = culling.split("private func cullingMetadataInspector(", 1)[1].split(
+            "private func metadataRow(", 1
+        )[0]
+        self.assertIn('metadataRow("Current image size"', inspector)
+        self.assertNotIn('metadataRow("Original size"', inspector)
+
     def test_photo_index_excludes_raw_only_assets_before_pagination(self):
         photo_library = (
             NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"

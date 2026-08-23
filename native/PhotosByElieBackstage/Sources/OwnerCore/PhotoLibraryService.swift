@@ -21,17 +21,23 @@ public struct PhotoPreview: Sendable, Equatable {
     public var jpegData: Data
     public var pixelWidth: Int
     public var pixelHeight: Int
+    /// Byte count of complete current-image data received directly from Photos
+    /// before any preview downsampling or JPEG encoding. Nil when the preview
+    /// came from a rendered `requestImage` raster or another partial path.
+    public var currentImageByteCount: Int64?
 
     public init(
         assetID: String,
         jpegData: Data,
         pixelWidth: Int,
-        pixelHeight: Int
+        pixelHeight: Int,
+        currentImageByteCount: Int64? = nil
     ) {
         self.assetID = assetID
         self.jpegData = jpegData
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
+        self.currentImageByteCount = currentImageByteCount
     }
 }
 
@@ -479,10 +485,12 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                             return
                         }
                         do {
+                            let sourceData = gate.dataSnapshot()
                             gate.resume(with: .success(try Self.previewFromImageData(
-                                gate.dataSnapshot(),
+                                sourceData,
                                 localIdentifier: localIdentifier,
-                                maxPixelSize: maxPixelSize
+                                maxPixelSize: maxPixelSize,
+                                currentImageByteCount: Int64(sourceData.count)
                             )))
                         } catch {
                             gate.resume(with: .failure(error))
@@ -584,10 +592,11 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         )
     }
 
-    private static func previewFromImageData(
+    static func previewFromImageData(
         _ sourceData: Data,
         localIdentifier: String,
-        maxPixelSize: Int
+        maxPixelSize: Int,
+        currentImageByteCount: Int64? = nil
     ) throws -> PhotoPreview {
         guard let source = CGImageSourceCreateWithData(sourceData as CFData, nil),
               let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
@@ -616,7 +625,8 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             assetID: localIdentifier,
             jpegData: output as Data,
             pixelWidth: thumbnail.width,
-            pixelHeight: thumbnail.height
+            pixelHeight: thumbnail.height,
+            currentImageByteCount: currentImageByteCount
         )
     }
 

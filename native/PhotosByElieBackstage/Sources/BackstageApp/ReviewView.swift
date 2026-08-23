@@ -181,7 +181,8 @@ private enum ReviewQuickLookPresenter {
                 mediaType: item.mediaType,
                 pixelWidth: item.pixelWidth,
                 pixelHeight: item.pixelHeight,
-                byteCount: item.originalByteCount
+                byteCount: item.originalByteCount,
+                currentImageByteCount: model.currentImageByteCount(for: assetID)
             ),
             rating: item.rating,
             color: item.color,

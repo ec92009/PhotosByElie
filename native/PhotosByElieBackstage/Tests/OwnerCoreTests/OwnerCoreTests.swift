@@ -99,12 +99,15 @@ struct OwnerCoreTests {
             mediaType: "photo",
             pixelWidth: 2_048,
             pixelHeight: 4_096,
-            byteCount: 4_000_000
+            byteCount: 4_000_000,
+            currentImageByteCount: 3_000_000
         )
         #expect(photo.displayValue.contains("2048 × 4096"))
         #expect(photo.displayValue.contains("8.4 MP"))
-        #expect(photo.displayValue.contains("4 MB"))
+        #expect(!photo.displayValue.contains("4 MB"))
+        #expect(photo.currentImageSizeDisplayValue == "3 MB")
         #expect(photo.accessibilityValue.contains("2048 by 4096 pixels"))
+        #expect(!photo.accessibilityValue.localizedCaseInsensitiveContains("file size"))
 
         let video = BackstageQuickLookSourceSize(
             mediaType: "video",
@@ -113,11 +116,87 @@ struct OwnerCoreTests {
             byteCount: 120_000_000
         )
         #expect(video.displayValue.contains("3840 × 2160"))
+        #expect(video.displayValue.contains("120 MB"))
         #expect(!video.displayValue.contains("MP"))
         #expect(video.accessibilityValue.hasPrefix("Video source."))
+        #expect(video.currentImageSizeDisplayValue == nil)
 
         #expect(BackstageQuickLookSourceSize.unavailable.displayValue ==
-            "Dimensions unavailable / Megapixels unavailable / File size unavailable")
+            "Dimensions unavailable / Megapixels unavailable")
+        #expect(BackstageQuickLookSourceSize.unavailable.currentImageSizeDisplayValue == nil)
+        #expect(!BackstageQuickLookSourceSize.unavailable.accessibilityValue
+            .localizedCaseInsensitiveContains("file size"))
+    }
+
+    @Test("Complete Photos source bytes remain distinct from encoded preview bytes")
+    func completeSourceByteProvenance() throws {
+        let sourceData = try #require(Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        ))
+        let known = try PhotoKitLibraryService.previewFromImageData(
+            sourceData,
+            localIdentifier: "photo-known",
+            maxPixelSize: 180,
+            currentImageByteCount: Int64(sourceData.count)
+        )
+        #expect(known.currentImageByteCount == Int64(sourceData.count))
+        #expect(known.currentImageByteCount != Int64(known.jpegData.count))
+
+        let renderedRaster = try PhotoKitLibraryService.previewFromImageData(
+            sourceData,
+            localIdentifier: "photo-rendered-raster",
+            maxPixelSize: 180
+        )
+        #expect(renderedRaster.currentImageByteCount == nil)
+    }
+
+    @Test("Current-image size cache is compatible and never changes original provenance")
+    func currentImageSizeCachePreservesOriginalMetadata() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-current-image-size-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('photo-1', '{"originalByteCount":4000000}'),
+          ('photo-2', '{"originalByteCount":5000000}');
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let store = OwnerCurrentImageSizeSQLiteStore(databaseURL: databaseURL)
+        #expect(try store.values(assetIDs: ["photo-1"]) == [:])
+        try store.upsert(
+            ["photo-1": 3_000_000, "photo-2": 6_000_000],
+            updatedAt: Date(timeIntervalSince1970: 2_000_000_000)
+        )
+        #expect(try store.values(assetIDs: ["photo-2", "photo-1", "photo-1"]) == [
+            "photo-1": 3_000_000,
+            "photo-2": 6_000_000,
+        ])
+        try store.upsert(["photo-1": 3_500_000], updatedAt: Date())
+        #expect(try store.values(assetIDs: ["photo-1"]) == ["photo-1": 3_500_000])
+
+        #expect(sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK)
+        var statement: OpaquePointer?
+        #expect(sqlite3_prepare_v2(
+            database,
+            "SELECT raw_json FROM sidecar_assets WHERE asset_id = 'photo-1'",
+            -1,
+            &statement,
+            nil
+        ) == SQLITE_OK)
+        #expect(sqlite3_step(statement) == SQLITE_ROW)
+        let rawJSON = sqlite3_column_text(statement, 0).map(String.init(cString:))
+        #expect(rawJSON == #"{"originalByteCount":4000000}"#)
+        sqlite3_finalize(statement)
+        sqlite3_close(database)
     }
 
     @Test("Owner source metadata lookup is read-only and asset scoped")

@@ -261,6 +261,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
     @Published var cullingThumbnailFailures: [String: CullingThumbnailFailure] = [:]
+    @Published private(set) var currentImageByteCounts: [String: Int64] = [:]
     @Published var isLoadingPreview = false
     @Published var isLoadingCullingDecisions = false
     @Published var cullingDecisionProgress = 0
@@ -383,6 +384,7 @@ final class BackstageViewModel: ObservableObject {
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
+    private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
@@ -393,6 +395,8 @@ final class BackstageViewModel: ObservableObject {
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingThumbnailTaskTokens: [String: UUID] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
+    private var pendingCurrentImageByteCounts: [String: Int64] = [:]
+    private var currentImageSizeFlushTask: Task<Void, Never>?
     private var thumbnailPreferredIdentifiers: [String: String] = [:]
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
@@ -406,6 +410,7 @@ final class BackstageViewModel: ObservableObject {
     private var shouldInjectNextCullingThumbnailFailure: Bool
     private var controlledFailedCullingAssetID: String?
     private let cullingThumbnailUpgradeDelay: Duration
+    private let currentImageSizeFlushDelay: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
@@ -528,7 +533,11 @@ final class BackstageViewModel: ObservableObject {
         workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
             .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:)),
+        currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
         cullingThumbnailUpgradeDelay: Duration = .seconds(1),
+        currentImageSizeFlushDelay: Duration = .milliseconds(500),
         injectNextCullingThumbnailFailure: Bool = ProcessInfo.processInfo.environment[
             "PBE_CULLING_PREVIEW_FAIL_ONCE"
         ] == "1"
@@ -557,6 +566,7 @@ final class BackstageViewModel: ObservableObject {
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
         self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
+        self.currentImageSizeFlushDelay = currentImageSizeFlushDelay
         self.shouldInjectNextCullingThumbnailFailure = injectNextCullingThumbnailFailure
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
@@ -581,7 +591,73 @@ final class BackstageViewModel: ObservableObject {
             photoLibrary: photoLibrary
         )
         self.workflowRecoveryStore = workflowRecoveryStore
+        self.currentImageSizeCache = currentImageSizeCache
         self.openExternalURL = openExternalURL
+    }
+
+    func currentImageByteCount(for assetID: String) -> Int64? {
+        currentImageByteCounts[assetID]
+    }
+
+    private func hydrateCurrentImageByteCounts(for assetIDs: [String]) async {
+        guard let currentImageSizeCache else { return }
+        let ids = Array(Set(assetIDs)).filter { !$0.isEmpty }
+        guard !ids.isEmpty else { return }
+        do {
+            let values = try await Task.detached(priority: .utility) {
+                try currentImageSizeCache.values(assetIDs: ids)
+            }.value
+            currentImageByteCounts.merge(values) { _, persisted in persisted }
+        } catch {
+            // This cache is opportunistic. Owner workflow remains available if
+            // its compatibility table is absent or temporarily busy.
+        }
+    }
+
+    private func learnCurrentImageByteCount(
+        from preview: PhotoPreview,
+        for assetID: String,
+        mediaType: String,
+        persistPromptly: Bool
+    ) async {
+        let normalizedType = mediaType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalizedType != "video", normalizedType != "movie",
+              let byteCount = preview.currentImageByteCount,
+              byteCount > 0
+        else { return }
+        currentImageByteCounts[assetID] = byteCount
+        pendingCurrentImageByteCounts[assetID] = byteCount
+        if persistPromptly {
+            currentImageSizeFlushTask?.cancel()
+            currentImageSizeFlushTask = nil
+            await flushCurrentImageByteCounts()
+        } else {
+            scheduleCurrentImageSizeFlush()
+        }
+    }
+
+    private func scheduleCurrentImageSizeFlush() {
+        guard currentImageSizeFlushTask == nil else { return }
+        currentImageSizeFlushTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: self.currentImageSizeFlushDelay)
+            guard !Task.isCancelled else { return }
+            await self.flushCurrentImageByteCounts()
+        }
+    }
+
+    private func flushCurrentImageByteCounts() async {
+        currentImageSizeFlushTask = nil
+        guard let currentImageSizeCache, !pendingCurrentImageByteCounts.isEmpty else { return }
+        let values = pendingCurrentImageByteCounts
+        pendingCurrentImageByteCounts.removeAll()
+        do {
+            try await Task.detached(priority: .utility) {
+                try currentImageSizeCache.upsert(values, updatedAt: Date())
+            }.value
+        } catch {
+            pendingCurrentImageByteCounts.merge(values) { current, _ in current }
+        }
     }
 
     private func pendingLifecycleActionStatus(
@@ -1439,6 +1515,12 @@ final class BackstageViewModel: ObservableObject {
                   let image = NSImage(data: preview.jpegData)
             else { return }
             cullingThumbnails[assetID] = image
+            await learnCurrentImageByteCount(
+                from: preview,
+                for: assetID,
+                mediaType: "photo",
+                persistPromptly: false
+            )
         } catch {
             // A high-resolution upgrade is opportunistic. Keep the bounded
             // low-resolution thumbnail and its existing retry/failure state.
@@ -2161,6 +2243,7 @@ final class BackstageViewModel: ObservableObject {
             guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
             fixtureCullingMediaAvailability = window.mediaAvailability
             fixtureCullingWindow = window
+            await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
                     asset.id,
@@ -2875,6 +2958,7 @@ final class BackstageViewModel: ObservableObject {
             hydrateReviewProposalDrafts(from: window.items)
             reviewAIWindowRefreshPending = false
             fixtureReviewWindow = window
+            await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             let orderedIDs = window.items.map(\.id)
             let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
                 ?? orderedIDs.first
@@ -4317,9 +4401,16 @@ final class BackstageViewModel: ObservableObject {
                         to: directory
                     ).destination)
                 } else {
-                    let preview = try await photoLibrary.preview(
-                        localIdentifier: item.photoLibraryIdentifier,
+                    let preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: item.id,
+                        preferredIdentifier: item.photoLibraryIdentifier,
                         maxPixelSize: 4_000
+                    )
+                    await learnCurrentImageByteCount(
+                        from: preview,
+                        for: item.id,
+                        mediaType: item.mediaType,
+                        persistPromptly: true
                     )
                     let destination = directory
                         .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
@@ -4593,6 +4684,12 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 4_000
             )
+            await learnCurrentImageByteCount(
+                from: preview,
+                for: item.mediaID,
+                mediaType: item.mediaType,
+                persistPromptly: true
+            )
             let destination = directory
                 .appendingPathComponent(item.mediaID.replacingOccurrences(of: "/", with: "_"))
                 .appendingPathExtension("jpg")
@@ -4638,9 +4735,16 @@ final class BackstageViewModel: ObservableObject {
                     )
                     urls.append(receipt.destination)
                 } else {
-                    let preview = try await photoLibrary.preview(
-                        localIdentifier: photoLibraryIdentifier(for: id),
+                    let preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: id,
+                        preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
+                    )
+                    await learnCurrentImageByteCount(
+                        from: preview,
+                        for: id,
+                        mediaType: asset?.mediaType ?? "photo",
+                        persistPromptly: true
                     )
                     let destination = directory
                         .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
@@ -5230,6 +5334,7 @@ final class BackstageViewModel: ObservableObject {
                 order: order
             )
             nativeUploadPlan = plan
+            await hydrateCurrentImageByteCounts(for: plan.items.map(\.id))
             selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
             if !plan.cloudAllowed {
                 nativeUploadStatus = "\(plan.fixtureName) policy does not permit cloud publication."
@@ -5307,9 +5412,16 @@ final class BackstageViewModel: ObservableObject {
                 at: directory,
                 withIntermediateDirectories: true
             )
-            let preview = try await photoLibrary.preview(
-                localIdentifier: localIdentifier,
+            let preview = try await renderedJPEGPreviewForAsset(
+                forAssetID: assetID,
+                preferredIdentifier: localIdentifier,
                 maxPixelSize: 4_000
+            )
+            await learnCurrentImageByteCount(
+                from: preview,
+                for: assetID,
+                mediaType: "photo",
+                persistPromptly: true
             )
             let safeName = assetID
                 .replacingOccurrences(of: "/", with: "_")

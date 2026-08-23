@@ -348,7 +348,8 @@ struct UploadView: View {
                     mediaType: item.mediaType,
                     pixelWidth: item.pixelWidth,
                     pixelHeight: item.pixelHeight,
-                    byteCount: item.originalByteCount
+                    byteCount: item.originalByteCount,
+                    currentImageByteCount: model.currentImageByteCount(for: item.id)
                 ),
                 rating: decision?.rating ?? source?.rating ?? 0,
                 color: decision?.color ?? source?.color ?? "",

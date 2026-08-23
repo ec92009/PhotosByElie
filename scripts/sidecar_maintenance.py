@@ -14,11 +14,11 @@ from pathlib import Path
 try:
     from backstage_photos_client import BackstagePhotosClientError, request_preview
     from sidecar_server import _index_job_snapshot, _run_index_job
-    from sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, sidecar_sync_status
+    from sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, photos_discovery_window, sidecar_sync_status
 except ModuleNotFoundError:  # pragma: no cover - supports package-style imports.
     from scripts.backstage_photos_client import BackstagePhotosClientError, request_preview
     from scripts.sidecar_server import _index_job_snapshot, _run_index_job
-    from scripts.sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, sidecar_sync_status
+    from scripts.sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, photos_discovery_window, sidecar_sync_status
 
 
 DEFAULT_AI_PLAN_PATH = Path("assets/owner-actions/sidecar-ai-metadata-plan.json")
@@ -548,16 +548,39 @@ def _register_uploaded_catalog_rows(
 def photos_index_sync(args: argparse.Namespace) -> int:
     repo_root = args.repo_root.resolve()
     job_id = f"scheduled-{uuid.uuid4().hex[:12]}"
+    date_from = str(args.date_from or "").strip()
+    date_to = str(args.date_to or "").strip()
+    full = bool(getattr(args, "full", False))
+    incremental = bool(getattr(args, "incremental", False))
+    if full and (incremental or date_from or date_to):
+        raise ValueError("--full cannot be combined with incremental or date bounds")
+    if incremental and (date_from or date_to):
+        raise ValueError("--incremental cannot be combined with explicit date bounds")
+
+    if full:
+        mode = "full"
+        policy = {"mode": mode, "dateFrom": "", "dateTo": ""}
+    elif date_from or date_to:
+        mode = "range"
+        policy = {"mode": mode, "dateFrom": date_from, "dateTo": date_to}
+    else:
+        # Ordinary and scheduled refreshes are incremental by default. A full
+        # Photos audit must now be requested explicitly with --full.
+        policy = photos_discovery_window(repo_root)
+        mode = "incremental"
+        date_from = str(policy["dateFrom"])
     _run_index_job(
         repo_root,
         job_id,
-        date_from=str(args.date_from or "").strip(),
-        date_to=str(args.date_to or "").strip(),
+        date_from=date_from,
+        date_to=date_to,
+        mode=mode,
     )
     payload = {
         "ok": True,
         "task": "sidecar-photos-index-sync",
         "generatedAt": now_iso(),
+        "policy": policy,
         "job": _index_job_snapshot(repo_root),
         "sync": sidecar_sync_status(repo_root, limit=args.limit),
     }
@@ -784,6 +807,9 @@ def build_parser() -> argparse.ArgumentParser:
     photos.add_argument("--limit", type=int, default=80, help="Number of rows to include in the written sync status artifact.")
     photos.add_argument("--date-from", default="", help="Optional inclusive PhotoKit capture-date lower bound.")
     photos.add_argument("--date-to", default="", help="Optional exclusive PhotoKit capture-date upper bound.")
+    mode = photos.add_mutually_exclusive_group()
+    mode.add_argument("--incremental", action="store_true", help="Resume recent-photo discovery from the durable Owner checkpoint (default).")
+    mode.add_argument("--full", action="store_true", help="Explicitly audit the complete Photos library and reconcile missing assets.")
     photos.add_argument("--output", type=Path, default=DEFAULT_SYNC_STATUS_PATH, help="JSON artifact path for the scheduler result.")
     photos.set_defaults(func=photos_index_sync)
 

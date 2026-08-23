@@ -1,8 +1,10 @@
 import base64
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
+import sqlite3
 import socket
 import struct
 import sys
@@ -18,6 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import backstage_photos_client
 import sidecar_maintenance
+import sidecar_state_db
 from backstage_photos_client import (
     BackstagePhotosClientError,
     request_library_index,
@@ -563,6 +566,136 @@ class BackstagePhotosClientTest(unittest.TestCase):
         index_job = source.split("def _run_index_job", 1)[1].split("def _start_index_job", 1)[0]
         self.assertIn("_write_backstage_library_index", index_job)
         self.assertNotIn("_run_apple_photos_bridge", index_job)
+
+    def test_photos_discovery_window_resumes_from_latest_index_with_overlap(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_assets (asset_id, source_anchor, captured_at)
+                    VALUES (?, ?, ?)
+                    """,
+                    ("asset-newest", "photos://asset-newest", "2026-08-20T12:30:00Z"),
+                )
+
+            policy = sidecar_state_db.photos_discovery_window(
+                root,
+                now=datetime(2026, 8, 23, 18, 0, tzinfo=timezone.utc),
+            )
+
+            self.assertEqual(policy["mode"], "incremental")
+            self.assertEqual(policy["source"], "indexed")
+            self.assertEqual(policy["dateFrom"], "2026-08-13T12:30:00Z")
+            self.assertEqual(policy["checkpoint"]["assetId"], "asset-newest")
+
+    def test_photos_discovery_checkpoint_is_durable_and_never_regresses(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO sidecar_assets (asset_id, source_anchor, captured_at)
+                    VALUES (?, ?, ?)
+                    """,
+                    ("asset-newest", "photos://asset-newest", "2026-08-22T09:00:00Z"),
+                )
+
+            first = sidecar_state_db.record_photos_discovery_checkpoint(
+                root,
+                mode="incremental",
+                date_from="2026-08-15T09:00:00Z",
+                date_to="",
+                imported_count=1,
+                completed_at="2026-08-23T18:00:00Z",
+            )
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    "UPDATE sidecar_assets SET captured_at = ? WHERE asset_id = ?",
+                    ("2026-08-01T09:00:00Z", "asset-newest"),
+                )
+            second = sidecar_state_db.record_photos_discovery_checkpoint(
+                root,
+                mode="incremental",
+                date_from="2026-07-25T09:00:00Z",
+                date_to="",
+                imported_count=1,
+                completed_at="2026-08-23T18:05:00Z",
+            )
+
+            self.assertEqual(first["captureDate"], "2026-08-22T09:00:00Z")
+            self.assertEqual(second["captureDate"], first["captureDate"])
+            resumed = sidecar_state_db.photos_discovery_window(
+                root,
+                now=datetime(2026, 8, 23, 19, 0, tzinfo=timezone.utc),
+            )
+            self.assertEqual(resumed["source"], "stored")
+            self.assertEqual(resumed["dateFrom"], "2026-08-15T09:00:00Z")
+
+    def test_incremental_index_advances_checkpoint_only_after_success(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            checkpoint = {"captureDate": "2026-08-22T09:00:00Z", "assetId": "asset-newest"}
+            with patch.object(sidecar_server, "mark_invalid_source_assets_missing", return_value=0), patch.object(
+                sidecar_server,
+                "_write_backstage_library_index",
+                return_value={"ok": True, "count": 2, "totalCount": 2},
+            ), patch.object(sidecar_server, "_import_index_jsonl", return_value=(2, 0)) as importer, patch.object(
+                sidecar_server,
+                "record_photos_discovery_checkpoint",
+                return_value=checkpoint,
+            ) as record, patch.object(sidecar_server, "_summary_snapshot", return_value={"indexedCount": 2}):
+                sidecar_server._run_index_job(
+                    root,
+                    "job-success",
+                    "2026-08-15T09:00:00Z",
+                    "",
+                    mode="incremental",
+                )
+
+            self.assertFalse(importer.call_args.kwargs["prune_missing"])
+            record.assert_called_once()
+            self.assertEqual(sidecar_server.INDEX_JOB["status"], "done")
+            self.assertEqual(sidecar_server.INDEX_JOB["discoveryCheckpoint"], checkpoint)
+
+            with patch.object(sidecar_server, "mark_invalid_source_assets_missing", return_value=0), patch.object(
+                sidecar_server,
+                "_write_backstage_library_index",
+                side_effect=RuntimeError("synthetic scan failure"),
+            ), patch.object(sidecar_server, "record_photos_discovery_checkpoint") as failed_record:
+                sidecar_server._run_index_job(
+                    root,
+                    "job-failure",
+                    "2026-08-15T09:00:00Z",
+                    "",
+                    mode="incremental",
+                )
+
+            failed_record.assert_not_called()
+            self.assertEqual(sidecar_server.INDEX_JOB["status"], "failed")
+            self.assertIn("synthetic scan failure", sidecar_server.INDEX_JOB["error"])
+
+    def test_loopback_index_start_defaults_to_incremental_and_full_is_explicit(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            policy = {"dateFrom": "2026-08-15T09:00:00Z"}
+            with patch.object(sidecar_server, "photos_discovery_window", return_value=policy), patch.object(
+                sidecar_server.threading,
+                "Thread",
+            ) as thread:
+                sidecar_server._start_index_job(root)
+            self.assertEqual(thread.call_args.kwargs["target"], sidecar_server._run_index_job)
+            self.assertEqual(
+                thread.call_args.kwargs["args"][2:],
+                ("2026-08-15T09:00:00Z", ""),
+            )
+            self.assertEqual(thread.call_args.kwargs["kwargs"], {"mode": "incremental"})
+
+            sidecar_server.INDEX_JOB["status"] = "done"
+            with patch.object(sidecar_server.threading, "Thread") as thread:
+                sidecar_server._start_index_job(root, full_library=True)
+            self.assertEqual(thread.call_args.kwargs["args"][2:], ("", ""))
+            self.assertEqual(thread.call_args.kwargs["kwargs"], {"mode": "full"})
 
     def test_connector_preview_task_adapts_to_backstage_ipc_inside_runtime(self):
         with TemporaryDirectory() as temporary_directory:

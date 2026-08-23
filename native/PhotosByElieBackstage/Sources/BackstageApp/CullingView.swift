@@ -913,27 +913,29 @@ struct CullingView: View {
             .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
             Button {
                 Task {
-                    await model.refreshPhotos()
+                    await model.refreshPhotosAndRecentIndex()
                     if !model.selectedFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
                 }
             } label: {
-                if model.isLoadingPhotos {
+                if model.isLoadingPhotos || model.isReconcilingPhotosIndex {
                     HStack(spacing: 6) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Refreshing previews…")
+                        Text("Discovering recent Photos…")
                     }
                 } else {
-                    Text("Refresh previews")
+                    Text("Refresh & discover")
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
             .accessibilityLabel(
-                model.isLoadingPhotos ? "Refreshing Photos previews" : "Refresh Photos previews"
+                model.isLoadingPhotos || model.isReconcilingPhotosIndex
+                    ? "Discovering recent Photos"
+                    : "Refresh previews and discover recent Photos"
             )
-            .backstageHelp("Refresh local Photos previews and then reload the active fixture Culling window.")
+            .backstageHelp("Refresh local previews, resume recent-photo discovery from the durable Owner checkpoint, and reload Culling. A seven-day overlap safely rechecks the boundary without changing decisions.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {
@@ -942,11 +944,11 @@ struct CullingView: View {
                         .controlSize(.small)
                         .accessibilityLabel("Reconciling complete Photos library")
                 } else {
-                    Text("Reconcile library")
+                    Text("Full library audit")
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
-            .backstageHelp("Stream the complete Photos library through the signed helper and reconcile Owner without changing existing decisions.")
+            .backstageHelp("Explicitly audit the complete Photos library and reconcile unavailable assets. This maintenance pass can take several minutes and does not change existing decisions.")
         }
     }
 

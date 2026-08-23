@@ -2388,6 +2388,7 @@ struct OwnerCoreTests {
             state: .completed,
             result: [
                 "job": .object([
+                    "mode": "range",
                     "status": "done",
                     "stage": "Complete",
                     "indexedCount": 52_400,
@@ -2395,6 +2396,9 @@ struct OwnerCoreTests {
                     "totalCount": 52_400,
                     "missingMarkedCount": 17,
                     "completedAt": "2026-07-28T12:00:00Z",
+                    "discoveryCheckpoint": .object([
+                        "captureDate": "2026-07-28T11:59:00Z",
+                    ]),
                 ]),
             ]
         )
@@ -2415,6 +2419,8 @@ struct OwnerCoreTests {
         )
 
         #expect(report.status == "done")
+        #expect(report.mode == "range")
+        #expect(report.checkpointCaptureDate == "2026-07-28T11:59:00Z")
         #expect(report.indexedCount == 52_400)
         #expect(report.importedCount == 52_400)
         #expect(report.totalCount == 52_400)
@@ -2426,7 +2432,59 @@ struct OwnerCoreTests {
         #expect(request.payload["queuedAt"]?.stringValue?.isEmpty == false)
         #expect(request.payload["dateFrom"]?.stringValue == "2026-06-13T00:00:00Z")
         #expect(request.payload["dateTo"]?.stringValue == "2026-07-29T00:00:00Z")
+        #expect(request.payload["mode"]?.stringValue == "range")
         #expect(request.payload["manifest"] == nil)
+    }
+
+    @Test("Native Photos reconciliation defaults to incremental and full audit is explicit")
+    func nativePhotosIndexReconciliationModes() async throws {
+        let incrementalTerminal = OwnerAction(
+            id: "owner-action-photos-incremental",
+            actionKind: "sidecar-photos-index-sync",
+            target: "david",
+            state: .completed,
+            result: ["job": .object(["status": "done", "mode": "incremental"])]
+        )
+        let incrementalAPI = ScriptedOwnerActionAPI(completed: [incrementalTerminal])
+        let incrementalService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: incrementalAPI,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        _ = try await incrementalService.reconcilePhotosIndex()
+        let incrementalRequest = try #require(await incrementalAPI.requests().first)
+        #expect(incrementalRequest.payload["mode"]?.stringValue == "incremental")
+        #expect(incrementalRequest.payload["fullLibrary"] == nil)
+        #expect(incrementalRequest.payload["dateFrom"] == nil)
+
+        let fullTerminal = OwnerAction(
+            id: "owner-action-photos-full",
+            actionKind: "sidecar-photos-index-sync",
+            target: "david",
+            state: .completed,
+            result: ["job": .object(["status": "done", "mode": "full"])]
+        )
+        let fullAPI = ScriptedOwnerActionAPI(completed: [fullTerminal])
+        let fullService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: fullAPI,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        _ = try await fullService.reconcilePhotosIndex(fullLibrary: true)
+        let fullRequest = try #require(await fullAPI.requests().first)
+        #expect(fullRequest.payload["mode"]?.stringValue == "full")
+        #expect(fullRequest.payload["fullLibrary"]?.boolValue == true)
+        #expect(fullRequest.payload["dateFrom"] == nil)
     }
 
     @Test("Fixture culling keeps H fixture-local and X globally scoped")

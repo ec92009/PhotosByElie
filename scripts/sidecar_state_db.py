@@ -30,6 +30,9 @@ except ModuleNotFoundError:  # pragma: no cover - supports package-style test im
 
 
 DEFAULT_DB = Path("assets/owner-actions/Owner.sqlite")
+PHOTOS_DISCOVERY_CHECKPOINT_SETTING = "photos.discovery.high-water.v1"
+DEFAULT_PHOTOS_DISCOVERY_INITIAL_DAYS = 45
+DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS = 7
 KEYWORD_BLACKLIST_JSON = Path("assets/owner-actions/keyword-blacklist.json")
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
@@ -200,6 +203,166 @@ COUNTRY_GPS_HINTS: tuple[dict[str, Any], ...] = (
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _photos_discovery_datetime(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _photos_discovery_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _photos_discovery_latest_identity(conn: sqlite3.Connection) -> dict[str, str]:
+    row = conn.execute(
+        """
+        SELECT captured_at, asset_id
+        FROM sidecar_assets
+        WHERE (missing_at IS NULL OR missing_at = '')
+          AND trim(COALESCE(captured_at, '')) <> ''
+        ORDER BY captured_at DESC, asset_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if not row:
+        return {}
+    capture_date = _photos_discovery_datetime(row["captured_at"])
+    if capture_date is None:
+        return {}
+    return {
+        "captureDate": _photos_discovery_iso(capture_date),
+        "assetId": str(row["asset_id"] or ""),
+    }
+
+
+def photos_discovery_window(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    initial_days: int = DEFAULT_PHOTOS_DISCOVERY_INITIAL_DAYS,
+    overlap_days: int = DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS,
+) -> dict[str, Any]:
+    """Return the bounded ordinary-refresh window from durable Owner state."""
+
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    safe_initial_days = max(1, int(initial_days))
+    safe_overlap_days = max(1, int(overlap_days))
+    checkpoint: dict[str, Any] = {}
+    source = "fallback"
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (PHOTOS_DISCOVERY_CHECKPOINT_SETTING,),
+        ).fetchone()
+        if row:
+            parsed = _read_json_text(str(row["setting_value"] or ""), {})
+            if isinstance(parsed, dict) and _photos_discovery_datetime(parsed.get("captureDate")):
+                checkpoint = dict(parsed)
+                source = "stored"
+        if not checkpoint:
+            checkpoint = _photos_discovery_latest_identity(conn)
+            if checkpoint:
+                source = "indexed"
+
+    capture_date = _photos_discovery_datetime(checkpoint.get("captureDate"))
+    if capture_date is None:
+        date_from = current - timedelta(days=safe_initial_days)
+        checkpoint = {
+            "captureDate": _photos_discovery_iso(date_from),
+            "assetId": "",
+        }
+    else:
+        # A future camera timestamp must not move the discovery floor beyond now.
+        capture_date = min(capture_date, current)
+        date_from = capture_date - timedelta(days=safe_overlap_days)
+        checkpoint["captureDate"] = _photos_discovery_iso(capture_date)
+
+    return {
+        "mode": "incremental",
+        "dateFrom": _photos_discovery_iso(date_from),
+        "overlapDays": safe_overlap_days,
+        "initialDays": safe_initial_days,
+        "source": source,
+        "checkpoint": checkpoint,
+    }
+
+
+def record_photos_discovery_checkpoint(
+    repo_root: Path,
+    *,
+    mode: str,
+    date_from: str,
+    date_to: str,
+    imported_count: int,
+    completed_at: str,
+    overlap_days: int = DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS,
+) -> dict[str, Any]:
+    """Advance the discovery high-water mark only after a successful scan/import."""
+
+    with connect(repo_root) as conn:
+        latest = _photos_discovery_latest_identity(conn)
+        previous_row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (PHOTOS_DISCOVERY_CHECKPOINT_SETTING,),
+        ).fetchone()
+        previous = (
+            _read_json_text(str(previous_row["setting_value"] or ""), {})
+            if previous_row else {}
+        )
+        if not isinstance(previous, dict):
+            previous = {}
+
+        latest_date = _photos_discovery_datetime(latest.get("captureDate"))
+        previous_date = _photos_discovery_datetime(previous.get("captureDate"))
+        if previous_date is not None and (
+            latest_date is None
+            or (previous_date, str(previous.get("assetId") or ""))
+            > (latest_date, str(latest.get("assetId") or ""))
+        ):
+            identity = {
+                "captureDate": _photos_discovery_iso(previous_date),
+                "assetId": str(previous.get("assetId") or ""),
+            }
+        else:
+            identity = latest
+
+        if not identity:
+            return previous
+
+        checkpoint = {
+            "schemaVersion": 1,
+            **identity,
+            "mode": str(mode or "incremental"),
+            "lastDateFrom": str(date_from or ""),
+            "lastDateTo": str(date_to or ""),
+            "overlapDays": max(1, int(overlap_days)),
+            "importedCount": max(0, int(imported_count)),
+            "completedAt": str(completed_at or now_iso()),
+        }
+        conn.execute(
+            """
+            INSERT INTO owner_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(setting_key) DO UPDATE SET
+              setting_value = excluded.setting_value,
+              updated_at = excluded.updated_at
+            """,
+            (
+                PHOTOS_DISCOVERY_CHECKPOINT_SETTING,
+                json.dumps(checkpoint, ensure_ascii=False, separators=(",", ":")),
+                checkpoint["completedAt"],
+            ),
+        )
+    return checkpoint
 
 
 def _sidecar_workflow_timestamp(value: object) -> datetime | None:
@@ -404,6 +567,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         """
         PRAGMA journal_mode = WAL;
         PRAGMA foreign_keys = ON;
+
+        CREATE TABLE IF NOT EXISTS owner_settings (
+          setting_key   TEXT PRIMARY KEY,
+          setting_value TEXT NOT NULL,
+          updated_at    TEXT
+        ) WITHOUT ROWID;
 
         CREATE TABLE IF NOT EXISTS sidecar_assets (
           asset_id       TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),

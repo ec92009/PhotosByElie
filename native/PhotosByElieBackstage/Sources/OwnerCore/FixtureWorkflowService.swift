@@ -976,6 +976,7 @@ public struct FixtureStateMigrationReport: Sendable, Equatable {
 }
 
 public struct PhotosIndexReconciliationReport: Sendable, Equatable {
+    public var mode: String
     public var status: String
     public var stage: String
     public var indexedCount: Int
@@ -983,8 +984,10 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
     public var totalCount: Int
     public var missingMarkedCount: Int
     public var completedAt: String
+    public var checkpointCaptureDate: String
 
     init(json: [String: JSONValue]) {
+        mode = json["mode"]?.stringValue ?? ""
         status = json["status"]?.stringValue ?? ""
         stage = json["stage"]?.stringValue ?? ""
         indexedCount = json["indexedCount"]?.intValue ?? 0
@@ -992,6 +995,7 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
         totalCount = json["totalCount"]?.intValue ?? 0
         missingMarkedCount = json["missingMarkedCount"]?.intValue ?? 0
         completedAt = json["completedAt"]?.stringValue ?? ""
+        checkpointCaptureDate = json["discoveryCheckpoint"]?.objectValue?["captureDate"]?.stringValue ?? ""
     }
 }
 
@@ -1149,7 +1153,8 @@ public actor FixtureWorkflowService {
 
     public func reconcilePhotosIndex(
         dateFrom: String = "",
-        dateTo: String = ""
+        dateTo: String = "",
+        fullLibrary: Bool = false
     ) async throws -> PhotosIndexReconciliationReport {
         let connectorID = await connectorIdentity.connectorID()
         var payload: [String: JSONValue] = [
@@ -1158,6 +1163,13 @@ public actor FixtureWorkflowService {
         ]
         let cleanDateFrom = dateFrom.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanDateTo = dateTo.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mode = fullLibrary
+            ? "full"
+            : (cleanDateFrom.isEmpty && cleanDateTo.isEmpty ? "incremental" : "range")
+        payload["mode"] = .string(mode)
+        if fullLibrary {
+            payload["fullLibrary"] = .bool(true)
+        }
         if !cleanDateFrom.isEmpty {
             payload["dateFrom"] = .string(cleanDateFrom)
         }
@@ -1175,6 +1187,7 @@ public actor FixtureWorkflowService {
                 connectorID,
                 cleanDateFrom,
                 cleanDateTo,
+                mode,
                 UUID().uuidString,
             ]
                 .joined(separator: ":")

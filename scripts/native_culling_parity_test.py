@@ -1304,8 +1304,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "235.3")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "170")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "235.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "171")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1403,7 +1403,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("AXUIElement", control)
         self.assertNotIn("CGEvent", control)
 
-    def test_culling_refreshes_previews_without_competing_owner_reconciliation(self):
+    def test_culling_refresh_resumes_discovery_and_keeps_full_audit_explicit(self):
         source = backstage_ui_source()
         model_source = (
             NATIVE
@@ -1421,7 +1421,7 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageFeedbackView.swift"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("await model.refreshPhotos()", culling)
+        self.assertIn("await model.refreshPhotosAndRecentIndex()", culling)
         self.assertIn("struct BackstageFeedbackView: View", feedback)
         self.assertIn('.accessibilityLabel(isWorking ? "Working. ', feedback)
         self.assertIn("BackstageFeedbackView(", culling)
@@ -1431,17 +1431,18 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
         self.assertIn("guard !isLoadingPhotos else { return }", model_source)
-        self.assertIn('Text("Refreshing previews…")', culling)
-        self.assertIn('"Refreshing Photos previews" : "Refresh Photos previews"', culling)
-        self.assertNotIn("await model.refreshPhotosAndRecentIndex()", culling)
-        self.assertNotIn("await model.refreshPhotosAndRecentIndex(force: true)", culling)
+        self.assertIn('Text("Discovering recent Photos…")', culling)
+        self.assertIn('Text("Refresh & discover")', culling)
+        self.assertIn('Text("Full library audit")', culling)
         self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)
-        self.assertIn("func reconcileRecentPhotosIndex(force: Bool = false)", model_source)
-        self.assertIn("value: -45", model_source)
-        self.assertIn('dateFormatter.dateFormat = "yyyy-MM-dd"', model_source)
-        self.assertLess(
-            culling.index("await model.refreshPhotos()"),
-            culling.index("await model.loadFixtureCullingWindow()"),
+        self.assertIn("func reconcileRecentPhotosIndex()", model_source)
+        self.assertIn("reconcilePhotosIndex(fullLibrary: true)", model_source)
+        self.assertNotIn("value: -45", model_source)
+        self.assertNotIn("hasReconciledRecentPhotosIndex", model_source)
+        refresh_call = culling.index("await model.refreshPhotosAndRecentIndex()")
+        self.assertIn(
+            "await model.loadFixtureCullingWindow()",
+            culling[refresh_call:refresh_call + 500],
         )
 
     def test_shared_feedback_surface_is_adopted_by_review_and_upload_headers(self):

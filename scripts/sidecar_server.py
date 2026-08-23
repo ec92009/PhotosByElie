@@ -46,6 +46,8 @@ from sidecar_state_db import (
     summary,
     is_jpeg_source_row,
     mark_invalid_source_assets_missing,
+    photos_discovery_window,
+    record_photos_discovery_checkpoint,
     upload_bridge_plan,
     upload_plan,
     upsert_assets,
@@ -416,7 +418,14 @@ def _write_backstage_library_index(
     return {"ok": True, "mode": "library-index", "count": total_count, "totalCount": total_count}
 
 
-def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: str = "") -> None:
+def _run_index_job(
+    repo_root: Path,
+    job_id: str,
+    date_from: str = "",
+    date_to: str = "",
+    *,
+    mode: str = "range",
+) -> None:
     index_dir = repo_root / SIDECAR_INDEX_ROOT
     index_path = index_dir / f"photos-index-{int(time.time())}-{job_id}.jsonl"
     invalid_source_count = 0
@@ -437,6 +446,9 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             completedAt="",
             missingMarkedCount=0,
             invalidSourceMarkedCount=invalid_source_count,
+            mode=mode,
+            dateFrom=date_from,
+            dateTo=date_to,
         )
         index_payload = _write_backstage_library_index(
             repo_root,
@@ -448,6 +460,19 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
         total_count = int(index_payload.get("totalCount") or index_payload.get("count") or 0)
         imported, missing_count = _import_index_jsonl(repo_root, index_path, total_count, prune_missing=not date_from and not date_to)
         _invalidate_summary_cache()
+        completed_at = _utc_now()
+        checkpoint = (
+            record_photos_discovery_checkpoint(
+                repo_root,
+                mode=mode,
+                date_from=date_from,
+                date_to=date_to,
+                imported_count=imported,
+                completed_at=completed_at,
+            )
+            if mode in {"incremental", "full"}
+            else {}
+        )
         _set_index_job(
             ok=True,
             status="done",
@@ -456,9 +481,13 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             importedCount=imported,
             totalCount=total_count,
             progress=1,
-            completedAt=_utc_now(),
+            completedAt=completed_at,
             missingMarkedCount=missing_count,
             invalidSourceMarkedCount=invalid_source_count,
+            mode=mode,
+            dateFrom=date_from,
+            dateTo=date_to,
+            discoveryCheckpoint=checkpoint,
             sidecarSummary=_summary_snapshot(repo_root, force=True),
         )
     except Exception as error:
@@ -469,10 +498,19 @@ def _run_index_job(repo_root: Path, job_id: str, date_from: str = "", date_to: s
             error=str(error),
             completedAt=_utc_now(),
             invalidSourceMarkedCount=invalid_source_count,
+            mode=mode,
+            dateFrom=date_from,
+            dateTo=date_to,
         )
 
 
-def _start_index_job(repo_root: Path, date_from: str = "", date_to: str = "") -> dict:
+def _start_index_job(
+    repo_root: Path,
+    date_from: str = "",
+    date_to: str = "",
+    *,
+    full_library: bool = False,
+) -> dict:
     with INDEX_JOB_LOCK:
         if INDEX_JOB.get("status") == "running":
             return dict(INDEX_JOB)
@@ -490,7 +528,22 @@ def _start_index_job(repo_root: Path, date_from: str = "", date_to: str = "") ->
         startedAt=_utc_now(),
         completedAt="",
     )
-    thread = threading.Thread(target=_run_index_job, args=(repo_root, job_id, date_from, date_to), daemon=True)
+    if full_library and (date_from or date_to):
+        raise ValueError("full Photos reconciliation cannot include date bounds")
+    if full_library:
+        mode = "full"
+    elif date_from or date_to:
+        mode = "range"
+    else:
+        policy = photos_discovery_window(repo_root)
+        mode = "incremental"
+        date_from = str(policy["dateFrom"])
+    thread = threading.Thread(
+        target=_run_index_job,
+        args=(repo_root, job_id, date_from, date_to),
+        kwargs={"mode": mode},
+        daemon=True,
+    )
     thread.start()
     return _index_job_snapshot(repo_root)
 
@@ -815,7 +868,14 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             payload = self._read_json_body()
             date_from = str(payload.get("dateFrom") or payload.get("date_from") or "").strip()
             date_to = str(payload.get("dateTo") or payload.get("date_to") or "").strip()
-            result = _start_index_job(Path.cwd(), date_from=date_from, date_to=date_to)
+            mode = str(payload.get("mode") or "").strip().casefold()
+            full_library = bool(payload.get("fullLibrary") or payload.get("full_library")) or mode == "full"
+            result = _start_index_job(
+                Path.cwd(),
+                date_from=date_from,
+                date_to=date_to,
+                full_library=full_library,
+            )
         except Exception as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": str(error)})
             return

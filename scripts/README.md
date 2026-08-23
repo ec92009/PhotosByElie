@@ -191,8 +191,18 @@ Correct scheduled entrypoint:
 python3 scripts/sidecar_maintenance.py photos-index-sync
 ```
 
-That command asks the running signed Backstage app for a bounded library-index
-page. The picked-only AI planning task does not touch PhotoKit directly. When
+That command resumes recent-photo discovery from the durable Owner checkpoint,
+with a seven-day overlap around the newest indexed capture date. The checkpoint
+advances only after a successful scan and import. A complete maintenance audit
+must be requested explicitly:
+
+```bash
+python3 scripts/sidecar_maintenance.py photos-index-sync --full
+```
+
+Both commands ask the running signed Backstage app for bounded library-index
+pages. Only the explicit full audit can mark previously indexed assets missing.
+The picked-only AI planning task does not touch PhotoKit directly. When
 the AI review needs visual evidence, run Backstage and export the current
 picked/not-approved preview queue through authenticated IPC:
 

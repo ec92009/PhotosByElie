@@ -638,6 +638,22 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
 
+    def test_photos_index_sync_defaults_to_incremental_and_full_is_explicit(self):
+        payload = {"job": {"status": "done"}, "sync": {"pendingCount": 0}}
+        with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
+            execute_action(self.config, {
+                "type": "sidecar-photos-index-sync",
+                "payload": {"mode": "incremental"},
+            })
+        self.assertEqual(run.call_args.args[1][-1], "--incremental")
+
+        with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
+            execute_action(self.config, {
+                "type": "sidecar-photos-index-sync",
+                "payload": {"mode": "full", "fullLibrary": True},
+            })
+        self.assertEqual(run.call_args.args[1][-1], "--full")
+
     def test_owner_hidden_metadata_resolves_private_title_without_public_catalog(self):
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

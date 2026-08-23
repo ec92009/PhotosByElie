@@ -1853,6 +1853,8 @@ def execute_action(
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         date_from = str(payload.get("dateFrom") or "").strip()
         date_to = str(payload.get("dateTo") or "").strip()
+        mode = str(payload.get("mode") or "").strip().casefold()
+        full_library = bool(payload.get("fullLibrary")) or mode == "full"
         for label, value in (("dateFrom", date_from), ("dateTo", date_to)):
             if not value:
                 continue
@@ -1867,10 +1869,16 @@ def execute_action(
             "--limit",
             "24",
         ]
-        if date_from:
+        if full_library:
+            if date_from or date_to:
+                raise RuntimeError("full Photos reconciliation cannot include date bounds")
+            arguments.append("--full")
+        elif date_from:
             arguments.extend(["--date-from", date_from])
         if date_to:
             arguments.extend(["--date-to", date_to])
+        if not full_library and not date_from and not date_to:
+            arguments.append("--incremental")
         indexed = _run_repo_json(config, [
             *arguments,
         ])

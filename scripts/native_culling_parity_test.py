@@ -378,7 +378,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         resource_preview = photo_library.split(
-            "private func requestRenderedJPEGPreview(", 1
+            "private func requestAcceptedStillResourcePreview(", 1
         )[1].split("private func requestFullPreview(", 1)[0]
         self.assertIn("let sourceData = gate.dataSnapshot()", resource_preview)
         self.assertIn(
@@ -391,6 +391,29 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("manager.requestImage(", full_preview)
         self.assertNotIn("currentImageByteCount:", full_preview)
         self.assertNotIn("requestImageDataAndOrientation(", photo_library)
+
+        culling_preview = photo_library.split(
+            "public func cullingPreview(", 1
+        )[1].split("public func renderedJPEGPreview(", 1)[0]
+        self.assertIn(
+            "let acceptedSource = preferredAcceptedStillResource(for: asset)",
+            culling_preview,
+        )
+        self.assertIn(
+            "requestAcceptedStillResourcePreview(",
+            culling_preview,
+        )
+        rendered_preview = photo_library.split(
+            "public func renderedJPEGPreview(", 1
+        )[1].split("private func requestThumbnailPreview(", 1)[0]
+        self.assertIn(
+            "let acceptedSource = preferredAcceptedStillResource(for: asset)",
+            rendered_preview,
+        )
+        self.assertIn(
+            "requestAcceptedStillResourcePreview(",
+            rendered_preview,
+        )
 
         self.assertIn("asset_current_image_sizes", size_store)
         self.assertIn("current_image_byte_count", size_store)

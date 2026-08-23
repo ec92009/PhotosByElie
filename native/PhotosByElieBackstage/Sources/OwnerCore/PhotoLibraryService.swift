@@ -21,9 +21,10 @@ public struct PhotoPreview: Sendable, Equatable {
     public var jpegData: Data
     public var pixelWidth: Int
     public var pixelHeight: Int
-    /// Byte count of complete current-image data received directly from Photos
-    /// before any preview downsampling or JPEG encoding. Nil when the preview
-    /// came from a rendered `requestImage` raster or another partial path.
+    /// Byte count of complete accepted JPEG or HEIC data received directly
+    /// from Photos before any preview downsampling or JPEG encoding. Nil when
+    /// the preview came from a rendered `requestImage` raster or another
+    /// partial path.
     public var currentImageByteCount: Int64?
 
     public init(
@@ -342,21 +343,9 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let asset = try asset(localIdentifier)
 
         if maxPixelSize > 180,
-           let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
-            return try await requestRenderedJPEGPreview(
-                resource: renderedJPEG,
-                localIdentifier: localIdentifier,
-                maxPixelSize: maxPixelSize
-            )
-        }
-
-        // HEIC has no local JPEG resource to stream directly. Ask Photos for
-        // its current rendered image instead of reading the RAW side of a
-        // paired asset; Photos performs the safe HEIC-to-JPG rendering here.
-        if maxPixelSize > 180,
-           preferredAcceptedStillResource(for: asset) != nil {
-            return try await requestFullPreview(
-                for: asset,
+           let acceptedSource = preferredAcceptedStillResource(for: asset) {
+            return try await requestAcceptedStillResourcePreview(
+                resource: acceptedSource,
                 localIdentifier: localIdentifier,
                 maxPixelSize: maxPixelSize
             )
@@ -383,9 +372,9 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoPreview {
         try requireAccess()
         let asset = try asset(localIdentifier)
-        if let renderedJPEG = preferredRenderedJPEGResource(for: asset) {
-            return try await requestRenderedJPEGPreview(
-                resource: renderedJPEG,
+        if let acceptedSource = preferredAcceptedStillResource(for: asset) {
+            return try await requestAcceptedStillResourcePreview(
+                resource: acceptedSource,
                 localIdentifier: localIdentifier,
                 maxPixelSize: maxPixelSize
             )
@@ -460,7 +449,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         })
     }
 
-    private func requestRenderedJPEGPreview(
+    private func requestAcceptedStillResourcePreview(
         resource: PHAssetResource,
         localIdentifier: String,
         maxPixelSize: Int

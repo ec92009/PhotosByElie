@@ -1422,6 +1422,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("await model.refreshPhotosAndRecentIndex()", culling)
+        self.assertIn("await model.discoverRecentPhotosAtStartupIfNeeded()", culling)
         self.assertIn("struct BackstageFeedbackView: View", feedback)
         self.assertIn('.accessibilityLabel(isWorking ? "Working. ', feedback)
         self.assertIn("BackstageFeedbackView(", culling)
@@ -1436,6 +1437,18 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('Text("Full library audit")', culling)
         self.assertIn("await model.reconcilePhotosLibraryIndex()", culling)
         self.assertIn("func reconcileRecentPhotosIndex()", model_source)
+        self.assertIn(
+            "func discoverRecentPhotosAtStartupIfNeeded()",
+            model_source,
+        )
+        self.assertIn(
+            "guard !didStartAutomaticRecentPhotosDiscovery else { return }",
+            model_source,
+        )
+        self.assertIn(
+            "await loadFixtureCullingWindow(preservingVisibleWindow: true)",
+            model_source,
+        )
         self.assertIn("reconcilePhotosIndex(fullLibrary: true)", model_source)
         self.assertNotIn("value: -45", model_source)
         self.assertNotIn("hasReconciledRecentPhotosIndex", model_source)

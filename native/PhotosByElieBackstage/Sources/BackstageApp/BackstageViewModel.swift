@@ -364,6 +364,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var updateState: BackstageUpdateState = .idle
     private var nativePublicationCancellationRequested = false
     private var didCheckOwnerWorkflowRecovery = false
+    private var didStartAutomaticRecentPhotosDiscovery = false
     private var r2ReconciliationCancellationRequested = false
     private var terminationRequested = false
 
@@ -1275,6 +1276,16 @@ final class BackstageViewModel: ObservableObject {
     func refreshPhotosAndRecentIndex() async {
         await refreshPhotos()
         await reconcileRecentPhotosIndex()
+    }
+
+    func discoverRecentPhotosAtStartupIfNeeded() async {
+        guard !didStartAutomaticRecentPhotosDiscovery else { return }
+        didStartAutomaticRecentPhotosDiscovery = true
+        await reconcileRecentPhotosIndex()
+        guard !Task.isCancelled else { return }
+        if !selectedFixtureID.isEmpty {
+            await loadFixtureCullingWindow(preservingVisibleWindow: true)
+        }
     }
 
     func reconcileRecentPhotosIndex() async {

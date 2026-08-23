@@ -341,6 +341,7 @@ struct CullingView: View {
             } else {
                 await model.refreshCullingDecisions()
             }
+            await model.discoverRecentPhotosAtStartupIfNeeded()
         }
     }
 

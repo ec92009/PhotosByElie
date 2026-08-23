@@ -152,8 +152,22 @@ final class BackstageSelectionController: ObservableObject {
 
 @MainActor
 final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowDelegate, @preconcurrency QLPreviewPanelDataSource {
-    private var items: [NSURL] = []
-    private var metadata: [BackstageQuickLookMetadata] = []
+    private final class PreviewItem: NSObject, QLPreviewItem {
+        let previewItemURL: URL?
+        let previewItemTitle: String?
+        var metadata: BackstageQuickLookMetadata?
+
+        init(url: URL, title: String, metadata: BackstageQuickLookMetadata?) {
+            previewItemURL = url
+            previewItemTitle = title
+            self.metadata = metadata
+        }
+    }
+
+    typealias PresentationID = UInt64
+
+    private var items: [PreviewItem] = []
+    private var presentationID: PresentationID = 0
     private var shortcutMonitor: Any?
     private var previewIndexObservation: NSKeyValueObservation?
     private var previewPanelObservers: [NSObjectProtocol] = []
@@ -206,22 +220,49 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         dismiss()
     }
 
+    /// Reserve the next Quick Look presentation before asynchronous photo
+    /// preparation. Only the newest reservation may update the shared panel.
+    func beginPresentation() -> PresentationID {
+        presentationID &+= 1
+        return presentationID
+    }
+
+    func isCurrentPresentation(_ candidate: PresentationID) -> Bool {
+        candidate == presentationID
+    }
+
+    static func previewTitle(
+        for url: URL,
+        metadata: BackstageQuickLookMetadata?
+    ) -> String {
+        let filename = metadata?.filename.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return filename.isEmpty ? url.lastPathComponent : filename
+    }
+
     func present(
         urls: [URL],
         startingAt index: Int = 0,
         metadata: [BackstageQuickLookMetadata] = [],
+        presentation candidate: PresentationID,
         onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil
     ) {
         guard isOwnerActive else { return }
+        guard isCurrentPresentation(candidate) else { return }
         guard !urls.isEmpty else { return }
-        items = urls.map { $0 as NSURL }
-        self.metadata = metadata
+        items = urls.enumerated().map { offset, url in
+            PreviewItem(
+                url: url,
+                title: Self.previewTitle(for: url, metadata: metadata.indices.contains(offset) ? metadata[offset] : nil),
+                metadata: metadata.indices.contains(offset) ? metadata[offset] : nil
+            )
+        }
         guard let panel = QLPreviewPanel.shared() else { return }
         NSApp.activate(ignoringOtherApps: true)
         configureQuickLookFrame(panel)
         panel.dataSource = self
-        panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
         panel.reloadData()
+        panel.currentPreviewItemIndex = max(0, min(items.count - 1, index))
+        panel.refreshCurrentPreviewItem()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
         installMetadataPanel(in: panel)
@@ -230,6 +271,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     func dismiss() {
+        presentationID &+= 1
         let panel = configuredPreviewPanel ?? QLPreviewPanel.shared()
         metadataWindow.parent?.removeChildWindow(metadataWindow)
         metadataWindow.orderOut(nil)
@@ -237,7 +279,6 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         panel?.delegate = nil
         configuredPreviewPanel = nil
         items = []
-        metadata = []
         previewIndexObservation = nil
         removePreviewPanelObservers()
         removeShortcutMonitor()
@@ -268,10 +309,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     func updateMetadata(_ item: BackstageQuickLookMetadata) {
-        guard let index = metadata.firstIndex(where: { $0.assetID == item.assetID }) else {
+        guard let previewItem = items.first(where: { $0.metadata?.assetID == item.assetID }) else {
             return
         }
-        metadata[index] = item
+        previewItem.metadata = item
         updateMetadataPanel()
     }
 
@@ -325,8 +366,8 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     private var currentMetadata: BackstageQuickLookMetadata? {
         guard let panel = QLPreviewPanel.shared() else { return nil }
         let index = panel.currentPreviewItemIndex
-        guard metadata.indices.contains(index) else { return nil }
-        return metadata[index]
+        guard items.indices.contains(index) else { return nil }
+        return items[index].metadata
     }
 
     private func observePreviewIndex(in panel: QLPreviewPanel) {
@@ -498,7 +539,8 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         guard let panel = configuredPreviewPanel else { return .below }
         let index = panel.currentPreviewItemIndex
         guard items.indices.contains(index),
-              let image = NSImage(contentsOf: items[index] as URL),
+              let url = items[index].previewItemURL,
+              let image = NSImage(contentsOf: url),
               image.size.width > 0,
               image.size.height > image.size.width
         else {

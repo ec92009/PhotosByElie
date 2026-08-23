@@ -627,13 +627,16 @@ private struct LifecycleView: View {
         for item: LifecycleItem,
         direction: OwnerSelectionDirection = .next
     ) {
+        let presentationID = quickLook.beginPresentation()
         Task { @MainActor in
             guard let url = await model.prepareLifecycleQuickLookURL(for: item) else {
                 return
             }
+            guard quickLook.isCurrentPresentation(presentationID) else { return }
             quickLook.present(
                 urls: [url],
                 metadata: [lifecycleQuickLookMetadata(for: item)],
+                presentation: presentationID,
                 onShortcut: { shortcut, assetID in
                     switch shortcut {
                     case .previous:
@@ -1852,6 +1855,7 @@ private struct MetadataGiveBackView: View {
         title: String,
         keywords: [String]
     ) {
+        let presentationID = quickLook.beginPresentation()
         Task {
             let source = model.cullingAssets.first(where: { $0.id == assetID })
             guard let url = await model.prepareMetadataQuickLookURL(
@@ -1860,6 +1864,7 @@ private struct MetadataGiveBackView: View {
             ) else {
                 return
             }
+            guard quickLook.isCurrentPresentation(presentationID) else { return }
             let decision = model.cullingStates[assetID]
             quickLook.present(
                 urls: [url],
@@ -1883,7 +1888,8 @@ private struct MetadataGiveBackView: View {
                         state: decision?.pickState ?? source?.placementState.rawValue ?? "metadata",
                         shortcutHint: "Read-only Metadata preview • Escape closes"
                     )
-                ]
+                ],
+                presentation: presentationID
             )
         }
     }

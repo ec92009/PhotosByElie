@@ -331,10 +331,12 @@ struct UploadView: View {
         _ item: NativeUploadPlanItem,
         direction: OwnerSelectionDirection = .next
     ) {
+        let presentationID = quickLook.beginPresentation()
         Task {
             guard let url = await model.prepareNativeUploadQuickLookURL(for: item) else {
                 return
             }
+            guard quickLook.isCurrentPresentation(presentationID) else { return }
             let source = model.cullingAssets.first(where: { $0.id == item.id })
             let decision = model.cullingStates[item.id]
             let metadata = BackstageQuickLookMetadata(
@@ -359,6 +361,7 @@ struct UploadView: View {
             quickLook.present(
                 urls: [url],
                 metadata: [metadata],
+                presentation: presentationID,
                 onShortcut: { shortcut, assetID in
                     guard !model.isRunningDelivery else { return false }
                     switch shortcut {

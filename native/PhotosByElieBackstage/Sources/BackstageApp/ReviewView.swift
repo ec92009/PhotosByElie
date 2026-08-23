@@ -21,9 +21,11 @@ private enum ReviewQuickLookPresenter {
             model.reviewStatus = "Quick Look opens one selected Review item at a time."
             return
         }
+        let presentationID = coordinator.beginPresentation()
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
             let urls = await model.prepareReviewQuickLookURLs()
+            guard coordinator.isCurrentPresentation(presentationID) else { return }
             let prepared = zip(ids, urls).compactMap { assetID, url in
                 metadata(for: assetID, model: model).map { (url, $0) }
             }
@@ -31,6 +33,7 @@ private enum ReviewQuickLookPresenter {
             coordinator.present(
                 urls: prepared.map(\.0),
                 metadata: prepared.map(\.1),
+                presentation: presentationID,
                 onShortcut: { [weak model, weak coordinator] shortcut, assetID in
                     guard let model, let coordinator, !model.isRunningReview else {
                         return false

@@ -93,6 +93,38 @@ struct OwnerCoreTests {
         )
     }
 
+    @Test("Only the newest asynchronous Quick Look presentation remains current")
+    @MainActor
+    func quickLookPresentationGenerationRejectsStaleWork() {
+        let coordinator = BackstageQuickLookCoordinator()
+        let first = coordinator.beginPresentation()
+        let second = coordinator.beginPresentation()
+
+        #expect(!coordinator.isCurrentPresentation(first))
+        #expect(coordinator.isCurrentPresentation(second))
+    }
+
+    @Test("Quick Look title uses the same filename as its metadata snapshot")
+    @MainActor
+    func quickLookTitleUsesMetadataFilename() {
+        let url = URL(fileURLWithPath: "/tmp/opaque-asset-id.jpg")
+        let metadata = BackstageQuickLookMetadata(
+            assetID: "asset-1",
+            filename: "IMG_4478.jpg",
+            title: "Photo title",
+            keywords: [],
+            locationLabel: "",
+            capturedAt: "",
+            rating: 0,
+            color: "",
+            state: "undecided",
+            shortcutHint: ""
+        )
+
+        #expect(BackstageQuickLookCoordinator.previewTitle(for: url, metadata: metadata) == "IMG_4478.jpg")
+        #expect(BackstageQuickLookCoordinator.previewTitle(for: url, metadata: nil) == "opaque-asset-id.jpg")
+    }
+
     @Test("Quick Look source size is truthful for photos, video, and partial metadata")
     func quickLookSourceSizeFormatting() {
         let photo = BackstageQuickLookSourceSize(

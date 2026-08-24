@@ -574,15 +574,27 @@ private struct PublicationView: View {
 private struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @StateObject private var lifecycleScrollPosition = LifecycleTableScrollPosition()
     @State private var confirmingEmpty = false
     @State private var confirmingDeleteSelected = false
     @State private var lifecycleSortOrder = [
         KeyPathComparator(\LifecycleItem.updatedAt, order: .reverse),
     ]
-    @State private var lifecycleScrollAnchorID: LifecycleItem.ID?
+    @State private var lifecycleSortRevision = 0
 
     private var sortedLifecycleItems: [LifecycleItem] {
         model.lifecycleItems.sorted(using: lifecycleSortOrder)
+    }
+
+    private var lifecycleSortBinding: Binding<[KeyPathComparator<LifecycleItem>]> {
+        Binding(
+            get: { lifecycleSortOrder },
+            set: { nextSortOrder in
+                lifecycleScrollPosition.captureBeforeSort()
+                lifecycleSortOrder = nextSortOrder
+                lifecycleSortRevision += 1
+            }
+        )
     }
 
     private var pendingLifecycleOperationLabel: String {
@@ -854,7 +866,7 @@ private struct LifecycleView: View {
             Table(
                 sortedLifecycleItems,
                 selection: $model.selectedLifecycleIDs,
-                sortOrder: $lifecycleSortOrder
+                sortOrder: lifecycleSortBinding
             ) {
                 TableColumn("Preview") { item in
                     Group {
@@ -946,11 +958,12 @@ private struct LifecycleView: View {
                 }
                 .width(100)
             }
-            // Keep the top visible lifecycle row anchored by its durable ID
-            // while a sortable header reorders the table. Without an explicit
-            // anchor, the second header press can jump to a different offset
-            // even though the user is still inspecting the same rows.
-            .scrollPosition(id: $lifecycleScrollAnchorID, anchor: .top)
+            .background(
+                LifecycleTableScrollProbe(
+                    position: lifecycleScrollPosition,
+                    sortRevision: lifecycleSortRevision
+                )
+            )
             .overlay {
                 if model.isRunningLifecycle && model.lifecycleItems.isEmpty {
                     ProgressView("Loading private lifecycle ledger…")

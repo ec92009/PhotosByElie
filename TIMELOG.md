@@ -769,8 +769,9 @@ Clock state: running
 | 2026-08-21 | 18:18 CEST | 18:19 CEST | 0:01 | Resumed the PBB ticket loop and completed the PBB-105 source verification checkpoint; background implementation, tests, build, and ticket API runtime excluded. |
 | 2026-08-21 | 18:37 CEST | 18:38 CEST | 0:01 | Corrected the Tick/Tock human-gate alert cadence and paused for a pending download; background ticket investigation excluded. |
 | 2026-08-21 | 18:41 CEST | 18:42 CEST | 0:01 | Resumed the current PBB Tick goal after the download gate cleared; background ticket implementation and verification excluded. |
+| 2026-08-24 | 20:10 CEST | 20:16 CEST | 0:01 | Reported the build-180 Waste Basket Deleted-sort scroll regression and requested the updated GSA instructions be applied; background diagnosis, implementation, tests, and release work excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:10
+Active collaboration time used: 38:11
 Remaining budget: not set

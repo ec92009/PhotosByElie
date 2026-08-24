@@ -1321,8 +1321,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.7")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "179")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.9")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "181")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1509,9 +1509,10 @@ class NativeCullingParityTest(unittest.TestCase):
 
         for marker in (
             "private var sortedLifecycleItems: [LifecycleItem]",
-            "sortOrder: $lifecycleSortOrder",
-            "@State private var lifecycleScrollAnchorID: LifecycleItem.ID?",
-            ".scrollPosition(id: $lifecycleScrollAnchorID, anchor: .top)",
+            "sortOrder: lifecycleSortBinding",
+            "@StateObject private var lifecycleScrollPosition = LifecycleTableScrollPosition()",
+            "lifecycleScrollPosition.captureBeforeSort()",
+            "LifecycleTableScrollProbe(",
             'Button("Delete Selected", role: .destructive)',
             "model.selectedRecoverableLifecycleIDs.isEmpty",
             "Text(model.lifecycleCountSummary)",

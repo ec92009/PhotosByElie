@@ -4005,7 +4005,17 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                 SELECT
                                     bridge.photo_id AS media_id,
                                     bridge.asset_id AS photo_library_identifier,
-                                    COALESCE(NULLIF(bridge.filename, ''), sidecar.filename, '') AS filename,
+                                    COALESCE(
+                                        NULLIF(
+                                            CASE WHEN json_valid(sidecar.raw_json)
+                                                 THEN json_extract(sidecar.raw_json, '$.preferredResourceFilename')
+                                                 ELSE '' END,
+                                            ''
+                                        ),
+                                        NULLIF(bridge.filename, ''),
+                                        sidecar.filename,
+                                        ''
+                                    ) AS filename,
                                     COALESCE(sidecar.captured_at, '') AS captured_at
                                 FROM bridge_candidates AS bridge
                                 LEFT JOIN sidecar_assets AS sidecar
@@ -4017,7 +4027,16 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                             direct_rows = connection.execute(
                                 f"""SELECT asset_id AS media_id,
                                            '' AS photo_library_identifier,
-                                           filename,
+                                           COALESCE(
+                                               NULLIF(
+                                                   CASE WHEN json_valid(raw_json)
+                                                        THEN json_extract(raw_json, '$.preferredResourceFilename')
+                                                        ELSE '' END,
+                                                   ''
+                                               ),
+                                               filename,
+                                               ''
+                                           ) AS filename,
                                            captured_at
                                     FROM sidecar_assets
                                     WHERE asset_id IN ({placeholders})""",
@@ -4026,7 +4045,17 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                         else:
                             rows = connection.execute(
                                 f"""SELECT asset_id AS media_id, '' AS photo_library_identifier,
-                                           filename, captured_at
+                                           COALESCE(
+                                               NULLIF(
+                                                   CASE WHEN json_valid(raw_json)
+                                                        THEN json_extract(raw_json, '$.preferredResourceFilename')
+                                                        ELSE '' END,
+                                                   ''
+                                               ),
+                                               filename,
+                                               ''
+                                           ) AS filename,
+                                           captured_at
                                     FROM sidecar_assets
                                     WHERE asset_id IN ({placeholders})""",
                                 batch,

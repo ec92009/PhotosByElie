@@ -394,7 +394,8 @@ class FixtureConnectorTest(unittest.TestCase):
             root = Path(temp_dir)
             sidecar_state_db.upsert_assets(root, [{
                 "localIdentifier": "photos-hidden",
-                "filename": "Hidden.MOV",
+                "filename": "Hidden Rendered.mp4",
+                "preferredResourceFilename": "Hidden Original.MOV",
                 "mediaType": "video",
                 "creationDate": "2026-07-24T10:00:00Z",
             }])
@@ -436,7 +437,7 @@ class FixtureConnectorTest(unittest.TestCase):
                         "bridge-lifecycle",
                         "photos-hidden",
                         "photo-hidden",
-                        "Hidden.MOV",
+                        "Hidden Rendered.mp4",
                         "video",
                         "2026-07-25T00:00:00Z",
                         "2026-07-25T00:00:00Z",
@@ -463,7 +464,7 @@ class FixtureConnectorTest(unittest.TestCase):
         )
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["filename"],
-            "Hidden.MOV",
+            "Hidden Original.MOV",
         )
         self.assertEqual(
             listed["result"]["lifecycle"]["items"][0]["capturedAt"],
@@ -482,6 +483,7 @@ class FixtureConnectorTest(unittest.TestCase):
             sidecar_state_db.upsert_assets(root, [{
                 "localIdentifier": "photos-native-hidden",
                 "filename": "Native Hidden.jpg",
+                "preferredResourceFilename": "Native Hidden.heic",
                 "mediaType": "photo",
                 "creationDate": "2026-08-24T08:33:09Z",
             }])
@@ -507,7 +509,7 @@ class FixtureConnectorTest(unittest.TestCase):
             )
 
         item = listed["result"]["lifecycle"]["items"][0]
-        self.assertEqual(item["filename"], "Native Hidden.jpg")
+        self.assertEqual(item["filename"], "Native Hidden.heic")
         self.assertEqual(item["capturedAt"], "2026-08-24T08:33:09Z")
         self.assertEqual(item["updatedAt"], "2026-08-24T08:33:09Z")
 

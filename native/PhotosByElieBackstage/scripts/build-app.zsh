@@ -25,6 +25,26 @@ if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" ]]; the
   print -u2 "Native release metadata contains an unexpected bundle identity."
   exit 1
 fi
+if ! python3 - "$PBE_BACKSTAGE_UPDATE_MANIFEST_URL" <<'PY'
+import sys
+from urllib.parse import urlsplit
+
+url = urlsplit(sys.argv[1])
+valid = (
+    url.scheme.lower() == "https"
+    and url.hostname == "download.photos-by-elie.com"
+    and url.path == "/backstage/releases/latest.json"
+    and not url.query
+    and not url.fragment
+    and url.username is None
+    and url.password is None
+)
+raise SystemExit(0 if valid else 1)
+PY
+then
+  print -u2 "Native release metadata contains an unapproved Backstage manifest URL."
+  exit 1
+fi
 
 cd "$package_root"
 swift build -c "$configuration"
@@ -127,6 +147,8 @@ cat > "${contents}/Info.plist" <<PLIST
   <string>Backstage reads and applies approved title, caption, and keyword metadata in Apple Photos.</string>
   <key>PBEOwnerRuntimeRevision</key>
   <string>${runtime_revision}</string>
+  <key>PBEBackstageUpdateManifestURL</key>
+  <string>${PBE_BACKSTAGE_UPDATE_MANIFEST_URL}</string>
 </dict>
 </plist>
 PLIST

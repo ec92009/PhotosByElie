@@ -1328,16 +1328,26 @@ class NativeCullingParityTest(unittest.TestCase):
         bridge_installer = (
             ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
         ).read_text(encoding="utf-8")
+        manifest_builder = (
+            ROOT / "scripts" / "build_backstage_release_manifest.zsh"
+        ).read_text(encoding="utf-8")
 
         def value(name: str) -> str:
             match = re.search(rf'^{name}="([^"]+)"$', metadata, re.MULTILINE)
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.14")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "186")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "188")
+        self.assertEqual(
+            value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
+            "https://download.photos-by-elie.com/backstage/releases/latest.json",
+        )
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
+        self.assertIn("PBEBackstageUpdateManifestURL", build_script)
+        self.assertIn("PBE_BACKSTAGE_UPDATE_MANIFEST_URL", build_script)
+        self.assertIn('chmod -R u+w "$stage_root"', manifest_builder)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
         self.assertIn('--entitlements "$entitlements"', build_script)
         entitlements = (NATIVE / "Backstage.entitlements").read_text(encoding="utf-8")

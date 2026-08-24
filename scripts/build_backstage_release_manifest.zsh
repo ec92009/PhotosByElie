@@ -58,7 +58,13 @@ stage_root="$(mktemp -d "${TMPDIR:-/tmp}/pbe-backstage-manifest.XXXXXX")"
 temporary_output=""
 cleanup() {
   [[ -n "$temporary_output" && -f "$temporary_output" ]] && rm -f -- "$temporary_output"
-  [[ -d "$stage_root" ]] && rm -rf -- "$stage_root"
+  if [[ -d "$stage_root" ]]; then
+    # Release apps intentionally contain a read-only embedded Owner runtime.
+    # Restore write permission only inside this build-owned temporary tree so
+    # cleanup remains complete without weakening the signed app or source.
+    chmod -R u+w "$stage_root"
+    rm -rf -- "$stage_root"
+  fi
 }
 trap cleanup EXIT
 

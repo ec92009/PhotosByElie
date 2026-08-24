@@ -5131,6 +5131,75 @@ test("deployed Worker serves public R2 previews through the media route", async 
   assert.equal(missing.headers.get("cdn-cache-control"), "no-store");
 });
 
+test("deployed Worker serves only the approved Backstage release manifest and immutable archives", async () => {
+  const manifest = new TextEncoder().encode('{"schemaVersion":1}\n');
+  const archive = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+  const bucket = createFakeR2({
+    "backstage/releases/latest.json": {
+      body: manifest,
+      httpMetadata: { contentType: "text/plain" },
+    },
+    "backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip": {
+      body: archive,
+      httpMetadata: { contentType: "application/octet-stream" },
+    },
+    "backstage/releases/private.txt": {
+      body: new TextEncoder().encode("not public"),
+    },
+  });
+
+  const manifestResponse = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(manifestResponse.status, 200);
+  assert.equal(manifestResponse.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(manifestResponse.headers.get("cache-control"), "public, max-age=60, must-revalidate");
+  assert.equal(manifestResponse.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(await manifestResponse.text(), '{"schemaVersion":1}\n');
+
+  const archiveUrl = "https://download.photos-by-elie.com/backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip";
+  const archiveResponse = await deployedWorker.fetch(new Request(archiveUrl), { PUBLIC_MEDIA: bucket });
+  assert.equal(archiveResponse.status, 200);
+  assert.equal(archiveResponse.headers.get("content-type"), "application/zip");
+  assert.equal(archiveResponse.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(
+    archiveResponse.headers.get("content-disposition"),
+    'attachment; filename="PhotosByElie-Backstage-v237.1-build-188.zip"',
+  );
+  assert.equal(Buffer.from(await archiveResponse.arrayBuffer()).toString("hex"), "504b0304");
+
+  const headResponse = await deployedWorker.fetch(new Request(archiveUrl, { method: "HEAD" }), { PUBLIC_MEDIA: bucket });
+  assert.equal(headResponse.status, 200);
+  assert.equal(headResponse.headers.get("content-length"), "4");
+  assert.equal((await headResponse.arrayBuffer()).byteLength, 0);
+
+  for (const path of [
+    "/backstage/releases/private.txt",
+    "/backstage/releases/../private.txt",
+    "/backstage/releases/PhotosByElie-Backstage-latest.zip",
+  ]) {
+    const denied = await deployedWorker.fetch(
+      new Request(`https://download.photos-by-elie.com${path}`),
+      { PUBLIC_MEDIA: bucket },
+    );
+    assert.equal(denied.status, 404, path);
+  }
+
+  const post = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json", { method: "POST" }),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(post.status, 405);
+  assert.equal(post.headers.get("allow"), "GET, HEAD");
+
+  const unavailable = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    {},
+  );
+  assert.equal(unavailable.status, 503);
+});
+
 test("deployed Worker root redirects direct auth-domain visits to Account", async () => {
   const response = await deployedWorker.fetch(new Request("https://auth.photos-by-elie.com/"), {
     PUBLIC_SITE_URL: "https://photos-by-elie.com",

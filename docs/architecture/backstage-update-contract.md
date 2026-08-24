@@ -37,11 +37,20 @@ write a manifest when the artifact is missing, ad-hoc signed, unsigned, has a
 different bundle identity, or cannot be verified by `codesign --verify
 --deep --strict`.
 
-The repository currently has no approved cloud manifest endpoint, published
-Backstage archive, or production rollback/install mechanism. Therefore the
-signed app must not contain a guessed production URL, and local tests use only
-injected HTTPS fixture URLs. Configuring `PBEBackstageUpdateManifestURL` in a
-future signed build is a release-owner decision, not a local default.
+The approved production manifest is
+`https://download.photos-by-elie.com/backstage/releases/latest.json`. Signed
+release builds embed that exact URL as `PBEBackstageUpdateManifestURL`.
+Cloudflare serves only `latest.json` and immutable archives named
+`PhotosByElie-Backstage-v<version>-build-<build>.zip` below that release path;
+other release object names are not public routes.
+
+`scripts/publish_backstage_release.zsh` verifies the signed app, creates the
+archive and manifest from the same bytes, uploads and re-reads the immutable
+archive first, preserves the previous manifest as immutable rollback history,
+and writes `latest.json` last. A failure before that final write leaves clients
+on the previous verified release. Installation remains a separate explicit
+action, and the immediately previous verified signed app is retained locally
+when a new build is installed.
 
 ## State and safety
 
@@ -59,8 +68,9 @@ in `Data`. A rejected partial or temporary download is removed; after
 verification, the archive and extracted app remain there for review. The updater
 has no install, overwrite, launch, Keychain,
 Photos, connector, Owner database, fixture, catalog, upload, or publication
-operation. Installation and rollback remain separate, explicit mechanisms that
-must be designed and accepted before production use.
+operation. Installation and rollback remain separate, explicit operator
+actions. The updater reveals a verified archive but never overwrites or
+launches an app.
 
 Verification checks, in order:
 

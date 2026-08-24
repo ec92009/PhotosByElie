@@ -76,6 +76,21 @@ build. **Check for updates** reads only the configured authoritative HTTPS
 release manifest. When a newer compatible release is available, Backstage shows
 its version/build, minimum macOS version, release notes, and archive size.
 
+Production signed builds use
+`https://download.photos-by-elie.com/backstage/releases/latest.json`. Release
+owners publish a signed build with:
+
+```zsh
+scripts/publish_backstage_release.zsh \
+  --app 'native/PhotosByElieBackstage/dist/PhotosByElie Backstage.app' \
+  --release-notes 'Short operator-facing summary'
+```
+
+Use `--dry-run` to perform the complete local archive and manifest validation
+without changing Cloudflare. Publication keeps versioned archives immutable,
+verifies the uploaded bytes, preserves the previous manifest for rollback, and
+updates `latest.json` only as the final write.
+
 **Download and verify** writes a unique archive below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,
 signing authority, and designated requirement. A verified archive can be

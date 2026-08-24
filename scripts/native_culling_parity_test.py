@@ -137,6 +137,9 @@ class NativeCullingParityTest(unittest.TestCase):
             'onKeyPress("p")',
             'onKeyPress("h")',
             'onKeyPress("x")',
+            'onKeyPress("z", phases: .down)',
+            "press.modifiers.contains(.command)",
+            "await model.undoLastCullingDecision()",
             'onKeyPress("u")',
             'onKeyPress("b")',
             "P include • H exclude",
@@ -1318,8 +1321,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.2")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "174")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.3")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "175")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)

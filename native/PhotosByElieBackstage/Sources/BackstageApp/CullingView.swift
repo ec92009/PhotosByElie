@@ -1070,6 +1070,11 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
                 Task { await model.moveCullingSelectionToWasteBasket() }
                 return .handled
             }
+            .onKeyPress("z", phases: .down) { press in
+                guard press.modifiers.contains(.command) else { return .ignored }
+                Task { await model.undoLastCullingDecision() }
+                return .handled
+            }
             .onKeyPress("u") {
                 Task { await model.applyPickShortcut(.unpick) }
                 return .handled

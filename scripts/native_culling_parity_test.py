@@ -1334,8 +1334,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.13")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "185")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.14")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "186")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)

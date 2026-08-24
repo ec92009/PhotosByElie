@@ -310,7 +310,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H exclude • P include • X Waste Basket • 0–5 rating • 6–9 color"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • X Waste Basket • 0–5 rating • 6–9 color"
         )
     }
 }
@@ -419,18 +419,24 @@ struct CullingView: View {
 
     private var cullingFilterControls: some View {
         FlowLayout(spacing: 8) {
-            Text("Status").font(.caption.weight(.semibold))
-            ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
-                Toggle(
-                    view.label,
-                    isOn: Binding(
-                        get: { model.cullingViews.contains(view) },
-                        set: { _ in model.toggleCullingViewFilter(view) }
+            HStack(spacing: 8) {
+                ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
+                    Toggle(
+                        view.label,
+                        isOn: Binding(
+                            get: { model.cullingViews.contains(view) },
+                            set: { _ in model.toggleCullingViewFilter(view) }
+                        )
                     )
-                )
-                .toggleStyle(.checkbox)
+                    .toggleStyle(.checkbox)
+                }
             }
-            Divider().frame(width: 1, height: 18)
+            .frame(height: CullingCompactControlMetrics.height)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Status filter")
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
             CullingRatingSlider(
                 rating: model.cullingMinimumRating,
                 isDisabled: false,
@@ -439,7 +445,9 @@ struct CullingView: View {
             ) { rating in
                 model.setCullingMinimumRating(rating)
             }
-            Divider().frame(width: 1, height: 18)
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
             HStack(spacing: CullingCompactControlMetrics.groupSpacing) {
                 ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
                     LightroomColorFilterButton(
@@ -450,9 +458,11 @@ struct CullingView: View {
                     }
                 }
             }
+            .frame(height: CullingCompactControlMetrics.height)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Color filter")
             Button("Clear filters") { model.clearCullingFilters() }
+                .frame(height: CullingCompactControlMetrics.height)
                 .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
@@ -661,12 +671,11 @@ struct CullingView: View {
 
     private var cullingActions: some View {
         VStack(alignment: .leading, spacing: 4) {
-            cullingDestinationActions
             cullingDecisionActions
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P include • H exclude • X Waste Basket • U clear • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P pick • H hide • X Waste Basket • U clear • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -693,37 +702,26 @@ struct CullingView: View {
         }
     }
 
-    private var cullingDestinationActions: some View {
-        HStack(spacing: 6) {
-            Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .accessibilityLabel("Send selection to Metadata")
-                .accessibilityHint("Metadata is the authoritative title and keyword review handoff; this does not approve or publish the selection.")
-                .backstageHelp("Send selected assets to Metadata, the authoritative title and keyword review surface. This does not approve or publish them.")
-            Text("Review and Uploads remain available from the sidebar.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-    }
-
     private var cullingDecisionActions: some View {
         FlowLayout(spacing: 4) {
-            Button("P Include") {
+            Button("P Pick") {
                 Task { await model.applyPickShortcut(.pick) }
             }
+            .frame(height: CullingCompactControlMetrics.height)
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .accessibilityLabel("P Include selected items")
-            .backstageHelp("Instantly include the explicit selection in the current fixture. The existing audited fixture writer reports affected, skipped, and failed items.")
-            Button("H Exclude") {
+            .accessibilityLabel("P Pick selected items")
+            .backstageHelp("Instantly pick the explicit selection in the current fixture. The existing audited fixture writer reports affected, skipped, and failed items.")
+            Button("H Hide") {
                 Task { await model.applyPickShortcut(.reject) }
             }
+            .frame(height: CullingCompactControlMetrics.height)
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .accessibilityLabel("H Exclude selected items")
-            .backstageHelp("Instantly exclude the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
+            .accessibilityLabel("H Hide selected items")
+            .backstageHelp("Instantly hide the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
             Button("X Waste Basket") {
                 Task { await model.moveCullingSelectionToWasteBasket() }
             }
+            .frame(height: CullingCompactControlMetrics.height)
             .disabled(
                 model.cullingSelection.selectedIDs.isEmpty
                     || model.isApplyingCullingDecision
@@ -744,6 +742,7 @@ struct CullingView: View {
                     cullingColorAssignmentButton(color)
                 }
             }
+            .frame(height: CullingCompactControlMetrics.height)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Color assignment")
         }
@@ -1300,7 +1299,8 @@ private struct CullingAssetCard: View {
 }
 
 private enum CullingCompactControlMetrics {
-    static let ratingWidth: CGFloat = 78
+    static let ratingWidth: CGFloat = 90
+    static let ratingHorizontalPadding: CGFloat = 6
     static let colorWidth: CGFloat = 30
     static let height: CGFloat = 28
     static let cornerRadius: CGFloat = 6
@@ -1388,6 +1388,7 @@ private struct CullingRatingSlider: View {
                 }
             }
             .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, CullingCompactControlMetrics.ratingHorizontalPadding)
 
             GeometryReader { geometry in
                 Color.clear

@@ -235,6 +235,14 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     .frame(width: 900, height: 680)
 }
 
+#Preview("Culling — Narrow") {
+    CullingView(
+        model: CullingPreviewFixtures.model(previewPanelVisible: false),
+        isPreviewMode: true
+    )
+    .frame(width: 640, height: 680)
+}
+
 #Preview("Culling — Applying Filters") {
     CullingView(
         model: CullingPreviewFixtures.model(loading: true),

@@ -342,10 +342,10 @@ audited Owner action path.
 10. Choose **Undo** or press Command-Z to reverse the latest decision batch.
    Backstage keeps up to 100 session steps and restores the earlier cloud
    decision state and selection.
-11. **Send to Metadata** retains the current selection while switching to the
-    authoritative title-and-keyword review workspace. It does not approve or
-    publish by itself. Review and Uploads remain available from the sidebar;
-    their owning workspaces retain the shared selection.
+11. Use the **Metadata**, **Review**, or **Uploads** workspace directly from the
+    sidebar. Each owning workspace retains the shared selection when it is
+    relevant; Culling no longer duplicates those navigation actions in its
+    footer.
 
 Opening a pool or using **Refresh previews** rehydrates pick, rating, and color
 state from the canonical cloud ledger. The pool order and scope remain

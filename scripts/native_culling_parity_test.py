@@ -126,11 +126,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "Review picked",
             "Select burst",
             "Search title, file, or keyword",
-            "Send to Metadata",
-            "Metadata, the authoritative title and keyword review surface",
-            "Review and Uploads remain available from the sidebar.",
-            'Button("P Include")',
-            'Button("H Exclude")',
+            'Button("P Pick")',
+            'Button("H Hide")',
             'Button("X Waste Basket")',
             'Menu("Workflows")',
             "thumbnail: model.cullingThumbnails",
@@ -142,7 +139,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "await model.undoLastCullingDecision()",
             'onKeyPress("u")',
             'onKeyPress("b")',
-            "P include • H exclude",
+            "P pick • H hide",
             "X Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
@@ -1050,9 +1047,10 @@ class NativeCullingParityTest(unittest.TestCase):
         footer = culling.split("private var cullingDecisionActions", 1)[1].split(
             "private var cullingHistoryActions", 1
         )[0]
-        self.assertIn('Button("P Include")', footer)
-        self.assertIn('Button("H Exclude")', footer)
+        self.assertIn('Button("P Pick")', footer)
+        self.assertIn('Button("H Hide")', footer)
         self.assertIn('Button("X Waste Basket")', footer)
+        self.assertNotIn('Button("Send to Metadata")', culling)
         self.assertNotIn('Button("Quick Look")', footer)
         self.assertNotIn('Button("Open in Review")', footer)
         self.assertNotIn('Button("Export originals…")', footer)
@@ -1104,7 +1102,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("Menu {", culling)
         self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 1)
         self.assertNotIn("Text(\"Media\")", culling)
-        self.assertIn("Text(\"Status\")", culling)
+        self.assertNotIn("Text(\"Status\")", culling)
+        self.assertIn('.accessibilityLabel("Status filter")', culling)
         self.assertNotIn("Text(\"Rating\")", culling)
         self.assertNotIn("Text(\"Color\")", culling)
         self.assertIn("CullingRatingSlider(", culling)
@@ -1165,6 +1164,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("model.applyRatingShortcut(rating)", culling)
         self.assertIn("model.toggleCullingColor(color)", culling)
         self.assertIn("CullingCompactControlMetrics.ratingWidth", app)
+        self.assertIn("CullingCompactControlMetrics.ratingHorizontalPadding", app)
         self.assertIn("CullingCompactControlMetrics.colorWidth", app)
         self.assertIn("CullingCompactControlMetrics.swatchSize", app)
         self.assertIn("CullingCompactControlMetrics.swatchCornerRadius", app)
@@ -1327,8 +1327,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.11")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "183")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.12")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "184")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -2181,9 +2181,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "at most 200 matching rows",
             "Review picked",
             "Select burst",
-            "Send to Metadata",
-            "authoritative title-and-keyword review workspace",
-            "Review and Uploads remain available from the sidebar;",
+            "Metadata",
+            "Review",
+            "Uploads",
+            "Culling no longer duplicates those navigation actions",
         ):
             self.assertIn(marker, guide)
 

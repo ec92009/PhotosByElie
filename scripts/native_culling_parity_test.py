@@ -1321,8 +1321,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.3")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "175")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "176")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1525,6 +1525,9 @@ class NativeCullingParityTest(unittest.TestCase):
             'TableColumn("Filename", value: \\.filename)',
             'TableColumn("Title", value: \\.title)',
             'TableColumn("State", value: \\.state)',
+            "BackstageUndoCommands(model: model)",
+            "CommandGroup(replacing: .undoRedo)",
+            "Task { await model.undoCurrentSection() }",
         ):
             self.assertIn(marker, app)
         for marker in (
@@ -1536,6 +1539,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "@Published private(set) var cullingWasteBasketQueueing",
             "@Published private(set) var cullingWasteBasketPendingActionID",
             "@Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []",
+            "@Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []",
             "@Published private(set) var reviewWasteBasketQueueing",
             "@Published private(set) var reviewWasteBasketPendingActionID",
             "lifecycleMonitorTask: Task<Void, Never>?",
@@ -1555,6 +1559,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "Queued X for",
             "The local Culling grid is updated",
             "restoreWasteBasketCullingEntryInCurrentWindow",
+            "finishDeferredCullingWasteBasketUndo",
             "Delete Selected queued as action",
             "func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL?",
             "private func exportOriginalForAsset(",

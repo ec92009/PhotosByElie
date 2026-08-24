@@ -24,6 +24,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isLoadingPreview = false
     var isLoadingCullingDecisions = false
     var isApplyingCullingDecision = false
+    var isDeferringCullingWasteBasketUndo = false
     var isRunningReview = false
     var isRunningAIPass = false
     var isRunningAccess = false
@@ -51,6 +52,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
             isLoadingPreview,
             isLoadingCullingDecisions,
             isApplyingCullingDecision,
+            isDeferringCullingWasteBasketUndo,
             isRunningReview,
             isRunningAIPass,
             isRunningAccess,
@@ -83,6 +85,7 @@ extension BackstageViewModel {
             isLoadingPreview: isLoadingPreview,
             isLoadingCullingDecisions: isLoadingCullingDecisions,
             isApplyingCullingDecision: isApplyingCullingDecision,
+            isDeferringCullingWasteBasketUndo: !cullingWasteBasketDeferredUndoActionIDs.isEmpty,
             isRunningReview: isRunningReview,
             isRunningAIPass: isRunningAIPass,
             isRunningAccess: isRunningAccess,

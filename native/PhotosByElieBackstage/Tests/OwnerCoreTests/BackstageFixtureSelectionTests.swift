@@ -334,6 +334,75 @@ struct BackstageFixtureSelectionTests {
         ])
     }
 
+    @Test("Culling Undo restores locally while X is pending and defers Put Back")
+    @MainActor
+    func cullingWasteBasketImmediateUndoWhileXPending() async throws {
+        let items = (1...2).map { index in
+            FixtureAsset(
+                id: "culling-immediate-undo-\(index)",
+                title: "Item \(index)",
+                filename: "item-\(index).jpg",
+                mediaType: "photo"
+            )
+        }
+        let xActionID = "owner-action-culling-immediate-x"
+        let restoreActionID = "owner-action-culling-immediate-restore"
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: xActionID,
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+            OwnerAction(
+                id: restoreActionID,
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: ["ok": true]
+            ),
+        ], terminalDelay: .milliseconds(200))
+        let model = cullingWasteBasketModel(
+            actionAPI: actionAPI,
+            items: items,
+            selectedIDs: [items[0].id],
+            focusedID: items[0].id
+        )
+
+        await model.moveCullingSelectionToWasteBasket()
+        for _ in 0..<300 where model.cullingHistory.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
+        #expect(model.cullingWasteBasketPendingActionIDs == [xActionID])
+
+        await model.undoLastCullingDecision()
+
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.cullingSelection.selectedIDs == [items[0].id])
+        #expect(model.cullingWasteBasketDeferredUndoActionIDs == [xActionID])
+        #expect(model.cullingStatus.contains("local Culling grid is restored"))
+        #expect(await actionAPI.requests().count == 1)
+
+        for _ in 0..<1_000 where await actionAPI.requests().count < 2 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let requests = await actionAPI.requests()
+        #expect(requests.map { $0.payload["operation"]?.stringValue } == [
+            "waste-basket-x",
+            "waste-basket-restore",
+        ])
+        #expect(model.cullingWasteBasketDeferredUndoActionIDs.isEmpty)
+        #expect(model.cullingWasteBasketPendingActionIDs == [restoreActionID])
+
+        for _ in 0..<1_000 where !model.cullingWasteBasketPendingActionIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.cullingStatus.contains("Restored 1 item from Waste Basket"))
+    }
+
     @Test("Culling Waste Basket allows consecutive X and Undo actions")
     @MainActor
     func cullingWasteBasketAllowsConsecutiveActions() async throws {

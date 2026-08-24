@@ -95,6 +95,7 @@ public struct BackstageApplication: App {
             }
         }
         .commands {
+            BackstageUndoCommands(model: model)
             CommandMenu("Backstage") {
                 Button("Refresh Activity") {
                     Task { await model.refreshActions() }
@@ -166,6 +167,33 @@ public struct BackstageApplication: App {
         case .delivery: "shippingbox"
         case .publication: "globe"
         case .updates: "arrow.triangle.2.circlepath"
+        }
+    }
+}
+
+private struct BackstageUndoCommands: Commands {
+    @ObservedObject var model: BackstageViewModel
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some Commands {
+        CommandGroup(replacing: .undoRedo) {
+            Button(model.currentUndoMenuTitle) {
+                if model.canUndoCurrentSection {
+                    Task { await model.undoCurrentSection() }
+                } else {
+                    undoManager?.undo()
+                }
+            }
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!model.canUndoCurrentSection && undoManager?.canUndo != true)
+            .backstageHelp("Undo the latest reversible change in the active Backstage section.")
+
+            Button("Redo") {
+                undoManager?.redo()
+            }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+            .disabled(undoManager?.canRedo != true)
+            .backstageHelp("Redo the latest standard text edit when the active field supports it.")
         }
     }
 }

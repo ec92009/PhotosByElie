@@ -278,6 +278,7 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var cullingWasteBasketPendingActionID: String?
     @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
     @Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []
+    @Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -2836,12 +2837,15 @@ final class BackstageViewModel: ObservableObject {
                             )
                         }
                     }
+                    let undoWasRequested = self.cullingWasteBasketDeferredUndoActionIDs.contains(action.id)
                     self.finishCullingWasteBasketAction(action.id)
                     let receipt = LifecycleActionReceipt.summarize(
                         completedAction,
                         requestedCount: ids.count
                     )
-                    self.cullingStatus = "Culling X completed through action \(action.id). \(receipt.statusSummary). Every affected item remains recoverable in Waste Basket."
+                    if !undoWasRequested {
+                        self.cullingStatus = "Culling X completed through action \(action.id). \(receipt.statusSummary). Every affected item remains recoverable in Waste Basket."
+                    }
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {
@@ -4644,8 +4648,20 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         if !entry.wasteBasketMediaIDs.isEmpty {
-            guard !cullingWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID) else {
-                cullingStatus = "This Waste Basket action must finish before its Undo can be queued."
+            if cullingWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID),
+               let pendingAction = cullingWasteBasketPendingActions[entry.wasteBasketActionID] {
+                cullingHistory.removeLast()
+                let restoredLocally = selectedFixtureID == entry.fixtureID
+                    && restoreWasteBasketCullingEntryInCurrentWindow(entry)
+                cullingWasteBasketDeferredUndoActionIDs.insert(entry.wasteBasketActionID)
+                cullingStatus = "Undo requested for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s"). The local Culling grid is restored; durable Put Back will queue as soon as X finishes."
+                Task { @MainActor [weak self] in
+                    await self?.finishDeferredCullingWasteBasketUndo(
+                        entry,
+                        after: pendingAction,
+                        restoredLocally: restoredLocally
+                    )
+                }
                 return
             }
             cullingWasteBasketQueueing = true
@@ -4753,6 +4769,153 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    var canUndoCurrentSection: Bool {
+        switch selection ?? .overview {
+        case .culling:
+            !cullingHistory.isEmpty
+        case .review:
+            !reviewHistory.isEmpty
+                && !isRunningReview
+                && !reviewWasteBasketQueueing
+                && !reviewUndoIsBlockedByPendingWasteBasketAction
+        case .metadata:
+            !metadataHistory.isEmpty
+        default:
+            false
+        }
+    }
+
+    var currentUndoMenuTitle: String {
+        switch selection ?? .overview {
+        case .culling where !cullingHistory.isEmpty:
+            "Undo Culling"
+        case .review where !reviewHistory.isEmpty:
+            "Undo Review"
+        case .metadata where !metadataHistory.isEmpty:
+            "Undo Metadata"
+        default:
+            "Undo"
+        }
+    }
+
+    func undoCurrentSection() async {
+        switch selection ?? .overview {
+        case .culling:
+            await undoLastCullingDecision()
+        case .review:
+            await undoLastReviewAction()
+        case .metadata:
+            await undoLastMetadataChange()
+        default:
+            break
+        }
+    }
+
+    private func finishDeferredCullingWasteBasketUndo(
+        _ entry: CullingHistoryEntry,
+        after pendingAction: OwnerAction,
+        restoredLocally: Bool
+    ) async {
+        while true {
+            do {
+                _ = try await lifecycleService.awaitCompletion(of: pendingAction) { [weak self] update in
+                    Task { @MainActor [weak self] in
+                        self?.updateCullingWasteBasketAction(update)
+                    }
+                }
+                finishCullingWasteBasketAction(pendingAction.id)
+                break
+            } catch let ownerError as OwnerActionRunError where ownerError == .timedOut {
+                cullingStatus = "Undo is still waiting for X action \(pendingAction.id) to finish. The local Culling grid remains restored."
+                continue
+            } catch {
+                finishCullingWasteBasketAction(pendingAction.id)
+                cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+                cullingStatus = "X did not complete, so no durable Put Back was needed. The local Culling grid remains restored. \(userFacingMessage(for: error))"
+                return
+            }
+        }
+
+        do {
+            let restoreAction = try await lifecycleService.enqueueRestore(
+                mediaIDs: entry.wasteBasketMediaIDs
+            )
+            beginCullingWasteBasketAction(restoreAction)
+            cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+            cullingStatus = "Queued durable Put Back for the immediate Undo as action \(restoreAction.id). The local Culling grid remains restored while reconciliation completes."
+            monitorCullingWasteBasketRestore(
+                restoreAction,
+                entry: entry,
+                restoredLocally: restoredLocally
+            )
+        } catch {
+            cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+            if restoredLocally, selectedFixtureID == entry.fixtureID {
+                _ = removeWasteBasketCullingEntryFromCurrentWindow(
+                    entry,
+                    previousIDs: visibleCullingAssets.map(\.id),
+                    focusedID: entry.focusedID,
+                    removalDirection: .next
+                )
+            }
+            if !cullingHistory.contains(where: { $0.id == entry.id }) {
+                cullingHistory.append(entry)
+            }
+            cullingStatus = "Undo could not be queued after X completed; the history step was preserved. \(userFacingMessage(for: error))"
+        }
+    }
+
+    private func monitorCullingWasteBasketRestore(
+        _ action: OwnerAction,
+        entry: CullingHistoryEntry,
+        restoredLocally: Bool
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.updateCullingWasteBasketAction(update)
+                        self.cullingStatus = self.pendingLifecycleActionStatus(
+                            "Culling Undo",
+                            action: update,
+                            availability: "Culling remains available while it completes."
+                        )
+                    }
+                }
+                self.finishCullingWasteBasketAction(action.id)
+                if !restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                    await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                }
+                self.cullingStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+            } catch {
+                if let ownerError = error as? OwnerActionRunError,
+                   ownerError == .timedOut {
+                    self.cullingStatus = self.pendingLifecycleActionStatus(
+                        "Culling Undo",
+                        action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                        availability: "Culling remains available; check Activity for the full receipt."
+                    )
+                } else {
+                    self.finishCullingWasteBasketAction(action.id)
+                    if !self.cullingHistory.contains(where: { $0.id == entry.id }) {
+                        self.cullingHistory.append(entry)
+                    }
+                    if restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                        _ = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                            entry,
+                            previousIDs: self.visibleCullingAssets.map(\.id),
+                            focusedID: entry.focusedID,
+                            removalDirection: .next
+                        )
+                    }
+                    self.cullingStatus = "Waste Basket Undo failed; the local Culling grid was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                }
+            }
+        }
+    }
+
     private func beginCullingWasteBasketAction(_ action: OwnerAction) {
         cullingWasteBasketPendingActionIDs.insert(action.id)
         cullingWasteBasketPendingActions[action.id] = action
@@ -4827,9 +4990,10 @@ final class BackstageViewModel: ObservableObject {
         }
         let restoredIDs = Set(entry.wasteBasketMediaIDs)
         var items = window.items.filter { !restoredIDs.contains($0.id) }
-        items.append(contentsOf: entry.cullingItems.filter { restoredItem in
+        let newlyRestoredItems = entry.cullingItems.filter { restoredItem in
             !items.contains(where: { $0.id == restoredItem.id })
-        })
+        }
+        items.append(contentsOf: newlyRestoredItems)
         items.sort { left, right in
             let leftIndex = cullingStableWindowIndexes[left.id]
                 ?? entry.cullingItemIndexes[left.id].map { entry.windowOffset + $0 }
@@ -4840,7 +5004,7 @@ final class BackstageViewModel: ObservableObject {
             return leftIndex < rightIndex
         }
         window.items = items
-        adjustCullingSummary(&window, for: entry.cullingItems, delta: 1)
+        adjustCullingSummary(&window, for: newlyRestoredItems, delta: 1)
         fixtureCullingWindow = window
         let orderedIDs = visibleCullingAssets.map(\.id)
         let selectedIDs = entry.selectedIDs.intersection(orderedIDs)

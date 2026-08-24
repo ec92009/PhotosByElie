@@ -476,6 +476,41 @@ class FixtureConnectorTest(unittest.TestCase):
         self.assertNotIn("previewPath", listed["result"]["lifecycle"]["items"][0])
         self.assertNotIn("quickLookPath", listed["result"]["lifecycle"]["items"][0])
 
+    def test_connector_lists_native_asset_lifecycle_filename_without_bridge_row(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(root, [{
+                "localIdentifier": "photos-native-hidden",
+                "filename": "Native Hidden.jpg",
+                "mediaType": "photo",
+                "creationDate": "2026-08-24T08:33:09Z",
+            }])
+            with owner_state_db.connect(root) as connection:
+                connection.execute(
+                    """INSERT INTO media_lifecycle
+                       (media_id, lifecycle_state, source_slug, title, media_type,
+                        hidden_at, source_paths_json, public_preview_keys_json,
+                        private_keys_json, updated_at)
+                       VALUES (?, 'hidden', 'expo', 'Native hidden title', 'photo',
+                               ?, '[]', '[]', '[]', ?)""",
+                    (
+                        "photos-native-hidden",
+                        "2026-08-24T08:33:09Z",
+                        "2026-08-24T08:33:09Z",
+                    ),
+                )
+                connection.commit()
+
+            listed = local_server.new_owner_connector_result(
+                root,
+                action("fixture-lifecycle-list", states=["hidden"]),
+            )
+
+        item = listed["result"]["lifecycle"]["items"][0]
+        self.assertEqual(item["filename"], "Native Hidden.jpg")
+        self.assertEqual(item["capturedAt"], "2026-08-24T08:33:09Z")
+        self.assertEqual(item["updatedAt"], "2026-08-24T08:33:09Z")
+
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

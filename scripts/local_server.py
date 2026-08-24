@@ -4014,6 +4014,15 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                 """,
                                 batch,
                             ).fetchall()
+                            direct_rows = connection.execute(
+                                f"""SELECT asset_id AS media_id,
+                                           '' AS photo_library_identifier,
+                                           filename,
+                                           captured_at
+                                    FROM sidecar_assets
+                                    WHERE asset_id IN ({placeholders})""",
+                                batch,
+                            ).fetchall()
                         else:
                             rows = connection.execute(
                                 f"""SELECT asset_id AS media_id, '' AS photo_library_identifier,
@@ -4022,6 +4031,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                     WHERE asset_id IN ({placeholders})""",
                                 batch,
                             ).fetchall()
+                            direct_rows = []
                         indexed_assets.update({
                             str(row["media_id"]): {
                                 "photoLibraryIdentifier": str(row["photo_library_identifier"] or ""),
@@ -4030,6 +4040,15 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                             }
                             for row in rows
                         })
+                        for row in direct_rows:
+                            indexed_assets.setdefault(
+                                str(row["media_id"]),
+                                {
+                                    "photoLibraryIdentifier": "",
+                                    "filename": str(row["filename"] or ""),
+                                    "capturedAt": str(row["captured_at"] or ""),
+                                },
+                            )
             except (OSError, sqlite3.Error):
                 # Lifecycle browsing remains available when the read-only Photos
                 # index is absent or temporarily unavailable. Owner.sqlite stays

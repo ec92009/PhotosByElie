@@ -1321,8 +1321,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "176")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "177")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1525,11 +1525,14 @@ class NativeCullingParityTest(unittest.TestCase):
             'TableColumn("Filename", value: \\.filename)',
             'TableColumn("Title", value: \\.title)',
             'TableColumn("State", value: \\.state)',
+            'TableColumn("Deleted", value: \\.updatedAt) { item in',
+            'Text(deletedAt, style: .relative)',
             "BackstageUndoCommands(model: model)",
             "CommandGroup(replacing: .undoRedo)",
             "Task { await model.undoCurrentSection() }",
         ):
             self.assertIn(marker, app)
+        self.assertNotIn('TableColumn("Updated", value: \\.updatedAt)', app)
         for marker in (
             "@Published var lifecycleCountSummary",
             "@Published private(set) var lifecycleQueueing",

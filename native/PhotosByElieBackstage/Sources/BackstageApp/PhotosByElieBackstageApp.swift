@@ -928,7 +928,14 @@ private struct LifecycleView: View {
                         .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
                 }
                 TableColumn("Captured", value: \.capturedAt)
-                TableColumn("Updated", value: \.updatedAt)
+                TableColumn("Deleted", value: \.updatedAt) { item in
+                    if let deletedAt = try? Date(item.updatedAt, strategy: .iso8601) {
+                        Text(deletedAt, style: .relative)
+                            .help(deletedAt.formatted(date: .abbreviated, time: .standard))
+                    } else {
+                        Text(item.updatedAt.isEmpty ? "Unknown" : item.updatedAt)
+                    }
+                }
                 TableColumn("Actions") { item in
                     Button("Quick Look") {
                         openQuickLook(for: item)

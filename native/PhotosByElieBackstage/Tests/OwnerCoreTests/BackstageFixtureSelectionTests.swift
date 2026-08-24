@@ -962,6 +962,96 @@ struct BackstageFixtureSelectionTests {
         #expect(model.lifecycleStatus.contains("restored locally"))
     }
 
+    @Test("Failed Empty Waste Basket action remains visible with terminal feedback")
+    @MainActor
+    func failedEmptyWasteBasketRetainsActionAndFeedback() async throws {
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-empty-failure",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .failed,
+                    error: ["message": "synthetic Empty failure"]
+                ),
+            ],
+            terminalDelay: .milliseconds(50)
+        )
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        model.lifecycleItems = [LifecycleItem(json: [
+            "mediaId": "recoverable-empty-failure",
+            "state": "hidden",
+            "title": "Recoverable",
+        ])]
+
+        await model.emptyWasteBasket()
+        for _ in 0..<300 where !model.lifecycleStatus.contains("no retry") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.lifecycleItems.count == 1)
+        #expect(model.actions.first(where: { $0.id == "owner-action-empty-failure" })?.state == .failed)
+        #expect(model.lifecycleStatus.contains("owner-action-empty-failure"))
+        #expect(model.lifecycleStatus.contains("remain recoverable"))
+        #expect(model.lifecycleStatus.contains("no retry"))
+    }
+
+    @Test("Failed Delete Selected action remains visible with terminal feedback")
+    @MainActor
+    func failedDeleteSelectedRetainsActionAndFeedback() async throws {
+        let actionAPI = ReviewLifecycleActionAPI(
+            terminalActions: [
+                OwnerAction(
+                    id: "owner-action-delete-selection-failure",
+                    actionKind: "photo-moderation",
+                    target: "max",
+                    state: .failed,
+                    error: ["message": "synthetic Delete Selected failure"]
+                ),
+            ],
+            terminalDelay: .milliseconds(50)
+        )
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+        let selected = LifecycleItem(json: [
+            "mediaId": "recoverable-delete-selection-failure",
+            "state": "hidden",
+            "title": "Recoverable",
+        ])
+        model.lifecycleItems = [selected]
+        model.selectedLifecycleIDs = [selected.id]
+
+        await model.emptyWasteBasketSelection()
+        for _ in 0..<300 where !model.lifecycleStatus.contains("no retry") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.lifecycleItems.count == 1)
+        #expect(model.actions.first(where: { $0.id == "owner-action-delete-selection-failure" })?.state == .failed)
+        #expect(model.lifecycleStatus.contains("owner-action-delete-selection-failure"))
+        #expect(model.lifecycleStatus.contains("remain recoverable"))
+        #expect(model.lifecycleStatus.contains("no retry"))
+    }
+
     @Test("Refresh previews reports immediate progress and prevents duplicate requests")
     @MainActor
     func refreshPhotosReportsProgressAndGuardsDuplicates() async throws {

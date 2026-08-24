@@ -416,6 +416,7 @@ final class BackstageViewModel: ObservableObject {
     private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
     private var lifecycleRestorePendingActions: [String: OwnerAction] = [:]
     private var lifecycleRestorePendingActionOrder: [String] = []
+    private var locallyObservedLifecycleActions: [String: OwnerAction] = [:]
     private var lifecycleRecoverableCount = 0
     private var lifecycleTombstoneCount = 0
     private var cullingWasteBasketPendingActions: [String: OwnerAction] = [:]
@@ -1234,7 +1235,8 @@ final class BackstageViewModel: ObservableObject {
         defer { isRefreshing = false }
         guard await prepareAuthenticatedOperation() else { return }
         do {
-            actions = try await api.listActions(limit: 50).actions
+            let fetched = try await api.listActions(limit: 50).actions
+            actions = mergeLocallyObservedLifecycleActions(into: fetched)
             authentication = await authenticationService.currentSnapshot()
             status = "Connected"
         } catch {
@@ -1243,6 +1245,36 @@ final class BackstageViewModel: ObservableObject {
                 status = userFacingMessage(for: error)
             }
         }
+    }
+
+    private func retainLocallyObservedLifecycleAction(_ action: OwnerAction) {
+        locallyObservedLifecycleActions[action.id] = action
+        actions = mergeLocallyObservedLifecycleActions(into: actions)
+    }
+
+    private func mergeLocallyObservedLifecycleActions(
+        into fetched: [OwnerAction]
+    ) -> [OwnerAction] {
+        var merged = fetched
+        for local in locallyObservedLifecycleActions.values {
+            if let index = merged.firstIndex(where: { $0.id == local.id }) {
+                let remote = merged[index]
+                let remoteUpdated = remote.updatedAt ?? remote.createdAt ?? Date.distantPast
+                let localUpdated = local.updatedAt ?? local.createdAt ?? Date.distantPast
+                if localUpdated >= remoteUpdated {
+                    merged[index] = local
+                }
+            } else {
+                merged.append(local)
+            }
+        }
+        return merged
+            .sorted {
+                ($0.updatedAt ?? $0.createdAt ?? Date.distantPast)
+                    > ($1.updatedAt ?? $1.createdAt ?? Date.distantPast)
+            }
+            .prefix(50)
+            .map { $0 }
     }
 
     func authorizeAndLoadPhotos() async {
@@ -5638,12 +5670,14 @@ final class BackstageViewModel: ObservableObject {
                 self.lifecycleQueueing = false
                 self.lifecyclePendingActionID = action.id
                 self.lifecyclePendingAction = action
+                self.retainLocallyObservedLifecycleAction(action)
                 self.lifecycleStatus = "Empty Waste Basket queued as action \(action.id). Browsing and Quick Look remain available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                    let completed = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             self.lifecyclePendingAction = update
+                            self.retainLocallyObservedLifecycleAction(update)
                             self.lifecycleStatus = self.pendingLifecycleActionStatus(
                                 "Empty Waste Basket",
                                 action: update,
@@ -5651,6 +5685,7 @@ final class BackstageViewModel: ObservableObject {
                             )
                         }
                     }
+                    self.retainLocallyObservedLifecycleAction(completed)
                     self.lifecyclePendingActionID = nil
                     self.lifecyclePendingAction = nil
                     self.lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
@@ -5664,15 +5699,17 @@ final class BackstageViewModel: ObservableObject {
                             availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
                         )
                     } else {
+                        let failed = self.lifecyclePendingAction ?? action
+                        self.retainLocallyObservedLifecycleAction(failed)
                         self.lifecyclePendingActionID = nil
                         self.lifecyclePendingAction = nil
-                        self.lifecycleStatus = self.userFacingMessage(for: error)
+                        self.lifecycleStatus = "Empty Waste Basket action \(action.id) failed. All current rows remain recoverable; no retry was started. \(self.userFacingMessage(for: error))"
                     }
                 }
             } catch {
                 self.lifecycleQueueing = false
                 self.lifecyclePendingAction = nil
-                self.lifecycleStatus = self.userFacingMessage(for: error)
+                self.lifecycleStatus = "Empty Waste Basket was not queued. No items changed. \(self.userFacingMessage(for: error))"
             }
             self.lifecycleMonitorTask = nil
         }
@@ -5709,12 +5746,14 @@ final class BackstageViewModel: ObservableObject {
                 self.lifecycleQueueing = false
                 self.lifecyclePendingActionID = action.id
                 self.lifecyclePendingAction = action
+                self.retainLocallyObservedLifecycleAction(action)
                 self.lifecycleStatus = "Delete Selected queued as action \(action.id). Browsing and Quick Look remain available while it completes."
                 do {
-                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                    let completed = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             self.lifecyclePendingAction = update
+                            self.retainLocallyObservedLifecycleAction(update)
                             self.lifecycleStatus = self.pendingLifecycleActionStatus(
                                 "Delete Selected",
                                 action: update,
@@ -5722,6 +5761,7 @@ final class BackstageViewModel: ObservableObject {
                             )
                         }
                     }
+                    self.retainLocallyObservedLifecycleAction(completed)
                     self.lifecyclePendingActionID = nil
                     self.lifecyclePendingAction = nil
                     self.lifecycleStatus = "Deleted \(ids.count.formatted()) selected recoverable item\(ids.count == 1 ? "" : "s") through action \(action.id). Source media and R2 objects were retained."
@@ -5735,15 +5775,17 @@ final class BackstageViewModel: ObservableObject {
                             availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
                         )
                     } else {
+                        let failed = self.lifecyclePendingAction ?? action
+                        self.retainLocallyObservedLifecycleAction(failed)
                         self.lifecyclePendingActionID = nil
                         self.lifecyclePendingAction = nil
-                        self.lifecycleStatus = self.userFacingMessage(for: error)
+                        self.lifecycleStatus = "Delete Selected action \(action.id) failed. The selected rows remain recoverable; no retry was started. \(self.userFacingMessage(for: error))"
                     }
                 }
             } catch {
                 self.lifecycleQueueing = false
                 self.lifecyclePendingAction = nil
-                self.lifecycleStatus = self.userFacingMessage(for: error)
+                self.lifecycleStatus = "Delete Selected was not queued. No items changed. \(self.userFacingMessage(for: error))"
             }
             self.lifecycleMonitorTask = nil
         }

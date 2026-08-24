@@ -579,6 +579,7 @@ private struct LifecycleView: View {
     @State private var lifecycleSortOrder = [
         KeyPathComparator(\LifecycleItem.updatedAt, order: .reverse),
     ]
+    @State private var lifecycleScrollAnchorID: LifecycleItem.ID?
 
     private var sortedLifecycleItems: [LifecycleItem] {
         model.lifecycleItems.sorted(using: lifecycleSortOrder)
@@ -945,6 +946,11 @@ private struct LifecycleView: View {
                 }
                 .width(100)
             }
+            // Keep the top visible lifecycle row anchored by its durable ID
+            // while a sortable header reorders the table. Without an explicit
+            // anchor, the second header press can jump to a different offset
+            // even though the user is still inspecting the same rows.
+            .scrollPosition(id: $lifecycleScrollAnchorID, anchor: .top)
             .overlay {
                 if model.isRunningLifecycle && model.lifecycleItems.isEmpty {
                     ProgressView("Loading private lifecycle ledger…")

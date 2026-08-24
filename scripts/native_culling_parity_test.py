@@ -1510,6 +1510,8 @@ class NativeCullingParityTest(unittest.TestCase):
         for marker in (
             "private var sortedLifecycleItems: [LifecycleItem]",
             "sortOrder: $lifecycleSortOrder",
+            "@State private var lifecycleScrollAnchorID: LifecycleItem.ID?",
+            ".scrollPosition(id: $lifecycleScrollAnchorID, anchor: .top)",
             'Button("Delete Selected", role: .destructive)',
             "model.selectedRecoverableLifecycleIDs.isEmpty",
             "Text(model.lifecycleCountSummary)",

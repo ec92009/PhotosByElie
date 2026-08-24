@@ -379,7 +379,7 @@ struct UploadView: View {
                             assetID: assetID,
                             removalDirection: direction
                         )
-                    case .pick, .approve, .unpick, .rating, .color, .wasteBasket:
+                    case .pick, .approve, .unpick, .undo, .rating, .color, .wasteBasket:
                         return false
                     }
                     return true

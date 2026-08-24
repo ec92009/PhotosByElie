@@ -119,6 +119,7 @@ enum BackstageQuickLookShortcut: Equatable {
     case approve
     case returnToReview
     case unpick
+    case undo
     case rating(Int)
     case color(SidecarColor)
 
@@ -154,6 +155,44 @@ enum BackstageQuickLookShortcut: Equatable {
         case 124: .next
         case 126: .previousRow
         case 125: .nextRow
+        default: nil
+        }
+    }
+
+    static func shortcut(
+        forKeyCode keyCode: UInt16,
+        charactersIgnoringModifiers: String?,
+        modifierFlags: NSEvent.ModifierFlags
+    ) -> Self? {
+        let guardedModifiers = modifierFlags.intersection([.command, .control, .option])
+        if guardedModifiers.contains(.command) {
+            guard guardedModifiers == [.command],
+                  !modifierFlags.contains(.shift),
+                  charactersIgnoringModifiers?.lowercased() == "z"
+            else { return nil }
+            return .undo
+        }
+        guard guardedModifiers.isEmpty else { return nil }
+        if let navigation = navigationShortcut(forKeyCode: keyCode) {
+            return navigation
+        }
+        return switch charactersIgnoringModifiers?.lowercased() {
+        case "p": .pick
+        case "h": .hide
+        case "x": .wasteBasket
+        case "a": .approve
+        case "r": .returnToReview
+        case "u": .unpick
+        case "0": .rating(0)
+        case "1": .rating(1)
+        case "2": .rating(2)
+        case "3": .rating(3)
+        case "4": .rating(4)
+        case "5": .rating(5)
+        case "6": .color(.red)
+        case "7": .color(.yellow)
+        case "8": .color(.green)
+        case "9": .color(.blue)
         default: nil
         }
     }
@@ -373,41 +412,17 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         guard let onShortcut else { return }
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard QLPreviewPanel.shared()?.isVisible == true,
-                  event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
-                  let shortcut = self.shortcut(for: event),
+                  let shortcut = BackstageQuickLookShortcut.shortcut(
+                      forKeyCode: event.keyCode,
+                      charactersIgnoringModifiers: event.charactersIgnoringModifiers,
+                      modifierFlags: event.modifierFlags
+                  ),
                   let item = self.currentMetadata,
                   onShortcut(shortcut, item.assetID)
             else {
                 return event
             }
             return nil
-        }
-    }
-
-    private func shortcut(for event: NSEvent) -> BackstageQuickLookShortcut? {
-        if let navigation = BackstageQuickLookShortcut.navigationShortcut(
-            forKeyCode: event.keyCode
-        ) {
-            return navigation
-        }
-        return switch event.charactersIgnoringModifiers?.lowercased() {
-        case "p": .pick
-        case "h": .hide
-        case "x": .wasteBasket
-        case "a": .approve
-        case "r": .returnToReview
-        case "u": .unpick
-        case "0": .rating(0)
-        case "1": .rating(1)
-        case "2": .rating(2)
-        case "3": .rating(3)
-        case "4": .rating(4)
-        case "5": .rating(5)
-        case "6": .color(.red)
-        case "7": .color(.yellow)
-        case "8": .color(.green)
-        case "9": .color(.blue)
-        default: nil
         }
     }
 

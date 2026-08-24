@@ -703,7 +703,7 @@ struct LifecycleView: View {
                         else { return false }
                         model.selectedLifecycleIDs = [assetID]
                         confirmingDeleteSelected = true
-                    case .hide, .approve, .returnToReview, .unpick, .rating, .color:
+                    case .hide, .approve, .returnToReview, .unpick, .undo, .rating, .color:
                         return false
                     }
                     return true

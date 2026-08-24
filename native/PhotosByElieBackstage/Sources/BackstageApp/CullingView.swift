@@ -107,6 +107,22 @@ private enum CullingQuickLookPresenter {
                                 direction: direction
                             )
                         }
+                    case .undo:
+                        guard !model.cullingHistory.isEmpty else { return false }
+                        Task { [weak model, weak coordinator] in
+                            guard let model, let coordinator else { return }
+                            await model.undoLastCullingDecision()
+                            guard coordinator.isVisible else { return }
+                            if model.selectedCullingAssetIDs.count == 1 {
+                                present(
+                                    model: model,
+                                    coordinator: coordinator,
+                                    direction: direction
+                                )
+                            } else {
+                                coordinator.dismiss()
+                            }
+                        }
                     case .approve, .returnToReview, .unpick:
                         return false
                     }

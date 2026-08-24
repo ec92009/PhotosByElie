@@ -880,6 +880,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'case "h": .hide',
             'case "x": .wasteBasket',
             'case "a": .approve',
+            'return .undo',
             'case "0": .rating(0)',
             'case "1": .rating(1)',
             'case "5": .rating(5)',
@@ -912,6 +913,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.applyPickShortcut(", culling)
         self.assertIn("await model.applyRatingShortcut(value)", culling)
         self.assertIn("await model.applyColorShortcut(value)", culling)
+        self.assertIn("await model.undoLastCullingDecision()", culling)
+        self.assertIn("if model.selectedCullingAssetIDs.count == 1", culling)
         self.assertIn("shortcut.selectionDelta(", culling)
         self.assertIn("rowStride: model.cullingGridDensity", culling)
         self.assertIn("model.moveCullingSelection(by: delta", culling)
@@ -1324,8 +1327,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.10")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "182")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.11")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "183")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)

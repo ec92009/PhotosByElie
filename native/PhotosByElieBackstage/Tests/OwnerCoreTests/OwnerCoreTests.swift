@@ -154,6 +154,31 @@ struct OwnerCoreTests {
         #expect(BackstageQuickLookShortcut.nextRow.ownerSelectionDirection == .next)
     }
 
+    @Test("Quick Look recognizes plain Command-Z as undo without stealing modified variants")
+    func quickLookRecognizesUndoShortcut() {
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: .command
+            ) == .undo
+        )
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: [.command, .shift]
+            ) == nil
+        )
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: [.command, .option]
+            ) == nil
+        )
+    }
+
     @Test("Quick Look source size is truthful for photos, video, and partial metadata")
     func quickLookSourceSizeFormatting() {
         let photo = BackstageQuickLookSourceSize(

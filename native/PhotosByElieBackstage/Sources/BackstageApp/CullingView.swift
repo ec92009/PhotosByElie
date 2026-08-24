@@ -1299,8 +1299,8 @@ private struct CullingAssetCard: View {
 }
 
 private enum CullingCompactControlMetrics {
-    static let ratingWidth: CGFloat = 90
-    static let ratingHorizontalPadding: CGFloat = 6
+    static let ratingWidth: CGFloat = 108
+    static let ratingHorizontalPadding: CGFloat = 10
     static let colorWidth: CGFloat = 30
     static let height: CGFloat = 28
     static let cornerRadius: CGFloat = 6
@@ -1403,7 +1403,7 @@ private struct CullingRatingSlider: View {
                                 guard !isDisabled else { return }
                                 let selectedRating = rating(at: gesture.location.x, width: geometry.size.width)
                                 pendingRating = nil
-                                action(selectedRating == rating ? 0 : selectedRating)
+                                action(selectedRating)
                             }
                     )
             }
@@ -1438,7 +1438,7 @@ private struct CullingRatingSlider: View {
     private func rating(at location: CGFloat, width: CGFloat) -> Int {
         guard width > 0 else { return 0 }
         let normalized = min(max(location / width, 0), 0.999_999)
-        return min(5, max(1, Int(normalized * 5) + 1))
+        return min(5, max(0, Int(normalized * 6)))
     }
 }
 

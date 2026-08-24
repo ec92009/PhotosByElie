@@ -39,16 +39,15 @@ private enum CullingQuickLookPresenter {
                           !model.isApplyingCullingDecision
                     else { return false }
                     switch shortcut {
-                    case .previous:
+                    case .previous, .next, .previousRow, .nextRow:
+                        guard let delta = shortcut.selectionDelta(
+                            rowStride: model.cullingGridDensity
+                        ), let navigationDirection = shortcut.ownerSelectionDirection else {
+                            return false
+                        }
                         navigate(
-                            direction: .previous,
-                            from: assetID,
-                            model: model,
-                            coordinator: coordinator
-                        )
-                    case .next:
-                        navigate(
-                            direction: .next,
+                            by: delta,
+                            direction: navigationDirection,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
@@ -118,16 +117,14 @@ private enum CullingQuickLookPresenter {
     }
 
     private static func navigate(
+        by delta: Int,
         direction: OwnerSelectionDirection,
         from assetID: String,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator
     ) {
         model.clickCullingAsset(assetID, modifiers: [])
-        model.moveCullingSelection(
-            by: direction == .previous ? -1 : 1,
-            extending: false
-        )
+        model.moveCullingSelection(by: delta, extending: false)
         guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
         present(model: model, coordinator: coordinator, direction: direction)
     }

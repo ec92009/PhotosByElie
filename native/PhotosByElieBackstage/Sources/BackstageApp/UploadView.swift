@@ -365,9 +365,9 @@ struct UploadView: View {
                 onShortcut: { shortcut, assetID in
                     guard !model.isRunningDelivery else { return false }
                     switch shortcut {
-                    case .previous:
+                    case .previous, .previousRow:
                         moveUploadQuickLook(from: assetID, direction: .previous)
-                    case .next:
+                    case .next, .nextRow:
                         moveUploadQuickLook(from: assetID, direction: .next)
                     case .hide:
                         hideCurrentUploadQuickLook(

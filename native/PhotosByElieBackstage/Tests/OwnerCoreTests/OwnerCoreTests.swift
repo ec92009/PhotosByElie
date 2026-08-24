@@ -138,6 +138,22 @@ struct OwnerCoreTests {
         #expect(!behavior.contains(.moveToActiveSpace))
     }
 
+    @Test("Quick Look preserves arrow axes and uses the live grid row stride")
+    func quickLookNavigationUsesGridRowStride() {
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 123) == .previous)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 124) == .next)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 126) == .previousRow)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 125) == .nextRow)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 0) == nil)
+
+        #expect(BackstageQuickLookShortcut.previous.selectionDelta(rowStride: 6) == -1)
+        #expect(BackstageQuickLookShortcut.next.selectionDelta(rowStride: 6) == 1)
+        #expect(BackstageQuickLookShortcut.previousRow.selectionDelta(rowStride: 6) == -6)
+        #expect(BackstageQuickLookShortcut.nextRow.selectionDelta(rowStride: 6) == 6)
+        #expect(BackstageQuickLookShortcut.previousRow.ownerSelectionDirection == .previous)
+        #expect(BackstageQuickLookShortcut.nextRow.ownerSelectionDirection == .next)
+    }
+
     @Test("Quick Look source size is truthful for photos, video, and partial metadata")
     func quickLookSourceSizeFormatting() {
         let photo = BackstageQuickLookSourceSize(

@@ -39,14 +39,14 @@ private enum ReviewQuickLookPresenter {
                         return false
                     }
                     switch shortcut {
-                    case .previous:
+                    case .previous, .previousRow:
                         navigate(
                             direction: .previous,
                             from: assetID,
                             model: model,
                             coordinator: coordinator
                         )
-                    case .next:
+                    case .next, .nextRow:
                         navigate(
                             direction: .next,
                             from: assetID,

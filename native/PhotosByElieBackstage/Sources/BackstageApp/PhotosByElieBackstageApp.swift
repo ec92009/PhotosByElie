@@ -680,12 +680,12 @@ private struct LifecycleView: View {
                 presentation: presentationID,
                 onShortcut: { shortcut, assetID in
                     switch shortcut {
-                    case .previous:
+                    case .previous, .previousRow:
                         moveQuickLook(
                             from: assetID,
                             direction: .previous
                         )
-                    case .next:
+                    case .next, .nextRow:
                         moveQuickLook(
                             from: assetID,
                             direction: .next

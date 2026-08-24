@@ -111,6 +111,8 @@ struct BackstageQuickLookSourceSize: Equatable {
 enum BackstageQuickLookShortcut: Equatable {
     case previous
     case next
+    case previousRow
+    case nextRow
     case pick
     case hide
     case wasteBasket
@@ -119,6 +121,42 @@ enum BackstageQuickLookShortcut: Equatable {
     case unpick
     case rating(Int)
     case color(SidecarColor)
+
+    var ownerSelectionDirection: OwnerSelectionDirection? {
+        switch self {
+        case .previous, .previousRow:
+            .previous
+        case .next, .nextRow:
+            .next
+        default:
+            nil
+        }
+    }
+
+    func selectionDelta(rowStride: Int) -> Int? {
+        switch self {
+        case .previous:
+            -1
+        case .next:
+            1
+        case .previousRow:
+            -max(1, rowStride)
+        case .nextRow:
+            max(1, rowStride)
+        default:
+            nil
+        }
+    }
+
+    static func navigationShortcut(forKeyCode keyCode: UInt16) -> Self? {
+        switch keyCode {
+        case 123: .previous
+        case 124: .next
+        case 126: .previousRow
+        case 125: .nextRow
+        default: nil
+        }
+    }
 }
 
 @MainActor
@@ -347,12 +385,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     private func shortcut(for event: NSEvent) -> BackstageQuickLookShortcut? {
-        switch event.keyCode {
-        case 123: return .previous
-        case 124: return .next
-        case 126: return .previous
-        case 125: return .next
-        default: break
+        if let navigation = BackstageQuickLookShortcut.navigationShortcut(
+            forKeyCode: event.keyCode
+        ) {
+            return navigation
         }
         return switch event.charactersIgnoringModifiers?.lowercased() {
         case "p": .pick

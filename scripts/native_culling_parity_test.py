@@ -494,8 +494,10 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn("guard ids.count == 1 else", source)
             self.assertIn(status, source)
             self.assertIn("direction: OwnerSelectionDirection = .next", source)
-            self.assertIn("direction == .previous ? -1 : 1", source)
             self.assertIn("case .wasteBasket:", source)
+        self.assertIn("shortcut.selectionDelta(", presenter)
+        self.assertIn("rowStride: model.cullingGridDensity", presenter)
+        self.assertIn("direction == .previous ? -1 : 1", review_presenter)
 
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
@@ -871,10 +873,10 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         for shortcut in (
-            "case 123: return .previous",
-            "case 124: return .next",
-            "case 126: return .previous",
-            "case 125: return .next",
+            "case 123: .previous",
+            "case 124: .next",
+            "case 126: .previousRow",
+            "case 125: .nextRow",
             'case "p": .pick',
             'case "h": .hide',
             'case "x": .wasteBasket',
@@ -911,7 +913,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.applyPickShortcut(", culling)
         self.assertIn("await model.applyRatingShortcut(value)", culling)
         self.assertIn("await model.applyColorShortcut(value)", culling)
-        self.assertIn("direction == .previous ? -1 : 1", culling)
+        self.assertIn("shortcut.selectionDelta(", culling)
+        self.assertIn("rowStride: model.cullingGridDensity", culling)
+        self.assertIn("model.moveCullingSelection(by: delta", culling)
         self.assertIn("guard wasVisible && !remainsVisible else", culling)
         self.assertIn("present(model: model, coordinator: coordinator, direction: direction)", culling)
 

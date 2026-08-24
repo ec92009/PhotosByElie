@@ -12,6 +12,28 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
     public var sourceSlug: String
     public var updatedAt: String
 
+    public init(
+        mediaID: String,
+        state: String,
+        title: String,
+        filename: String,
+        capturedAt: String,
+        photoLibraryIdentifier: String,
+        mediaType: String,
+        sourceSlug: String,
+        updatedAt: String
+    ) {
+        self.mediaID = mediaID
+        self.state = state
+        self.title = title
+        self.filename = filename
+        self.capturedAt = capturedAt
+        self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.mediaType = mediaType
+        self.sourceSlug = sourceSlug
+        self.updatedAt = updatedAt
+    }
+
     init(json: [String: JSONValue]) {
         mediaID = json["mediaId"]?.stringValue ?? ""
         state = json["state"]?.stringValue ?? ""

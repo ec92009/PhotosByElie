@@ -571,8 +571,9 @@ private struct PublicationView: View {
     }
 }
 
-private struct LifecycleView: View {
+struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
+    var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
     @StateObject private var lifecycleScrollPosition = LifecycleTableScrollPosition()
     @State private var confirmingEmpty = false
@@ -819,7 +820,7 @@ private struct LifecycleView: View {
                 }
                 Spacer()
                 Button("Refresh") { Task { await model.loadLifecycle() } }
-                    .disabled(model.isRunningLifecycle)
+                    .disabled(model.isRunningLifecycle || isPreviewMode)
                     .backstageHelp("Reload the private lifecycle ledger and current Waste Basket contents.")
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
                     .disabled(
@@ -827,6 +828,7 @@ private struct LifecycleView: View {
                             || model.lifecycleQueueing
                             || model.lifecycleRestoreQueueing
                             || model.selectedRecoverableLifecycleIDs.isEmpty
+                            || isPreviewMode
                     )
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
                 Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
@@ -837,6 +839,7 @@ private struct LifecycleView: View {
                             || model.lifecycleRestorePendingActionID != nil
                             || model.lifecyclePendingActionID != nil
                             || model.selectedRecoverableLifecycleIDs.isEmpty
+                            || isPreviewMode
                     )
                     .backstageHelp("Review the explicit confirmation for changing only the selected recoverable items into global tombstones; active tombstones and unselected items are untouched.")
                 Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
@@ -847,6 +850,7 @@ private struct LifecycleView: View {
                             || model.lifecycleRestorePendingActionID != nil
                             || model.lifecyclePendingActionID != nil
                             || model.lifecycleItems.allSatisfy { $0.state != "hidden" }
+                            || isPreviewMode
                     )
                     .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
@@ -919,6 +923,7 @@ private struct LifecycleView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     .accessibilityLabel(item.filename.isEmpty ? "Preview" : "Preview of \(item.filename)")
                     .task(id: item.mediaID) {
+                        guard !isPreviewMode else { return }
                         model.requestLifecycleThumbnail(
                             for: item.mediaID,
                             preferredIdentifier: item.photoLibraryIdentifier
@@ -953,7 +958,7 @@ private struct LifecycleView: View {
                     Button("Quick Look") {
                         openQuickLook(for: item)
                     }
-                    .disabled(model.isRunningLifecycle)
+                    .disabled(model.isRunningLifecycle || isPreviewMode)
                     .backstageHelp("Open this Waste Basket item in private read-only Quick Look without changing lifecycle state.")
                 }
                 .width(100)
@@ -976,6 +981,7 @@ private struct LifecycleView: View {
                 }
             }
             .onKeyPress(.space) {
+                guard !isPreviewMode else { return .handled }
                 guard model.selectedLifecycleIDs.count == 1 else {
                     model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
                         ? "Select one Waste Basket item before opening Quick Look."
@@ -992,7 +998,10 @@ private struct LifecycleView: View {
             }
         }
         .padding()
-        .task { await model.loadLifecycle() }
+        .task {
+            guard !isPreviewMode else { return }
+            await model.loadLifecycle()
+        }
         .confirmationDialog(
             "Empty Waste Basket?",
             isPresented: $confirmingEmpty

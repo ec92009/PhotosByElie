@@ -502,7 +502,7 @@ class NativeCullingParityTest(unittest.TestCase):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
-        lifecycle = app.split("private struct LifecycleView", 1)[1].split(
+        lifecycle = app.split("struct LifecycleView", 1)[1].split(
             "private struct ActivityView", 1
         )[0]
         self.assertIn(
@@ -540,7 +540,6 @@ class NativeCullingParityTest(unittest.TestCase):
         lifecycle = (
             NATIVE / "Sources" / "OwnerCore" / "LifecycleService.swift"
         ).read_text(encoding="utf-8")
-
         for marker in (
             "OwnerActionPhaseTiming",
             "OwnerConnectorTiming",
@@ -1325,8 +1324,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.9")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "181")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "236.10")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "182")
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
@@ -1510,6 +1509,9 @@ class NativeCullingParityTest(unittest.TestCase):
         lifecycle = (
             NATIVE / "Sources" / "OwnerCore" / "LifecycleService.swift"
         ).read_text(encoding="utf-8")
+        preview = (
+            NATIVE / "Sources" / "BackstageApp" / "LifecyclePreview.swift"
+        ).read_text(encoding="utf-8")
 
         for marker in (
             "private var sortedLifecycleItems: [LifecycleItem]",
@@ -1593,6 +1595,16 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, lifecycle)
         self.assertIn("photoLibraryIdentifier", lifecycle)
+        for marker in (
+            '#Preview("Waste Basket — Mixed, large count, and failed preview")',
+            '#Preview("Waste Basket — Empty")',
+            '#Preview("Waste Basket — Loading")',
+            "isPreviewMode: true",
+            "3,546 recoverable • 6,110 active global tombstones",
+            ".previewUnavailable",
+        ):
+            self.assertIn(marker, preview)
+        self.assertIn("guard !isPreviewMode else { return }", app)
 
     def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
         app = (

@@ -484,6 +484,7 @@ class FixtureConnectorTest(unittest.TestCase):
                 "localIdentifier": "photos-native-hidden",
                 "filename": "Native Hidden.jpg",
                 "preferredResourceFilename": "Native Hidden.heic",
+                "applePhotosTitle": "Paris, Opera Garnier",
                 "mediaType": "photo",
                 "creationDate": "2026-08-24T08:33:09Z",
             }])
@@ -493,7 +494,7 @@ class FixtureConnectorTest(unittest.TestCase):
                        (media_id, lifecycle_state, source_slug, title, media_type,
                         hidden_at, source_paths_json, public_preview_keys_json,
                         private_keys_json, updated_at)
-                       VALUES (?, 'hidden', 'expo', 'Native hidden title', 'photo',
+                       VALUES (?, 'hidden', 'expo', '', 'photo',
                                ?, '[]', '[]', '[]', ?)""",
                     (
                         "photos-native-hidden",
@@ -510,6 +511,7 @@ class FixtureConnectorTest(unittest.TestCase):
 
         item = listed["result"]["lifecycle"]["items"][0]
         self.assertEqual(item["filename"], "Native Hidden.heic")
+        self.assertEqual(item["title"], "Paris, Opera Garnier")
         self.assertEqual(item["capturedAt"], "2026-08-24T08:33:09Z")
         self.assertEqual(item["updatedAt"], "2026-08-24T08:33:09Z")
 

@@ -4016,6 +4016,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                         sidecar.filename,
                                         ''
                                     ) AS filename,
+                                    COALESCE(NULLIF(sidecar.photos_title, ''), '') AS title,
                                     COALESCE(sidecar.captured_at, '') AS captured_at
                                 FROM bridge_candidates AS bridge
                                 LEFT JOIN sidecar_assets AS sidecar
@@ -4037,6 +4038,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                                filename,
                                                ''
                                            ) AS filename,
+                                           COALESCE(NULLIF(photos_title, ''), '') AS title,
                                            captured_at
                                     FROM sidecar_assets
                                     WHERE asset_id IN ({placeholders})""",
@@ -4055,6 +4057,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                                filename,
                                                ''
                                            ) AS filename,
+                                           COALESCE(NULLIF(photos_title, ''), '') AS title,
                                            captured_at
                                     FROM sidecar_assets
                                     WHERE asset_id IN ({placeholders})""",
@@ -4065,6 +4068,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                             str(row["media_id"]): {
                                 "photoLibraryIdentifier": str(row["photo_library_identifier"] or ""),
                                 "filename": str(row["filename"] or ""),
+                                "title": str(row["title"] or ""),
                                 "capturedAt": str(row["captured_at"] or ""),
                             }
                             for row in rows
@@ -4075,6 +4079,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                                 {
                                     "photoLibraryIdentifier": "",
                                     "filename": str(row["filename"] or ""),
+                                    "title": str(row["title"] or ""),
                                     "capturedAt": str(row["captured_at"] or ""),
                                 },
                             )
@@ -4087,7 +4092,10 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             {
                 "mediaId": str(item.get("media_id") or ""),
                 "state": str(item.get("lifecycle_state") or ""),
-                "title": str(item.get("title") or ""),
+                "title": indexed_assets.get(str(item.get("media_id") or ""), {}).get(
+                    "title",
+                    "",
+                ) or str(item.get("title") or ""),
                 "filename": indexed_assets.get(str(item.get("media_id") or ""), {}).get("filename", ""),
                 "capturedAt": indexed_assets.get(str(item.get("media_id") or ""), {}).get("capturedAt", ""),
                 "photoLibraryIdentifier": indexed_assets.get(

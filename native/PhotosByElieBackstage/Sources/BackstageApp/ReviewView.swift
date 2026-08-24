@@ -53,7 +53,7 @@ private enum ReviewQuickLookPresenter {
                             model: model,
                             coordinator: coordinator
                         )
-                    case .approve, .pick:
+                    case .approve:
                         applyReviewAction(
                             .approve,
                             assetID: assetID,
@@ -80,7 +80,11 @@ private enum ReviewQuickLookPresenter {
                         model.clickReviewItem(assetID, modifiers: [])
                         coordinator.dismiss()
                         Task { [weak model] in await model?.unpickReviewSelection() }
-                    case .returnToReview, .undo, .rating, .color:
+                    case .undo:
+                        guard !model.reviewHistory.isEmpty else { return false }
+                        coordinator.dismiss()
+                        Task { [weak model] in await model?.undoLastReviewAction() }
+                    case .pick, .returnToReview, .rating, .color:
                         return false
                     }
                     return true
@@ -190,7 +194,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: state,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P/A approve • H hide • X Waste Basket • U unpick"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick • ⌘Z undo"
         )
     }
 }

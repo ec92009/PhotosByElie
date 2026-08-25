@@ -14,6 +14,7 @@ const photoHtml = read("photo.html");
 const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
 const galleryCardJs = read("gallery-card.js");
+const ownerSessionJs = read("pbe-owner-session.js");
 const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
@@ -79,6 +80,20 @@ test("contextual gallery bar replaces the passive hint and owns view commands", 
   assert.match(photosCss, /html\[data-gallery-action-labels="true"\] \.gallery-command-label/);
   assert.match(photosCss, /html\.is-tap-first \.gallery-command-shortcut/);
   assert.match(galleryJs, /document\.body\.append\(topButton\)/);
+});
+
+test("Owner rating and color controls match the compact Backstage contract", () => {
+  assert.match(galleryJs, /data-gallery-rating-slider/);
+  assert.match(galleryJs, /role="slider"/);
+  assert.match(galleryJs, /aria-valuemin="0" aria-valuemax="5"/);
+  assert.match(galleryJs, /ratingFromPointer/);
+  assert.match(galleryJs, /ratingSlider\.setPointerCapture/);
+  assert.match(galleryJs, /event\.key === "Home" \? 0/);
+  assert.match(galleryJs, /event\.key === "End" \? 5/);
+  assert.match(galleryJs, /colorSwatchHtml/);
+  assert.match(photosCss, /\.gallery-rating-slider\{/);
+  assert.match(photosCss, /\.gallery-color-swatch\.is-red\{--owner-swatch:#ff453a\}/);
+  assert.match(ownerSessionJs, /ownerState:[\s\S]*rating:[\s\S]*color:[\s\S]*placement:[\s\S]*editorial:/);
 });
 
 test("gallery cards bound native Owner preview bursts and retry transient failures", () => {

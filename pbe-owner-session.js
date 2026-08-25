@@ -287,6 +287,12 @@
           dimensions,
         },
       },
+      ownerState: {
+        rating: Math.max(0, Math.min(5, Number(item?.rating) || 0)),
+        color: String(item?.color || "").trim().toLowerCase(),
+        placement: String(item?.placementState || "").trim().toLowerCase(),
+        editorial: String(item?.editorialState || "").trim().toLowerCase(),
+      },
     };
   };
 

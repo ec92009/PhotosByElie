@@ -1824,6 +1824,7 @@ const galleryCommands = [
     id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: rating,
     label: rating ? `Rating ${rating}` : "Clear Rating", icon: rating ? "★" : "☆", shortcut: String(rating), shortcutLabel: String(rating),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    ratingValue: rating,
     state: () => ownerCapabilityState("setRating"),
     execute: (context) => runOwnerAdapterCommand("setRating", { value: rating, currentPhoto: context.currentPhoto }),
   })),
@@ -1831,6 +1832,7 @@ const galleryCommands = [
     id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: 10 + index,
     label: `${color[0].toUpperCase()}${color.slice(1)}`, icon: "●", shortcut: String(key), shortcutLabel: String(key),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    colorValue: color,
     state: () => ownerCapabilityState("setColor"),
     execute: (context) => runOwnerAdapterCommand("setColor", { value: color, currentPhoto: context.currentPhoto }),
   })),
@@ -1971,6 +1973,84 @@ const commandButtonHtml = (command) => {
   `;
 };
 
+const selectedOwnerPhotos = () => {
+  const selected = new Set(selectedPhotoIds);
+  return renderedGalleryPhotos.filter((photo) => selected.has(photo.id));
+};
+
+const commonOwnerValue = (key, fallback) => {
+  const values = selectedOwnerPhotos().map((photo) => photo?.ownerState?.[key] ?? fallback);
+  if (!values.length) return { value: fallback, mixed: false };
+  const value = values[0];
+  return { value, mixed: values.some((candidate) => candidate !== value) };
+};
+
+const ratingSliderHtml = (commands) => {
+  const command = commands.find((candidate) => candidate.ratingValue === 0) || commands[0];
+  const { value, mixed } = commonOwnerValue("rating", 0);
+  const rating = Math.max(0, Math.min(5, Number(value) || 0));
+  const title = command.enabled
+    ? mixed ? "Set one rating for the mixed selection." : `Rating ${rating}. Drag, click, or use 0–5.`
+    : command.disabledReason;
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-rating-star${!mixed && index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  return `
+    <span class="gallery-rating-slider${mixed ? " is-mixed" : ""}"
+      data-gallery-rating-slider data-rating="${rating}" role="slider"
+      aria-label="Rating"
+      aria-valuemin="0" aria-valuemax="5" aria-valuenow="${rating}"
+      aria-valuetext="${mixed ? "Mixed ratings" : rating ? `${rating} stars` : "Unrated"}"
+      aria-disabled="${!command.enabled}" tabindex="${command.enabled ? "0" : "-1"}" title="${escapeHtml(title)}">
+      <span class="gallery-rating-zero" aria-hidden="true">○</span>${stars}
+      <span class="gallery-command-shortcut" aria-hidden="true">(0–5)</span>
+    </span>
+  `;
+};
+
+const colorSwatchHtml = (command) => {
+  const current = commonOwnerValue("color", "");
+  const applied = !current.mixed && current.value === command.colorValue;
+  const title = command.enabled ? `${command.label} (${command.shortcutLabel})` : command.disabledReason;
+  return `
+    <button class="gallery-color-swatch is-${escapeHtml(command.colorValue)}${applied ? " is-applied" : ""}"
+      type="button" data-gallery-command="${escapeHtml(command.id)}"
+      ${command.enabled ? "" : "disabled"} title="${escapeHtml(title)}"
+      aria-label="${escapeHtml(`${command.label} (${command.shortcutLabel})${applied ? ", applied" : ""}${command.enabled ? "" : `. ${command.disabledReason}`}`)}"
+      aria-pressed="${applied}"><span aria-hidden="true"></span></button>
+  `;
+};
+
+const commandGroupHtml = (entry) => {
+  if (entry.group !== "rating-color") return entry.commands.map(commandButtonHtml).join("");
+  const ratings = entry.commands.filter((command) => Number.isInteger(command.ratingValue));
+  const colors = entry.commands.filter((command) => command.colorValue);
+  return `${ratingSliderHtml(ratings)}${colors.map(colorSwatchHtml).join("")}`;
+};
+
+const ratingFromPointer = (event, element) => {
+  const bounds = element.getBoundingClientRect();
+  if (!bounds.width) return 0;
+  const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+  return Math.max(0, Math.min(5, Math.round(ratio * 5)));
+};
+
+const dispatchRating = async (rating) => {
+  await galleryCommandRegistry.dispatch(`rating-${Math.max(0, Math.min(5, rating))}`, { source: "rating-slider" });
+  renderGalleryCommandBar();
+};
+
+const previewRatingSlider = (element, rating) => {
+  const value = Math.max(0, Math.min(5, rating));
+  element.dataset.rating = String(value);
+  element.setAttribute("aria-valuenow", String(value));
+  element.setAttribute("aria-valuetext", value ? `${value} stars` : "Unrated");
+  element.classList.remove("is-mixed");
+  element.querySelectorAll(".gallery-rating-star").forEach((star, index) => {
+    star.classList.toggle("is-filled", index < value);
+  });
+};
+
 const mountPBEOwnerSessionInCommandBar = (sessionRoot = document.querySelector("[data-pbe-owner-session]")) => {
   if (!isPBEOwnerGallery || !sessionRoot || !galleryCommandBar) return;
   const commandScroll = galleryCommandBar.querySelector("[data-gallery-command-scroll]");
@@ -1986,6 +2066,7 @@ const renderGalleryCommandBar = () => {
     ? document.querySelector("[data-pbe-owner-session]")
     : null;
   const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
+  const focusedRating = Boolean(document.activeElement?.matches?.("[data-gallery-rating-slider]"));
   const commands = galleryCommandRegistry.list();
   const groups = galleryCommandModel.GROUP_ORDER
     .map((group) => ({ group, commands: commands.filter((command) => command.group === group) }))
@@ -1995,7 +2076,7 @@ const renderGalleryCommandBar = () => {
       <span class="gallery-command-count-slot" data-gallery-command-count-slot></span>
       ${groups.map((entry) => `
         <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replace("-", " "))}">
-          ${entry.commands.map(commandButtonHtml).join("")}
+          ${commandGroupHtml(entry)}
         </span>
       `).join("")}
     </div>
@@ -2008,8 +2089,38 @@ const renderGalleryCommandBar = () => {
       renderGalleryCommandBar();
     });
   });
+  const ratingSlider = galleryCommandBar.querySelector("[data-gallery-rating-slider]");
+  let ratingPointerActive = false;
+  if (ratingSlider?.getAttribute("aria-disabled") !== "true") {
+    ratingSlider?.addEventListener("pointerdown", (event) => {
+      ratingPointerActive = true;
+      ratingSlider.setPointerCapture?.(event.pointerId);
+      previewRatingSlider(ratingSlider, ratingFromPointer(event, ratingSlider));
+    });
+    ratingSlider?.addEventListener("pointermove", (event) => {
+      if (ratingPointerActive) previewRatingSlider(ratingSlider, ratingFromPointer(event, ratingSlider));
+    });
+    ratingSlider?.addEventListener("pointerup", () => {
+      if (!ratingPointerActive) return;
+      ratingPointerActive = false;
+      dispatchRating(Number(ratingSlider.dataset.rating) || 0);
+    });
+    ratingSlider?.addEventListener("pointercancel", () => { ratingPointerActive = false; });
+  }
+  ratingSlider?.addEventListener("keydown", (event) => {
+    const current = Number(ratingSlider.dataset.rating) || 0;
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? 5
+        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
+          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
+            : null;
+    if (next === null) return;
+    event.preventDefault();
+    dispatchRating(next);
+  });
   mountPBEOwnerSessionInCommandBar(ownerSessionRoot);
   if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
+  else if (focusedRating) galleryCommandBar.querySelector("[data-gallery-rating-slider]")?.focus({ preventScroll: true });
   const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
   if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);
 };

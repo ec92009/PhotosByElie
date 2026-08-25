@@ -1573,7 +1573,7 @@ struct OwnerCoreTests {
               "tokenType":"Bearer",
               "accessToken":"access-one",
               "expiresIn":900,
-              "accessExpiresAt":"2026-07-25T10:15:00Z"
+              "accessExpiresAt":"2026-07-25T10:15:00.000Z"
             }
             """,
         ])
@@ -1601,6 +1601,35 @@ struct OwnerCoreTests {
         let request = try #require(await transport.requests().first)
         #expect(request.url?.path == "/api/v1/auth/tokens")
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test("Owner API dates accept production fractional seconds and explicit timezone variants")
+    func ownerAPIDateVariants() throws {
+        struct Envelope: Decodable { let accessExpiresAt: Date }
+
+        let values: [(String, TimeInterval)] = [
+            ("2026-07-25T10:15:00.000Z", 1_784_974_500),
+            ("2026-07-25T10:15:00Z", 1_784_974_500),
+            ("2026-07-25T12:15:00.125+02:00", 1_784_974_500.125),
+            ("2026-07-25T12:15:00+02:00", 1_784_974_500),
+        ]
+        for (value, expectedTimestamp) in values {
+            let data = Data(#"{"accessExpiresAt":"\#(value)"}"#.utf8)
+            let decoded = try JSONDecoder.ownerAPI.decode(Envelope.self, from: data)
+            #expect(abs(decoded.accessExpiresAt.timeIntervalSince1970 - expectedTimestamp) < 0.000_001)
+        }
+    }
+
+    @Test("Owner API dates reject malformed or timezone-free values")
+    func ownerAPIDateVariantsFailClosed() throws {
+        struct Envelope: Decodable { let accessExpiresAt: Date }
+
+        for value in ["2026-07-25 10:15:00Z", "2026-07-25T10:15:00", "not-a-date"] {
+            let data = Data(#"{"accessExpiresAt":"\#(value)"}"#.utf8)
+            #expect(throws: DecodingError.self) {
+                try JSONDecoder.ownerAPI.decode(Envelope.self, from: data)
+            }
+        }
     }
 
     @Test("Launch bootstrap re-authenticates the Keychain device credential")

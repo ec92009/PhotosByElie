@@ -1124,7 +1124,25 @@ private extension String {
 public extension JSONDecoder {
     static var ownerAPI: JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            let formatOptions: [ISO8601DateFormatter.Options] = [
+                [.withInternetDateTime, .withFractionalSeconds],
+                [.withInternetDateTime],
+            ]
+            for options in formatOptions {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = options
+                if let date = formatter.date(from: value) {
+                    return date
+                }
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Expected an ISO 8601 date-time with an explicit timezone, with or without fractional seconds."
+            )
+        }
         return decoder
     }
 }

@@ -117,6 +117,11 @@ if [[ ! "$version" =~ '^[0-9]+(\.[0-9]+)*$' || ! "$build" =~ '^[0-9]+$' || ! "$m
 fi
 
 /usr/bin/codesign --verify --deep --strict "$app"
+if ! /usr/bin/codesign -d --entitlements :- "$app" 2>/dev/null \
+  | python3 -c 'import plistlib, sys; entitlements = plistlib.loads(sys.stdin.buffer.read()); raise SystemExit(0 if entitlements.get("com.apple.security.personal-information.photos-library") is True else 1)'; then
+  print -u2 "Refusing to publish Backstage without the signed Photos Library entitlement."
+  exit 1
+fi
 signature_details="$(/usr/bin/codesign -dvvv "$app" 2>&1)"
 if [[ "$signature_details" == *"Signature=adhoc"* ]]; then
   print -u2 "Refusing to generate a release manifest for an ad-hoc signed artifact."

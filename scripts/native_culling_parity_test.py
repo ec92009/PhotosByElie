@@ -1359,8 +1359,17 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("--sequesterRsrc", release_publisher)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
         self.assertIn('--entitlements "$entitlements"', build_script)
+        self.assertIn("Backstage is missing the signed Photos Library entitlement", build_script)
+        self.assertIn(
+            "Refusing to publish Backstage without the signed Photos Library entitlement",
+            manifest_builder,
+        )
         entitlements = (NATIVE / "Backstage.entitlements").read_text(encoding="utf-8")
         self.assertIn("com.apple.security.automation.apple-events", entitlements)
+        self.assertIn(
+            "com.apple.security.personal-information.photos-library",
+            entitlements,
+        )
         self.assertNotIn("PBE_PHOTOS_BRIDGE_", metadata)
         self.assertNotIn("PBEPhotosBridge", build_script)
         self.assertNotIn("Backstage and Photos Bridge", build_script)

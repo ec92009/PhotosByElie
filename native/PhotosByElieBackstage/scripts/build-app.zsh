@@ -231,6 +231,11 @@ else
   codesign --force --deep --options runtime --sign "$identity" --entitlements "$entitlements" "$app"
 fi
 codesign --verify --deep --strict "$app"
+if ! codesign -d --entitlements :- "$app" 2>/dev/null \
+  | python3 -c 'import plistlib, sys; entitlements = plistlib.loads(sys.stdin.buffer.read()); raise SystemExit(0 if entitlements.get("com.apple.security.personal-information.photos-library") is True else 1)'; then
+  print -u2 "Backstage is missing the signed Photos Library entitlement."
+  exit 1
+fi
 signature_details="$(codesign -dvv "$app" 2>&1)"
 if [[ "$identity" != "-" && "$signature_details" == *"Signature=adhoc"* ]]; then
   print -u2 "Backstage unexpectedly received an ad-hoc signature."

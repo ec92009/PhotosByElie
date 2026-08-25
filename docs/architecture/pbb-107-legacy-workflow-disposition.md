@@ -50,5 +50,26 @@ preserved, and the canonical database SHA-256 remained identical before and
 after. The aggregate receipt is retained in
 `docs/rehearsals/pbb-107-legacy-workflow-disposition.json`.
 
-This result does not authorize applying the proposed states to canonical
-`Owner.sqlite`; canonical application remains a separate explicit gate.
+## Approved canonical application
+
+The operator separately approved canonical application on 2026-08-25. Before
+the write, the tool created and integrity-checked a private SQLite online
+backup, then confirmed that SQLite's data version had not changed while the
+backup was being made. It acquired an immediate write transaction only after
+those checks and reused the same fail-closed classification and mutation logic
+as the copy-only rehearsal.
+
+The canonical transaction applied the approved aggregate dispositions: 19
+Photos runs became `cancelled`, 2 became `failed`, 3 Upload Bridge runs became
+`cancelled`, and 1 partial bridge run became `interrupted`. Post-commit strict
+audit found zero running or ambiguous legacy rows. Both canonical and rollback
+databases passed `PRAGMA integrity_check`; the rollback database retained the
+complete pre-write 19/2 and 3/1 inventory. All 10,360 Upload Bridge item rows
+were identical between canonical and rollback databases, including the 2,332
+rows in scope, the 3 durable uploaded rows, and the 2,329 untouched rows.
+
+The verified private rollback backup remains retained beside `Owner.sqlite`.
+The aggregate canonical receipt is
+`docs/rehearsals/pbb-107-legacy-workflow-apply.json`. This disposition does not
+by itself complete PBB-107's separate future-retry prevention and acceptance
+scope.

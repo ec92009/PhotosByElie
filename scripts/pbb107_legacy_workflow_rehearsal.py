@@ -138,10 +138,147 @@ def _update_each(
         cursor = connection.execute(sql.format(table=table), (*values, run_id))
         if cursor.rowcount != 1:
             raise RuntimeError(
-                f"Copy-only rehearsal lost its guarded {table} row before update"
+                f"Disposition transaction lost its guarded {table} row before update"
             )
         changed += cursor.rowcount
     return changed
+
+
+def apply_in_open_transaction(
+    connection: sqlite3.Connection,
+    *,
+    checked_at: str,
+) -> dict[str, object]:
+    """Apply proven dispositions while the caller owns the SQLite transaction."""
+    photos_before = _photos_report(connection)
+    uploads_before = _upload_report(connection)
+    photos = _classify_photos(connection)
+    uploads = _classify_uploads(connection)
+    manual_review = len(photos["manualReviewRequired"]) + len(
+        uploads["manualReviewRequired"]
+    )
+    if manual_review:
+        raise RuntimeError("Disposition transaction refused an unproven legacy shape")
+
+    items_before = _bridge_items_digest(connection)
+    photos_cancelled = _update_each(
+        connection,
+        table="photos_sync_runs",
+        run_ids=photos["cancelledBeforeScan"],
+        sql="""
+                UPDATE {table}
+                SET status = 'cancelled', stage = 'Cancelled after legacy review',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
+                    lease_expires_at = NULL, recovery_state = 'recovered',
+                    recovery_reason = ?, recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND recovery_state = 'needs-review'
+        """,
+        values=(
+            "Legacy Photos sync was queued but never scanned an item.",
+            checked_at,
+            checked_at,
+            "Operator-reviewed disposition: cancelled before scan.",
+            checked_at,
+        ),
+    )
+    photos_failed = _update_each(
+        connection,
+        table="photos_sync_runs",
+        run_ids=photos["interruptedBeforeCheckpoint"],
+        sql="""
+                UPDATE {table}
+                SET status = 'failed', stage = 'Failed after legacy review',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
+                    lease_expires_at = NULL, recovery_state = 'recovered',
+                    recovery_reason = ?, recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND recovery_state = 'needs-review'
+        """,
+        values=(
+            "Legacy Photos sync entered a read stage without a durable checkpoint.",
+            checked_at,
+            checked_at,
+            "Operator-reviewed disposition: failed before checkpoint.",
+            checked_at,
+        ),
+    )
+    uploads_cancelled = _update_each(
+        connection,
+        table="sidecar_upload_bridge_runs",
+        run_ids=uploads["cancelledBeforeExport"],
+        sql="""
+                UPDATE {table}
+                SET status = 'cancelled',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
+                    lease_expires_at = NULL, recovery_state = 'recovered',
+                    recovery_reason = ?, recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND recovery_state = 'needs-review'
+        """,
+        values=(
+            "Legacy Upload Bridge run ended before any export began.",
+            checked_at,
+            checked_at,
+            "Operator-reviewed disposition: cancelled before export.",
+            checked_at,
+        ),
+    )
+    uploads_interrupted = _update_each(
+        connection,
+        table="sidecar_upload_bridge_runs",
+        run_ids=uploads["interruptedPartial"],
+        sql="""
+                UPDATE {table}
+                SET status = 'interrupted',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
+                    lease_expires_at = NULL, recovery_state = 'recovered',
+                    recovery_reason = ?, recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND recovery_state = 'needs-review'
+        """,
+        values=(
+            "Legacy Upload Bridge run ended after a partial durable upload receipt.",
+            checked_at,
+            checked_at,
+            "Operator-reviewed disposition: interrupted; durable uploads preserved.",
+            checked_at,
+        ),
+    )
+
+    if connection.execute(
+        "SELECT COUNT(*) FROM photos_sync_runs WHERE status = 'running'"
+    ).fetchone()[0]:
+        raise RuntimeError("A Photos sync row remained running after disposition")
+    if connection.execute(
+        "SELECT COUNT(*) FROM sidecar_upload_bridge_runs WHERE status = 'running'"
+    ).fetchone()[0]:
+        raise RuntimeError("An Upload Bridge row remained running after disposition")
+    items_after = _bridge_items_digest(connection)
+    if items_before != items_after:
+        raise RuntimeError("Upload Bridge item receipts changed during disposition")
+    return {
+        "manualReviewRequired": 0,
+        "photosSync": {
+            "runningRowsBefore": photos_before["runningRows"],
+            "cancelledBeforeScan": photos_cancelled,
+            "failedBeforeCheckpoint": photos_failed,
+            "runningRowsAfter": 0,
+        },
+        "uploadBridge": {
+            "runningRowsBefore": uploads_before["runningRows"],
+            "cancelledBeforeExport": uploads_cancelled,
+            "interruptedPartial": uploads_interrupted,
+            "runningRowsAfter": 0,
+            "uploadedItemsPreserved": uploads_before["uploadedItemsToPreserve"],
+            "untouchedItemsPreserved": uploads_before["untouchedItems"],
+            "allItemRowsValueEquivalent": items_before == items_after,
+        },
+    }
 
 
 def rehearse(
@@ -167,119 +304,7 @@ def rehearse(
     try:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("BEGIN IMMEDIATE")
-        photos_before = _photos_report(connection)
-        uploads_before = _upload_report(connection)
-        photos = _classify_photos(connection)
-        uploads = _classify_uploads(connection)
-        manual_review = len(photos["manualReviewRequired"]) + len(
-            uploads["manualReviewRequired"]
-        )
-        if manual_review:
-            raise RuntimeError(
-                "Copy-only rehearsal refused an unproven legacy disposition shape"
-            )
-
-        items_before = _bridge_items_digest(connection)
-        photos_cancelled = _update_each(
-            connection,
-            table="photos_sync_runs",
-            run_ids=photos["cancelledBeforeScan"],
-            sql="""
-                UPDATE {table}
-                SET status = 'cancelled', stage = 'Cancelled after legacy review',
-                    error_text = COALESCE(NULLIF(error_text, ''), ?),
-                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
-                    lease_expires_at = NULL, recovery_state = 'recovered',
-                    recovery_reason = ?, recovery_checked_at = ?
-                WHERE run_id = ? AND status = 'running'
-                  AND recovery_state = 'needs-review'
-            """,
-            values=(
-                "Legacy Photos sync was queued but never scanned an item.",
-                checked_at,
-                checked_at,
-                "Operator-reviewed copy rehearsal: cancelled before scan.",
-                checked_at,
-            ),
-        )
-        photos_failed = _update_each(
-            connection,
-            table="photos_sync_runs",
-            run_ids=photos["interruptedBeforeCheckpoint"],
-            sql="""
-                UPDATE {table}
-                SET status = 'failed', stage = 'Failed after legacy review',
-                    error_text = COALESCE(NULLIF(error_text, ''), ?),
-                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
-                    lease_expires_at = NULL, recovery_state = 'recovered',
-                    recovery_reason = ?, recovery_checked_at = ?
-                WHERE run_id = ? AND status = 'running'
-                  AND recovery_state = 'needs-review'
-            """,
-            values=(
-                "Legacy Photos sync entered a read stage without a durable checkpoint.",
-                checked_at,
-                checked_at,
-                "Operator-reviewed copy rehearsal: failed before checkpoint.",
-                checked_at,
-            ),
-        )
-        uploads_cancelled = _update_each(
-            connection,
-            table="sidecar_upload_bridge_runs",
-            run_ids=uploads["cancelledBeforeExport"],
-            sql="""
-                UPDATE {table}
-                SET status = 'cancelled',
-                    error_text = COALESCE(NULLIF(error_text, ''), ?),
-                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
-                    lease_expires_at = NULL, recovery_state = 'recovered',
-                    recovery_reason = ?, recovery_checked_at = ?
-                WHERE run_id = ? AND status = 'running'
-                  AND recovery_state = 'needs-review'
-            """,
-            values=(
-                "Legacy Upload Bridge run ended before any export began.",
-                checked_at,
-                checked_at,
-                "Operator-reviewed copy rehearsal: cancelled before export.",
-                checked_at,
-            ),
-        )
-        uploads_interrupted = _update_each(
-            connection,
-            table="sidecar_upload_bridge_runs",
-            run_ids=uploads["interruptedPartial"],
-            sql="""
-                UPDATE {table}
-                SET status = 'interrupted',
-                    error_text = COALESCE(NULLIF(error_text, ''), ?),
-                    completed_at = COALESCE(completed_at, ?), updated_at = ?,
-                    lease_expires_at = NULL, recovery_state = 'recovered',
-                    recovery_reason = ?, recovery_checked_at = ?
-                WHERE run_id = ? AND status = 'running'
-                  AND recovery_state = 'needs-review'
-            """,
-            values=(
-                "Legacy Upload Bridge run ended after a partial durable upload receipt.",
-                checked_at,
-                checked_at,
-                "Operator-reviewed copy rehearsal: interrupted; durable uploads preserved.",
-                checked_at,
-            ),
-        )
-
-        if connection.execute(
-            "SELECT COUNT(*) FROM photos_sync_runs WHERE status = 'running'"
-        ).fetchone()[0]:
-            raise RuntimeError("A Photos sync row remained running in the rehearsal copy")
-        if connection.execute(
-            "SELECT COUNT(*) FROM sidecar_upload_bridge_runs WHERE status = 'running'"
-        ).fetchone()[0]:
-            raise RuntimeError("An Upload Bridge row remained running in the rehearsal copy")
-        items_after = _bridge_items_digest(connection)
-        if items_before != items_after:
-            raise RuntimeError("Upload Bridge item receipts changed during rehearsal")
+        result = apply_in_open_transaction(connection, checked_at=checked_at)
         connection.commit()
     except Exception:
         connection.rollback()
@@ -295,22 +320,7 @@ def rehearse(
         "canonicalDatabaseUnchanged": source_hash_before == source_hash_after,
         "canonicalMutationPerformed": False,
         "mutationPerformedOnCopy": True,
-        "manualReviewRequired": 0,
-        "photosSync": {
-            "runningRowsBefore": photos_before["runningRows"],
-            "cancelledBeforeScan": photos_cancelled,
-            "failedBeforeCheckpoint": photos_failed,
-            "runningRowsAfter": 0,
-        },
-        "uploadBridge": {
-            "runningRowsBefore": uploads_before["runningRows"],
-            "cancelledBeforeExport": uploads_cancelled,
-            "interruptedPartial": uploads_interrupted,
-            "runningRowsAfter": 0,
-            "uploadedItemsPreserved": uploads_before["uploadedItemsToPreserve"],
-            "untouchedItemsPreserved": uploads_before["untouchedItems"],
-            "allItemRowsValueEquivalent": items_before == items_after,
-        },
+        **result,
     }
 
 

@@ -64,6 +64,47 @@ struct BackstageFixtureSelectionTests {
         await bootstrap.value
     }
 
+    @Test("Activity refresh times out promptly without hiding local recovery truth")
+    @MainActor
+    func activityRefreshIsBounded() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let vault = FixtureSelectionCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        try await session.save(OwnerCredentialSet(
+            deviceId: "owner-device-test",
+            deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "activity-timeout-access-token",
+            accessExpiresAt: Date().addingTimeInterval(3_600)
+        ))
+        let transport = StalledActivityTransport()
+        let api = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let authentication = OwnerAuthenticationService(api: api, session: session)
+        let model = BackstageViewModel(
+            api: api,
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences,
+            authenticationService: authentication,
+            workflowRecoveryStore: nil,
+            activityRefreshTimeout: .milliseconds(20)
+        )
+
+        let clock = ContinuousClock()
+        let started = clock.now
+        await model.refreshActions()
+        let elapsed = started.duration(to: clock.now)
+
+        #expect(elapsed < .seconds(1))
+        #expect(!model.isRefreshing)
+        #expect(model.actions.isEmpty)
+        #expect(model.activityStatus.contains("timed out"))
+        #expect(model.activityStatus.contains("Local workflow recovery remains available"))
+    }
+
     @Test("One selection persists across launch without changing the current section or workflow history")
     @MainActor
     func authoritativeSelectionPersistsAndKeepsContext() throws {

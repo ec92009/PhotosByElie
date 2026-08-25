@@ -1105,6 +1105,12 @@ private struct ActivityView: View {
             BackstageFeedbackView(message: model.ownerWorkflowRecoveryStatus)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
+            BackstageFeedbackView(
+                message: model.isRefreshing ? "Loading audited cloud activity…" : model.activityStatus,
+                isWorking: model.isRefreshing
+            )
+            .padding(.horizontal)
+            .padding(.bottom, 8)
             Table(model.actions) {
                 TableColumn("Kind", value: \.actionKind)
                 TableColumn("Target", value: \.target)

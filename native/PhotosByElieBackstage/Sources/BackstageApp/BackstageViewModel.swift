@@ -2,6 +2,10 @@ import AppKit
 import Foundation
 import OwnerCore
 
+private enum ActivityRefreshError: Error {
+    case timedOut
+}
+
 struct CullingHistoryEntry: Identifiable, Sendable {
     var id = UUID()
     var label: String
@@ -364,6 +368,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
     @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
+    @Published var activityStatus = "Refresh to load the latest audited cloud activity."
     @Published var isSyncingPhotos = false
     @Published var r2Reconciliation: R2ReconciliationReport?
     @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
@@ -432,6 +437,7 @@ final class BackstageViewModel: ObservableObject {
     private var controlledFailedCullingAssetID: String?
     private let cullingThumbnailUpgradeDelay: Duration
     private let currentImageSizeFlushDelay: Duration
+    private let activityRefreshTimeout: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
@@ -560,6 +566,7 @@ final class BackstageViewModel: ObservableObject {
             .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
         cullingThumbnailUpgradeDelay: Duration = .seconds(1),
         currentImageSizeFlushDelay: Duration = .milliseconds(500),
+        activityRefreshTimeout: Duration = .seconds(5),
         injectNextCullingThumbnailFailure: Bool = ProcessInfo.processInfo.environment[
             "PBE_CULLING_PREVIEW_FAIL_ONCE"
         ] == "1"
@@ -590,6 +597,7 @@ final class BackstageViewModel: ObservableObject {
         self.photoLibrary = photoLibrary
         self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
         self.currentImageSizeFlushDelay = currentImageSizeFlushDelay
+        self.activityRefreshTimeout = activityRefreshTimeout
         self.shouldInjectNextCullingThumbnailFailure = injectNextCullingThumbnailFailure
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
@@ -1259,15 +1267,39 @@ final class BackstageViewModel: ObservableObject {
         defer { isRefreshing = false }
         guard await prepareAuthenticatedOperation() else { return }
         do {
-            let fetched = try await api.listActions(limit: 50).actions
+            let fetched = try await fetchActionsWithTimeout().actions
             actions = mergeLocallyObservedLifecycleActions(into: fetched)
             authentication = await authenticationService.currentSnapshot()
             status = "Connected"
+            activityStatus = actions.isEmpty
+                ? "Activity is up to date. No recent cloud actions."
+                : "Loaded \(actions.count) recent audited action\(actions.count == 1 ? "" : "s")."
+        } catch ActivityRefreshError.timedOut {
+            activityStatus = "Cloud Activity timed out after 5 seconds. Local workflow recovery remains available; retry when online."
+            status = "Activity refresh timed out"
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
             if authentication.phase == .authenticated {
                 status = userFacingMessage(for: error)
             }
+            activityStatus = "Cloud Activity unavailable: \(userFacingMessage(for: error))"
+        }
+    }
+
+    private func fetchActionsWithTimeout() async throws -> OwnerActionPage {
+        try await withThrowingTaskGroup(of: OwnerActionPage.self) { group in
+            group.addTask { [api] in
+                try await api.listActions(limit: 50)
+            }
+            group.addTask { [activityRefreshTimeout] in
+                try await Task.sleep(for: activityRefreshTimeout)
+                throw ActivityRefreshError.timedOut
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else {
+                throw CancellationError()
+            }
+            return first
         }
     }
 

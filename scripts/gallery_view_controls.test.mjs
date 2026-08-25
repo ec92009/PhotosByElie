@@ -101,8 +101,11 @@ test("hosted Owner separates filters from mutations and renders durable card ind
     galleryJs.indexOf('id: "burst"'),
     galleryJs.indexOf('id: "approve"'),
   );
-  assert.match(galleryJs, /gallery-command-section is-filters/);
+  assert.match(galleryJs, /data-gallery-owner-filter-row/);
+  assert.match(galleryJs, /renderOwnerFilterRow/);
+  assert.doesNotMatch(galleryJs, /gallery-command-section is-filters/);
   assert.match(galleryJs, /gallery-command-section is-actions/);
+  assert.doesNotMatch(galleryJs, /gallery-command-section-label">View/);
   assert.match(galleryJs, /data-gallery-rating-filter/);
   assert.match(galleryJs, /data-gallery-owner-color-filter/);
   assert.match(galleryJs, /ownerMinRating/);
@@ -111,8 +114,11 @@ test("hosted Owner separates filters from mutations and renders durable card ind
   assert.doesNotMatch(burstCommand, /shortcut:/);
   assert.match(galleryJs, /gallery-owner-card-rating/);
   assert.match(galleryJs, /owner-color-\$\{supportedColor\}/);
-  assert.match(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo::after/);
+  assert.match(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo\{/);
+  assert.match(photosCss, /outline:5px solid var\(--owner-card-color\)/);
+  assert.doesNotMatch(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo::after/);
   assert.match(photosCss, /\.gallery-owner-card-rating\{/);
+  assert.match(photosCss, /\.gallery-owner-filter-row\{/);
   assert.match(galleryCardJs, /mediaOverlayHtml/);
 });
 

@@ -707,6 +707,7 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
+    ${isPBEOwnerGallery ? '<div class="gallery-owner-filter-row" data-gallery-owner-filter-row aria-label="Owner filters"></div>' : ""}
   `;
   if (galleryActions && isSelectionGallery) {
     galleryActions.after(filterBar);
@@ -2131,17 +2132,71 @@ const galleryCommandGroupsHtml = (groups) => groups.map((entry) => `
   </span>
 `).join("");
 
+const bindOwnerRatingFilter = (root) => {
+  const ratingFilter = root?.querySelector("[data-gallery-rating-filter]");
+  let ratingFilterPointerActive = false;
+  ratingFilter?.addEventListener("pointerdown", (event) => {
+    ratingFilterPointerActive = true;
+    ratingFilter.setPointerCapture?.(event.pointerId);
+    previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointermove", (event) => {
+    if (ratingFilterPointerActive) previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointerup", () => {
+    if (!ratingFilterPointerActive) return;
+    ratingFilterPointerActive = false;
+    commitOwnerFilterState({ ownerMinRating: Number(ratingFilter.dataset.rating) || 0 });
+  });
+  ratingFilter?.addEventListener("pointercancel", () => { ratingFilterPointerActive = false; });
+  ratingFilter?.addEventListener("keydown", (event) => {
+    const current = Number(ratingFilter.dataset.rating) || 0;
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? 5
+        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
+          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
+            : null;
+    if (next === null) return;
+    event.preventDefault();
+    commitOwnerFilterState({ ownerMinRating: next });
+  });
+};
+
+const renderOwnerFilterRow = () => {
+  const row = filterBar?.querySelector("[data-gallery-owner-filter-row]");
+  if (!row || !galleryCommandRegistry) return;
+  const focusedRatingFilter = Boolean(document.activeElement?.matches?.("[data-gallery-rating-filter]"));
+  const focusedColorFilter = document.activeElement?.dataset?.galleryOwnerColorFilter || "";
+  const burst = galleryCommandRegistry.list().find((command) => command.id === "burst");
+  row.innerHTML = `
+    <span class="gallery-owner-filter-label">Filters</span>
+    ${burst ? commandButtonHtml(burst) : ""}
+    ${ownerRatingFilterHtml()}${ownerColorFilterHtml()}
+  `;
+  row.querySelector("[data-gallery-command=\"burst\"]")?.addEventListener("click", async () => {
+    await galleryCommandRegistry.dispatch("burst", { source: "filter" });
+    renderGalleryCommandBar();
+  });
+  bindOwnerRatingFilter(row);
+  row.querySelectorAll("[data-gallery-owner-color-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = selectedOwnerColorFilters();
+      const color = button.dataset.galleryOwnerColorFilter;
+      if (selected.has(color)) selected.delete(color);
+      else selected.add(color);
+      commitOwnerFilterState({ ownerColors: ownerColorFilterValues.filter((candidate) => selected.has(candidate)).join(",") });
+    });
+  });
+  if (focusedRatingFilter) row.querySelector("[data-gallery-rating-filter]")?.focus({ preventScroll: true });
+  else if (focusedColorFilter) row.querySelector(`[data-gallery-owner-color-filter="${CSS.escape(focusedColorFilter)}"]`)?.focus({ preventScroll: true });
+};
+
 const ownerCommandSectionsHtml = (groups) => {
-  const filterGroups = groups.filter((entry) => entry.group === "filters");
   const viewGroups = groups.filter((entry) => ["selection", "view"].includes(entry.group));
   const actionGroups = groups.filter((entry) => !["filters", "selection", "view"].includes(entry.group));
   return `
-    <span class="gallery-command-section is-filters" role="group" aria-label="Filters">
-      <span class="gallery-command-section-label">Filters</span>
-      ${galleryCommandGroupsHtml(filterGroups)}${ownerRatingFilterHtml()}${ownerColorFilterHtml()}
-    </span>
     <span class="gallery-command-section is-view" role="group" aria-label="Selection and view">
-      <span class="gallery-command-section-label">View</span>${galleryCommandGroupsHtml(viewGroups)}
+      ${galleryCommandGroupsHtml(viewGroups)}
     </span>
     <span class="gallery-command-section is-actions" role="group" aria-label="Actions">
       <span class="gallery-command-section-label">Actions</span>${galleryCommandGroupsHtml(actionGroups)}
@@ -2197,8 +2252,6 @@ const renderGalleryCommandBar = () => {
     : null;
   const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
   const focusedRating = Boolean(document.activeElement?.matches?.("[data-gallery-rating-slider]"));
-  const focusedRatingFilter = Boolean(document.activeElement?.matches?.("[data-gallery-rating-filter]"));
-  const focusedColorFilter = document.activeElement?.dataset?.galleryOwnerColorFilter || "";
   const commands = galleryCommandRegistry.list();
   const groups = galleryCommandModel.GROUP_ORDER
     .map((group) => ({ group, commands: commands.filter((command) => command.group === group) }))
@@ -2246,46 +2299,9 @@ const renderGalleryCommandBar = () => {
     event.preventDefault();
     dispatchRating(next);
   });
-  const ratingFilter = galleryCommandBar.querySelector("[data-gallery-rating-filter]");
-  let ratingFilterPointerActive = false;
-  ratingFilter?.addEventListener("pointerdown", (event) => {
-    ratingFilterPointerActive = true;
-    ratingFilter.setPointerCapture?.(event.pointerId);
-    previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
-  });
-  ratingFilter?.addEventListener("pointermove", (event) => {
-    if (ratingFilterPointerActive) previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
-  });
-  ratingFilter?.addEventListener("pointerup", () => {
-    if (!ratingFilterPointerActive) return;
-    ratingFilterPointerActive = false;
-    commitOwnerFilterState({ ownerMinRating: Number(ratingFilter.dataset.rating) || 0 });
-  });
-  ratingFilter?.addEventListener("pointercancel", () => { ratingFilterPointerActive = false; });
-  ratingFilter?.addEventListener("keydown", (event) => {
-    const current = Number(ratingFilter.dataset.rating) || 0;
-    const next = event.key === "Home" ? 0
-      : event.key === "End" ? 5
-        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
-          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
-            : null;
-    if (next === null) return;
-    event.preventDefault();
-    commitOwnerFilterState({ ownerMinRating: next });
-  });
-  galleryCommandBar.querySelectorAll("[data-gallery-owner-color-filter]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const selected = selectedOwnerColorFilters();
-      const color = button.dataset.galleryOwnerColorFilter;
-      if (selected.has(color)) selected.delete(color);
-      else selected.add(color);
-      commitOwnerFilterState({ ownerColors: ownerColorFilterValues.filter((candidate) => selected.has(candidate)).join(",") });
-    });
-  });
+  renderOwnerFilterRow();
   mountPBEOwnerSessionInCommandBar(ownerSessionRoot);
   if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
-  else if (focusedRatingFilter) galleryCommandBar.querySelector("[data-gallery-rating-filter]")?.focus({ preventScroll: true });
-  else if (focusedColorFilter) galleryCommandBar.querySelector(`[data-gallery-owner-color-filter="${CSS.escape(focusedColorFilter)}"]`)?.focus({ preventScroll: true });
   else if (focusedRating) galleryCommandBar.querySelector("[data-gallery-rating-slider]")?.focus({ preventScroll: true });
   const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
   if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);

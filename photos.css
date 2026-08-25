@@ -5226,6 +5226,11 @@ body[data-gallery] main.shell{
 .gallery-command-section.is-filters{
   background:color-mix(in srgb,var(--surface-2) 78%,transparent);
 }
+.gallery-command-section.is-view{
+  padding-inline:0;
+  border-color:transparent;
+  background:transparent;
+}
 .gallery-command-section.is-actions{
   background:color-mix(in srgb,var(--surface) 88%,transparent);
 }
@@ -6244,6 +6249,27 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
   padding:0 12px;
   align-self:end;
 }
+.gallery-owner-filter-row{
+  display:flex;
+  flex:1 0 100%;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  padding-top:10px;
+  border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+}
+.gallery-owner-filter-label{
+  flex:0 0 auto;
+  color:var(--text);
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.gallery-owner-filter-row .gallery-command-button,
+.gallery-owner-filter-row .gallery-rating-slider{
+  min-height:32px;
+}
 .gallery-filter-bar select:focus-visible,
 .gallery-filter-bar input:focus-visible,
 .gallery-filter-clear:focus-visible{
@@ -6659,13 +6685,9 @@ html[data-theme="light"] .mock-photo.has-image::after{
   z-index:9;
   display:flex;
 }
-.mock-photo-card.has-owner-color .mock-photo::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:7;
-  border:5px solid var(--owner-card-color);
-  pointer-events:none;
+.mock-photo-card.has-owner-color .mock-photo{
+  outline:5px solid var(--owner-card-color);
+  outline-offset:-5px;
 }
 .mock-photo-card.owner-color-red{--owner-card-color:#ff453a}
 .mock-photo-card.owner-color-yellow{--owner-card-color:#ffd60a}

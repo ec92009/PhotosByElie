@@ -781,8 +781,9 @@ Clock state: running
 | 2026-08-25 | 13:16 CEST | 13:27 CEST | 0:03 | Diagnosed Curie's Photos denial through the Sequoia permission surface and confirmed PBB-94 is blocked by the missing signed Photos Library entitlement; waiting and background inspection excluded. |
 | 2026-08-25 | 18:24 CEST | 18:25 CEST | 0:01 | Approved the bounded PBB-123 canonical release-source guardrail implementation; background implementation, tests, and ticket API runtime excluded. |
 | 2026-08-25 | 17:54 CEST | 17:55 CEST | 0:01 | Approved PBB-79's source-only mixed Empty Waste Basket repair; background implementation, tests, and ticket API runtime excluded. |
+| 2026-08-25 | 21:47 CEST | 21:48 CEST | 0:01 | Approved the rehearsed PBB-107 canonical ghost-run dispositions; backup, database transaction, verification, commit, and ticket-update runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:24
+Active collaboration time used: 38:25
 Remaining budget: not set

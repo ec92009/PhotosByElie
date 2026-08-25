@@ -1849,7 +1849,9 @@ const galleryCommands = [
   {
     id: "pick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 20,
     label: "Pick", icon: "P", shortcut: "p", shortcutLabel: "P", quickLookLegend: true, selectionEffect: "preserve",
-    state: () => ownerWorkflowContext() === "review"
+    state: () => isPBEOwnerGallery
+      ? { hidden: true, enabled: false, disabledReason: "Already in the picked Owner fixture." }
+      : ownerWorkflowContext() === "review"
       ? { enabled: false, disabledReason: "Already picked." }
       : ownerCapabilityState("pick"),
     execute: (context) => runOwnerAdapterCommand("pick", { currentPhoto: context.currentPhoto }),

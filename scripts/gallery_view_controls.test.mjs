@@ -96,6 +96,19 @@ test("Owner rating and color controls match the compact Backstage contract", () 
   assert.match(ownerSessionJs, /ownerState:[\s\S]*rating:[\s\S]*color:[\s\S]*placement:[\s\S]*editorial:/);
 });
 
+test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {
+  const pickCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "pick"'),
+    galleryJs.indexOf('id: "hide"'),
+  );
+  const reviewCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "review"'),
+    galleryJs.indexOf('id: "waste-basket"'),
+  );
+  assert.match(pickCommand, /isPBEOwnerGallery[\s\S]*hidden: true/);
+  assert.match(reviewCommand, /ownerCapabilityState\("review"\)/);
+});
+
 test("gallery cards bound native Owner preview bursts and retry transient failures", () => {
   assert.match(galleryCardJs, /loading="lazy" decoding="async"/);
   assert.match(galleryCardJs, /const ownerPreviewRetryDelays = \[250, 750, 1500\]/);

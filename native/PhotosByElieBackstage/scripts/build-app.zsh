@@ -47,8 +47,31 @@ then
 fi
 
 cd "$package_root"
-swift build -c "$configuration"
-binary_path="$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage"
+
+binary_paths=()
+if [[ "$configuration" == "release" ]]; then
+  # Official Backstage releases are one signed universal app. Building each
+  # slice in its own SwiftPM scratch tree avoids host-architecture leakage and
+  # keeps the Intel slice deployable on Curie's macOS 15 installation while the
+  # deployment target remains macOS 14.
+  release_architectures=(arm64 x86_64)
+  for architecture in "${release_architectures[@]}"; do
+    scratch_path="${package_root}/.build/pbe-${configuration}-${architecture}"
+    target_triple="${architecture}-apple-macosx14.0"
+    build_arguments=(
+      -c "$configuration"
+      --triple "$target_triple"
+      --scratch-path "$scratch_path"
+    )
+    swift build "${build_arguments[@]}"
+    binary_paths+=(
+      "$(swift build "${build_arguments[@]}" --show-bin-path)/PhotosByElieBackstage"
+    )
+  done
+else
+  swift build -c "$configuration"
+  binary_paths+=("$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage")
+fi
 
 if [[ -e "$app" || -L "$app" ]]; then
   if [[ -L "$app" || ! -d "$app" ]]; then
@@ -61,7 +84,20 @@ if [[ -e "$app" || -L "$app" ]]; then
   rm -rf "$app"
 fi
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
-cp "$binary_path" "$executable"
+if (( ${#binary_paths[@]} == 1 )); then
+  cp "${binary_paths[1]}" "$executable"
+else
+  /usr/bin/lipo -create "${binary_paths[@]}" -output "$executable"
+fi
+
+if [[ "$configuration" == "release" ]]; then
+  executable_architectures="$(/usr/bin/lipo -archs "$executable")"
+  if [[ " $executable_architectures " != *" arm64 "* \
+        || " $executable_architectures " != *" x86_64 "* ]]; then
+    print -u2 "Release executable is not universal arm64 + x86_64: $executable_architectures"
+    exit 1
+  fi
+fi
 
 runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options 'HEAD^{commit}')"
 materializer_entry="$(git -C "$repo_root" ls-tree "$runtime_revision" -- scripts/owner_connector_runtime.py)"

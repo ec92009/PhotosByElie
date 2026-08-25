@@ -1308,6 +1308,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Developer ID Application:", build_script)
         self.assertIn("Apple Development:", build_script)
         self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', build_script)
+        self.assertIn('release_architectures=(arm64 x86_64)', build_script)
+        self.assertIn('--triple "$target_triple"', build_script)
+        self.assertIn('/usr/bin/lipo -create', build_script)
         self.assertIn(
             "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
             build_script,
@@ -1340,8 +1343,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "191")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "192")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1351,6 +1354,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("PBEBackstageUpdateManifestURL", build_script)
         self.assertIn("PBE_BACKSTAGE_UPDATE_MANIFEST_URL", build_script)
         self.assertIn('chmod -R u+w "$stage_root"', manifest_builder)
+        self.assertIn('"architectures": architectures.split()', manifest_builder)
+        self.assertIn("Refusing to publish a non-universal Backstage release", manifest_builder)
         self.assertNotIn("--sequesterRsrc", release_publisher)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
         self.assertIn('--entitlements "$entitlements"', build_script)

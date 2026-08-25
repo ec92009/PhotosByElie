@@ -60,6 +60,7 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
     public var minimumOSVersion: String
     public var releaseNotes: String
     public var artifactFormat: String
+    public var architectures: [String]?
     public var downloadURL: URL
     public var fileSize: Int64
     public var sha256: String
@@ -74,6 +75,7 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
         minimumOSVersion: String,
         releaseNotes: String,
         artifactFormat: String = "zip",
+        architectures: [String]? = nil,
         downloadURL: URL,
         fileSize: Int64,
         sha256: String,
@@ -87,6 +89,7 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
         self.minimumOSVersion = minimumOSVersion
         self.releaseNotes = releaseNotes
         self.artifactFormat = artifactFormat
+        self.architectures = architectures
         self.downloadURL = downloadURL
         self.fileSize = fileSize
         self.sha256 = sha256
@@ -115,6 +118,13 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
         }
         guard artifactFormat == "zip" else {
             throw BackstageUpdateError.invalidManifest("Backstage updates must be ZIP archives containing one app bundle.")
+        }
+        if let architectures {
+            guard Set(architectures) == Set(["arm64", "x86_64"]), architectures.count == 2 else {
+                throw BackstageUpdateError.invalidManifest(
+                    "Manifest architectures must identify one universal arm64 and x86_64 release."
+                )
+            }
         }
         guard downloadURL.scheme?.lowercased() == "https",
               let downloadHost = downloadURL.host,

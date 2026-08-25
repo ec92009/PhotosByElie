@@ -418,6 +418,14 @@ private struct BackstageUpdatesView: View {
         VStack(alignment: .leading, spacing: 6) {
             LabeledContent("Available version", value: "\(manifest.version) (\(manifest.build))")
             LabeledContent("Minimum macOS", value: manifest.minimumOSVersion)
+            if let architectures = manifest.architectures {
+                LabeledContent(
+                    "Architectures",
+                    value: architectures == ["arm64", "x86_64"]
+                        ? "Universal (Apple silicon + Intel)"
+                        : architectures.joined(separator: ", ")
+                )
+            }
             LabeledContent("Archive size", value: "\(manifest.fileSize.formatted()) bytes")
             Text(manifest.releaseNotes)
                 .font(.callout)

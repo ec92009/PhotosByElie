@@ -7,6 +7,7 @@
   "minimumOSVersion": "14.0",
   "releaseNotes": "Synthetic fixture release for deterministic updater tests.",
   "artifactFormat": "zip",
+  "architectures": ["arm64", "x86_64"],
   "downloadURL": "https://updates.test/photosbyelie/backstage-219.2-78.zip",
   "fileSize": 17,
   "sha256": "87c87f4215e4860bffd0ebd8bdf643a4364da28f9ed352bf4deae8077e50609f",

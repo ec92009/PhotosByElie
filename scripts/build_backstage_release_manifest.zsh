@@ -92,8 +92,23 @@ bundle_identifier="$(plist_value CFBundleIdentifier)"
 version="$(plist_value CFBundleShortVersionString)"
 build="$(plist_value CFBundleVersion)"
 minimum_os="$(plist_value LSMinimumSystemVersion)"
+executable_name="$(plist_value CFBundleExecutable)"
 if [[ "$bundle_identifier" != "com.photosbyelie.backstage" ]]; then
   print -u2 "Unexpected Backstage bundle identifier: $bundle_identifier"
+  exit 1
+fi
+
+executable="$app/Contents/MacOS/$executable_name"
+if [[ ! -f "$executable" || -L "$executable" ]]; then
+  print -u2 "The Backstage app bundle is missing its regular executable."
+  exit 1
+fi
+architectures="$(/usr/bin/lipo -archs "$executable" 2>/dev/null)" || {
+  print -u2 "The Backstage executable architecture could not be inspected."
+  exit 1
+}
+if [[ " $architectures " != *" arm64 "* || " $architectures " != *" x86_64 "* ]]; then
+  print -u2 "Refusing to publish a non-universal Backstage release: $architectures"
   exit 1
 fi
 if [[ ! "$version" =~ '^[0-9]+(\.[0-9]+)*$' || ! "$build" =~ '^[0-9]+$' || ! "$minimum_os" =~ '^[0-9]+(\.[0-9]+)*$' ]]; then
@@ -123,7 +138,7 @@ file_size="$(stat -f '%z' "$artifact")"
 sha256="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 mkdir -p "${output:h}"
 temporary_output="${output}.tmp.$$"
-python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" <<'PY'
+python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" "$architectures" <<'PY'
 import json
 import pathlib
 import sys
@@ -140,6 +155,7 @@ import sys
     team_identifier,
     signing_identity,
     designated_requirement,
+    architectures,
 ) = sys.argv[1:]
 manifest = {
     "schemaVersion": 1,
@@ -150,6 +166,7 @@ manifest = {
     "minimumOSVersion": minimum_os,
     "releaseNotes": release_notes,
     "artifactFormat": "zip",
+    "architectures": architectures.split(),
     "downloadURL": download_url,
     "fileSize": int(file_size),
     "sha256": sha256,

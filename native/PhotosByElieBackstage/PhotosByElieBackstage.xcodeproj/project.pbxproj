@@ -36,6 +36,7 @@
 		4628074BA54F4ECE704A7053 /* AccessControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8F54038F6A3AEC01C2A39E /* AccessControlService.swift */; };
 		475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */; };
 		490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */; };
+		4E31A2C97F6548B1A08D37E2 /* BackstageUpdateInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73DA4E6F8B9146C2A5F031D7 /* BackstageUpdateInstaller.swift */; };
 		52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB6E2056746C1F076962053 /* OwnerModels.swift */; };
 		56B7C35ACBECD902BB325AE9 /* BackstagePreviewIPCServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06643EBF1140D87675451A96 /* BackstagePreviewIPCServer.swift */; };
 		5710E0E1DAD841A895A560A6 /* BackstageViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F7A66C5F08372E2CCB91DC1 /* BackstageViewModel.swift */; };
@@ -180,6 +181,7 @@
 		47F2A47E90108DD44FFC944D /* PBEOwnerHTTPRequestParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerHTTPRequestParser.swift; sourceTree = "<group>"; };
 		49137FE1D2EA2ED58819AC14 /* PhotosByElieBackstage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotosByElieBackstage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageUpdateService.swift; sourceTree = "<group>"; };
+		73DA4E6F8B9146C2A5F031D7 /* BackstageUpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageUpdateInstaller.swift; sourceTree = "<group>"; };
 		4D3BD163ECF90B589AA74502 /* UploadHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHeaderView.swift; sourceTree = "<group>"; };
 		4F505E771E39A7C698C9501F /* PBEOwnerNativeGalleryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeGalleryService.swift; sourceTree = "<group>"; };
 		51BC746A81E7877FA8F5CE82 /* OwnerCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = OwnerCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -384,6 +386,7 @@
 				10EACB0F350F72D4D702B495 /* BackstagePreviewIPCProtocol.swift */,
 				06643EBF1140D87675451A96 /* BackstagePreviewIPCServer.swift */,
 				E4992800ECC238EF737DF895 /* BackstageUpdateModels.swift */,
+				73DA4E6F8B9146C2A5F031D7 /* BackstageUpdateInstaller.swift */,
 				4B30A4F42D53171BF64DCBF4 /* BackstageUpdateService.swift */,
 				45D015A4C0515540BDDD3344 /* CullingWorkspace.swift */,
 				8FB0FFA5AF03E232552274D4 /* FixtureDeliveryService.swift */,
@@ -611,6 +614,7 @@
 				F1651D6414B368CBED39AAD8 /* BackstagePreviewIPCProtocol.swift in Sources */,
 				56B7C35ACBECD902BB325AE9 /* BackstagePreviewIPCServer.swift in Sources */,
 				490D0DC291F53CFE09E70BD8 /* BackstageUpdateModels.swift in Sources */,
+				4E31A2C97F6548B1A08D37E2 /* BackstageUpdateInstaller.swift in Sources */,
 				9E2CF54C2D1C7D82D2F9A946 /* BackstageUpdateService.swift in Sources */,
 				85C552A4DC7DAE3B98B0D2CE /* CullingWorkspace.swift in Sources */,
 				C2458FDC3ACC77E67215160A /* FixtureDeliveryService.swift in Sources */,

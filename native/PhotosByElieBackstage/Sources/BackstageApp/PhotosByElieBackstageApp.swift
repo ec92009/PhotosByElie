@@ -315,6 +315,7 @@ private struct OverviewView: View {
 
 private struct BackstageUpdatesView: View {
     @ObservedObject var model: BackstageViewModel
+    @State private var isConfirmingInstallation = false
 
     var body: some View {
         ScrollView {
@@ -349,6 +350,18 @@ private struct BackstageUpdatesView: View {
                 }
             }
             .padding(24)
+        }
+        .confirmationDialog(
+            "Install this verified Backstage update?",
+            isPresented: $isConfirmingInstallation,
+            titleVisibility: .visible
+        ) {
+            Button("Install and retain rollback") {
+                Task { await model.installVerifiedUpdate() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Backstage will stage and reverify the complete app, preserve the incumbent signed bundle, then atomically replace only /Applications/PhotosByElie Backstage.app.")
         }
     }
 
@@ -394,6 +407,37 @@ private struct BackstageUpdatesView: View {
                 NSWorkspace.shared.activateFileViewerSelecting([update.bundleURL])
             }
             .backstageHelp("Reveal the isolated verified app bundle for a separately confirmed manual installation or rollback decision.")
+            Button("Install verified update") {
+                isConfirmingInstallation = true
+            }
+            .buttonStyle(.borderedProminent)
+            .backstageHelp("Confirm a complete staged copy, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
+        case let .installing(manifest):
+            statusLabel("Installing verified update", systemImage: "arrow.triangle.2.circlepath", color: .orange)
+            releaseSummary(manifest)
+            ProgressView()
+            Text("Staging and reverifying the complete app before the canonical bundle is exchanged.")
+                .foregroundStyle(.secondary)
+        case let .installed(receipt):
+            statusLabel("Installed safely", systemImage: "checkmark.seal.fill", color: .green)
+            releaseSummary(receipt.manifest)
+            Text("The verified release is installed at /Applications/PhotosByElie Backstage.app.")
+                .foregroundStyle(.secondary)
+            if receipt.rollbackBundleURL != nil {
+                Text("The previous signed app is retained privately for rollback.")
+                    .foregroundStyle(.secondary)
+            }
+            Button("Quit and open installed Backstage") {
+                let configuration = NSWorkspace.OpenConfiguration()
+                NSWorkspace.shared.openApplication(
+                    at: receipt.installedBundleURL,
+                    configuration: configuration
+                ) { _, error in
+                    guard error == nil else { return }
+                    DispatchQueue.main.async { NSApp.terminate(nil) }
+                }
+            }
+            .buttonStyle(.borderedProminent)
         case let .failed(message, recovery):
             statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
             Text(message)
@@ -405,6 +449,7 @@ private struct BackstageUpdatesView: View {
     private var isBusy: Bool {
         if case .checking = model.updateState { return true }
         if case .downloading = model.updateState { return true }
+        if case .installing = model.updateState { return true }
         return false
     }
 

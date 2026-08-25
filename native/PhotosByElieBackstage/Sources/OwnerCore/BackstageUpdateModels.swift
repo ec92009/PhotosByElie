@@ -197,6 +197,22 @@ public struct BackstageVerifiedUpdate: Sendable, Equatable {
     }
 }
 
+public struct BackstageInstallationReceipt: Sendable, Equatable {
+    public var manifest: BackstageReleaseManifest
+    public var installedBundleURL: URL
+    public var rollbackBundleURL: URL?
+
+    public init(
+        manifest: BackstageReleaseManifest,
+        installedBundleURL: URL,
+        rollbackBundleURL: URL?
+    ) {
+        self.manifest = manifest
+        self.installedBundleURL = installedBundleURL
+        self.rollbackBundleURL = rollbackBundleURL
+    }
+}
+
 public enum BackstageUpdateState: Sendable, Equatable {
     case idle
     case checking
@@ -204,6 +220,8 @@ public enum BackstageUpdateState: Sendable, Equatable {
     case updateAvailable(BackstageReleaseManifest)
     case downloading(BackstageReleaseManifest, receivedBytes: Int64, totalBytes: Int64)
     case verified(BackstageVerifiedUpdate)
+    case installing(BackstageReleaseManifest)
+    case installed(BackstageInstallationReceipt)
     case failed(message: String, recovery: String)
 }
 
@@ -231,12 +249,13 @@ public enum BackstageUpdateError: Error, LocalizedError, Sendable, Equatable {
     case checksumMismatch(expected: String, actual: String)
     case archiveInvalid(String)
     case signatureMismatch(String)
+    case installationFailed(String)
 
     public var errorDescription: String? {
         switch self {
         case .configurationMissing:
             return "No authoritative Backstage release-manifest endpoint is configured."
-        case let .invalidManifest(message), let .incompatible(message), let .downloadFailed(message), let .archiveInvalid(message), let .signatureMismatch(message):
+        case let .invalidManifest(message), let .incompatible(message), let .downloadFailed(message), let .archiveInvalid(message), let .signatureMismatch(message), let .installationFailed(message):
             return message
         case let .network(message):
             return "The authoritative Backstage release check failed: \(message)"
@@ -259,6 +278,8 @@ public enum BackstageUpdateError: Error, LocalizedError, Sendable, Equatable {
             return "The rejected temporary archive was removed. Retry only after the release owner repairs the artifact or manifest. The running app and local Owner state were not touched."
         case .incompatible:
             return "Keep this installation and use a release whose minimum macOS version and stable bundle identity match this Mac."
+        case .installationFailed:
+            return "Keep using the incumbent Backstage app. Its canonical bundle was preserved or restored; inspect the retained rollback copy before retrying."
         default:
             return "Retry the read-only check or download. If it continues, keep the current installation and contact the release owner."
         }

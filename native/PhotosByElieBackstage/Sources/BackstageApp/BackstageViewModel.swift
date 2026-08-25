@@ -394,6 +394,7 @@ final class BackstageViewModel: ObservableObject {
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let updateService: BackstageUpdateService
+    let updateInstaller: BackstageUpdateInstaller
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
@@ -547,6 +548,7 @@ final class BackstageViewModel: ObservableObject {
         pbeOwnerHost: (any PBEOwnerHostServing)? = nil,
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
         updateService: BackstageUpdateService = BackstageUpdateService(),
+        updateInstaller: BackstageUpdateInstaller = BackstageUpdateInstaller(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
         lifecycleService: LifecycleService? = nil,
@@ -564,6 +566,7 @@ final class BackstageViewModel: ObservableObject {
     ) {
         self.preferences = preferences
         self.updateService = updateService
+        self.updateInstaller = updateInstaller
         self.installedRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
@@ -1108,6 +1111,25 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             let updateError = (error as? BackstageUpdateError)
                 ?? BackstageUpdateError.downloadFailed(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
+        }
+    }
+
+    func installVerifiedUpdate() async {
+        guard case let .verified(update) = updateState else { return }
+        updateState = .installing(update.manifest)
+        do {
+            let installer = updateInstaller
+            let receipt = try await Task.detached {
+                try installer.install(update)
+            }.value
+            updateState = .installed(receipt)
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.installationFailed(error.localizedDescription)
             updateState = .failed(
                 message: updateError.localizedDescription,
                 recovery: updateError.recoveryGuidance

@@ -675,7 +675,7 @@ struct CullingView: View {
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P pick • H hide • X Waste Basket • U clear • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P pick • H hide • U unhide • X Waste Basket • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -718,6 +718,18 @@ struct CullingView: View {
             .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
             .accessibilityLabel("H Hide selected items")
             .backstageHelp("Instantly hide the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
+            Button("U Unhide") {
+                Task { await model.applyPickShortcut(.unpick) }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("U Unhide selected items")
+            .accessibilityValue(
+                model.cullingSelection.selectedIDs.isEmpty
+                    ? "No items selected."
+                    : "Returns the selected fixture items to Undecided."
+            )
+            .backstageHelp("Return the explicit selection to Undecided in the current fixture. This uses the same reversible fixture writer as the U shortcut and does not affect the Waste Basket.")
             Button("X Waste Basket") {
                 Task { await model.moveCullingSelectionToWasteBasket() }
             }

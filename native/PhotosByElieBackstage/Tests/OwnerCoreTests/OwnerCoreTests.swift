@@ -4980,7 +4980,10 @@ private final class LockedFlag: @unchecked Sendable {
 private func createZipArchive(sourceApp: URL, destination: URL) throws {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-    process.arguments = ["-c", "-k", "--keepParent", sourceApp.path, destination.path]
+    process.arguments = [
+        "-c", "-k", "--sequesterRsrc", "--keepParent",
+        sourceApp.path, destination.path,
+    ]
     let pipe = Pipe()
     process.standardError = pipe
     try process.run()

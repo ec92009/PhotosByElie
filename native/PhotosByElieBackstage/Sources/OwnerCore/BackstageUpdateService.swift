@@ -243,9 +243,11 @@ private enum BackstageZipArchiveInspector {
             }
 
             if components[0] == "__MACOSX" {
-                guard components.count > 1 else {
-                    throw BackstageUpdateError.archiveInvalid("The archive contains an invalid metadata root.")
-                }
+                // ditto --sequesterRsrc emits an explicit __MACOSX/ directory
+                // entry before its app-scoped metadata children. The empty
+                // metadata root carries no path outside the declared app and
+                // is safe to ignore; every child remains bound below.
+                if components.count == 1 { continue }
                 let metadataRoot = components[1].hasPrefix("._")
                     ? String(components[1].dropFirst(2))
                     : components[1]

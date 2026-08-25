@@ -25,6 +25,11 @@ if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" ]]; the
   print -u2 "Native release metadata contains an unexpected bundle identity."
   exit 1
 fi
+if [[ "$PBE_BACKSTAGE_RELEASE_SOURCE_REF" != refs/heads/* ]] \
+  || ! git -C "$repo_root" check-ref-format "$PBE_BACKSTAGE_RELEASE_SOURCE_REF"; then
+  print -u2 "Native release metadata contains an invalid canonical source ref."
+  exit 1
+fi
 if ! python3 - "$PBE_BACKSTAGE_UPDATE_MANIFEST_URL" <<'PY'
 import sys
 from urllib.parse import urlsplit
@@ -183,6 +188,8 @@ cat > "${contents}/Info.plist" <<PLIST
   <string>Backstage reads and applies approved title, caption, and keyword metadata in Apple Photos.</string>
   <key>PBEOwnerRuntimeRevision</key>
   <string>${runtime_revision}</string>
+  <key>PBEBackstageReleaseSourceRef</key>
+  <string>${PBE_BACKSTAGE_RELEASE_SOURCE_REF}</string>
   <key>PBEBackstageUpdateManifestURL</key>
   <string>${PBE_BACKSTAGE_UPDATE_MANIFEST_URL}</string>
 </dict>

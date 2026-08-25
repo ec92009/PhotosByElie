@@ -1349,12 +1349,21 @@ class NativeCullingParityTest(unittest.TestCase):
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
         )
+        self.assertEqual(
+            value("PBE_BACKSTAGE_RELEASE_SOURCE_REF"),
+            "refs/heads/release/backstage",
+        )
         self.assertIn('source "$release_metadata"', build_script)
         self.assertIn("NSAppleEventsUsageDescription", build_script)
         self.assertIn("PBEBackstageUpdateManifestURL", build_script)
+        self.assertIn("PBEBackstageReleaseSourceRef", build_script)
         self.assertIn("PBE_BACKSTAGE_UPDATE_MANIFEST_URL", build_script)
+        self.assertIn("PBE_BACKSTAGE_RELEASE_SOURCE_REF", build_script)
         self.assertIn('chmod -R u+w "$stage_root"', manifest_builder)
         self.assertIn('"architectures": architectures.split()', manifest_builder)
+        self.assertIn('"canonicalRef": source_ref', manifest_builder)
+        self.assertIn('"commit": source_revision', manifest_builder)
+        self.assertIn('verify_backstage_release_source.zsh', manifest_builder)
         self.assertIn("Refusing to publish a non-universal Backstage release", manifest_builder)
         self.assertNotIn("--sequesterRsrc", release_publisher)
         self.assertIn("approved title, caption, and keyword metadata", build_script)

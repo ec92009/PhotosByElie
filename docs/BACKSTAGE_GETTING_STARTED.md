@@ -78,7 +78,22 @@ its version/build, minimum macOS version, release notes, and archive size.
 
 Production signed builds use
 `https://download.photos-by-elie.com/backstage/releases/latest.json`. Release
-owners publish a signed build with:
+owners publish only from the reviewed commit recorded in the app and from the
+canonical `refs/heads/release/backstage` source line. The manifest builder
+proves that exact commit is reachable from that branch on `origin`, then writes
+both the commit and canonical ref into the release manifest. An unpushed,
+worktree-only, or unrelated-branch commit fails closed before publication.
+
+Promoting source is a separate reviewed Git action. In a clean isolated
+worktree, fetch `refs/heads/release/backstage`, inspect its divergence from the
+reviewed commit, and update it with an ordinary non-force push only when the
+existing remote tip is an ancestor of the reviewed commit. Verify the exact
+remote tip with `git ls-remote origin refs/heads/release/backstage`, then build
+and sign from the reviewed commit. Never force-push or rewrite the canonical
+release branch to reconcile divergence. The public PBE web release remains a
+separate release boundary and is not changed by this Backstage process.
+
+After that explicit source promotion and signed build, publish with:
 
 ```zsh
 scripts/publish_backstage_release.zsh \
@@ -87,9 +102,10 @@ scripts/publish_backstage_release.zsh \
 ```
 
 Use `--dry-run` to perform the complete local archive and manifest validation
-without changing Cloudflare. Publication keeps versioned archives immutable,
-verifies the uploaded bytes, preserves the previous manifest for rollback, and
-updates `latest.json` only as the final write.
+without changing Cloudflare. The dry run still checks canonical remote source
+reachability. Publication keeps versioned archives immutable, verifies the
+uploaded bytes, preserves the previous manifest—including its source commit
+and ref—for rollback, and updates `latest.json` only as the final write.
 
 **Download and verify** writes a unique archive below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,

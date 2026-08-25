@@ -1,6 +1,17 @@
 #!/bin/zsh
 set -euo pipefail
 
+script_dir="${0:A:h}"
+repo_root="${script_dir:h}"
+release_metadata="${repo_root}/native/PhotosByElieBackstage/release-metadata.zsh"
+source_verifier="${script_dir}/verify_backstage_release_source.zsh"
+
+if [[ ! -r "$release_metadata" || ! -x "$source_verifier" ]]; then
+  print -u2 "Backstage release provenance tooling is incomplete."
+  exit 1
+fi
+source "$release_metadata"
+
 usage() {
   print -u2 "Usage: $0 --artifact signed-backstage.zip --download-url https://... --release-notes '...' --output manifest.json"
 }
@@ -93,10 +104,20 @@ version="$(plist_value CFBundleShortVersionString)"
 build="$(plist_value CFBundleVersion)"
 minimum_os="$(plist_value LSMinimumSystemVersion)"
 executable_name="$(plist_value CFBundleExecutable)"
+source_revision="$(plist_value PBEOwnerRuntimeRevision)"
+source_ref="$(plist_value PBEBackstageReleaseSourceRef)"
 if [[ "$bundle_identifier" != "com.photosbyelie.backstage" ]]; then
   print -u2 "Unexpected Backstage bundle identifier: $bundle_identifier"
   exit 1
 fi
+if [[ "$source_ref" != "$PBE_BACKSTAGE_RELEASE_SOURCE_REF" ]]; then
+  print -u2 "The signed artifact does not name the approved canonical release source ref."
+  exit 1
+fi
+"$source_verifier" \
+  --repo "$repo_root" \
+  --revision "$source_revision" \
+  --canonical-ref "$source_ref"
 
 executable="$app/Contents/MacOS/$executable_name"
 if [[ ! -f "$executable" || -L "$executable" ]]; then
@@ -143,7 +164,7 @@ file_size="$(stat -f '%z' "$artifact")"
 sha256="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 mkdir -p "${output:h}"
 temporary_output="${output}.tmp.$$"
-python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" "$architectures" <<'PY'
+python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" "$architectures" "$source_revision" "$source_ref" <<'PY'
 import json
 import pathlib
 import sys
@@ -161,6 +182,8 @@ import sys
     signing_identity,
     designated_requirement,
     architectures,
+    source_revision,
+    source_ref,
 ) = sys.argv[1:]
 manifest = {
     "schemaVersion": 1,
@@ -175,6 +198,10 @@ manifest = {
     "downloadURL": download_url,
     "fileSize": int(file_size),
     "sha256": sha256,
+    "source": {
+        "commit": source_revision,
+        "canonicalRef": source_ref,
+    },
     "trust": {
         "teamIdentifier": team_identifier,
         "signingIdentity": signing_identity,

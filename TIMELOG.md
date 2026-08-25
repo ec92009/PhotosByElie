@@ -777,8 +777,9 @@ Clock state: running
 | 2026-08-25 | 11:31 CEST | 11:36 CEST | 0:02 | Approved PBB-120 universal-release work and confirmed Intel macOS 15 support; background implementation and build verification excluded. |
 | 2026-08-25 | 12:35 CEST | 12:36 CEST | 0:01 | Approved PBB-121 as the next bounded repair after Curie's enrollment-date failure; background diagnosis, implementation, and tests excluded. |
 | 2026-08-25 | 12:45 CEST | 12:46 CEST | 0:01 | Approved publication of the signed universal PBB-121 candidate and a retained-enrollment retry on Curie; background build, verification, upload, and ticket-update runtime excluded. |
+| 2026-08-25 | 13:10 CEST | 13:14 CEST | 0:02 | Installed build 193 on Curie, confirmed retained-device authentication on Intel macOS 15, and accepted PBB-121 after an error-free session refresh; waiting and background inspection excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:17
+Active collaboration time used: 38:19
 Remaining budget: not set

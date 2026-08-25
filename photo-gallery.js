@@ -149,9 +149,12 @@ const defaultFilterState = {
   orientation: "all",
   sort: "newest",
   dateFrom: galleryDateRange.dateFrom,
-  dateTo: galleryDateRange.dateTo
+  dateTo: galleryDateRange.dateTo,
+  ownerMinRating: 0,
+  ownerColors: "none,red,yellow,green,blue",
 };
 const persistedFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
+const storedFilterKeys = [...persistedFilterKeys, ...(isPBEOwnerGallery ? ["ownerMinRating", "ownerColors"] : [])];
 const publicFilterState = (state = {}) => Object.fromEntries(
   Object.keys(defaultFilterState).map((key) => [key, state[key] ?? defaultFilterState[key]])
 );
@@ -422,7 +425,7 @@ const readFilterState = () => {
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
-      persistedFilterKeys.map((key) => [key, savedState[key] ?? defaultFilterState[key]])
+      storedFilterKeys.map((key) => [key, savedState[key] ?? defaultFilterState[key]])
     );
     return normalizeDateFilterState({
       ...defaultFilterState,
@@ -472,7 +475,7 @@ seedInlineDatePickerSelections();
 const writeFilterState = () => {
   if (isSelectionGallery) return;
   const persistedState = Object.fromEntries(
-    persistedFilterKeys.map((key) => [key, filterState[key] || defaultFilterState[key]])
+    storedFilterKeys.map((key) => [key, filterState[key] ?? defaultFilterState[key]])
   );
   localStorage.setItem(filterStateKey, JSON.stringify(persistedState));
 };
@@ -527,6 +530,19 @@ const metadataValue = (photo, label) => (
 
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
+const ownerColorFilterValues = ["none", "red", "yellow", "green", "blue"];
+const ownerMinRatingFilter = () => Math.max(0, Math.min(5, Number(filterState.ownerMinRating) || 0));
+const selectedOwnerColorFilters = () => new Set(
+  String(filterState.ownerColors ?? defaultFilterState.ownerColors)
+    .split(",")
+    .filter((color) => ownerColorFilterValues.includes(color))
+);
+const ownerFilterCount = () => {
+  if (!isPBEOwnerGallery) return 0;
+  const minRating = ownerMinRatingFilter();
+  const colors = selectedOwnerColorFilters();
+  return Number(minRating > 0) + Number(colors.size !== ownerColorFilterValues.length);
+};
 const ownerSuperSearchText = (photo) => {
   if (!localModerationEnabled) return "";
   return ownerSuperSearchIndex.get(photo?.id)?.text || "";
@@ -536,8 +552,15 @@ const filterContext = () => ({
   collectionTitle: localizedCollectionTitle(),
   extraSearchText: ownerSuperSearchText,
 });
-const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys);
-const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext());
+const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys) + ownerFilterCount();
+const matchesOwnerFilterState = (photo) => {
+  if (!isPBEOwnerGallery) return true;
+  const rating = Math.max(0, Math.min(5, Number(photo?.ownerState?.rating) || 0));
+  const color = String(photo?.ownerState?.color || "none").trim().toLowerCase() || "none";
+  return rating >= ownerMinRatingFilter() && selectedOwnerColorFilters().has(color);
+};
+const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext())
+  && matchesOwnerFilterState(photo);
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
@@ -1607,6 +1630,45 @@ const normalizeOwnerCommandResult = (result, requestedIds) => {
   return { succeeded, failed };
 };
 
+const ownerPhotoForId = (photoId) => (gallery?.photos || []).find((photo) => photo.id === photoId) || null;
+
+const applyOwnerCommandState = (methodName, value, succeededIds) => {
+  succeededIds.forEach((photoId) => {
+    const photo = ownerPhotoForId(photoId);
+    if (!photo) return;
+    photo.ownerState = { ...(photo.ownerState || {}) };
+    if (methodName === "setRating") photo.ownerState.rating = Math.max(0, Math.min(5, Number(value) || 0));
+    if (methodName === "setColor") photo.ownerState.color = String(value || "").trim().toLowerCase();
+    if (methodName === "review") photo.ownerState.placement = "picked";
+    if (methodName === "unpick") photo.ownerState.placement = "undecided";
+  });
+};
+
+const ownerCommandSuccessStatus = (methodName, value, count) => {
+  const subject = `${count} photo${count === 1 ? "" : "s"}`;
+  if (methodName === "setRating") return `${subject} rated ${Number(value) || 0}.`;
+  if (methodName === "setColor") return `${subject} labeled ${String(value || "").toLowerCase()}.`;
+  if (methodName === "review") return `${subject} returned to Review.`;
+  if (methodName === "unpick") return `${subject} returned to Undecided.`;
+  if (methodName === "hide") return `${subject} hidden from this fixture.`;
+  return `${subject} updated.`;
+};
+
+const ownerCardPresentation = (photo) => {
+  if (!isPBEOwnerGallery) return { className: "", html: "" };
+  const rating = Math.max(0, Math.min(5, Number(photo?.ownerState?.rating) || 0));
+  const color = String(photo?.ownerState?.color || "").trim().toLowerCase();
+  const supportedColor = ["red", "yellow", "green", "blue"].includes(color) ? color : "";
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-owner-card-star${index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  const stateLabel = `Rating ${rating} of 5${supportedColor ? `, ${supportedColor} color` : ", no color"}`;
+  return {
+    className: supportedColor ? `has-owner-color owner-color-${supportedColor}` : "",
+    html: `<span class="gallery-owner-card-rating" aria-label="${escapeHtml(stateLabel)}" title="${escapeHtml(stateLabel)}">${stars}</span>`,
+  };
+};
+
 const runOwnerAdapterCommand = async (methodName, { value = null, removes = false, currentPhoto = null } = {}) => {
   const method = ownerAdapterMethod(methodName);
   if (!method) return null;
@@ -1624,6 +1686,7 @@ const runOwnerAdapterCommand = async (methodName, { value = null, removes = fals
     const normalized = normalizeOwnerCommandResult(result, requestedIds);
     normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
     normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
+    applyOwnerCommandState(methodName, value, normalized.succeeded);
     if (removes) {
       normalized.succeeded.forEach((photoId) => {
         selectedPhotoIds.delete(photoId);
@@ -1639,12 +1702,14 @@ const runOwnerAdapterCommand = async (methodName, { value = null, removes = fals
         }
       }
       renderGallery();
+    } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
+      renderGallery({ scrollSelection: false });
     } else {
       updateSelection({ scroll: false });
     }
     setGalleryStatus(normalized.failed.length
       ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed and remain selected.`
-      : `${requestedIds.length} photo${requestedIds.length === 1 ? "" : "s"} updated.`);
+      : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
     return normalized;
   } catch (error) {
     requestedIds.forEach((photoId) => selectionErrors.set(photoId, error?.message || "Owner command failed."));
@@ -1821,7 +1886,7 @@ const galleryCommands = [
     },
   },
   ...[0, 1, 2, 3, 4, 5].map((rating) => ({
-    id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: rating,
+    id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "actions-rating-color", order: rating,
     label: rating ? `Rating ${rating}` : "Clear Rating", icon: rating ? "★" : "☆", shortcut: String(rating), shortcutLabel: String(rating),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
     ratingValue: rating,
@@ -1829,7 +1894,7 @@ const galleryCommands = [
     execute: (context) => runOwnerAdapterCommand("setRating", { value: rating, currentPhoto: context.currentPhoto }),
   })),
   ...[[6, "red"], [7, "yellow"], [8, "green"], [9, "blue"]].map(([key, color], index) => ({
-    id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: 10 + index,
+    id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "actions-rating-color", order: 10 + index,
     label: `${color[0].toUpperCase()}${color.slice(1)}`, icon: "●", shortcut: String(key), shortcutLabel: String(key),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
     colorValue: color,
@@ -1869,7 +1934,7 @@ const galleryCommands = [
     state: () => ownerWorkflowContext() === "review"
       ? { enabled: false, disabledReason: "Already in Review." }
       : ownerCapabilityState("review"),
-    execute: (context) => runOwnerAdapterCommand("review", { removes: true, currentPhoto: context.currentPhoto }),
+    execute: (context) => runOwnerAdapterCommand("review", { removes: !isPBEOwnerGallery, currentPhoto: context.currentPhoto }),
   },
   {
     id: "waste-basket", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 50,
@@ -1889,8 +1954,8 @@ const galleryCommands = [
     execute: (context) => runOwnerAdapterCommand("unpick", { currentPhoto: context.currentPhoto }),
   },
   {
-    id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "workflow", order: 70,
-    label: () => `Burst ${burstCandidateIds()?.length || 0}`, icon: "B", shortcut: "b", shortcutLabel: "B", selectionEffect: "replace",
+    id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "filters", order: 10,
+    label: () => `Burst ${burstCandidateIds()?.length || 0}`, icon: "B", selectionEffect: "replace",
     state: () => {
       const candidates = burstCandidateIds();
       const current = new Set(selectedPhotoIds);
@@ -2024,10 +2089,64 @@ const colorSwatchHtml = (command) => {
 };
 
 const commandGroupHtml = (entry) => {
-  if (entry.group !== "rating-color") return entry.commands.map(commandButtonHtml).join("");
+  if (entry.group !== "actions-rating-color") return entry.commands.map(commandButtonHtml).join("");
   const ratings = entry.commands.filter((command) => Number.isInteger(command.ratingValue));
   const colors = entry.commands.filter((command) => command.colorValue);
   return `${ratingSliderHtml(ratings)}${colors.map(colorSwatchHtml).join("")}`;
+};
+
+const ownerRatingFilterHtml = () => {
+  const rating = ownerMinRatingFilter();
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-rating-star${index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  return `
+    <span class="gallery-rating-slider gallery-rating-filter" data-gallery-rating-filter data-rating="${rating}"
+      role="slider" aria-label="Minimum rating filter" aria-valuemin="0" aria-valuemax="5"
+      aria-valuenow="${rating}" aria-valuetext="${rating ? `${rating} stars or more` : "All ratings"}"
+      tabindex="0" title="Show photos rated ${rating ? `${rating} stars or more` : "0–5"}">
+      <span class="gallery-rating-zero" aria-hidden="true">○</span>${stars}
+    </span>
+  `;
+};
+
+const ownerColorFilterHtml = () => {
+  const selected = selectedOwnerColorFilters();
+  return ownerColorFilterValues.map((color) => {
+    const active = selected.has(color);
+    const label = color === "none" ? "No color" : `${color[0].toUpperCase()}${color.slice(1)}`;
+    return `
+      <button class="gallery-color-swatch gallery-color-filter is-${escapeHtml(color)}${active ? " is-applied" : ""}"
+        type="button" data-gallery-owner-color-filter="${escapeHtml(color)}" title="Filter: ${escapeHtml(label)}"
+        aria-label="Filter by ${escapeHtml(label)}" aria-pressed="${active}">
+        <span aria-hidden="true">${color === "none" ? "∕" : ""}</span>
+      </button>
+    `;
+  }).join("");
+};
+
+const galleryCommandGroupsHtml = (groups) => groups.map((entry) => `
+  <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replaceAll("-", " "))}">
+    ${commandGroupHtml(entry)}
+  </span>
+`).join("");
+
+const ownerCommandSectionsHtml = (groups) => {
+  const filterGroups = groups.filter((entry) => entry.group === "filters");
+  const viewGroups = groups.filter((entry) => ["selection", "view"].includes(entry.group));
+  const actionGroups = groups.filter((entry) => !["filters", "selection", "view"].includes(entry.group));
+  return `
+    <span class="gallery-command-section is-filters" role="group" aria-label="Filters">
+      <span class="gallery-command-section-label">Filters</span>
+      ${galleryCommandGroupsHtml(filterGroups)}${ownerRatingFilterHtml()}${ownerColorFilterHtml()}
+    </span>
+    <span class="gallery-command-section is-view" role="group" aria-label="Selection and view">
+      <span class="gallery-command-section-label">View</span>${galleryCommandGroupsHtml(viewGroups)}
+    </span>
+    <span class="gallery-command-section is-actions" role="group" aria-label="Actions">
+      <span class="gallery-command-section-label">Actions</span>${galleryCommandGroupsHtml(actionGroups)}
+    </span>
+  `;
 };
 
 const ratingFromPointer = (event, element) => {
@@ -2053,6 +2172,15 @@ const previewRatingSlider = (element, rating) => {
   });
 };
 
+const commitOwnerFilterState = (updates) => {
+  filterState = { ...filterState, ...updates };
+  writeFilterState();
+  cancelPaginationSequence();
+  visibleLimit = pageSize;
+  selectedIndex = 0;
+  renderGallery({ scrollSelection: false });
+};
+
 const mountPBEOwnerSessionInCommandBar = (sessionRoot = document.querySelector("[data-pbe-owner-session]")) => {
   if (!isPBEOwnerGallery || !sessionRoot || !galleryCommandBar) return;
   const commandScroll = galleryCommandBar.querySelector("[data-gallery-command-scroll]");
@@ -2069,6 +2197,8 @@ const renderGalleryCommandBar = () => {
     : null;
   const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
   const focusedRating = Boolean(document.activeElement?.matches?.("[data-gallery-rating-slider]"));
+  const focusedRatingFilter = Boolean(document.activeElement?.matches?.("[data-gallery-rating-filter]"));
+  const focusedColorFilter = document.activeElement?.dataset?.galleryOwnerColorFilter || "";
   const commands = galleryCommandRegistry.list();
   const groups = galleryCommandModel.GROUP_ORDER
     .map((group) => ({ group, commands: commands.filter((command) => command.group === group) }))
@@ -2076,11 +2206,7 @@ const renderGalleryCommandBar = () => {
   galleryCommandBar.innerHTML = `
     <div class="gallery-command-scroll" data-gallery-command-scroll>
       <span class="gallery-command-count-slot" data-gallery-command-count-slot></span>
-      ${groups.map((entry) => `
-        <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replace("-", " "))}">
-          ${commandGroupHtml(entry)}
-        </span>
-      `).join("")}
+      ${isPBEOwnerGallery ? ownerCommandSectionsHtml(groups) : galleryCommandGroupsHtml(groups)}
     </div>
   `;
   const countSlot = galleryCommandBar.querySelector("[data-gallery-command-count-slot]");
@@ -2120,8 +2246,46 @@ const renderGalleryCommandBar = () => {
     event.preventDefault();
     dispatchRating(next);
   });
+  const ratingFilter = galleryCommandBar.querySelector("[data-gallery-rating-filter]");
+  let ratingFilterPointerActive = false;
+  ratingFilter?.addEventListener("pointerdown", (event) => {
+    ratingFilterPointerActive = true;
+    ratingFilter.setPointerCapture?.(event.pointerId);
+    previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointermove", (event) => {
+    if (ratingFilterPointerActive) previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointerup", () => {
+    if (!ratingFilterPointerActive) return;
+    ratingFilterPointerActive = false;
+    commitOwnerFilterState({ ownerMinRating: Number(ratingFilter.dataset.rating) || 0 });
+  });
+  ratingFilter?.addEventListener("pointercancel", () => { ratingFilterPointerActive = false; });
+  ratingFilter?.addEventListener("keydown", (event) => {
+    const current = Number(ratingFilter.dataset.rating) || 0;
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? 5
+        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
+          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
+            : null;
+    if (next === null) return;
+    event.preventDefault();
+    commitOwnerFilterState({ ownerMinRating: next });
+  });
+  galleryCommandBar.querySelectorAll("[data-gallery-owner-color-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = selectedOwnerColorFilters();
+      const color = button.dataset.galleryOwnerColorFilter;
+      if (selected.has(color)) selected.delete(color);
+      else selected.add(color);
+      commitOwnerFilterState({ ownerColors: ownerColorFilterValues.filter((candidate) => selected.has(candidate)).join(",") });
+    });
+  });
   mountPBEOwnerSessionInCommandBar(ownerSessionRoot);
   if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
+  else if (focusedRatingFilter) galleryCommandBar.querySelector("[data-gallery-rating-filter]")?.focus({ preventScroll: true });
+  else if (focusedColorFilter) galleryCommandBar.querySelector(`[data-gallery-owner-color-filter="${CSS.escape(focusedColorFilter)}"]`)?.focus({ preventScroll: true });
   else if (focusedRating) galleryCommandBar.querySelector("[data-gallery-rating-slider]")?.focus({ preventScroll: true });
   const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
   if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);
@@ -2244,6 +2408,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
             ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
           </button>
       ` : "";
+    const ownerPresentation = ownerCardPresentation(photo);
     const actionHtml = `
       <div class="gallery-card-selection">${selectButton}</div>
       ${likeButton ? `<div class="gallery-card-actions">${likeButton}</div>` : ""}
@@ -2254,6 +2419,8 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       href,
       collectionKey: galleryKey,
       actionHtml,
+      mediaOverlayHtml: ownerPresentation.html,
+      cardClass: ownerPresentation.className,
       ownerEditable: false,
     });
   }).join("");

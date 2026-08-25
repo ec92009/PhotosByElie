@@ -158,6 +158,8 @@
     collectionKey = "",
     collectionAccent = "",
     actionHtml = "",
+    mediaOverlayHtml = "",
+    cardClass = "",
     ownerEditable = false,
     missingLabel = "",
   }) => {
@@ -191,6 +193,7 @@
       ${isVideo ? `<span class="video-card-badge" aria-hidden="true">${window.photosByElieMdIcon?.("play") || "▶"}</span>` : ""}
       ${rawLabel ? `<span class="raw-source-badge" title="${escapeHtml(rawLabel)} source">RAW</span>` : ""}
       ${originBadgeHtml(origin, originLabel, isVideo)}
+      ${mediaOverlayHtml}
     `;
     const media = href
       ? `<a class="${photoClasses}" href="${hrefAttr}" data-photo-link aria-label="${photoOpenLabel}"${photoAspectStyle}>${mediaHtml}</a>`
@@ -205,7 +208,7 @@
 
     return `
       <article
-        class="mock-photo-card"
+        class="mock-photo-card${cardClass ? ` ${escapeHtml(cardClass)}` : ""}"
         aria-label="${photoOpenLabel}, ${escapeHtml(originLabel)}${rawLabel ? `, RAW source ${escapeHtml(rawLabel)}` : ""}"
         data-photo-index="${index}"
         data-photo-id="${safeId}"

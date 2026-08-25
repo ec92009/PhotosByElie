@@ -5212,6 +5212,35 @@ body[data-gallery] main.shell{
   padding-left:8px;
   border-left:1px solid var(--line);
 }
+.gallery-command-section{
+  display:inline-flex;
+  flex:0 0 auto;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px;
+  min-height:42px;
+  padding:3px 6px;
+  border:1px solid color-mix(in srgb,var(--line) 72%,transparent);
+  border-radius:14px;
+}
+.gallery-command-section.is-filters{
+  background:color-mix(in srgb,var(--surface-2) 78%,transparent);
+}
+.gallery-command-section.is-actions{
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+}
+.gallery-command-section-label{
+  padding-inline:3px;
+  color:var(--muted);
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.gallery-command-section > .gallery-command-group:first-of-type{
+  padding-left:0;
+  border-left:0;
+}
 .gallery-command-button{
   display:inline-flex;
   align-items:center;
@@ -5313,9 +5342,25 @@ body[data-gallery] main.shell{
 .gallery-color-swatch.is-yellow{--owner-swatch:#ffd60a}
 .gallery-color-swatch.is-green{--owner-swatch:#30d158}
 .gallery-color-swatch.is-blue{--owner-swatch:#0a84ff}
+.gallery-color-swatch.is-none{--owner-swatch:transparent}
+.gallery-color-swatch.is-none > span{
+  display:grid;
+  place-items:center;
+  color:var(--muted);
+  font-size:1rem;
+  font-weight:900;
+}
 .gallery-color-swatch.is-applied{
   border-color:var(--text);
   box-shadow:0 0 0 2px color-mix(in srgb,var(--text) 28%,transparent);
+}
+.gallery-rating-filter,
+.gallery-color-filter{
+  min-height:32px;
+}
+.gallery-color-filter{
+  width:32px;
+  height:32px;
 }
 .gallery-action-label-setting{
   display:flex;
@@ -6613,6 +6658,41 @@ html[data-theme="light"] .mock-photo.has-image::after{
   left:8px;
   z-index:9;
   display:flex;
+}
+.mock-photo-card.has-owner-color .mock-photo::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:7;
+  border:5px solid var(--owner-card-color);
+  pointer-events:none;
+}
+.mock-photo-card.owner-color-red{--owner-card-color:#ff453a}
+.mock-photo-card.owner-color-yellow{--owner-card-color:#ffd60a}
+.mock-photo-card.owner-color-green{--owner-card-color:#30d158}
+.mock-photo-card.owner-color-blue{--owner-card-color:#0a84ff}
+.gallery-owner-card-rating{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:8;
+  display:inline-flex;
+  gap:1px;
+  padding:4px 6px;
+  border:1px solid rgba(255,255,255,.48);
+  border-radius:999px;
+  background:rgba(0,0,0,.62);
+  color:rgba(255,255,255,.56);
+  box-shadow:0 8px 22px rgba(0,0,0,.2);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.gallery-owner-card-star{
+  font-size:.78rem;
+  line-height:1;
+}
+.gallery-owner-card-star.is-filled{
+  color:#ffd60a;
 }
 .gallery-action-toggle{
   display:grid;

@@ -32,7 +32,7 @@ test("command registry keeps role gating, stable group order, and disabled posit
     ],
   });
 
-  assert.deepEqual(GROUP_ORDER, ["selection", "view", "rating-color", "workflow"]);
+  assert.deepEqual(GROUP_ORDER, ["filters", "selection", "view", "actions-rating-color", "workflow"]);
   assert.equal(MAX_SELECTION, 500);
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview"]);
   assert.equal(registry.command("clear").enabled, false);
@@ -96,6 +96,26 @@ test("Owner rating and color controls match the compact Backstage contract", () 
   assert.match(ownerSessionJs, /ownerState:[\s\S]*rating:[\s\S]*color:[\s\S]*placement:[\s\S]*editorial:/);
 });
 
+test("hosted Owner separates filters from mutations and renders durable card indicators", () => {
+  const burstCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "burst"'),
+    galleryJs.indexOf('id: "approve"'),
+  );
+  assert.match(galleryJs, /gallery-command-section is-filters/);
+  assert.match(galleryJs, /gallery-command-section is-actions/);
+  assert.match(galleryJs, /data-gallery-rating-filter/);
+  assert.match(galleryJs, /data-gallery-owner-color-filter/);
+  assert.match(galleryJs, /ownerMinRating/);
+  assert.match(galleryJs, /selectedOwnerColorFilters/);
+  assert.match(burstCommand, /group: "filters"/);
+  assert.doesNotMatch(burstCommand, /shortcut:/);
+  assert.match(galleryJs, /gallery-owner-card-rating/);
+  assert.match(galleryJs, /owner-color-\$\{supportedColor\}/);
+  assert.match(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo::after/);
+  assert.match(photosCss, /\.gallery-owner-card-rating\{/);
+  assert.match(galleryCardJs, /mediaOverlayHtml/);
+});
+
 test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {
   const pickCommand = galleryJs.slice(
     galleryJs.indexOf('id: "pick"'),
@@ -107,6 +127,8 @@ test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {
   );
   assert.match(pickCommand, /isPBEOwnerGallery[\s\S]*hidden: true/);
   assert.match(reviewCommand, /ownerCapabilityState\("review"\)/);
+  assert.match(reviewCommand, /removes: !isPBEOwnerGallery/);
+  assert.match(galleryJs, /returned to Review/);
 });
 
 test("gallery cards bound native Owner preview bursts and retry transient failures", () => {

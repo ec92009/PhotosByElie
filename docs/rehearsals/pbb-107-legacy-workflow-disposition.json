@@ -1,0 +1,26 @@
+{
+  "canonicalDatabaseUnchanged": true,
+  "canonicalMutationPerformed": false,
+  "containsRowIdentifiers": false,
+  "copyStartedIdenticalToSource": true,
+  "generatedAt": "2026-08-25T19:50:00Z",
+  "manualReviewRequired": 0,
+  "mode": "copy-only-transaction",
+  "mutationPerformedOnCopy": true,
+  "photosSync": {
+    "cancelledBeforeScan": 19,
+    "failedBeforeCheckpoint": 2,
+    "runningRowsAfter": 0,
+    "runningRowsBefore": 21
+  },
+  "schema": "photosbyelie.pbb107LegacyWorkflowDispositionRehearsal.v1",
+  "uploadBridge": {
+    "allItemRowsValueEquivalent": true,
+    "cancelledBeforeExport": 3,
+    "interruptedPartial": 1,
+    "runningRowsAfter": 0,
+    "runningRowsBefore": 4,
+    "untouchedItemsPreserved": 2329,
+    "uploadedItemsPreserved": 3
+  }
+}

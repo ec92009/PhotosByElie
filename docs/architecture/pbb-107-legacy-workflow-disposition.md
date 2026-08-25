@@ -25,6 +25,30 @@ Strict mode fails closed if any row does not match one of the proven shapes.
 | Upload Bridge | Partially interrupted | 1 run / 500 items | 3 items have durable upload keys; 497 remain untouched | `interrupted`, preserving the 3 successful items |
 
 No row falls outside those shapes. The 3 successful historical uploads must
-not be replayed or erased. This report does not authorize applying the proposed
-states; an operator-reviewed, transactionally tested mutation remains a
-separate gate.
+not be replayed or erased.
+
+## Copy-only transaction rehearsal
+
+The operator approved a transaction-only rehearsal on an exact copy on
+2026-08-25. The rehearsal tool refuses the source database as its target,
+requires the copied file to have the source file's starting SHA-256, applies
+all dispositions in one SQLite transaction, and fails closed with a complete
+rollback if any running row does not match a proven shape.
+
+Run it only after making a private exact file copy:
+
+```sh
+python3 scripts/pbb107_legacy_workflow_rehearsal.py \
+  --source-database assets/owner-actions/Owner.sqlite \
+  --copied-database /private/path/Owner.rehearsal.sqlite
+```
+
+The approved rehearsal passed: all 21 Photos runs and 4 Upload Bridge runs
+became terminal in the copy, all 2,332 Upload Bridge item rows remained
+value-identical, the 3 durable uploads and 2,329 untouched items were
+preserved, and the canonical database SHA-256 remained identical before and
+after. The aggregate receipt is retained in
+`docs/rehearsals/pbb-107-legacy-workflow-disposition.json`.
+
+This result does not authorize applying the proposed states to canonical
+`Owner.sqlite`; canonical application remains a separate explicit gate.

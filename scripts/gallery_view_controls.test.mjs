@@ -113,13 +113,23 @@ test("hosted Owner separates filters from mutations and renders durable card ind
   assert.match(burstCommand, /group: "filters"/);
   assert.doesNotMatch(burstCommand, /shortcut:/);
   assert.match(galleryJs, /gallery-owner-card-rating/);
+  assert.match(galleryJs, /gallery-owner-card-color/);
   assert.match(galleryJs, /owner-color-\$\{supportedColor\}/);
-  assert.match(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo\{/);
-  assert.match(photosCss, /outline:5px solid var\(--owner-card-color\)/);
+  assert.match(photosCss, /\.gallery-owner-card-color\{/);
+  assert.match(photosCss, /border:5px solid var\(--owner-card-color\)/);
   assert.doesNotMatch(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo::after/);
   assert.match(photosCss, /\.gallery-owner-card-rating\{/);
   assert.match(photosCss, /\.gallery-owner-filter-row\{/);
   assert.match(galleryCardJs, /mediaOverlayHtml/);
+});
+
+test("hosted Owner card clicks stop at selection while explicit Like controls remain", () => {
+  assert.match(
+    galleryJs,
+    /card\.addEventListener\("click", \(event\) => \{[\s\S]*?event\.target\.closest\("button"\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?event\.stopPropagation\(\);[\s\S]*?selectOwnerPhotoFromPointer[\s\S]*?\}, \{ capture: true \}\);/,
+  );
+  assert.match(galleryJs, /data-gallery-like/);
+  assert.match(galleryJs, /id: "like"[\s\S]*?shortcut: "l"/);
 });
 
 test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {

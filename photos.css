@@ -6685,14 +6685,17 @@ html[data-theme="light"] .mock-photo.has-image::after{
   z-index:9;
   display:flex;
 }
-.mock-photo-card.has-owner-color .mock-photo{
-  outline:5px solid var(--owner-card-color);
-  outline-offset:-5px;
-}
 .mock-photo-card.owner-color-red{--owner-card-color:#ff453a}
 .mock-photo-card.owner-color-yellow{--owner-card-color:#ffd60a}
 .mock-photo-card.owner-color-green{--owner-card-color:#30d158}
 .mock-photo-card.owner-color-blue{--owner-card-color:#0a84ff}
+.gallery-owner-card-color{
+  position:absolute;
+  inset:0;
+  z-index:7;
+  border:5px solid var(--owner-card-color);
+  pointer-events:none;
+}
 .gallery-owner-card-rating{
   position:absolute;
   right:8px;

@@ -1663,10 +1663,13 @@ const ownerCardPresentation = (photo) => {
   const stars = Array.from({ length: 5 }, (_, index) => `
     <span class="gallery-owner-card-star${index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
   `).join("");
+  const colorFrame = supportedColor
+    ? '<span class="gallery-owner-card-color" aria-hidden="true"></span>'
+    : "";
   const stateLabel = `Rating ${rating} of 5${supportedColor ? `, ${supportedColor} color` : ", no color"}`;
   return {
     className: supportedColor ? `has-owner-color owner-color-${supportedColor}` : "",
-    html: `<span class="gallery-owner-card-rating" aria-label="${escapeHtml(stateLabel)}" title="${escapeHtml(stateLabel)}">${stars}</span>`,
+    html: `${colorFrame}<span class="gallery-owner-card-rating" aria-label="${escapeHtml(stateLabel)}" title="${escapeHtml(stateLabel)}">${stars}</span>`,
   };
 };
 
@@ -2476,10 +2479,11 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       card.addEventListener("click", (event) => {
         if (event.target.closest("button")) return;
         event.preventDefault();
+        event.stopPropagation();
         const index = Number(card.dataset.photoIndex || 0);
         const photo = visibleSubset[index];
         if (photo) selectOwnerPhotoFromPointer(photo.id, visibleSubset, event);
-      });
+      }, { capture: true });
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
         window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href")));

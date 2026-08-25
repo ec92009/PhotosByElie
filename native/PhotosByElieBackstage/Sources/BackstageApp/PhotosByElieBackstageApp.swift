@@ -359,7 +359,9 @@ private struct BackstageUpdatesView: View {
             Button("Install and retain rollback") {
                 Task { await model.installVerifiedUpdate() }
             }
+            .backstageHelp("Install only the already verified release, retain the incumbent signed app as a private rollback, and atomically exchange the canonical bundle.")
             Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without installing or changing the canonical Backstage app.")
         } message: {
             Text("Backstage will stage and reverify the complete app, preserve the incumbent signed bundle, then atomically replace only /Applications/PhotosByElie Backstage.app.")
         }
@@ -438,6 +440,7 @@ private struct BackstageUpdatesView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .backstageHelp("Open the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
         case let .failed(message, recovery):
             statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
             Text(message)

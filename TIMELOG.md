@@ -6,7 +6,7 @@ Tracking rule: See `docs/sops/TIMELOG_SOP.md`.
 
 Started tracking: 2026-05-22 06:55 CEST
 
-Clock state: paused
+Clock state: running
 
 ## Sessions
 
@@ -773,6 +773,7 @@ Clock state: paused
 | 2026-08-24 | 20:41 CEST | 20:42 CEST | 0:01 | Accepted the PBB-116 cross-desktop Quick Look behavior and continued PBB-103 row-wise Quick Look navigation; background implementation, tests, build, and installation excluded. |
 | 2026-08-25 | 00:11 CEST | 00:12 CEST | 0:01 | Reported that Empty Waste Basket remained enabled after the long operation and confirmed the missing terminal-feedback symptom; background PBE-134 release implementation, tests, deployment, signing, and installation excluded. |
 | 2026-08-25 | 08:21 CEST | 08:21 CEST | 0:00 | Paused at a safe checkpoint before expected network loss; GSA had already ended and no destructive action or worker was running. |
+| 2026-08-25 | 09:26 CEST | 09:26 CEST | 0:00 | Resumed from the network-loss checkpoint; no destructive action restarted automatically. |
 
 ## Totals
 

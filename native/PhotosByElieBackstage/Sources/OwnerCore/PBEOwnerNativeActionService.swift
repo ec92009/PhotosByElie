@@ -8,6 +8,14 @@ public actor PBEOwnerNativeActionService {
     public typealias GalleryProvider = @Sendable (
         PBEOwnerSessionContract
     ) async throws -> PBEOwnerNativeGallery
+    public typealias NativeMutationProvider = @Sendable (
+        PBEOwnerSessionContract,
+        String,
+        [String],
+        JSONValue?,
+        String,
+        String
+    ) async throws -> [String: JSONValue]
 
     private struct Record: Sendable, Equatable {
         var sessionID: String
@@ -15,25 +23,35 @@ public actor PBEOwnerNativeActionService {
         var operation: String
         var assetIDs: [String]
         var idempotencyDigest: String
+        var valueDigest: String
+    }
+
+    private struct NativeRecord: Sendable, Equatable {
+        var record: Record
+        var response: [String: JSONValue]
     }
 
     private let api: any OwnerActionServing
     private let runner: OwnerActionRunner
     private let connectorID: String
     private let galleryProvider: GalleryProvider
+    private let nativeMutationProvider: NativeMutationProvider?
     private var records: [String: Record] = [:]
     private var latestRequestBySession: [String: String] = [:]
+    private var nativeRecords: [String: NativeRecord] = [:]
 
     public init(
         api: any OwnerActionServing,
         runner: OwnerActionRunner,
         connectorID: String,
-        galleryProvider: @escaping GalleryProvider
+        galleryProvider: @escaping GalleryProvider,
+        nativeMutationProvider: NativeMutationProvider? = nil
     ) {
         self.api = api
         self.runner = runner
         self.connectorID = connectorID.trimmingCharacters(in: .whitespacesAndNewlines)
         self.galleryProvider = galleryProvider
+        self.nativeMutationProvider = nativeMutationProvider
     }
 
     public func submit(
@@ -48,18 +66,20 @@ public actor PBEOwnerNativeActionService {
               key.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) else {
             throw failure("pbe_owner_idempotency_required", 400)
         }
-        guard !connectorID.isEmpty else {
-            throw failure("pbe_owner_connector_unavailable", 503)
-        }
-
         let operation = clean(payload["action"]?.stringValue ?? "").lowercased()
-        guard ["waste-basket-x", "waste-basket-x-many", "waste-basket-restore"]
-            .contains(operation) else {
+        let nativeCapabilities = [
+            "fixture-hide": "fixture.hide",
+            "fixture-review": "fixture.review",
+            "rating-set": "asset.rating",
+            "color-set": "asset.color",
+        ]
+        let workerOperations = ["waste-basket-x", "waste-basket-x-many", "waste-basket-restore"]
+        guard workerOperations.contains(operation) || nativeCapabilities[operation] != nil else {
             throw failure("pbe_owner_action_forbidden", 403)
         }
-        let capability = operation == "waste-basket-restore"
-            ? "waste-basket.restore"
-            : "waste-basket.x"
+        let capability = nativeCapabilities[operation] ?? (
+            operation == "waste-basket-restore" ? "waste-basket.restore" : "waste-basket.x"
+        )
         guard session.capabilities.contains(capability) else {
             throw failure("pbe_owner_action_forbidden", 403)
         }
@@ -87,13 +107,59 @@ public actor PBEOwnerNativeActionService {
             }
         }
 
+        let reason = try cleanReason(payload["reason"]?.stringValue ?? "")
+        if nativeCapabilities[operation] != nil {
+            guard let nativeMutationProvider else {
+                throw failure("pbe_owner_action_forbidden", 403)
+            }
+            let value = payload["value"]
+            let keyDigest = Self.digest(key)
+            let record = Record(
+                sessionID: session.id,
+                fixtureID: session.fixtureId,
+                operation: operation,
+                assetIDs: assetIDs,
+                idempotencyDigest: keyDigest,
+                valueDigest: Self.digest(value)
+            )
+            if let existing = nativeRecords[keyDigest] {
+                guard existing.record == record else {
+                    throw failure("pbe_owner_idempotency_conflict", 409)
+                }
+                return existing.response
+            }
+            let response: [String: JSONValue]
+            do {
+                response = try await nativeMutationProvider(
+                    session,
+                    operation,
+                    assetIDs,
+                    value,
+                    reason,
+                    key
+                )
+            } catch let failure as PBEOwnerNativeSessionFailure {
+                throw failure
+            } catch {
+                throw failure("pbe_owner_action_failed", 502)
+            }
+            var completed = response
+            completed["ok"] = true
+            completed["state"] = "completed"
+            nativeRecords[keyDigest] = NativeRecord(record: record, response: completed)
+            return completed
+        }
+
+        guard !connectorID.isEmpty else {
+            throw failure("pbe_owner_connector_unavailable", 503)
+        }
+
         if let active = try await activeAction(session: session) {
             var response = response(for: active)
             response["resumed"] = true
             return response
         }
 
-        let reason = try cleanReason(payload["reason"]?.stringValue ?? "")
         let request = OwnerActionCreate(
             actionKind: "photo-moderation",
             target: connectorID,
@@ -124,7 +190,8 @@ public actor PBEOwnerNativeActionService {
             fixtureID: session.fixtureId,
             operation: operation,
             assetIDs: assetIDs,
-            idempotencyDigest: Self.digest(key)
+            idempotencyDigest: Self.digest(key),
+            valueDigest: ""
         )
         if let existing = records[action.id], existing != record {
             throw failure("pbe_owner_idempotency_conflict", 409)
@@ -315,5 +382,12 @@ public actor PBEOwnerNativeActionService {
 
     private static func digest(_ value: String) -> String {
         SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func digest(_ value: JSONValue?) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = (try? encoder.encode(value ?? .null)) ?? Data("null".utf8)
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }

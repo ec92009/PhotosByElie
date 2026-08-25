@@ -108,6 +108,86 @@ struct PBEOwnerNativeActionTests {
         #expect(await api.requests().isEmpty)
     }
 
+    @Test("Native fixture actions are capability scoped, frozen, and idempotent")
+    func nativeFixtureActions() async throws {
+        let api = PBEOwnerNativeActionAPIStub()
+        let recorder = PBEOwnerNativeMutationRecorder()
+        let service = PBEOwnerNativeActionService(
+            api: api,
+            runner: OwnerActionRunner(
+                api: api,
+                waker: PBEOwnerNativeActionNoopWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorID: "",
+            galleryProvider: { _ in actionGallery() },
+            nativeMutationProvider: { session, operation, assetIDs, value, reason, key in
+                await recorder.record(
+                    session: session,
+                    operation: operation,
+                    assetIDs: assetIDs,
+                    value: value,
+                    reason: reason,
+                    key: key
+                )
+                return [
+                    "results": .array(assetIDs.map { .object([
+                        "photoId": .string($0), "ok": true,
+                    ]) }),
+                ]
+            }
+        )
+        let session = actionSession(additionalCapabilities: ["fixture.hide", "fixture.review"])
+
+        await expectActionFailure(code: "pbe_owner_action_forbidden") {
+            _ = try await service.submit(
+                session: actionSession(),
+                payload: ["action": "fixture-hide", "photo_id": "asset-one"],
+                idempotencyKey: "missing-capability"
+            )
+        }
+
+        let first = try await service.submit(
+            session: session,
+            payload: [
+                "action": "fixture-hide",
+                "photo_id": "asset-one",
+                "value": 4,
+            ],
+            idempotencyKey: "native-key"
+        )
+        let replay = try await service.submit(
+            session: session,
+            payload: [
+                "action": "fixture-hide",
+                "photo_id": "asset-one",
+                "value": 4,
+            ],
+            idempotencyKey: "native-key"
+        )
+        #expect(first == replay)
+        #expect(first["state"]?.stringValue == "completed")
+        #expect(await recorder.calls().count == 1)
+        #expect(await api.requests().isEmpty)
+
+        await expectActionFailure(code: "pbe_owner_idempotency_conflict") {
+            _ = try await service.submit(
+                session: session,
+                payload: ["action": "fixture-review", "photo_id": "asset-one"],
+                idempotencyKey: "native-key"
+            )
+        }
+        await expectActionFailure(code: "pbe_owner_fixture_mismatch") {
+            _ = try await service.submit(
+                session: session,
+                payload: ["action": "fixture-hide", "photo_id": "asset-two"],
+                idempotencyKey: "outside-key"
+            )
+        }
+        #expect(await recorder.calls().count == 1)
+    }
+
     private func actionService(
         api: PBEOwnerNativeActionAPIStub
     ) -> PBEOwnerNativeActionService {
@@ -140,7 +220,7 @@ struct PBEOwnerNativeActionTests {
     }
 }
 
-private func actionSession() -> PBEOwnerSessionContract {
+private func actionSession(additionalCapabilities: [String] = []) -> PBEOwnerSessionContract {
     PBEOwnerSessionContract(
         id: "session-one",
         state: "ready",
@@ -150,13 +230,47 @@ private func actionSession() -> PBEOwnerSessionContract {
         catalogIdentity: "catalog-one",
         readinessIdentity: "readiness-one",
         fixtureRevision: "revision-one",
-        capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"],
+        capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+            + additionalCapabilities,
         lifecycleWriter: "pbb-79-waste-basket",
         createdAt: nil,
         expiresAt: Date().addingTimeInterval(300),
         closedAt: nil,
         leaseExpiresAt: nil
     )
+}
+
+private actor PBEOwnerNativeMutationRecorder {
+    struct Call: Sendable, Equatable {
+        var sessionID: String
+        var operation: String
+        var assetIDs: [String]
+        var value: JSONValue?
+        var reason: String
+        var key: String
+    }
+
+    private var recorded: [Call] = []
+
+    func record(
+        session: PBEOwnerSessionContract,
+        operation: String,
+        assetIDs: [String],
+        value: JSONValue?,
+        reason: String,
+        key: String
+    ) {
+        recorded.append(Call(
+            sessionID: session.id,
+            operation: operation,
+            assetIDs: assetIDs,
+            value: value,
+            reason: reason,
+            key: key
+        ))
+    }
+
+    func calls() -> [Call] { recorded }
 }
 
 private func actionGallery() -> PBEOwnerNativeGallery {

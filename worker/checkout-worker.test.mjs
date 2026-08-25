@@ -1204,7 +1204,15 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   assert.equal(minted.session.fixtureId, "fixture-la-concha");
   assert.equal(minted.session.lifecycleWriter, "pbb-79-waste-basket");
   assert.equal(minted.session.fixtureRevision, "fixture-revision:one");
-  assert.deepEqual(minted.session.capabilities, ["gallery.read", "waste-basket.x", "waste-basket.restore"]);
+  assert.deepEqual(minted.session.capabilities, [
+    "gallery.read",
+    "waste-basket.x",
+    "waste-basket.restore",
+    "fixture.hide",
+    "fixture.review",
+    "asset.rating",
+    "asset.color",
+  ]);
 
   const statusResponse = await worker.fetch(new Request("https://worker.test/api/v1/pbe-owner/session", {
     headers: bearer(minted.sessionToken),

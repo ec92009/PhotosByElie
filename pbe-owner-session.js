@@ -23,6 +23,37 @@
   let heartbeatTimer = 0;
   let sessionGeneration = 0;
   let bannerResizeObserver = null;
+  const ownerGalleryCommands = window.photosByElieOwnerGalleryCommands || {};
+  window.photosByElieOwnerGalleryCommands = ownerGalleryCommands;
+
+  const commandPayload = ({ photoIds = [], value = null, idempotencyKey = "" } = {}) => ({
+    photo_ids: photoIds,
+    value,
+    idempotencyKey,
+    reason: "Hosted PBE Owner gallery",
+  });
+
+  const syncOwnerGalleryCommands = () => {
+    const capabilities = new Set(state.session?.capabilities || []);
+    ownerGalleryCommands.fixtureId = state.ready ? state.session?.fixtureId || "" : "";
+    ownerGalleryCommands.context = "gallery";
+    for (const method of ["hide", "review", "setRating", "setColor"]) {
+      delete ownerGalleryCommands[method];
+    }
+    if (!state.ready) return;
+    if (capabilities.has("fixture.hide")) {
+      ownerGalleryCommands.hide = (payload) => action("fixture-hide", commandPayload(payload));
+    }
+    if (capabilities.has("fixture.review")) {
+      ownerGalleryCommands.review = (payload) => action("fixture-review", commandPayload(payload));
+    }
+    if (capabilities.has("asset.rating")) {
+      ownerGalleryCommands.setRating = (payload) => action("rating-set", commandPayload(payload));
+    }
+    if (capabilities.has("asset.color")) {
+      ownerGalleryCommands.setColor = (payload) => action("color-set", commandPayload(payload));
+    }
+  };
 
   // The hosted Owner route intentionally does not depend on the public SQLite
   // catalog. Observe those background promises so an expected public-catalog
@@ -46,6 +77,7 @@
 
   const update = (next) => {
     state = { ...state, ...next };
+    syncOwnerGalleryCommands();
     render();
     window.dispatchEvent(new CustomEvent("photosbyelie:pbeownerchange", { detail: publicState() }));
   };
@@ -762,13 +794,16 @@
     if (photoId) actionPayload.photo_id = photoId;
     if (photoIds.length) actionPayload.photo_ids = photoIds;
     if (String(payload?.reason || "").trim()) actionPayload.reason = String(payload.reason).trim();
+    if (payload?.value !== null && payload?.value !== undefined) actionPayload.value = payload.value;
+    const requestedIdempotencyKey = String(payload?.idempotencyKey || "").trim();
     const response = await fetch(`${localBase}/action`, {
       method: "POST",
       cache: "no-store",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "Idempotency-Key": `pbe-owner-${Date.now().toString(36)}-${crypto.randomUUID()}`,
+        "Idempotency-Key": requestedIdempotencyKey
+          || `pbe-owner-${Date.now().toString(36)}-${crypto.randomUUID()}`,
       },
       body: JSON.stringify(actionPayload),
     });

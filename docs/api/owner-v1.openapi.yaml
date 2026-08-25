@@ -753,7 +753,7 @@ components:
           type: array
           items:
             type: string
-            enum: [gallery.read, waste-basket.x, waste-basket.restore]
+            enum: [gallery.read, waste-basket.x, waste-basket.restore, fixture.hide, fixture.review, asset.rating, asset.color]
         lifecycleWriter: { type: string, const: pbb-79-waste-basket }
         createdAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }

@@ -30,6 +30,15 @@ struct PBEOwnerNativeReadinessTests {
         #expect(matchesOpaqueIdentity(initial.fixtureRevision, prefix: "fixture-revision:sha256:"))
         #expect(!String(describing: initial).contains(root.path))
 
+        let extended = try await PBEOwnerNativeReadinessService(
+            ownerDatabaseURL: owner,
+            catalogDatabaseURL: catalog,
+            additionalCapabilities: ["fixture.hide", "fixture.review"]
+        ).readiness(fixtureID: "expo")
+        #expect(Set(extended.capabilities) == Set(
+            initial.capabilities + ["fixture.hide", "fixture.review"]
+        ))
+
         let alias = FileManager.default.temporaryDirectory.appendingPathComponent(
             "pbe-native-readiness-alias-\(UUID().uuidString)",
             isDirectory: true

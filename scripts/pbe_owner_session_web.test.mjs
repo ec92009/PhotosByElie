@@ -161,6 +161,70 @@ test("Owner cold-launch failure leaves a distinct actionable non-busy state", as
   assert.equal(client.document.body.dataset.pbeOwnerSessionState, "unavailable");
 });
 
+test("hosted Owner exposes only signed fixture and decision capabilities", async () => {
+  const actionCalls = [];
+  const session = {
+    id: "session-actions", state: "ready", fixtureId: "fixture-expo",
+    fixtureBreadcrumb: "Expo", expiresAt: "2030-01-01T12:00:00Z",
+    capabilities: ["gallery.read", "fixture.hide", "fixture.review", "asset.rating", "asset.color"],
+  };
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300, status, json: async () => payload,
+  });
+  const client = runSessionClient({
+    search: "?gallery=pbe-owner",
+    fetch: async (url, options = {}) => {
+      if (url.endsWith("/session")) return response({ ok: true, session });
+      if (url.endsWith("/gallery")) return response({
+        ok: true,
+        gallery: {
+          fixtureId: session.fixtureId,
+          fixtureBreadcrumb: session.fixtureBreadcrumb,
+          items: [{ assetId: "asset-one", filename: "one.jpg", mediaType: "photo" }],
+          summary: { filtered: 1 },
+        },
+      });
+      if (url.endsWith("/action")) {
+        actionCalls.push({ options, body: JSON.parse(options.body) });
+        return response({
+          ok: true, state: "completed",
+          results: [{ photoId: "asset-one", ok: true }],
+        });
+      }
+      if (url.endsWith("/session/close")) return response({ ok: true, session: { ...session, state: "closed" } });
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+  await client.window.photosByEliePBEOwnerSessionReady;
+
+  const commands = client.window.photosByElieOwnerGalleryCommands;
+  assert.equal(commands.fixtureId, "fixture-expo");
+  assert.equal(typeof commands.hide, "function");
+  assert.equal(typeof commands.review, "function");
+  assert.equal(typeof commands.setRating, "function");
+  assert.equal(typeof commands.setColor, "function");
+  assert.equal(commands.pick, undefined);
+
+  await commands.setRating({
+    photoIds: ["asset-one"],
+    value: 4,
+    idempotencyKey: "owner-rating-key",
+  });
+  assert.deepEqual(actionCalls[0].body, {
+    action: "rating-set",
+    photo_ids: ["asset-one"],
+    reason: "Hosted PBE Owner gallery",
+    value: 4,
+  });
+  assert.equal(actionCalls[0].options.headers["Idempotency-Key"], "owner-rating-key");
+
+  await client.window.photosByEliePBEOwnerSession.close();
+  assert.equal(commands.hide, undefined);
+  assert.equal(commands.review, undefined);
+  assert.equal(commands.setRating, undefined);
+  assert.equal(commands.setColor, undefined);
+});
+
 test("native Owner uses fast gallery previews and reserves full previews for detail", () => {
   assert.match(ownerSessionSource, /galleryUrl:[^\n]+`\$\{previewUrl\}\?size=gallery`/);
   assert.match(ownerSessionSource, /detailUrl:[^\n]+`\$\{previewUrl\}\?size=detail`/);

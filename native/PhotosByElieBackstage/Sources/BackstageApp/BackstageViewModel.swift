@@ -601,7 +601,8 @@ final class BackstageViewModel: ObservableObject {
             localReviewService: LocalFixtureReviewService()
         )
         self.accessService = AccessControlService(api: api)
-        self.decisionService = SidecarDecisionService(api: api)
+        let decisionService = SidecarDecisionService(api: api)
+        self.decisionService = decisionService
         self.metadataReviewService = MetadataReviewService(runner: runner)
         self.visualRepairService = VisualRepairProposalService(
             runner: runner,
@@ -611,7 +612,8 @@ final class BackstageViewModel: ObservableObject {
         self.deliveryService = FixtureDeliveryService(runner: runner)
         self.pbeOwnerHost = pbeOwnerHost ?? PBEOwnerNativeHostService(
             api: api,
-            photoLibrary: photoLibrary
+            photoLibrary: photoLibrary,
+            sidecarDecisionService: decisionService
         )
         self.workflowRecoveryStore = workflowRecoveryStore
         self.currentImageSizeCache = currentImageSizeCache

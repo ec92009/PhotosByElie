@@ -62,6 +62,13 @@ public struct SidecarDecisionChange: Sendable, Equatable {
     public var changedFamilies: [String]
 }
 
+public protocol SidecarDecisionServing: Sendable {
+    func applyDetailed(
+        _ decisions: [SidecarDecision],
+        idempotencyKey: String
+    ) async throws -> [SidecarDecisionChange]
+}
+
 /// Canonical Sidecar decision payload. This deliberately mirrors the web
 /// Sidecar ledger rather than inventing a second native decision vocabulary.
 public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
@@ -120,7 +127,7 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
 private struct DecisionQuery: Codable { let assetIds: [String] }
 private struct DecisionBatch: Codable { let decisions: [SidecarDecision] }
 
-public actor SidecarDecisionService {
+public actor SidecarDecisionService: SidecarDecisionServing {
     private let api: OwnerAPIClient
 
     public init(api: OwnerAPIClient) {

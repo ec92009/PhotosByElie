@@ -32,6 +32,7 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
     private let connectorIdentity: any OwnerConnectorIdentifying
     private let actionWaker: any OwnerActionWaking
     private let verifier: any PBEOwnerCloudSessionVerifying
+    private let sidecarDecisionService: (any SidecarDecisionServing)?
     private let runtimeRootOverride: URL?
     private let dataRootOverride: URL?
     private let connectorConfigURL: URL
@@ -51,6 +52,7 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
         connectorIdentity: any OwnerConnectorIdentifying = LocalOwnerConnectorIdentity(),
         actionWaker: any OwnerActionWaking = OnDemandOwnerActionWaker(),
         verifier: any PBEOwnerCloudSessionVerifying = PBEOwnerCloudSessionVerifier(),
+        sidecarDecisionService: (any SidecarDecisionServing)? = nil,
         runtimeRoot: URL? = nil,
         dataRoot: URL? = nil,
         connectorConfigURL: URL? = nil,
@@ -63,6 +65,7 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
         self.connectorIdentity = connectorIdentity
         self.actionWaker = actionWaker
         self.verifier = verifier
+        self.sidecarDecisionService = sidecarDecisionService
         self.runtimeRootOverride = runtimeRoot?.standardizedFileURL
         self.dataRootOverride = dataRoot?.standardizedFileURL
         self.connectorConfigURL = connectorConfigURL ?? URL(
@@ -232,7 +235,14 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
         if let readinessOverride {
             readinessProvider = readinessOverride
         } else if let dataRoot {
-            readinessProvider = PBEOwnerNativeReadinessService(dataRoot: dataRoot).provider()
+            var additionalCapabilities = ["fixture.hide", "fixture.review"]
+            if sidecarDecisionService != nil {
+                additionalCapabilities += ["asset.rating", "asset.color"]
+            }
+            readinessProvider = PBEOwnerNativeReadinessService(
+                dataRoot: dataRoot,
+                additionalCapabilities: additionalCapabilities
+            ).provider()
         } else {
             throw failure(
                 "pbe_owner_data_root_missing",
@@ -261,11 +271,86 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
         }
         let connectorID = await connectorIdentity.connectorID()
         let runner = OwnerActionRunner(api: api, waker: actionWaker)
+        let nativeMutationProvider: PBEOwnerNativeActionService.NativeMutationProvider?
+        if let dataRoot {
+            let fixtureService = LocalFixtureReviewService(
+                nativeDatabaseURL: dataRoot.appendingPathComponent(
+                    "assets/owner-actions/Owner.sqlite",
+                    isDirectory: false
+                )
+            )
+            let sidecarDecisionService = self.sidecarDecisionService
+            nativeMutationProvider = { session, operation, assetIDs, value, reason, key in
+                switch operation {
+                case "fixture-hide", "fixture-review":
+                    let placement: FixturePlacementState = operation == "fixture-hide"
+                        ? .hidden
+                        : .picked
+                    let applied = try await Task.detached(priority: .userInitiated) {
+                        try fixtureService.nativeApplyCullingState(
+                            placement,
+                            fixtureID: session.fixtureId,
+                            assetIDs: assetIDs,
+                            reason: reason.isEmpty ? "Hosted PBE Owner \(operation)" : reason
+                        )
+                    }.value
+                    guard applied != nil else {
+                        throw PBEOwnerNativeSessionFailure(
+                            code: "pbe_owner_action_failed",
+                            statusCode: 502,
+                            message: "The native fixture writer did not return a result."
+                        )
+                    }
+                case "rating-set":
+                    guard let sidecarDecisionService,
+                          let rating = value?.intValue,
+                          (0...5).contains(rating) else {
+                        throw PBEOwnerNativeSessionFailure(
+                            code: "pbe_owner_action_invalid",
+                            statusCode: 400,
+                            message: "The hosted rating action is invalid."
+                        )
+                    }
+                    _ = try await sidecarDecisionService.applyDetailed(
+                        assetIDs.map { SidecarDecision.rating($0, value: rating) },
+                        idempotencyKey: key
+                    )
+                case "color-set":
+                    guard let sidecarDecisionService,
+                          let color = value?.stringValue.flatMap(SidecarColor.init(rawValue:)),
+                          color != .none else {
+                        throw PBEOwnerNativeSessionFailure(
+                            code: "pbe_owner_action_invalid",
+                            statusCode: 400,
+                            message: "The hosted color action is invalid."
+                        )
+                    }
+                    _ = try await sidecarDecisionService.applyDetailed(
+                        assetIDs.map { SidecarDecision.color($0, value: color) },
+                        idempotencyKey: key
+                    )
+                default:
+                    throw PBEOwnerNativeSessionFailure(
+                        code: "pbe_owner_action_forbidden",
+                        statusCode: 403,
+                        message: "The hosted Owner action is unavailable."
+                    )
+                }
+                return [
+                    "results": .array(assetIDs.map { assetID in
+                        .object(["photoId": .string(assetID), "ok": true])
+                    }),
+                ]
+            }
+        } else {
+            nativeMutationProvider = nil
+        }
         let actionService = PBEOwnerNativeActionService(
             api: api,
             runner: runner,
             connectorID: connectorID,
-            galleryProvider: galleryProvider
+            galleryProvider: galleryProvider,
+            nativeMutationProvider: nativeMutationProvider
         )
         let actionSubmitProvider = await actionService.submitProvider()
         let actionStatusProvider = await actionService.statusProvider()

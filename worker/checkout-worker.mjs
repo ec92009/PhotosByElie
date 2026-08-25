@@ -16,7 +16,15 @@ const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const OWNER_ACCESS_TOKEN_SECONDS = 15 * 60;
 const PBE_OWNER_SESSION_SECONDS = 5 * 60;
 const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail.com";
-const PBE_OWNER_CAPABILITIES = Object.freeze(["gallery.read", "waste-basket.x", "waste-basket.restore"]);
+const PBE_OWNER_CAPABILITIES = Object.freeze([
+  "gallery.read",
+  "waste-basket.x",
+  "waste-basket.restore",
+  "fixture.hide",
+  "fixture.review",
+  "asset.rating",
+  "asset.color",
+]);
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;

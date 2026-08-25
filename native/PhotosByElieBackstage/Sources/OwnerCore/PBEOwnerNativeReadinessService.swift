@@ -6,18 +6,25 @@ public struct PBEOwnerNativeReadinessService: Sendable {
     public let ownerDatabaseURL: URL
     public let catalogDatabaseURL: URL
     public let busyTimeoutMilliseconds: Int32
+    public let additionalCapabilities: [String]
 
     public init(
         ownerDatabaseURL: URL,
         catalogDatabaseURL: URL,
-        busyTimeoutMilliseconds: Int32 = 2_000
+        busyTimeoutMilliseconds: Int32 = 2_000,
+        additionalCapabilities: [String] = []
     ) {
         self.ownerDatabaseURL = ownerDatabaseURL.standardizedFileURL.resolvingSymlinksInPath()
         self.catalogDatabaseURL = catalogDatabaseURL.standardizedFileURL.resolvingSymlinksInPath()
         self.busyTimeoutMilliseconds = max(0, busyTimeoutMilliseconds)
+        self.additionalCapabilities = additionalCapabilities
     }
 
-    public init(dataRoot: URL, busyTimeoutMilliseconds: Int32 = 2_000) {
+    public init(
+        dataRoot: URL,
+        busyTimeoutMilliseconds: Int32 = 2_000,
+        additionalCapabilities: [String] = []
+    ) {
         self.init(
             ownerDatabaseURL: dataRoot.appendingPathComponent(
                 "assets/owner-actions/Owner.sqlite",
@@ -27,7 +34,8 @@ public struct PBEOwnerNativeReadinessService: Sendable {
                 "assets/catalog/photosbyelie.sqlite",
                 isDirectory: false
             ),
-            busyTimeoutMilliseconds: busyTimeoutMilliseconds
+            busyTimeoutMilliseconds: busyTimeoutMilliseconds,
+            additionalCapabilities: additionalCapabilities
         )
     }
 
@@ -83,7 +91,10 @@ public struct PBEOwnerNativeReadinessService: Sendable {
             readinessIdentity: readinessIdentity,
             fixtureRevision: fixtureRevision,
             lifecycleWriter: "pbb-79-waste-basket",
-            capabilities: ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+            capabilities: Array(Set(
+                ["gallery.read", "waste-basket.x", "waste-basket.restore"]
+                    + additionalCapabilities
+            )).sorted()
         )
     }
 

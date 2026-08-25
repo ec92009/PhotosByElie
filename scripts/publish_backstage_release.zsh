@@ -60,7 +60,11 @@ archive_name="PhotosByElie-Backstage-v${version}-build-${build}.zip"
 archive="${stage_root}/${archive_name}"
 manifest="${stage_root}/latest.json"
 download_url="${public_base}/${archive_name}"
-/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
+# The signed bundle is fully represented by ordinary files. Avoid emitting an
+# explicit __MACOSX/ metadata root so older approved Backstage verifiers can
+# consume the same immutable archive; the manifest builder immediately proves
+# that the extracted bundle still passes strict signature verification.
+/usr/bin/ditto -c -k --keepParent "$app" "$archive"
 "$manifest_builder" \
   --artifact "$archive" \
   --download-url "$download_url" \

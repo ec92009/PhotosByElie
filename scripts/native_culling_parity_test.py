@@ -1331,14 +1331,17 @@ class NativeCullingParityTest(unittest.TestCase):
         manifest_builder = (
             ROOT / "scripts" / "build_backstage_release_manifest.zsh"
         ).read_text(encoding="utf-8")
+        release_publisher = (
+            ROOT / "scripts" / "publish_backstage_release.zsh"
+        ).read_text(encoding="utf-8")
 
         def value(name: str) -> str:
             match = re.search(rf'^{name}="([^"]+)"$', metadata, re.MULTILINE)
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.3")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "190")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "191")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1348,6 +1351,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("PBEBackstageUpdateManifestURL", build_script)
         self.assertIn("PBE_BACKSTAGE_UPDATE_MANIFEST_URL", build_script)
         self.assertIn('chmod -R u+w "$stage_root"', manifest_builder)
+        self.assertNotIn("--sequesterRsrc", release_publisher)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
         self.assertIn('--entitlements "$entitlements"', build_script)
         entitlements = (NATIVE / "Backstage.entitlements").read_text(encoding="utf-8")

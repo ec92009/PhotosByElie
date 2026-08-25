@@ -1041,6 +1041,28 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 self.db,
             )
 
+    def test_lifecycle_scope_partitions_mixed_deployed_and_local_only_assets(self) -> None:
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO sidecar_assets
+                     (asset_id, source_anchor, media_type, filename, raw_json, indexed_at, updated_at)
+                   VALUES ('local-only', 'apple-photos-cloud://local-only', 'photo',
+                           'local-only.jpg', '{}', ?, ?)""",
+                (NOW, NOW),
+            )
+
+        scope = gateway.classify_deployed_lifecycle_scope(
+            self.root,
+            ["asset-1", "local-only"],
+            self.db,
+        )
+
+        self.assertEqual(scope["scope"], "mixed")
+        self.assertEqual(scope["assetIds"], ["asset-1", "local-only"])
+        self.assertEqual(scope["deployedAssetIds"], ["asset-1"])
+        self.assertEqual(scope["localOnlyAssetIds"], ["local-only"])
+        self.assertEqual(scope["members"][0]["canonicalAssetId"], "asset-1")
+
     def test_complete_lifecycle_schema_skips_hot_path_migrations(self) -> None:
         gateway.ensure_schema(self.root, self.db)
 

@@ -1006,6 +1006,65 @@ struct BackstageFixtureSelectionTests {
         #expect(model.lifecycleStatus.contains("no retry"))
     }
 
+    @Test("Mixed Empty Waste Basket reports retained local-only rows after refresh")
+    @MainActor
+    func mixedEmptyWasteBasketReportsRetainedLocalOnlyRows() async throws {
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
+            OwnerAction(
+                id: "owner-action-mixed-empty",
+                actionKind: "photo-moderation",
+                target: "max",
+                state: .completed,
+                result: [
+                    "result": ["assetIds": ["asset-deployed"]],
+                    "lifecycle": [
+                        "scope": "mixed",
+                        "partial": true,
+                        "retainedLocalOnlyAssetIds": ["asset-local-only"],
+                    ],
+                ]
+            ),
+            OwnerAction(
+                id: "owner-action-lifecycle-refresh",
+                actionKind: "sidecar-culling-review",
+                target: "max",
+                state: .completed,
+                result: [
+                    "lifecycle": [
+                        "hiddenCount": 1,
+                        "discardedCount": 1,
+                        "items": [[
+                            "mediaId": "asset-local-only",
+                            "state": "hidden",
+                            "title": "Local only",
+                        ]],
+                    ],
+                ]
+            ),
+        ])
+        let lifecycleService = LifecycleService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            lifecycleService: lifecycleService,
+            workflowRecoveryStore: nil
+        )
+
+        await model.emptyWasteBasket()
+        for _ in 0..<300 where !model.lifecycleStatus.contains("local-only") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.lifecycleItems.map(\.id) == ["asset-local-only"])
+        #expect(model.lifecycleStatus.contains("1 deployed item"))
+        #expect(model.lifecycleStatus.contains("1 local-only item remains recoverable"))
+        #expect(model.lifecycleStatus.contains("owner-action-mixed-empty"))
+    }
+
     @Test("Failed Delete Selected action remains visible with terminal feedback")
     @MainActor
     func failedDeleteSelectedRetainsActionAndFeedback() async throws {

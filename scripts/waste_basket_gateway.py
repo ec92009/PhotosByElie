@@ -1437,9 +1437,15 @@ def classify_deployed_lifecycle_scope(
             "reason": "no-cloud-media-evidence",
         }
     if local_only_ids:
-        raise WasteBasketError(
-            "lifecycle batch mixes deployed and local-only assets; submit separate actions"
-        )
+        deployed_ids = [asset_id for asset_id in ids if asset_id not in local_only_ids]
+        return {
+            "scope": "mixed",
+            "assetIds": ids,
+            "deployedAssetIds": deployed_ids,
+            "localOnlyAssetIds": local_only_ids,
+            "members": derive_deployed_lifecycle_members(repo_root, deployed_ids, db_path),
+            "reason": "local-only-assets-have-no-cloud-media-evidence",
+        }
     raise original_error
 
 

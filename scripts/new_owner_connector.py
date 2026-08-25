@@ -1935,6 +1935,7 @@ def execute_action(
         }
         lifecycle_arm = None
         lifecycle_result = None
+        retained_local_only_ids: list[str] = []
         active_lifecycle_client = lifecycle_client
         if operation in lifecycle_operations:
             lifecycle_operation, denied = lifecycle_operations[operation]
@@ -1963,6 +1964,35 @@ def execute_action(
                     "remoteArmRequired": False,
                     "reason": lifecycle_scope["reason"],
                 }
+            elif lifecycle_scope["scope"] == "mixed":
+                if lifecycle_operation != "empty":
+                    raise RuntimeError(
+                        "lifecycle batch mixes deployed and local-only assets; submit separate actions"
+                    )
+                retained_local_only_ids = list(lifecycle_scope["localOnlyAssetIds"])
+                authoritative_ids = list(lifecycle_scope["deployedAssetIds"])
+                arm_request = {
+                    "operationId": operation_id,
+                    "operation": lifecycle_operation,
+                    "denied": denied,
+                    "items": lifecycle_scope["members"],
+                }
+                active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
+                with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
+                    arm_intent = _persist_lifecycle_arm_intent(
+                        config,
+                        lifecycle_operation,
+                        authoritative_ids,
+                        arm_request,
+                    )
+                with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
+                    lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                        config,
+                        active_lifecycle_client,
+                        gateway,
+                        arm_intent,
+                        action_timing=action_timing,
+                    )
             else:
                 active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
                 arm_request = {
@@ -2042,6 +2072,14 @@ def execute_action(
                     action_timing=action_timing,
                 )
             lifecycle_result = {"arm": lifecycle_arm, "replay": replay}
+            if retained_local_only_ids:
+                lifecycle_result.update({
+                    "scope": "mixed",
+                    "partial": True,
+                    "deployedAssetIds": photo_ids,
+                    "retainedLocalOnlyAssetIds": retained_local_only_ids,
+                    "reason": "local-only-assets-have-no-cloud-media-evidence",
+                })
         result_payload = {
             "connectorId": config.connector_id,
             "type": action_type,

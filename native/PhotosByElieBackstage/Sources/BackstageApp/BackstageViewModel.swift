@@ -5557,7 +5557,7 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadLifecycle() async {
+    func loadLifecycle(successStatus: String? = nil) async {
         isRunningLifecycle = true
         lifecycleStatus = "Loading the private lifecycle ledger…"
         defer { isRunningLifecycle = false }
@@ -5568,7 +5568,8 @@ final class BackstageViewModel: ObservableObject {
             lifecycleRecoverableCount = ledger.hiddenCount
             lifecycleTombstoneCount = ledger.discardedCount
             refreshLifecycleCountSummary()
-            lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
+            lifecycleStatus = successStatus
+                ?? "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
         }
@@ -5712,8 +5713,16 @@ final class BackstageViewModel: ObservableObject {
                     self.retainLocallyObservedLifecycleAction(completed)
                     self.lifecyclePendingActionID = nil
                     self.lifecyclePendingAction = nil
-                    self.lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
-                    await self.loadLifecycle()
+                    let lifecycle = completed.result?["lifecycle"]?.objectValue
+                    let retainedLocalOnlyCount = lifecycle?["retainedLocalOnlyAssetIds"]?.arrayValue?.count ?? 0
+                    let completionStatus: String
+                    if retainedLocalOnlyCount > 0 {
+                        let emptiedCount = completed.result?["result"]?.objectValue?["assetIds"]?.arrayValue?.count ?? 0
+                        completionStatus = "Empty Waste Basket activated the audited global tombstone state for \(emptiedCount.formatted()) deployed item\(emptiedCount == 1 ? "" : "s") through action \(action.id). \(retainedLocalOnlyCount.formatted()) local-only item\(retainedLocalOnlyCount == 1 ? " remains" : "s remain") recoverable because no cloud media exists. Source and R2 media were retained."
+                    } else {
+                        completionStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
+                    }
+                    await self.loadLifecycle(successStatus: completionStatus)
                 } catch {
                     if let ownerError = error as? OwnerActionRunError,
                        ownerError == .timedOut {

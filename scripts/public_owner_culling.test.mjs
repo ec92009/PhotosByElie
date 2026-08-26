@@ -30,6 +30,10 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.match(gallery, /const extendOwnerKeyboardSelection =/);
   assert.match(gallery, /if \(extend\) \{\s*extendOwnerKeyboardSelection\(photos, nextIndex\);/);
   assert.match(gallery, /stepGallerySelection\(delta, !horizontal, \{ extend: event\.shiftKey \}\)/);
+  assert.match(gallery, /const focusedControlOwnsGalleryKey = \(target, key\) => \{/);
+  assert.match(gallery, /target\.tagName === "BUTTON" && \[" ", "Spacebar", "Enter"\]\.includes\(key\)/);
+  assert.doesNotMatch(gallery, /\["INPUT", "TEXTAREA", "SELECT", "BUTTON"\]\.includes\(target\.tagName\)/);
+  assert.match(gallery, /if \(focusedControlOwnsGalleryKey\(target, event\.key\)\) return;/);
   assert.match(gallery, /syncGallerySelectionToolbar\(\)/);
   assert.match(gallery, /await window\.photosByEliePageReady\(\)/);
   assert.match(detail, /await window\.photosByEliePageReady\(\)/);

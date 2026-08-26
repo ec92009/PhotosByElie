@@ -1835,6 +1835,14 @@ const openGalleryPreview = () => {
 };
 
 const commandShortcut = (key, options = {}) => ({ key, ...options });
+const focusedControlOwnsGalleryKey = (target, key) => {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return true;
+  // Clicking a card's selection button must not consume the next mutation
+  // shortcut. Preserve only the keys that activate the focused button itself.
+  return target.tagName === "BUTTON" && [" ", "Spacebar", "Enter"].includes(key);
+};
 const ownerCapabilityState = (methodName, activeReason = "Requires the active Backstage fixture session.") => ({
   enabled: Boolean(ownerAdapterMethod(methodName)) && selectedPhotoIds.size > 0,
   disabledReason: selectedPhotoIds.size ? activeReason : "Select at least one photo.",
@@ -2626,10 +2634,7 @@ if (galleryRoot && gallery) {
   window.addEventListener("keydown", async (event) => {
     if (event.defaultPrevented) return;
     const target = event.target;
-    if (target instanceof HTMLElement) {
-      if (target.isContentEditable) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
-    }
+    if (focusedControlOwnsGalleryKey(target, event.key)) return;
     if (ownerCullingEnabled && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const photos = filteredVisiblePhotos();
       if (photos.length && ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(event.key)) {

@@ -22,6 +22,7 @@ const PBE_OWNER_CAPABILITIES = Object.freeze([
   "waste-basket.restore",
   "fixture.hide",
   "fixture.review",
+  "fixture.clear",
   "asset.rating",
   "asset.color",
 ]);

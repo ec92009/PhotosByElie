@@ -1210,6 +1210,7 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
     "waste-basket.restore",
     "fixture.hide",
     "fixture.review",
+    "fixture.clear",
     "asset.rating",
     "asset.color",
   ]);

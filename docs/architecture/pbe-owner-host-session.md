@@ -49,7 +49,8 @@ The Worker derives, signs, and persists the remaining claims:
 - `purpose=pbe-owner-session`;
 - exact fixture, source, catalog, and readiness bindings;
 - capabilities `gallery.read`, `waste-basket.x`, `waste-basket.restore`,
-  `fixture.hide`, `fixture.review`, `asset.rating`, and `asset.color`;
+  `fixture.hide`, `fixture.review`, `fixture.clear`, `asset.rating`, and
+  `asset.color`;
 - lifecycle writer `pbb-79-waste-basket`;
 - issued, expiry, close, and state fields.
 

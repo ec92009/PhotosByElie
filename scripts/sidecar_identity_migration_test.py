@@ -7,9 +7,19 @@ import tempfile
 import unittest
 
 try:
-    from sidecar_identity_migration import build_dry_run, rehearse_synthetic
+    from sidecar_identity_migration import (
+        MigrationSafetyError,
+        build_dry_run,
+        rehearse_synthetic,
+        resolve_owner_asset_identity,
+    )
 except ModuleNotFoundError:
-    from scripts.sidecar_identity_migration import build_dry_run, rehearse_synthetic
+    from scripts.sidecar_identity_migration import (
+        MigrationSafetyError,
+        build_dry_run,
+        rehearse_synthetic,
+        resolve_owner_asset_identity,
+    )
 
 
 class SidecarIdentityMigrationTests(unittest.TestCase):
@@ -438,6 +448,11 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             waste_entry = connection.execute("SELECT * FROM owner_waste_basket_entries").fetchone()
             waste_operation = connection.execute("SELECT * FROM owner_waste_basket_operations").fetchone()
             waste_receipt = connection.execute("SELECT * FROM owner_waste_basket_receipts").fetchone()
+            aliases = connection.execute(
+                "SELECT legacy_asset_id, canonical_asset_id FROM owner_asset_identity_aliases ORDER BY legacy_asset_id"
+            ).fetchall()
+            collision_resolution = resolve_owner_asset_identity(connection, "legacy-collision")
+            rewrite_resolution = resolve_owner_asset_identity(connection, "legacy-rewrite")
             source_count = connection.execute("SELECT count(*) FROM sidecar_assets WHERE asset_id LIKE 'legacy-%'").fetchone()[0]
             connection.close()
             source_unchanged = before == owner.read_bytes()
@@ -466,6 +481,10 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertEqual(waste_entry["asset_id"], "cloud-a")
         self.assertEqual(json.loads(waste_operation["asset_ids_json"]), ["cloud-a"])
         self.assertEqual(waste_receipt["asset_id"], "cloud-a")
+        self.assertEqual(len(aliases), 2)
+        self.assertEqual(collision_resolution, "cloud-a")
+        self.assertEqual(rewrite_resolution, "cloud-b")
+        self.assertEqual(report["rehearsal"]["identityAliasCount"], 2)
         self.assertTrue(report["referenceContract"]["operationalDrain"]["allDrained"])
         self.assertEqual(
             report["referenceContract"]["preservedReferences"]["preservedAuditRowCount"],
@@ -613,7 +632,7 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         )
         self.assertFalse(report["rehearsal"]["workingCopyCreated"])
 
-    def test_legacy_lifecycle_audit_reference_requires_alias_plan(self) -> None:
+    def test_legacy_lifecycle_audit_reference_is_preserved_by_verified_alias(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
             owner = self._database(directory)
@@ -631,7 +650,18 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
                 ],
             )
             report = rehearse_synthetic(owner, mapping, directory / "legacy-audit")
-        self.assertIn(
+            connection = sqlite3.connect(directory / "legacy-audit" / "working.sqlite")
+            preserved_asset_id = connection.execute(
+                "SELECT asset_id FROM owner_waste_basket_entries"
+            ).fetchone()[0]
+            resolved_asset_id = resolve_owner_asset_identity(
+                connection, preserved_asset_id
+            )
+            alias_count = connection.execute(
+                "SELECT count(*) FROM owner_asset_identity_aliases"
+            ).fetchone()[0]
+            connection.close()
+        self.assertNotIn(
             "preserved-lifecycle-audit-references-require-alias-plan",
             report["safety"]["blockedReasons"],
         )
@@ -641,7 +671,7 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         )
         alias_plan = report["referenceContract"]["aliasRetentionPlan"]
         self.assertTrue(alias_plan["required"])
-        self.assertFalse(alias_plan["applyImplemented"])
+        self.assertTrue(alias_plan["applyImplemented"])
         self.assertEqual(alias_plan["requiredAliasCount"], 1)
         self.assertEqual(alias_plan["eligibleResolutionCount"], 2)
         self.assertTrue(alias_plan["transactionContract"]["insertBeforeRewrite"])
@@ -649,7 +679,43 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         rendered = json.dumps(report)
         self.assertNotIn("legacy-collision", rendered)
         self.assertNotIn("cloud-a", rendered)
-        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+        self.assertTrue(report["rehearsal"]["applyPerformed"])
+        self.assertTrue(report["rehearsal"]["workingCopyCreated"])
+        self.assertEqual(preserved_asset_id, "legacy-collision")
+        self.assertEqual(resolved_asset_id, "cloud-a")
+        self.assertEqual(alias_count, 2)
+
+    def test_identity_alias_resolver_fails_closed_on_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "chain")
+            self.assertTrue(report["rehearsal"]["applyPerformed"])
+            working = directory / "chain" / "working.sqlite"
+            connection = sqlite3.connect(working)
+            connection.execute("PRAGMA foreign_keys = OFF")
+            connection.execute(
+                "INSERT INTO owner_asset_identity_aliases VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    "cloud-a",
+                    "cloud-b",
+                    "invalid-test-digest",
+                    "source-tied-apple-photos",
+                    "2024-01-01T00:00:00Z",
+                    "2024-01-01T00:00:00Z",
+                ),
+            )
+            connection.commit()
+            with self.assertRaises(MigrationSafetyError):
+                resolve_owner_asset_identity(connection, "legacy-collision")
+            connection.close()
 
     def test_rollback_is_verified_after_injected_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

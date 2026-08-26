@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -91,6 +92,11 @@ DIRECT_REFERENCE_COLUMNS: dict[tuple[str, str], str] = {
     ("owner_lifecycle_outbox", "canonical_asset_id"): "canonical-audit-preserve",
     ("owner_waste_basket_entries", "asset_id"): "lifecycle-audit-preserve",
     ("owner_waste_basket_receipts", "asset_id"): "lifecycle-audit-preserve",
+    # The legacy key intentionally survives after its source asset row is
+    # removed. The canonical target is verified, one-hop-only identity state;
+    # neither column participates in ordinary reference rewriting.
+    ("owner_asset_identity_aliases", "legacy_asset_id"): "identity-alias-key",
+    ("owner_asset_identity_aliases", "canonical_asset_id"): "identity-alias-target",
 }
 
 JSON_REFERENCE_COLUMNS: dict[tuple[str, str], str] = {
@@ -117,6 +123,11 @@ AUDIT_PRESERVE_POLICIES = {
     "lifecycle-audit-preserve",
     "lifecycle-intent-preserve",
     "lifecycle-request-preserve",
+}
+
+ALIAS_REFERENCE_POLICIES = {
+    "identity-alias-key",
+    "identity-alias-target",
 }
 
 # Identity migration may not race durable lifecycle work. Counts are reported
@@ -491,7 +502,7 @@ def build_alias_retention_plan(
     return {
         "mode": "dry-run-contract",
         "required": required_alias_count > 0,
-        "applyImplemented": False,
+        "applyImplemented": True,
         "eligibleResolutionCount": len(resolutions),
         "requiredAliasCount": required_alias_count,
         "aliasPairDigest": _digest_values(
@@ -523,6 +534,131 @@ def build_alias_retention_plan(
             "deletionRequiresZeroReferences": True,
         },
     }
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _ensure_identity_alias_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS owner_asset_identity_aliases (
+          legacy_asset_id TEXT PRIMARY KEY,
+          canonical_asset_id TEXT NOT NULL,
+          mapping_pair_digest TEXT NOT NULL,
+          mapping_source TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          verified_at TEXT NOT NULL,
+          CHECK (legacy_asset_id <> canonical_asset_id),
+          FOREIGN KEY (canonical_asset_id) REFERENCES sidecar_assets(asset_id)
+        )
+        """
+    )
+
+
+def _verify_identity_alias(
+    connection: sqlite3.Connection,
+    legacy_asset_id: str,
+    canonical_asset_id: str,
+) -> None:
+    row = connection.execute(
+        """
+        SELECT canonical_asset_id, mapping_pair_digest, mapping_source
+          FROM owner_asset_identity_aliases
+         WHERE legacy_asset_id = ?
+        """,
+        (legacy_asset_id,),
+    ).fetchone()
+    expected_digest = _digest(f"{legacy_asset_id}\0{canonical_asset_id}")
+    if not row or _text(row[0]) != canonical_asset_id:
+        raise MigrationSafetyError("identity alias verification failed")
+    if _text(row[1]) != expected_digest or _text(row[2]) != "source-tied-apple-photos":
+        raise MigrationSafetyError("identity alias evidence verification failed")
+    if connection.execute(
+        "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (canonical_asset_id,)
+    ).fetchone() is None:
+        raise MigrationSafetyError("identity alias target is missing")
+    if connection.execute(
+        "SELECT 1 FROM owner_asset_identity_aliases WHERE legacy_asset_id = ?",
+        (canonical_asset_id,),
+    ).fetchone() is not None:
+        raise MigrationSafetyError("identity alias chain is forbidden")
+
+
+def _insert_verified_identity_alias(
+    connection: sqlite3.Connection,
+    resolution: Resolution,
+) -> None:
+    if resolution.source_asset_id == resolution.target_asset_id:
+        raise MigrationSafetyError("self-referential identity alias is forbidden")
+    _ensure_identity_alias_table(connection)
+    now = _utc_now()
+    expected_digest = _digest(
+        f"{resolution.source_asset_id}\0{resolution.target_asset_id}"
+    )
+    existing = connection.execute(
+        """
+        SELECT canonical_asset_id, mapping_pair_digest, mapping_source
+          FROM owner_asset_identity_aliases
+         WHERE legacy_asset_id = ?
+        """,
+        (resolution.source_asset_id,),
+    ).fetchone()
+    if existing:
+        if (
+            _text(existing[0]) != resolution.target_asset_id
+            or _text(existing[1]) != expected_digest
+            or _text(existing[2]) != "source-tied-apple-photos"
+        ):
+            raise MigrationSafetyError("conflicting identity alias exists")
+        connection.execute(
+            "UPDATE owner_asset_identity_aliases SET verified_at = ? WHERE legacy_asset_id = ?",
+            (now, resolution.source_asset_id),
+        )
+    else:
+        connection.execute(
+            """
+            INSERT INTO owner_asset_identity_aliases
+              (legacy_asset_id, canonical_asset_id, mapping_pair_digest,
+               mapping_source, created_at, verified_at)
+            VALUES (?, ?, ?, 'source-tied-apple-photos', ?, ?)
+            """,
+            (
+                resolution.source_asset_id,
+                resolution.target_asset_id,
+                expected_digest,
+                now,
+                now,
+            ),
+        )
+    _verify_identity_alias(
+        connection,
+        resolution.source_asset_id,
+        resolution.target_asset_id,
+    )
+
+
+def resolve_owner_asset_identity(connection: sqlite3.Connection, asset_id: str) -> str:
+    """Resolve a canonical key or one verified legacy alias, failing closed."""
+    identity = _text(asset_id)
+    if not identity:
+        raise MigrationSafetyError("asset identity is empty")
+    if connection.execute(
+        "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (identity,)
+    ).fetchone() is not None:
+        return identity
+    if "owner_asset_identity_aliases" not in _table_names(connection):
+        raise MigrationSafetyError("asset identity is not canonical and has no verified alias")
+    rows = connection.execute(
+        "SELECT canonical_asset_id FROM owner_asset_identity_aliases WHERE legacy_asset_id = ?",
+        (identity,),
+    ).fetchall()
+    if len(rows) != 1:
+        raise MigrationSafetyError("asset identity alias is missing or ambiguous")
+    canonical = _text(rows[0][0])
+    _verify_identity_alias(connection, identity, canonical)
+    return canonical
 
 
 def _read_owner_rows(connection: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -750,6 +886,7 @@ def _scalar_reference_columns(table: str, columns: Sequence[str]) -> list[str]:
         if (table, column) in DIRECT_REFERENCE_COLUMNS
         and DIRECT_REFERENCE_COLUMNS[(table, column)] != "identity-key"
         and DIRECT_REFERENCE_COLUMNS[(table, column)] not in PRESERVED_REFERENCE_POLICIES
+        and DIRECT_REFERENCE_COLUMNS[(table, column)] not in ALIAS_REFERENCE_POLICIES
     ]
 
 
@@ -1082,19 +1219,31 @@ def _merge_asset_rows(connection: sqlite3.Connection, source: str, target: str, 
     _update_row(connection, "sidecar_assets", target_data, merged)
 
 
-def _rewrite_asset_only(connection: sqlite3.Connection, source: str, target: str, target_cloud: str) -> None:
-    source_row = connection.execute("SELECT * FROM sidecar_assets WHERE asset_id = ?", (source,)).fetchone()
+def _create_canonical_asset_from_source(
+    connection: sqlite3.Connection,
+    source: str,
+    target: str,
+    target_cloud: str,
+) -> None:
+    """Create the canonical survivor while the legacy source still exists."""
+    source_row = connection.execute(
+        "SELECT * FROM sidecar_assets WHERE asset_id = ?", (source,)
+    ).fetchone()
     if not source_row:
         raise MigrationSafetyError("asset rewrite source is missing")
-    data = dict(source_row)
-    if connection.execute("SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (target,)).fetchone():
+    if connection.execute(
+        "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (target,)
+    ).fetchone():
         raise MigrationSafetyError("rewrite target unexpectedly exists")
+    data = dict(source_row)
     data["asset_id"] = target
     data["source_anchor"] = f"apple-photos-cloud://{target_cloud}"
     data["raw_json"] = _merge_raw_json("{}", data["raw_json"], target_cloud)
+    columns = _table_columns(connection, "sidecar_assets")
     connection.execute(
-        "UPDATE sidecar_assets SET asset_id = ?, source_anchor = ?, raw_json = ? WHERE asset_id = ?",
-        (target, data["source_anchor"], data["raw_json"], source),
+        f"INSERT INTO sidecar_assets ({', '.join(_quoted(column) for column in columns)}) "
+        f"VALUES ({', '.join('?' for _ in columns)})",
+        [data.get(column) for column in columns],
     )
 
 
@@ -1244,8 +1393,6 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
         if schema["unknownSurfaceCount"]:
             blocked.append("unknown-schema-or-reference-surface")
         blocked.extend(operational_drain["blockedReasons"])
-        if preserved_references["preservedAuditRowCount"]:
-            blocked.append("preserved-lifecycle-audit-references-require-alias-plan")
         if preserved_references["canonicalInvariantViolationCount"]:
             blocked.append("noncanonical-canonical-audit-reference")
         if classified["quarantine"]["entryCount"]:
@@ -1346,8 +1493,6 @@ def _apply_transaction(
         if not operational_drain["allDrained"]:
             raise MigrationSafetyError("lifecycle work must drain before identity migration")
         preserved_references = inspect_preserved_references(connection, resolutions)
-        if preserved_references["preservedAuditRowCount"]:
-            raise MigrationSafetyError("lifecycle audit references require an alias plan")
         if preserved_references["canonicalInvariantViolationCount"]:
             raise MigrationSafetyError("canonical lifecycle audit reference contains a legacy identity")
         if _quick_check(connection) != ["ok"] or _foreign_key_errors(connection):
@@ -1356,9 +1501,11 @@ def _apply_transaction(
         before_logical_digest = _logical_database_digest(working_db)
         connection.execute("BEGIN IMMEDIATE")
         connection.execute("PRAGMA defer_foreign_keys = ON")
+        _ensure_identity_alias_table(connection)
         merged_count = 0
         rewrite_count = 0
         reference_count = 0
+        alias_count = 0
         for index, resolution in enumerate(resolutions, start=1):
             source_exists = connection.execute(
                 "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (resolution.source_asset_id,)
@@ -1368,6 +1515,15 @@ def _apply_transaction(
             target_exists = connection.execute(
                 "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (resolution.target_asset_id,)
             ).fetchone()
+            if not target_exists:
+                _create_canonical_asset_from_source(
+                    connection,
+                    resolution.source_asset_id,
+                    resolution.target_asset_id,
+                    resolution.cloud_identifier,
+                )
+            _insert_verified_identity_alias(connection, resolution)
+            alias_count += 1
             if target_exists:
                 reference_count += _rewrite_references(
                     connection, resolution.source_asset_id, resolution.target_asset_id
@@ -1383,16 +1539,18 @@ def _apply_transaction(
                 )
                 merged_count += 1
             else:
-                _rewrite_asset_only(
-                    connection,
-                    resolution.source_asset_id,
-                    resolution.target_asset_id,
-                    resolution.cloud_identifier,
-                )
                 reference_count += _rewrite_references(
                     connection, resolution.source_asset_id, resolution.target_asset_id
                 )
+                connection.execute(
+                    "DELETE FROM sidecar_assets WHERE asset_id = ?",
+                    (resolution.source_asset_id,),
+                )
                 rewrite_count += 1
+            if resolve_owner_asset_identity(
+                connection, resolution.source_asset_id
+            ) != resolution.target_asset_id:
+                raise MigrationSafetyError("post-rewrite identity alias verification failed")
             if failure_stage == "after-first-reference" and index == 1:
                 raise MigrationSafetyError("injected rehearsal failure after first reference rewrite")
         if failure_stage == "invariant":
@@ -1408,6 +1566,7 @@ def _apply_transaction(
                 "mergedCount": merged_count,
                 "rewriteOnlyCount": rewrite_count,
                 "referenceRewriteCount": reference_count,
+                "identityAliasCount": alias_count,
                 "sourceDeletionPerformed": bool(merged_count),
                 "fixtureMutationPerformed": False,
                 "publicationMutationPerformed": False,

@@ -166,10 +166,12 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 ## Backstage-launched PBE Owner session
 
 The Backstage sidebar exposes the sole launch point for actionable hosted PBE
-Owner mode. It starts from the authoritative current fixture, verifies the
-existing loopback host readiness identities, mints a five-minute Worker session,
-and opens a gallery bound to that fixture, source/catalog identity, device,
-capabilities, expiry, and `pbb-79-waste-basket` lifecycle writer.
+Owner mode. It captures the authoritative current fixture, lazily starts a
+Backstage-owned native listener on a random loopback port, verifies the local
+readiness identities, mints a five-minute Worker session, and opens a gallery
+bound to that fixture, source/catalog identity, device, capabilities, expiry,
+and `pbb-79-waste-basket` lifecycle writer. The production path does not launch
+or attach to `scripts/local_server.py`.
 
 The browser receives a one-time opaque handoff in the URL fragment, removes it
 immediately, and exchanges it for an HttpOnly, SameSite, session-only loopback
@@ -178,21 +180,16 @@ credential. Backstage freezes the fixture while the session is active; the
 Worker and host reject a missing, revoked, expired, closed, mismatched, or
 unready lease.
 
-Backstage and the Python host independently attest the launched checkout as
-`git:<commit>:pbe-host-sha256:<digest>`. The digest covers the tracked Python
-host and hosted gallery code declared in
-`scripts/pbe_owner_host_tracked_paths.txt`. Both sides require those tracked
-files to match `HEAD`, including direct blob checks that defeat
-`assume-unchanged`; dirty host code fails before a bearer is sent. Ignored
-root dependencies such as `node_modules` and unrelated untracked files outside
-the Python import scope do not alter the identity. Before it creates the
-bootstrap secret, Backstage separately rejects untracked or ignored import
-modules, symlinks, special files, and executables under `scripts/`, including a
-standard-library shadow such as `scripts/json.py`. The host starts with
-inherited Python configuration disabled and a clean per-launch bytecode-cache
-prefix; ordinary ignored `__pycache__` files therefore remain non-blocking.
-Python repeats the scope check as defense in depth, while native preflight is
-the required pre-import control.
+The native host serves only an immutable web bundle from the signed app's
+`OwnerRuntime`. `PBEOwnerWebBundle` validates the packaged runtime manifest,
+fixed entrypoints, safe regular-file paths, MIME types, byte bounds, sizes, and
+per-file SHA-256 values before the listener is accepted. Its identity is
+`pbe-web-runtime:sha256:<manifest-digest>`. A one-use in-process bootstrap
+secret exchanges that identity for a separate host-authorization secret before
+Backstage presents a Worker session bearer. Mutable checkout state, Python
+imports, and an arbitrary filesystem web root are not part of this production
+trust boundary. The retained Python host and its git-tree attestation are
+legacy rollback/test material only; they are not a normal launch fallback.
 
 Open PBE Owner captures the exact fixture synchronously. Both chooser and
 fixture refresh remain disabled through the asynchronous readiness/mint/attach
@@ -210,7 +207,7 @@ contract.
 
 | Threat | Control |
 | --- | --- |
-| A compromised web view or browser sends a raw SQLite operation | Local wake accepts only an opaque action ID; connector claims and validates it through the Worker |
+| A compromised web view or browser sends a raw SQLite operation | The native host exposes only its reviewed route allowlist, requires the session cookie and exact origin where applicable, and derives fixture and actor authority from the frozen lease |
 | A stolen access token remains useful | 15-minute lifetime, per-request device revocation check, no refresh token, device credential in Keychain |
 | A connector acts for another Mac | Target and claim ownership are checked on every exact action |
 | A crash partially mutates private state | Connector and migration writes use transactions; action is completed only after receipts are durable |

@@ -61,11 +61,14 @@ matching session.
 
 ## Local host readiness and lease
 
-Backstage launches the existing `scripts/local_server.py` on a random loopback
-port; it never trusts or attaches credentials to an arbitrary fixed-port
-process. A one-use bootstrap secret and an independently computed git checkout
-identity authenticate the launched host before Backstage sends any bearer.
-It does not start Expo or a competing writer.
+Backstage lazily creates `PBEOwnerNativeHostService`, which owns an in-process
+HTTP listener bound only to `127.0.0.1` on a random port. It never trusts an
+arbitrary fixed-port process and the production path never launches
+`scripts/local_server.py`. A one-use in-process bootstrap secret authenticates
+the exact packaged web-runtime identity before Backstage sends any bearer. The
+bootstrap then yields a distinct host-authorization secret for Backstage-only
+control routes. Starting the native host does not start Expo or a competing
+writer.
 `GET /__photosbyelie/pbe-owner/readiness` requires the local Owner database and
 public catalog and returns only opaque SHA-256 identities, capabilities, and
 the lifecycle writer. Local paths never leave the host.
@@ -76,29 +79,23 @@ content while excluding only intended lifecycle fields. The mutable Owner source
 binds the file object's device and inode: authorized row writes survive, while
 database replacement ends the lease. The public catalog is an expected generated
 derivative of X/restore, so its identity deliberately survives an atomic rebuild
-at the same canonical slot with the same schema. A different checkout, missing
-or unreadable database, or incompatible schema still fails closed.
+at the same canonical slot with the same schema. A different or malformed
+packaged web runtime, missing or unreadable database, or incompatible schema
+still fails closed.
 
-The checkout identity is
-`git:<commit>:pbe-host-sha256:<tracked-host-tree-digest>`. Backstage and Python
-independently read `scripts/pbe_owner_host_tracked_paths.txt`, require every
-declared host/gallery file to be tracked at `HEAD`, reject tracked status
-changes, and hash each working-tree blob against the commit before calculating
-the same digest. This also detects `assume-unchanged` content changes. Ignored
-root `node_modules` and unrelated untracked files outside the Python import
-scope are intentionally outside the host-code attestation.
+The web-runtime identity is
+`pbe-web-runtime:sha256:<connector-runtime-manifest-digest>`. The signed app's
+`OwnerRuntime/connector-runtime-manifest.json` must name the expected runtime
+kind, schema, scope manifest, and exact `gallery.html` and `photo.html`
+entrypoints. `PBEOwnerWebBundle` then accepts only bounded, allowlisted regular
+files beneath that runtime root and verifies every declared size, MIME type,
+and SHA-256 before loading any resource. Symlinks, special files, unsafe paths,
+missing entrypoints, undeclared resources, and digest mismatches fail closed.
 
-Before creating the bootstrap secret or starting Python, Backstage also walks
-the `scripts/` execution/import scope and compares it with Git's tracked set.
-Any untracked or ignored Python/extension module, symlink, special file, or
-executable fails closed with `pbe_owner_checkout_stray_import`; this includes
-an untracked `scripts/json.py` that could shadow the standard library before
-Python's in-process attestation. Ordinary `__pycache__` bytecode remains a
-non-blocking local artifact because Backstage launches Python with inherited
-`PYTHON*` settings disabled and an empty per-launch bytecode-cache prefix, so
-checkout caches are not loaded. Python repeats the stray-scope check during
-identity evaluation as defense in depth, but the native pre-launch check is
-the controlling boundary because Python imports occur first.
+The earlier git-tree identity and `scripts/pbe_owner_host_tracked_paths.txt`
+contract remain relevant only to an explicit legacy Python rollback or its
+tests. They do not describe the active host and cannot become an automatic
+fallback when native startup fails.
 
 After cloud minting, Backstage calls
 `POST /__photosbyelie/pbe-owner/session/start` with the short-lived session token
@@ -117,6 +114,13 @@ and selected fixture all agree. The fixture coordinator remains frozen until
 close, expiry, or a fail-closed error. The exact fixture is captured before the
 first asynchronous launch step; both fixture selection and refresh are locked
 until launch succeeds or the provisional freeze is released on failure.
+
+Ending PBE Owner closes the exact local and cloud leases, clears Backstage's
+session state, and stops the in-process listener. There is no PBE Owner
+LaunchAgent or always-on web service. Durable Worker actions already submitted
+through the session retain their own ledger state; the separate on-demand
+connector lifecycle that claims those action IDs is governed by PBB-106 and is
+not part of this browser-host process.
 
 ## Browser handoff
 
@@ -194,7 +198,7 @@ Owner actions are disabled when any of these is true:
 - wrong provisioning email, provider, or token purpose;
 - missing, invalid, or revoked device;
 - unavailable Worker or loopback host;
-- dirty, untracked, or content-mismatched declared host code;
+- missing, malformed, unsafe, or content-mismatched packaged web runtime;
 - missing Owner database or public catalog;
 - missing capability or lifecycle writer;
 - absent or mismatched fixture/source/catalog/readiness binding;
@@ -207,10 +211,12 @@ session, direct SQLite mutation, or a direct global tombstone.
 
 ## Verification and release boundary
 
-Automated coverage includes Worker authorization/revocation/expiry, Python
-readiness and in-memory lease behavior, guarded X/restore payloads, Swift launch
-and transport bindings, dirty/`assume-unchanged` checkout rejection, stale
-heartbeat rejection, fixture-refresh locking, projection retry, script order
-and secret handling, and desktop/narrow status styling. Production remains
-unchanged until the normal Worker, static site, and signed Backstage release
-gates are completed and manually rehearsed.
+Automated coverage includes Worker authorization/revocation/expiry, the native
+route and authority allowlist, strict loopback parsing, packaged web-bundle
+validation, SQLite readiness, in-memory lease behavior, browser handoff and
+cookie isolation, guarded action payloads, stale-heartbeat rejection, fixture-
+refresh locking, and desktop/narrow status styling. The signed Backstage app is
+the active production host; legacy Python host tests exercise rollback material
+only. Crash/sleep/sign-out, close/drain, update/rollback, packaged rollback-
+runtime retirement, and final signed multi-Mac acceptance remain explicit
+PBB-114 release gates rather than inferred completion.

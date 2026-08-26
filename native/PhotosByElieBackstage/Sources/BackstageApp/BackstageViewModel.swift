@@ -287,7 +287,6 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
     @Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []
-    @Published var cullingScrollTargetID: String?
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -4947,7 +4946,6 @@ final class BackstageViewModel: ObservableObject {
                     focusedID: focusedID
                 )
                 selectedPhotoIDs = cullingSelection.selectedIDs
-                cullingScrollTargetID = focusedID
                 cullingStatus = "Undid \(entry.label)."
             } catch {
                 cullingStatus = "Undo failed; the history step was preserved. \(error)"

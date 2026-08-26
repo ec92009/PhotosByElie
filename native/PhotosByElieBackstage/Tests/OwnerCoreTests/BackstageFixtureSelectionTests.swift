@@ -444,7 +444,7 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingStatus.contains("Restored 1 item from Waste Basket"))
     }
 
-    @Test("Fixture decision Undo restores the grid in place and requests its prior anchor")
+    @Test("Fixture decision Undo restores selection without forcing a viewport recenter")
     @MainActor
     func fixtureDecisionUndoPreservesCullingAnchor() async throws {
         let items = [
@@ -518,7 +518,6 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingSelection.selectedIDs == Set(items.map(\.id)))
         #expect(model.cullingSelection.anchorID == items[0].id)
         #expect(model.cullingSelection.focusedID == items[1].id)
-        #expect(model.cullingScrollTargetID == items[1].id)
         #expect(await placementService.undoCount() == 1)
     }
 

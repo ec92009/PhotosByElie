@@ -83,10 +83,10 @@ durable action available for the next Backstage launch.
 
 The per-Mac token remains in `~/.config/photosbyelie/connector.json` with mode
 600 and is passed only by config-file path, never copied into a Swift or shell
-argument. Installation still copies tracked connector code into a versioned,
+argument. Release preparation copies tracked connector code into a versioned,
 read-only, manifest-verified runtime below
-`~/Library/Application Support/PhotosByElie`; the existing LaunchAgent
-installer is rollback-only until the PBB-106 release and live/KV gates are
+`~/Library/Application Support/PhotosByElie`. PBB-106 retired the LaunchAgent,
+its installer, and its downloadable package after the bounded runtime gate was
 accepted. Every runtime byte comes directly from one fully resolved Git commit
 object rather than the index or working tree, and committed symlinks,
 non-regular entries, unsafe paths, and invalid revisions fail closed.

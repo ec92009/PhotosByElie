@@ -2,8 +2,7 @@
 """Mac connector for cloud Owner actions.
 
 The supported Backstage path launches this process with ``--once`` for a
-bounded drain. The legacy long-running mode remains only for rollback and
-must not be used by the on-demand launch contract.
+bounded drain. Long-running launch-at-login operation is retired.
 """
 
 from __future__ import annotations
@@ -108,9 +107,6 @@ READ_ONLY_FIXTURE_MODES = {
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
 LEGACY_BROWSER_OWNER_ENABLED = (
     os.environ.get("PBE_ENABLE_LEGACY_BROWSER_OWNER", "").strip() == "1"
-)
-LEGACY_CONNECTOR_DAEMON_ENABLED = (
-    os.environ.get("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", "").strip() == "1"
 )
 
 
@@ -2404,7 +2400,7 @@ def _run_connector(config: ConnectorConfig, *, once: bool, action_id: str = "") 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the PhotosByElie background Mac connector.")
+    parser = argparse.ArgumentParser(description="Run one bounded PhotosByElie Owner connector drain.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="Poll once and exit.")
@@ -2427,16 +2423,10 @@ def main() -> int:
         raise SystemExit("On-demand Owner connector launches must use --once.")
     if args.action_id and not args.once:
         raise SystemExit("--action-id requires --once.")
-    if (
-        not args.once
-        and not args.status
-        and not args.action_id
-        and not LEGACY_CONNECTOR_DAEMON_ENABLED
-    ):
+    if not args.once and not args.status and not args.action_id:
         print(
             "The always-on Owner connector daemon is retired. Use signed "
-            "PhotosByElie Backstage for on-demand work, or set "
-            "PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1 for a deliberate rollback rehearsal.",
+            "PhotosByElie Backstage for on-demand work.",
             file=sys.stderr,
             flush=True,
         )

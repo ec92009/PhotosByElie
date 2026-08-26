@@ -55,46 +55,21 @@ class RetiredApplePhotosImportTests(unittest.TestCase):
         self.assertNotIn("_run_apple_photos_bridge", source)
         self.assertNotIn("apple_photos_bridge.swift", source)
 
-    def test_normal_installers_do_not_package_or_launch_standalone_bridge(self):
+    def test_launch_at_login_connector_distribution_is_retired(self):
         root = Path(__file__).resolve().parents[1]
-        sources = {
-            "connector_installer": (
-                root / "scripts" / "install_new_owner_connector.zsh"
-            ).read_text(encoding="utf-8"),
-            "connector_package_builder": (
-                root / "scripts" / "build_new_owner_connector_package.zsh"
-            ).read_text(encoding="utf-8"),
-            "connector_package_command": (
-                root
-                / "assets"
-                / "connector-package"
-                / "Install PhotosByElie Connector.command"
-            ).read_text(encoding="utf-8"),
-            "scheduled_tasks": (
-                root / "scripts" / "install_sidecar_scheduled_tasks.zsh"
-            ).read_text(encoding="utf-8"),
-        }
+        retired_paths = (
+            root / "scripts" / "install_new_owner_connector.zsh",
+            root / "scripts" / "build_new_owner_connector_package.zsh",
+            root / "scripts" / "new_owner_connector_launch_agent.plist.in",
+            root / "assets" / "connector-package" / "README.txt",
+            root / "assets" / "connector-package" / "Install PhotosByElie Connector.command",
+        )
+        self.assertTrue(all(not path.exists() for path in retired_paths))
 
-        for name, source in sources.items():
-            with self.subTest(name=name):
-                self.assertNotIn("PBE_SKIP_BRIDGE_BUILD", source)
-                self.assertNotIn("install_sidecar_photos_bridge_app.zsh", source)
-                self.assertNotIn("PhotosByElie Photos Bridge.app", source)
-
-        package_readme = (
-            root / "assets" / "connector-package" / "README.txt"
-        ).read_text(encoding="utf-8")
-        self.assertIn("does not install a second Photos helper", package_readme)
-
-    def test_legacy_owner_connector_install_requires_explicit_rollback_opt_in(self):
-        root = Path(__file__).resolve().parents[1]
-        installer = (root / "scripts" / "install_new_owner_connector.zsh").read_text(encoding="utf-8")
-        package_command = (
-            root / "assets" / "connector-package" / "Install PhotosByElie Connector.command"
-        ).read_text(encoding="utf-8")
-        for source in (installer, package_command):
-            self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT", source)
-            self.assertIn("exit 64", source)
+        scheduled_tasks = (root / "scripts" / "install_sidecar_scheduled_tasks.zsh").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("PhotosByElie Photos Bridge.app", scheduled_tasks)
 
     def test_retired_browser_owner_launcher_fails_closed_without_rollback_opt_in(self):
         root = Path(__file__).resolve().parents[1]

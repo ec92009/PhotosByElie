@@ -39,7 +39,7 @@ dependency of native Backstage.
 | `LocalOwnerConnectorIdentity` | Selects the connector authority attached to new Worker actions | Interactive runtime-critical (Swift) | Use the explicit non-secret authority target (`max` by default). Do not contact a daemon or read the credential-bearing connector config; a future writer migration must inject a rehearsed target. |
 | `PBEOwnerHostClient` -> `scripts/local_server.py` | PBB launches one loopback PBE Owner web host after the user presses Open | Interactive compatibility boundary | Retain temporarily for the explicit web session. PBB owns the child, fixture lease, bootstrap secret, and shutdown; closing PBB drains started durable work and terminates the host. It is not a daemon or idle dependency. PBB-114 owns its native replacement. |
 | `PhotoLibraryService` and `PhotoMetadataService` | Photos authorization, previews, exports, and approved metadata writes | Interactive runtime-critical (Swift) | Keep in the signed Backstage bundle. There is no separately installed Photos helper and no Python on this path. |
-| `new_owner_connector.py` with no bounded flag | LaunchAgent/background polling, local status server, retry/backoff, and action drain | Legacy/removable daemon | Refuse by default before reading connector config. `--once` and `--action-id` remain bounded forms; a deliberate rollback may opt in with `PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1`. |
+| `new_owner_connector.py` with no bounded flag | Former LaunchAgent/background polling entry | Retired daemon | Refuses before reading connector config. `--once` and `--action-id` remain the bounded forms used by Backstage. |
 | `new_owner_connector.py` -> `sidecar_server.py` | Legacy Sidecar browser launch when `PBE_ENABLE_LEGACY_SIDECAR=1` | Legacy compatibility | Retain only for explicit rollback/rehearsal; native Backstage must not depend on it. |
 | `new_owner_connector.py` -> `local_server.py` | Legacy local Owner/Waste Basket/browser helper | Legacy compatibility | Retain only for the legacy web surface until its owner-facing replacement is confirmed; never use it as the native Review/Undo path. |
 | `open_sidecar_main.py` -> `sidecar_server.py` | Dock-launched legacy Sidecar | Legacy compatibility | Keep isolated behind its existing explicit enablement; no LaunchAgent requirement. |
@@ -86,10 +86,9 @@ retained in `Owner.sqlite`.
 
 - `--once --action-id`: claims and executes exactly one Worker action, then
   exits; and
-- no bounded flag: starts the local status server and a polling loop, with
-  retry/backoff and an interactive lease. This is the daemon mode that caused
-  the battery/idle-process concern, and it now refuses to start unless the
-  explicit rollback variable `PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1` is set.
+- no bounded flag: refuses before reading connector configuration. The former
+  LaunchAgent installer, package download, and daemon rollback opt-in were
+  removed after PBB-106's bounded-runtime gate was accepted.
 
 The Swift `OwnerReviewSQLiteStore` and `OwnerCullingSQLiteStore` now own the
 interactive transaction, snapshot validation, event recording, and guarded
@@ -129,10 +128,9 @@ component is removed; PBB-111 owns the detailed acceptance evidence.
    attributable to SQLite or refresh work instead of an opaque helper launch.
 5. Keep broader Worker/Photos/R2/delivery/publication actions action-scoped
    until their own native or dedicated bridge contracts are verified.
-6. Keep the Owner LaunchAgent installer and daemon/status-server mode behind
-   explicit rollback-only opt-ins. The native path cannot start the daemon
-   implicitly. The legacy Sidecar and local Owner launchers remain explicit
-   rollback tools only.
+6. Keep Owner connector execution bounded to `--once` or `--action-id`.
+   LaunchAgent installation and downloadable daemon packages are retired. The
+   legacy Sidecar and local Owner launchers remain separate explicit tools.
 
 ## Quit contract
 
@@ -170,8 +168,8 @@ The completed decision settles the native Review/Culling boundary, removes its h
 Python/HTTP fallback, keeps the Metadata model-ladder read off its localhost helper,
 removes the connector-status lookup from native identity resolution without
 loading connector credentials into Swift, removes the unused native localhost
-action-wake client, and makes the unbounded connector daemon fail closed by
-default.
+action-wake client, and retires the unbounded connector daemon and its
+install/distribution surface.
 
 Python is not fundamentally required by the finished Backstage/PBE Owner
 product runtime. It remains appropriate for bounded batch, migration, repair,

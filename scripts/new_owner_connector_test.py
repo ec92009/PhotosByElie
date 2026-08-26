@@ -53,12 +53,9 @@ class UploadRegistrationScopeTest(unittest.TestCase):
     def setUp(self):
         self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
 
-    def test_unbounded_daemon_requires_explicit_legacy_opt_in_before_config_load(self):
+    def test_unbounded_daemon_is_retired_before_config_load(self):
         output = StringIO()
         with patch(
-            "scripts.new_owner_connector.LEGACY_CONNECTOR_DAEMON_ENABLED",
-            False,
-        ), patch(
             "scripts.new_owner_connector.load_config"
         ) as load_config, patch(
             "sys.argv",
@@ -165,13 +162,16 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                     if module is not None:
                         sys.modules[name] = module
 
-    def test_launch_agent_is_explicit_legacy_daemon_rollback(self):
-        template = (
-            Path(__file__).with_name("new_owner_connector_launch_agent.plist.in")
-        ).read_text(encoding="utf-8")
-        self.assertIn("<key>ProcessType</key>\n  <string>Standard</string>", template)
-        self.assertNotIn("<string>Background</string>", template)
-        self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", template)
+    def test_launch_at_login_artifacts_are_retired(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        retired_paths = (
+            repo_root / "scripts" / "install_new_owner_connector.zsh",
+            repo_root / "scripts" / "new_owner_connector_launch_agent.plist.in",
+            repo_root / "scripts" / "build_new_owner_connector_package.zsh",
+            repo_root / "assets" / "connector-package" / "README.txt",
+            repo_root / "assets" / "connector-package" / "Install PhotosByElie Connector.command",
+        )
+        self.assertTrue(all(not path.exists() for path in retired_paths))
 
     def test_on_demand_mode_rejects_a_long_running_invocation(self):
         with (

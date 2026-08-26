@@ -118,25 +118,23 @@ Backstage show `verified`. The operator may reveal the isolated artifact or
 explicitly confirm the separate canonical installer. Finder replacement is not
 the supported installation path.
 
-## Connector runtime installation
+## Connector runtime materialization
 
-The connector installer is a separate local mechanism; the Backstage updater
-does not invoke it. Before writing connector configuration or a LaunchAgent,
-the installer materializes every Git-tracked file below `scripts/` into a new
+Backstage's release path materializes the bounded connector runtime into a new
 versioned directory below `~/Library/Application Support/PhotosByElie`. It
 copies file bytes rather than preserving links, refuses any tracked symlink or
 non-regular source entry, records exact paths, sizes, modes, and SHA-256 hashes
-in a runtime manifest, and makes the complete snapshot read-only.
+in a runtime manifest, and makes the complete snapshot read-only. There is no
+LaunchAgent installer or separately downloadable connector package.
 
 Mutable project data remains under the stable configured `repoRoot`. Executable
-code, imports, and helper launches use the separate `runtimeRoot`; neither the
-mode-600 connector config nor the LaunchAgent records the source checkout used
-to create that snapshot. The installer runs the runtime's local `--status`
-check before activation, and every connector start validates manifest coverage,
+code, imports, and helper launches use the separate `runtimeRoot`; the mode-600
+connector config does not record the source checkout used to create that
+snapshot. Release validation runs the runtime's local `--status` check before
+activation, and every connector start validates manifest coverage,
 hashes, modes, required files, and the absence of symlinks or unmanifested
 files. Status validation performs no Worker request and exposes no credential.
 
-Replacing an already running production connector remains an explicit operator
-gate: stop, install, restart, and compare live connector health only under the
-approved deployment procedure. The installer does not silently migrate or
-delete an older runtime.
+Replacing a runtime remains part of the signed Backstage release gate. The
+release path does not silently delete an older runtime, and bounded launches
+never create a login item or persistent background service.

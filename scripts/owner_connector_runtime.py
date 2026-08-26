@@ -25,7 +25,6 @@ REQUIRED_RUNTIME_FILES = frozenset(
         "scripts/backstage_photos_client.py",
         "scripts/local_server.py",
         "scripts/new_owner_connector.py",
-        "scripts/new_owner_connector_launch_agent.plist.in",
         "scripts/owner_connector_runtime.py",
         PBE_OWNER_HOST_SCOPE_MANIFEST,
         PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST,

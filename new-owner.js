@@ -55,7 +55,6 @@
   const actionStatusRoot = $("[data-new-owner-action-status]");
   const localConnectorRoot = $("[data-new-owner-local-connector]");
   const workerBaseRoot = $("[data-new-owner-worker-base]");
-  const connectorDownload = $("[data-new-owner-download-connector]");
   const reFixtureInput = $("[data-new-owner-re-fixture]");
   const reProjectInput = $("[data-new-owner-re-project]");
   const reProjectNewInput = $("[data-new-owner-re-project-new]");
@@ -815,10 +814,6 @@
             ? "Backstage is the active writer. Browser Owner is read-only."
             : "Cloud Owner session verified.")
           : "Owner role is required."));
-      if (connectorDownload && ownerAllowed() && workerBase && !provisioningOnly) {
-        connectorDownload.href = `${workerBase}${ownerApiPath("/owner/connector/download/mac")}`;
-        connectorDownload.hidden = false;
-      }
     } catch (error) {
       state.session = null;
       state.access = null;

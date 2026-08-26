@@ -2163,8 +2163,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn("connector.json", identity)
         self.assertIn('"--action-id"', connector)
         self.assertIn("if args.action_id:", connector)
-        self.assertIn("LEGACY_CONNECTOR_DAEMON_ENABLED", connector)
-        self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1", connector)
+        self.assertIn("The always-on Owner connector daemon is retired", connector)
+        self.assertNotIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", connector)
 
     def test_review_proposals_arrive_incrementally_without_batch_load(self):
         app = backstage_ui_source()

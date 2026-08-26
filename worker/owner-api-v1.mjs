@@ -16,7 +16,6 @@ const exactRoutes = new Map([
   ["/owner/session", "/api/owner/session"],
   ["/owner/connectors", "/api/owner/connectors"],
   ["/owner/interactive", "/api/owner/interactive"],
-  ["/owner/connector/download/mac", "/api/owner/connector/download/mac"],
   ["/actions", "/api/owner/actions"],
   ["/connectors", "/api/owner/connectors"],
   ["/connectors/heartbeat", "/api/owner/connector/heartbeat"],

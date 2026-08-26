@@ -41,6 +41,20 @@ def _make_app(
 
 
 class NativeBackstageCutoverAuditTests(unittest.TestCase):
+    def test_current_home_can_find_a_system_installed_backstage(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / "home"
+            system_applications = Path(directory) / "Applications"
+            _make_app(system_applications, BACKSTAGE_APP, "com.photosbyelie.backstage")
+
+            payload = collect_inventory(
+                home,
+                applications_directory=system_applications,
+                live_probes=False,
+            )
+
+            self.assertTrue(payload["checks"]["backstageInstalled"])
+
     def test_clean_native_only_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

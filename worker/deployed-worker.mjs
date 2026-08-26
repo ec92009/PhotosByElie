@@ -12,7 +12,6 @@ import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
 import { createD1OwnerEnrollmentHandoffStore } from "./owner-enrollment-handoff-store.mjs";
 import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
-import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
 import { createRealEstateAuth } from "./real-estate-auth.mjs";
 import { createRealEstateDeliverables } from "./real-estate-deliverables.mjs";
@@ -565,10 +564,6 @@ export default {
         database: env.ACCESS_DB,
       }) : undefined,
       ownerConnectorAuth: ownerConnectorAuthFor(env),
-      ownerConnectorPackage: createR2OwnerConnectorPackage({
-        bucket: privateBucket,
-        key: env.OWNER_CONNECTOR_MAC_KEY || "owner-connectors/photosbyelie-mac-connector.zip",
-      }),
       authAllowedReturnOrigins: authAllowedReturnOriginsFor(env, publicSiteUrl),
       ordersUrl: `${publicSiteUrl}/order.html`,
       downloadBaseUrl: workerPublicUrl,

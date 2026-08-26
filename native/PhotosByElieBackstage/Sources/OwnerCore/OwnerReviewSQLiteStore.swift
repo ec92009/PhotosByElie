@@ -458,11 +458,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = ?",
                         bindings: [.string(assetID)]
                     )
-                    guard delivery?["delivery_state"]?.stringValue != "live" else {
-                        throw OwnerReviewSQLiteError.conflict(
-                            "live asset cannot return to Review: \(assetID)"
-                        )
-                    }
+                    let preservesLiveRendition = delivery?["delivery_state"]?.stringValue == "live"
                     try connection.execute(
                         """
                         UPDATE sidecar_decisions
@@ -472,15 +468,17 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         """,
                         bindings: [.string(timestamp), .string(assetID)]
                     )
-                    try connection.execute(
-                        """
-                        INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                        VALUES (?, 'not-ready', ?, ?)
-                        ON CONFLICT(asset_id) DO UPDATE SET
-                          delivery_state = 'not-ready', updated_at = excluded.updated_at
-                        """,
-                        bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                    )
+                    if !preservesLiveRendition {
+                        try connection.execute(
+                            """
+                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                            VALUES (?, 'not-ready', ?, ?)
+                            ON CONFLICT(asset_id) DO UPDATE SET
+                              delivery_state = 'not-ready', updated_at = excluded.updated_at
+                            """,
+                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                        )
+                    }
                     try connection.execute(
                         """
                         UPDATE asset_editorial_state

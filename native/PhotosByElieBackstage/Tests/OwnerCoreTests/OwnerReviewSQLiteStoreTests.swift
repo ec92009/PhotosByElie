@@ -373,16 +373,20 @@ struct OwnerReviewSQLiteStoreTests {
             databaseURL,
             "UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id = 'asset-1'"
         )
-        #expect(throws: OwnerReviewSQLiteError.self) {
-            try store.applyReview(
-                .returnToReview,
-                fixtureID: "fixture-expo",
-                assetIDs: ["asset-1"],
-                anchorAssetID: "asset-1"
-            )
-        }
-        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        let returnedLive = try store.applyReview(
+            .returnToReview,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1"
+        )
+        #expect(returnedLive.changes.first?.review["editorialState"]?.stringValue == "unreviewed")
+        #expect(returnedLive.changes.first?.review["deliveryState"]?.stringValue == "live")
+        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
         #expect(try scalar(databaseURL, "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "live")
+
+        let undoneLive = try store.undoReview(operationID: returnedLive.operationID)
+        #expect(undoneLive.changes.first?.review["editorialState"]?.stringValue == "approved")
+        #expect(undoneLive.changes.first?.review["deliveryState"]?.stringValue == "live")
 
         #expect(throws: OwnerReviewSQLiteError.self) {
             try store.applyReview(

@@ -10,7 +10,8 @@ private enum CullingQuickLookPresenter {
     static func present(
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator,
-        direction: OwnerSelectionDirection = .next
+        direction: OwnerSelectionDirection = .next,
+        onReturnToReview: @escaping () -> Void
     ) {
         let ids = model.selectedCullingAssetIDs
         guard !ids.isEmpty else {
@@ -53,7 +54,8 @@ private enum CullingQuickLookPresenter {
                                 wasVisible: wasVisible,
                                 model: model,
                                 coordinator: coordinator,
-                                direction: direction
+                                direction: direction,
+                                onReturnToReview: onReturnToReview
                             )
                         }
                     ) {
@@ -71,7 +73,8 @@ private enum CullingQuickLookPresenter {
                             direction: navigationDirection,
                             from: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            onReturnToReview: onReturnToReview
                         )
                     case .pick:
                         applyPlacement(
@@ -79,7 +82,8 @@ private enum CullingQuickLookPresenter {
                             assetID: assetID,
                             model: model,
                             coordinator: coordinator,
-                            removalDirection: direction
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
                     case .hide:
                         applyPlacement(
@@ -87,14 +91,16 @@ private enum CullingQuickLookPresenter {
                             assetID: assetID,
                             model: model,
                             coordinator: coordinator,
-                            removalDirection: direction
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
                     case .wasteBasket:
                         applyWasteBasket(
                             assetID: assetID,
                             model: model,
                             coordinator: coordinator,
-                            removalDirection: direction
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
                     case .rating, .color:
                         return false
@@ -108,7 +114,8 @@ private enum CullingQuickLookPresenter {
                                 present(
                                     model: model,
                                     coordinator: coordinator,
-                                    direction: direction
+                                    direction: direction,
+                                    onReturnToReview: onReturnToReview
                                 )
                             } else {
                                 coordinator.dismiss()
@@ -120,9 +127,20 @@ private enum CullingQuickLookPresenter {
                             assetID: assetID,
                             model: model,
                             coordinator: coordinator,
-                            removalDirection: direction
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
-                    case .approve, .returnToReview:
+                    case .returnToReview:
+                        if !model.cullingSelection.selectedIDs.contains(assetID) {
+                            model.clickCullingAsset(assetID, modifiers: [])
+                        }
+                        guard model.canReturnCullingSelectionToReview else {
+                            model.cullingStatus = "Return to Review is available only for approved Gallery assets."
+                            return true
+                        }
+                        coordinator.dismiss()
+                        onReturnToReview()
+                    case .approve:
                         return false
                     }
                     return true
@@ -136,12 +154,18 @@ private enum CullingQuickLookPresenter {
         direction: OwnerSelectionDirection,
         from assetID: String,
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        onReturnToReview: @escaping () -> Void
     ) {
         model.clickCullingAsset(assetID, modifiers: [])
         model.moveCullingSelection(by: delta, extending: false)
         guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
-        present(model: model, coordinator: coordinator, direction: direction)
+        present(
+            model: model,
+            coordinator: coordinator,
+            direction: direction,
+            onReturnToReview: onReturnToReview
+        )
     }
 
     private static func applyPlacement(
@@ -149,7 +173,8 @@ private enum CullingQuickLookPresenter {
         assetID: String,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator,
-        removalDirection: OwnerSelectionDirection
+        removalDirection: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
     ) {
         let previousIDs = model.visibleCullingAssets.map(\.id)
         // Quick Look can be opened from a command-click multi-selection. Do
@@ -176,7 +201,8 @@ private enum CullingQuickLookPresenter {
                 previousIDs: previousIDs,
                 model: model,
                 coordinator: coordinator,
-                direction: removalDirection
+                direction: removalDirection,
+                onReturnToReview: onReturnToReview
             )
         }
     }
@@ -186,7 +212,8 @@ private enum CullingQuickLookPresenter {
         previousIDs: [String],
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator,
-        direction: OwnerSelectionDirection
+        direction: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
     ) {
         var selection = OwnerSelectionModel(
             orderedIDs: previousIDs,
@@ -205,7 +232,12 @@ private enum CullingQuickLookPresenter {
         model.cullingSelection = selection
         model.selectedPhotoIDs = selection.selectedIDs
         if replacement != nil {
-            present(model: model, coordinator: coordinator, direction: direction)
+            present(
+                model: model,
+                coordinator: coordinator,
+                direction: direction,
+                onReturnToReview: onReturnToReview
+            )
         } else {
             coordinator.dismiss()
         }
@@ -215,7 +247,8 @@ private enum CullingQuickLookPresenter {
         assetID: String,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator,
-        removalDirection: OwnerSelectionDirection
+        removalDirection: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
     ) {
         if !model.cullingSelection.selectedIDs.contains(assetID) {
             model.clickCullingAsset(assetID, modifiers: [])
@@ -231,7 +264,8 @@ private enum CullingQuickLookPresenter {
                     present(
                         model: model,
                         coordinator: coordinator,
-                        direction: removalDirection
+                        direction: removalDirection,
+                        onReturnToReview: onReturnToReview
                     )
                 } else {
                     coordinator.dismiss()
@@ -246,7 +280,8 @@ private enum CullingQuickLookPresenter {
         wasVisible: Bool,
         model: BackstageViewModel,
         coordinator: BackstageQuickLookCoordinator,
-        direction: OwnerSelectionDirection
+        direction: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
     ) {
         guard coordinator.isVisible else { return }
         let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
@@ -268,7 +303,12 @@ private enum CullingQuickLookPresenter {
         model.cullingSelection = selection
         model.selectedPhotoIDs = selection.selectedIDs
         if replacement != nil {
-            present(model: model, coordinator: coordinator, direction: direction)
+            present(
+                model: model,
+                coordinator: coordinator,
+                direction: direction,
+                onReturnToReview: onReturnToReview
+            )
         } else {
             coordinator.dismiss()
         }
@@ -309,7 +349,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • R return approved to Review • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
         )
     }
 }
@@ -319,6 +359,7 @@ struct CullingView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @State private var confirmingReturnToReview = false
 
     var body: some View {
         GeometryReader { viewport in
@@ -353,12 +394,39 @@ struct CullingView: View {
                 await model.refreshPhotos()
             }
             if !model.selectedFixtureID.isEmpty {
-                await model.loadFixtureCullingWindow()
+                if model.fixtureCullingWindow == nil {
+                    await model.loadFixtureCullingWindow()
+                } else {
+                    model.replaceCullingItems()
+                }
             } else {
                 await model.refreshCullingDecisions()
             }
             await model.discoverRecentPhotosAtStartupIfNeeded()
         }
+        .confirmationDialog(
+            "Return the selected approved assets to Review?",
+            isPresented: $confirmingReturnToReview
+        ) {
+            Button("Return \(model.cullingReturnToReviewEligibleIDs.count.formatted()) to Review") {
+                Task { await model.returnCullingSelectionToReview() }
+            }
+            .backstageHelp("Confirm the audited approval reversal while preserving metadata, fixture picks, and any currently deployed rendition.")
+            Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without changing approval or delivery state.")
+        } message: {
+            Text(model.cullingReturnToReviewConfirmationMessage)
+        }
+    }
+
+    private func requestReturnToReview() {
+        guard model.canReturnCullingSelectionToReview else {
+            model.cullingStatus = model.selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Gallery assets first."
+                : "Return to Review is available only for approved Gallery assets."
+            return
+        }
+        confirmingReturnToReview = true
     }
 
     private var cullingWorkspacePane: some View {
@@ -594,10 +662,16 @@ struct CullingView: View {
                 .modifier(
                     CullingPrimaryKeyCommands(
                         model: model,
-                        quickLook: quickLook
+                        quickLook: quickLook,
+                        onReturnToReview: requestReturnToReview
                     )
                 )
                 .modifier(CullingDisplayKeyCommands(model: model))
+                .onChange(of: model.cullingScrollTargetID) { _, target in
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    model.cullingScrollTargetID = nil
+                }
         }
         .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
@@ -724,7 +798,7 @@ struct CullingView: View {
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P pick • H hide • U clears the selected fixture decision • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P pick • H hide • U clears the selected fixture decision • R returns approved assets to Review after confirmation • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -781,6 +855,18 @@ struct CullingView: View {
                         : "Selected items are already Undecided."
             )
             .backstageHelp("\(model.cullingClearDecisionHelp) This uses the same reversible fixture writer as the U shortcut and does not affect the Waste Basket.")
+            Button("R Return to Review…") {
+                requestReturnToReview()
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(!model.canReturnCullingSelectionToReview)
+            .accessibilityLabel("R Return selected approved assets to Review")
+            .accessibilityValue(
+                model.cullingReturnToReviewEligibleIDs.isEmpty
+                    ? "No approved assets selected."
+                    : "\(model.cullingReturnToReviewEligibleIDs.count.formatted()) approved selected; confirmation required."
+            )
+            .backstageHelp("Review the confirmation for reversing approval. Metadata and fixture picks are preserved; a live deployed rendition remains live until separately replaced or unpublished.")
             Button("X Waste Basket") {
                 Task { await model.moveCullingSelectionToWasteBasket() }
             }
@@ -956,8 +1042,10 @@ struct CullingView: View {
             model.galleryDeliveryFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.gallerySourceFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.galleryBurstsOnly ? "bursts" : "all-captures",
+            model.cullingSearch,
+            model.cullingRatingFilters.sorted().map(String.init).joined(separator: ","),
+            model.cullingColorFilters.map(\.rawValue).sorted().joined(separator: ","),
             String(model.cullingWorkspace.offset),
-            model.visibleCullingAssets.first?.id ?? "empty",
         ].joined(separator: ":")
     }
 
@@ -1180,6 +1268,7 @@ private extension FixtureAsset {
 private struct CullingPrimaryKeyCommands: ViewModifier {
     @ObservedObject var model: BackstageViewModel
     @ObservedObject var quickLook: BackstageQuickLookCoordinator
+    let onReturnToReview: () -> Void
 
     func body(content: Content) -> some View {
         content
@@ -1189,7 +1278,11 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
                 return .handled
             }
             .onKeyPress(.space) {
-                CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
+                CullingQuickLookPresenter.present(
+                    model: model,
+                    coordinator: quickLook,
+                    onReturnToReview: onReturnToReview
+                )
                 return .handled
             }
             .onKeyPress("p") {
@@ -1211,6 +1304,11 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
             }
             .onKeyPress("u") {
                 Task { await model.applyPickShortcut(.unpick) }
+                return .handled
+            }
+            .onKeyPress("r") {
+                guard model.canReturnCullingSelectionToReview else { return .ignored }
+                onReturnToReview()
                 return .handled
             }
     }

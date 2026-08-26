@@ -161,6 +161,109 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySavedViewLabel == "Custom")
     }
 
+    @Test("Gallery returns only approved selections to Review and exact Undo restores delivery")
+    @MainActor
+    func galleryReturnToReviewPreservesLiveAndUndo() async throws {
+        let approvedLive = FixtureAsset(
+            id: "gallery-approved-live",
+            title: "Approved live",
+            filename: "approved-live.jpg",
+            mediaType: "photo",
+            placementState: .picked,
+            editorialState: "approved",
+            deliveryState: "live"
+        )
+        let approvedQueued = FixtureAsset(
+            id: "gallery-approved-queued",
+            title: "Approved queued",
+            filename: "approved-queued.jpg",
+            mediaType: "photo",
+            placementState: .picked,
+            editorialState: "approved",
+            deliveryState: "needs-upload"
+        )
+        let alreadyUnreviewed = FixtureAsset(
+            id: "gallery-unreviewed",
+            title: "Already unreviewed",
+            filename: "already-unreviewed.jpg",
+            mediaType: "photo",
+            placementState: .picked,
+            editorialState: "unreviewed",
+            deliveryState: "not-ready"
+        )
+        let items = [approvedLive, approvedQueued, alreadyUnreviewed]
+        let localReview = RecordingGalleryReviewService(
+            states: Dictionary(uniqueKeysWithValues: items.map {
+                ($0.id, ($0.editorialState, $0.deliveryState))
+            })
+        )
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: ReviewLifecycleActionAPI(terminalActions: []),
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: localReview
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: items.count, videos: 0)
+        window.items = items
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.picked]
+        model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
+            (
+                item.id,
+                SidecarDecisionState(
+                    assetId: item.id,
+                    pickState: FixturePlacementState.picked.rawValue,
+                    metadataState: item.editorialState
+                )
+            )
+        })
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: Set(items.map(\.id)),
+            anchorID: approvedLive.id,
+            focusedID: approvedQueued.id
+        )
+
+        #expect(model.cullingReturnToReviewEligibleIDs == [approvedLive.id, approvedQueued.id])
+        #expect(model.cullingReturnToReviewSkippedCount == 1)
+        #expect(model.cullingReturnToReviewLiveCount == 1)
+
+        await model.returnCullingSelectionToReview()
+
+        #expect(model.cullingHistory.last?.reviewOperationID == "gallery-return-operation")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedLive.id })?.editorialState == "unreviewed")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedLive.id })?.deliveryState == "live")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedQueued.id })?.editorialState == "unreviewed")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedQueued.id })?.deliveryState == "not-ready")
+        #expect(model.cullingStatus.contains("Skipped 1 selected asset"))
+        #expect(model.cullingStatus.contains("live rendition remains live"))
+        #expect(await localReview.appliedAssetIDs() == [approvedLive.id, approvedQueued.id])
+
+        await model.undoLastCullingDecision()
+
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.cullingAssets.first(where: { $0.id == approvedLive.id })?.editorialState == "approved")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedLive.id })?.deliveryState == "live")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedQueued.id })?.editorialState == "approved")
+        #expect(model.cullingAssets.first(where: { $0.id == approvedQueued.id })?.deliveryState == "needs-upload")
+        #expect(model.cullingSelection.selectedIDs == Set(items.map(\.id)))
+        #expect(model.cullingSelection.focusedID == approvedQueued.id)
+        #expect(await localReview.undoOperationIDs() == ["gallery-return-operation"])
+    }
+
     @Test("Fixture selection becomes ready before a stalled Activity refresh")
     @MainActor
     func fixtureSelectionPrecedesActivityRefresh() async throws {
@@ -2571,6 +2674,86 @@ private struct CustomerPhotoTestResolver: CustomerPhotoLinkResolving {
         if let error { throw error }
         return try CustomerPhotoLink(publishedMediaID: "published-id")
     }
+}
+
+private actor RecordingGalleryReviewService: LocalFixtureReviewServing {
+    private var states: [String: (editorial: String, delivery: String)]
+    private var beforeStates: [String: (editorial: String, delivery: String)] = [:]
+    private var appliedIDs: [String] = []
+    private var undoneOperationIDs: [String] = []
+
+    init(states: [String: (String, String)]) {
+        self.states = states
+    }
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        let ids = manifest["assetIds"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        appliedIDs = ids
+        let items = ids.map { assetID -> JSONValue in
+            let before = states[assetID] ?? ("unreviewed", "not-ready")
+            beforeStates[assetID] = before
+            let after = (
+                editorial: "unreviewed",
+                delivery: before.delivery == "live" ? "live" : "not-ready"
+            )
+            states[assetID] = after
+            let beforeJSON: JSONValue = .object([
+                "editorialState": .string(before.editorial),
+                "deliveryState": .string(before.delivery),
+            ])
+            let afterJSON: JSONValue = .object([
+                "editorialState": .string(after.editorial),
+                "deliveryState": .string(after.delivery),
+            ])
+            return .object([
+                "assetId": .string(assetID),
+                "before": beforeJSON,
+                "after": afterJSON,
+                "review": afterJSON,
+            ])
+        }
+        return FixtureReviewResult(json: [
+            "operationId": "gallery-return-operation",
+            "fixtureId": manifest["fixtureId"] ?? "",
+            "action": manifest["reviewAction"] ?? "return-to-review",
+            "anchorAssetId": manifest["anchorAssetId"] ?? "",
+            "propagated": false,
+            "items": .array(items),
+        ])
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        undoneOperationIDs.append(operationID)
+        let items = appliedIDs.map { assetID -> JSONValue in
+            let beforeUndo = states[assetID] ?? ("unreviewed", "not-ready")
+            let restored = beforeStates[assetID] ?? beforeUndo
+            states[assetID] = restored
+            let beforeJSON: JSONValue = .object([
+                "editorialState": .string(beforeUndo.editorial),
+                "deliveryState": .string(beforeUndo.delivery),
+            ])
+            let restoredJSON: JSONValue = .object([
+                "editorialState": .string(restored.editorial),
+                "deliveryState": .string(restored.delivery),
+            ])
+            return .object([
+                "assetId": .string(assetID),
+                "before": beforeJSON,
+                "after": restoredJSON,
+                "review": restoredJSON,
+            ])
+        }
+        return FixtureReviewUndoResult(json: [
+            "operationId": .string(operationID),
+            "fixtureId": "fixture-expo",
+            "action": "return-to-review",
+            "alreadyUndone": false,
+            "items": .array(items),
+        ])
+    }
+
+    func appliedAssetIDs() -> [String] { appliedIDs }
+    func undoOperationIDs() -> [String] { undoneOperationIDs }
 }
 
 private struct InertPhotoLibrary: PhotoLibraryServing {

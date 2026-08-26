@@ -440,6 +440,16 @@ struct ReviewView: View {
                 .frame(minHeight: 360, maxHeight: .infinity)
                 HStack {
                     Text("\(model.reviewSelection.selectedIDs.count) selected")
+                    Button("Open in Gallery") {
+                        Task {
+                            await model.openInGallery(
+                                assetIDs: model.selectedReviewAssetIDs,
+                                sourceLabel: "Review"
+                            )
+                        }
+                    }
+                    .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
+                    .backstageHelp("Open the selected Review asset in Gallery while preserving its current selection and workflow state.")
                     Spacer()
                     Button("Undo") {
                         Task { await model.undoLastReviewAction() }

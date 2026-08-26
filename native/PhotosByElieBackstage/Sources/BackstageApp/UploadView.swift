@@ -124,6 +124,16 @@ struct UploadView: View {
                     HStack {
                         Text("\(model.selectedDeliveryIDs.count.formatted()) selected")
                             .foregroundStyle(.secondary)
+                        Button("Open in Gallery") {
+                            Task {
+                                await model.openInGallery(
+                                    assetIDs: model.selectedDeliveryIDs.sorted(),
+                                    sourceLabel: "Uploads"
+                                )
+                            }
+                        }
+                        .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
+                        .backstageHelp("Open the selected Upload asset in Gallery while preserving its current editorial and delivery state.")
                         Button("Return to Review…") {
                             confirmingReturnToReview = true
                         }

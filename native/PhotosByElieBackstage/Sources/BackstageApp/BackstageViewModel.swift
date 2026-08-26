@@ -13,6 +13,7 @@ struct CullingHistoryEntry: Identifiable, Sendable {
     var fixtureChanges: [FixtureAssetState] = []
     var wasteBasketMediaIDs: [String] = []
     var wasteBasketActionID: String = ""
+    var reviewOperationID: String = ""
     var fixtureID: String = ""
     var windowOffset: Int = 0
     var selectedIDs: Set<String>
@@ -20,6 +21,7 @@ struct CullingHistoryEntry: Identifiable, Sendable {
     var focusedID: String?
     var cullingItems: [FixtureAsset] = []
     var cullingItemIndexes: [String: Int] = [:]
+    var orderedIDs: [String] = []
 }
 
 enum MetadataHistoryKind: Sendable {
@@ -285,6 +287,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingRating = 0
     @Published var cullingColor: SidecarColor = .none
     @Published var cullingSelection = OwnerSelectionModel<String>()
+    @Published var cullingScrollTargetID: String?
     @Published var cullingStates: [String: SidecarDecisionState] = [:]
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
@@ -472,6 +475,8 @@ final class BackstageViewModel: ObservableObject {
     private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
     private var reviewWasteBasketPendingActionOrder: [String] = []
     private var cullingStableWindowIndexes: [String: Int] = [:]
+    private var pendingGalleryRevealIDs: [String] = []
+    private var pendingGalleryRevealSource = ""
     private var lifecycleMonitorTask: Task<Void, Never>?
     private var cullingVisibleAssetIDs = Set<String>()
     private var isCullingScrolling = false
@@ -2273,6 +2278,38 @@ final class BackstageViewModel: ObservableObject {
         applyGallerySavedView(.culling)
     }
 
+    func openInGallery(assetIDs: [String], sourceLabel: String) async {
+        let ids = assetIDs.reduce(into: [String]()) { result, rawID in
+            let id = rawID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty, !result.contains(id) else { return }
+            result.append(id)
+        }
+        guard !selectedFixtureID.isEmpty else {
+            cullingStatus = "Choose a fixture before opening an asset in Gallery."
+            return
+        }
+        guard let targetID = ids.first else {
+            cullingStatus = "Select an asset before opening Gallery."
+            return
+        }
+
+        let preset = gallerySavedViewPreset(.allAssets)
+        cullingPool = nil
+        cullingViews = preset.views
+        cullingRatingFilters = Set(0...5)
+        cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = preset.editorial
+        galleryDeliveryFilters = preset.delivery
+        gallerySourceFilters = preset.sources
+        galleryBurstsOnly = false
+        cullingSearch = targetID
+        cullingWindowOffset = 0
+        pendingGalleryRevealIDs = ids
+        pendingGalleryRevealSource = sourceLabel
+        selection = .culling
+        await loadFixtureCullingWindow()
+    }
+
     func applyGallerySavedView(_ savedView: GallerySavedView) {
         let preset = gallerySavedViewPreset(savedView)
         cullingSearch = ""
@@ -2460,6 +2497,52 @@ final class BackstageViewModel: ObservableObject {
 
     var selectedCullingAssetIDs: [String] {
         cullingSelection.selectedInDisplayOrder
+    }
+
+    var cullingReturnToReviewEligibleIDs: [String] {
+        let selected = Set(selectedCullingAssetIDs)
+        return cullingAssets.compactMap { asset in
+            guard selected.contains(asset.id),
+                  asset.editorialState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "approved"
+            else { return nil }
+            return asset.id
+        }
+    }
+
+    var cullingReturnToReviewSkippedCount: Int {
+        max(0, selectedCullingAssetIDs.count - cullingReturnToReviewEligibleIDs.count)
+    }
+
+    var cullingReturnToReviewLiveCount: Int {
+        let eligible = Set(cullingReturnToReviewEligibleIDs)
+        return cullingAssets.filter {
+            eligible.contains($0.id)
+                && $0.deliveryState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "live"
+        }.count
+    }
+
+    var canReturnCullingSelectionToReview: Bool {
+        !selectedFixtureID.isEmpty
+            && cullingPool == nil
+            && !isApplyingCullingDecision
+            && !cullingReturnToReviewEligibleIDs.isEmpty
+    }
+
+    var cullingReturnToReviewConfirmationMessage: String {
+        let eligible = cullingReturnToReviewEligibleIDs.count
+        let live = cullingReturnToReviewLiveCount
+        let skipped = cullingReturnToReviewSkippedCount
+        var parts = [
+            "This reverses approval for \(eligible.formatted()) selected asset\(eligible == 1 ? "" : "s") while preserving metadata and fixture picks."
+        ]
+        if live > 0 {
+            parts.append("The current deployed rendition for \(live.formatted()) live asset\(live == 1 ? "" : "s") remains live until a separate replacement or unpublish action.")
+        }
+        if skipped > 0 {
+            parts.append("\(skipped.formatted()) selected asset\(skipped == 1 ? " is" : "s are") not approved and will be skipped.")
+        }
+        parts.append("The audited action can be undone during this Backstage session.")
+        return parts.joined(separator: " ")
     }
 
     var cullingClearDecisionLabel: String {
@@ -2885,9 +2968,12 @@ final class BackstageViewModel: ObservableObject {
                 )
             })
             replaceCullingItems()
+            let didRevealGallerySelection = applyPendingGalleryRevealIfPossible()
             if !preservingVisibleWindow {
                 photoPreview = nil
-                cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+                if !didRevealGallerySelection {
+                    cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+                }
             }
         } catch {
             guard requestSerial == cullingWindowRequestSerial else { return }
@@ -2907,6 +2993,38 @@ final class BackstageViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             await self?.loadFixtureCullingWindow(preservingVisibleWindow: true)
         }
+    }
+
+    @discardableResult
+    private func applyPendingGalleryRevealIfPossible() -> Bool {
+        guard !pendingGalleryRevealIDs.isEmpty else { return false }
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        let requested = Set(pendingGalleryRevealIDs)
+        let matched = visibleIDs.filter(requested.contains)
+        let requestedCount = pendingGalleryRevealIDs.count
+        let source = pendingGalleryRevealSource
+        pendingGalleryRevealIDs = []
+        pendingGalleryRevealSource = ""
+        guard let focusedID = matched.first else {
+            cullingStatus = "The selected \(source) asset is not in the current fixture Gallery."
+            return true
+        }
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: visibleIDs,
+            selectedIDs: Set(matched),
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
+        cullingScrollTargetID = focusedID
+        if requestedCount == 1 {
+            cullingStatus = "Opened the selected \(source) asset in Gallery."
+        } else if matched.count == requestedCount {
+            cullingStatus = "Opened all \(matched.count.formatted()) selected \(source) assets in Gallery."
+        } else {
+            cullingStatus = "Opened \(matched.count.formatted()) of \(requestedCount.formatted()) selected \(source) assets in Gallery; the others are outside this exact result."
+        }
+        return true
     }
 
     func loadFixtures() async {
@@ -3494,6 +3612,127 @@ final class BackstageViewModel: ObservableObject {
 
     func applyColorShortcut(_ color: SidecarColor) async {
         await toggleCullingColor(color)
+    }
+
+    func returnCullingSelectionToReview() async {
+        guard !isApplyingCullingDecision else { return }
+        let eligibleIDs = cullingReturnToReviewEligibleIDs
+        let skippedCount = cullingReturnToReviewSkippedCount
+        let liveCount = cullingReturnToReviewLiveCount
+        guard !selectedFixtureID.isEmpty, let anchorID = eligibleIDs.first else {
+            cullingStatus = selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Gallery assets first."
+                : "Return to Review is available only for approved Gallery assets."
+            return
+        }
+        let entry = CullingHistoryEntry(
+            label: "Return to Review",
+            fixtureID: selectedFixtureID,
+            windowOffset: fixtureCullingWindow?.offset ?? cullingWindowOffset,
+            selectedIDs: cullingSelection.selectedIDs,
+            anchorID: cullingSelection.anchorID,
+            focusedID: cullingSelection.focusedID,
+            cullingItems: cullingAssets.filter { eligibleIDs.contains($0.id) },
+            cullingItemIndexes: Dictionary(
+                uniqueKeysWithValues: cullingAssets.enumerated().compactMap { index, item in
+                    eligibleIDs.contains(item.id) ? (item.id, index) : nil
+                }
+            ),
+            orderedIDs: visibleCullingAssets.map(\.id)
+        )
+        isApplyingCullingDecision = true
+        cullingStatus = "Returning \(eligibleIDs.count.formatted()) approved Gallery asset\(eligibleIDs.count == 1 ? "" : "s") to Review…"
+        defer { isApplyingCullingDecision = false }
+        do {
+            let result = try await fixtureService.applyReview(
+                .returnToReview,
+                fixtureID: selectedFixtureID,
+                assetIDs: eligibleIDs,
+                anchorAssetID: anchorID
+            )
+            var completedEntry = entry
+            completedEntry.reviewOperationID = result.operationID
+            cullingHistory.append(completedEntry)
+            if cullingHistory.count > 100 {
+                cullingHistory.removeFirst(cullingHistory.count - 100)
+            }
+            retainCullingReviewResultInCurrentWindow(result.changes)
+            reconcileCullingSelection(after: completedEntry, primaryChangedID: anchorID)
+            let returnedCount = result.changes.count
+            var message = "Returned \(returnedCount.formatted()) approved asset\(returnedCount == 1 ? "" : "s") to Review. Metadata and fixture picks were preserved."
+            if liveCount > 0 {
+                message += " \(liveCount.formatted()) current live rendition\(liveCount == 1 ? " remains" : "s remain") live until a separate replacement or unpublish action."
+            }
+            if skippedCount > 0 {
+                message += " Skipped \(skippedCount.formatted()) selected asset\(skippedCount == 1 ? "" : "s") that were not approved."
+            }
+            cullingStatus = message
+            scheduleFixtureCullingBackfill()
+        } catch {
+            cullingStatus = "Return to Review failed; no Gallery state changed. \(userFacingMessage(for: error))"
+        }
+    }
+
+    private func retainCullingReviewResultInCurrentWindow(
+        _ changes: [FixtureReviewChange]
+    ) {
+        let reviewsByID = Dictionary(uniqueKeysWithValues: changes.map { ($0.assetID, $0.review) })
+        if var window = fixtureCullingWindow {
+            window.items = window.items.map { current in
+                guard let review = reviewsByID[current.id] else { return current }
+                var item = current
+                if let editorialState = review["editorialState"]?.stringValue {
+                    item.editorialState = editorialState
+                }
+                if let deliveryState = review["deliveryState"]?.stringValue {
+                    item.deliveryState = deliveryState
+                }
+                return item
+            }
+            fixtureCullingWindow = window
+        }
+        for change in changes {
+            var decision = cullingStates[change.assetID]
+                ?? SidecarDecisionState(assetId: change.assetID)
+            if let editorialState = change.review["editorialState"]?.stringValue {
+                decision.metadataState = editorialState
+            }
+            cullingStates[change.assetID] = decision
+        }
+        replaceCullingItems()
+    }
+
+    private func reconcileCullingSelection(
+        after entry: CullingHistoryEntry,
+        primaryChangedID: String
+    ) {
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        var selection = OwnerSelectionModel(
+            orderedIDs: entry.orderedIDs,
+            selectedIDs: entry.selectedIDs,
+            anchorID: entry.anchorID,
+            focusedID: entry.focusedID
+        )
+        if visibleIDs.contains(primaryChangedID) {
+            selection.replaceItems(visibleIDs)
+        } else {
+            _ = selection.replaceItems(
+                visibleIDs,
+                selectingSuccessorAfterRemoving: primaryChangedID,
+                direction: .next
+            )
+        }
+        if selection.selectedIDs.isEmpty, let fallback = visibleIDs.first {
+            selection = OwnerSelectionModel(
+                orderedIDs: visibleIDs,
+                selectedIDs: [fallback],
+                anchorID: fallback,
+                focusedID: fallback
+            )
+        }
+        cullingSelection = selection
+        selectedPhotoIDs = selection.selectedIDs
+        cullingScrollTargetID = selection.focusedID
     }
 
     func applyRatingShortcut(_ rating: Int) async {
@@ -5486,6 +5725,41 @@ final class BackstageViewModel: ObservableObject {
             } catch {
                 cullingWasteBasketQueueing = false
                 cullingStatus = "Undo failed; the history step was preserved. \(userFacingMessage(for: error))"
+            }
+            return
+        }
+        if !entry.reviewOperationID.isEmpty {
+            isApplyingCullingDecision = true
+            defer { isApplyingCullingDecision = false }
+            do {
+                let result = try await fixtureService.undoReview(
+                    operationID: entry.reviewOperationID
+                )
+                retainCullingReviewResultInCurrentWindow(result.changes)
+                cullingHistory.removeLast()
+                let orderedIDs = visibleCullingAssets.map(\.id)
+                let selectedIDs = entry.selectedIDs.intersection(Set(orderedIDs))
+                let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+                    ?? selectedIDs.first
+                    ?? orderedIDs.first
+                let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+                    ?? focusedID
+                cullingSelection = OwnerSelectionModel(
+                    orderedIDs: orderedIDs,
+                    selectedIDs: selectedIDs.isEmpty
+                        ? Set(focusedID.map { [$0] } ?? [])
+                        : selectedIDs,
+                    anchorID: anchorID,
+                    focusedID: focusedID
+                )
+                selectedPhotoIDs = cullingSelection.selectedIDs
+                cullingScrollTargetID = focusedID
+                cullingStatus = result.alreadyUndone
+                    ? "Return to Review was already undone; Gallery refreshed from the authoritative receipt."
+                    : "Undid Return to Review and restored the exact approval and delivery states."
+                scheduleFixtureCullingBackfill()
+            } catch {
+                cullingStatus = "Undo failed; the Return to Review history step was preserved. \(userFacingMessage(for: error))"
             }
             return
         }

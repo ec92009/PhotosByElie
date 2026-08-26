@@ -20,7 +20,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import quote
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 FAILURE_STATUSES = {"failed", "error", "not_found", "missing", "unsupported"}
 SAFE_MAPPING_STATUSES = {"ok", "mapped", "collision-existing-canonical", "resolved", "source-tied"}
 QUARANTINE_CLASSES = {
@@ -418,18 +418,22 @@ def inspect_preserved_references(
     canonical_violations = 0
     preserved_audit_rows = 0
     source_local_rows = 0
+    required_alias_sources: set[str] = set()
 
     for (table, column), policy in DIRECT_REFERENCE_COLUMNS.items():
         if policy not in PRESERVED_REFERENCE_POLICIES or table not in tables:
             continue
-        count = sum(
-            _text(row[0]) in source_ids
+        matched_sources = [
+            _text(row[0])
             for row in connection.execute(
                 f"SELECT {_quoted(column)} FROM {_quoted(table)}"
             )
-        )
+            if _text(row[0]) in source_ids
+        ]
+        count = len(matched_sources)
         if policy in AUDIT_PRESERVE_POLICIES:
             preserved_audit_rows += count
+            required_alias_sources.update(matched_sources)
         else:
             source_local_rows += count
         if policy == "canonical-audit-preserve":
@@ -449,8 +453,14 @@ def inspect_preserved_references(
             f"SELECT {_quoted(column)} FROM {_quoted(table)}"
         ):
             parsed = _json_value(row[0], [])
-            if any(_json_contains(parsed, source_id) for source_id in source_ids):
+            matched_sources = {
+                source_id
+                for source_id in source_ids
+                if _json_contains(parsed, source_id)
+            }
+            if matched_sources:
                 count += 1
+                required_alias_sources.update(matched_sources)
         if policy in AUDIT_PRESERVE_POLICIES:
             preserved_audit_rows += count
         else:
@@ -468,6 +478,50 @@ def inspect_preserved_references(
         "preservedAuditRowCount": preserved_audit_rows,
         "sourceLocalReferenceRowCount": source_local_rows,
         "canonicalInvariantViolationCount": canonical_violations,
+        "requiredAliasSourceCount": len(required_alias_sources),
+    }
+
+
+def build_alias_retention_plan(
+    preserved_references: Mapping[str, Any],
+    resolutions: Sequence[Resolution],
+) -> dict[str, Any]:
+    """Describe the required alias seam without exposing or writing identities."""
+    required_alias_count = int(preserved_references["requiredAliasSourceCount"])
+    return {
+        "mode": "dry-run-contract",
+        "required": required_alias_count > 0,
+        "applyImplemented": False,
+        "eligibleResolutionCount": len(resolutions),
+        "requiredAliasCount": required_alias_count,
+        "aliasPairDigest": _digest_values(
+            f"{resolution.source_asset_id}\0{resolution.target_asset_id}"
+            for resolution in resolutions
+        ),
+        "storageContract": {
+            "table": "owner_asset_identity_aliases",
+            "uniqueLegacyKey": True,
+            "canonicalTargetForeignKey": "sidecar_assets.asset_id",
+            "mappingSource": "source-tied Apple Photos local-to-cloud result",
+            "filenameDateInference": False,
+        },
+        "lookupContract": {
+            "newWrites": "canonical-only",
+            "historicalReads": "canonical key first, then one verified legacy alias hop",
+            "aliasChains": "forbidden",
+            "ambiguousOrMissingAlias": "fail closed",
+        },
+        "transactionContract": {
+            "insertBeforeRewrite": True,
+            "verifyBeforeSourceDeletion": True,
+            "sameImmediateTransaction": True,
+            "partialAliasCommit": "forbidden",
+        },
+        "retentionContract": {
+            "immutableAuditRows": "never rewritten",
+            "minimumRetention": "while any preserved audit reference names the legacy identity",
+            "deletionRequiresZeroReferences": True,
+        },
     }
 
 
@@ -1185,6 +1239,7 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
         classified = classify_owner_rows(owner_rows, mapping)
         resolutions = classified.pop("resolutions")
         preserved_references = inspect_preserved_references(connection, resolutions)
+        alias_retention_plan = build_alias_retention_plan(preserved_references, resolutions)
         blocked = list()
         if schema["unknownSurfaceCount"]:
             blocked.append("unknown-schema-or-reference-surface")
@@ -1212,6 +1267,7 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
             "referenceContract": {
                 "operationalDrain": operational_drain,
                 "preservedReferences": preserved_references,
+                "aliasRetentionPlan": alias_retention_plan,
             },
             "owner": {
                 "assetRowCount": len(owner_rows),

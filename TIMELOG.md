@@ -786,9 +786,10 @@ Clock state: running
 | 2026-08-26 | 09:21 CEST | 09:22 CEST | 0:01 | Authorized PBB-105 color-toggle implementation across the grid and shared Quick Look surfaces; background implementation, tests, build, and installation excluded. |
 | 2026-08-26 | 19:14 CEST | 19:15 CEST | 0:01 | Clarified that IMG_4362 is the known fail-closed preview Retry because its legacy Photos identity is ambiguous; background PBE-143 contract work excluded. |
 | 2026-08-26 | 19:33 CEST | 19:40 CEST | 0:02 | Confirmed that healthy and unavailable cards can share IMG_4388/IMG_4387 filenames, and preserved the fail-closed rule that filenames never resolve or merge Photos identities; background test execution and ticket API runtime excluded. |
+| 2026-08-26 | 19:48 CEST | 19:51 CEST | 0:01 | Defined PBE-143's dry-run alias lookup, transactional insertion, and immutable-history retention contract without enabling live apply; background implementation and test execution excluded. |
 | 2026-08-27 | 10:11 CEST | 10:12 CEST | 0:01 | Directed the PBE-164 Gallery thumbnail lifecycle correction for bounded visible upgrades and scroll-cancelable APL backfill; background implementation, tests, build, commit, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:31
+Active collaboration time used: 38:32
 Remaining budget: not set

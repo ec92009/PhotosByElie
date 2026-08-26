@@ -639,6 +639,16 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             report["referenceContract"]["preservedReferences"]["preservedAuditRowCount"],
             1,
         )
+        alias_plan = report["referenceContract"]["aliasRetentionPlan"]
+        self.assertTrue(alias_plan["required"])
+        self.assertFalse(alias_plan["applyImplemented"])
+        self.assertEqual(alias_plan["requiredAliasCount"], 1)
+        self.assertEqual(alias_plan["eligibleResolutionCount"], 2)
+        self.assertTrue(alias_plan["transactionContract"]["insertBeforeRewrite"])
+        self.assertTrue(alias_plan["retentionContract"]["deletionRequiresZeroReferences"])
+        rendered = json.dumps(report)
+        self.assertNotIn("legacy-collision", rendered)
+        self.assertNotIn("cloud-a", rendered)
         self.assertFalse(report["rehearsal"]["workingCopyCreated"])
 
     def test_rollback_is_verified_after_injected_failure(self) -> None:

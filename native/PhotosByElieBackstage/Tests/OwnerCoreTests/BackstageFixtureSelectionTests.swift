@@ -444,6 +444,84 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingStatus.contains("Restored 1 item from Waste Basket"))
     }
 
+    @Test("Fixture decision Undo restores the grid in place and requests its prior anchor")
+    @MainActor
+    func fixtureDecisionUndoPreservesCullingAnchor() async throws {
+        let items = [
+            FixtureAsset(
+                id: "culling-hidden",
+                title: "Hidden",
+                filename: "hidden.jpg",
+                mediaType: "photo",
+                placementState: .hidden
+            ),
+            FixtureAsset(
+                id: "culling-picked",
+                title: "Picked",
+                filename: "picked.jpg",
+                mediaType: "photo",
+                placementState: .picked
+            ),
+        ]
+        let placementService = RecordingFixturePlacementService(states: [
+            items[0].id: .hidden,
+            items[1].id: .picked,
+        ])
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: [])
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: actionAPI,
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: placementService
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 2, videos: 0)
+        window.items = items
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.hidden, .picked]
+        model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
+            (
+                item.id,
+                SidecarDecisionState(
+                    assetId: item.id,
+                    pickState: item.placementState.rawValue
+                )
+            )
+        })
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: Set(items.map(\.id)),
+            anchorID: items[0].id,
+            focusedID: items[1].id
+        )
+
+        #expect(await model.applyPickShortcut(.unpick))
+        #expect(model.visibleCullingAssets.isEmpty)
+        #expect(model.cullingHistory.last?.anchorID == items[0].id)
+        #expect(model.cullingHistory.last?.focusedID == items[1].id)
+
+        await model.undoLastCullingDecision()
+
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.cullingSelection.selectedIDs == Set(items.map(\.id)))
+        #expect(model.cullingSelection.anchorID == items[0].id)
+        #expect(model.cullingSelection.focusedID == items[1].id)
+        #expect(model.cullingScrollTargetID == items[1].id)
+        #expect(await placementService.undoCount() == 1)
+    }
+
     @Test("Culling Waste Basket allows consecutive X and Undo actions")
     @MainActor
     func cullingWasteBasketAllowsConsecutiveActions() async throws {
@@ -1746,6 +1824,76 @@ private struct StaticLocalFixtureTree: LocalFixtureReviewServing, LocalFixtureTr
 
     func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
         throw CancellationError()
+    }
+}
+
+private actor RecordingFixturePlacementService: LocalFixtureReviewServing, LocalFixtureCullingServing {
+    private var states: [String: FixturePlacementState]
+    private var recordedUndoCount = 0
+
+    init(states: [String: FixturePlacementState]) {
+        self.states = states
+    }
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        throw CancellationError()
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        throw CancellationError()
+    }
+
+    func nativeApplyCullingState(
+        _ state: FixturePlacementState,
+        fixtureID: String,
+        assetIDs: [String],
+        reason: String
+    ) async throws -> [FixtureAssetState]? {
+        assetIDs.map { assetID in
+            let before = states[assetID] ?? .undecided
+            states[assetID] = state
+            return fixtureAssetState(
+                fixtureID: fixtureID,
+                assetID: assetID,
+                placementState: state,
+                beforePlacementState: before
+            )
+        }
+    }
+
+    func nativeUndoCullingState(
+        _ applied: [FixtureAssetState],
+        reason: String
+    ) async throws -> [FixtureAssetState]? {
+        recordedUndoCount += 1
+        return applied.map { change in
+            states[change.assetID] = change.beforePlacementState
+            return fixtureAssetState(
+                fixtureID: change.fixtureID,
+                assetID: change.assetID,
+                placementState: change.beforePlacementState,
+                beforePlacementState: change.placementState
+            )
+        }
+    }
+
+    func undoCount() -> Int { recordedUndoCount }
+
+    private func fixtureAssetState(
+        fixtureID: String,
+        assetID: String,
+        placementState: FixturePlacementState,
+        beforePlacementState: FixturePlacementState
+    ) -> FixtureAssetState {
+        FixtureAssetState(json: [
+            "fixtureId": .string(fixtureID),
+            "assetId": .string(assetID),
+            "placementState": .string(placementState.rawValue),
+            "eligibilityState": .string("active"),
+            "source": .string("test"),
+            "beforePlacementState": .string(beforePlacementState.rawValue),
+            "beforeEligibilityState": .string("active"),
+        ])
     }
 }
 

@@ -287,6 +287,7 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
     @Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []
+    @Published var cullingScrollTargetID: String?
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -4917,12 +4918,36 @@ final class BackstageViewModel: ObservableObject {
         }
         if !entry.fixtureChanges.isEmpty {
             do {
-                _ = try await fixtureService.undoState(
+                let restoredChanges = try await fixtureService.undoState(
                     entry.fixtureChanges,
                     reason: "Undo \(entry.label)"
                 )
+                for change in restoredChanges {
+                    var decision = cullingStates[change.assetID]
+                        ?? SidecarDecisionState(assetId: change.assetID)
+                    decision.pickState = change.placementState.rawValue
+                    cullingStates[change.assetID] = decision
+                }
                 cullingHistory.removeLast()
-                await loadFixtureCullingWindow()
+                replaceCullingItems()
+                let orderedIDs = visibleCullingAssets.map(\.id)
+                let selectedIDs = entry.selectedIDs.intersection(Set(orderedIDs))
+                let focusedID = entry.focusedID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? selectedIDs.first ?? orderedIDs.first
+                let anchorID = entry.anchorID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? focusedID
+                cullingSelection = OwnerSelectionModel(
+                    orderedIDs: orderedIDs,
+                    selectedIDs: selectedIDs.isEmpty
+                        ? Set(focusedID.map { [$0] } ?? [])
+                        : selectedIDs,
+                    anchorID: anchorID,
+                    focusedID: focusedID
+                )
+                selectedPhotoIDs = cullingSelection.selectedIDs
+                cullingScrollTargetID = focusedID
                 cullingStatus = "Undid \(entry.label)."
             } catch {
                 cullingStatus = "Undo failed; the history step was preserved. \(error)"
@@ -5458,6 +5483,7 @@ final class BackstageViewModel: ObservableObject {
             invalidateCullingWindowLoads()
         }
         let selectedBefore = cullingSelection.selectedIDs
+        let anchorBefore = cullingSelection.anchorID
         let focusedBefore = cullingSelection.focusedID ?? ids.last
         let previousStates = ids.map { ($0, cullingStates[$0]) }
         for id in ids {
@@ -5502,7 +5528,9 @@ final class BackstageViewModel: ObservableObject {
             cullingHistory.append(CullingHistoryEntry(
                 label: label,
                 fixtureChanges: changes,
-                selectedIDs: selectedBefore
+                selectedIDs: selectedBefore,
+                anchorID: anchorBefore,
+                focusedID: focusedBefore
             ))
             if cullingPool == nil {
                 scheduleFixtureCullingBackfill()

@@ -537,6 +537,11 @@ struct CullingView: View {
                         proxy.scrollTo(focused, anchor: .center)
                     }
                 }
+                .onChange(of: model.cullingScrollTargetID) { _, target in
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    model.cullingScrollTargetID = nil
+                }
                 .modifier(
                     CullingPrimaryKeyCommands(
                         model: model,

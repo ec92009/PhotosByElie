@@ -170,7 +170,7 @@ struct FixturePicker: View {
                 allowsSelection: { !$0.isArchived }
             )
             .disabled(model.isFixtureChooserDisabled || isPreviewMode)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let explanation = model.fixtureChooserExplanation,
                model.fixtureSelectionAvailability != .ready

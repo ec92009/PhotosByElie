@@ -1738,6 +1738,20 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("isWorking: model.isLaunchingPBEOwner", picker)
         self.assertNotIn("Text(model.pbeOwnerSessionStatus)", picker)
 
+    def test_current_fixture_selector_is_left_aligned_in_sidebar(self):
+        picker = (
+            NATIVE / "Sources" / "BackstageApp" / "FixturePicker.swift"
+        ).read_text(encoding="utf-8")
+        selector = picker.split("FixtureHierarchyMenu(", 1)[1].split(
+            "if let explanation", 1
+        )[0]
+
+        self.assertIn(
+            ".frame(maxWidth: .infinity, alignment: .leading)",
+            selector,
+        )
+        self.assertNotIn(".frame(maxWidth: .infinity)\n", selector)
+
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
             NATIVE

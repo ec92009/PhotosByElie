@@ -235,7 +235,7 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
         if let readinessOverride {
             readinessProvider = readinessOverride
         } else if let dataRoot {
-            var additionalCapabilities = ["fixture.hide", "fixture.review"]
+            var additionalCapabilities = ["fixture.hide", "fixture.review", "fixture.clear"]
             if sidecarDecisionService != nil {
                 additionalCapabilities += ["asset.rating", "asset.color"]
             }
@@ -285,10 +285,12 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                     (assetID, ["photoId": JSONValue.string(assetID), "ok": .bool(true)])
                 })
                 switch operation {
-                case "fixture-hide", "fixture-review":
-                    let placement: FixturePlacementState = operation == "fixture-hide"
-                        ? .hidden
-                        : .picked
+                case "fixture-hide", "fixture-review", "fixture-clear":
+                    let placement: FixturePlacementState = switch operation {
+                    case "fixture-hide": .hidden
+                    case "fixture-review": .picked
+                    default: .undecided
+                    }
                     let applied = try await Task.detached(priority: .userInitiated) {
                         try fixtureService.nativeApplyCullingState(
                             placement,

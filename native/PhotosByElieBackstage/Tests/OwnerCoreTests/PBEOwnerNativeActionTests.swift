@@ -123,6 +123,12 @@ struct PBEOwnerNativeActionTests {
             connectorID: "",
             galleryProvider: { _ in actionGallery() },
             nativeMutationProvider: { session, operation, assetIDs, value, reason, key in
+                let placement: String
+                switch operation {
+                case "fixture-hide": placement = "hidden"
+                case "fixture-review": placement = "picked"
+                default: placement = "undecided"
+                }
                 await recorder.record(
                     session: session,
                     operation: operation,
@@ -135,12 +141,12 @@ struct PBEOwnerNativeActionTests {
                     "results": .array(assetIDs.map { .object([
                         "photoId": .string($0),
                         "ok": true,
-                        "placement": .string(operation == "fixture-hide" ? "hidden" : "picked"),
+                        "placement": .string(placement),
                     ]) }),
                 ]
             }
         )
-        let session = actionSession(additionalCapabilities: ["fixture.hide", "fixture.review"])
+        let session = actionSession(additionalCapabilities: ["fixture.hide", "fixture.review", "fixture.clear"])
 
         await expectActionFailure(code: "pbe_owner_action_forbidden") {
             _ = try await service.submit(
@@ -174,6 +180,14 @@ struct PBEOwnerNativeActionTests {
         #expect(await recorder.calls().count == 1)
         #expect(await api.requests().isEmpty)
 
+        let cleared = try await service.submit(
+            session: session,
+            payload: ["action": "fixture-clear", "photo_id": "asset-one"],
+            idempotencyKey: "clear-key"
+        )
+        #expect(cleared["results"]?.arrayValue?.first?.objectValue?["placement"]?.stringValue == "undecided")
+        #expect(await recorder.calls().count == 2)
+
         await expectActionFailure(code: "pbe_owner_idempotency_conflict") {
             _ = try await service.submit(
                 session: session,
@@ -188,7 +202,7 @@ struct PBEOwnerNativeActionTests {
                 idempotencyKey: "outside-key"
             )
         }
-        #expect(await recorder.calls().count == 1)
+        #expect(await recorder.calls().count == 2)
     }
 
     private func actionService(

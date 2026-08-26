@@ -108,8 +108,11 @@ test("hosted Owner separates filters from mutations and renders durable card ind
   assert.doesNotMatch(galleryJs, /gallery-command-section-label">View/);
   assert.match(galleryJs, /data-gallery-rating-filter/);
   assert.match(galleryJs, /data-gallery-owner-color-filter/);
+  assert.match(galleryJs, /data-gallery-owner-placement-filter/);
   assert.match(galleryJs, /ownerMinRating/);
   assert.match(galleryJs, /selectedOwnerColorFilters/);
+  assert.match(galleryJs, /selectedOwnerPlacementFilters/);
+  assert.match(galleryJs, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear Decision"/);
   assert.match(burstCommand, /group: "filters"/);
   assert.doesNotMatch(burstCommand, /shortcut:/);
   assert.match(galleryJs, /gallery-owner-card-rating/);
@@ -135,7 +138,8 @@ test("hosted Owner card clicks stop at selection while explicit Like controls re
 test("hosted Owner projects authoritative mutation results into its cards", () => {
   assert.match(galleryJs, /const color = item\.color \?\? item\.state\?\.color \?\? value/);
   assert.match(galleryJs, /methodName === "hide"[\s\S]*ownerState\.placement/);
-  assert.match(galleryJs, /ownerState\?\.placement[\s\S]*!== "hidden"/);
+  assert.match(galleryJs, /ownerPlacements/);
+  assert.match(galleryJs, /clearFixtureDecisionState/);
   assert.match(galleryJs, /applyOwnerCommandState\(methodName, value, normalized\.succeededItems\)/);
 });
 

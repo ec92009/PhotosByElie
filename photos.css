@@ -6270,6 +6270,11 @@ body[data-gallery="selection"] .gallery-hero .cta:empty{
 .gallery-owner-filter-row .gallery-rating-slider{
   min-height:32px;
 }
+.gallery-owner-filter-row .gallery-placement-filter.is-applied{
+  border-color:var(--text);
+  background:var(--text);
+  color:var(--surface);
+}
 .gallery-filter-bar select:focus-visible,
 .gallery-filter-bar input:focus-visible,
 .gallery-filter-clear:focus-visible{

@@ -44,6 +44,7 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.doesNotMatch(gallery, /data-owner-cull-undo/);
   assert.match(gallery, /id: "waste-basket"[\s\S]*shortcut: "x"[\s\S]*moveOwnerSelectionToWasteBasket/);
   assert.match(gallery, /id: "unpick"[\s\S]*shortcut: "u"/);
+  assert.match(gallery, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear Decision"/);
   assert.match(gallery, /id: "undo"[\s\S]*shortcut: commandShortcut\("z", \{ primary: true \}\)[\s\S]*undoLastOwnerCommand/);
   assert.match(gallery, /moveOwnerSelectionToWasteBasket/);
   assert.doesNotMatch(gallery, /data-owner-cull-touch-hide|data-owner-cull-touch-undo/);

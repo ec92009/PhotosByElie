@@ -5,7 +5,7 @@ import Testing
 
 @Suite("PBE Owner native gallery")
 struct PBEOwnerNativeGalleryTests {
-    @Test("Gallery is a bounded read-only picked-photo window for the frozen fixture")
+    @Test("Gallery is a bounded read-only picked and hidden photo window for the frozen fixture")
     func pickedFixtureWindow() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "pbe-native-gallery-\(UUID().uuidString)",
@@ -24,15 +24,17 @@ struct PBEOwnerNativeGalleryTests {
         #expect(gallery.readOnly)
         #expect(gallery.fixtureId == "expo")
         #expect(gallery.fixtureBreadcrumb == "Root / Expo")
-        #expect(gallery.view == "picked")
-        #expect(gallery.count == 2)
-        #expect(gallery.summary.filtered == 2)
-        #expect(gallery.summary.universe == 3)
+        #expect(gallery.view == "all-active")
+        #expect(gallery.count == 3)
+        #expect(gallery.summary.filtered == 3)
+        #expect(gallery.summary.universe == 4)
         #expect(gallery.summary.undecided == 1)
         #expect(gallery.summary.picked == 2)
-        #expect(gallery.items.map(\.assetId) == ["picked-photo", "picked-unreviewed"])
+        #expect(gallery.summary.hidden == 1)
+        #expect(gallery.items.map(\.assetId) == ["picked-photo", "picked-unreviewed", "fixture-hidden"])
         #expect(gallery.items.first?.keywords == ["Approved", "Expo"])
-        #expect(gallery.items.last?.keywords == ["Photos"])
+        #expect(gallery.items[1].keywords == ["Photos"])
+        #expect(gallery.items.last?.placementState == "hidden")
         #expect(!gallery.truncated)
     }
 
@@ -80,9 +82,9 @@ struct PBEOwnerNativeGalleryTests {
         nextSession.fixtureRevision = "revision-two"
         let refreshedSession = try await service.gallery(session: nextSession)
 
-        #expect(first.items.map(\.assetId) == ["picked-photo", "picked-unreviewed"])
+        #expect(first.items.map(\.assetId) == ["picked-photo", "picked-unreviewed", "fixture-hidden"])
         #expect(sameFrozenSession == first)
-        #expect(refreshedSession.items.map(\.assetId) == ["picked-unreviewed"])
+        #expect(refreshedSession.items.map(\.assetId) == ["picked-unreviewed", "fixture-hidden"])
     }
 
     private func session() -> PBEOwnerSessionContract {
@@ -156,6 +158,8 @@ struct PBEOwnerNativeGalleryTests {
                '2026-08-22T09:30:00Z', 'Unreviewed picked', '["Photos"]', '', '[]', 4000, 3000, NULL),
               ('undecided-photo', 'apple-photos://undecided-photo', '{}', 'undecided.jpg', 'photo',
                '2026-08-22T09:00:00Z', 'Undecided', '[]', '', '[]', 4000, 3000, NULL),
+              ('fixture-hidden', 'apple-photos://fixture-hidden', '{}', 'fixture-hidden.jpg', 'photo',
+               '2026-08-22T08:30:00Z', 'Fixture hidden', '[]', '', '[]', 4000, 3000, NULL),
               ('global-hidden', 'apple-photos://global-hidden', '{}', 'hidden.jpg', 'photo',
                '2026-08-22T08:00:00Z', 'Hidden', '[]', '', '[]', 4000, 3000, NULL),
               ('picked-video', 'apple-photos://picked-video', '{}', 'video.mov', 'video',
@@ -168,6 +172,7 @@ struct PBEOwnerNativeGalleryTests {
             INSERT INTO fixture_asset_decisions VALUES
               ('expo', 'picked-photo', 'picked', 'active'),
               ('expo', 'picked-unreviewed', 'picked', 'active'),
+              ('expo', 'fixture-hidden', 'hidden', 'active'),
               ('expo', 'global-hidden', 'picked', 'active'),
               ('expo', 'picked-video', 'picked', 'active'),
               ('expo', 'tombstoned-photo', 'picked', 'active'),

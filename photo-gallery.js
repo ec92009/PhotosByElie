@@ -152,9 +152,10 @@ const defaultFilterState = {
   dateTo: galleryDateRange.dateTo,
   ownerMinRating: 0,
   ownerColors: "none,red,yellow,green,blue",
+  ownerPlacements: "picked",
 };
 const persistedFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
-const storedFilterKeys = [...persistedFilterKeys, ...(isPBEOwnerGallery ? ["ownerMinRating", "ownerColors"] : [])];
+const storedFilterKeys = [...persistedFilterKeys, ...(isPBEOwnerGallery ? ["ownerMinRating", "ownerColors", "ownerPlacements"] : [])];
 const publicFilterState = (state = {}) => Object.fromEntries(
   Object.keys(defaultFilterState).map((key) => [key, state[key] ?? defaultFilterState[key]])
 );
@@ -531,17 +532,26 @@ const metadataValue = (photo, label) => (
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
 const ownerColorFilterValues = ["none", "red", "yellow", "green", "blue"];
+const ownerPlacementFilterValues = ["picked", "hidden", "undecided"];
 const ownerMinRatingFilter = () => Math.max(0, Math.min(5, Number(filterState.ownerMinRating) || 0));
 const selectedOwnerColorFilters = () => new Set(
   String(filterState.ownerColors ?? defaultFilterState.ownerColors)
     .split(",")
     .filter((color) => ownerColorFilterValues.includes(color))
 );
+const selectedOwnerPlacementFilters = () => new Set(
+  String(filterState.ownerPlacements ?? defaultFilterState.ownerPlacements)
+    .split(",")
+    .filter((placement) => ownerPlacementFilterValues.includes(placement))
+);
 const ownerFilterCount = () => {
   if (!isPBEOwnerGallery) return 0;
   const minRating = ownerMinRatingFilter();
   const colors = selectedOwnerColorFilters();
-  return Number(minRating > 0) + Number(colors.size !== ownerColorFilterValues.length);
+  const placements = selectedOwnerPlacementFilters();
+  return Number(minRating > 0)
+    + Number(colors.size !== ownerColorFilterValues.length)
+    + Number(placements.size !== 1 || !placements.has("picked"));
 };
 const ownerSuperSearchText = (photo) => {
   if (!localModerationEnabled) return "";
@@ -557,7 +567,10 @@ const matchesOwnerFilterState = (photo) => {
   if (!isPBEOwnerGallery) return true;
   const rating = Math.max(0, Math.min(5, Number(photo?.ownerState?.rating) || 0));
   const color = String(photo?.ownerState?.color || "none").trim().toLowerCase() || "none";
-  return rating >= ownerMinRatingFilter() && selectedOwnerColorFilters().has(color);
+  const placement = String(photo?.ownerState?.placement || "undecided").trim().toLowerCase() || "undecided";
+  return rating >= ownerMinRatingFilter()
+    && selectedOwnerColorFilters().has(color)
+    && selectedOwnerPlacementFilters().has(placement);
 };
 const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext())
   && matchesOwnerFilterState(photo);
@@ -924,9 +937,7 @@ const reserveReplacementPhoto = (selected, selectedIds) => {
 };
 
 const visiblePhotos = () => {
-  const basePhotos = (gallery?.photos || []).filter((photo) => (
-    !isPBEOwnerGallery || String(photo?.ownerState?.placement || "").trim().toLowerCase() !== "hidden"
-  ));
+  const basePhotos = gallery?.photos || [];
   if (!ownerCullingEnabled) return window.photosByElieFilterPublicHidden?.(basePhotos) || basePhotos;
 
   const selected = hiddenActions
@@ -1848,6 +1859,34 @@ const ownerCapabilityState = (methodName, activeReason = "Requires the active Ba
   disabledReason: selectedPhotoIds.size ? activeReason : "Select at least one photo.",
 });
 
+const ownerCommandPhotos = (context = {}) => context.currentPhoto?.id
+  ? [context.currentPhoto]
+  : selectedOwnerPhotos();
+
+const clearFixtureDecisionState = (context = {}) => {
+  const photos = ownerCommandPhotos(context);
+  const placements = new Set(photos.map((photo) => (
+    String(photo?.ownerState?.placement || "undecided").trim().toLowerCase() || "undecided"
+  )));
+  const hiddenOnly = placements.size === 1 && placements.has("hidden");
+  const pickedOnly = placements.size === 1 && placements.has("picked");
+  const actionable = [...placements].some((placement) => placement !== "undecided");
+  return {
+    label: hiddenOnly ? "Unhide" : pickedOnly ? "Unpick" : "Clear Decision",
+    tooltip: hiddenOnly
+      ? "Return the hidden selection to Undecided."
+      : pickedOnly
+        ? "Return the picked selection to Undecided."
+        : "Return the selected fixture decisions to Undecided.",
+    enabled: Boolean(ownerAdapterMethod("unpick")) && photos.length > 0 && actionable,
+    disabledReason: !photos.length
+      ? "Select at least one photo."
+      : !ownerAdapterMethod("unpick")
+        ? "Requires the active Backstage fixture session."
+        : "The selection is already Undecided.",
+  };
+};
+
 const galleryCommands = [
   {
     id: "select-all", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "selection", order: 10,
@@ -1958,7 +1997,10 @@ const galleryCommands = [
     label: "Hide", icon: "H", shortcut: "h", shortcutLabel: "H", quickLookLegend: true,
     tooltip: "Fixture-local Hide; never a global tombstone.", selectionEffect: "remove-successes",
     state: () => ownerCapabilityState("hide"),
-    execute: (context) => runOwnerAdapterCommand("hide", { removes: true, currentPhoto: context.currentPhoto }),
+    execute: (context) => runOwnerAdapterCommand("hide", {
+      removes: !selectedOwnerPlacementFilters().has("hidden"),
+      currentPhoto: context.currentPhoto,
+    }),
   },
   {
     id: "review", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 40,
@@ -1980,10 +2022,13 @@ const galleryCommands = [
   },
   {
     id: "unpick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 60,
-    label: "Unpick", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
-    tooltip: "Clear the active fixture decision; this is not Undo.", selectionEffect: "preserve",
-    state: () => ownerCapabilityState("unpick"),
-    execute: (context) => runOwnerAdapterCommand("unpick", { currentPhoto: context.currentPhoto }),
+    label: "Clear Decision", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
+    selectionEffect: "remove-successes",
+    state: clearFixtureDecisionState,
+    execute: (context) => runOwnerAdapterCommand("unpick", {
+      removes: !selectedOwnerPlacementFilters().has("undecided"),
+      currentPhoto: context.currentPhoto,
+    }),
   },
   {
     id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "filters", order: 10,
@@ -2157,6 +2202,22 @@ const ownerColorFilterHtml = () => {
   }).join("");
 };
 
+const ownerPlacementFilterHtml = () => {
+  const selected = selectedOwnerPlacementFilters();
+  return ownerPlacementFilterValues.map((placement) => {
+    const active = selected.has(placement);
+    const label = `${placement[0].toUpperCase()}${placement.slice(1)}`;
+    return `
+      <button class="gallery-command-button gallery-placement-filter${active ? " is-applied" : ""}"
+        type="button" data-gallery-owner-placement-filter="${escapeHtml(placement)}"
+        title="Filter: ${escapeHtml(label)}" aria-label="Filter by ${escapeHtml(label)}"
+        aria-pressed="${active}">
+        <span class="gallery-command-label">${escapeHtml(label)}</span>
+      </button>
+    `;
+  }).join("");
+};
+
 const galleryCommandGroupsHtml = (groups) => groups.map((entry) => `
   <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replaceAll("-", " "))}">
     ${commandGroupHtml(entry)}
@@ -2198,9 +2259,11 @@ const renderOwnerFilterRow = () => {
   if (!row || !galleryCommandRegistry) return;
   const focusedRatingFilter = Boolean(document.activeElement?.matches?.("[data-gallery-rating-filter]"));
   const focusedColorFilter = document.activeElement?.dataset?.galleryOwnerColorFilter || "";
+  const focusedPlacementFilter = document.activeElement?.dataset?.galleryOwnerPlacementFilter || "";
   const burst = galleryCommandRegistry.list().find((command) => command.id === "burst");
   row.innerHTML = `
     <span class="gallery-owner-filter-label">Filters</span>
+    ${ownerPlacementFilterHtml()}
     ${burst ? commandButtonHtml(burst) : ""}
     ${ownerRatingFilterHtml()}${ownerColorFilterHtml()}
   `;
@@ -2218,8 +2281,21 @@ const renderOwnerFilterRow = () => {
       commitOwnerFilterState({ ownerColors: ownerColorFilterValues.filter((candidate) => selected.has(candidate)).join(",") });
     });
   });
+  row.querySelectorAll("[data-gallery-owner-placement-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = selectedOwnerPlacementFilters();
+      const placement = button.dataset.galleryOwnerPlacementFilter;
+      if (selected.has(placement)) selected.delete(placement);
+      else selected.add(placement);
+      if (!selected.size) selected.add("picked");
+      commitOwnerFilterState({
+        ownerPlacements: ownerPlacementFilterValues.filter((candidate) => selected.has(candidate)).join(","),
+      });
+    });
+  });
   if (focusedRatingFilter) row.querySelector("[data-gallery-rating-filter]")?.focus({ preventScroll: true });
   else if (focusedColorFilter) row.querySelector(`[data-gallery-owner-color-filter="${CSS.escape(focusedColorFilter)}"]`)?.focus({ preventScroll: true });
+  else if (focusedPlacementFilter) row.querySelector(`[data-gallery-owner-placement-filter="${CSS.escape(focusedPlacementFilter)}"]`)?.focus({ preventScroll: true });
 };
 
 const ownerCommandSectionsHtml = (groups) => {

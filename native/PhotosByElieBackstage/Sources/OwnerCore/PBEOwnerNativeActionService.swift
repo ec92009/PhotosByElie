@@ -70,6 +70,7 @@ public actor PBEOwnerNativeActionService {
         let nativeCapabilities = [
             "fixture-hide": "fixture.hide",
             "fixture-review": "fixture.review",
+            "fixture-clear": "fixture.clear",
             "rating-set": "asset.rating",
             "color-set": "asset.color",
         ]

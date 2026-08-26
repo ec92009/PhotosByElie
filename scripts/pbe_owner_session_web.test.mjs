@@ -166,7 +166,7 @@ test("hosted Owner exposes only signed fixture and decision capabilities", async
   const session = {
     id: "session-actions", state: "ready", fixtureId: "fixture-expo",
     fixtureBreadcrumb: "Expo", expiresAt: "2030-01-01T12:00:00Z",
-    capabilities: ["gallery.read", "fixture.hide", "fixture.review", "asset.rating", "asset.color"],
+    capabilities: ["gallery.read", "fixture.hide", "fixture.review", "fixture.clear", "asset.rating", "asset.color"],
   };
   const response = (payload, status = 200) => ({
     ok: status >= 200 && status < 300, status, json: async () => payload,
@@ -201,6 +201,7 @@ test("hosted Owner exposes only signed fixture and decision capabilities", async
   assert.equal(commands.fixtureId, "fixture-expo");
   assert.equal(typeof commands.hide, "function");
   assert.equal(typeof commands.review, "function");
+  assert.equal(typeof commands.unpick, "function");
   assert.equal(typeof commands.setRating, "function");
   assert.equal(typeof commands.setColor, "function");
   assert.equal(commands.pick, undefined);
@@ -218,9 +219,21 @@ test("hosted Owner exposes only signed fixture and decision capabilities", async
   });
   assert.equal(actionCalls[0].options.headers["Idempotency-Key"], "owner-rating-key");
 
+  await commands.unpick({
+    photoIds: ["asset-one"],
+    idempotencyKey: "owner-clear-key",
+  });
+  assert.deepEqual(actionCalls[1].body, {
+    action: "fixture-clear",
+    photo_ids: ["asset-one"],
+    reason: "Hosted PBE Owner gallery",
+  });
+  assert.equal(actionCalls[1].options.headers["Idempotency-Key"], "owner-clear-key");
+
   await client.window.photosByEliePBEOwnerSession.close();
   assert.equal(commands.hide, undefined);
   assert.equal(commands.review, undefined);
+  assert.equal(commands.unpick, undefined);
   assert.equal(commands.setRating, undefined);
   assert.equal(commands.setColor, undefined);
 });

@@ -110,8 +110,10 @@ public struct PBEOwnerNativeGallery: Codable, Sendable, Equatable {
 }
 
 /// Produces the only gallery window exposed by the PBB-114 native host.
-/// The window is fixed to the active lease's picked still photos and is read
-/// directly from Owner.sqlite without creating a connector action.
+/// The window is fixed to the active lease's picked and fixture-hidden still
+/// photos so the browser can expose an explicit Hidden view and clear either
+/// decision. It is read directly from Owner.sqlite without creating a
+/// connector action.
 public struct PBEOwnerNativeGalleryService: Sendable {
     public let ownerDatabaseURL: URL
     public let busyTimeoutMilliseconds: Int32
@@ -161,6 +163,7 @@ public struct PBEOwnerNativeGalleryService: Sendable {
             ).cullingWindow(
                 fixtureID: fixtureID,
                 view: .picked,
+                views: [.picked, .hidden],
                 offset: 0,
                 limit: 500,
                 mediaTypes: ["photo"]

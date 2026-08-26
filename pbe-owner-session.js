@@ -37,7 +37,7 @@
     const capabilities = new Set(state.session?.capabilities || []);
     ownerGalleryCommands.fixtureId = state.ready ? state.session?.fixtureId || "" : "";
     ownerGalleryCommands.context = "gallery";
-    for (const method of ["hide", "review", "setRating", "setColor"]) {
+    for (const method of ["hide", "review", "unpick", "setRating", "setColor"]) {
       delete ownerGalleryCommands[method];
     }
     if (!state.ready) return;
@@ -46,6 +46,9 @@
     }
     if (capabilities.has("fixture.review")) {
       ownerGalleryCommands.review = (payload) => action("fixture-review", commandPayload(payload));
+    }
+    if (capabilities.has("fixture.clear")) {
+      ownerGalleryCommands.unpick = (payload) => action("fixture-clear", commandPayload(payload));
     }
     if (capabilities.has("asset.rating")) {
       ownerGalleryCommands.setRating = (payload) => action("rating-set", commandPayload(payload));

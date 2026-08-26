@@ -1872,7 +1872,7 @@ const clearFixtureDecisionState = (context = {}) => {
   const pickedOnly = placements.size === 1 && placements.has("picked");
   const actionable = [...placements].some((placement) => placement !== "undecided");
   return {
-    label: hiddenOnly ? "Unhide" : pickedOnly ? "Unpick" : "Clear Decision",
+    label: hiddenOnly ? "Unhide" : pickedOnly ? "Unpick" : "Clear decisions",
     tooltip: hiddenOnly
       ? "Return the hidden selection to Undecided."
       : pickedOnly
@@ -2022,7 +2022,7 @@ const galleryCommands = [
   },
   {
     id: "unpick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 60,
-    label: "Clear Decision", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
+    label: "Clear decisions", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
     selectionEffect: "remove-successes",
     state: clearFixtureDecisionState,
     execute: (context) => runOwnerAdapterCommand("unpick", {

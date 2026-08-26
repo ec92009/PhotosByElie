@@ -2038,6 +2038,35 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection.selectedInDisplayOrder
     }
 
+    var cullingClearDecisionLabel: String {
+        let placements = selectedCullingPlacementStates
+        if placements == [.hidden] { return "Unhide" }
+        if placements == [.picked] { return "Unpick" }
+        return "Clear decisions"
+    }
+
+    var cullingClearDecisionHelp: String {
+        switch cullingClearDecisionLabel {
+        case "Unhide":
+            "Return the hidden selection to Undecided in the current fixture."
+        case "Unpick":
+            "Return the picked selection to Undecided in the current fixture."
+        default:
+            "Return every selected fixture decision to Undecided."
+        }
+    }
+
+    private var selectedCullingPlacementStates: Set<FixturePlacementState> {
+        let assetsByID = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
+        return Set(selectedCullingAssetIDs.compactMap { id in
+            if let rawValue = cullingStates[id]?.pickState,
+               let placement = FixturePlacementState(rawValue: rawValue) {
+                return placement
+            }
+            return assetsByID[id]?.placementState
+        })
+    }
+
     var cullingSelectionRating: Int? {
         let ids = selectedCullingAssetIDs
         guard let firstID = ids.first else { return nil }

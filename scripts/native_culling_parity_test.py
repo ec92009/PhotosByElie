@@ -121,6 +121,9 @@ class NativeCullingParityTest(unittest.TestCase):
 
     def test_native_ui_exposes_sidecar_parity_without_a_browser_route(self):
         source = backstage_ui_source()
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
         for marker in (
             "OutlineGroup(model.fixtures",
             "Review picked",
@@ -128,8 +131,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "Search title, file, or keyword",
             'Button("P Pick")',
             'Button("H Hide")',
-            'Button("U Unhide")',
-            'accessibilityLabel("U Unhide selected items")',
+            'Button("U \\(model.cullingClearDecisionLabel)")',
+            'accessibilityLabel("U \\(model.cullingClearDecisionLabel) selected items")',
             "Task { await model.applyPickShortcut(.unpick) }",
             'Button("X Waste Basket")',
             'Menu("Workflows")',
@@ -142,7 +145,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "await model.undoLastCullingDecision()",
             'onKeyPress("u")',
             'onKeyPress("b")',
-            "P pick • H hide • U unhide",
+            "P pick • H hide • U clears the selected fixture decision",
             "X Waste Basket",
             "Button(\"Stop\")",
             "ScrollView(.vertical)",
@@ -151,6 +154,15 @@ class NativeCullingParityTest(unittest.TestCase):
             "CullingColorFilter.selectableCases",
         ):
             self.assertIn(marker, source)
+        for marker in (
+            'var cullingClearDecisionLabel: String',
+            'if placements == [.hidden] { return "Unhide" }',
+            'if placements == [.picked] { return "Unpick" }',
+            'return "Clear decisions"',
+        ):
+            self.assertIn(marker, model)
+        self.assertIn("case .unpick:", source)
+        self.assertIn("applyPlacement(\n                            .unpick,", source)
         self.assertNotIn("127.0.0.1:8011", source)
         self.assertIn(
             'Button("Select burst") { model.selectVisibleBurstCandidates() }',

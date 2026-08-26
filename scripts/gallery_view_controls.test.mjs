@@ -112,7 +112,7 @@ test("hosted Owner separates filters from mutations and renders durable card ind
   assert.match(galleryJs, /ownerMinRating/);
   assert.match(galleryJs, /selectedOwnerColorFilters/);
   assert.match(galleryJs, /selectedOwnerPlacementFilters/);
-  assert.match(galleryJs, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear Decision"/);
+  assert.match(galleryJs, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear decisions"/);
   assert.match(burstCommand, /group: "filters"/);
   assert.doesNotMatch(burstCommand, /shortcut:/);
   assert.match(galleryJs, /gallery-owner-card-rating/);

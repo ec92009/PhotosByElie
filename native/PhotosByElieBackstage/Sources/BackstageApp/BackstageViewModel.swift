@@ -2981,6 +2981,23 @@ final class BackstageViewModel: ObservableObject {
         await applyRating()
     }
 
+    @discardableResult
+    func applyQuickLookRating(_ rating: Int, assetID: String) async -> Bool {
+        let value = min(5, max(0, rating))
+        return await applyCullingDecisions(
+            [.rating(assetID, value: value)],
+            label: value == 0 ? "Clear rating" : "Rate \(value)"
+        )
+    }
+
+    @discardableResult
+    func applyQuickLookColor(_ color: SidecarColor, assetID: String) async -> Bool {
+        await applyCullingDecisions(
+            [.color(assetID, value: color)],
+            label: color == .none ? "Clear color" : "\(color.label) color"
+        )
+    }
+
     func sendCullingSelection(to destination: Section) {
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
@@ -5240,10 +5257,14 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func applyCullingDecisions(_ decisions: [SidecarDecision], label: String) async {
+    @discardableResult
+    private func applyCullingDecisions(
+        _ decisions: [SidecarDecision],
+        label: String
+    ) async -> Bool {
         guard await preparePhotosMutation() else {
             cullingStatus = photosMutationReadinessMessage()
-            return
+            return false
         }
         if cullingPool == nil {
             invalidateCullingWindowLoads()
@@ -5268,7 +5289,7 @@ final class BackstageViewModel: ObservableObject {
                     }
                     replaceCullingItems()
                     cullingStatus = "Stopped after \(cullingDecisionProgress.formatted()) of \(decisions.count.formatted()) items; completed batches remain audited and undoable."
-                    return
+                    return false
                 }
                 let end = min(decisions.count, start + 200)
                 let batch = try await decisionService.applyDetailed(
@@ -5294,8 +5315,10 @@ final class BackstageViewModel: ObservableObject {
             }
             replaceCullingItems()
             cullingStatus = "\(label) saved for \(changes.count) item\(changes.count == 1 ? "" : "s") in the cloud ledger."
+            return true
         } catch {
             cullingStatus = userFacingMessage(for: error)
+            return false
         }
     }
 

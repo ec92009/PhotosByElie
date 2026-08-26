@@ -736,6 +736,14 @@ struct LifecycleView: View {
                 metadata: [lifecycleQuickLookMetadata(for: item)],
                 presentation: presentationID,
                 onShortcut: { shortcut, assetID in
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: quickLook
+                    ) {
+                        return true
+                    }
                     switch shortcut {
                     case .previous, .previousRow:
                         moveQuickLook(
@@ -783,7 +791,7 @@ struct LifecycleView: View {
             state: item.state == "hidden"
                 ? "Recoverable"
                 : "Active global tombstone",
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P put back • X delete selected recoverable • Escape closes"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P put back • X delete selected recoverable • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
         )
     }
 
@@ -1965,7 +1973,7 @@ private struct MetadataGiveBackView: View {
         .accessibilityLabel(
             "Open preview for \(title.isEmpty ? assetID : title)"
         )
-        .backstageHelp("Open this exact Metadata asset in the canonical read-only Quick Look presentation.")
+        .backstageHelp("Open this exact Metadata asset in the canonical Quick Look presentation. Rating and color shortcuts remain audited.")
         .task(id: assetID) {
             let source = model.cullingAssets.first(where: { $0.id == assetID })
             model.requestThumbnail(
@@ -2011,10 +2019,18 @@ private struct MetadataGiveBackView: View {
                         rating: decision?.rating ?? source?.rating ?? 0,
                         color: decision?.color ?? source?.color ?? "",
                         state: decision?.pickState ?? source?.placementState.rawValue ?? "metadata",
-                        shortcutHint: "Read-only Metadata preview • Escape closes"
+                        shortcutHint: "Metadata preview • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
                     )
                 ],
-                presentation: presentationID
+                presentation: presentationID,
+                onShortcut: { shortcut, currentAssetID in
+                    BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: currentAssetID,
+                        model: model,
+                        coordinator: quickLook
+                    )
+                }
             )
         }
     }

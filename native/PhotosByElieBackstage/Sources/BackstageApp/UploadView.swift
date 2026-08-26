@@ -356,7 +356,7 @@ struct UploadView: View {
                 rating: decision?.rating ?? source?.rating ?? 0,
                 color: decision?.color ?? source?.color ?? "",
                 state: item.deliveryState,
-                shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • R return to Review"
+                shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • R return to Review • \(BackstageQuickLookDecisionRouter.shortcutHint)"
             )
             quickLook.present(
                 urls: [url],
@@ -364,6 +364,14 @@ struct UploadView: View {
                 presentation: presentationID,
                 onShortcut: { shortcut, assetID in
                     guard !model.isRunningDelivery else { return false }
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: quickLook
+                    ) {
+                        return true
+                    }
                     switch shortcut {
                     case .previous, .previousRow:
                         moveUploadQuickLook(from: assetID, direction: .previous)

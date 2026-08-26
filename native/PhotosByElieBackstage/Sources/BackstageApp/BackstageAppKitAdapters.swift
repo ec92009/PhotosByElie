@@ -123,6 +123,15 @@ enum BackstageQuickLookShortcut: Equatable {
     case rating(Int)
     case color(SidecarColor)
 
+    var isGlobalDecisionMutation: Bool {
+        switch self {
+        case .rating, .color:
+            true
+        default:
+            false
+        }
+    }
+
     var ownerSelectionDirection: OwnerSelectionDirection? {
         switch self {
         case .previous, .previousRow:
@@ -405,6 +414,26 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         updateMetadataPanel()
     }
 
+    func updateDecisionMetadata(
+        for assetID: String,
+        rating: Int? = nil,
+        color: SidecarColor? = nil
+    ) {
+        guard let previewItem = items.first(where: { $0.metadata?.assetID == assetID }),
+              var metadata = previewItem.metadata
+        else {
+            return
+        }
+        if let rating {
+            metadata.rating = min(5, max(0, rating))
+        }
+        if let color {
+            metadata.color = color.rawValue
+        }
+        previewItem.metadata = metadata
+        updateMetadataPanel()
+    }
+
     private func installShortcutMonitor(
         onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)?
     ) {
@@ -672,6 +701,61 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         }
     }
 
+}
+
+/// Routes global rating and color mutations for every Backstage Quick Look
+/// surface. Workspace-specific presenters remain responsible only for their
+/// local navigation and placement actions.
+@MainActor
+enum BackstageQuickLookDecisionRouter {
+    static let shortcutHint = "0–5 rating • 6–9 color"
+
+    @discardableResult
+    static func handle(
+        _ shortcut: BackstageQuickLookShortcut,
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        completion: @escaping @MainActor (Bool) -> Void = { _ in }
+    ) -> Bool {
+        guard !model.isApplyingCullingDecision else { return false }
+        switch shortcut {
+        case let .rating(value):
+            Task { @MainActor [weak model, weak coordinator] in
+                guard let model, let coordinator else { return }
+                let succeeded = await model.applyQuickLookRating(
+                    value,
+                    assetID: assetID
+                )
+                if succeeded {
+                    coordinator.updateDecisionMetadata(
+                        for: assetID,
+                        rating: value
+                    )
+                }
+                completion(succeeded)
+            }
+            return true
+        case let .color(value):
+            Task { @MainActor [weak model, weak coordinator] in
+                guard let model, let coordinator else { return }
+                let succeeded = await model.applyQuickLookColor(
+                    value,
+                    assetID: assetID
+                )
+                if succeeded {
+                    coordinator.updateDecisionMetadata(
+                        for: assetID,
+                        color: value
+                    )
+                }
+                completion(succeeded)
+            }
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 @MainActor

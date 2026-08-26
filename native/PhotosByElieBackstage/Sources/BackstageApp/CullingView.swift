@@ -38,6 +38,27 @@ private enum CullingQuickLookPresenter {
                     guard let model, let coordinator,
                           !model.isApplyingCullingDecision
                     else { return false }
+                    let previousIDs = model.visibleCullingAssets.map(\.id)
+                    let wasVisible = previousIDs.contains(assetID)
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: coordinator,
+                        completion: { succeeded in
+                            guard succeeded else { return }
+                            advanceOrRefresh(
+                                assetID: assetID,
+                                previousIDs: previousIDs,
+                                wasVisible: wasVisible,
+                                model: model,
+                                coordinator: coordinator,
+                                direction: direction
+                            )
+                        }
+                    ) {
+                        return true
+                    }
                     switch shortcut {
                     case .previous, .next, .previousRow, .nextRow:
                         guard let delta = shortcut.selectionDelta(
@@ -75,38 +96,8 @@ private enum CullingQuickLookPresenter {
                             coordinator: coordinator,
                             removalDirection: direction
                         )
-                    case let .rating(value):
-                        let previousIDs = model.visibleCullingAssets.map(\.id)
-                        let wasVisible = previousIDs.contains(assetID)
-                        model.clickCullingAsset(assetID, modifiers: [])
-                        Task { [weak model, weak coordinator] in
-                            guard let model, let coordinator else { return }
-                            await model.applyRatingShortcut(value)
-                            advanceOrRefresh(
-                                assetID: assetID,
-                                previousIDs: previousIDs,
-                                wasVisible: wasVisible,
-                                model: model,
-                                coordinator: coordinator,
-                                direction: direction
-                            )
-                        }
-                    case let .color(value):
-                        let previousIDs = model.visibleCullingAssets.map(\.id)
-                        let wasVisible = previousIDs.contains(assetID)
-                        model.clickCullingAsset(assetID, modifiers: [])
-                        Task { [weak model, weak coordinator] in
-                            guard let model, let coordinator else { return }
-                            await model.applyColorShortcut(value)
-                            advanceOrRefresh(
-                                assetID: assetID,
-                                previousIDs: previousIDs,
-                                wasVisible: wasVisible,
-                                model: model,
-                                coordinator: coordinator,
-                                direction: direction
-                            )
-                        }
+                    case .rating, .color:
+                        return false
                     case .undo:
                         guard !model.cullingHistory.isEmpty else { return false }
                         Task { [weak model, weak coordinator] in
@@ -310,7 +301,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • X Waste Basket • 0–5 rating • 6–9 color"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
         )
     }
 }

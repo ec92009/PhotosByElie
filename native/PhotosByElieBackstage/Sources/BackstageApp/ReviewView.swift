@@ -38,6 +38,14 @@ private enum ReviewQuickLookPresenter {
                     guard let model, let coordinator, !model.isRunningReview else {
                         return false
                     }
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: coordinator
+                    ) {
+                        return true
+                    }
                     switch shortcut {
                     case .previous, .previousRow:
                         navigate(
@@ -194,7 +202,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: state,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick • ⌘Z undo"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick • \(BackstageQuickLookDecisionRouter.shortcutHint) • ⌘Z undo"
         )
     }
 }

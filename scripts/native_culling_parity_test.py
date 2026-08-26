@@ -911,8 +911,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "private enum ReviewQuickLookPresenter", 1
         )[0]
         self.assertIn("await model.applyPickShortcut(", culling)
-        self.assertIn("await model.applyRatingShortcut(value)", culling)
-        self.assertIn("await model.applyColorShortcut(value)", culling)
+        self.assertIn("BackstageQuickLookDecisionRouter.handle(", culling)
         self.assertIn("await model.undoLastCullingDecision()", culling)
         self.assertIn("if model.selectedCullingAssetIDs.count == 1", culling)
         self.assertIn("shortcut.selectionDelta(", culling)
@@ -1346,8 +1345,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "237.15")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "202")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "238.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "203")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -2228,10 +2227,39 @@ class NativeCullingParityTest(unittest.TestCase):
             "BackstageQuickLookMetadata(",
             "BackstageQuickLookSourceSize(",
             "quickLook.present(",
-            "canonical read-only Quick Look presentation",
+            "canonical Quick Look presentation. Rating and color shortcuts remain audited.",
         ):
             self.assertIn(marker, metadata)
         self.assertNotIn('TableColumn("Preview")', metadata)
+
+    def test_all_photo_quick_look_surfaces_share_rating_and_color_routing(self):
+        appkit = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+        culling = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingView.swift"
+        ).read_text(encoding="utf-8")
+        review = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
+        ).read_text(encoding="utf-8")
+        upload = (
+            NATIVE / "Sources" / "BackstageApp" / "UploadView.swift"
+        ).read_text(encoding="utf-8")
+        app = backstage_ui_source()
+        lifecycle = app.split("struct LifecycleView", 1)[1].split(
+            "private struct ActivityView", 1
+        )[0]
+        metadata = app.split("private struct MetadataGiveBackView", 1)[1]
+
+        self.assertIn("enum BackstageQuickLookDecisionRouter", appkit)
+        self.assertIn("applyQuickLookRating", appkit)
+        self.assertIn("applyQuickLookColor", appkit)
+        for surface in (culling, review, upload, lifecycle, metadata):
+            self.assertIn("BackstageQuickLookDecisionRouter.handle(", surface)
+            self.assertIn("BackstageQuickLookDecisionRouter.shortcutHint", surface)
 
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(

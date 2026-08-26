@@ -154,6 +154,34 @@ struct OwnerCoreTests {
         #expect(BackstageQuickLookShortcut.nextRow.ownerSelectionDirection == .next)
     }
 
+    @Test("Every Quick Look maps 0–9 through the shared global decision vocabulary")
+    func quickLookDecisionShortcutsAreCanonical() {
+        let expected: [BackstageQuickLookShortcut] = [
+            .rating(0),
+            .rating(1),
+            .rating(2),
+            .rating(3),
+            .rating(4),
+            .rating(5),
+            .color(.red),
+            .color(.yellow),
+            .color(.green),
+            .color(.blue),
+        ]
+
+        for (value, shortcut) in zip(0...9, expected) {
+            let parsed = BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 0,
+                charactersIgnoringModifiers: String(value),
+                modifierFlags: []
+            )
+            #expect(parsed == shortcut)
+            #expect(parsed?.isGlobalDecisionMutation == true)
+        }
+        #expect(!BackstageQuickLookShortcut.hide.isGlobalDecisionMutation)
+        #expect(!BackstageQuickLookShortcut.next.isGlobalDecisionMutation)
+    }
+
     @Test("Quick Look recognizes plain Command-Z as undo without stealing modified variants")
     func quickLookRecognizesUndoShortcut() {
         #expect(

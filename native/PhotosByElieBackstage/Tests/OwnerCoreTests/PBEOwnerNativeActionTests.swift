@@ -133,7 +133,9 @@ struct PBEOwnerNativeActionTests {
                 )
                 return [
                     "results": .array(assetIDs.map { .object([
-                        "photoId": .string($0), "ok": true,
+                        "photoId": .string($0),
+                        "ok": true,
+                        "placement": .string(operation == "fixture-hide" ? "hidden" : "picked"),
                     ]) }),
                 ]
             }
@@ -168,6 +170,7 @@ struct PBEOwnerNativeActionTests {
         )
         #expect(first == replay)
         #expect(first["state"]?.stringValue == "completed")
+        #expect(first["results"]?.arrayValue?.first?.objectValue?["placement"]?.stringValue == "hidden")
         #expect(await recorder.calls().count == 1)
         #expect(await api.requests().isEmpty)
 

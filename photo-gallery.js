@@ -924,7 +924,9 @@ const reserveReplacementPhoto = (selected, selectedIds) => {
 };
 
 const visiblePhotos = () => {
-  const basePhotos = gallery?.photos || [];
+  const basePhotos = (gallery?.photos || []).filter((photo) => (
+    !isPBEOwnerGallery || String(photo?.ownerState?.placement || "").trim().toLowerCase() !== "hidden"
+  ));
   if (!ownerCullingEnabled) return window.photosByElieFilterPublicHidden?.(basePhotos) || basePhotos;
 
   const selected = hiddenActions
@@ -1610,11 +1612,21 @@ const ownerAdapterMethod = (name) => typeof ownerCommandAdapter?.[name] === "fun
 
 const normalizeOwnerCommandResult = (result, requestedIds) => {
   const itemResults = Array.isArray(result?.results) ? result.results : [];
-  if (!itemResults.length) return { succeeded: [...requestedIds], failed: [] };
-  const succeeded = itemResults
+  if (!itemResults.length) {
+    return {
+      succeeded: [...requestedIds],
+      succeededItems: requestedIds.map((photoId) => ({ photoId })),
+      failed: [],
+    };
+  }
+  const succeededItems = itemResults
     .filter((item) => item?.ok !== false)
-    .map((item) => String(item.photoId || item.photo_id || item.id || ""))
-    .filter(Boolean);
+    .map((item) => ({
+      ...item,
+      photoId: String(item.photoId || item.photo_id || item.id || ""),
+    }))
+    .filter((item) => item.photoId);
+  const succeeded = succeededItems.map((item) => item.photoId);
   const succeededIds = new Set(succeeded);
   const failed = itemResults
     .filter((item) => item?.ok === false)
@@ -1628,19 +1640,27 @@ const normalizeOwnerCommandResult = (result, requestedIds) => {
       failed.push({ photoId, reason: "No result was returned for this photo." });
     }
   });
-  return { succeeded, failed };
+  return { succeeded, succeededItems, failed };
 };
 
 const ownerPhotoForId = (photoId) => (gallery?.photos || []).find((photo) => photo.id === photoId) || null;
 
-const applyOwnerCommandState = (methodName, value, succeededIds) => {
-  succeededIds.forEach((photoId) => {
+const applyOwnerCommandState = (methodName, value, succeededItems) => {
+  succeededItems.forEach((item) => {
+    const photoId = item.photoId;
     const photo = ownerPhotoForId(photoId);
     if (!photo) return;
     photo.ownerState = { ...(photo.ownerState || {}) };
-    if (methodName === "setRating") photo.ownerState.rating = Math.max(0, Math.min(5, Number(value) || 0));
-    if (methodName === "setColor") photo.ownerState.color = String(value || "").trim().toLowerCase();
-    if (methodName === "review") photo.ownerState.placement = "picked";
+    if (methodName === "setRating") {
+      const rating = item.rating ?? item.state?.rating ?? value;
+      photo.ownerState.rating = Math.max(0, Math.min(5, Number(rating) || 0));
+    }
+    if (methodName === "setColor") {
+      const color = item.color ?? item.state?.color ?? value;
+      photo.ownerState.color = String(color || "").trim().toLowerCase();
+    }
+    if (methodName === "hide") photo.ownerState.placement = String(item.placement || "hidden").trim().toLowerCase();
+    if (methodName === "review") photo.ownerState.placement = String(item.placement || "picked").trim().toLowerCase();
     if (methodName === "unpick") photo.ownerState.placement = "undecided";
   });
 };
@@ -1690,7 +1710,7 @@ const runOwnerAdapterCommand = async (methodName, { value = null, removes = fals
     const normalized = normalizeOwnerCommandResult(result, requestedIds);
     normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
     normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
-    applyOwnerCommandState(methodName, value, normalized.succeeded);
+    applyOwnerCommandState(methodName, value, normalized.succeededItems);
     if (removes) {
       normalized.succeeded.forEach((photoId) => {
         selectedPhotoIds.delete(photoId);

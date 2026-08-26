@@ -132,6 +132,13 @@ test("hosted Owner card clicks stop at selection while explicit Like controls re
   assert.match(galleryJs, /id: "like"[\s\S]*?shortcut: "l"/);
 });
 
+test("hosted Owner projects authoritative mutation results into its cards", () => {
+  assert.match(galleryJs, /const color = item\.color \?\? item\.state\?\.color \?\? value/);
+  assert.match(galleryJs, /methodName === "hide"[\s\S]*ownerState\.placement/);
+  assert.match(galleryJs, /ownerState\?\.placement[\s\S]*!== "hidden"/);
+  assert.match(galleryJs, /applyOwnerCommandState\(methodName, value, normalized\.succeededItems\)/);
+});
+
 test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {
   const pickCommand = galleryJs.slice(
     galleryJs.indexOf('id: "pick"'),

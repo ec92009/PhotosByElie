@@ -281,6 +281,9 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
             )
             let sidecarDecisionService = self.sidecarDecisionService
             nativeMutationProvider = { session, operation, assetIDs, value, reason, key in
+                var resultByAssetID = Dictionary(uniqueKeysWithValues: assetIDs.map { assetID in
+                    (assetID, ["photoId": JSONValue.string(assetID), "ok": .bool(true)])
+                })
                 switch operation {
                 case "fixture-hide", "fixture-review":
                     let placement: FixturePlacementState = operation == "fixture-hide"
@@ -301,6 +304,9 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                             message: "The native fixture writer did not return a result."
                         )
                     }
+                    for item in applied ?? [] {
+                        resultByAssetID[item.assetID]?["placement"] = .string(item.placementState.rawValue)
+                    }
                 case "rating-set":
                     guard let sidecarDecisionService,
                           let rating = value?.intValue,
@@ -311,10 +317,14 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                             message: "The hosted rating action is invalid."
                         )
                     }
-                    _ = try await sidecarDecisionService.applyDetailed(
+                    let changes = try await sidecarDecisionService.applyDetailed(
                         assetIDs.map { SidecarDecision.rating($0, value: rating) },
                         idempotencyKey: key
                     )
+                    for change in changes {
+                        resultByAssetID[change.assetID]?["rating"] = JSONValue.number(Double(change.state.rating))
+                        resultByAssetID[change.assetID]?["color"] = JSONValue.string(change.state.color)
+                    }
                 case "color-set":
                     guard let sidecarDecisionService,
                           let color = value?.stringValue.flatMap(SidecarColor.init(rawValue:)),
@@ -325,10 +335,14 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                             message: "The hosted color action is invalid."
                         )
                     }
-                    _ = try await sidecarDecisionService.applyDetailed(
+                    let changes = try await sidecarDecisionService.applyDetailed(
                         assetIDs.map { SidecarDecision.color($0, value: color) },
                         idempotencyKey: key
                     )
+                    for change in changes {
+                        resultByAssetID[change.assetID]?["rating"] = JSONValue.number(Double(change.state.rating))
+                        resultByAssetID[change.assetID]?["color"] = JSONValue.string(change.state.color)
+                    }
                 default:
                     throw PBEOwnerNativeSessionFailure(
                         code: "pbe_owner_action_forbidden",
@@ -338,7 +352,10 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                 }
                 return [
                     "results": .array(assetIDs.map { assetID in
-                        .object(["photoId": .string(assetID), "ok": true])
+                        .object(resultByAssetID[assetID] ?? [
+                            "photoId": .string(assetID),
+                            "ok": true,
+                        ])
                     }),
                 ]
             }

@@ -666,7 +666,7 @@ struct CullingView: View {
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P pick • H hide • U unhide • X Waste Basket • Rating slider 0–5 • Color buttons toggle • 6–9 color shortcuts • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P pick • H hide • U unhide • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }

@@ -350,17 +350,19 @@ audited Owner action path.
    the matching fixture-local shortcuts; X remains the separate global
    recoverable Waste Basket action. Only a confirmed **Empty Waste Basket**
    operation activates a global tombstone.
-7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
-   0 through 5 apply the corresponding value.
-8. Use **Color** and **Apply color** for the five labels or to clear a label.
+7. Use the rating control for zero to five stars. The number keys 0 through 5
+   apply the corresponding value; 0 clears the rating.
+8. Use the direct color buttons to assign a label. Choosing a color already
+   applied to every selected item clears it.
 9. Choose **Quick Look** or press Space to inspect still photos and panoramas
    without leaving Backstage. The metadata panel never
    covers the item: it stacks below landscape previews and beside portrait
    previews while showing the current filename, title, keywords, capture time,
    rating, color, and state. While
    Quick Look is open, Left/Right moves to the previous/next visible item, P and
-   H apply fixture Include/Exclude, 0 clears rating, 1–5 set rating, and 6–9 set
-   red/yellow/green/blue. The same 0–9 router applies in Culling, Review,
+   H apply fixture Include/Exclude, 0 clears rating, 1–5 set rating, and 6–9
+   toggle red/yellow/green/blue. Pressing the same color again clears it. The
+   same 0–9 router applies in Culling, Review,
    Metadata, Uploads, and Waste Basket, and the visible metadata refreshes as
    soon as a rating or color change succeeds. When P or H removes the current
    item from the active filters, Quick Look stays open on the next surviving
@@ -420,7 +422,8 @@ and Quick Look context remain intact.
    Quick Look shows the same basic metadata context; Left/Right moves to the
    previous/next visible item, P or A approves, H hides, X moves the item to
    the recoverable Waste Basket, U returns the current item to Culling, 0
-   clears rating, 1–5 set rating, and 6–9 set red/yellow/green/blue.
+   clears rating, 1–5 set rating, and 6–9 toggle red/yellow/green/blue;
+   pressing the same color again clears it.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
    through the same bounded shoot window. It does not run AI.
 4. AI reasons and the optional note are only a local form until **Update AI
@@ -457,7 +460,8 @@ session remain reversible; a failed undo keeps its history entry for retry.
 
 Select the current asset's preview or press Space to open canonical Quick
 Look. The shared shortcuts remain available there: 0 clears rating, 1–5 set
-rating, and 6–9 set red/yellow/green/blue. Successful changes immediately
+rating, and 6–9 toggle red/yellow/green/blue. Pressing the same color again
+clears it. Successful changes immediately
 refresh the visible Quick Look metadata.
 
 The keyword blacklist is replaced as one managed set; review it carefully
@@ -503,7 +507,7 @@ tombstones. Use **Refresh**, select the items to restore, and choose
 path.
 
 Select exactly one row and press Space, or choose **Quick Look**, to inspect it.
-Within Quick Look, 0 clears rating, 1–5 set rating, and 6–9 set
+Within Quick Look, 0 clears rating, 1–5 set rating, and 6–9 toggle
 red/yellow/green/blue through the same shared router used by the other photo
 workspaces. These metadata changes do not restore or tombstone the item.
 
@@ -525,8 +529,9 @@ file name, capture date, state, and any eligibility error.
    Press **R** to open the guarded Return to Review action, **H** to open the
    guarded fixture-hide action, or **Space** to open a larger preview with the
    canonical title and keywords. In Quick Look, 0 clears rating, 1–5 set
-   rating, and 6–9 set red/yellow/green/blue; the metadata pane refreshes after
-   each successful change. Press Space again to close it.
+   rating, and 6–9 toggle red/yellow/green/blue; pressing the same color again
+   clears it, and the metadata pane refreshes after each successful change.
+   Press Space again to close it.
 4. Read the persistent queue-window line. It says how many of the eligible
    items are shown and how many remain outside the loaded window. The server
    loads at most 200 of the oldest eligible items by upload-readiness time;

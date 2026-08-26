@@ -19,6 +19,18 @@ public enum SidecarColor: String, Codable, Sendable, CaseIterable {
     public var label: String {
         self == .none ? "No color" : rawValue.capitalized
     }
+
+    /// Color assignment is a toggle: applying the same non-empty color to
+    /// every target clears it; otherwise the requested color is assigned.
+    public func toggleTarget(for currentColors: [String]) -> SidecarColor {
+        guard self != .none,
+              !currentColors.isEmpty,
+              currentColors.allSatisfy({ $0 == rawValue })
+        else {
+            return self
+        }
+        return .none
+    }
 }
 
 public struct SidecarDecisionState: Codable, Sendable, Equatable {

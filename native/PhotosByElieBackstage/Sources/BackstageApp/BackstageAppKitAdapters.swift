@@ -434,6 +434,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         updateMetadataPanel()
     }
 
+    func decisionColorValue(for assetID: String) -> String {
+        items.first(where: { $0.metadata?.assetID == assetID })?.metadata?.color ?? ""
+    }
+
     private func installShortcutMonitor(
         onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)?
     ) {
@@ -708,7 +712,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
 /// local navigation and placement actions.
 @MainActor
 enum BackstageQuickLookDecisionRouter {
-    static let shortcutHint = "0–5 rating • 6–9 color"
+    static let shortcutHint = "0–5 rating • 6–9 toggle color"
 
     @discardableResult
     static func handle(
@@ -739,14 +743,17 @@ enum BackstageQuickLookDecisionRouter {
         case let .color(value):
             Task { @MainActor [weak model, weak coordinator] in
                 guard let model, let coordinator else { return }
+                let target = value.toggleTarget(
+                    for: [coordinator.decisionColorValue(for: assetID)]
+                )
                 let succeeded = await model.applyQuickLookColor(
-                    value,
+                    target,
                     assetID: assetID
                 )
                 if succeeded {
                     coordinator.updateDecisionMetadata(
                         for: assetID,
-                        color: value
+                        color: target
                     )
                 }
                 completion(succeeded)

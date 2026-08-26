@@ -2972,8 +2972,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func applyColorShortcut(_ color: SidecarColor) async {
-        cullingColor = color
-        await applyColor()
+        await toggleCullingColor(color)
     }
 
     func applyRatingShortcut(_ rating: Int) async {

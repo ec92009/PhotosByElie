@@ -3340,6 +3340,16 @@ struct OwnerCoreTests {
         #expect(decisions.last?["rating"] as? Int == 5)
     }
 
+    @Test("Color assignment clears only when every target already has that color")
+    func sidecarColorToggleTarget() {
+        #expect(SidecarColor.green.toggleTarget(for: ["green"]) == .none)
+        #expect(SidecarColor.green.toggleTarget(for: ["green", "green"]) == .none)
+        #expect(SidecarColor.green.toggleTarget(for: ["green", "blue"]) == .green)
+        #expect(SidecarColor.green.toggleTarget(for: [""]) == .green)
+        #expect(SidecarColor.green.toggleTarget(for: []) == .green)
+        #expect(SidecarColor.none.toggleTarget(for: [""]) == .none)
+    }
+
     @Test("Native culling reloads preserved decisions and captures reversible before state")
     func nativeCullingStateAndUndoEvidence() async throws {
         let applyTransport = RecordingTransport(response: """

@@ -307,6 +307,42 @@ class BackstagePhotosClientTest(unittest.TestCase):
             [request["assetId"] for request in requests],
         )
 
+    def test_metadata_apply_isolates_invalid_item_without_poisoning_valid_batches(self):
+        observed = []
+
+        def responder(request):
+            observed.append(request)
+            return success_metadata_response(request)
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            requests = [
+                {
+                    "assetId": f"asset-{index}",
+                    "title": f"Title {index}",
+                    "caption": "",
+                    "keywords": ["Spain"],
+                    "managedKeywords": ["PBE:Approved"],
+                }
+                for index in range(130)
+            ]
+            requests[65]["keywords"] = ["invalid\u0000keyword"]
+            with FakeBackstagePreviewServer(root, responder) as server:
+                rows = request_metadata_apply_many(
+                    requests,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+        self.assertEqual([len(request["requests"]) for request in observed], [64, 64, 1])
+        self.assertEqual([row["assetId"] for row in rows], [request["assetId"] for request in requests])
+        self.assertIn("invalid_metadata_request", rows[65]["error"])
+        self.assertNotIn(
+            "asset-65",
+            [item["assetId"] for request in observed for item in request["requests"]],
+        )
+        self.assertTrue(all("error" not in row for index, row in enumerate(rows) if index != 65))
+
     def test_authenticated_original_export_copies_and_cleans_private_staging(self):
         original = b"owner-only-original-bytes"
         observed_requests = []

@@ -264,10 +264,29 @@ def _request_metadata_many(
 ) -> list[dict]:
     if operation not in {METADATA_READ_OPERATION, METADATA_APPLY_OPERATION}:
         raise BackstagePhotosClientError("invalid_metadata_operation", "The metadata operation is unsupported.")
-    _validate_metadata_requests(requests, timeout)
+    _validate_metadata_arguments(requests, timeout)
+    rows: list[dict | None] = [None] * len(requests)
+    valid_requests: list[dict] = []
+    valid_indexes: list[int] = []
+    for index, request in enumerate(requests):
+        try:
+            _validate_metadata_request(request)
+        except BackstagePhotosClientError as error:
+            asset_id = request.get("assetId") if isinstance(request, dict) else ""
+            rows[index] = {
+                "assetId": asset_id if isinstance(asset_id, str) else "",
+                "error": f"{error.code}: {error}",
+            }
+        else:
+            valid_requests.append(request)
+            valid_indexes.append(index)
+
+    if not valid_requests:
+        return [dict(row) for row in rows if row is not None]
+
     descriptor = _read_descriptor(Path(descriptor_path))
-    rows: list[dict] = []
-    for batch in _metadata_batches(operation, requests, descriptor):
+    valid_offset = 0
+    for batch in _metadata_batches(operation, valid_requests, descriptor):
         request_id = str(uuid.uuid4())
         request = {
             "requestId": request_id,
@@ -281,11 +300,14 @@ def _request_metadata_many(
             timeout,
             operation_label="Photos metadata",
         )
-        rows.extend(_decode_metadata_response(response_data, request_id, operation, batch))
-    return rows
+        decoded = _decode_metadata_response(response_data, request_id, operation, batch)
+        for row in decoded:
+            rows[valid_indexes[valid_offset]] = row
+            valid_offset += 1
+    return [dict(row) for row in rows if row is not None]
 
 
-def _validate_metadata_requests(requests: list[dict], timeout: float) -> None:
+def _validate_metadata_arguments(requests: list[dict], timeout: float) -> None:
     if not isinstance(requests, list) or not requests:
         raise BackstagePhotosClientError(
             "invalid_metadata_requests",
@@ -296,32 +318,34 @@ def _validate_metadata_requests(requests: list[dict], timeout: float) -> None:
             "invalid_timeout",
             "The metadata timeout must be between 0 and 300 seconds.",
         )
-    for request in requests:
-        if not isinstance(request, dict):
-            raise BackstagePhotosClientError("invalid_metadata_request", "Each metadata request must be an object.")
-        _validate_asset_id(request.get("assetId"))
-        for field in ("title", "caption"):
-            if field in request and (
-                not isinstance(request[field], str)
-                or len(request[field].encode("utf-8")) > 8 * 1_024
-                or any(unicodedata.category(char) == "Cc" for char in request[field])
-            ):
-                raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
-        for field in ("keywords", "managedKeywords"):
-            if field not in request:
-                continue
-            values = request[field]
-            if (
-                not isinstance(values, list)
-                or len(values) > 512
-                or any(
-                    not isinstance(value, str)
-                    or len(value.encode("utf-8")) > 8 * 1_024
-                    or any(unicodedata.category(char) == "Cc" for char in value)
-                    for value in values
-                )
-            ):
-                raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
+
+
+def _validate_metadata_request(request: dict) -> None:
+    if not isinstance(request, dict):
+        raise BackstagePhotosClientError("invalid_metadata_request", "Each metadata request must be an object.")
+    _validate_asset_id(request.get("assetId"))
+    for field in ("title", "caption"):
+        if field in request and (
+            not isinstance(request[field], str)
+            or len(request[field].encode("utf-8")) > 8 * 1_024
+            or any(unicodedata.category(char) == "Cc" for char in request[field])
+        ):
+            raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
+    for field in ("keywords", "managedKeywords"):
+        if field not in request:
+            continue
+        values = request[field]
+        if (
+            not isinstance(values, list)
+            or len(values) > 512
+            or any(
+                not isinstance(value, str)
+                or len(value.encode("utf-8")) > 8 * 1_024
+                or any(unicodedata.category(char) == "Cc" for char in value)
+                for value in values
+            )
+        ):
+            raise BackstagePhotosClientError("invalid_metadata_request", f"The metadata {field} is invalid.")
 
 
 def _metadata_batches(operation: str, requests: list[dict], descriptor: dict) -> list[list[dict]]:

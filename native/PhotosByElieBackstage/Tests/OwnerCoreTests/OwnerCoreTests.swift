@@ -3350,6 +3350,80 @@ struct OwnerCoreTests {
         #expect(SidecarColor.none.toggleTarget(for: [""]) == .none)
     }
 
+    @Test("Color toggle queries authoritative state before clearing a repeated color")
+    func sidecarColorToggleUsesAuthoritativeState() async throws {
+        let transport = RoutingTransport(responses: [
+            "/api/v1/sidecar/decisions/query": """
+            {
+              "ok": true,
+              "decisions": {
+                "asset-1": {
+                  "assetId": "asset-1",
+                  "rating": 0,
+                  "color": "green",
+                  "pickState": "undecided",
+                  "metadataState": "unreviewed",
+                  "title": "",
+                  "keywords": [],
+                  "tombstoneState": "",
+                  "updatedAt": "2026-08-26T10:00:00Z"
+                }
+              }
+            }
+            """,
+            "/api/v1/sidecar/decisions/apply": """
+            {
+              "ok": true,
+              "assetId": "asset-1",
+              "state": {
+                "assetId": "asset-1",
+                "rating": 0,
+                "color": "",
+                "pickState": "undecided",
+                "metadataState": "unreviewed",
+                "title": "",
+                "keywords": [],
+                "tombstoneState": "",
+                "updatedAt": "2026-08-26T10:00:01Z"
+              },
+              "before": {
+                "assetId": "asset-1",
+                "rating": 0,
+                "color": "green",
+                "pickState": "undecided",
+                "metadataState": "unreviewed",
+                "title": "",
+                "keywords": [],
+                "tombstoneState": "",
+                "updatedAt": "2026-08-26T10:00:00Z"
+              },
+              "changedFamilies": ["color"]
+            }
+            """,
+        ])
+        let service = SidecarDecisionService(api: OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        ))
+
+        let changes = try await service.toggleColor(
+            .green,
+            assetIDs: ["asset-1"],
+            idempotencyKey: "toggle-green-off"
+        )
+
+        #expect(changes.first?.state.color == "")
+        let requests = await transport.requests()
+        #expect(requests.map { $0.url?.path } == [
+            "/api/v1/sidecar/decisions/query",
+            "/api/v1/sidecar/decisions/apply",
+        ])
+        let applyBody = try #require(requests.last?.httpBody)
+        let applyPayload = try JSONSerialization.jsonObject(with: applyBody) as? [String: Any]
+        #expect(applyPayload?["action"] as? String == "color")
+        #expect(applyPayload?["color"] as? String == "")
+    }
+
     @Test("Native culling reloads preserved decisions and captures reversible before state")
     func nativeCullingStateAndUndoEvidence() async throws {
         let applyTransport = RecordingTransport(response: """

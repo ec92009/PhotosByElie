@@ -79,6 +79,11 @@ public protocol SidecarDecisionServing: Sendable {
         _ decisions: [SidecarDecision],
         idempotencyKey: String
     ) async throws -> [SidecarDecisionChange]
+    func toggleColor(
+        _ requested: SidecarColor,
+        assetIDs: [String],
+        idempotencyKey: String
+    ) async throws -> [SidecarDecisionChange]
 }
 
 /// Canonical Sidecar decision payload. This deliberately mirrors the web
@@ -176,6 +181,23 @@ public actor SidecarDecisionService: SidecarDecisionServing {
         idempotencyKey: String = UUID().uuidString
     ) async throws -> [SidecarDecisionChange] {
         try parseChanges(try await apply(decisions, idempotencyKey: idempotencyKey))
+    }
+
+    public func toggleColor(
+        _ requested: SidecarColor,
+        assetIDs: [String],
+        idempotencyKey: String = UUID().uuidString
+    ) async throws -> [SidecarDecisionChange] {
+        let uniqueAssetIDs = Array(Set(assetIDs)).sorted()
+        guard requested != .none, !uniqueAssetIDs.isEmpty else { return [] }
+        let current = try await queryStates(assetIDs: uniqueAssetIDs)
+        let target = requested.toggleTarget(
+            for: uniqueAssetIDs.map { current[$0]?.color ?? "" }
+        )
+        return try await applyDetailed(
+            uniqueAssetIDs.map { SidecarDecision.color($0, value: target) },
+            idempotencyKey: idempotencyKey
+        )
     }
 
     public func queryStates(assetIDs: [String]) async throws -> [String: SidecarDecisionState] {

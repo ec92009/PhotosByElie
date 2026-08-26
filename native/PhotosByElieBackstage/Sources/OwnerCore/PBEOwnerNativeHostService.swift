@@ -335,8 +335,9 @@ public actor PBEOwnerNativeHostService: PBEOwnerHostServing {
                             message: "The hosted color action is invalid."
                         )
                     }
-                    let changes = try await sidecarDecisionService.applyDetailed(
-                        assetIDs.map { SidecarDecision.color($0, value: color) },
+                    let changes = try await sidecarDecisionService.toggleColor(
+                        color,
+                        assetIDs: assetIDs,
                         idempotencyKey: key
                     )
                     for change in changes {

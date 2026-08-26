@@ -2045,6 +2045,11 @@ final class BackstageViewModel: ObservableObject {
         return "Clear decisions"
     }
 
+    var canClearCullingDecision: Bool {
+        !selectedCullingAssetIDs.isEmpty
+            && selectedCullingPlacementStates.contains(where: { $0 != .undecided })
+    }
+
     var cullingClearDecisionHelp: String {
         switch cullingClearDecisionLabel {
         case "Unhide":
@@ -2897,6 +2902,12 @@ final class BackstageViewModel: ObservableObject {
         _ action: SidecarPickAction,
         removalDirection: OwnerSelectionDirection = .next
     ) async -> Bool {
+        if case .unpick = action, !canClearCullingDecision {
+            cullingStatus = selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Photos items."
+                : "The selected items are already Undecided."
+            return false
+        }
         let semanticAction: FixtureCullingAction = switch action {
         case .pick: .include
         case .reject: .exclude

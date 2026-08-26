@@ -156,6 +156,7 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, source)
         for marker in (
             'var cullingClearDecisionLabel: String',
+            'var canClearCullingDecision: Bool',
             'if placements == [.hidden] { return "Unhide" }',
             'if placements == [.picked] { return "Unpick" }',
             'return "Clear decisions"',
@@ -1362,8 +1363,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "238.8")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "211")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "238.9")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "212")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

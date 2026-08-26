@@ -721,12 +721,14 @@ struct CullingView: View {
                 Task { await model.applyPickShortcut(.unpick) }
             }
             .frame(height: CullingCompactControlMetrics.height)
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .disabled(!model.canClearCullingDecision || model.isApplyingCullingDecision)
             .accessibilityLabel("U \(model.cullingClearDecisionLabel) selected items")
             .accessibilityValue(
                 model.cullingSelection.selectedIDs.isEmpty
                     ? "No items selected."
-                    : "Returns the selected fixture items to Undecided."
+                    : model.canClearCullingDecision
+                        ? "Returns the selected fixture items to Undecided."
+                        : "Selected items are already Undecided."
             )
             .backstageHelp("\(model.cullingClearDecisionHelp) This uses the same reversible fixture writer as the U shortcut and does not affect the Waste Basket.")
             Button("X Waste Basket") {

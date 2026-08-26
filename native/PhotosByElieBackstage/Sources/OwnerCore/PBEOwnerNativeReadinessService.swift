@@ -172,9 +172,13 @@ public struct PBEOwnerNativeReadinessService: Sendable {
                 "The requested PBE Owner fixture is missing or archived."
             )
         }
+        // Freeze membership and source content, not the mutable fixture
+        // decision fields that this hosted session is authorized to change.
+        // Including placement, eligibility, or decision source here makes a
+        // successful Hide/Review action invalidate its own browser lease.
         let members = try connection.query(
             """
-            SELECT d.asset_id, d.placement_state, d.eligibility_state, d.source,
+            SELECT d.asset_id,
                    a.source_anchor, a.media_type, a.filename, a.captured_at,
                    a.modified_at, a.pixel_width, a.pixel_height, a.duration,
                    a.photos_title, a.photos_keywords_json, a.location_label,

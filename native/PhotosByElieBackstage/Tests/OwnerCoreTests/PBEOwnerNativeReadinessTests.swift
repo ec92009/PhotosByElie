@@ -69,6 +69,19 @@ struct PBEOwnerNativeReadinessTests {
         try execute(
             at: owner,
             sql: """
+            UPDATE fixture_asset_decisions
+            SET placement_state = 'hidden', eligibility_state = 'dormant', source = 'native'
+            WHERE fixture_id = 'expo' AND asset_id = 'asset-one';
+            """
+        )
+        let hostedDecisionChanged = try await service.readiness(fixtureID: "expo")
+        #expect(hostedDecisionChanged.sourceIdentity == initial.sourceIdentity)
+        #expect(hostedDecisionChanged.fixtureRevision == initial.fixtureRevision)
+        #expect(hostedDecisionChanged.readinessIdentity == initial.readinessIdentity)
+
+        try execute(
+            at: owner,
+            sql: """
             INSERT INTO sidecar_assets VALUES (
               'asset-two', 'apple-photos://asset-two', 'photo', 'two.jpg',
               '2026-08-13T12:01:00Z', '', 4000, 3000, 0, 'Two', '[]',

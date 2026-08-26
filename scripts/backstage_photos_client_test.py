@@ -255,6 +255,58 @@ class BackstagePhotosClientTest(unittest.TestCase):
             self.assertGreater(len(observed), 1)
             self.assertTrue(all(len(json.dumps(request).encode("utf-8")) <= 16 * 1_024 for request in observed))
 
+    def test_metadata_read_splits_more_than_64_items_without_reordering(self):
+        observed = []
+
+        def responder(request):
+            observed.append(request)
+            return success_metadata_response(request)
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            asset_ids = [f"asset-{index}" for index in range(130)]
+            with FakeBackstagePreviewServer(root, responder) as server:
+                rows = request_metadata_read_many(
+                    asset_ids,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+        self.assertEqual([len(request["requests"]) for request in observed], [64, 64, 2])
+        self.assertEqual([row["assetId"] for row in rows], asset_ids)
+
+    def test_metadata_apply_splits_more_than_64_items_without_reordering(self):
+        observed = []
+
+        def responder(request):
+            observed.append(request)
+            return success_metadata_response(request)
+
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            requests = [
+                {
+                    "assetId": f"asset-{index}",
+                    "title": f"Title {index}",
+                    "caption": "",
+                    "keywords": [],
+                    "managedKeywords": ["PBE:Approved"],
+                }
+                for index in range(130)
+            ]
+            with FakeBackstagePreviewServer(root, responder) as server:
+                rows = request_metadata_apply_many(
+                    requests,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+        self.assertEqual([len(request["requests"]) for request in observed], [64, 64, 2])
+        self.assertEqual(
+            [row["assetId"] for row in rows],
+            [request["assetId"] for request in requests],
+        )
+
     def test_authenticated_original_export_copies_and_cleans_private_staging(self):
         original = b"owner-only-original-bytes"
         observed_requests = []

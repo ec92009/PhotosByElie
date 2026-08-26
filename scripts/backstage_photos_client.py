@@ -286,10 +286,10 @@ def _request_metadata_many(
 
 
 def _validate_metadata_requests(requests: list[dict], timeout: float) -> None:
-    if not isinstance(requests, list) or not 0 < len(requests) <= MAX_METADATA_ITEMS:
+    if not isinstance(requests, list) or not requests:
         raise BackstagePhotosClientError(
             "invalid_metadata_requests",
-            "Backstage metadata requests must contain 1 to 64 items.",
+            "Backstage metadata requests must contain at least one item.",
         )
     if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_METADATA_TIMEOUT_SECONDS:
         raise BackstagePhotosClientError(
@@ -338,7 +338,7 @@ def _metadata_batches(operation: str, requests: list[dict], descriptor: dict) ->
             "requests": candidate,
         }
         size = len(json.dumps(envelope, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
-        if size > MAX_REQUEST_BYTES:
+        if len(candidate) > MAX_METADATA_ITEMS or size > MAX_REQUEST_BYTES:
             if not current:
                 raise BackstagePhotosClientError(
                     "request_oversized",

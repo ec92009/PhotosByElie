@@ -20,7 +20,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import quote
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 FAILURE_STATUSES = {"failed", "error", "not_found", "missing", "unsupported"}
 SAFE_MAPPING_STATUSES = {"ok", "mapped", "collision-existing-canonical", "resolved", "source-tied"}
 QUARANTINE_CLASSES = {
@@ -81,13 +81,68 @@ DIRECT_REFERENCE_COLUMNS: dict[tuple[str, str], str] = {
     ("fixture_placement_events", "asset_id"): "fixture-history-reference",
     ("fixture_asset_destinations", "asset_id"): "delivery-config-reference",
     ("fixture_delivery_receipts", "asset_id"): "delivery-receipt-reference",
+    # Current-image byte counts and legacy fence-push state are mutable caches.
+    # They follow the canonical Owner key, but conflicting non-empty cache rows
+    # still fail closed through the normal merge rules.
+    ("asset_current_image_sizes", "asset_id"): "preview-size-cache-key",
+    ("sidecar_fence_pushes", "asset_id"): "state-key",
+    # Lifecycle outbox payloads and Waste Basket history are durable audit
+    # evidence. They retain the identity recorded when the action occurred.
+    ("owner_lifecycle_outbox", "canonical_asset_id"): "canonical-audit-preserve",
+    ("owner_waste_basket_entries", "asset_id"): "lifecycle-audit-preserve",
+    ("owner_waste_basket_receipts", "asset_id"): "lifecycle-audit-preserve",
 }
 
 JSON_REFERENCE_COLUMNS: dict[tuple[str, str], str] = {
     # This is a reviewed list of Owner asset references.  before_json and
     # after_json remain immutable audit snapshots and are not rewritten.
     ("fixture_review_operations", "asset_ids_json"): "review-history-id-list",
+    # These payloads are exact initiating intent or action evidence. Rewriting
+    # them would invalidate request digests, signatures, or audit receipts.
+    ("owner_connector_lifecycle_arm_intents", "asset_ids_json"): "lifecycle-intent-preserve",
+    ("owner_hosted_lifecycle_requests", "asset_ids_json"): "lifecycle-request-preserve",
+    ("owner_waste_basket_operations", "asset_ids_json"): "lifecycle-audit-preserve",
 }
+
+PRESERVED_REFERENCE_POLICIES = {
+    "source-local-preserve",
+    "canonical-audit-preserve",
+    "lifecycle-audit-preserve",
+    "lifecycle-intent-preserve",
+    "lifecycle-request-preserve",
+}
+
+AUDIT_PRESERVE_POLICIES = {
+    "canonical-audit-preserve",
+    "lifecycle-audit-preserve",
+    "lifecycle-intent-preserve",
+    "lifecycle-request-preserve",
+}
+
+# Identity migration may not race durable lifecycle work. Counts are reported
+# without exposing any asset identifier, and any non-zero result blocks apply.
+OPERATIONAL_DRAIN_CHECKS: tuple[tuple[str, str, str], ...] = (
+    (
+        "owner_connector_lifecycle_arm_intents",
+        "1 = 1",
+        "pending-connector-lifecycle-arm-intents",
+    ),
+    (
+        "owner_hosted_lifecycle_requests",
+        "state IN ('queued', 'running')",
+        "active-hosted-lifecycle-requests",
+    ),
+    (
+        "owner_waste_basket_operations",
+        "status = 'running'",
+        "running-waste-basket-operations",
+    ),
+    (
+        "owner_lifecycle_outbox",
+        "state <> 'locally_acked'",
+        "unacknowledged-lifecycle-outbox-items",
+    ),
+)
 
 STATE_DEFAULTS: dict[tuple[str, str], Any] = {
     ("sidecar_decisions", "rating"): 0,
@@ -156,6 +211,14 @@ LOGICAL_KEY_COLUMNS: dict[str, tuple[str, ...]] = {
     "fixture_placement_events": ("event_id",),
     "fixture_asset_destinations": ("fixture_id", "asset_id"),
     "fixture_delivery_receipts": ("receipt_id",),
+    "asset_current_image_sizes": ("asset_id",),
+    "sidecar_fence_pushes": ("asset_id",),
+    "owner_connector_lifecycle_arm_intents": ("operation_id", "asset_ids_json"),
+    "owner_hosted_lifecycle_requests": ("request_id", "asset_ids_json"),
+    "owner_lifecycle_outbox": ("operation_id", "canonical_media_id", "canonical_asset_id"),
+    "owner_waste_basket_entries": ("entry_id", "asset_id"),
+    "owner_waste_basket_operations": ("operation_id", "asset_ids_json"),
+    "owner_waste_basket_receipts": ("operation_id", "asset_id"),
 }
 
 INVARIANT_TABLES = tuple(LOGICAL_KEY_COLUMNS)
@@ -318,6 +381,93 @@ def inspect_schema(connection: sqlite3.Connection) -> dict[str, Any]:
         "schemaDigest": _digest_values(
             f"{table}:{column}" for table in _table_names(connection) for column in _table_columns(connection, table)
         ),
+    }
+
+
+def inspect_operational_drain(connection: sqlite3.Connection) -> dict[str, Any]:
+    """Return privacy-safe counts for lifecycle work that must finish first."""
+    tables = set(_table_names(connection))
+    checks: list[dict[str, Any]] = []
+    blocked: list[str] = []
+    for table, predicate, reason in OPERATIONAL_DRAIN_CHECKS:
+        count = 0
+        if table in tables:
+            count = int(
+                connection.execute(
+                    f"SELECT count(*) FROM {_quoted(table)} WHERE {predicate}"
+                ).fetchone()[0]
+            )
+        checks.append({"table": table, "blockingRowCount": count, "blockedReason": reason})
+        if count:
+            blocked.append(reason)
+    return {
+        "allDrained": not blocked,
+        "checks": checks,
+        "blockedReasons": blocked,
+    }
+
+
+def inspect_preserved_references(
+    connection: sqlite3.Connection,
+    resolutions: Sequence[Resolution],
+) -> dict[str, Any]:
+    """Count preserved audit references without returning any raw identity."""
+    source_ids = {resolution.source_asset_id for resolution in resolutions}
+    tables = set(_table_names(connection))
+    surfaces: list[dict[str, Any]] = []
+    canonical_violations = 0
+    preserved_audit_rows = 0
+    source_local_rows = 0
+
+    for (table, column), policy in DIRECT_REFERENCE_COLUMNS.items():
+        if policy not in PRESERVED_REFERENCE_POLICIES or table not in tables:
+            continue
+        count = sum(
+            _text(row[0]) in source_ids
+            for row in connection.execute(
+                f"SELECT {_quoted(column)} FROM {_quoted(table)}"
+            )
+        )
+        if policy in AUDIT_PRESERVE_POLICIES:
+            preserved_audit_rows += count
+        else:
+            source_local_rows += count
+        if policy == "canonical-audit-preserve":
+            canonical_violations += count
+        surfaces.append({
+            "table": table,
+            "column": column,
+            "policy": policy,
+            "eligibleSourceReferenceCount": count,
+        })
+
+    for (table, column), policy in JSON_REFERENCE_COLUMNS.items():
+        if policy not in PRESERVED_REFERENCE_POLICIES or table not in tables:
+            continue
+        count = 0
+        for row in connection.execute(
+            f"SELECT {_quoted(column)} FROM {_quoted(table)}"
+        ):
+            parsed = _json_value(row[0], [])
+            if any(_json_contains(parsed, source_id) for source_id in source_ids):
+                count += 1
+        if policy in AUDIT_PRESERVE_POLICIES:
+            preserved_audit_rows += count
+        else:
+            source_local_rows += count
+        surfaces.append({
+            "table": table,
+            "column": column,
+            "policy": policy,
+            "eligibleSourceReferenceCount": count,
+        })
+
+    return {
+        "surfaceCount": len(surfaces),
+        "surfaces": surfaces,
+        "preservedAuditRowCount": preserved_audit_rows,
+        "sourceLocalReferenceRowCount": source_local_rows,
+        "canonicalInvariantViolationCount": canonical_violations,
     }
 
 
@@ -545,8 +695,13 @@ def _scalar_reference_columns(table: str, columns: Sequence[str]) -> list[str]:
         for column in columns
         if (table, column) in DIRECT_REFERENCE_COLUMNS
         and DIRECT_REFERENCE_COLUMNS[(table, column)] != "identity-key"
-        and DIRECT_REFERENCE_COLUMNS[(table, column)] != "source-local-preserve"
+        and DIRECT_REFERENCE_COLUMNS[(table, column)] not in PRESERVED_REFERENCE_POLICIES
     ]
+
+
+def _rewritten_json_reference(table: str, column: str) -> bool:
+    policy = JSON_REFERENCE_COLUMNS.get((table, column))
+    return bool(policy and policy not in PRESERVED_REFERENCE_POLICIES)
 
 
 def _json_contains(value: Any, source: str) -> bool:
@@ -759,7 +914,7 @@ def _rewrite_reference_row(table: str, row: Mapping[str, Any], source: str, targ
         if result.get(column) == source:
             result[column] = target
     for column in columns:
-        if (table, column) not in JSON_REFERENCE_COLUMNS:
+        if not _rewritten_json_reference(table, column):
             continue
         parsed = _json_value(result.get(column), [])
         result[column] = _json_dump(_rewrite_json(parsed, source, target))
@@ -771,7 +926,7 @@ def _row_references_source(table: str, row: Mapping[str, Any], source: str) -> b
         if row.get(column) == source:
             return True
     for column in row:
-        if (table, column) in JSON_REFERENCE_COLUMNS and _json_contains(_json_value(row.get(column), []), source):
+        if _rewritten_json_reference(table, column) and _json_contains(_json_value(row.get(column), []), source):
             return True
     return False
 
@@ -793,7 +948,7 @@ def _merge_reference_rows(
             if _empty(result.get(column)):
                 result[column] = source.get(column)
             continue
-        if (table, column) in JSON_REFERENCE_COLUMNS:
+        if _rewritten_json_reference(table, column):
             result[column] = _merge_json_values(table, column, result.get(column), source.get(column))
             continue
         result[column] = _merge_field(table, column, result.get(column), source.get(column))
@@ -1025,12 +1180,19 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
     connection = _read_only_connection(owner_db)
     try:
         schema = inspect_schema(connection)
+        operational_drain = inspect_operational_drain(connection)
         owner_rows = _read_owner_rows(connection)
         classified = classify_owner_rows(owner_rows, mapping)
         resolutions = classified.pop("resolutions")
+        preserved_references = inspect_preserved_references(connection, resolutions)
         blocked = list()
         if schema["unknownSurfaceCount"]:
             blocked.append("unknown-schema-or-reference-surface")
+        blocked.extend(operational_drain["blockedReasons"])
+        if preserved_references["preservedAuditRowCount"]:
+            blocked.append("preserved-lifecycle-audit-references-require-alias-plan")
+        if preserved_references["canonicalInvariantViolationCount"]:
+            blocked.append("noncanonical-canonical-audit-reference")
         if classified["quarantine"]["entryCount"]:
             blocked.append("unresolved-or-ambiguous-identities-quarantined")
         if classified["mapping"]["malformedCount"] or classified["mapping"]["missingFieldCount"]:
@@ -1047,6 +1209,10 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
             "readOnly": True,
             "database": {"pathDigest": _digest(str(owner_db.expanduser().resolve()))},
             "schema": schema,
+            "referenceContract": {
+                "operationalDrain": operational_drain,
+                "preservedReferences": preserved_references,
+            },
             "owner": {
                 "assetRowCount": len(owner_rows),
                 "identityCounts": classified["identityCounts"],
@@ -1068,6 +1234,8 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
                 "scalarReferences": {
                     "knownSurfacesOnly": True,
                     "rewrite": "source Owner asset references become the canonical target",
+                    "immutableAuditEvidence": "preserve the identity recorded when the action occurred",
+                    "activeLifecycleWork": "drain before migration",
                     "unknownSurface": "fail closed before transaction",
                 },
                 "fieldRules": {
@@ -1083,6 +1251,7 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
                     "fixture pools, placements, decisions, and decision history",
                     "tombstones",
                     "delivery state, previews, source versions, and receipts",
+                    "immutable lifecycle requests, outbox payloads, Waste Basket operations, and receipts",
                     "publication, catalog, sale, and exact-dedupe references",
                 ],
             },
@@ -1117,6 +1286,14 @@ def _apply_transaction(
         preflight = inspect_schema(connection)
         if preflight["unknownSurfaceCount"]:
             raise MigrationSafetyError("unknown schema/reference surface")
+        operational_drain = inspect_operational_drain(connection)
+        if not operational_drain["allDrained"]:
+            raise MigrationSafetyError("lifecycle work must drain before identity migration")
+        preserved_references = inspect_preserved_references(connection, resolutions)
+        if preserved_references["preservedAuditRowCount"]:
+            raise MigrationSafetyError("lifecycle audit references require an alias plan")
+        if preserved_references["canonicalInvariantViolationCount"]:
+            raise MigrationSafetyError("canonical lifecycle audit reference contains a legacy identity")
         if _quick_check(connection) != ["ok"] or _foreign_key_errors(connection):
             raise MigrationSafetyError("pre-migration SQLite invariant failed")
         before_domain = _domain_snapshot(connection, resolution_map)

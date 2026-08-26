@@ -202,6 +202,55 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
               before_json TEXT NOT NULL,
               after_json TEXT NOT NULL
             );
+            CREATE TABLE asset_current_image_sizes (
+              asset_id TEXT PRIMARY KEY,
+              current_image_byte_count INTEGER NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE TABLE sidecar_fence_pushes (
+              asset_id TEXT PRIMARY KEY,
+              status TEXT NOT NULL,
+              pushed_at TEXT,
+              updated_at TEXT,
+              note TEXT
+            );
+            CREATE TABLE owner_connector_lifecycle_arm_intents (
+              operation_id TEXT PRIMARY KEY,
+              operation TEXT NOT NULL,
+              denied INTEGER NOT NULL,
+              asset_ids_json TEXT NOT NULL,
+              request_json TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE TABLE owner_hosted_lifecycle_requests (
+              request_id TEXT PRIMARY KEY,
+              asset_ids_json TEXT NOT NULL,
+              state TEXT NOT NULL
+            );
+            CREATE TABLE owner_lifecycle_outbox (
+              operation_id TEXT NOT NULL,
+              canonical_media_id TEXT NOT NULL,
+              canonical_asset_id TEXT NOT NULL,
+              state TEXT NOT NULL,
+              PRIMARY KEY (operation_id, canonical_media_id)
+            );
+            CREATE TABLE owner_waste_basket_entries (
+              entry_id TEXT PRIMARY KEY,
+              asset_id TEXT NOT NULL,
+              state TEXT NOT NULL
+            );
+            CREATE TABLE owner_waste_basket_operations (
+              operation_id TEXT PRIMARY KEY,
+              asset_ids_json TEXT NOT NULL,
+              status TEXT NOT NULL
+            );
+            CREATE TABLE owner_waste_basket_receipts (
+              operation_id TEXT NOT NULL,
+              asset_id TEXT NOT NULL,
+              receipt_state TEXT NOT NULL,
+              PRIMARY KEY (operation_id, asset_id)
+            );
             """
         )
         connection.execute("INSERT INTO fixtures VALUES ('fixture-synthetic')")
@@ -295,6 +344,27 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             connection.execute(
                 "INSERT INTO fixture_review_operations(operation_id, anchor_asset_id, asset_ids_json, before_json, after_json) VALUES ('operation-1', 'legacy-collision', '[\"legacy-collision\", \"legacy-rewrite\"]', '{\"history\":true}', '{\"history\":true}')"
             )
+            connection.execute(
+                "INSERT INTO asset_current_image_sizes VALUES ('legacy-rewrite', 2048, '2024-02')"
+            )
+            connection.execute(
+                "INSERT INTO sidecar_fence_pushes VALUES ('legacy-rewrite', 'pending', NULL, '2024-02', '')"
+            )
+            connection.execute(
+                "INSERT INTO owner_hosted_lifecycle_requests VALUES ('hosted-1', '[\"cloud-a\"]', 'completed')"
+            )
+            connection.execute(
+                "INSERT INTO owner_lifecycle_outbox VALUES ('lifecycle-1', 'media-1', 'cloud-a', 'locally_acked')"
+            )
+            connection.execute(
+                "INSERT INTO owner_waste_basket_entries VALUES ('entry-1', 'cloud-a', 'restored')"
+            )
+            connection.execute(
+                "INSERT INTO owner_waste_basket_operations VALUES ('waste-operation-1', '[\"cloud-a\"]', 'completed')"
+            )
+            connection.execute(
+                "INSERT INTO owner_waste_basket_receipts VALUES ('waste-operation-1', 'cloud-a', 'restored')"
+            )
         connection.commit()
         connection.close()
         return path
@@ -361,6 +431,13 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             publication = connection.execute("SELECT * FROM asset_publications WHERE asset_id = 'cloud-a'").fetchone()
             review = connection.execute("SELECT * FROM fixture_review_operations").fetchone()
             sync = connection.execute("SELECT * FROM asset_sync_state WHERE asset_id = 'cloud-a'").fetchone()
+            image_size = connection.execute("SELECT * FROM asset_current_image_sizes").fetchone()
+            fence_push = connection.execute("SELECT * FROM sidecar_fence_pushes").fetchone()
+            hosted_request = connection.execute("SELECT * FROM owner_hosted_lifecycle_requests").fetchone()
+            lifecycle_outbox = connection.execute("SELECT * FROM owner_lifecycle_outbox").fetchone()
+            waste_entry = connection.execute("SELECT * FROM owner_waste_basket_entries").fetchone()
+            waste_operation = connection.execute("SELECT * FROM owner_waste_basket_operations").fetchone()
+            waste_receipt = connection.execute("SELECT * FROM owner_waste_basket_receipts").fetchone()
             source_count = connection.execute("SELECT count(*) FROM sidecar_assets WHERE asset_id LIKE 'legacy-%'").fetchone()[0]
             connection.close()
             source_unchanged = before == owner.read_bytes()
@@ -382,6 +459,22 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertIsNotNone(publication)
         self.assertIn("cloud-a", json.loads(review["asset_ids_json"]))
         self.assertEqual(sync["photos_asset_id"], "old-local-runtime")
+        self.assertEqual(image_size["asset_id"], "cloud-b")
+        self.assertEqual(fence_push["asset_id"], "cloud-b")
+        self.assertEqual(json.loads(hosted_request["asset_ids_json"]), ["cloud-a"])
+        self.assertEqual(lifecycle_outbox["canonical_asset_id"], "cloud-a")
+        self.assertEqual(waste_entry["asset_id"], "cloud-a")
+        self.assertEqual(json.loads(waste_operation["asset_ids_json"]), ["cloud-a"])
+        self.assertEqual(waste_receipt["asset_id"], "cloud-a")
+        self.assertTrue(report["referenceContract"]["operationalDrain"]["allDrained"])
+        self.assertEqual(
+            report["referenceContract"]["preservedReferences"]["preservedAuditRowCount"],
+            0,
+        )
+        self.assertEqual(
+            report["referenceContract"]["preservedReferences"]["sourceLocalReferenceRowCount"],
+            0,
+        )
 
     def test_unresolved_rows_get_privacy_safe_quarantine_and_never_apply(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -434,6 +527,91 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertIn("unknown-schema-or-reference-surface", report["safety"]["blockedReasons"])
         self.assertFalse(report["rehearsal"]["applyPerformed"])
         self.assertEqual(report["schema"]["unknownSurfaceCount"], 1)
+
+    def test_active_lifecycle_intent_blocks_before_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "INSERT INTO owner_connector_lifecycle_arm_intents VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "intent-1",
+                    "restore",
+                    0,
+                    '["legacy-collision"]',
+                    '{"operationId":"intent-1"}',
+                    "2024-01",
+                    "2024-01",
+                ),
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "active-intent")
+        self.assertIn(
+            "pending-connector-lifecycle-arm-intents",
+            report["safety"]["blockedReasons"],
+        )
+        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+
+    def test_noncanonical_lifecycle_outbox_reference_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE owner_lifecycle_outbox SET canonical_asset_id = 'legacy-collision'"
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "bad-outbox")
+        self.assertIn(
+            "noncanonical-canonical-audit-reference",
+            report["safety"]["blockedReasons"],
+        )
+        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+
+    def test_legacy_lifecycle_audit_reference_requires_alias_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE owner_waste_basket_entries SET asset_id = 'legacy-collision'"
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "legacy-audit")
+        self.assertIn(
+            "preserved-lifecycle-audit-references-require-alias-plan",
+            report["safety"]["blockedReasons"],
+        )
+        self.assertEqual(
+            report["referenceContract"]["preservedReferences"]["preservedAuditRowCount"],
+            1,
+        )
+        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
 
     def test_rollback_is_verified_after_injected_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

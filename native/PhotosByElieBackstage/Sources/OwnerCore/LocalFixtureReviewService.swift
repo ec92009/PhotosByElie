@@ -44,7 +44,11 @@ public protocol LocalFixtureCullingReading: Sendable {
         search: String,
         mediaTypes: [String],
         ratings: [Int],
-        colors: [String]
+        colors: [String],
+        editorialFilters: [GalleryEditorialFilter],
+        deliveryFilters: [GalleryDeliveryFilter],
+        sourceFilters: [GallerySourceFilter],
+        burstsOnly: Bool
     ) async throws -> FixtureCullingWindow?
 }
 
@@ -120,7 +124,11 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         search: String,
         mediaTypes: [String],
         ratings: [Int],
-        colors: [String]
+        colors: [String],
+        editorialFilters: [GalleryEditorialFilter],
+        deliveryFilters: [GalleryDeliveryFilter],
+        sourceFilters: [GallerySourceFilter],
+        burstsOnly: Bool
     ) throws -> FixtureCullingWindow? {
         return try nativeCullingStore().cullingWindow(
             fixtureID: fixtureID,
@@ -131,7 +139,11 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             search: search,
             mediaTypes: mediaTypes,
             ratings: ratings,
-            colors: colors
+            colors: colors,
+            editorialFilters: editorialFilters,
+            deliveryFilters: deliveryFilters,
+            sourceFilters: sourceFilters,
+            burstsOnly: burstsOnly
         )
     }
 

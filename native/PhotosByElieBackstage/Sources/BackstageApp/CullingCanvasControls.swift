@@ -12,20 +12,15 @@ struct CullingSearchControls: View {
                 .frame(width: 240)
                 .onSubmit { model.applyCullingFilters() }
             Menu("View: \(model.gallerySavedViewLabel)") {
-                Button("All fixture assets") {
-                    model.showAllFixtureAssetsInGallery()
+                ForEach(GallerySavedView.allCases) { savedView in
+                    Button(savedView.rawValue) {
+                        model.applyGallerySavedView(savedView)
+                    }
                 }
-                .backstageHelp("Show Undecided, Picked, and Hidden assets in the current fixture Gallery.")
-                Button("Culling — Undecided") {
-                    model.showCullingSavedView()
-                }
-                .backstageHelp("Show the Culling saved view containing only Undecided assets.")
             }
             .accessibilityLabel("Gallery saved view")
             Button("Review picked") { model.showPickedReview() }
                 .backstageHelp("Open Review with the assets currently picked in this fixture.")
-            Button("Select burst") { model.selectVisibleBurstCandidates() }
-                .backstageHelp("Select likely duplicate frames in each visible capture burst while keeping the probable best frame unselected.")
         }
     }
 }

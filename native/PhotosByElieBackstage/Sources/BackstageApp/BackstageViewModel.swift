@@ -129,6 +129,19 @@ enum CullingThumbnailFailure: Equatable, Sendable {
     }
 }
 
+enum GallerySavedView: String, CaseIterable, Identifiable {
+    case allAssets = "All fixture assets"
+    case culling = "Culling — Undecided"
+    case reviewQueue = "Review queue"
+    case approved = "Approved"
+    case uploadQueue = "Upload queue"
+    case live = "Live"
+    case hidden = "Hidden"
+    case unavailable = "Unavailable"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class BackstageViewModel: ObservableObject {
     enum Section: String, CaseIterable, Identifiable {
@@ -276,6 +289,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var cullingRatingFilters = Set(0...5)
     @Published var cullingColorFilters = Set(CullingColorFilter.selectableCases)
+    @Published var galleryEditorialFilters: Set<GalleryEditorialFilter> = []
+    @Published var galleryDeliveryFilters: Set<GalleryDeliveryFilter> = []
+    @Published var gallerySourceFilters: Set<GallerySourceFilter> = [.available]
+    @Published var galleryBurstsOnly = false
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
@@ -1910,13 +1927,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var gallerySavedViewLabel: String {
-        if cullingViews == [.undecided] {
-            return "Culling — Undecided"
-        }
-        if cullingViews == Set(FixtureCullingView.selectableCases) {
-            return "All fixture assets"
-        }
-        return "Custom"
+        GallerySavedView.allCases.first(where: matchesGallerySavedView)?.rawValue ?? "Custom"
     }
 
     var cullingRatingFilterLabel: String {
@@ -1939,19 +1950,36 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func showAllFixtureAssetsInGallery() {
-        applyGallerySavedView(Set(FixtureCullingView.selectableCases))
+        applyGallerySavedView(.allAssets)
     }
 
     func showCullingSavedView() {
-        applyGallerySavedView([.undecided])
+        applyGallerySavedView(.culling)
     }
 
-    private func applyGallerySavedView(_ views: Set<FixtureCullingView>) {
-        if cullingViews == views {
-            applyCullingFilters()
-        } else {
-            cullingViews = views
-        }
+    func applyGallerySavedView(_ savedView: GallerySavedView) {
+        let preset = gallerySavedViewPreset(savedView)
+        cullingSearch = ""
+        cullingViews = preset.views
+        cullingRatingFilters = Set(0...5)
+        cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = preset.editorial
+        galleryDeliveryFilters = preset.delivery
+        gallerySourceFilters = preset.sources
+        galleryBurstsOnly = false
+        applyCullingFilters()
+    }
+
+    func toggleGalleryEditorialFilter(_ filter: GalleryEditorialFilter) {
+        toggleOptional(filter, in: &galleryEditorialFilters)
+    }
+
+    func toggleGalleryDeliveryFilter(_ filter: GalleryDeliveryFilter) {
+        toggleOptional(filter, in: &galleryDeliveryFilters)
+    }
+
+    func toggleGallerySourceFilter(_ filter: GallerySourceFilter) {
+        toggle(filter, in: &gallerySourceFilters)
     }
 
     func setCullingMinimumRating(_ rating: Int) {
@@ -1969,6 +1997,56 @@ final class BackstageViewModel: ObservableObject {
             selection.remove(value)
         } else {
             selection.insert(value)
+        }
+    }
+
+    private func toggleOptional<Value: Hashable>(_ value: Value, in selection: inout Set<Value>) {
+        if selection.contains(value) {
+            selection.remove(value)
+        } else {
+            selection.insert(value)
+        }
+    }
+
+    private func matchesGallerySavedView(_ savedView: GallerySavedView) -> Bool {
+        let preset = gallerySavedViewPreset(savedView)
+        return cullingViews == preset.views
+            && cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && cullingRatingFilters == Set(0...5)
+            && cullingColorFilters == Set(CullingColorFilter.selectableCases)
+            && galleryEditorialFilters == preset.editorial
+            && galleryDeliveryFilters == preset.delivery
+            && gallerySourceFilters == preset.sources
+            && !galleryBurstsOnly
+    }
+
+    private func gallerySavedViewPreset(
+        _ savedView: GallerySavedView
+    ) -> (
+        views: Set<FixtureCullingView>,
+        editorial: Set<GalleryEditorialFilter>,
+        delivery: Set<GalleryDeliveryFilter>,
+        sources: Set<GallerySourceFilter>
+    ) {
+        let allViews = Set(FixtureCullingView.selectableCases)
+        let allSources = Set(GallerySourceFilter.allCases)
+        return switch savedView {
+        case .allAssets:
+            (allViews, [], [], allSources)
+        case .culling:
+            ([.undecided], [], [], [.available])
+        case .reviewQueue:
+            ([.picked], [.needsReview, .aiRequested, .proposalAvailable], [], [.available])
+        case .approved:
+            ([.picked], [.approved], [], [.available])
+        case .uploadQueue:
+            ([.picked], [.approved], [.needsUpload, .uploading, .failed], [.available])
+        case .live:
+            ([.picked], [], [.live], [.available])
+        case .hidden:
+            ([.hidden], [], [], [.available])
+        case .unavailable:
+            (allViews, [], [], [.unavailable])
         }
     }
 
@@ -2238,6 +2316,10 @@ final class BackstageViewModel: ObservableObject {
         cullingMediaFilters = [.photos]
         cullingRatingFilters = Set(0...5)
         cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = []
+        galleryDeliveryFilters = []
+        gallerySourceFilters = Set(GallerySourceFilter.allCases)
+        galleryBurstsOnly = false
         let allViews = Set(FixtureCullingView.selectableCases)
         let viewsChanged = cullingViews != allViews
         cullingViews = allViews
@@ -2450,7 +2532,11 @@ final class BackstageViewModel: ObservableObject {
                     search: requestedSearch,
                     mediaTypes: ["photo"],
                     ratings: ratings,
-                    colors: colors
+                    colors: colors,
+                    editorialFilters: galleryEditorialFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    deliveryFilters: galleryDeliveryFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    sourceFilters: gallerySourceFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    burstsOnly: galleryBurstsOnly
                 )
             }
 

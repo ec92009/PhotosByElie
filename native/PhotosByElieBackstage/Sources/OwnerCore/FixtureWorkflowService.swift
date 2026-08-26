@@ -67,6 +67,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var rating: Int
     public var color: String
     public var editorialState: String
+    public var proposalAvailable: Bool
+    public var deliveryState: String
+    public var sourceAvailable: Bool
     public var keywords: [String]
 
     public init(
@@ -86,6 +89,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         rating: Int = 0,
         color: String = "",
         editorialState: String = "unreviewed",
+        proposalAvailable: Bool = false,
+        deliveryState: String = "not-ready",
+        sourceAvailable: Bool = true,
         keywords: [String] = []
     ) {
         self.id = id
@@ -104,6 +110,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.rating = rating
         self.color = color
         self.editorialState = editorialState
+        self.proposalAvailable = proposalAvailable
+        self.deliveryState = deliveryState
+        self.sourceAvailable = sourceAvailable
         self.keywords = keywords
     }
 
@@ -126,6 +135,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         rating = json["rating"]?.intValue ?? 0
         color = json["color"]?.stringValue ?? ""
         editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
+        proposalAvailable = json["proposalAvailable"]?.boolValue ?? false
+        deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
+        sourceAvailable = json["sourceAvailable"]?.boolValue ?? true
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
     }
 }
@@ -410,6 +422,50 @@ public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
     }
 
     public static var selectableCases: [Self] { [.undecided, .picked, .hidden] }
+}
+
+public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case needsReview = "needs-review"
+    case aiRequested = "ai-requested"
+    case proposalAvailable = "proposal-available"
+    case approved
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .needsReview: "Needs Review"
+        case .aiRequested: "AI Requested"
+        case .proposalAvailable: "Proposal Available"
+        case .approved: "Approved"
+        }
+    }
+}
+
+public enum GalleryDeliveryFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case needsUpload = "needs-upload"
+    case uploading
+    case live
+    case failed
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .needsUpload: "Needs Upload"
+        case .uploading: "Uploading"
+        case .live: "Uploaded / Live"
+        case .failed: "Failed / Stale"
+        }
+    }
+}
+
+public enum GallerySourceFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case available
+    case unavailable
+
+    public var id: String { rawValue }
+    public var label: String { rawValue.capitalized }
 }
 
 public struct FixtureCullingSummary: Sendable, Equatable {
@@ -1118,7 +1174,11 @@ public actor FixtureWorkflowService {
         search: String = "",
         mediaTypes: [String] = [],
         ratings: [Int] = [],
-        colors: [String] = []
+        colors: [String] = [],
+        editorialFilters: [GalleryEditorialFilter] = [],
+        deliveryFilters: [GalleryDeliveryFilter] = [],
+        sourceFilters: [GallerySourceFilter] = [.available],
+        burstsOnly: Bool = false
     ) async throws -> FixtureCullingWindow {
         if let localReviewService,
            let localCullingReader = localReviewService as? any LocalFixtureCullingReading,
@@ -1131,7 +1191,11 @@ public actor FixtureWorkflowService {
                search: search,
                mediaTypes: mediaTypes,
                ratings: ratings,
-               colors: colors
+               colors: colors,
+               editorialFilters: editorialFilters,
+               deliveryFilters: deliveryFilters,
+               sourceFilters: sourceFilters,
+               burstsOnly: burstsOnly
            ) {
             return localWindow
         }
@@ -1145,6 +1209,10 @@ public actor FixtureWorkflowService {
             "mediaTypes": .array(mediaTypes.map(JSONValue.string)),
             "ratings": .array(ratings.map { .number(Double($0)) }),
             "colors": .array(colors.map(JSONValue.string)),
+            "editorialFilters": .array(editorialFilters.map { .string($0.rawValue) }),
+            "deliveryFilters": .array(deliveryFilters.map { .string($0.rawValue) }),
+            "sourceFilters": .array(sourceFilters.map { .string($0.rawValue) }),
+            "burstsOnly": .bool(burstsOnly),
         ])
         return FixtureCullingWindow(
             json: result["cullingWindow"]?.objectValue ?? [:]

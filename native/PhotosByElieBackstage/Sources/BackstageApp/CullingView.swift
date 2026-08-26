@@ -460,6 +460,49 @@ struct CullingView: View {
             .frame(height: CullingCompactControlMetrics.height)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Color filter")
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
+            Toggle("Bursts", isOn: $model.galleryBurstsOnly)
+                .toggleStyle(.checkbox)
+                .frame(height: CullingCompactControlMetrics.height)
+                .backstageHelp("Show only assets that belong to a capture-time burst. This filter has no mutation shortcut.")
+            Menu("Editorial") {
+                ForEach(GalleryEditorialFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.galleryEditorialFilters.contains(filter) },
+                            set: { _ in model.toggleGalleryEditorialFilter(filter) }
+                        )
+                    )
+                }
+            }
+            .accessibilityLabel("Editorial filters")
+            Menu("Delivery") {
+                ForEach(GalleryDeliveryFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.galleryDeliveryFilters.contains(filter) },
+                            set: { _ in model.toggleGalleryDeliveryFilter(filter) }
+                        )
+                    )
+                }
+            }
+            .accessibilityLabel("Delivery and publication filters")
+            Menu("Source") {
+                ForEach(GallerySourceFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.gallerySourceFilters.contains(filter) },
+                            set: { _ in model.toggleGallerySourceFilter(filter) }
+                        )
+                    )
+                }
+            }
+            .accessibilityLabel("Source availability filters")
             Button("Clear filters") { model.clearCullingFilters() }
                 .frame(height: CullingCompactControlMetrics.height)
                 .backstageHelp("Show all Gallery decision states, ratings, colors, and search results.")
@@ -470,6 +513,10 @@ struct CullingView: View {
         .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingColorFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryEditorialFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryDeliveryFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.gallerySourceFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryBurstsOnly) { _, _ in model.applyCullingFilters() }
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -902,6 +949,10 @@ struct CullingView: View {
         [
             model.selectedFixtureID,
             model.cullingViews.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryEditorialFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryDeliveryFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.gallerySourceFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryBurstsOnly ? "bursts" : "all-captures",
             String(model.cullingWorkspace.offset),
             model.visibleCullingAssets.first?.id ?? "empty",
         ].joined(separator: ":")
@@ -987,6 +1038,13 @@ struct CullingView: View {
                     : asset.resourceFormat
             )
             metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
+            metadataRow("Fixture state", value: asset.placementState.galleryLabel)
+            metadataRow("Editorial", value: asset.galleryEditorialLabel)
+            if asset.proposalAvailable {
+                metadataRow("AI proposal", value: "Proposal Available")
+            }
+            metadataRow("Delivery / publication", value: asset.galleryDeliveryLabel)
+            metadataRow("Source", value: asset.sourceAvailable ? "Available" : "Unavailable")
             metadataRow("Dimensions", value: formattedDimensions(asset))
             if let byteCount = model.currentImageByteCount(for: asset.id) {
                 metadataRow("Current image size", value: formattedCurrentImageSize(byteCount))
@@ -1066,6 +1124,51 @@ struct CullingView: View {
     }
 }
 
+private extension FixturePlacementState {
+    var galleryLabel: String {
+        switch self {
+        case .undecided: "Undecided"
+        case .picked: "Picked"
+        case .hidden: "Hidden"
+        }
+    }
+}
+
+private extension FixtureAsset {
+    var galleryEditorialLabel: String {
+        switch editorialState {
+        case "requesting-ai": "AI Requested"
+        case "proposed": "Proposal Available"
+        case "approved": "Approved"
+        default: "Needs Review"
+        }
+    }
+
+    var galleryDeliveryLabel: String {
+        switch deliveryState {
+        case "needs-upload": "Needs Upload"
+        case "uploading": "Uploading"
+        case "live": "Live"
+        case "failed": "Failed"
+        default: "Not Ready"
+        }
+    }
+
+    var galleryStateBadges: [String] {
+        var badges = [placementState.galleryLabel, galleryEditorialLabel]
+        if proposalAvailable, editorialState != "proposed" {
+            badges.append("Proposal Available")
+        }
+        if deliveryState != "not-ready" {
+            badges.append(galleryDeliveryLabel)
+        }
+        if !sourceAvailable {
+            badges.append("Unavailable")
+        }
+        return badges
+    }
+}
+
 private struct CullingPrimaryKeyCommands: ViewModifier {
     @ObservedObject var model: BackstageViewModel
     @ObservedObject var quickLook: BackstageQuickLookCoordinator
@@ -1100,10 +1203,6 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
             }
             .onKeyPress("u") {
                 Task { await model.applyPickShortcut(.unpick) }
-                return .handled
-            }
-            .onKeyPress("b") {
-                model.selectVisibleBurstCandidates()
                 return .handled
             }
     }
@@ -1241,6 +1340,19 @@ private struct CullingAssetCard: View {
                         .padding(6)
                         .accessibilityLabel("Picked")
                 }
+            }
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(asset.galleryStateBadges, id: \.self) { badge in
+                        Text(badge)
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .foregroundStyle(.white)
+                            .background(.black.opacity(0.72), in: Capsule())
+                    }
+                }
+                .padding(6)
             }
             HStack(spacing: 5) {
                 VStack(alignment: .leading, spacing: 1) {

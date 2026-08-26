@@ -24,11 +24,43 @@ struct BackstageFixtureSelectionTests {
 
         model.showAllFixtureAssetsInGallery()
         #expect(model.cullingViews == Set(FixtureCullingView.selectableCases))
+        #expect(model.gallerySourceFilters == Set(GallerySourceFilter.allCases))
         #expect(model.gallerySavedViewLabel == "All fixture assets")
 
         model.showCullingSavedView()
         #expect(model.cullingViews == [.undecided])
+        #expect(model.gallerySourceFilters == [.available])
         #expect(model.gallerySavedViewLabel == "Culling — Undecided")
+
+        model.applyGallerySavedView(.reviewQueue)
+        #expect(model.cullingViews == [.picked])
+        #expect(model.galleryEditorialFilters == [.needsReview, .aiRequested, .proposalAvailable])
+        #expect(model.gallerySavedViewLabel == "Review queue")
+
+        model.applyGallerySavedView(.approved)
+        #expect(model.galleryEditorialFilters == [.approved])
+        #expect(model.gallerySavedViewLabel == "Approved")
+
+        model.applyGallerySavedView(.uploadQueue)
+        #expect(model.galleryEditorialFilters == [.approved])
+        #expect(model.galleryDeliveryFilters == [.needsUpload, .uploading, .failed])
+        #expect(model.gallerySavedViewLabel == "Upload queue")
+
+        model.applyGallerySavedView(.live)
+        #expect(model.galleryDeliveryFilters == [.live])
+        #expect(model.gallerySavedViewLabel == "Live")
+
+        model.applyGallerySavedView(.hidden)
+        #expect(model.cullingViews == [.hidden])
+        #expect(model.gallerySavedViewLabel == "Hidden")
+
+        model.applyGallerySavedView(.unavailable)
+        #expect(model.cullingViews == Set(FixtureCullingView.selectableCases))
+        #expect(model.gallerySourceFilters == [.unavailable])
+        #expect(model.gallerySavedViewLabel == "Unavailable")
+
+        model.cullingSearch = "custom"
+        #expect(model.gallerySavedViewLabel == "Custom")
     }
 
     @Test("Fixture selection becomes ready before a stalled Activity refresh")

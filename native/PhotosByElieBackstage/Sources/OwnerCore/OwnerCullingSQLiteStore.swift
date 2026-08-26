@@ -46,7 +46,11 @@ public struct OwnerCullingSQLiteStore: Sendable {
         search: String = "",
         mediaTypes: [String] = [],
         ratings: [Int] = [],
-        colors: [String] = []
+        colors: [String] = [],
+        editorialFilters: [GalleryEditorialFilter] = [],
+        deliveryFilters: [GalleryDeliveryFilter] = [],
+        sourceFilters: [GallerySourceFilter] = [.available],
+        burstsOnly: Bool = false
     ) throws -> FixtureCullingWindow {
         let cleanFixtureID = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanFixtureID.isEmpty else {
@@ -69,6 +73,9 @@ public struct OwnerCullingSQLiteStore: Sendable {
         let selectedColors = Set(colors.map(cullingColorValue)).intersection(
             ["", "red", "yellow", "green", "blue", "purple"]
         )
+        let selectedEditorial = Set(editorialFilters)
+        let selectedDelivery = Set(deliveryFilters)
+        let selectedSources = Set(sourceFilters)
 
         let connection = try CullingSQLiteConnection(
             databaseURL: databaseURL,
@@ -101,6 +108,18 @@ public struct OwnerCullingSQLiteStore: Sendable {
              AND current_decision.fixture_id = ?
             LEFT JOIN sidecar_decisions AS global_decision
               ON global_decision.asset_id = asset.asset_id
+            LEFT JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = asset.asset_id
+            LEFT JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = asset.asset_id
+            LEFT JOIN asset_source_versions AS latest_source
+              ON latest_source.version_id = (
+                SELECT source_version.version_id
+                FROM asset_source_versions AS source_version
+                WHERE source_version.asset_id = asset.asset_id
+                ORDER BY source_version.created_at DESC, source_version.version_id DESC
+                LIMIT 1
+              )
             """
         bindings.append(.string(cleanFixtureID))
 
@@ -124,7 +143,20 @@ public struct OwnerCullingSQLiteStore: Sendable {
                    COALESCE(current_decision.eligibility_state, 'active') AS eligibility_state,
                    COALESCE(global_decision.rating, 0) AS rating,
                    COALESCE(global_decision.color, '') AS color,
-                   COALESCE(global_decision.metadata_state, 'unreviewed') AS editorial_state,
+                   COALESCE(editorial.editorial_state, global_decision.metadata_state, 'unreviewed') AS editorial_state,
+                   CASE WHEN EXISTS (
+                     SELECT 1
+                     FROM asset_ai_proposals AS proposal
+                     WHERE proposal.asset_id = asset.asset_id
+                       AND proposal.status IN ('ready', 'loaded')
+                   ) THEN 1 ELSE 0 END AS proposal_available,
+                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state,
+                   CASE
+                     WHEN COALESCE(asset.missing_at, '') <> '' THEN 0
+                     WHEN COALESCE(latest_source.source_exists, 1) = 0 THEN 0
+                     WHEN COALESCE(latest_source.state, '') = 'source-missing' THEN 0
+                     ELSE 1
+                   END AS source_available,
                    COALESCE((
                      SELECT CAST(COALESCE(
                        json_extract(upload.value, '$.bytes'),
@@ -147,8 +179,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
                      0
                    ) AS INTEGER)) AS original_byte_count
             FROM \(fromSQL)
-            WHERE (asset.missing_at IS NULL OR asset.missing_at = '')
-              AND NOT EXISTS (
+            WHERE NOT EXISTS (
                 SELECT 1
                 FROM sidecar_tombstones AS tombstone
                 WHERE tombstone.asset_id = asset.asset_id
@@ -161,7 +192,14 @@ public struct OwnerCullingSQLiteStore: Sendable {
         )
 
         let searchTerms = cullingSearchTerms(search)
+        let burstAssetIDs = burstsOnly
+            ? Set(cullingBurstRows(rows).compactMap { $0["asset_id"]?.stringValue })
+            : []
         let filteredRows = rows.filter { row in
+            if burstsOnly,
+               !burstAssetIDs.contains(row["asset_id"]?.stringValue ?? "") {
+                return false
+            }
             let media = cullingMediaType(row["media_type"]?.stringValue ?? "photo") ?? "photo"
             guard selectedMedia.isEmpty || selectedMedia.count == 2 || selectedMedia.contains(media) else {
                 return false
@@ -172,6 +210,21 @@ public struct OwnerCullingSQLiteStore: Sendable {
             }
             let color = row["color"]?.stringValue ?? ""
             guard selectedColors.isEmpty || selectedColors.count == 6 || selectedColors.contains(color) else {
+                return false
+            }
+            guard cullingEditorialMatches(row, filters: selectedEditorial) else {
+                return false
+            }
+            let delivery = GalleryDeliveryFilter(
+                rawValue: row["delivery_state"]?.stringValue ?? "not-ready"
+            )
+            guard selectedDelivery.isEmpty || delivery.map(selectedDelivery.contains) == true else {
+                return false
+            }
+            let source = ((row["source_available"]?.intValue ?? 1) != 0)
+                ? GallerySourceFilter.available
+                : GallerySourceFilter.unavailable
+            guard selectedSources.isEmpty || selectedSources.contains(source) else {
                 return false
             }
             return cullingSearchMatches(row, terms: searchTerms)
@@ -504,6 +557,54 @@ public struct OwnerCullingSQLiteStore: Sendable {
     }
 }
 
+private func cullingBurstRows(
+    _ rows: [[String: JSONValue]],
+    maximumGap: TimeInterval = 2
+) -> [[String: JSONValue]] {
+    var included = Set<String>()
+    var group: [[String: JSONValue]] = []
+
+    func flush() {
+        if group.count > 1 {
+            included.formUnion(group.compactMap { $0["asset_id"]?.stringValue })
+        }
+        group.removeAll(keepingCapacity: true)
+    }
+
+    for row in rows {
+        guard let value = row["captured_at"]?.stringValue,
+              let capturedAt = CullingWorkspace.captureDate(value) else {
+            flush()
+            continue
+        }
+        if let previousValue = group.last?["captured_at"]?.stringValue,
+           let previous = CullingWorkspace.captureDate(previousValue),
+           abs(capturedAt.timeIntervalSince(previous)) > maximumGap {
+            flush()
+        }
+        group.append(row)
+    }
+    flush()
+    return rows.filter { included.contains($0["asset_id"]?.stringValue ?? "") }
+}
+
+private func cullingEditorialMatches(
+    _ row: [String: JSONValue],
+    filters: Set<GalleryEditorialFilter>
+) -> Bool {
+    guard !filters.isEmpty else { return true }
+    let state = row["editorial_state"]?.stringValue ?? "unreviewed"
+    let proposalAvailable = (row["proposal_available"]?.intValue ?? 0) != 0
+    return filters.contains { filter in
+        switch filter {
+        case .needsReview: state == "unreviewed"
+        case .aiRequested: state == "requesting-ai"
+        case .proposalAvailable: proposalAvailable || state == "proposed"
+        case .approved: state == "approved"
+        }
+    }
+}
+
 private func cullingMediaType(_ value: String) -> String? {
     switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
     case "photo", "photos": return "photo"
@@ -616,6 +717,9 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
         "rating": row["rating"] ?? .number(0),
         "color": row["color"] ?? .string(""),
         "editorialState": .string(editorialState),
+        "proposalAvailable": .bool((row["proposal_available"]?.intValue ?? 0) != 0),
+        "deliveryState": row["delivery_state"] ?? .string("not-ready"),
+        "sourceAvailable": .bool((row["source_available"]?.intValue ?? 1) != 0),
         "keywords": .array(keywords.map(JSONValue.string)),
         "locationLabel": row["location_label"] ?? .string(""),
         "locationKeywords": .array(

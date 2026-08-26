@@ -149,6 +149,22 @@ struct PBEOwnerNativeGalleryTests {
             CREATE TABLE sidecar_upload_bridge_run_items (
               asset_id TEXT, upload_keys_json TEXT, updated_at TEXT
             );
+            CREATE TABLE asset_editorial_state (
+              asset_id TEXT PRIMARY KEY,
+              editorial_state TEXT NOT NULL DEFAULT 'unreviewed'
+            );
+            CREATE TABLE asset_delivery_state (
+              asset_id TEXT PRIMARY KEY,
+              delivery_state TEXT NOT NULL DEFAULT 'not-ready'
+            );
+            CREATE TABLE asset_ai_proposals (
+              proposal_id TEXT PRIMARY KEY, asset_id TEXT,
+              status TEXT, attempt INTEGER, created_at TEXT
+            );
+            CREATE TABLE asset_source_versions (
+              version_id TEXT PRIMARY KEY, asset_id TEXT,
+              source_exists INTEGER, state TEXT, created_at TEXT
+            );
             INSERT INTO fixtures VALUES ('expo', NULL, 'curated', NULL);
 
             INSERT INTO sidecar_assets VALUES

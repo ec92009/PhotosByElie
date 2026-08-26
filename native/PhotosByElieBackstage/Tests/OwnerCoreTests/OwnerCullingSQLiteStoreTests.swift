@@ -137,7 +137,7 @@ struct OwnerCullingSQLiteStoreTests {
               location_keywords_json
             ) VALUES (
               'asset-3', 'apple-photos://local-asset-3',
-              '{"resourceFormat":"jpeg"}', 'C.JPG', '2026-01-01T03:00:00Z',
+              '{"resourceFormat":"jpeg"}', 'C.JPG', '2026-01-01T02:00:01Z',
               'Palace facade', '["Granada"]', 'Alhambrá, Granada, Spain',
               '["Alhambrá","Granada","Spain"]'
             );
@@ -156,6 +156,16 @@ struct OwnerCullingSQLiteStoreTests {
             UPDATE sidecar_assets SET missing_at = '2026-01-01T06:00:00Z' WHERE asset_id = 'asset-missing';
             INSERT INTO sidecar_tombstones(asset_id, tombstone_state)
               VALUES ('asset-tombstone', 'active');
+            INSERT INTO asset_editorial_state(asset_id, editorial_state)
+              VALUES ('asset-1', 'approved'),
+                     ('asset-2', 'requesting-ai'),
+                     ('asset-3', 'unreviewed');
+            INSERT INTO asset_delivery_state(asset_id, delivery_state)
+              VALUES ('asset-1', 'live'),
+                     ('asset-2', 'failed'),
+                     ('asset-3', 'needs-upload');
+            INSERT INTO asset_ai_proposals(proposal_id, asset_id, status, attempt, created_at)
+              VALUES ('proposal-2', 'asset-2', 'ready', 1, '2026-01-01T02:30:00Z');
             """
         )
         let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
@@ -197,6 +207,48 @@ struct OwnerCullingSQLiteStoreTests {
 
         let child = try store.cullingWindow(fixtureID: "fixture-child", view: .allActive)
         #expect(child.items.map(\.id) == ["asset-1"])
+
+        let liveApproved = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            editorialFilters: [.approved],
+            deliveryFilters: [.live]
+        )
+        #expect(liveApproved.items.map(\.id) == ["asset-1"])
+        #expect(liveApproved.items.first?.editorialState == "approved")
+        #expect(liveApproved.items.first?.deliveryState == "live")
+
+        let proposedFailure = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            editorialFilters: [.proposalAvailable],
+            deliveryFilters: [.failed]
+        )
+        #expect(proposedFailure.items.map(\.id) == ["asset-2"])
+        #expect(proposedFailure.items.first?.proposalAvailable == true)
+
+        let unavailable = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            sourceFilters: [.unavailable]
+        )
+        #expect(unavailable.items.map(\.id) == ["asset-missing"])
+        #expect(unavailable.items.first?.sourceAvailable == false)
+
+        let burst = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            burstsOnly: true
+        )
+        #expect(burst.items.map(\.id) == ["asset-3", "asset-2"])
+
+        let redBurstFrame = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            colors: ["red"],
+            burstsOnly: true
+        )
+        #expect(redBurstFrame.items.map(\.id) == ["asset-2"])
     }
 
     @Test("Fixture workflow uses native Culling reads without an Owner action")
@@ -334,6 +386,28 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
       asset_id TEXT NOT NULL,
       upload_keys_json TEXT NOT NULL DEFAULT '[]',
       updated_at TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE asset_editorial_state (
+      asset_id TEXT PRIMARY KEY,
+      editorial_state TEXT NOT NULL DEFAULT 'unreviewed'
+    );
+    CREATE TABLE asset_delivery_state (
+      asset_id TEXT PRIMARY KEY,
+      delivery_state TEXT NOT NULL DEFAULT 'not-ready'
+    );
+    CREATE TABLE asset_ai_proposals (
+      proposal_id TEXT PRIMARY KEY,
+      asset_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'ready',
+      attempt INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE asset_source_versions (
+      version_id TEXT PRIMARY KEY,
+      asset_id TEXT NOT NULL,
+      source_exists INTEGER NOT NULL DEFAULT 1,
+      state TEXT NOT NULL DEFAULT 'candidate',
+      created_at TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE fixture_asset_decisions (
       fixture_id TEXT NOT NULL,

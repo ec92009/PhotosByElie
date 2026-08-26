@@ -497,6 +497,34 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertEqual(report["classificationCounts"]["duplicate-local"], 2)
         self.assertFalse(report["safety"]["applyReady"])
 
+    def test_matching_filename_never_resolves_or_merges_a_legacy_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE sidecar_assets SET filename = 'IMG_4388.jpg' "
+                "WHERE asset_id IN ('cloud-a', 'legacy-rewrite')"
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [{"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"}],
+            )
+            result = build_dry_run(owner, mapping)
+            report = result["report"]
+
+        resolved_sources = {resolution.source_asset_id for resolution in result["resolutions"]}
+        self.assertNotIn("legacy-rewrite", resolved_sources)
+        self.assertEqual(report["classificationCounts"]["unmapped"], 1)
+        self.assertFalse(report["mappingContract"]["filenameDateInference"])
+        self.assertFalse(report["safety"]["applyReady"])
+        self.assertIn(
+            "unresolved-or-ambiguous-identities-quarantined",
+            report["safety"]["blockedReasons"],
+        )
+
     def test_ineligible_mapping_status_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)

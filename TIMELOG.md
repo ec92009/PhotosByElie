@@ -785,9 +785,10 @@ Clock state: running
 | 2026-08-25 | 22:02 CEST | 22:03 CEST | 0:01 | Reported that installed Backstage build 200 took roughly 40 seconds to settle Activity after the PBB-107 reconciliation; background diagnosis, implementation, tests, and build verification excluded. |
 | 2026-08-26 | 09:21 CEST | 09:22 CEST | 0:01 | Authorized PBB-105 color-toggle implementation across the grid and shared Quick Look surfaces; background implementation, tests, build, and installation excluded. |
 | 2026-08-26 | 19:14 CEST | 19:15 CEST | 0:01 | Clarified that IMG_4362 is the known fail-closed preview Retry because its legacy Photos identity is ambiguous; background PBE-143 contract work excluded. |
+| 2026-08-26 | 19:33 CEST | 19:40 CEST | 0:02 | Confirmed that healthy and unavailable cards can share IMG_4388/IMG_4387 filenames, and preserved the fail-closed rule that filenames never resolve or merge Photos identities; background test execution and ticket API runtime excluded. |
 | 2026-08-27 | 10:11 CEST | 10:12 CEST | 0:01 | Directed the PBE-164 Gallery thumbnail lifecycle correction for bounded visible upgrades and scroll-cancelable APL backfill; background implementation, tests, build, commit, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:29
+Active collaboration time used: 38:31
 Remaining budget: not set

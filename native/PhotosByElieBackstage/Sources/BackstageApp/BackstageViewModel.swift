@@ -74,6 +74,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
     case photosAccess
     case assetUnavailable
     case previewUnavailable
+    case timedOut
 
     init(error: Error) {
         guard let photoError = error as? PhotoLibraryError else {
@@ -95,6 +96,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
         case .photosAccess: "Photos access needed"
         case .assetUnavailable: "Photo unavailable"
         case .previewUnavailable: "Preview unavailable"
+        case .timedOut: "Preview timed out"
         }
     }
 
@@ -106,13 +108,15 @@ enum CullingThumbnailFailure: Equatable, Sendable {
             "This asset is not in the current Photos library. Retry after Photos sync completes."
         case .previewUnavailable:
             "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
+        case .timedOut:
+            "Photos took too long to prepare this preview. Retry this card or open Quick Look."
         }
     }
 
     var systemImage: String {
         switch self {
         case .photosAccess: "lock.shield"
-        case .assetUnavailable, .previewUnavailable: "photo.badge.exclamationmark"
+        case .assetUnavailable, .previewUnavailable, .timedOut: "photo.badge.exclamationmark"
         }
     }
 
@@ -413,6 +417,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingThumbnailTaskTokens: [String: UUID] = [:]
+    private var cullingThumbnailTimeoutTasks: [String: Task<Void, Never>] = [:]
     private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
     private var pendingCurrentImageByteCounts: [String: Int64] = [:]
     private var currentImageSizeFlushTask: Task<Void, Never>?
@@ -435,6 +440,7 @@ final class BackstageViewModel: ObservableObject {
     private var isCullingScrolling = false
     private var shouldInjectNextCullingThumbnailFailure: Bool
     private var controlledFailedCullingAssetID: String?
+    private let cullingThumbnailTimeout: Duration
     private let cullingThumbnailUpgradeDelay: Duration
     private let currentImageSizeFlushDelay: Duration
     private let activityRefreshTimeout: Duration
@@ -564,6 +570,7 @@ final class BackstageViewModel: ObservableObject {
         currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
+        cullingThumbnailTimeout: Duration = .seconds(12),
         cullingThumbnailUpgradeDelay: Duration = .seconds(1),
         currentImageSizeFlushDelay: Duration = .milliseconds(500),
         activityRefreshTimeout: Duration = .seconds(5),
@@ -595,6 +602,7 @@ final class BackstageViewModel: ObservableObject {
         self.api = api
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
+        self.cullingThumbnailTimeout = cullingThumbnailTimeout
         self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
         self.currentImageSizeFlushDelay = currentImageSizeFlushDelay
         self.activityRefreshTimeout = activityRefreshTimeout
@@ -1462,10 +1470,31 @@ final class BackstageViewModel: ObservableObject {
         let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
         let taskToken = UUID()
         cullingThumbnailTaskTokens[assetID] = taskToken
+        let timeout = cullingThumbnailTimeout
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = Task { [weak self] in
+            do {
+                try await Task.sleep(for: timeout)
+            } catch {
+                return
+            }
+            guard let self,
+                  !Task.isCancelled,
+                  self.cullingThumbnailTaskTokens[assetID] == taskToken,
+                  self.cullingThumbnails[assetID] == nil
+            else { return }
+            self.cullingThumbnailTasks[assetID]?.cancel()
+            self.cullingThumbnailTasks[assetID] = nil
+            self.cullingThumbnailTaskTokens[assetID] = nil
+            self.cullingThumbnailTimeoutTasks[assetID] = nil
+            self.cullingThumbnailFailures[assetID] = .timedOut
+        }
         cullingThumbnailTasks[assetID] = Task { [weak self] in
             guard let self else { return }
             defer {
                 if self.cullingThumbnailTaskTokens[assetID] == taskToken {
+                    self.cullingThumbnailTimeoutTasks[assetID]?.cancel()
+                    self.cullingThumbnailTimeoutTasks[assetID] = nil
                     self.cullingThumbnailTaskTokens[assetID] = nil
                     self.cullingThumbnailTasks[assetID] = nil
                 }
@@ -1574,6 +1603,8 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks.removeValue(forKey: assetID)
         cullingThumbnailTaskTokens.removeValue(forKey: assetID)
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks.removeValue(forKey: assetID)
         cullingThumbnailUpgradeTasks[assetID]?.cancel()
         cullingThumbnailUpgradeTasks.removeValue(forKey: assetID)
     }
@@ -1673,6 +1704,7 @@ final class BackstageViewModel: ObservableObject {
                     }
                     break
                 }
+                guard !Task.isCancelled else { return }
                 cacheCullingThumbnail(image, for: assetID)
                 cullingThumbnailFailures.removeValue(forKey: assetID)
                 scheduleThumbnailUpgrade(for: assetID)
@@ -1696,6 +1728,8 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks[assetID] = nil
         cullingThumbnailTaskTokens[assetID] = nil
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         requestThumbnail(
             for: assetID,
@@ -1712,10 +1746,22 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnails[assetID] = image
     }
 
+    private func recoverCullingThumbnail(_ image: NSImage, for assetID: String) {
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailTaskTokens[assetID] = nil
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = nil
+        cullingThumbnailFailures.removeValue(forKey: assetID)
+        cacheCullingThumbnail(image, for: assetID)
+    }
+
     private func cancelCullingThumbnailWork() {
         cullingThumbnailTasks.values.forEach { $0.cancel() }
         cullingThumbnailTasks.removeAll()
         cullingThumbnailTaskTokens.removeAll()
+        cullingThumbnailTimeoutTasks.values.forEach { $0.cancel() }
+        cullingThumbnailTimeoutTasks.removeAll()
         cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
         cullingThumbnailUpgradeTasks.removeAll()
         cullingVisibleAssetIDs.removeAll()
@@ -5233,6 +5279,9 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
                     )
+                    if let image = NSImage(data: preview.jpegData) {
+                        recoverCullingThumbnail(image, for: id)
+                    }
                     await learnCurrentImageByteCount(
                         from: preview,
                         for: id,
@@ -6209,6 +6258,7 @@ final class BackstageViewModel: ObservableObject {
         // here could strand that flag and prevent the drain from completing.
         reviewAIStatusRefreshTask?.cancel()
         cullingThumbnailTasks.values.forEach { $0.cancel() }
+        cullingThumbnailTimeoutTasks.values.forEach { $0.cancel() }
         reviewThumbnailTasks.values.forEach { $0.cancel() }
 
         // A delayed Review text edit is durable work even though its network

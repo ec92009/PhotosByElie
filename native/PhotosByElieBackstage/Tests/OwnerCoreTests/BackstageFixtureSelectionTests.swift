@@ -1275,6 +1275,64 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingPool?.assets.map(\.id) == [asset.id])
     }
 
+    @Test("A stalled Culling thumbnail times out and Quick Look recovers that card in place")
+    @MainActor
+    func stalledCullingThumbnailIsRecoveredByQuickLook() async {
+        let photoLibrary = StalledThumbnailPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailTimeout: .milliseconds(40)
+        )
+        let asset = FixturePoolAsset(
+            id: "asset-stalled-thumbnail",
+            position: 0,
+            title: "Stalled thumbnail",
+            filename: "stalled-thumbnail.jpg",
+            mediaType: "photo"
+        )
+        model.cullingPool = FixturePool(
+            id: "pool-stalled-thumbnail",
+            name: "Stalled thumbnail",
+            fixtureID: "fixture-stalled-thumbnail",
+            assetCount: 1,
+            snapshotHash: "synthetic",
+            assets: [asset]
+        )
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: [asset.id],
+            selectedIDs: [asset.id],
+            anchorID: asset.id,
+            focusedID: asset.id
+        )
+        model.cullingWindowOffset = 37
+        model.cullingSearch = "stalled"
+        let originalRatingFilters = model.cullingRatingFilters
+        let originalColorFilters = model.cullingColorFilters
+
+        model.requestThumbnail(for: asset.id)
+        for _ in 0..<40 {
+            if model.cullingThumbnailFailures[asset.id] == .timedOut { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(model.cullingThumbnails[asset.id] == nil)
+        #expect(model.cullingThumbnailFailures[asset.id] == .timedOut)
+
+        let urls = await model.prepareQuickLookURLs()
+
+        #expect(urls.count == 1)
+        #expect(model.cullingThumbnails[asset.id] != nil)
+        #expect(model.cullingThumbnailFailures[asset.id] == nil)
+        #expect(model.selectedCullingAssetIDs == [asset.id])
+        #expect(model.cullingSelection.focusedID == asset.id)
+        #expect(model.cullingWindowOffset == 37)
+        #expect(model.cullingSearch == "stalled")
+        #expect(model.cullingRatingFilters == originalRatingFilters)
+        #expect(model.cullingColorFilters == originalColorFilters)
+        #expect(photoLibrary.requestedPixelSizes().contains(180))
+        #expect(photoLibrary.requestedPixelSizes().contains(4_000))
+    }
+
     @Test("Culling thumbnail upgrades coalesce learned current sizes after scroll idle")
     @MainActor
     func cullingThumbnailUpgradeWaitsForScrollIdle() async {
@@ -1725,6 +1783,39 @@ private struct RetryPhotoLibrary: PhotoLibraryServing {
 
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
         throw PhotoLibraryError.exportFailed("Synthetic retry test does not export originals.")
+    }
+}
+
+private final class StalledThumbnailPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var pixelSizes: [Int] = []
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        lock.withLock { pixelSizes.append(maxPixelSize) }
+        if maxPixelSize <= 180 {
+            try await Task.sleep(for: .seconds(60))
+        }
+        return PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: maxPixelSize,
+            pixelHeight: maxPixelSize
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Synthetic stalled-thumbnail test does not export originals.")
+    }
+
+    func requestedPixelSizes() -> [Int] {
+        lock.withLock { pixelSizes }
     }
 }
 

@@ -462,7 +462,7 @@ struct CullingView: View {
             .accessibilityLabel("Color filter")
             Button("Clear filters") { model.clearCullingFilters() }
                 .frame(height: CullingCompactControlMetrics.height)
-                .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
+                .backstageHelp("Show all Gallery decision states, ratings, colors, and search results.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
@@ -884,16 +884,14 @@ struct CullingView: View {
     }
     private var cullingHeading: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(
-                model.cullingPool?.name
-                    ?? (model.selectedFixtureBreadcrumb.isEmpty
-                        ? nil
-                        : model.selectedFixtureBreadcrumb)
-                    ?? "Fixture Culling"
-            )
+            Text("Gallery")
             .font(.largeTitle.bold())
             if let pool = model.cullingPool {
                 Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if !model.selectedFixtureBreadcrumb.isEmpty {
+                Text("Fixture: \(model.selectedFixtureBreadcrumb) • View: \(model.gallerySavedViewLabel)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -914,21 +912,21 @@ struct CullingView: View {
             Menu("Workflows") {
                 Button("Open in Review") { model.sendCullingSelection(to: .review) }
                     .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                    .backstageHelp("Open the owning Review workspace for the explicit Culling selection without changing its decisions.")
+                    .backstageHelp("Open the owning Review workspace for the explicit Gallery selection without changing its decisions.")
                 Button("Export selected originals…") {
                     guard let directory = chooseExportDirectory() else { return }
                     Task { await model.exportSelected(to: directory) }
                 }
                 .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Choose a destination for verified original resources from the explicit Culling selection; this does not upload or publish them.")
+                .backstageHelp("Choose a destination for verified original resources from the explicit Gallery selection; this does not upload or publish them.")
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty)
-            .accessibilityLabel("Culling workflows")
+            .accessibilityLabel("Gallery workflows")
             if model.cullingPool != nil {
                 Button("All Photos") {
                     model.showAllPhotosInCulling()
                 }
-                .backstageHelp("Leave the current fixture pool and show the complete indexed Photos library in Culling.")
+                .backstageHelp("Leave the current fixture pool and show the complete indexed Photos library in Gallery.")
             }
             Button("Allow Photos") {
                 Task { await model.authorizeAndLoadPhotos() }
@@ -958,7 +956,7 @@ struct CullingView: View {
                     ? "Discovering recent Photos"
                     : "Refresh previews and discover recent Photos"
             )
-            .backstageHelp("Refresh local previews, resume recent-photo discovery from the durable Owner checkpoint, and reload Culling. A seven-day overlap safely rechecks the boundary without changing decisions.")
+            .backstageHelp("Refresh local previews, resume recent-photo discovery from the durable Owner checkpoint, and reload Gallery. A seven-day overlap safely rechecks the boundary without changing decisions.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {
@@ -1593,7 +1591,7 @@ struct AdaptiveFixtureFieldPair<Left: View, Right: View>: View {
 }
 
 #if DEBUG
-#Preview("Culling — Wide") {
+#Preview("Gallery — Wide") {
     CullingView(
         model: CullingPreviewFixtures.model(),
         isPreviewMode: true

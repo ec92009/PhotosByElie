@@ -227,7 +227,7 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     }
 }
 
-#Preview("Culling — Compact") {
+#Preview("Gallery — Compact") {
     CullingView(
         model: CullingPreviewFixtures.model(previewPanelVisible: false),
         isPreviewMode: true
@@ -235,7 +235,7 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     .frame(width: 900, height: 680)
 }
 
-#Preview("Culling — Narrow") {
+#Preview("Gallery — Narrow") {
     CullingView(
         model: CullingPreviewFixtures.model(previewPanelVisible: false),
         isPreviewMode: true
@@ -243,7 +243,7 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     .frame(width: 640, height: 680)
 }
 
-#Preview("Culling — Applying Filters") {
+#Preview("Gallery — Applying Filters") {
     CullingView(
         model: CullingPreviewFixtures.model(loading: true),
         isPreviewMode: true
@@ -251,7 +251,7 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     .frame(width: 1_200, height: 760)
 }
 
-#Preview("Culling — Thumbnail Pending") {
+#Preview("Gallery — Thumbnail Pending") {
     CullingView(
         model: CullingPreviewFixtures.model(missingThumbnail: true),
         isPreviewMode: true
@@ -259,7 +259,7 @@ private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     .frame(width: 1_200, height: 760)
 }
 
-#Preview("Culling — Thumbnail Failure") {
+#Preview("Gallery — Thumbnail Failure") {
     CullingView(
         model: CullingPreviewFixtures.model(failedThumbnail: true),
         isPreviewMode: true

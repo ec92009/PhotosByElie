@@ -34,7 +34,7 @@ public struct BackstageApplication: App {
                         .padding(.bottom, 10)
                     Divider()
                     List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
-                        Label(section.rawValue, systemImage: icon(for: section))
+                        Label(section.title, systemImage: icon(for: section))
                             .tag(section)
                     }
                 }
@@ -67,8 +67,8 @@ public struct BackstageApplication: App {
                                         }
                                         .backstageHelp(
                                             model.isPreviewPanelVisible
-                                                ? "Collapse the Culling or Review preview inspector to give the main workspace more room."
-                                                : "Expand the Culling or Review preview inspector beside the main workspace."
+                                                ? "Collapse the Gallery or Review preview inspector to give the main workspace more room."
+                                                : "Expand the Gallery or Review preview inspector beside the main workspace."
                                         )
                                     }
                                 } else if model.status != "Connected" {
@@ -159,7 +159,7 @@ public struct BackstageApplication: App {
         case .activity: "clock.arrow.circlepath"
         case .fixtures: "folder.badge.gearshape"
         case .access: "person.2"
-        case .culling: "checkmark.rectangle.stack"
+        case .culling: "photo.stack"
         case .review: "checkmark.bubble"
         case .metadata: "tag"
         case .wasteBasket: "trash"
@@ -1514,7 +1514,7 @@ private struct FixtureWorkflowView: View {
                                             }
                                             .disabled(model.isRunningFixtureSnapshotOperation)
                                             .backstageHelp("Reload the selected fixture's saved immutable Culling snapshots.")
-                                            Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
+                                            Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Gallery") {
                                                 Task { await model.openSelectedFixturePool() }
                                             }
                                             .disabled(
@@ -1545,7 +1545,7 @@ private struct FixtureWorkflowView: View {
                                         LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
                                     }
                                     HStack {
-                                        Button(model.isOpeningFixturePool ? "Opening…" : "Open in Culling") {
+                                        Button(model.isOpeningFixturePool ? "Opening…" : "Open in Gallery") {
                                             Task { await model.openSelectedFixturePool() }
                                         }
                                         .disabled(model.isRunningFixtureSnapshotOperation)

@@ -26,7 +26,7 @@ the button's accessibility hint.
 1. Open **PhotosByElie Backstage**.
 2. In **Overview**, confirm that **Authentication** says **Authenticated** and
    that no orange connection warning appears in the toolbar.
-3. Open **Culling** and choose **Allow Photos** if macOS asks for permission.
+3. Open **Gallery** and choose **Allow Photos** if macOS asks for permission.
    Grant full Photos access. Backstage should report how many recent Photos
    previews it cached.
 4. Open **Fixtures** and choose **Reload tree**. Confirm that the current
@@ -141,7 +141,7 @@ not authorize that mutating download-session action.
 Backstage restores its working layout between launches: the main and Quick
 Look window frames, the last selected workspace, the navigation sidebar's
 visibility and width, the Fixtures and People & Access dividers, and the
-independent Culling and Review inspector visibility and width. Quick Look does
+independent Gallery and Review inspector visibility and width. Quick Look does
 not reopen stale media automatically; its saved frame is used the next time a
 preview is opened.
 
@@ -170,7 +170,8 @@ Backstage separates work into distinct stages:
 
 1. **Fixtures** define where media belongs.
 2. **People & Access** defines who belongs to which access groups.
-3. **Culling** records picks, rejects, and ratings.
+3. **Gallery** is the canonical fixture asset browser; its **Culling —
+   Undecided** saved view is the decision queue.
 4. **Metadata** prepares titles, captions, keywords, and verified Photos
    give-back.
 5. **Waste Basket** handles recoverable removals and explicitly confirmed
@@ -191,7 +192,7 @@ client. Catalog registration does not deploy the website.
 Use **Overview** to check this Mac's authentication.
 
 - **Authenticated** means the app has a working session. Once connected,
-  Backstage removes the redundant green toolbar indicator. In Culling and
+  Backstage removes the redundant green toolbar indicator. In Gallery and
   Review, that top-right space becomes the collapse/expand control for the
   preview or editorial panel.
 - **Refresh session** reloads the session from the credential stored in
@@ -285,7 +286,7 @@ moved, removed, or restored without deleting the asset.
 ### Create a culling snapshot
 
 After selecting search results, choose **Create stable culling snapshot**.
-The snapshot freezes that candidate set for review. Choose **Open in Culling**
+The snapshot freezes that candidate set for review. Choose **Open in Gallery**
 to switch Backstage to the exact immutable pool in its saved order. It does
 not open Safari or localhost, and it does not publish or upload the selected
 files.
@@ -317,10 +318,11 @@ Archiving a group preserves its history. Use the existing fixture/access model
 when a group must inherit access to a fixture; do not create duplicate grants
 for every child fixture.
 
-## Culling
+## Gallery
 
-**Culling** reads the Photos library and records review decisions through the
-audited Owner action path.
+**Gallery** reads the Photos library and records review decisions through the
+audited Owner action path. Choose **All fixture assets** to browse every active
+decision state, or **Culling — Undecided** for the bounded culling queue.
 
 1. Choose **Allow Photos** on the first run. **Refresh previews** updates the
    responsive cache of the 2,000 most recent Photos items. **Reconcile
@@ -334,7 +336,7 @@ audited Owner action path.
 2. When working from a saved fixture pool, confirm the pool name and immutable
    asset count above the list. Search and the Decision, Rating, and Color
    filters only narrow that pool; the total and matching counts remain visible.
-   Backstage Culling and Review source candidates are still photos only.
+   Backstage Gallery and Review source candidates are still photos only.
    Generated Real Estate videos are downstream Delivery outputs, not fixture
    or review candidates.
 3. Backstage shows at most 200 matching rows at once. Use **Previous** and
@@ -362,14 +364,14 @@ audited Owner action path.
    Quick Look is open, Left/Right moves to the previous/next visible item, P and
    H apply fixture Include/Exclude, 0 clears rating, 1–5 set rating, and 6–9
    toggle red/yellow/green/blue. Pressing the same color again clears it. The
-   same 0–9 router applies in Culling, Review,
+   same 0–9 router applies in Gallery, Review,
    Metadata, Uploads, and Waste Basket, and the visible metadata refreshes as
    soon as a rating or color change succeeds. When P or H removes the current
    item from the active filters, Quick Look stays open on the next surviving
    item (or the preceding survivor at the end). Temporary preview files stay
    in the app cache and are replaced on the next preview. Long preparation and
    decision operations show progress and can stop after the current audited
-   batch. The Culling inspector shows the Owner title and keywords, capture
+   batch. The Gallery inspector shows the Owner title and keywords, capture
    date, original dimensions and megapixels, resource format, and filename.
    Original file size appears when a verified upload receipt already recorded
    it; otherwise Backstage says it is unavailable rather than downloading the
@@ -379,14 +381,14 @@ audited Owner action path.
    decision state and selection.
 11. Use the **Metadata**, **Review**, or **Uploads** workspace directly from the
     sidebar. Each owning workspace retains the shared selection when it is
-    relevant; Culling no longer duplicates those navigation actions in its
+    relevant; Gallery no longer duplicates those navigation actions in its
     footer.
 
 Opening a pool or using **Refresh previews** rehydrates pick, rating, and color
 state from the canonical cloud ledger. The pool order and scope remain
 unchanged; there is no separate footer reload command.
 
-The Culling header **Workflows** menu can open Review or ask for a destination
+The Gallery header **Workflows** menu can open Review or ask for a destination
 folder to export verified original resources. These actions are separate from
 fixture upload and catalog publication.
 
@@ -421,7 +423,8 @@ and Quick Look context remain intact.
    question mark.
    Quick Look shows the same basic metadata context; Left/Right moves to the
    previous/next visible item, P or A approves, H hides, X moves the item to
-   the recoverable Waste Basket, U returns the current item to Culling, 0
+   the recoverable Waste Basket, U returns the current item to the Gallery's
+   Culling saved view, 0
    clears rating, 1–5 set rating, and 6–9 toggle red/yellow/green/blue;
    pressing the same color again clears it.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
@@ -447,7 +450,7 @@ or unauthorized.
 
 ### Edit metadata
 
-1. Select an item in **Culling**.
+1. Select an item in **Gallery**.
 2. Open **Metadata** and choose **Use selected Photos item**.
 3. Edit the title, caption, or comma-separated keywords.
 4. Choose **Save title, caption & keywords**.

@@ -5,6 +5,32 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Gallery preserves legacy navigation identity and applies bounded saved views")
+    @MainActor
+    func gallerySavedViewsPreserveCullingPersistence() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        preferences.set("Culling", forKey: "PhotosByElieBackstage.selectedSection")
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences,
+            workflowRecoveryStore: nil
+        )
+
+        #expect(model.selection == .culling)
+        #expect(BackstageViewModel.Section.culling.rawValue == "Culling")
+        #expect(BackstageViewModel.Section.culling.title == "Gallery")
+
+        model.showAllFixtureAssetsInGallery()
+        #expect(model.cullingViews == Set(FixtureCullingView.selectableCases))
+        #expect(model.gallerySavedViewLabel == "All fixture assets")
+
+        model.showCullingSavedView()
+        #expect(model.cullingViews == [.undecided])
+        #expect(model.gallerySavedViewLabel == "Culling — Undecided")
+    }
+
     @Test("Fixture selection becomes ready before a stalled Activity refresh")
     @MainActor
     func fixtureSelectionPrecedesActivityRefresh() async throws {

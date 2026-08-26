@@ -145,6 +145,10 @@ final class BackstageViewModel: ObservableObject {
         case publication = "Publication"
         case updates = "Updates"
         var id: String { rawValue }
+
+        var title: String {
+            self == .culling ? "Gallery" : rawValue
+        }
     }
 
     @Published var selection: Section? {
@@ -1905,6 +1909,16 @@ final class BackstageViewModel: ObservableObject {
             : cullingViews.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
     }
 
+    var gallerySavedViewLabel: String {
+        if cullingViews == [.undecided] {
+            return "Culling — Undecided"
+        }
+        if cullingViews == Set(FixtureCullingView.selectableCases) {
+            return "All fixture assets"
+        }
+        return "Custom"
+    }
+
     var cullingRatingFilterLabel: String {
         let rating = cullingMinimumRating
         return rating == 0 ? "All ratings" : "\(rating)+ stars"
@@ -1922,6 +1936,22 @@ final class BackstageViewModel: ObservableObject {
 
     func toggleCullingViewFilter(_ view: FixtureCullingView) {
         toggle(view, in: &cullingViews)
+    }
+
+    func showAllFixtureAssetsInGallery() {
+        applyGallerySavedView(Set(FixtureCullingView.selectableCases))
+    }
+
+    func showCullingSavedView() {
+        applyGallerySavedView([.undecided])
+    }
+
+    private func applyGallerySavedView(_ views: Set<FixtureCullingView>) {
+        if cullingViews == views {
+            applyCullingFilters()
+        } else {
+            cullingViews = views
+        }
     }
 
     func setCullingMinimumRating(_ rating: Int) {
@@ -2380,7 +2410,7 @@ final class BackstageViewModel: ObservableObject {
 
     func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false) async {
         guard !selectedFixtureID.isEmpty else {
-            cullingStatus = "Choose a fixture to begin culling."
+            cullingStatus = "Choose a fixture to browse its Gallery."
             return
         }
         if !preservingVisibleWindow {

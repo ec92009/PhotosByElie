@@ -32,6 +32,33 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_gallery_is_the_visible_destination_and_culling_is_a_saved_view(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        controls = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingCanvasControls.swift"
+        ).read_text(encoding="utf-8")
+        surface = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingView.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('case culling = "Culling"', model)
+        self.assertIn('self == .culling ? "Gallery" : rawValue', model)
+        self.assertIn("Label(section.title, systemImage: icon(for: section))", app)
+        self.assertIn('Text("Gallery")', surface)
+        self.assertIn('Menu("View: \\(model.gallerySavedViewLabel)")', controls)
+        self.assertIn('Button("All fixture assets")', controls)
+        self.assertIn('Button("Culling — Undecided")', controls)
+        self.assertIn("applyGallerySavedView([.undecided])", model)
+        self.assertIn(
+            "applyGallerySavedView(Set(FixtureCullingView.selectableCases))",
+            model,
+        )
+
     def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
@@ -89,7 +116,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "failedThumbnail: Bool = false",
             "if failedThumbnail",
             'model.cullingThumbnailFailures[\"expo-1\"] = .previewUnavailable',
-            '#Preview(\"Culling — Thumbnail Failure\")',
+            '#Preview(\"Gallery — Thumbnail Failure\")',
             "BackstageViewModel(photoLibrary: PreviewPhotoLibrary())",
             "private struct PreviewPhotoLibrary: PhotoLibraryServing",
             "Canvas previews must never reach the user's Photos library.",
@@ -1859,8 +1886,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
-        self.assertIn("Collapse the Culling or Review preview inspector", root)
-        self.assertIn("Expand the Culling or Review preview inspector", root)
+        self.assertIn("Collapse the Gallery or Review preview inspector", root)
+        self.assertIn("Expand the Gallery or Review preview inspector", root)
         self.assertIn("if model.authentication.phase == .authenticated", root)
         self.assertIn('else if model.status != "Connected"', root)
         self.assertLess(
@@ -1887,7 +1914,7 @@ class NativeCullingParityTest(unittest.TestCase):
     def test_primary_canvases_are_colocated_with_production_views(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"
         expectations = (
-            ("CullingView.swift", "struct CullingView: View", '#Preview("Culling — Wide")'),
+            ("CullingView.swift", "struct CullingView: View", '#Preview("Gallery — Wide")'),
             ("ReviewView.swift", "struct ReviewView: View", '#Preview("Review — Loaded")'),
             ("UploadView.swift", "struct UploadView: View", '#Preview("Uploads — Ready")'),
         )
@@ -2000,7 +2027,7 @@ class NativeCullingParityTest(unittest.TestCase):
         upload = (source_dir / "UploadHeaderView.swift").read_text(
             encoding="utf-8"
         )
-        self.assertIn('#Preview("Culling — Controls")', culling)
+        self.assertIn('#Preview("Gallery — Controls")', culling)
         self.assertIn('#Preview("T/K — Inspector")', review)
         self.assertIn('#Preview("Uploads — Header")', upload)
         self.assertIn("CullingSearchControls(model: model)", backstage_ui_source())
@@ -2291,7 +2318,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "Metadata",
             "Review",
             "Uploads",
-            "Culling no longer duplicates those navigation actions",
+            "Gallery no longer duplicates those navigation actions",
         ):
             self.assertIn(marker, guide)
 
@@ -2307,7 +2334,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "Backstage Culling and Review source candidates are still photos only",
+            "Backstage Gallery and Review source candidates are still photos only",
             guide,
         )
         self.assertIn(

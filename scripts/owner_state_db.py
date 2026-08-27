@@ -29,6 +29,29 @@ COUNTRY_ASSIGNMENT_TARGETS = {
     "spain": "Spain",
     "usa": "USA",
 }
+COUNTRY_LOCATION_ALIASES = {
+    "fr": "france",
+    "france": "france",
+    "it": "italy",
+    "italia": "italy",
+    "italy": "italy",
+    "mexico": "mexico",
+    "méxico": "mexico",
+    "mx": "mexico",
+    "portugal": "portugal",
+    "pt": "portugal",
+    "eslovaquia": "slovakia",
+    "sk": "slovakia",
+    "slovakia": "slovakia",
+    "es": "spain",
+    "españa": "spain",
+    "spain": "spain",
+    "estados unidos": "usa",
+    "us": "usa",
+    "usa": "usa",
+    "united states": "usa",
+    "united states of america": "usa",
+}
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
@@ -2070,7 +2093,7 @@ def country_review_context(
     *,
     capability: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return accepted Country and a non-authoritative catalog suggestion."""
+    """Return accepted Country and deterministic, non-authoritative evidence."""
 
     capability = capability or country_review_write_capability(conn)
     current = ""
@@ -2098,16 +2121,76 @@ def country_review_context(
     suggested = str(suggestion["collection_slug"] or "") if suggestion else ""
     if suggested not in COUNTRY_ASSIGNMENT_TARGETS:
         suggested = ""
+    location = conn.execute(
+        """
+        SELECT location_label, location_keywords_json, raw_json
+        FROM sidecar_assets
+        WHERE asset_id = ?
+        LIMIT 1
+        """,
+        (asset_id,),
+    ).fetchone()
+    location_suggested, location_source = _country_from_photos_location(location)
+    if current:
+        suggested = ""
+        suggestion_source = "accepted assignment"
+    elif suggested and location_suggested and suggested != location_suggested:
+        suggested = ""
+        suggestion_source = "conflicting catalog and Apple Photos location"
+    elif suggested and location_suggested:
+        suggestion_source = "catalog resolver + Apple Photos location"
+    elif suggested:
+        suggestion_source = "catalog resolver"
+    elif location_suggested:
+        suggested = location_suggested
+        suggestion_source = location_source
+    else:
+        suggestion_source = location_source
     return {
         "country": current,
         "suggestedCountry": suggested,
-        "countrySuggestionSource": (
-            "accepted assignment" if current else "catalog resolver" if suggested else ""
-        ),
+        "countrySuggestionSource": suggestion_source,
         "countryWriteEnabled": bool(capability["enabled"]),
         "countryWriteBlockReason": str(capability["reason"]),
         "countryMigrationId": str(capability["migrationId"]),
     }
+
+
+def _normalized_country_evidence(value: Any) -> str:
+    return re.sub(r"[^\w]+", " ", str(value or "").casefold(), flags=re.UNICODE).strip()
+
+
+def _country_from_photos_location(row: sqlite3.Row | None) -> tuple[str, str]:
+    """Map only exact structured Apple Photos country tokens to Review slugs."""
+
+    if row is None:
+        return "", ""
+    values: list[str] = [str(row["location_label"] or "")]
+    try:
+        keywords = json.loads(str(row["location_keywords_json"] or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        keywords = []
+    if isinstance(keywords, list):
+        values.extend(str(value) for value in keywords)
+    try:
+        raw = json.loads(str(row["raw_json"] or "{}"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raw = {}
+    if isinstance(raw, dict):
+        values.extend(str(raw.get(key) or "") for key in ("locationCountry", "country"))
+        raw_location = raw.get("location")
+        if isinstance(raw_location, dict):
+            values.extend(str(raw_location.get(key) or "") for key in ("country", "countryCode"))
+    matches = {
+        COUNTRY_LOCATION_ALIASES[normalized]
+        for value in values
+        if (normalized := _normalized_country_evidence(value)) in COUNTRY_LOCATION_ALIASES
+    }
+    if len(matches) == 1:
+        return next(iter(matches)), "Apple Photos location"
+    if len(matches) > 1:
+        return "", "conflicting Apple Photos location"
+    return "", ""
 
 
 def set_review_country_assignment(

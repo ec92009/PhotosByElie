@@ -325,6 +325,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewTitle = ""
     @Published var reviewKeywords = ""
     @Published var reviewCountry = ""
+    private var reviewCountrySuggestionSeedAssetID: String?
+    private var reviewCountrySuggestionSeedValue = ""
     @Published var reviewAIReasons: Set<String> = []
     @Published var reviewAINote = ""
     @Published var reviewLastAction: FixtureReviewAction = .approve
@@ -4029,6 +4031,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func updateReviewCountry(_ value: String) {
+        if value != reviewCountry {
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        }
         reviewCountry = value
         scheduleReviewMetadataAutosave()
     }
@@ -4068,11 +4074,18 @@ final class BackstageViewModel: ObservableObject {
                 ? reviewTitle
                 : nil
         let currentCountry = focusedReviewItem?.country ?? ""
-        let countryDraft = approvalDraft?.country ?? reviewCountry
+        let countrySuggestionIsUntouched = reviewCountrySuggestionSeedAssetID == anchor
+            && reviewCountrySuggestionSeedValue == reviewCountry
+        let countryDraft = action == .approve && countrySuggestionIsUntouched
+            ? reviewCountry
+            : approvalDraft?.country ?? reviewCountry
         let approvalCountry: String? = fixtureReviewWindow?.countryWriteEnabled == true
             && (
                 action == .propagateCountry
-                    || ((action == .approve || action == .editMetadata) && countryDraft != currentCountry)
+                    || (action == .approve && countryDraft != currentCountry)
+                    || (action == .editMetadata
+                        && countryDraft != currentCountry
+                        && !countrySuggestionIsUntouched)
             )
             ? countryDraft
             : nil
@@ -5160,7 +5173,19 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let draft = reviewProposalDrafts[item.id]
-        reviewCountry = draft?.country ?? item.country
+        if let draft {
+            reviewCountry = draft.country
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        } else if item.country.isEmpty, !item.suggestedCountry.isEmpty {
+            reviewCountry = item.suggestedCountry
+            reviewCountrySuggestionSeedAssetID = item.id
+            reviewCountrySuggestionSeedValue = item.suggestedCountry
+        } else {
+            reviewCountry = item.country
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        }
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
         let hasActiveAIRequest = item.editorialState == "requesting-ai"
@@ -5221,6 +5246,8 @@ final class BackstageViewModel: ObservableObject {
         reviewTitle = ""
         reviewKeywords = ""
         reviewCountry = ""
+        reviewCountrySuggestionSeedAssetID = nil
+        reviewCountrySuggestionSeedValue = ""
         reviewAIReasons = []
         reviewAINote = ""
     }
@@ -5229,7 +5256,11 @@ final class BackstageViewModel: ObservableObject {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
-        let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let visibleCountry = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let country = reviewCountrySuggestionSeedAssetID == item.id
+            && reviewCountrySuggestionSeedValue == visibleCountry
+            ? item.country
+            : visibleCountry
         if let existing = reviewProposalDrafts[item.id], existing.isProposal {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
                 country: country,

@@ -555,6 +555,94 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewItems.first?.country.isEmpty == true)
     }
 
+    @Test("Apple Photos Country suggestion seeds the picker but title autosave does not accept it")
+    @MainActor
+    func locationCountrySuggestionRemainsDraftOnly() async throws {
+        let item = FixtureReviewItem(
+            id: "review-location-country",
+            photoLibraryIdentifier: "photos-review-location-country",
+            title: "Current title",
+            keywords: ["Current"],
+            country: "",
+            suggestedCountry: "usa",
+            countrySuggestionSource: "Apple Photos location",
+            filename: "location.jpg",
+            capturedAt: "2026-08-28T00:00:00Z"
+        )
+        let reviewService = CapturingReviewService()
+        let aiStatusActions = (1...4).map { index in
+            OwnerAction(
+                id: "owner-action-country-ai-status-\(index)",
+                actionKind: "sidecar-culling-review",
+                target: "max",
+                state: .completed,
+                result: [
+                    "ai": .object([
+                        "active": false,
+                        "requested": 0,
+                        "ready": 0,
+                    ]),
+                ]
+            )
+        }
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: ReviewLifecycleActionAPI(terminalActions: aiStatusActions),
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: reviewService
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.fixtureReviewWindow = FixtureReviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            reviewStateFilters: ["picked"],
+            offset: 0,
+            limit: 200,
+            nextOffset: 0,
+            hasNext: false,
+            countryWriteEnabled: true,
+            summary: FixtureReviewSummary(
+                total: 1,
+                unreviewed: 1,
+                requestingAI: 0,
+                proposed: 0,
+                approved: 0,
+                countryMissing: 1
+            ),
+            items: [item]
+        )
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: [item.id])
+        model.clickReviewItem(item.id, modifiers: [])
+
+        #expect(model.reviewCountry == "usa")
+        model.updateReviewTitle("Edited title")
+        #expect(model.reviewProposalDrafts[item.id]?.country == "")
+        try await Task.sleep(for: .milliseconds(700))
+        #expect(model.reviewItems.first?.country == "")
+        let autosaves = await reviewService.recordedManifests()
+        #expect(autosaves.last?["reviewAction"]?.stringValue == "edit-metadata")
+        #expect(autosaves.last?["country"] == nil)
+
+        await model.applyReviewAction(.approve)
+        let approvals = await reviewService.recordedManifests()
+        #expect(approvals.last?["reviewAction"]?.stringValue == "approve")
+        #expect(approvals.last?["country"]?.stringValue == "usa")
+    }
+
     @Test("Culling Waste Basket updates locally and exact Undo restores the same window")
     @MainActor
     func cullingWasteBasketOptimisticXAndUndo() async throws {
@@ -2352,6 +2440,53 @@ private struct StaticLocalFixtureTree: LocalFixtureReviewServing, LocalFixtureTr
 
     func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
         throw CancellationError()
+    }
+}
+
+private actor CapturingReviewService: LocalFixtureReviewServing {
+    private var manifests: [[String: JSONValue]] = []
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        manifests.append(manifest)
+        let action = manifest["reviewAction"]?.stringValue ?? "edit-metadata"
+        let assetID = manifest["anchorAssetId"]?.stringValue ?? ""
+        let title = manifest["title"]?.stringValue ?? "Current title"
+        let keywords = manifest["keywords"]?.arrayValue ?? [.string("Current")]
+        let country = manifest["country"]?.stringValue ?? ""
+        return FixtureReviewResult(json: [
+            "operationId": .string("captured-\(manifests.count)"),
+            "fixtureId": manifest["fixtureId"] ?? .string(""),
+            "action": .string(action),
+            "anchorAssetId": .string(assetID),
+            "propagated": manifest["propagate"] ?? .bool(false),
+            "items": .array([
+                .object([
+                    "assetId": .string(assetID),
+                    "before": .object([
+                        "title": .string("Current title"),
+                        "keywords": .array([.string("Current")]),
+                        "country": .string(""),
+                        "editorialState": .string("unreviewed"),
+                    ]),
+                    "after": .object([
+                        "title": .string(title),
+                        "keywords": .array(keywords),
+                        "country": .string(country),
+                        "editorialState": .string(action == "approve" ? "approved" : "unreviewed"),
+                    ]),
+                    "review": .object([:]),
+                ]),
+            ]),
+            "timing": .object([:]),
+        ])
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        throw CancellationError()
+    }
+
+    func recordedManifests() -> [[String: JSONValue]] {
+        manifests
     }
 }
 

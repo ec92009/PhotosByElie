@@ -51,13 +51,20 @@ struct ReviewTitleKeywordEditor: View {
                     let accepted = item.country.isEmpty ? "Unknown" : item.country.capitalized
                     let suggestion = item.suggestedCountry.isEmpty
                         ? ""
-                        : " · Suggested: \(item.suggestedCountry.capitalized) via \(item.countrySuggestionSource)"
+                        : " · Suggested: \(countryDisplayName(item.suggestedCountry)) via \(item.countrySuggestionSource)"
                     let proposal = item.proposedCountry.isEmpty
                         ? ""
                         : " · AI proposal: \(item.proposedCountry.capitalized)"
                     Text("Accepted: \(accepted)\(suggestion)\(proposal)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    if item.suggestedCountry.isEmpty,
+                       !item.countrySuggestionSource.isEmpty,
+                       item.country.isEmpty {
+                        Text("Country evidence: \(item.countrySuggestionSource).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 if model.fixtureReviewWindow?.countryWriteEnabled != true,
                    let reason = model.fixtureReviewWindow?.countryWriteBlockReason,
@@ -105,6 +112,10 @@ struct ReviewTitleKeywordEditor: View {
                 .backstageHelp("Copy the current keywords to the other selected Review items using the active propagation scope.")
             }
         }
+    }
+
+    private func countryDisplayName(_ country: String) -> String {
+        country == "usa" ? "USA" : country.capitalized
     }
 }
 

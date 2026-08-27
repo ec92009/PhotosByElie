@@ -170,6 +170,24 @@ Backstage reads and writes use SQLite.
 - Choosing Unknown deliberately clears the assignment through an audited
   Review operation; it does not delete suggestion or resolution history.
 
+#### Deterministic Apple Photos location proposal
+
+PBE-171 extends the suggestion projection without creating a second Country
+authority. When accepted Country is Unknown, Review maps only exact supported
+country tokens from Apple Photos structured location metadata, its canonical
+location keywords, or a country-only location label. For example, `United
+States`, `USA`, and `US` map to the existing `usa` slug. Free-form titles,
+filenames, fixture names, and visual similarity are never inputs.
+
+The suggestion is preselected in the visible Country picker and is forwarded
+to requested-AI context with `Apple Photos location` provenance. It remains an
+untouched local draft: Title or Keywords autosave does not accept it. Owner
+approval or an explicit Country picker change uses the existing audited Review
+transaction. Accepted assignments always win, and conflicting catalog versus
+Apple Photos evidence fails closed with a visible reason. Because suggestion
+replay is a read-only projection, refresh is naturally idempotent; the durable
+audit receipt begins only when Owner action accepts or changes Country.
+
 ### Save, correction, and application
 
 Extend the existing connector-owned `fixture-review-apply` contract:

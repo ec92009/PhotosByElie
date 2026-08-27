@@ -56,6 +56,83 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(try scalar(databaseURL, "SELECT count(*) FROM country_assignments WHERE asset_id = 'asset-2'") == "0")
     }
 
+    @Test("Exact Apple Photos location seeds Country while accepted assignments still win")
+    func applePhotosLocationCountrySuggestion() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-location-country-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+            SET location_label = 'United States',
+                location_keywords_json = '["United States"]'
+            WHERE asset_id = 'asset-1';
+            """
+        )
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        let proposed = try store.reviewWindow(fixtureID: "fixture-expo")
+        let item = try #require(proposed.items.first { $0.id == "asset-1" })
+        #expect(item.country.isEmpty)
+        #expect(item.suggestedCountry == "usa")
+        #expect(item.countrySuggestionSource == "Apple Photos location")
+
+        try enableSyntheticCountryReceipt(databaseURL)
+        _ = try store.applyReview(
+            .editMetadata,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            country: "spain"
+        )
+        let accepted = try #require(
+            store.reviewWindow(fixtureID: "fixture-expo").items.first { $0.id == "asset-1" }
+        )
+        #expect(accepted.country == "spain")
+        #expect(accepted.suggestedCountry.isEmpty)
+        #expect(accepted.countrySuggestionSource == "accepted assignment")
+    }
+
+    @Test("Conflicting catalog and Apple Photos Country evidence fails closed")
+    func conflictingCountrySuggestions() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-country-conflict-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+            SET location_label = 'United States',
+                location_keywords_json = '["United States"]'
+            WHERE asset_id = 'asset-1';
+            CREATE TABLE catalog_collection_resolutions (
+              asset_id TEXT NOT NULL,
+              source_version_hash TEXT NOT NULL,
+              collection_slug TEXT NOT NULL,
+              resolved_at TEXT NOT NULL,
+              PRIMARY KEY (asset_id, source_version_hash)
+            );
+            INSERT INTO catalog_collection_resolutions
+              (asset_id, source_version_hash, collection_slug, resolved_at)
+            VALUES ('asset-1', 'conflict-version', 'spain', '2026-08-28T00:00:00Z');
+            """
+        )
+        let item = try #require(
+            OwnerReviewSQLiteStore(databaseURL: databaseURL)
+                .reviewWindow(fixtureID: "fixture-expo").items.first { $0.id == "asset-1" }
+        )
+        #expect(item.country.isEmpty)
+        #expect(item.suggestedCountry.isEmpty)
+        #expect(item.countrySuggestionSource == "conflicting catalog and Apple Photos location")
+    }
+
     @Test("Hide and exact Undo stay inside one Swift SQLite transaction")
     func hideAndUndoCopiedFixture() throws {
         let root = FileManager.default.temporaryDirectory

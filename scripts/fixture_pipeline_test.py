@@ -259,6 +259,67 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(cleared["items"][0]["after"]["country"], "")
 
+    def test_country_review_seeds_exact_apple_photos_location_without_accepting_it(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE sidecar_assets
+                SET location_label = 'United States',
+                    location_keywords_json = '["United States"]'
+                WHERE asset_id = 'asset-1'
+                """
+            )
+            connection.commit()
+
+        proposed = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(proposed["country"], "")
+        self.assertEqual(proposed["suggestedCountry"], "usa")
+        self.assertEqual(proposed["countrySuggestionSource"], "Apple Photos location")
+
+        self.enable_synthetic_country_identity_receipt()
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="spain",
+        )
+        accepted = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(accepted["country"], "spain")
+        self.assertEqual(accepted["suggestedCountry"], "")
+        self.assertEqual(accepted["countrySuggestionSource"], "accepted assignment")
+
+    def test_country_review_fails_closed_when_catalog_and_photos_location_conflict(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE sidecar_assets
+                SET location_label = 'United States',
+                    location_keywords_json = '["United States"]'
+                WHERE asset_id = 'asset-1'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO catalog_collection_resolutions (
+                  asset_id, source_version_hash, collection_slug, provider, resolved_at
+                ) VALUES ('asset-1', 'conflict-version', 'spain', 'test', '2026-08-28T00:00:00Z')
+                """
+            )
+            connection.commit()
+
+        item = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(item["country"], "")
+        self.assertEqual(item["suggestedCountry"], "")
+        self.assertEqual(
+            item["countrySuggestionSource"],
+            "conflicting catalog and Apple Photos location",
+        )
+
     def test_requested_ai_country_stays_an_editable_proposal_until_owner_approval(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")

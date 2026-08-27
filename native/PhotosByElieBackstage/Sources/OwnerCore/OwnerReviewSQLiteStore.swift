@@ -1232,6 +1232,17 @@ private let supportedReviewCountries: Set<String> = [
     "france", "italy", "mexico", "portugal", "slovakia", "spain", "usa",
 ]
 
+private let reviewCountryLocationAliases: [String: String] = [
+    "fr": "france", "france": "france",
+    "it": "italy", "italia": "italy", "italy": "italy",
+    "mexico": "mexico", "mx": "mexico",
+    "portugal": "portugal", "pt": "portugal",
+    "eslovaquia": "slovakia", "sk": "slovakia", "slovakia": "slovakia",
+    "es": "spain", "espana": "spain", "spain": "spain",
+    "estados unidos": "usa", "us": "usa", "usa": "usa",
+    "united states": "usa", "united states of america": "usa",
+]
+
 private func countryWriteCapability(
     _ connection: ReviewSQLiteConnection
 ) throws -> CountryWriteCapability {
@@ -1344,12 +1355,72 @@ private func countryContext(
             bindings: [.string(assetID)]
         )?["collection_slug"]?.stringValue ?? ""
         : ""
-    let suggested = supportedReviewCountries.contains(candidate) ? candidate : ""
-    return (
-        country,
-        suggested,
-        country.isEmpty ? (suggested.isEmpty ? "" : "catalog resolver") : "accepted assignment"
+    var suggested = supportedReviewCountries.contains(candidate) ? candidate : ""
+    let locationRow = try connection.queryOne(
+        """
+        SELECT location_label, location_keywords_json, raw_json
+        FROM sidecar_assets
+        WHERE asset_id = ?
+        LIMIT 1
+        """,
+        bindings: [.string(assetID)]
     )
+    let location = locationCountryEvidence(locationRow)
+    if !country.isEmpty {
+        return (country, "", "accepted assignment")
+    }
+    if !suggested.isEmpty, !location.country.isEmpty, suggested != location.country {
+        return (country, "", "conflicting catalog and Apple Photos location")
+    }
+    if !suggested.isEmpty, !location.country.isEmpty {
+        return (country, suggested, "catalog resolver + Apple Photos location")
+    }
+    if !suggested.isEmpty {
+        return (country, suggested, "catalog resolver")
+    }
+    suggested = location.country
+    return (country, suggested, location.source)
+}
+
+private func normalizedCountryEvidence(_ value: String) -> String {
+    value
+        .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        .lowercased()
+        .components(separatedBy: CharacterSet.alphanumerics.inverted)
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
+}
+
+private func locationCountryEvidence(
+    _ row: [String: JSONValue]?
+) -> (country: String, source: String) {
+    guard let row else { return ("", "") }
+    var values = [row["location_label"]?.stringValue ?? ""]
+    if let encoded = row["location_keywords_json"]?.stringValue,
+       let data = encoded.data(using: .utf8),
+       let keywords = try? JSONSerialization.jsonObject(with: data) as? [String] {
+        values.append(contentsOf: keywords)
+    }
+    if let encoded = row["raw_json"]?.stringValue,
+       let data = encoded.data(using: .utf8),
+       let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        values.append(raw["locationCountry"] as? String ?? "")
+        values.append(raw["country"] as? String ?? "")
+        if let location = raw["location"] as? [String: Any] {
+            values.append(location["country"] as? String ?? "")
+            values.append(location["countryCode"] as? String ?? "")
+        }
+    }
+    let matches = Set(values.compactMap {
+        reviewCountryLocationAliases[normalizedCountryEvidence($0)]
+    })
+    if matches.count == 1, let country = matches.first {
+        return (country, "Apple Photos location")
+    }
+    if matches.count > 1 {
+        return ("", "conflicting Apple Photos location")
+    }
+    return ("", "")
 }
 
 private func setCountry(

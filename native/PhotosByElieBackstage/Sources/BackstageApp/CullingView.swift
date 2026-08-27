@@ -572,13 +572,13 @@ struct CullingView: View {
                     .backstageHelp("Make each Culling thumbnail larger, showing fewer assets at once.")
             }
             .buttonStyle(.bordered)
-            .backstageHelp(model.cullingUsesFill
-                ? "Switch thumbnails to Fit so each complete image remains visible inside its card."
-                : "Switch thumbnails to Fill so images crop to cover their cards edge to edge.")
             Button(model.cullingUsesFill ? "Fill" : "Fit") {
                 model.toggleCullingFitFill()
             }
             .buttonStyle(.bordered)
+            .backstageHelp(model.cullingUsesFill
+                ? "Switch thumbnails to Fit so each complete image remains visible inside its card. This changes display only; fixture decisions stay unchanged."
+                : "Switch thumbnails to Fill so images crop to cover their cards edge to edge. This changes display only; fixture decisions stay unchanged.")
         }
     }
 

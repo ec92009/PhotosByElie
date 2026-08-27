@@ -23,6 +23,7 @@ from scripts.new_owner_connector import (
     WorkerRequestError,
     WorkerClient,
     _allowed_local_status_origin,
+    _launch_waste_basket_for_browser,
     _launch_sidecar_workspace,
     _load_local_modules,
     _local_status_payload,
@@ -888,6 +889,11 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             _owner_waste_basket_url(8007),
             "http://127.0.0.1:8007/owner-review.html?view=blocked",
         )
+
+    def test_waste_basket_browser_helper_requires_explicit_rollback(self):
+        with patch("scripts.new_owner_connector.LEGACY_BROWSER_OWNER_ENABLED", False):
+            with self.assertRaisesRegex(RuntimeError, "Browser Waste Basket is retired"):
+                _launch_waste_basket_for_browser(self.config)
 
     def test_sidecar_job_payload_surfaces_redirect_url(self):
         payload = _sidecar_job_public_payload(self.config, "local-sidecar-test", {

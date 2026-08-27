@@ -109,4 +109,10 @@
       return state;
     }
   })();
+
+  window.photosByEliePageReady = async () => {
+    await window.photosByElieCatalogReady;
+    await window.photosByElieSharedGalleryReady;
+    return { mode: "public", galleryKey: "", gallery: null };
+  };
 })();

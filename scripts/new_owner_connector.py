@@ -106,6 +106,9 @@ READ_ONLY_FIXTURE_MODES = {
     "r2-reconciliation-plan",
 }
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
+LEGACY_BROWSER_OWNER_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_BROWSER_OWNER", "").strip() == "1"
+)
 LEGACY_CONNECTOR_DAEMON_ENABLED = (
     os.environ.get("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", "").strip() == "1"
 )
@@ -494,7 +497,12 @@ def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
 
 
 def _launch_waste_basket_for_browser(config: ConnectorConfig) -> dict:
-    """Start the local Owner helper and return its Waste Basket URL."""
+    """Start the retired browser Owner helper only for an explicit rollback."""
+    if not LEGACY_BROWSER_OWNER_ENABLED:
+        raise RuntimeError(
+            "Browser Waste Basket is retired. Use native PhotosByElie Backstage, "
+            "or set PBE_ENABLE_LEGACY_BROWSER_OWNER=1 for a deliberate rollback."
+        )
     existing = _running_owner_helper()
     if existing:
         return existing
@@ -893,6 +901,19 @@ def start_local_status_server(
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
             if parsed.path == LOCAL_WASTE_BASKET_OPEN_PATH:
+                if not LEGACY_BROWSER_OWNER_ENABLED:
+                    body = (
+                        "Browser Waste Basket is retired. Use native PhotosByElie Backstage. "
+                        "For a deliberate rollback, restart the connector with "
+                        "PBE_ENABLE_LEGACY_BROWSER_OWNER=1."
+                    ).encode("utf-8")
+                    self.send_response(410)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 try:
                     workspace = _launch_waste_basket_for_browser(config)
                     self.send_response(302)

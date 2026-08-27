@@ -163,12 +163,18 @@ advance in one `BEGIN IMMEDIATE` transaction and roll back together on error.
 - Cookies, OAuth secrets, connector credentials, and permanent R2 credentials
   are never embedded in the app.
 
-## Backstage-launched PBE Owner session
+## Retired hosted PBE Owner session
 
-The Backstage sidebar exposes the sole launch point for actionable hosted PBE
-Owner mode. It captures the authoritative current fixture, lazily starts a
-Backstage-owned native listener on a random loopback port, verifies the local
-readiness identities, mints a five-minute Worker session, and opens a gallery
+The Backstage sidebar no longer exposes the actionable hosted PBE Owner launch
+point. **Gallery → Workflows → View as customer** opens only a verified,
+published customer URL and creates no Owner session. The former host/session
+implementation remains as unreachable rollback and test material while its
+final deletion inventory is reviewed; normal Backstage and PBE customer runtime
+do not start it.
+
+Historically, the compatibility flow captured the authoritative current fixture and lazily started a
+Backstage-owned native listener on a random loopback port, verified the local
+readiness identities, minted a five-minute Worker session, and opened a gallery
 bound to that fixture, source/catalog identity, device, capabilities, expiry,
 and `pbb-79-waste-basket` lifecycle writer. The production path does not launch
 or attach to `scripts/local_server.py`.
@@ -191,7 +197,7 @@ imports, and an arbitrary filesystem web root are not part of this production
 trust boundary. The retained Python host and its git-tree attestation are
 legacy rollback/test material only; they are not a normal launch fallback.
 
-Open PBE Owner captures the exact fixture synchronously. Both chooser and
+The retired Open PBE Owner flow captured the exact fixture synchronously. Both chooser and
 fixture refresh remain disabled through the asynchronous readiness/mint/attach
 sequence, and the provisional lock is released if launch fails. A browser
 session generation guard prevents an older heartbeat response from restoring

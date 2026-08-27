@@ -1,147 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Photos By Elie | Sidecar</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Photos By Elie | Sidecar moved to Backstage</title>
   <meta name="robots" content="noindex,nofollow"/>
-  <meta name="theme-color" content="#7b4d26"/>
-  <link rel="stylesheet" href="./shared.css"/>
-  <link rel="stylesheet" href="./photos.css"/>
-  <link rel="stylesheet" href="./sidecar.css?v=224.0"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
+  <link rel="stylesheet" href="./shared.css?v=239.0"/>
+  <link rel="stylesheet" href="./styles.css?v=239.0"/>
+  <link rel="stylesheet" href="./photos.css?v=239.0"/>
 </head>
-<body data-gallery="sidecar">
-  <header class="site-header">
-    <a class="brand" href="./owner.html"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</a>
-    <nav aria-label="Sidecar navigation">
-      <a href="./owner.html">Owner</a>
-      <span>|</span>
-      <a class="is-active" href="./sidecar.html">Sidecar</a>
-    </nav>
+<body data-fixed-header>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar shell">
+    <a class="header-back-button" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
+    <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
+    <nav class="version-switch" aria-label="Site navigation"><a href="./">Photos</a></nav>
+    <span class="site-version-badge">v239.0</span>
   </header>
-
-  <main class="owner-main sidecar-shell">
-    <section class="owner-hero sidecar-hero">
-      <p class="eyebrow">Apple Photos workspace</p>
-      <h1>Sidecar</h1>
-      <p class="gallery-status" data-sidecar-status>Cloud-backed culling. This Mac handles Photos preview and export.</p>
-      <div class="sidecar-version" data-sidecar-version>v224.0</div>
-    </section>
-
-    <section class="panel sidecar-controls" aria-label="Sidecar source controls">
-      <div class="sidecar-view-tabs" role="tablist" aria-label="Sidecar pages">
-        <button class="sidecar-view-tab" type="button" role="tab" aria-selected="true" data-sidecar-page="culling">Culling</button>
-        <button class="sidecar-view-tab" type="button" role="tab" aria-selected="false" data-sidecar-page="review">Review</button>
+  <main id="main-content" class="shell">
+    <section class="panel gallery-hero">
+      <div>
+        <p class="eyebrow">Browser workflow retired</p>
+        <h1>Sidecar moved to Backstage</h1>
+        <p class="gallery-status">Open PhotosByElie Backstage on an enrolled Mac for Apple Photos indexing, previews, Culling, Review, and delivery work.</p>
       </div>
-      <div class="sidecar-control-grid sidecar-working-set-grid">
-        <label>
-          <span>Visible previews</span>
-          <select data-sidecar-limit>
-            <option value="48">48</option>
-            <option value="96" selected>96</option>
-            <option value="180">180</option>
-            <option value="300">300</option>
-          </select>
-        </label>
-        <label class="sidecar-search-control">
-          <span>Search</span>
-          <span class="sidecar-search-box">
-            <input type="search" data-sidecar-search placeholder="filename, title, keyword, place" autocomplete="off" spellcheck="false"/>
-            <button class="sidecar-search-clear" type="button" data-sidecar-search-clear aria-label="Clear search" title="Clear search">&times;</button>
-          </span>
-        </label>
-      </div>
-      <div class="sidecar-filter-grid" aria-label="Sidecar filters">
-        <fieldset class="sidecar-filter-group" data-sidecar-filter-group="rating">
-          <legend>Stars</legend>
-          <span class="sidecar-filter-actions" aria-label="Stars filter actions">
-            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="rating" data-sidecar-filter-checked="true" aria-label="Select all star filters">All</button>
-            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="rating" data-sidecar-filter-checked="false" aria-label="Deselect all star filters">None</button>
-          </span>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="0" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">0</span><span class="sidecar-visually-hidden">0 stars</span></label>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="1" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">1</span><span class="sidecar-visually-hidden">1 star</span></label>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="2" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">2</span><span class="sidecar-visually-hidden">2 stars</span></label>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="3" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">3</span><span class="sidecar-visually-hidden">3 stars</span></label>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="4" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">4</span><span class="sidecar-visually-hidden">4 stars</span></label>
-          <label class="sidecar-filter-rating-option"><input type="checkbox" value="5" data-sidecar-filter="rating" checked/><span class="sidecar-filter-rating-chip" aria-hidden="true">5</span><span class="sidecar-visually-hidden">5 stars</span></label>
-        </fieldset>
-        <fieldset class="sidecar-filter-group" data-sidecar-filter-group="color">
-          <legend>Colors</legend>
-          <span class="sidecar-filter-actions" aria-label="Colors filter actions">
-            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="color" data-sidecar-filter-checked="true" aria-label="Select all color filters">All</button>
-            <button class="sidecar-filter-action" type="button" data-sidecar-filter-toggle="color" data-sidecar-filter-checked="false" aria-label="Deselect all color filters">None</button>
-          </span>
-          <label class="sidecar-filter-swatch-option" title="none"><input type="checkbox" value="none" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch sidecar-filter-swatch-none" aria-hidden="true"></span><span class="sidecar-visually-hidden">none</span></label>
-          <label class="sidecar-filter-swatch-option" title="red"><input type="checkbox" value="red" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="red" aria-hidden="true"></span><span class="sidecar-visually-hidden">red</span></label>
-          <label class="sidecar-filter-swatch-option" title="yellow"><input type="checkbox" value="yellow" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="yellow" aria-hidden="true"></span><span class="sidecar-visually-hidden">yellow</span></label>
-          <label class="sidecar-filter-swatch-option" title="green"><input type="checkbox" value="green" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="green" aria-hidden="true"></span><span class="sidecar-visually-hidden">green</span></label>
-          <label class="sidecar-filter-swatch-option" title="blue"><input type="checkbox" value="blue" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="blue" aria-hidden="true"></span><span class="sidecar-visually-hidden">blue</span></label>
-          <label class="sidecar-filter-swatch-option" title="purple"><input type="checkbox" value="purple" data-sidecar-filter="color" checked/><span class="sidecar-filter-swatch" data-sidecar-color="purple" aria-hidden="true"></span><span class="sidecar-visually-hidden">purple</span></label>
-        </fieldset>
-        <fieldset class="sidecar-filter-group">
-          <legend>Decisions</legend>
-          <label><input type="checkbox" value="undecided" data-sidecar-filter="pickState" checked/>undecided</label>
-          <label><input type="checkbox" value="picked" data-sidecar-filter="pickState" checked/>picked</label>
-          <label><input type="checkbox" value="rejected" data-sidecar-filter="pickState" checked/>rejected</label>
-        </fieldset>
-        <fieldset class="sidecar-filter-group">
-          <legend>Media</legend>
-          <label><input type="checkbox" value="photo" data-sidecar-filter="mediaType" checked/>photos</label>
-          <label><input type="checkbox" value="video" data-sidecar-filter="mediaType" checked/>videos</label>
-        </fieldset>
-      </div>
-      <div class="cta sidecar-actions">
-        <button class="btn secondary sidecar-burst-action" type="button" data-sidecar-burst-cull>Cull bursts</button>
-        <button class="btn secondary" type="button" data-sidecar-summary>Refresh summary</button>
-        <button class="btn secondary" type="button" data-sidecar-upload-plan hidden>Upload Bridge</button>
-        <button class="btn secondary" type="button" data-sidecar-commit-plan>Photos commit plan</button>
-        <button class="btn secondary sidecar-danger-action" type="button" data-sidecar-empty-wastebasket>Empty wastebasket</button>
-      </div>
-      <div class="sidecar-index-status" data-sidecar-index-status hidden>
-        <div class="sidecar-index-status-copy">
-          <span data-sidecar-index-label>Local Photos index status</span>
-          <strong data-sidecar-index-count>0 indexed</strong>
-        </div>
-        <progress class="sidecar-index-progress" max="100" value="0" data-sidecar-index-progress hidden></progress>
-      </div>
-      <p class="owner-card-note">Shortcuts: <kbd>C</kbd> toggle Cull/Review, <kbd>1</kbd>-<kbd>5</kbd> rating, <kbd>0</kbd> clear rating, <kbd>6</kbd>-<kbd>9</kbd> toggle red/yellow/green/blue, <kbd>P</kbd> pick, <kbd>A</kbd> approve metadata + pick, <kbd>X</kbd> reject, <kbd>H</kbd> hide, <kbd>U</kbd> unpick, arrows select, <kbd>Shift</kbd>+arrows extend selection, <kbd>Space</kbd> preview, <kbd>Cmd</kbd>-<kbd>Z</kbd> undo. Shortcuts keep working in preview. Click, <kbd>Cmd</kbd>-click, and <kbd>Shift</kbd>-click select.</p>
-    </section>
-
-    <section class="sidecar-workspace">
-      <section class="panel sidecar-grid-panel" aria-label="Sidecar culling grid">
-        <div class="owner-card-titlebar">
-          <div>
-            <p class="eyebrow" data-sidecar-grid-eyebrow>Cull</p>
-            <h2 data-sidecar-grid-title>Library slice</h2>
-          </div>
-          <dl class="sidecar-mini-counts" data-sidecar-counts></dl>
-        </div>
-        <div class="sidecar-preview-progress" data-sidecar-preview-status hidden aria-live="polite">
-          <span data-sidecar-preview-label>Loading previews</span>
-          <progress max="1" value="0" data-sidecar-preview-progress></progress>
-          <strong data-sidecar-preview-count>0 / 0</strong>
-        </div>
-        <div class="sidecar-grid" data-sidecar-grid>
-          <div class="sidecar-window-loading" role="status" aria-live="polite">
-            <span class="sidecar-loading-spinner" aria-hidden="true"></span>
-            <span><strong>Starting Sidecar</strong><small>Preparing the local Photos workspace</small></span>
-          </div>
-        </div>
-      </section>
-
-      <aside class="panel sidecar-plan-panel" data-sidecar-plan-panel hidden>
-        <div class="owner-card-titlebar">
-          <div>
-            <p class="eyebrow" data-sidecar-plan-eyebrow>Plan</p>
-            <h2 data-sidecar-plan-title>Plan</h2>
-          </div>
-        </div>
-        <div data-sidecar-plan-output></div>
-      </aside>
+      <div class="cta"><a class="btn secondary" href="./">Return to Photos</a></div>
     </section>
   </main>
-
-  <script src="./photos.js"></script>
-  <script src="./sidecar.js?v=224.0"></script>
 </body>
 </html>

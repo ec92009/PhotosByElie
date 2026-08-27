@@ -1,7 +1,7 @@
 # PBE-164: Native View as customer
 
-Status: source implementation; not promoted, installed, or customer-accepted.
-Base: `release/backstage` at `4942b0fb`, v238.15 build 218.
+Status: customer-only cutover implemented in source; release promotion, installation,
+and production customer acceptance remain separate receipts.
 
 ## Product boundary
 
@@ -41,16 +41,33 @@ This is **recorded publication evidence**, not a new network verification of the
 customer page at click time. Customer-side revocation/access enforcement remains
 authoritative. It does not claim an unpublished item is visible.
 
-## Remaining cutover gates
+## Customer-only cutover
+
+Customer HTML no longer links to Backstage provisioning or loads the browser
+Owner authentication, navigation, hosted-session, hidden-store, or mutation
+bundles. A legacy `gallery=pbe-owner` request redirects to the neutral Search
+gallery. A legacy photo URL keeps its exact published media ID while removing
+the Owner gallery parameter before rendering the ordinary customer detail page.
+
+Backstage no longer presents an Open/End PBE Owner control or starts a hosted
+Owner session from the fixture picker. **Gallery → Workflows → View as customer**
+is the only browser-opening workflow exposed by the native app. The attested
+host/session implementation remains in source as unreachable rollback material
+until a later removal inventory deletes it; it is not part of the normal UI or
+customer runtime.
+
+`owner.html` remains an unlinked, `noindex` recovery surface for direct Google
+identity verification, one-time Backstage enrollment, device inspection, and
+revocation. Its provisioning-only policy hides every workflow card except
+Backstage enrollment. Server-side role and device checks remain authoritative.
+
+## Remaining release gates
 
 - Signed release promotion and installed UI/customer-page acceptance remain
-  separate from source tests. No version bump or installation is part of this change.
+  separate from source tests.
 - Private-only customer deliveries and fixture-wide previews require their own
   exact customer-link evidence. This public-photo handoff deliberately does not
   guess those links or grant access. Do not treat it as complete PBE-164 parity.
-- The existing PBE Owner launcher and browser runtime remain temporarily until
-  native workflow acceptance and public/private customer regression proof allow
-  retirement. They are compatibility surfaces, not future feature targets.
 - PBE-164's inventory source receipt is `9eb3dd66` on
   `codex/pbe-164-owner-retirement-inventory`. It describes the later detachment,
   removal, and deployment order; this implementation does not execute those steps.
@@ -64,10 +81,10 @@ conflicting live mappings, older live renditions, query encoding, and read-only
 bytes. Native model tests cover selection count, no Owner session, visible
 failure feedback, browser failure, duplicate submission, and stale async results.
 
-After separately approved promotion, test with a known verified published photo:
+After promotion, test with a known verified published photo:
 select it in Gallery, choose Workflows → View as customer, and confirm the right
 ordinary customer page opens with no Owner controls added by the handoff. Then
 test an unpublished/private-only photo, no/multiple selection, and a changed
 selection during lookup. Confirm keyboard reachability, VoiceOver feedback, and
-the narrow-window layout. Keep publication/customer acceptance distinct from
-the still-pending removal of browser Owner itself.
+the narrow-window layout. Also confirm legacy hosted-Owner gallery/detail URLs
+fail closed into customer pages and no Owner bundle or loopback request is made.

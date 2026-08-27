@@ -1391,8 +1391,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "219")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "220")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1745,7 +1745,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(flag, app)
 
-    def test_shared_feedback_surface_is_adopted_by_remaining_workflow_surfaces(self):
+    def test_shared_feedback_surface_is_adopted_by_active_workflow_surfaces(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"
         culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
         review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
@@ -1781,10 +1781,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("isWorking: model.isRunningDelivery", upload)
         self.assertNotIn("Text(model.uploadRecoveryStatus)", upload)
 
-        self.assertIn("BackstageFeedbackView(", picker)
-        self.assertIn("message: model.pbeOwnerSessionStatus", picker)
-        self.assertIn("isWorking: model.isLaunchingPBEOwner", picker)
-        self.assertNotIn("Text(model.pbeOwnerSessionStatus)", picker)
+        self.assertNotIn("BackstageFeedbackView(", picker)
+        self.assertNotIn("model.pbeOwnerSessionStatus", picker)
+        self.assertNotIn("model.isLaunchingPBEOwner", picker)
 
     def test_current_fixture_selector_is_left_aligned_in_sidebar(self):
         picker = (

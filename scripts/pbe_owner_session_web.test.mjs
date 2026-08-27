@@ -72,24 +72,18 @@ const runSessionClient = ({
   };
 };
 
-test("gallery and detail bootstrap the Backstage session before Owner actions", () => {
+test("customer gallery and detail do not bootstrap browser Owner capabilities", () => {
   for (const page of ["gallery.html", "photo.html"]) {
     const html = read(page);
-    const sessionIndex = html.indexOf("pbe-owner-session.js");
-    const actionsIndex = html.indexOf("hidden-actions.js");
-    assert.ok(sessionIndex >= 0, `${page} loads the PBE Owner session client`);
-    assert.ok(actionsIndex > sessionIndex, `${page} loads Owner actions after the session client`);
-    assert.match(html, /pbe-owner-session\.js\?v=226\.2/);
+    assert.doesNotMatch(html, /pbe-owner-session\.js/, `${page} omits the PBE Owner session client`);
+    assert.doesNotMatch(html, /hidden-actions\.js/, `${page} omits Owner actions`);
+    assert.doesNotMatch(html, /owner-tools\.js/, `${page} omits Owner tools`);
   }
   assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
-  assert.match(
-    read("photo-gallery.js"),
-    /if \(isPBEOwnerGallery\) \{[\s\S]*const ownerGallery = window\.photosByElieData\?\.\[pbeOwnerGalleryKey\]/,
-  );
-  assert.match(read("gallery.html"), /photo-gallery\.js\?v=226\.2/);
+  assert.match(read("photo-gallery.js"), /requestedGalleryKey === pbeOwnerGalleryKey[\s\S]*searchParams\.set\("gallery", "selection"\)/);
+  assert.match(read("gallery.html"), /photo-gallery\.js\?v=239\.0/);
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
-  assert.match(read("pbe-owner-session.js"), /if \(ownerSurface\) \{[\s\S]*await window\.photosByEliePBEOwnerSessionReady/);
-  assert.match(read("photo-gallery.js"), /const setCollectionLabel = \(element\) => \{[\s\S]*if \(isPBEOwnerGallery\) delete element\.dataset\.i18n;/);
+  assert.match(read("photo-detail.js"), /isRequestedPBEOwnerCollection[\s\S]*params\.delete\("gallery"\)/);
 });
 
 test("Owner cold launch exposes one busy loading region until the frozen fixture is ready", async () => {
@@ -348,12 +342,21 @@ test("public hidden actions initialize while Owner readiness remains pending", a
   assert.deepEqual(Array.from(hiddenIds), []);
 });
 
-test("detail controller renders explicit failure without public fallback", async (t) => {
-  for (const [label, search, expectedMeta] of [
-    ["Owner", "?gallery=%20PBE-OWNER%20&id=france-one", "PBE Owner unavailable"],
-    ["public", "?gallery=france&id=france-one", "Photo unavailable"],
-  ]) {
-    await t.test(label, async () => {
+test("detail controller redirects retired Owner URLs and renders public readiness failures", async (t) => {
+  await t.test("retired Owner URL", async () => {
+    let replaced = "";
+    const window = {
+      location: {
+        href: "https://photos-by-elie.com/photo.html?gallery=%20PBE-OWNER%20&id=france-one",
+        search: "?gallery=%20PBE-OWNER%20&id=france-one",
+        replace: (value) => { replaced = value; },
+      },
+    };
+    await vm.runInNewContext(read("photo-detail.js"), { window, URL, URLSearchParams });
+    assert.equal(replaced, "https://photos-by-elie.com/photo.html?id=france-one");
+  });
+
+  await t.test("public readiness failure", async () => {
       const elements = {
         preview: { setAttribute: (name) => { elements.preview[name] = true; } },
         purchase: { setAttribute: (name) => { elements.purchase[name] = true; } },
@@ -379,7 +382,11 @@ test("detail controller renders explicit failure without public fallback", async
       };
       let replaced = "";
       const window = {
-        location: { search, replace: (value) => { replaced = value; } },
+        location: {
+          href: "https://photos-by-elie.com/photo.html?gallery=france&id=france-one",
+          search: "?gallery=france&id=france-one",
+          replace: (value) => { replaced = value; },
+        },
         photosByEliePageReady: async () => { throw new Error("Fixture authorization unavailable"); },
         photosByElieData: { france: { title: "France", photos: [{ id: "france-one" }] } },
       };
@@ -387,16 +394,16 @@ test("detail controller renders explicit failure without public fallback", async
       await vm.runInNewContext(read("photo-detail.js"), {
         window,
         document,
+        URL,
         URLSearchParams,
       });
 
       assert.equal(replaced, "");
       assert.equal(elements.preview.hidden, true);
       assert.equal(elements.purchase.hidden, true);
-      assert.equal(elements.meta.textContent, expectedMeta);
+      assert.equal(elements.meta.textContent, "Photo unavailable");
       assert.equal(elements.title.textContent, "Fixture authorization unavailable");
-    });
-  }
+  });
 });
 
 test("browser session handoff exchanges an opaque ticket for an HttpOnly session", () => {
@@ -1270,14 +1277,16 @@ test("PBE Owner status remains usable at desktop and narrow widths", () => {
 
 test("Google browser Owner is credential provisioning only", () => {
   const owner = read("owner.html");
-  const ownerScript = read("new-owner.js");
+  const provisioningScript = read("backstage-provisioning.js");
   const worker = read("worker/checkout-worker.mjs");
   assert.match(owner, /data-owner-provisioning-only(?:[\s>])/);
-  assert.match(owner, /ec92009@gmail\.com/);
+  assert.match(owner, /backstage-provisioning\.js\?v=239\.0/);
+  assert.doesNotMatch(owner, /new-owner\.js|pbe-owner-session\.js|hidden-actions\.js|owner-tools\.js/);
   assert.doesNotMatch(owner, /owner-activity\.js/);
   assert.doesNotMatch(owner, /access-console\.html/);
-  assert.match(ownerScript, /session\?\.canProvisionBackstage/);
-  assert.doesNotMatch(ownerScript, /pbe_auth_(?:token|code)|sessionStorage/);
+  assert.match(provisioningScript, /currentSession\?\.canProvisionBackstage === true/);
+  assert.match(provisioningScript, /ownerPath\("\/owner\/session"\)/);
+  assert.doesNotMatch(provisioningScript, /pbe_auth_(?:token|code)|sessionStorage/);
   assert.match(worker, /const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail\.com"/);
   assert.doesNotMatch(worker, /\/owner\/auth\/refresh|pbe_auth_(?:token|code)/);
   assert.match(worker, /session\.provider !== "google-oauth"/);

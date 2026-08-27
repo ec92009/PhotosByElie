@@ -395,7 +395,8 @@ class NativeCullingParityTest(unittest.TestCase):
         culling_preview = photo_library.split(
             "public func cullingPreview(", 1
         )[1].split("public func renderedJPEGPreview(", 1)[0]
-        self.assertIn("if maxPixelSize > 180,", culling_preview)
+        self.assertIn("requestFullPreview(", culling_preview)
+        self.assertNotIn("requestAcceptedStillResourcePreview(", culling_preview)
         self.assertNotIn("maxPixelSize <= Self.thumbnailRequestMaxPixelSize,\n            let renderedJPEG", culling_preview)
 
         self.assertIn("cullingPreviewForAsset(", model)
@@ -451,14 +452,8 @@ class NativeCullingParityTest(unittest.TestCase):
         culling_preview = photo_library.split(
             "public func cullingPreview(", 1
         )[1].split("public func renderedJPEGPreview(", 1)[0]
-        self.assertIn(
-            "let acceptedSource = preferredAcceptedStillResource(for: asset)",
-            culling_preview,
-        )
-        self.assertIn(
-            "requestAcceptedStillResourcePreview(",
-            culling_preview,
-        )
+        self.assertIn("requestFullPreview(", culling_preview)
+        self.assertNotIn("requestAcceptedStillResourcePreview(", culling_preview)
         rendered_preview = photo_library.split(
             "public func renderedJPEGPreview(", 1
         )[1].split("private func requestThumbnailPreview(", 1)[0]
@@ -1404,8 +1399,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "223")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "224")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

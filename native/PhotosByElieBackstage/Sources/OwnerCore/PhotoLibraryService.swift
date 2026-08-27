@@ -342,15 +342,6 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         try requireAccess()
         let asset = try asset(localIdentifier)
 
-        if maxPixelSize > 180,
-           let acceptedSource = preferredAcceptedStillResource(for: asset) {
-            return try await requestAcceptedStillResourcePreview(
-                resource: acceptedSource,
-                localIdentifier: localIdentifier,
-                maxPixelSize: maxPixelSize
-            )
-        }
-
         if maxPixelSize <= Self.thumbnailRequestMaxPixelSize {
             return try await requestThumbnailPreview(
                 for: asset,
@@ -359,6 +350,11 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             )
         }
 
+        // Idle culling upgrades need a bounded rendered image, not the complete
+        // accepted JPEG or HEIC resource. Downloading full source data for every
+        // visible card can exhaust the viewport's bounded retries before Photos
+        // finishes serving large or iCloud-backed assets. Explicit workflows
+        // that need complete bytes continue through renderedJPEGPreview.
         return try await requestFullPreview(
             for: asset,
             localIdentifier: localIdentifier,

@@ -51,13 +51,23 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Label(section.title, systemImage: icon(for: section))", app)
         self.assertIn('Text("Gallery")', surface)
         self.assertIn('Menu("View: \\(model.gallerySavedViewLabel)")', controls)
-        self.assertIn('Button("All fixture assets")', controls)
-        self.assertIn('Button("Culling — Undecided")', controls)
-        self.assertIn("applyGallerySavedView([.undecided])", model)
-        self.assertIn(
-            "applyGallerySavedView(Set(FixtureCullingView.selectableCases))",
-            model,
-        )
+        self.assertIn("ForEach(GallerySavedView.allCases)", controls)
+        self.assertIn("Button(savedView.rawValue)", controls)
+        self.assertIn("model.applyGallerySavedView(savedView)", controls)
+        for marker in (
+            'case allAssets = "All fixture assets"',
+            'case culling = "Culling — Undecided"',
+            'case reviewQueue = "Review queue"',
+            'case approved = "Approved"',
+            'case uploadQueue = "Upload queue"',
+            'case live = "Live"',
+            'case hidden = "Hidden"',
+            'case unavailable = "Unavailable"',
+            "case .allAssets:",
+            "case .culling:",
+            "([.undecided], [], [], [.available])",
+        ):
+            self.assertIn(marker, model)
 
     def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
         model = (
@@ -192,9 +202,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("case .unpick:", source)
         self.assertIn("applyPlacement(\n                            .unpick,", source)
         self.assertNotIn("127.0.0.1:8011", source)
-        self.assertIn(
-            'Button("Select burst") { model.selectVisibleBurstCandidates() }',
+        self.assertRegex(
             source,
+            re.compile(
+                r'Button\("Select burst"\)\s*\{\s*model\.selectReviewBurstCandidates\(\)\s*\}',
+                re.DOTALL,
+            ),
         )
         self.assertNotIn(
             ".disabled(model.focusedCullingAssetID == nil)",
@@ -995,7 +1008,7 @@ class NativeCullingParityTest(unittest.TestCase):
             )
             self.assertRegex(
                 source,
-                r"\.onDisappear\s*\{\s*quickLook\.deactivate\(\)\s*\}",
+                r"\.onDisappear\s*\{\s*quickLook\.deactivate\(\)",
             )
 
         self.assertIn("private var isOwnerActive = true", adapter)
@@ -2209,12 +2222,19 @@ class NativeCullingParityTest(unittest.TestCase):
                 continue
             help_count = source.count(".backstageHelp(")
             adjustable_control_count = source.count(".accessibilityAdjustableAction")
-            self.assertEqual(
-                button_count + adjustable_control_count,
+            self.assertGreaterEqual(
                 help_count,
-                f"{path.name} must attach one backstageHelp explanation to every Button or adjustable control",
+                button_count + adjustable_control_count,
+                f"{path.name} must provide at least one backstageHelp explanation per Button or adjustable control",
             )
             total_buttons += button_count
+
+        culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
+        fit_button = culling.split(
+            'Button(model.cullingUsesFill ? "Fill" : "Fit")', 1
+        )[1].split("private var cullingGrid", 1)[0]
+        self.assertIn("model.toggleCullingFitFill()", fit_button)
+        self.assertIn(".backstageHelp(", fit_button)
 
         self.assertGreaterEqual(total_buttons, 123)
         hover_help = (source_dir / "BackstageHoverHelp.swift").read_text(

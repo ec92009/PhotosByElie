@@ -1,11 +1,66 @@
 import AppKit
 import Foundation
+import SwiftUI
 import Testing
 @testable import BackstageUI
 @testable import OwnerCore
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Compact fixture picker renders without changing data", arguments: [230, 320], [false, true])
+    @MainActor
+    func compactFixturePicker(width: Int, dark: Bool) throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID())"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), preferences: preferences,
+            workflowRecoveryStore: nil, currentImageSizeCache: nil, customerPhotoLinks: nil
+        )
+        let tree = [
+            FixtureNode(id: "travel", name: "Travel", children: [
+                FixtureNode(id: "travel-family", name: "Friends and Family"),
+            ]),
+            FixtureNode(id: "other-family", name: "Friends and Family"),
+        ]
+        for state in ["loading", "ready", "long-name", "unavailable"] {
+            if state == "ready" || state == "long-name" {
+                model.installFixtureTree(
+                    tree, preferredFixtureID: state == "ready" ? "travel" : "travel-family",
+                    persistSelection: false
+                )
+            } else if state == "unavailable" {
+                model.markFixtureSelectionUnavailable("Fixture tree unavailable. Reload to retry.")
+            }
+            let selectedID = model.selectedFixtureID
+            let view = FixturePicker(model: model)
+                .padding(12)
+                .frame(width: CGFloat(width), alignment: .topLeading)
+                .background(dark ? Color.black : Color.white)
+                .environment(\.colorScheme, dark ? .dark : .light)
+            let host = NSHostingView(rootView: view)
+            host.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            host.setFrameSize(host.fittingSize)
+            host.layoutSubtreeIfNeeded()
+            #expect(host.bounds.width == CGFloat(width))
+            #expect(host.bounds.height > 0 && host.bounds.height < 400)
+            let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let png = try #require(bitmap.representation(using: .png, properties: [:]))
+            #expect(!png.isEmpty)
+            // Optional synthetic render artifacts; never open a window or connect to Photos/Owner.
+            if let directory = ProcessInfo.processInfo.environment["PBB132_SNAPSHOTS"] {
+                let destination = URL(fileURLWithPath: directory, isDirectory: true)
+                    .appendingPathComponent("\(state)-\(width)-\(dark ? "dark" : "light").png")
+                try png.write(to: destination, options: .atomic)
+            }
+            #expect(model.selectedFixtureID == selectedID)
+            #expect(model.pbeOwnerFixtureSession == nil)
+            #expect(model.cullingHistory.isEmpty && model.cullingStates.isEmpty)
+            #expect(preferences.persistentDomain(forName: suiteName)?.isEmpty != false)
+        }
+    }
+
     @Test("View as customer opens one neutral URL without Owner authentication, session, or decisions")
     @MainActor
     func customerPhotoHandoff() async throws {

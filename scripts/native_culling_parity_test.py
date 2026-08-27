@@ -1828,6 +1828,25 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertNotIn(".frame(maxWidth: .infinity)\n", selector)
 
+    def test_fixture_dropdown_is_the_only_ready_state_fixture_label(self):
+        picker = (
+            NATIVE / "Sources" / "BackstageApp" / "FixturePicker.swift"
+        ).read_text(encoding="utf-8")
+        sidebar = picker.split("struct FixturePicker: View", 1)[1]
+        self.assertNotIn('Label("Current fixture"', sidebar)
+        self.assertNotIn("Text(model.selectedFixtureBreadcrumb)", sidebar)
+        self.assertIn("case .ready:\n            EmptyView()", sidebar)
+        self.assertIn('.accessibilityLabel(title)', picker)
+        self.assertIn('.accessibilityValue(selectedLabel)', picker)
+        self.assertIn("return match.breadcrumbLabel", picker)
+        self.assertIn('Text("Loading fixtures…")', sidebar)
+        self.assertIn('Label("Fixture unavailable"', sidebar)
+        self.assertIn('.accessibilityLabel("Refresh fixtures")', sidebar)
+        self.assertIn(".disabled(model.isFixtureRefreshDisabled || isPreviewMode)", sidebar)
+        self.assertIn(".disabled(model.isFixtureChooserDisabled || isPreviewMode)", sidebar)
+        self.assertIn("set: { _ = model.selectFixture($0) }", sidebar)
+        self.assertIn("allowsSelection: { !$0.isArchived }", sidebar)
+
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (
             NATIVE

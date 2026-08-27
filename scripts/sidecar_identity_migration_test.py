@@ -855,8 +855,26 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             connection.close()
             mapping = self._mapping(directory, [{"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"}, {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"}])
             report = rehearse_synthetic(owner, mapping, directory / "conflict")
+            reviewed_report = rehearse_synthetic(
+                owner,
+                mapping,
+                directory / "reviewed-conflict",
+                reviewed_partial_plan=True,
+            )
         self.assertFalse(report["rehearsal"]["applyPerformed"])
-        self.assertTrue(report["rehearsal"]["rollbackVerified"])
+        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+        self.assertEqual(report["classificationCounts"]["merge-conflict"], 1)
+        self.assertEqual(
+            report["mergeConflictPreflight"]["parkedResolutionCount"],
+            1,
+        )
+        self.assertTrue(reviewed_report["rehearsal"]["applyPerformed"])
+        self.assertEqual(reviewed_report["resolution"]["eligibleCount"], 1)
+        self.assertEqual(reviewed_report["rehearsal"]["rewriteOnlyCount"], 1)
+        self.assertTrue(
+            reviewed_report["rehearsal"]["invariants"]["parkedLegacyRowsPreserved"]
+        )
+        self.assertTrue(reviewed_report["rehearsal"]["secondRunNoOp"])
 
     def test_canonical_source_snapshot_wins_with_digest_only_legacy_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

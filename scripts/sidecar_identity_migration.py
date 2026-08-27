@@ -25,7 +25,7 @@ SCHEMA_VERSION = 4
 FAILURE_STATUSES = {"failed", "error", "not_found", "missing", "unsupported"}
 SAFE_MAPPING_STATUSES = {"ok", "mapped", "collision-existing-canonical", "resolved", "source-tied"}
 PARKABLE_MAPPING_STATUSES = {"missing", "not_found"}
-PARKABLE_QUARANTINE_CLASSES = {"unmapped", "missing-identity"}
+PARKABLE_QUARANTINE_CLASSES = {"unmapped", "missing-identity", "merge-conflict"}
 CANONICAL_SOURCE_SNAPSHOT_FIELDS = {
     "duration",
     "filename",
@@ -1265,6 +1265,70 @@ def _rewrite_references(connection: sqlite3.Connection, source: str, target: str
     return changed
 
 
+def _rewrite_all_references(
+    connection: sqlite3.Connection,
+    resolutions: Mapping[str, str],
+    *,
+    failure_stage: str = "",
+) -> int:
+    """Rewrite all mutable reference surfaces in one bounded table pass."""
+    changed = 0
+    source_ids = set(resolutions)
+    for table in _table_names(connection):
+        if table in {"sidecar_assets", "owner_asset_identity_aliases"}:
+            continue
+        columns = _table_columns(connection, table)
+        scalar_columns = _scalar_reference_columns(table, columns)
+        json_columns = [column for column in columns if _rewritten_json_reference(table, column)]
+        if not scalar_columns and not json_columns:
+            continue
+        rows = [dict(row) for row in connection.execute(f"SELECT * FROM {_quoted(table)}")]
+        primary = _primary_key_columns(connection, table)
+        if not primary and rows:
+            raise MigrationSafetyError(f"table {table} has no stable key")
+        for snapshot in rows:
+            referenced_sources = {
+                _text(snapshot.get(column))
+                for column in scalar_columns
+                if _text(snapshot.get(column)) in source_ids
+            }
+            for column in json_columns:
+                referenced_sources.update(
+                    _nested_strings(_json_value(snapshot.get(column), [])) & source_ids
+                )
+            if not referenced_sources:
+                continue
+            where, params = _where_for_values(primary, snapshot)
+            current_row = connection.execute(
+                f"SELECT * FROM {_quoted(table)} WHERE {where}",
+                params,
+            ).fetchone()
+            if current_row is None:
+                continue
+            current = dict(current_row)
+            candidate = dict(current)
+            for source_id in sorted(referenced_sources):
+                candidate = _rewrite_reference_row(
+                    table,
+                    candidate,
+                    source_id,
+                    resolutions[source_id],
+                )
+            collision = _find_unique_collision(connection, table, candidate, current)
+            if collision is not None:
+                merged = _merge_reference_rows(connection, table, dict(collision), candidate)
+                _update_row(connection, table, collision, merged)
+                _delete_row(connection, table, current)
+            else:
+                _update_row(connection, table, current, candidate)
+            changed += 1
+            if failure_stage == "after-first-reference" and changed == 1:
+                raise MigrationSafetyError(
+                    "injected rehearsal failure after first reference rewrite"
+                )
+    return changed
+
+
 def _merge_asset_rows(connection: sqlite3.Connection, source: str, target: str, target_cloud: str) -> None:
     source_row = connection.execute("SELECT * FROM sidecar_assets WHERE asset_id = ?", (source,)).fetchone()
     target_row = connection.execute("SELECT * FROM sidecar_assets WHERE asset_id = ?", (target,)).fetchone()
@@ -1298,6 +1362,203 @@ def _merge_asset_rows(connection: sqlite3.Connection, source: str, target: str, 
             continue
         merged[column] = _merge_field("sidecar_assets", column, target_data[column], source_data[column])
     _update_row(connection, "sidecar_assets", target_data, merged)
+
+
+def _nested_strings(value: Any) -> set[str]:
+    """Return strings from one JSON-like value without exposing them in reports."""
+    result: set[str] = set()
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            result.add(item)
+        elif isinstance(item, list):
+            pending.extend(item)
+        elif isinstance(item, dict):
+            pending.extend(item.values())
+    return result
+
+
+def _asset_merge_conflict_fields(
+    source: Mapping[str, Any],
+    target: Mapping[str, Any],
+    target_cloud: str,
+) -> set[str]:
+    """Return only field names whose collision merge would fail closed."""
+    conflicts: set[str] = set()
+    snapshot_conflicts = {
+        column
+        for column in CANONICAL_SOURCE_SNAPSHOT_FIELDS
+        if column in source
+        and source.get(column) != target.get(column)
+        and not _empty(source.get(column), STATE_DEFAULTS.get(("sidecar_assets", column)))
+        and not _empty(target.get(column), STATE_DEFAULTS.get(("sidecar_assets", column)))
+    }
+    for column in _table_columns_from_rows(source, target):
+        if column == "asset_id":
+            continue
+        try:
+            if column == "source_anchor":
+                continue
+            if column == "raw_json":
+                _merge_raw_json(
+                    target.get(column),
+                    source.get(column),
+                    target_cloud,
+                    supplemental_conflict_fields=sorted(snapshot_conflicts),
+                )
+                continue
+            _merge_field("sidecar_assets", column, target.get(column), source.get(column))
+        except MigrationSafetyError:
+            conflicts.add(f"sidecar_assets.{column}")
+    return conflicts
+
+
+def _reference_merge_conflict_fields(
+    connection: sqlite3.Connection,
+    table: str,
+    target: Mapping[str, Any],
+    source: Mapping[str, Any],
+) -> set[str]:
+    """Return all fields that make one collided reference merge unsafe."""
+    conflicts: set[str] = set()
+    primary = set(_primary_key_columns(connection, table))
+    columns = _table_columns_from_rows(target, source)
+    scalar = set(_scalar_reference_columns(table, columns))
+    for column in columns:
+        if column in primary:
+            continue
+        try:
+            if column in scalar:
+                if (
+                    target.get(column) != source.get(column)
+                    and not _empty(target.get(column))
+                    and not _empty(source.get(column))
+                ):
+                    raise MigrationSafetyError("conflicting reference field")
+                continue
+            if _rewritten_json_reference(table, column):
+                _merge_json_values(table, column, target.get(column), source.get(column))
+                continue
+            _merge_field(table, column, target.get(column), source.get(column))
+        except MigrationSafetyError:
+            conflicts.add(f"{table}.{column}")
+    return conflicts
+
+
+def inspect_resolution_merge_conflicts(
+    connection: sqlite3.Connection,
+    resolutions: Sequence[Resolution],
+) -> dict[str, Any]:
+    """Preflight every eligible merge and return IDs only in the internal result."""
+    by_source = {resolution.source_asset_id: resolution for resolution in resolutions}
+    source_ids = set(by_source)
+    conflicts_by_source: defaultdict[str, set[str]] = defaultdict(set)
+    collision_rows_by_table: Counter[str] = Counter()
+
+    for resolution in resolutions:
+        source = connection.execute(
+            "SELECT * FROM sidecar_assets WHERE asset_id = ?",
+            (resolution.source_asset_id,),
+        ).fetchone()
+        target = connection.execute(
+            "SELECT * FROM sidecar_assets WHERE asset_id = ?",
+            (resolution.target_asset_id,),
+        ).fetchone()
+        if source is not None and target is not None:
+            conflicts_by_source[resolution.source_asset_id].update(
+                _asset_merge_conflict_fields(dict(source), dict(target), resolution.cloud_identifier)
+            )
+
+    for table in _table_names(connection):
+        if table in {"sidecar_assets", "owner_asset_identity_aliases"}:
+            continue
+        columns = _table_columns(connection, table)
+        scalar_columns = _scalar_reference_columns(table, columns)
+        json_columns = [column for column in columns if _rewritten_json_reference(table, column)]
+        if not scalar_columns and not json_columns:
+            continue
+        rows = [dict(row) for row in connection.execute(f"SELECT * FROM {_quoted(table)}")]
+        primary = _primary_key_columns(connection, table)
+        unique_indexes: list[tuple[list[str], dict[tuple[Any, ...], list[dict[str, Any]]]]] = []
+        for unique_columns in _unique_index_columns(connection, table):
+            index: defaultdict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
+            for row in rows:
+                index[tuple(row.get(column) for column in unique_columns)].append(row)
+            unique_indexes.append((unique_columns, dict(index)))
+
+        for row in rows:
+            referenced_sources = {
+                _text(row.get(column))
+                for column in scalar_columns
+                if _text(row.get(column)) in source_ids
+            }
+            for column in json_columns:
+                referenced_sources.update(
+                    _nested_strings(_json_value(row.get(column), [])) & source_ids
+                )
+            for source_id in referenced_sources:
+                candidate = _rewrite_reference_row(
+                    table,
+                    row,
+                    source_id,
+                    by_source[source_id].target_asset_id,
+                )
+                collision: dict[str, Any] | None = None
+                for unique_columns, index in unique_indexes:
+                    key = tuple(candidate.get(column) for column in unique_columns)
+                    for other in index.get(key, []):
+                        if primary and _row_identity(other, primary) == _row_identity(row, primary):
+                            continue
+                        collision = other
+                        break
+                    if collision is not None:
+                        break
+                if collision is None:
+                    continue
+                collision_rows_by_table[table] += 1
+                conflicts_by_source[source_id].update(
+                    _reference_merge_conflict_fields(
+                        connection,
+                        table,
+                        collision,
+                        candidate,
+                    )
+                )
+
+    conflicted_sources = {
+        source_id
+        for source_id, fields in conflicts_by_source.items()
+        if fields
+    }
+    field_counts: Counter[str] = Counter()
+    for source_id in conflicted_sources:
+        field_counts.update(conflicts_by_source[source_id])
+    entries = [
+        {
+            "classification": "merge-conflict",
+            "assetIdDigest": _digest(source_id),
+            "rowDigest": _digest(
+                "|".join((source_id, *sorted(conflicts_by_source[source_id])))
+            ),
+            "conflictFieldCount": len(conflicts_by_source[source_id]),
+            "conflictFieldDigest": _digest_values(conflicts_by_source[source_id]),
+        }
+        for source_id in sorted(conflicted_sources)
+    ]
+    return {
+        "conflictedSourceIds": conflicted_sources,
+        "entries": entries,
+        "report": {
+            "inputResolutionCount": len(resolutions),
+            "conflictFreeResolutionCount": len(resolutions) - len(conflicted_sources),
+            "parkedResolutionCount": len(conflicted_sources),
+            "conflictedSourceCountsByField": dict(sorted(field_counts.items())),
+            "collisionRowsByTable": dict(sorted(collision_rows_by_table.items())),
+            "conflictedSourceDigest": _digest_values(conflicted_sources),
+            "rawIdentifiersIncluded": False,
+        },
+    }
 
 
 def _create_canonical_asset_from_source(
@@ -1480,6 +1741,20 @@ def build_dry_run(
         owner_rows = _read_owner_rows(connection)
         classified = classify_owner_rows(owner_rows, mapping)
         resolutions = classified.pop("resolutions")
+        merge_preflight = inspect_resolution_merge_conflicts(connection, resolutions)
+        conflicted_sources = merge_preflight["conflictedSourceIds"]
+        resolutions = [
+            resolution
+            for resolution in resolutions
+            if resolution.source_asset_id not in conflicted_sources
+        ]
+        classified["quarantine"]["entries"].extend(merge_preflight["entries"])
+        classified["quarantine"]["entryCount"] = len(
+            classified["quarantine"]["entries"]
+        )
+        classified["classificationCounts"]["merge-conflict"] = len(
+            conflicted_sources
+        )
         preserved_references = inspect_preserved_references(connection, resolutions)
         alias_retention_plan = build_alias_retention_plan(preserved_references, resolutions)
         blocked = list()
@@ -1532,6 +1807,7 @@ def build_dry_run(
                 "identityCounts": classified["identityCounts"],
             },
             "mapping": classified["mapping"],
+            "mergeConflictPreflight": merge_preflight["report"],
             "mappingContract": {
                 "sourceTiedRequired": True,
                 "acceptedPairFields": ["localIdentifier", "cloudIdentifier"],
@@ -1579,7 +1855,9 @@ def build_dry_run(
             "classificationCounts": classified["classificationCounts"],
             "resolution": {
                 "eligibleCount": len(resolutions),
-                "targetCloudDigest": classified["eligibleTargetCloudDigest"],
+                "targetCloudDigest": _digest_values(
+                    resolution.cloud_identifier for resolution in resolutions
+                ),
             },
             "quarantine": classified["quarantine"],
             "safety": {
@@ -1634,18 +1912,20 @@ def _apply_transaction(
         _ensure_identity_alias_table(connection)
         merged_count = 0
         rewrite_count = 0
-        reference_count = 0
         alias_count = 0
-        for index, resolution in enumerate(resolutions, start=1):
+        active_resolutions: list[Resolution] = []
+        target_existed: dict[str, bool] = {}
+        for resolution in resolutions:
             source_exists = connection.execute(
                 "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (resolution.source_asset_id,)
             ).fetchone()
             if not source_exists:
                 continue
-            target_exists = connection.execute(
+            existed = connection.execute(
                 "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (resolution.target_asset_id,)
-            ).fetchone()
-            if not target_exists:
+            ).fetchone() is not None
+            target_existed[resolution.source_asset_id] = existed
+            if not existed:
                 _create_canonical_asset_from_source(
                     connection,
                     resolution.source_asset_id,
@@ -1654,10 +1934,19 @@ def _apply_transaction(
                 )
             _insert_verified_identity_alias(connection, resolution)
             alias_count += 1
-            if target_exists:
-                reference_count += _rewrite_references(
-                    connection, resolution.source_asset_id, resolution.target_asset_id
-                )
+            active_resolutions.append(resolution)
+
+        reference_count = _rewrite_all_references(
+            connection,
+            {
+                resolution.source_asset_id: resolution.target_asset_id
+                for resolution in active_resolutions
+            },
+            failure_stage=failure_stage,
+        )
+
+        for resolution in active_resolutions:
+            if target_existed[resolution.source_asset_id]:
                 _merge_asset_rows(
                     connection,
                     resolution.source_asset_id,
@@ -1669,9 +1958,6 @@ def _apply_transaction(
                 )
                 merged_count += 1
             else:
-                reference_count += _rewrite_references(
-                    connection, resolution.source_asset_id, resolution.target_asset_id
-                )
                 connection.execute(
                     "DELETE FROM sidecar_assets WHERE asset_id = ?",
                     (resolution.source_asset_id,),
@@ -1681,8 +1967,6 @@ def _apply_transaction(
                 connection, resolution.source_asset_id
             ) != resolution.target_asset_id:
                 raise MigrationSafetyError("post-rewrite identity alias verification failed")
-            if failure_stage == "after-first-reference" and index == 1:
-                raise MigrationSafetyError("injected rehearsal failure after first reference rewrite")
         if failure_stage == "invariant":
             if "fixtures" not in _table_names(connection):
                 raise MigrationSafetyError("injected invariant failure")
@@ -1703,7 +1987,7 @@ def _apply_transaction(
                 "rewriteOnlyCount": rewrite_count,
                 "referenceRewriteCount": reference_count,
                 "identityAliasCount": alias_count,
-                "sourceDeletionPerformed": bool(merged_count),
+                "sourceDeletionPerformed": bool(merged_count or rewrite_count),
                 "fixtureMutationPerformed": False,
                 "publicationMutationPerformed": False,
             },

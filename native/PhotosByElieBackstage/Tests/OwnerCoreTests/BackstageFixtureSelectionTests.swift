@@ -466,6 +466,95 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewSelection.selectedIDs.contains(model.reviewSelection.focusedID!))
     }
 
+    @Test("AI Review proposal fields remain drafts until explicit Approve")
+    @MainActor
+    func aiReviewProposalFieldsDoNotAutosave() async throws {
+        let item = FixtureReviewItem(
+            id: "review-proposal",
+            photoLibraryIdentifier: "photos-review-proposal",
+            title: "Current title",
+            keywords: ["Current"],
+            country: "",
+            filename: "proposal.jpg",
+            capturedAt: "2026-08-27T16:38:00Z",
+            editorialState: "proposed",
+            proposalReady: true,
+            proposalContextAvailable: true,
+            proposalID: "proposal-review",
+            proposedTitle: "AI title",
+            proposedKeywords: ["Interior", "Sea view"],
+            proposedCountry: "spain",
+            proposalReason: "Synthetic bounded preview.",
+            proposalStatus: "ready"
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.fixtureReviewWindow = FixtureReviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            reviewStateFilters: ["picked"],
+            offset: 0,
+            limit: 200,
+            nextOffset: 0,
+            hasNext: false,
+            summary: FixtureReviewSummary(
+                total: 1,
+                unreviewed: 0,
+                requestingAI: 0,
+                proposed: 1,
+                approved: 0
+            ),
+            items: [item]
+        )
+        model.reviewSelection = OwnerSelectionModel(
+            orderedIDs: [item.id],
+            selectedIDs: [item.id],
+            anchorID: item.id,
+            focusedID: item.id
+        )
+        model.reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+            country: "spain",
+            title: "AI title",
+            keywords: ["Interior", "Sea view"],
+            proposalID: "proposal-review",
+            proposalReason: "Synthetic bounded preview.",
+            proposalStatus: "ready"
+        )
+        model.reviewCountry = "spain"
+        model.reviewTitle = "AI title"
+        model.reviewKeywords = "Interior, Sea view"
+
+        // SwiftUI can commit an unchanged text-field binding while the window
+        // is closing. That must not consume the proposal.
+        model.updateReviewTitle("AI title")
+        #expect(model.reviewProposalDrafts[item.id]?.hasManualEdits == false)
+        #expect(model.reviewStatus.contains("remains a draft"))
+
+        model.updateReviewTitle("Edited AI title")
+        model.updateReviewKeywords("Interior, Sea view, Balcony")
+        model.updateReviewCountry("portugal")
+        try await Task.sleep(for: .milliseconds(700))
+
+        #expect(model.reviewProposalDrafts[item.id]?.hasManualEdits == true)
+        #expect(model.reviewProposalDrafts[item.id]?.title == "Edited AI title")
+        #expect(model.reviewProposalDrafts[item.id]?.keywords == ["Interior", "Sea view", "Balcony"])
+        #expect(model.reviewProposalDrafts[item.id]?.country == "portugal")
+        #expect(model.reviewStatus.contains("Press Approve"))
+        #expect(model.reviewHistory.isEmpty)
+        #expect(model.reviewItems.first?.title == "Current title")
+        #expect(model.reviewItems.first?.keywords == ["Current"])
+        #expect(model.reviewItems.first?.country.isEmpty == true)
+    }
+
     @Test("Culling Waste Basket updates locally and exact Undo restores the same window")
     @MainActor
     func cullingWasteBasketOptimisticXAndUndo() async throws {

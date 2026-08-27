@@ -5257,6 +5257,12 @@ final class BackstageViewModel: ObservableObject {
         preserveCurrentReviewDraft()
         reviewMetadataAutosaveTask?.cancel()
         guard let assetID = focusedReviewItem?.id else { return }
+        if let draft = reviewProposalDrafts[assetID], draft.isProposal {
+            reviewStatus = draft.hasManualEdits
+                ? "AI proposal draft edited. Press Approve to accept it."
+                : "AI proposal remains a draft until you press Approve."
+            return
+        }
         reviewMetadataAutosaveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
@@ -5271,6 +5277,12 @@ final class BackstageViewModel: ObservableObject {
 
     private func saveReviewMetadataIfNeeded() async {
         guard let item = focusedReviewItem else { return }
+        // A visible AI proposal is an editable draft, never an autosave source.
+        // Text-field focus commits can invoke their bindings during window
+        // teardown even when the owner made no edit, so fail closed here as
+        // well as in the scheduler. Only the explicit Approve action may
+        // consume the proposal and write its three metadata fields.
+        guard reviewProposalDrafts[item.id]?.isProposal != true else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
         let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

@@ -337,6 +337,13 @@ class FixtureConnectorTest(unittest.TestCase):
                 review["result"]["reviewWindow"]["items"][0]["assetId"],
                 "asset-1",
             )
+            self.assertFalse(
+                review["result"]["reviewWindow"]["countryWriteEnabled"]
+            )
+            self.assertEqual(
+                review["result"]["reviewWindow"]["summary"]["countryMissing"],
+                1,
+            )
             requested = local_server.new_owner_connector_result(
                 root,
                 action(

@@ -184,6 +184,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         let anchorAssetID = try optionalString("anchorAssetId", from: payload) ?? ""
         let title = try optionalString("title", from: payload)
         let keywords = try optionalStringArray("keywords", from: payload)
+        let country = try optionalString("country", from: payload)
         let proposalID = try optionalString("proposalId", from: payload)
         let aiReasons = try optionalStringArray("aiReasons", from: payload) ?? []
         let aiNote = try optionalString("aiNote", from: payload) ?? ""
@@ -196,6 +197,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             propagate: propagate,
             title: title,
             keywords: keywords,
+            country: country,
             proposalID: proposalID,
             aiReasons: aiReasons,
             aiNote: aiNote

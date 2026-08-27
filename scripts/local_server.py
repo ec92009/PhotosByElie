@@ -3522,6 +3522,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             propagate=bool(manifest.get("propagate")),
             title=manifest.get("title") if "title" in manifest else None,
             keywords=manifest.get("keywords") if "keywords" in manifest else None,
+            country=manifest.get("country") if "country" in manifest else None,
             proposal_id=str(manifest.get("proposalId") or ""),
             ai_reasons=manifest.get("aiReasons") or [],
             ai_note=str(manifest.get("aiNote") or ""),

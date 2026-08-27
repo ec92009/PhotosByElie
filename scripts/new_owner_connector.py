@@ -751,6 +751,7 @@ def _local_review_action_result(repo_root: Path, payload: dict) -> dict:
                 propagate=bool(payload.get("propagate")),
                 title=payload.get("title") if "title" in payload else None,
                 keywords=payload.get("keywords") if "keywords" in payload else None,
+                country=payload.get("country") if "country" in payload else None,
                 proposal_id=str(payload.get("proposalId") or ""),
                 ai_reasons=payload.get("aiReasons") or [],
                 ai_note=str(payload.get("aiNote") or ""),

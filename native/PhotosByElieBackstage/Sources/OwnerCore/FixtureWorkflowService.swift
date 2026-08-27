@@ -546,6 +546,7 @@ public enum FixtureReviewAction: String, Codable, Sendable, CaseIterable {
     case hide
     case requestAI = "request-ai"
     case editMetadata = "edit-metadata"
+    case propagateCountry = "propagate-country"
     case propagateTitle = "propagate-title"
     case propagateKeywords = "propagate-keywords"
 }
@@ -587,6 +588,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var title: String
     public var caption: String
     public var keywords: [String]
+    public var country: String
+    public var suggestedCountry: String
+    public var countrySuggestionSource: String
     public var locationLabel: String
     public var locationKeywords: [String]
     public var filename: String
@@ -608,6 +612,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var proposalID: String
     public var proposedTitle: String
     public var proposedKeywords: [String]
+    public var proposedCountry: String
+    public var countryProposalSource: String
     public var proposalReason: String
     public var proposalStatus: String
     public var requestedGeneratorModel: String
@@ -624,6 +630,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         title: String,
         caption: String = "",
         keywords: [String],
+        country: String = "",
+        suggestedCountry: String = "",
+        countrySuggestionSource: String = "",
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
@@ -643,6 +652,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposalID: String = "",
         proposedTitle: String = "",
         proposedKeywords: [String] = [],
+        proposedCountry: String = "",
+        countryProposalSource: String = "",
         proposalReason: String = "",
         proposalStatus: String = "",
         requestedGeneratorModel: String = "",
@@ -660,6 +671,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.title = title
         self.caption = caption
         self.keywords = keywords
+        self.country = country
+        self.suggestedCountry = suggestedCountry
+        self.countrySuggestionSource = countrySuggestionSource
         self.locationLabel = locationLabel
         self.locationKeywords = locationKeywords
         self.filename = filename
@@ -681,6 +695,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.proposalID = proposalID
         self.proposedTitle = proposedTitle
         self.proposedKeywords = proposedKeywords
+        self.proposedCountry = proposedCountry
+        self.countryProposalSource = countryProposalSource
         self.proposalReason = proposalReason
         self.proposalStatus = proposalStatus
         self.requestedGeneratorModel = requestedGeneratorModel
@@ -698,6 +714,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         title = json["title"]?.stringValue ?? ""
         caption = json["caption"]?.stringValue ?? ""
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        country = json["country"]?.stringValue ?? ""
+        suggestedCountry = json["suggestedCountry"]?.stringValue ?? ""
+        countrySuggestionSource = json["countrySuggestionSource"]?.stringValue ?? ""
         locationLabel = json["locationLabel"]?.stringValue ?? ""
         locationKeywords = json["locationKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         filename = json["filename"]?.stringValue ?? ""
@@ -720,6 +739,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposalID = json["proposalId"]?.stringValue ?? ""
         proposedTitle = json["proposedTitle"]?.stringValue ?? ""
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposedCountry = json["proposedCountry"]?.stringValue ?? ""
+        countryProposalSource = json["countryProposalSource"]?.stringValue ?? ""
         proposalReason = json["proposalReason"]?.stringValue ?? ""
         proposalStatus = json["proposalStatus"]?.stringValue ?? ""
         requestedGeneratorModel = json["requestedGeneratorModel"]?.stringValue ?? ""
@@ -737,19 +758,22 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var requestingAI: Int
     public var proposed: Int
     public var approved: Int
+    public var countryMissing: Int
 
     public init(
         total: Int,
         unreviewed: Int,
         requestingAI: Int,
         proposed: Int,
-        approved: Int
+        approved: Int,
+        countryMissing: Int = 0
     ) {
         self.total = total
         self.unreviewed = unreviewed
         self.requestingAI = requestingAI
         self.proposed = proposed
         self.approved = approved
+        self.countryMissing = countryMissing
     }
 
     init(json: [String: JSONValue]) {
@@ -758,6 +782,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         requestingAI = json["requestingAI"]?.intValue ?? 0
         proposed = json["proposed"]?.intValue ?? 0
         approved = json["approved"]?.intValue ?? 0
+        countryMissing = json["countryMissing"]?.intValue ?? 0
     }
 
     /// Apply a durable editorial-state transition to the already-loaded
@@ -794,6 +819,8 @@ public struct FixtureReviewWindow: Sendable, Equatable {
     public var limit: Int
     public var nextOffset: Int
     public var hasNext: Bool
+    public var countryWriteEnabled: Bool
+    public var countryWriteBlockReason: String
     public var summary: FixtureReviewSummary
     public var items: [FixtureReviewItem]
 
@@ -807,6 +834,8 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         limit: Int,
         nextOffset: Int,
         hasNext: Bool,
+        countryWriteEnabled: Bool = false,
+        countryWriteBlockReason: String = "",
         summary: FixtureReviewSummary,
         items: [FixtureReviewItem]
     ) {
@@ -819,6 +848,8 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         self.limit = limit
         self.nextOffset = nextOffset
         self.hasNext = hasNext
+        self.countryWriteEnabled = countryWriteEnabled
+        self.countryWriteBlockReason = countryWriteBlockReason
         self.summary = summary
         self.items = items
     }
@@ -836,6 +867,8 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         limit = json["limit"]?.intValue ?? 200
         nextOffset = json["nextOffset"]?.intValue ?? 0
         hasNext = json["hasNext"]?.boolValue ?? false
+        countryWriteEnabled = json["countryWriteEnabled"]?.boolValue ?? false
+        countryWriteBlockReason = json["countryWriteBlockReason"]?.stringValue ?? ""
         summary = FixtureReviewSummary(json: json["summary"]?.objectValue ?? [:])
         items = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
@@ -912,10 +945,13 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
     public var attempt: Int
     public var previousTitle: String
     public var previousKeywords: [String]
+    public var previousCountry: String
     public var canonicalTitle: String
     public var canonicalKeywords: [String]
     public var proposedTitle: String
     public var proposedKeywords: [String]
+    public var proposedCountry: String
+    public var countryProposalSource: String
     public var confidence: String
     public var reason: String
     public var needsOwnerContext: Bool
@@ -936,10 +972,13 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
         attempt = json["attempt"]?.intValue ?? 0
         previousTitle = json["previousTitle"]?.stringValue ?? ""
         previousKeywords = json["previousKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        previousCountry = json["previousCountry"]?.stringValue ?? ""
         canonicalTitle = json["canonicalTitle"]?.stringValue ?? ""
         canonicalKeywords = json["canonicalKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         proposedTitle = json["proposedTitle"]?.stringValue ?? ""
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposedCountry = json["proposedCountry"]?.stringValue ?? ""
+        countryProposalSource = json["countryProposalSource"]?.stringValue ?? ""
         confidence = json["confidence"]?.stringValue ?? ""
         reason = json["reason"]?.stringValue ?? ""
         needsOwnerContext = json["needsOwnerContext"]?.boolValue ?? false
@@ -1373,6 +1412,7 @@ public actor FixtureWorkflowService {
         propagate: Bool = false,
         title: String? = nil,
         keywords: [String]? = nil,
+        country: String? = nil,
         proposalID: String? = nil,
         aiReasons: [String] = [],
         aiNote: String = ""
@@ -1391,6 +1431,9 @@ public actor FixtureWorkflowService {
         }
         if let keywords {
             extra["keywords"] = .array(keywords.map(JSONValue.string))
+        }
+        if let country {
+            extra["country"] = .string(country)
         }
         if let proposalID, !proposalID.isEmpty {
             extra["proposalId"] = .string(proposalID)

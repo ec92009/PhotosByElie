@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checkpointed, explicit-request-only AI title/keyword proposal pass."""
+"""Checkpointed, explicit-request-only AI Country/title/keyword proposal pass."""
 
 from __future__ import annotations
 
@@ -17,7 +17,13 @@ import uuid
 from typing import Any
 
 from fixture_pipeline import OWNER_DB, ai_run_status, connect as ensure_owner_schema, now_iso
-from owner_state_db import DEFAULT_TITLE_KEYWORD_MODEL_LADDER, title_keyword_model_ladder
+from owner_state_db import (
+    COUNTRY_ASSIGNMENT_TARGETS,
+    DEFAULT_TITLE_KEYWORD_MODEL_LADDER,
+    country_review_context,
+    country_review_write_capability,
+    title_keyword_model_ladder,
+)
 from requested_ai_previews import capture_requested_ai_previews
 
 
@@ -77,6 +83,7 @@ def _schema() -> dict[str, Any]:
         "required": [
             "title",
             "keywords",
+            "country",
             "confidence",
             "reason",
             "needs_owner_context",
@@ -87,6 +94,10 @@ def _schema() -> dict[str, Any]:
                 "type": "array",
                 "minItems": 1,
                 "items": {"type": "string", "minLength": 1},
+            },
+            "country": {
+                "type": "string",
+                "enum": ["", *sorted(COUNTRY_ASSIGNMENT_TARGETS)],
             },
             "confidence": {
                 "type": "string",
@@ -106,18 +117,26 @@ def _prompt(item: dict[str, Any]) -> str:
         "location": item["locationLabel"],
         "current_title": item["currentTitle"],
         "current_keywords": item["currentKeywords"],
+        "current_country": item["currentCountry"],
+        "suggested_country": item["suggestedCountry"],
+        "country_suggestion_source": item["countrySuggestionSource"],
+        "country_proposal_enabled": item["countryProposalEnabled"],
         "prior_proposal_title": item["priorProposalTitle"],
         "prior_proposal_keywords": item["priorProposalKeywords"],
+        "prior_proposal_country": item["priorProposalCountry"],
         "prior_proposal_reason": item["priorProposalReason"],
         "request_reasons": item["requestReasons"],
         "owner_note": item["requestNote"],
     }
     return "\n".join([
-        "Generate one Photos By Elie title and keyword proposal for the attached bounded JPEG preview.",
+        "Generate one Photos By Elie Country, title, and keyword proposal for the attached bounded JPEG preview.",
         "Return JSON only and follow the supplied schema.",
         "Do not approve, publish, upload, edit Apple Photos, or modify canonical metadata.",
         "Use the pixels as primary evidence and the context only as supporting evidence.",
         "Treat current_title and current_keywords as canonical owner metadata.",
+        "Treat current_country as accepted owner metadata and suggested_country only as supporting evidence.",
+        "Return an empty country when country_proposal_enabled is false or the evidence does not support one of the allowed country slugs.",
+        "Never infer Country from stereotypes or weak visual similarity.",
         "Treat prior_proposal_* only as the previous AI draft under review; preserve useful clues from it but correct it according to the owner's reasons and note.",
         "Write a concise human-readable title and useful searchable keywords.",
         "Do not include workflow keywords beginning with PBE:.",
@@ -211,6 +230,7 @@ def _candidate_rows(
                END current_keywords_json,
                COALESCE(prior.proposed_title, '') prior_proposal_title,
                COALESCE(prior.proposed_keywords_json, '[]') prior_proposal_keywords_json,
+               COALESCE(prior.proposed_country, '') prior_proposal_country,
                COALESCE(prior.reason, '') prior_proposal_reason
         FROM asset_editorial_state AS editorial
         JOIN sidecar_assets AS asset ON asset.asset_id = editorial.asset_id
@@ -233,7 +253,15 @@ def _candidate_rows(
         sql += " LIMIT ?"
         params.append(max(1, int(limit)))
     rows = conn.execute(sql, params).fetchall()
-    return [{
+    capability = country_review_write_capability(conn)
+    items = []
+    for row in rows:
+        country_context = country_review_context(
+            conn,
+            str(row["asset_id"]),
+            capability=capability,
+        )
+        items.append({
         "repoRoot": str(repo_root),
         "assetId": str(row["asset_id"]),
         "filename": str(row["filename"] or ""),
@@ -246,13 +274,19 @@ def _candidate_rows(
         "previewSha256": str(row["ai_preview_sha256"] or ""),
         "currentTitle": str(row["current_title"] or ""),
         "currentKeywords": _read_json(row["current_keywords_json"], []),
+        "currentCountry": str(country_context["country"]),
+        "suggestedCountry": str(country_context["suggestedCountry"]),
+        "countrySuggestionSource": str(country_context["countrySuggestionSource"]),
+        "countryProposalEnabled": bool(capability["enabled"]),
         "priorProposalTitle": str(row["prior_proposal_title"] or ""),
         "priorProposalKeywords": _read_json(
             row["prior_proposal_keywords_json"],
             [],
         ),
+        "priorProposalCountry": str(row["prior_proposal_country"] or ""),
         "priorProposalReason": str(row["prior_proposal_reason"] or ""),
-    } for row in rows]
+        })
+    return items
 
 
 def _normalize_proposal(value: dict[str, Any]) -> dict[str, Any]:
@@ -274,9 +308,13 @@ def _normalize_proposal(value: dict[str, Any]) -> dict[str, Any]:
     confidence = str(value.get("confidence") or "low").casefold()
     if confidence not in {"low", "medium", "high"}:
         confidence = "low"
+    country = str(value.get("country") or "").strip().casefold()
+    if country and country not in COUNTRY_ASSIGNMENT_TARGETS:
+        raise ValueError("proposal country is unsupported")
     return {
         "title": title,
         "keywords": keywords,
+        "country": country,
         "confidence": confidence,
         "reason": str(value.get("reason") or "").strip(),
         "needsOwnerContext": bool(value.get("needs_owner_context")),
@@ -441,6 +479,8 @@ def run_requested_ai_pass(
             conn.commit()
         try:
             proposal = _normalize_proposal(proposer(item))
+            if not item["countryProposalEnabled"]:
+                proposal["country"] = ""
             timestamp = now_iso()
             with _runtime_connection(repo_root) as conn:
                 state = conn.execute(
@@ -464,13 +504,14 @@ def run_requested_ai_pass(
                         INSERT INTO asset_ai_proposals (
                           proposal_id, asset_id, run_id, attempt, status,
                           previous_title, previous_keywords_json,
-                          proposed_title, proposed_keywords_json,
+                          previous_country, proposed_title, proposed_keywords_json,
+                          proposed_country, country_source,
                           confidence, reason, needs_owner_context,
                           request_reasons_json, request_note, preview_sha256,
                           generator, generator_model, requested_generator_model,
                           resolved_model, reasoning_effort, vision, model_ladder,
                           created_at
-                        ) VALUES (?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, 'ready', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'codex', ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             proposal_id,
@@ -479,8 +520,11 @@ def run_requested_ai_pass(
                             item["attempt"],
                             item["currentTitle"],
                             _json(item["currentKeywords"]),
+                            item["currentCountry"],
                             proposal["title"],
                             _json(proposal["keywords"]),
+                            proposal["country"],
+                            "ai-vision-context" if proposal["country"] else "",
                             proposal["confidence"],
                             proposal["reason"],
                             int(proposal["needsOwnerContext"]),

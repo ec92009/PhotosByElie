@@ -42,6 +42,7 @@ REVIEW_ACTIONS = {
     "hide",
     "request-ai",
     "edit-metadata",
+    "propagate-country",
     "propagate-title",
     "propagate-keywords",
 }
@@ -568,8 +569,11 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             CHECK (status IN ('ready', 'loaded', 'accepted', 'rejected', 'superseded')),
           previous_title TEXT NOT NULL DEFAULT '',
           previous_keywords_json TEXT NOT NULL DEFAULT '[]',
+          previous_country TEXT NOT NULL DEFAULT '',
           proposed_title TEXT NOT NULL,
           proposed_keywords_json TEXT NOT NULL DEFAULT '[]',
+          proposed_country TEXT NOT NULL DEFAULT '',
+          country_source TEXT NOT NULL DEFAULT '',
           confidence TEXT NOT NULL DEFAULT '',
           reason TEXT NOT NULL DEFAULT '',
           needs_owner_context INTEGER NOT NULL DEFAULT 0,
@@ -761,6 +765,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         for row in conn.execute("PRAGMA table_info(asset_ai_proposals)").fetchall()
     }
     for column, ddl in {
+        "previous_country": "ALTER TABLE asset_ai_proposals ADD COLUMN previous_country TEXT NOT NULL DEFAULT ''",
+        "proposed_country": "ALTER TABLE asset_ai_proposals ADD COLUMN proposed_country TEXT NOT NULL DEFAULT ''",
+        "country_source": "ALTER TABLE asset_ai_proposals ADD COLUMN country_source TEXT NOT NULL DEFAULT ''",
         "requested_generator_model": "ALTER TABLE asset_ai_proposals ADD COLUMN requested_generator_model TEXT NOT NULL DEFAULT ''",
         "resolved_model": "ALTER TABLE asset_ai_proposals ADD COLUMN resolved_model TEXT NOT NULL DEFAULT ''",
         "reasoning_effort": "ALTER TABLE asset_ai_proposals ADD COLUMN reasoning_effort TEXT NOT NULL DEFAULT ''",
@@ -1876,6 +1883,8 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "proposalId": str(row["proposal_id"] or ""),
         "proposedTitle": str(row["proposal_title"] or ""),
         "proposedKeywords": _read_json(row["proposal_keywords_json"], []),
+        "proposedCountry": str(row["proposal_country"] or ""),
+        "countryProposalSource": str(row["proposal_country_source"] or ""),
         "proposalReason": str(row["proposal_reason"] or ""),
         "proposalStatus": str(row["proposal_status"] or ""),
         "requestedGeneratorModel": str(row["proposal_requested_generator_model"] or ""),
@@ -2014,6 +2023,8 @@ def fixture_review_window(
                    available_proposal.proposal_id,
                    available_proposal.proposed_title proposal_title,
                    available_proposal.proposed_keywords_json proposal_keywords_json,
+                   available_proposal.proposed_country proposal_country,
+                   available_proposal.country_source proposal_country_source,
                    available_proposal.reason proposal_reason,
                    available_proposal.status proposal_status,
                    available_proposal.requested_generator_model proposal_requested_generator_model,
@@ -2031,6 +2042,35 @@ def fixture_review_window(
             """,
             [*params, safe_limit, safe_offset],
         ).fetchall()
+        country_capability = owner_state_db.country_review_write_capability(conn)
+        country_columns = {
+            str(column["name"])
+            for column in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+        }
+        if "asset_id" in country_columns:
+            country_missing = int(conn.execute(
+                f"""
+                SELECT sum(CASE WHEN country.asset_id IS NULL THEN 1 ELSE 0 END)
+                FROM {from_sql}
+                {joins}
+                LEFT JOIN country_assignments AS country
+                  ON country.asset_id = a.asset_id
+                 AND country.identity_status = 'mapped'
+                WHERE {where_sql}
+                """,
+                params,
+            ).fetchone()[0] or 0)
+        else:
+            country_missing = int(summary["total"] or 0)
+        review_items = []
+        for row in rows:
+            item = _review_item(row)
+            item.update(owner_state_db.country_review_context(
+                conn,
+                str(row["asset_id"]),
+                capability=country_capability,
+            ))
+            review_items.append(item)
     total = int(summary["total"] or 0)
     return {
         "ok": True,
@@ -2055,14 +2095,17 @@ def fixture_review_window(
         "count": len(rows),
         "nextOffset": safe_offset + len(rows),
         "hasNext": safe_offset + len(rows) < total,
+        "countryWriteEnabled": bool(country_capability["enabled"]),
+        "countryWriteBlockReason": str(country_capability["reason"]),
         "summary": {
             "total": total,
             "unreviewed": int(summary["unreviewed"] or 0),
             "requestingAI": int(summary["requesting_ai"] or 0),
             "proposed": int(summary["proposed"] or 0),
             "approved": int(summary["approved"] or 0),
+            "countryMissing": country_missing,
         },
-        "items": [_review_item(row) for row in rows],
+        "items": review_items,
     }
 
 
@@ -2264,6 +2307,15 @@ def _review_asset_snapshot(
                 (asset_id,),
             ).fetchall()
         ],
+        "countryAssignment": _row_dict(
+            conn.execute(
+                "SELECT * FROM country_assignments WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+        ) if "asset_id" in {
+            str(row["name"])
+            for row in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+        } else None,
     }
 
 
@@ -2281,6 +2333,7 @@ def _review_item_update_from_snapshot(
     decision = snapshot.get("decision") or {}
     editorial = snapshot.get("editorial") or {}
     delivery = snapshot.get("delivery") or {}
+    country_assignment = snapshot.get("countryAssignment")
     fixture_decision = next(
         (
             item
@@ -2340,6 +2393,8 @@ def _review_item_update_from_snapshot(
         "proposalId": str(proposal.get("proposal_id") or "") if proposal else "",
         "proposedTitle": str(proposal.get("proposed_title") or "") if proposal else "",
         "proposedKeywords": _read_json(proposal.get("proposed_keywords_json"), []) if proposal else [],
+        "proposedCountry": str(proposal.get("proposed_country") or "") if proposal else "",
+        "countryProposalSource": str(proposal.get("country_source") or "") if proposal else "",
         "proposalReason": str(proposal.get("reason") or "") if proposal else "",
         "proposalStatus": proposal_status,
         "requestedGeneratorModel": str(proposal.get("requested_generator_model") or "") if proposal else "",
@@ -2348,6 +2403,8 @@ def _review_item_update_from_snapshot(
         "vision": bool(proposal.get("vision")) if proposal else False,
         "modelLadder": _read_json(proposal.get("model_ladder"), []) if proposal else [],
         "deliveryState": str(delivery.get("delivery_state") or "not-ready"),
+        "country": str(country_assignment.get("country_slug") or "")
+        if isinstance(country_assignment, dict) else "",
     }
 
 
@@ -2363,6 +2420,7 @@ def _upsert_snapshot_row(
         "asset_delivery_state",
         "fixture_asset_decisions",
         "asset_ai_proposals",
+        "country_assignments",
     }
     if table not in allowed_tables:
         raise ValueError("review snapshot table is invalid")
@@ -2450,6 +2508,19 @@ def _restore_review_asset_snapshot(
             proposal,
             ("proposal_id",),
         )
+    if "asset_id" in {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+    }:
+        conn.execute("DELETE FROM country_assignments WHERE asset_id = ?", (asset_id,))
+        country_assignment = snapshot.get("countryAssignment")
+        if isinstance(country_assignment, dict):
+            _upsert_snapshot_row(
+                conn,
+                "country_assignments",
+                country_assignment,
+                ("assignment_id",),
+            )
 
 
 def apply_fixture_review_action(
@@ -2462,6 +2533,7 @@ def apply_fixture_review_action(
     propagate: bool = False,
     title: str | None = None,
     keywords: Iterable[Any] | None = None,
+    country: str | None = None,
     proposal_id: str | None = None,
     ai_reasons: Iterable[Any] | None = None,
     ai_note: str = "",
@@ -2492,12 +2564,12 @@ def apply_fixture_review_action(
         ).fetchone()
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
-        if propagate or clean_action in {"propagate-title", "propagate-keywords"}:
+        if propagate or clean_action in {"propagate-country", "propagate-title", "propagate-keywords"}:
             propagated = _review_target_ids(
                 conn,
                 fixture,
                 clean_anchor,
-                include_anchor=clean_action not in {"propagate-title", "propagate-keywords"},
+                include_anchor=clean_action not in {"propagate-country", "propagate-title", "propagate-keywords"},
             )
             clean_ids = _unique([*clean_ids, *propagated])
         if not clean_ids:
@@ -2526,7 +2598,7 @@ def apply_fixture_review_action(
             decisions[asset_id] = _ensure_global_decision(conn, asset_id, timestamp)
             active_proposals[asset_id] = conn.execute(
                 """
-                SELECT proposal_id, proposed_title, proposed_keywords_json
+                SELECT proposal_id, proposed_title, proposed_keywords_json, proposed_country
                 FROM asset_ai_proposals
                 WHERE asset_id = ? AND status IN ('ready', 'loaded')
                 ORDER BY attempt DESC, created_at DESC, proposal_id DESC
@@ -2559,6 +2631,7 @@ def apply_fixture_review_action(
 
         explicit_title = str(title).strip() if title is not None else None
         explicit_keywords = _unique(keywords or []) if keywords is not None else None
+        explicit_country = str(country or "").strip().casefold() if country is not None else None
         source_decision = decisions[clean_anchor]
         source_effective_title, source_effective_keywords = effective_metadata(
             source_decision,
@@ -2573,6 +2646,11 @@ def apply_fixture_review_action(
             explicit_keywords
             if explicit_keywords is not None
             else source_effective_keywords
+        )
+        source_country = (
+            explicit_country
+            if explicit_country is not None
+            else str(owner_state_db.country_review_context(conn, clean_anchor)["country"])
         )
         reasons = _unique(ai_reasons or [])
         note = str(ai_note or "").strip()
@@ -2597,6 +2675,7 @@ def apply_fixture_review_action(
                 "aiNote": str(before_editorial["ai_note"] or ""),
                 "title": before_title,
                 "keywords": before_keywords,
+                "country": str(owner_state_db.country_review_context(conn, asset_id)["country"]),
             }
             after_state = before["editorialState"]
             after_reasons = before["aiReasons"]
@@ -2635,6 +2714,13 @@ def apply_fixture_review_action(
                     if active_proposal
                     else _read_json(decision["keywords_json"], [])
                 )
+                approved_country = (
+                    explicit_country
+                    if use_explicit_anchor_metadata and explicit_country is not None
+                    else str(active_proposal["proposed_country"] or "").strip().casefold()
+                    if active_proposal and str(active_proposal["proposed_country"] or "").strip()
+                    else None
+                )
                 conn.execute(
                     """
                     UPDATE sidecar_decisions
@@ -2651,6 +2737,14 @@ def apply_fixture_review_action(
                     ),
                 )
                 _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+                if approved_country is not None:
+                    owner_state_db.set_review_country_assignment(
+                        conn,
+                        asset_id,
+                        approved_country,
+                        actor=actor,
+                        updated_at=timestamp,
+                    )
             elif clean_action == "return-to-review":
                 delivery = conn.execute(
                     """
@@ -2711,6 +2805,14 @@ def apply_fixture_review_action(
                         "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
                         (_json(_unique(keywords)), timestamp, asset_id),
                     )
+                if explicit_country is not None:
+                    owner_state_db.set_review_country_assignment(
+                        conn,
+                        asset_id,
+                        explicit_country,
+                        actor=actor,
+                        updated_at=timestamp,
+                    )
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
                 elif after_state == "proposed":
@@ -2734,6 +2836,16 @@ def apply_fixture_review_action(
                 conn.execute(
                     "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
                     (_json(source_keywords), timestamp, asset_id),
+                )
+                if after_state == "approved":
+                    _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "propagate-country":
+                owner_state_db.set_review_country_assignment(
+                    conn,
+                    asset_id,
+                    source_country,
+                    actor=actor,
+                    updated_at=timestamp,
                 )
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
@@ -2805,6 +2917,7 @@ def apply_fixture_review_action(
                 "aiNote": after_note,
                 "title": after_title,
                 "keywords": after_keywords,
+                "country": str(owner_state_db.country_review_context(conn, asset_id)["country"]),
             }
             conn.execute(
                 """
@@ -3141,10 +3254,13 @@ def ready_ai_proposals(
         "attempt": int(row["attempt"]),
         "previousTitle": str(row["previous_title"] or ""),
         "previousKeywords": _read_json(row["previous_keywords_json"], []),
+        "previousCountry": str(row["previous_country"] or ""),
         "canonicalTitle": str(row["canonical_title"] or ""),
         "canonicalKeywords": _read_json(row["canonical_keywords_json"], []),
         "proposedTitle": str(row["proposed_title"] or ""),
         "proposedKeywords": _read_json(row["proposed_keywords_json"], []),
+        "proposedCountry": str(row["proposed_country"] or ""),
+        "countryProposalSource": str(row["country_source"] or ""),
         "confidence": str(row["confidence"] or ""),
         "reason": str(row["reason"] or ""),
         "needsOwnerContext": bool(row["needs_owner_context"]),

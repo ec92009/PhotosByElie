@@ -66,6 +66,11 @@ public struct OwnerReviewSQLiteStore: Sendable {
             databaseURL: databaseURL,
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
+        let countryCapability = try countryWriteCapability(connection)
+        let proposalColumns = try connection.tableColumns("asset_ai_proposals")
+        let proposalCountrySelect = proposalColumns.contains("proposed_country")
+            ? "COALESCE(available_proposal.proposed_country, '') AS proposal_country, COALESCE(available_proposal.country_source, '') AS proposal_country_source"
+            : "'' AS proposal_country, '' AS proposal_country_source"
 
         guard try connection.queryOne(
             "SELECT fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
@@ -159,6 +164,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    available_proposal.proposal_id,
                    COALESCE(available_proposal.proposed_title, '') AS proposal_title,
                    COALESCE(available_proposal.proposed_keywords_json, '[]') AS proposal_keywords_json,
+                   \(proposalCountrySelect),
                    COALESCE(available_proposal.reason, '') AS proposal_reason,
                    COALESCE(available_proposal.status, '') AS proposal_status,
                    COALESCE(available_proposal.requested_generator_model, '') AS proposal_requested_generator_model,
@@ -212,7 +218,13 @@ public struct OwnerReviewSQLiteStore: Sendable {
             bindings: bindings
         )
         let searchedRows = rows.filter { reviewWindowSearchMatches($0, search: search) }
-        let items = searchedRows.map(reviewWindowItem)
+        var items = searchedRows.map(reviewWindowItem)
+        for index in items.indices {
+            let context = try countryContext(connection, assetID: items[index].id)
+            items[index].country = context.country
+            items[index].suggestedCountry = context.suggested
+            items[index].countrySuggestionSource = context.source
+        }
         let pageStart = min(safeOffset, items.count)
         let pageEnd = min(items.count, pageStart + safeLimit)
         let page = Array(items[pageStart..<pageEnd])
@@ -221,7 +233,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             unreviewed: items.filter { $0.editorialState == "unreviewed" }.count,
             requestingAI: items.filter { $0.editorialState == "requesting-ai" }.count,
             proposed: items.filter { $0.editorialState == "proposed" }.count,
-            approved: items.filter { $0.editorialState == "approved" }.count
+            approved: items.filter { $0.editorialState == "approved" }.count,
+            countryMissing: items.filter { $0.country.isEmpty }.count
         )
         let outputStates = stateFilters ?? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
         return FixtureReviewWindow(
@@ -234,6 +247,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             limit: safeLimit,
             nextOffset: safeOffset + page.count,
             hasNext: safeOffset + page.count < items.count,
+            countryWriteEnabled: countryCapability.enabled,
+            countryWriteBlockReason: countryCapability.reason,
             summary: summary,
             items: page
         )
@@ -250,6 +265,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         propagate: Bool = false,
         title: String? = nil,
         keywords: [String]? = nil,
+        country: String? = nil,
         proposalID: String? = nil,
         aiReasons: [String] = [],
         aiNote: String = "",
@@ -258,7 +274,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
     ) throws -> FixtureReviewResult {
         guard action == .hide || action == .approve || action == .returnToReview || action == .requestAI
             || action == .editMetadata || action == .propagateTitle
-            || action == .propagateKeywords else {
+            || action == .propagateKeywords || action == .propagateCountry else {
             throw OwnerReviewSQLiteError.unsupportedAction(action.rawValue)
         }
         var cleanIDs = unique(assetIDs)
@@ -270,8 +286,10 @@ public struct OwnerReviewSQLiteStore: Sendable {
         guard cleanIDs.contains(cleanAnchor) else {
             throw OwnerReviewSQLiteError.invalid("the Review anchor must be one of the selected assets")
         }
-        let shouldPropagate = propagate || action == .propagateTitle || action == .propagateKeywords
-        let includePropagationAnchor = action != .propagateTitle && action != .propagateKeywords
+        let shouldPropagate = propagate || action == .propagateCountry
+            || action == .propagateTitle || action == .propagateKeywords
+        let includePropagationAnchor = action != .propagateCountry
+            && action != .propagateTitle && action != .propagateKeywords
 
         let timestamp = ISO8601DateFormatter().string(from: now)
         let operationID = "reviewop-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(20))"
@@ -280,6 +298,10 @@ public struct OwnerReviewSQLiteStore: Sendable {
             databaseURL: databaseURL,
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
+        let proposalColumns = try connection.tableColumns("asset_ai_proposals")
+        let proposedCountrySelect = proposalColumns.contains("proposed_country")
+            ? "proposed_country"
+            : "'' AS proposed_country"
 
         return try connection.transaction {
             guard try connection.queryOne(
@@ -334,7 +356,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 for assetID in cleanIDs {
                     if let proposal = try connection.queryOne(
                         """
-                        SELECT proposal_id, proposed_title, proposed_keywords_json
+                        SELECT proposal_id, proposed_title, proposed_keywords_json,
+                               \(proposedCountrySelect)
                         FROM asset_ai_proposals
                         WHERE asset_id = ? AND status IN ('ready', 'loaded')
                         ORDER BY attempt DESC, created_at DESC, proposal_id DESC
@@ -355,6 +378,9 @@ public struct OwnerReviewSQLiteStore: Sendable {
             }
             let explicitTitle = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             let explicitKeywords = keywords.map { unique($0).map(JSONValue.string) }
+            let explicitCountry = country.map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            }
             let sourceDecision = try connection.queryOne(
                 "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
                 bindings: [.string(cleanAnchor)]
@@ -366,6 +392,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             )
             let sourceTitle = explicitTitle ?? sourceMetadata.title
             let sourceKeywords = explicitKeywords.map(JSONValue.array) ?? sourceMetadata.keywords
+            let sourceCountry = try explicitCountry
+                ?? countryContext(connection, assetID: cleanAnchor).country
             let cleanAIReasons = unique(aiReasons)
             let cleanAINote = aiNote.trimmingCharacters(in: .whitespacesAndNewlines)
             var pendingPlacements: [(assetID: String, state: String, eligibility: String)] = []
@@ -549,6 +577,15 @@ public struct OwnerReviewSQLiteStore: Sendable {
                             ]
                         )
                     }
+                    if let explicitCountry {
+                        try setCountry(
+                            connection,
+                            assetID: assetID,
+                            country: explicitCountry,
+                            actor: actor,
+                            timestamp: timestamp
+                        )
+                    }
 
                     if afterState == "approved" {
                         try connection.execute(
@@ -596,7 +633,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                             .string(timestamp), .string(assetID),
                         ]
                     )
-                } else if action == .propagateTitle || action == .propagateKeywords {
+                } else if action == .propagateCountry || action == .propagateTitle || action == .propagateKeywords {
                     let previousReview = beforeReview[assetID]?.objectValue ?? [:]
                     let previousReasons = previousReview["aiReasons"] ?? .array([])
                     let previousNote = previousReview["aiNote"]?.stringValue ?? ""
@@ -606,7 +643,15 @@ public struct OwnerReviewSQLiteStore: Sendable {
                     ) ?? [:]
                     let afterState = previousReview["editorialState"]?.stringValue ?? "unreviewed"
 
-                    if action == .propagateTitle {
+                    if action == .propagateCountry {
+                        try setCountry(
+                            connection,
+                            assetID: assetID,
+                            country: sourceCountry,
+                            actor: actor,
+                            timestamp: timestamp
+                        )
+                    } else if action == .propagateTitle {
                         try connection.execute(
                             """
                             UPDATE sidecar_decisions
@@ -685,6 +730,13 @@ public struct OwnerReviewSQLiteStore: Sendable {
                     } else {
                         approvedKeywords = jsonArray(decision["keywords_json"])
                     }
+                    let approvedCountry: String?
+                    if assetID == cleanAnchor, let explicitCountry {
+                        approvedCountry = explicitCountry
+                    } else {
+                        let proposed = activeProposal?["proposed_country"]?.stringValue ?? ""
+                        approvedCountry = proposed.isEmpty ? nil : proposed
+                    }
                     try connection.execute(
                         """
                         UPDATE sidecar_decisions
@@ -697,6 +749,15 @@ public struct OwnerReviewSQLiteStore: Sendable {
                             .string(timestamp), .string(assetID),
                         ]
                     )
+                    if let approvedCountry {
+                        try setCountry(
+                            connection,
+                            assetID: assetID,
+                            country: approvedCountry,
+                            actor: actor,
+                            timestamp: timestamp
+                        )
+                    }
                     if let activeProposalID = activeProposal?["proposal_id"]?.stringValue {
                         try connection.execute(
                             """
@@ -1055,6 +1116,7 @@ private final class ReviewSQLiteConnection {
         "asset_delivery_state",
         "fixture_asset_decisions",
         "asset_ai_proposals",
+        "country_assignments",
     ]
 
     private func bind(_ values: [ReviewSQLiteBinding], to statement: OpaquePointer) throws {
@@ -1160,6 +1222,172 @@ private func rowObject(_ snapshot: JSONValue, key: String) -> [String: JSONValue
     snapshot.objectValue?[key]?.objectValue ?? [:]
 }
 
+private struct CountryWriteCapability {
+    var enabled: Bool
+    var reason: String
+    var migrationID: String
+}
+
+private let supportedReviewCountries: Set<String> = [
+    "france", "italy", "mexico", "portugal", "slovakia", "spain", "usa",
+]
+
+private func countryWriteCapability(
+    _ connection: ReviewSQLiteConnection
+) throws -> CountryWriteCapability {
+    let columns = try connection.tableColumns("country_assignments")
+    guard columns.isSuperset(of: [
+        "assignment_id", "asset_id", "media_id", "country_slug",
+        "identity_status", "migration_id",
+    ]) else {
+        return .init(
+            enabled: false,
+            reason: "Country writes await the reviewed PBE-154 identity migration.",
+            migrationID: ""
+        )
+    }
+    let requiredTables = [
+        "country_assignment_identity_migrations",
+        "country_assignment_identity_migration_rows",
+    ]
+    for table in requiredTables {
+        guard try connection.queryOne(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            bindings: [.string(table)]
+        ) != nil else {
+            return .init(
+                enabled: false,
+                reason: "Country writes await a complete PBE-154 migration receipt.",
+                migrationID: ""
+            )
+        }
+    }
+    guard let receipt = try connection.queryOne(
+        """
+        SELECT migration_id, source_count, mapped_count, unmapped_count
+        FROM country_assignment_identity_migrations
+        ORDER BY applied_at DESC, migration_id DESC
+        LIMIT 1
+        """
+    ) else {
+        return .init(
+            enabled: false,
+            reason: "Country writes await a reviewed PBE-154 apply receipt.",
+            migrationID: ""
+        )
+    }
+    let migrationID = receipt["migration_id"]?.stringValue ?? ""
+    let source = receipt["source_count"]?.intValue ?? 0
+    let mapped = receipt["mapped_count"]?.intValue ?? 0
+    let unmapped = receipt["unmapped_count"]?.intValue ?? 0
+    let migrated = try connection.queryOne(
+        """
+        SELECT count(*) AS total,
+               sum(CASE WHEN identity_status = 'mapped' THEN 1 ELSE 0 END) AS mapped,
+               sum(CASE WHEN identity_status = 'unmapped' THEN 1 ELSE 0 END) AS unmapped
+        FROM country_assignments
+        WHERE migration_id = ?
+        """,
+        bindings: [.string(migrationID)]
+    ) ?? [:]
+    let audit = try connection.queryOne(
+        """
+        SELECT count(*) AS total
+        FROM country_assignment_identity_migration_rows
+        WHERE migration_id = ?
+        """,
+        bindings: [.string(migrationID)]
+    )?["total"]?.intValue ?? 0
+    let migratedTotal = migrated["total"]?.intValue ?? 0
+    let migratedMapped = migrated["mapped"]?.intValue ?? 0
+    let migratedUnmapped = migrated["unmapped"]?.intValue ?? 0
+    guard source == mapped + unmapped,
+          migratedTotal == source,
+          migratedMapped == mapped,
+          migratedUnmapped == unmapped,
+          audit == source else {
+        return .init(
+            enabled: false,
+            reason: "Country writes are locked because the PBE-154 receipt does not match its audit rows.",
+            migrationID: migrationID
+        )
+    }
+    return .init(enabled: true, reason: "", migrationID: migrationID)
+}
+
+private func countryContext(
+    _ connection: ReviewSQLiteConnection,
+    assetID: String
+) throws -> (country: String, suggested: String, source: String) {
+    let columns = try connection.tableColumns("country_assignments")
+    let country = columns.contains("asset_id")
+        ? try connection.queryOne(
+            """
+            SELECT country_slug FROM country_assignments
+            WHERE asset_id = ? AND identity_status = 'mapped'
+            LIMIT 1
+            """,
+            bindings: [.string(assetID)]
+        )?["country_slug"]?.stringValue ?? ""
+        : ""
+    let resolutionTable = try connection.queryOne(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'catalog_collection_resolutions'"
+    ) != nil
+    let candidate = resolutionTable
+        ? try connection.queryOne(
+            """
+            SELECT collection_slug FROM catalog_collection_resolutions
+            WHERE asset_id = ? AND collection_slug != 'unknown'
+            ORDER BY resolved_at DESC, source_version_hash DESC
+            LIMIT 1
+            """,
+            bindings: [.string(assetID)]
+        )?["collection_slug"]?.stringValue ?? ""
+        : ""
+    let suggested = supportedReviewCountries.contains(candidate) ? candidate : ""
+    return (
+        country,
+        suggested,
+        country.isEmpty ? (suggested.isEmpty ? "" : "catalog resolver") : "accepted assignment"
+    )
+}
+
+private func setCountry(
+    _ connection: ReviewSQLiteConnection,
+    assetID: String,
+    country: String,
+    actor: String,
+    timestamp: String
+) throws {
+    let capability = try countryWriteCapability(connection)
+    guard capability.enabled else {
+        throw OwnerReviewSQLiteError.conflict(capability.reason)
+    }
+    let clean = country.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard clean.isEmpty || supportedReviewCountries.contains(clean) else {
+        throw OwnerReviewSQLiteError.invalid("Country must be Unknown or a supported gallery country.")
+    }
+    try connection.execute(
+        "DELETE FROM country_assignments WHERE asset_id = ?",
+        bindings: [.string(assetID)]
+    )
+    guard !clean.isEmpty else { return }
+    try connection.execute(
+        """
+        INSERT INTO country_assignments (
+          assignment_id, asset_id, media_id, country_slug, source_slug, batch_id,
+          assigned_at, updated_at, identity_status, identity_source,
+          identity_evidence_json, migration_id, migrated_at
+        ) VALUES (?, ?, NULL, ?, '', '', ?, ?, 'mapped', ?, '[]', ?, ?)
+        """,
+        bindings: [
+            .string("asset:\(assetID)"), .string(assetID), .string(clean),
+            .string(timestamp), .string(timestamp), .string("native-review:\(actor)"),
+            .string("native-review:\(capability.migrationID)"), .string(timestamp),
+        ]
+    )
+}
+
 private func snapshot(
     _ connection: ReviewSQLiteConnection,
     assetID: String
@@ -1184,6 +1412,12 @@ private func snapshot(
         "SELECT * FROM asset_ai_proposals WHERE asset_id = ? ORDER BY proposal_id",
         bindings: [.string(assetID)]
     )
+    let countryAssignment = try connection.tableColumns("country_assignments").contains("asset_id")
+        ? connection.queryOne(
+            "SELECT * FROM country_assignments WHERE asset_id = ?",
+            bindings: [.string(assetID)]
+        )
+        : nil
     return .object([
         "assetId": .string(assetID),
         "decision": decision.map(JSONValue.object) ?? .null,
@@ -1191,6 +1425,7 @@ private func snapshot(
         "delivery": delivery.map(JSONValue.object) ?? .null,
         "fixtureDecisions": .array(fixtureDecisions.map(JSONValue.object)),
         "proposals": .array(proposals.map(JSONValue.object)),
+        "countryAssignment": countryAssignment.map(JSONValue.object) ?? .null,
     ])
 }
 
@@ -1302,6 +1537,7 @@ private func reviewState(
     let proposalStatus = proposal?["status"]?.stringValue ?? ""
     let proposalVision = proposal?["vision"]?.boolValue
         ?? ((proposal?["vision"]?.intValue ?? 0) == 1)
+    let country = try countryContext(connection, assetID: assetID).country
     return .object([
         "title": .string(metadata.title),
         "caption": decision["caption"] ?? .string(""),
@@ -1319,6 +1555,8 @@ private func reviewState(
         "proposalId": proposal?["proposal_id"] ?? .string(""),
         "proposedTitle": proposal?["proposed_title"] ?? .string(""),
         "proposedKeywords": jsonArray(proposal?["proposed_keywords_json"]),
+        "proposedCountry": proposal?["proposed_country"] ?? .string(""),
+        "countryProposalSource": proposal?["country_source"] ?? .string(""),
         "proposalReason": proposal?["reason"] ?? .string(""),
         "proposalStatus": .string(proposalStatus),
         "requestedGeneratorModel": proposal?["requested_generator_model"] ?? .string(""),
@@ -1327,6 +1565,7 @@ private func reviewState(
         "vision": .bool(proposalVision),
         "modelLadder": jsonArray(proposal?["model_ladder"]),
         "deliveryState": delivery["delivery_state"] ?? .string("not-ready"),
+        "country": .string(country),
     ])
 }
 
@@ -1410,6 +1649,8 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         proposalID: proposalID,
         proposedTitle: row["proposal_title"]?.stringValue ?? "",
         proposedKeywords: proposedKeywords,
+        proposedCountry: row["proposal_country"]?.stringValue ?? "",
+        countryProposalSource: row["proposal_country_source"]?.stringValue ?? "",
         proposalReason: proposalReason,
         proposalStatus: proposalStatus,
         requestedGeneratorModel: requestedGeneratorModel,
@@ -1596,6 +1837,19 @@ private func restoreSnapshot(
             throw OwnerReviewSQLiteError.invalid("review proposal snapshot is invalid: \(assetID)")
         }
         try connection.upsert("asset_ai_proposals", row: row, conflict: ["proposal_id"])
+    }
+    if try connection.tableColumns("country_assignments").contains("asset_id") {
+        try connection.execute(
+            "DELETE FROM country_assignments WHERE asset_id = ?",
+            bindings: [.string(assetID)]
+        )
+        if let countryAssignment = object["countryAssignment"]?.objectValue {
+            try connection.upsert(
+                "country_assignments",
+                row: countryAssignment,
+                conflict: ["assignment_id"]
+            )
+        }
     }
 }
 

@@ -22,12 +22,14 @@ enum ReviewPreviewFixtures {
             limit: 200,
             nextOffset: items.count,
             hasNext: true,
+            countryWriteEnabled: true,
             summary: FixtureReviewSummary(
                 total: 1_825,
                 unreviewed: 1_631,
                 requestingAI: 0,
                 proposed: 194,
-                approved: 0
+                approved: 0,
+                countryMissing: 1_012
             ),
             items: items
         )
@@ -39,7 +41,9 @@ enum ReviewPreviewFixtures {
         )
         model.reviewTitle = items[0].proposedTitle
         model.reviewKeywords = items[0].proposedKeywords.joined(separator: ", ")
+        model.reviewCountry = items[0].proposedCountry
         model.reviewProposalDrafts["review-1"] = ReviewMetadataDraft(
+            country: items[0].proposedCountry,
             title: items[0].proposedTitle,
             keywords: items[0].proposedKeywords,
             proposalID: items[0].proposalID,
@@ -107,6 +111,9 @@ enum ReviewPreviewFixtures {
             photoLibraryIdentifier: "review-1",
             title: "Paris, Musee Carnavalet",
             keywords: ["Paris", "Musee Carnavalet"],
+            country: "france",
+            suggestedCountry: "france",
+            countrySuggestionSource: "accepted assignment",
             filename: "20221216 164519 01061.jpg",
             capturedAt: "2022-12-17T00:45:19Z",
             editorialState: "proposed",
@@ -120,6 +127,8 @@ enum ReviewPreviewFixtures {
                 "Paris",
                 "museum display",
             ],
+            proposedCountry: "france",
+            countryProposalSource: "ai-vision-context",
             proposalReason: "A detailed architectural model is visible.",
             proposalStatus: "ready"
         ),

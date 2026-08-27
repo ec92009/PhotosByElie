@@ -20,6 +20,15 @@ OWNER_ACTION_ROOT = Path("assets/owner-actions")
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
+COUNTRY_ASSIGNMENT_TARGETS = {
+    "france": "France",
+    "italy": "Italy",
+    "mexico": "Mexico",
+    "portugal": "Portugal",
+    "slovakia": "Slovakia",
+    "spain": "Spain",
+    "usa": "USA",
+}
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
@@ -1968,6 +1977,183 @@ def _assignment_row(photo_id: str, record: dict[str, Any], fallback_batch_id: st
 
 def _country_assignment_columns(conn: sqlite3.Connection) -> set[str]:
     return {str(row[1]) for row in conn.execute("PRAGMA table_info(country_assignments)")}
+
+
+def country_review_write_capability(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Prove that PBE-154's reviewed identity migration was durably applied."""
+
+    columns = _country_assignment_columns(conn)
+    required_columns = {
+        "assignment_id", "asset_id", "media_id", "country_slug",
+        "identity_status", "migration_id",
+    }
+    if not required_columns.issubset(columns):
+        return {
+            "enabled": False,
+            "reason": "Country writes await the reviewed PBE-154 identity migration.",
+            "migrationId": "",
+        }
+    required_tables = {
+        "country_assignment_identity_migrations",
+        "country_assignment_identity_migration_rows",
+    }
+    tables = {
+        str(row[0])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    if not required_tables.issubset(tables):
+        return {
+            "enabled": False,
+            "reason": "Country writes await a complete PBE-154 migration receipt.",
+            "migrationId": "",
+        }
+    receipt = conn.execute(
+        """
+        SELECT migration_id, source_count, mapped_count, unmapped_count
+        FROM country_assignment_identity_migrations
+        ORDER BY applied_at DESC, migration_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if not receipt:
+        return {
+            "enabled": False,
+            "reason": "Country writes await a reviewed PBE-154 apply receipt.",
+            "migrationId": "",
+        }
+    migration_id = str(receipt["migration_id"])
+    source_count = int(receipt["source_count"] or 0)
+    mapped_count = int(receipt["mapped_count"] or 0)
+    unmapped_count = int(receipt["unmapped_count"] or 0)
+    migrated = conn.execute(
+        """
+        SELECT count(*) AS total,
+               sum(CASE WHEN identity_status = 'mapped' THEN 1 ELSE 0 END) AS mapped,
+               sum(CASE WHEN identity_status = 'unmapped' THEN 1 ELSE 0 END) AS unmapped
+        FROM country_assignments
+        WHERE migration_id = ?
+        """,
+        (migration_id,),
+    ).fetchone()
+    audit_count = int(conn.execute(
+        """
+        SELECT count(*)
+        FROM country_assignment_identity_migration_rows
+        WHERE migration_id = ?
+        """,
+        (migration_id,),
+    ).fetchone()[0])
+    actual = (
+        int(migrated["total"] or 0),
+        int(migrated["mapped"] or 0),
+        int(migrated["unmapped"] or 0),
+    )
+    expected = (source_count, mapped_count, unmapped_count)
+    if source_count != mapped_count + unmapped_count or actual != expected or audit_count != source_count:
+        return {
+            "enabled": False,
+            "reason": "Country writes are locked because the PBE-154 receipt does not match its audit rows.",
+            "migrationId": migration_id,
+        }
+    return {
+        "enabled": True,
+        "reason": "",
+        "migrationId": migration_id,
+    }
+
+
+def country_review_context(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    *,
+    capability: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return accepted Country and a non-authoritative catalog suggestion."""
+
+    capability = capability or country_review_write_capability(conn)
+    current = ""
+    if "asset_id" in _country_assignment_columns(conn):
+        assignment = conn.execute(
+            """
+            SELECT country_slug
+            FROM country_assignments
+            WHERE asset_id = ? AND identity_status = 'mapped'
+            LIMIT 1
+            """,
+            (asset_id,),
+        ).fetchone()
+        current = str(assignment["country_slug"] or "") if assignment else ""
+    suggestion = conn.execute(
+        """
+        SELECT collection_slug
+        FROM catalog_collection_resolutions
+        WHERE asset_id = ? AND collection_slug != 'unknown'
+        ORDER BY resolved_at DESC, source_version_hash DESC
+        LIMIT 1
+        """,
+        (asset_id,),
+    ).fetchone()
+    suggested = str(suggestion["collection_slug"] or "") if suggestion else ""
+    if suggested not in COUNTRY_ASSIGNMENT_TARGETS:
+        suggested = ""
+    return {
+        "country": current,
+        "suggestedCountry": suggested,
+        "countrySuggestionSource": (
+            "accepted assignment" if current else "catalog resolver" if suggested else ""
+        ),
+        "countryWriteEnabled": bool(capability["enabled"]),
+        "countryWriteBlockReason": str(capability["reason"]),
+        "countryMigrationId": str(capability["migrationId"]),
+    }
+
+
+def set_review_country_assignment(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    country_slug: str,
+    *,
+    actor: str,
+    updated_at: str,
+) -> None:
+    """Set, correct, or explicitly clear native Country after the migration gate."""
+
+    capability = country_review_write_capability(conn)
+    if not capability["enabled"]:
+        raise RuntimeError(str(capability["reason"]))
+    clean_asset_id = str(asset_id or "").strip()
+    clean_country = str(country_slug or "").strip().casefold()
+    if clean_country and clean_country not in COUNTRY_ASSIGNMENT_TARGETS:
+        raise ValueError("Country must be Unknown or a supported gallery country.")
+    if not conn.execute(
+        "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+        (clean_asset_id,),
+    ).fetchone():
+        raise ValueError(f"asset is not indexed: {clean_asset_id}")
+    conn.execute("DELETE FROM country_assignments WHERE asset_id = ?", (clean_asset_id,))
+    if not clean_country:
+        return
+    conn.execute(
+        """
+        INSERT INTO country_assignments
+          (assignment_id, asset_id, media_id, country_slug, source_slug, batch_id,
+           assigned_at, updated_at, identity_status, identity_source,
+           identity_evidence_json, migration_id, migrated_at)
+        VALUES (?, ?, NULL, ?, '', '', ?, ?, 'mapped', ?, '[]', ?, ?)
+        """,
+        (
+            f"asset:{clean_asset_id}",
+            clean_asset_id,
+            clean_country,
+            updated_at,
+            updated_at,
+            f"native-review:{actor}",
+            f"native-review:{capability['migrationId']}",
+            updated_at,
+        ),
+    )
 
 
 def _write_country_assignment_row(conn: sqlite3.Connection, row: tuple[Any, ...]) -> None:

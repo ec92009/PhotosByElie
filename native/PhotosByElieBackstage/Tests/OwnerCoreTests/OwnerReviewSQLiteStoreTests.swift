@@ -5,6 +5,57 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Country remains locked before PBE-154 and gains native assignment propagation and Undo after receipt")
+    func countryGatePropagationAndUndo() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-country-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+
+        let locked = try store.reviewWindow(fixtureID: "fixture-expo")
+        #expect(!locked.countryWriteEnabled)
+        #expect(locked.summary.countryMissing == 2)
+        #expect(throws: OwnerReviewSQLiteError.self) {
+            try store.applyReview(
+                .editMetadata,
+                fixtureID: "fixture-expo",
+                assetIDs: ["asset-1"],
+                anchorAssetID: "asset-1",
+                country: "spain"
+            )
+        }
+
+        try enableSyntheticCountryReceipt(databaseURL)
+        let assigned = try store.applyReview(
+            .editMetadata,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            country: "spain"
+        )
+        #expect(assigned.changes.first?.review["country"]?.stringValue == "spain")
+        let propagated = try store.applyReview(
+            .propagateCountry,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1"],
+            anchorAssetID: "asset-1",
+            country: "portugal"
+        )
+        #expect(Set(propagated.changes.map(\.assetID)) == ["asset-1", "asset-2"])
+        #expect(propagated.changes.allSatisfy { $0.review["country"]?.stringValue == "portugal" })
+        let window = try store.reviewWindow(fixtureID: "fixture-expo")
+        #expect(window.countryWriteEnabled)
+        #expect(window.summary.countryMissing == 0)
+
+        let undone = try store.undoReview(operationID: propagated.operationID)
+        #expect(!undone.alreadyUndone)
+        #expect(try scalar(databaseURL, "SELECT country_slug FROM country_assignments WHERE asset_id = 'asset-1'") == "spain")
+        #expect(try scalar(databaseURL, "SELECT count(*) FROM country_assignments WHERE asset_id = 'asset-2'") == "0")
+    }
+
     @Test("Hide and exact Undo stay inside one Swift SQLite transaction")
     func hideAndUndoCopiedFixture() throws {
         let root = FileManager.default.temporaryDirectory
@@ -750,6 +801,50 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     guard sqlite3_exec(database, schema, nil, nil, nil) == SQLITE_OK else {
         throw OwnerDatabaseError.unavailable("could not seed copied fixture database")
     }
+}
+
+private func enableSyntheticCountryReceipt(_ databaseURL: URL) throws {
+    try execute(
+        databaseURL,
+        """
+        CREATE TABLE country_assignments (
+          assignment_id TEXT PRIMARY KEY,
+          asset_id TEXT UNIQUE,
+          media_id TEXT UNIQUE,
+          country_slug TEXT NOT NULL,
+          source_slug TEXT,
+          batch_id TEXT,
+          assigned_at TEXT,
+          updated_at TEXT,
+          identity_status TEXT NOT NULL,
+          identity_source TEXT NOT NULL DEFAULT '',
+          identity_evidence_json TEXT NOT NULL DEFAULT '[]',
+          migration_id TEXT NOT NULL,
+          migrated_at TEXT NOT NULL
+        ) WITHOUT ROWID;
+        CREATE TABLE country_assignment_identity_migrations (
+          migration_id TEXT PRIMARY KEY,
+          plan_hash TEXT NOT NULL UNIQUE,
+          source_count INTEGER NOT NULL,
+          mapped_count INTEGER NOT NULL,
+          unmapped_count INTEGER NOT NULL,
+          applied_at TEXT NOT NULL
+        ) WITHOUT ROWID;
+        CREATE TABLE country_assignment_identity_migration_rows (
+          migration_id TEXT NOT NULL,
+          legacy_media_id TEXT NOT NULL,
+          country_slug TEXT NOT NULL,
+          migration_state TEXT NOT NULL,
+          asset_id TEXT,
+          evidence_json TEXT NOT NULL DEFAULT '[]',
+          reason TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY (migration_id, legacy_media_id)
+        ) WITHOUT ROWID;
+        INSERT INTO country_assignment_identity_migrations
+          (migration_id, plan_hash, source_count, mapped_count, unmapped_count, applied_at)
+        VALUES ('synthetic-reviewed', 'synthetic-plan', 0, 0, 0, '2026-08-27T12:00:00Z');
+        """
+    )
 }
 
 private func execute(_ databaseURL: URL, _ sql: String) throws {

@@ -104,6 +104,166 @@ class FixturePipelineTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def enable_synthetic_country_identity_receipt(self):
+        """Install a zero-row reviewed migration receipt in this copied test DB."""
+        with connect(self.root) as connection:
+            connection.execute("ALTER TABLE country_assignments RENAME TO country_assignments_v1")
+            connection.executescript(
+                """
+                CREATE TABLE country_assignments (
+                  assignment_id TEXT PRIMARY KEY,
+                  asset_id TEXT UNIQUE,
+                  media_id TEXT UNIQUE,
+                  country_slug TEXT NOT NULL,
+                  source_slug TEXT,
+                  batch_id TEXT,
+                  assigned_at TEXT,
+                  updated_at TEXT,
+                  identity_status TEXT NOT NULL,
+                  identity_source TEXT NOT NULL DEFAULT '',
+                  identity_evidence_json TEXT NOT NULL DEFAULT '[]',
+                  migration_id TEXT NOT NULL,
+                  migrated_at TEXT NOT NULL
+                ) WITHOUT ROWID;
+                CREATE TABLE country_assignment_identity_migrations (
+                  migration_id TEXT PRIMARY KEY,
+                  plan_hash TEXT NOT NULL UNIQUE,
+                  source_count INTEGER NOT NULL,
+                  mapped_count INTEGER NOT NULL,
+                  unmapped_count INTEGER NOT NULL,
+                  applied_at TEXT NOT NULL
+                ) WITHOUT ROWID;
+                CREATE TABLE country_assignment_identity_migration_rows (
+                  migration_id TEXT NOT NULL,
+                  legacy_media_id TEXT NOT NULL,
+                  country_slug TEXT NOT NULL,
+                  migration_state TEXT NOT NULL,
+                  asset_id TEXT,
+                  evidence_json TEXT NOT NULL DEFAULT '[]',
+                  reason TEXT NOT NULL DEFAULT '',
+                  PRIMARY KEY (migration_id, legacy_media_id)
+                ) WITHOUT ROWID;
+                INSERT INTO country_assignment_identity_migrations
+                  (migration_id, plan_hash, source_count, mapped_count, unmapped_count, applied_at)
+                VALUES ('synthetic-reviewed', 'synthetic-plan', 0, 0, 0, '2026-08-27T12:00:00Z');
+                DROP TABLE country_assignments_v1;
+                """
+            )
+            connection.commit()
+
+    def test_country_review_is_peer_metadata_but_writes_fail_closed_until_identity_receipt(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-3"],
+            "picked",
+        )
+        locked = fixture_review_window(self.root, root["fixtureId"])
+        self.assertFalse(locked["countryWriteEnabled"])
+        self.assertEqual(locked["summary"]["countryMissing"], 3)
+        self.assertEqual(locked["items"][0]["country"], "")
+        with self.assertRaisesRegex(RuntimeError, "PBE-154"):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-1"],
+                "edit-metadata",
+                country="spain",
+            )
+
+        self.enable_synthetic_country_identity_receipt()
+        assigned = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="spain",
+        )
+        self.assertEqual(assigned["items"][0]["after"]["country"], "spain")
+        propagated = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "propagate-country",
+            anchor_asset_id="asset-1",
+            country="portugal",
+        )
+        self.assertEqual(
+            {item["assetId"] for item in propagated["items"]},
+            {"asset-1", "asset-2"},
+        )
+        self.assertEqual(
+            {item["after"]["country"] for item in propagated["items"]},
+            {"portugal"},
+        )
+        window = fixture_review_window(self.root, root["fixtureId"])
+        self.assertTrue(window["countryWriteEnabled"])
+        self.assertEqual(window["summary"]["countryMissing"], 1)
+        self.assertEqual(
+            {item["assetId"]: item["country"] for item in window["items"]},
+            {"asset-1": "portugal", "asset-2": "portugal", "asset-3": ""},
+        )
+        undone = undo_fixture_review_action(self.root, propagated["operationId"])
+        self.assertFalse(undone["alreadyUndone"])
+        restored = fixture_review_window(self.root, root["fixtureId"])
+        self.assertEqual(
+            {item["assetId"]: item["country"] for item in restored["items"]},
+            {"asset-1": "spain", "asset-2": "", "asset-3": ""},
+        )
+        cleared = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="",
+        )
+        self.assertEqual(cleared["items"][0]["after"]["country"], "")
+
+    def test_requested_ai_country_stays_an_editable_proposal_until_owner_approval(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        self.enable_synthetic_country_identity_receipt()
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=["use shoot context"],
+        )
+        preview = self.root / "asset-1.jpg"
+        preview.write_bytes(b"bounded-preview")
+        record_ai_preview(self.root, "asset-1", preview)
+
+        result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=lambda _item: {
+                "country": "spain",
+                "title": "Apartment Entrance in La Concha",
+                "keywords": ["La Concha", "architecture"],
+                "confidence": "high",
+                "reason": "The supplied location context supports Spain.",
+                "needs_owner_context": False,
+            },
+        )
+        self.assertEqual(result["proposed"], 1)
+        proposal = ready_ai_proposals(self.root)["items"][0]
+        self.assertEqual(proposal["proposedCountry"], "spain")
+        self.assertEqual(proposal["countryProposalSource"], "ai-vision-context")
+        before = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(before["country"], "")
+        self.assertEqual(before["proposedCountry"], "spain")
+
+        approved = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            proposal_id=proposal["proposalId"],
+        )
+        self.assertEqual(approved["items"][0]["after"]["country"], "spain")
+
     def test_source_index_requires_a_real_jpeg_or_heic_resource(self):
         raw_only = {
             "localIdentifier": "raw-only",
@@ -1542,6 +1702,7 @@ class FixturePipelineTest(unittest.TestCase):
         proposals = ready_ai_proposals(self.root)
         self.assertEqual(proposals["count"], 1)
         self.assertEqual(proposals["items"][0]["proposedTitle"], "Visible family scene")
+        self.assertEqual(proposals["items"][0]["proposedCountry"], "")
         self.assertEqual(proposals["items"][0]["canonicalTitle"], "")
         self.assertEqual(
             proposals["items"][0]["requestedGeneratorModel"],
@@ -1920,6 +2081,7 @@ class FixturePipelineTest(unittest.TestCase):
             "previous AI draft under review",
             prompt,
         )
+        self.assertIn('"country_proposal_enabled": false', prompt)
 
     def test_request_ai_preserves_photos_only_current_metadata(self):
         upsert_assets(self.root, [

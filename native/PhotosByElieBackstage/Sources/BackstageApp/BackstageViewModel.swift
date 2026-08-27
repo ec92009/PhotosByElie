@@ -34,6 +34,7 @@ struct MetadataHistoryEntry: Identifiable, Sendable {
 }
 
 struct ReviewMetadataDraft: Sendable, Equatable {
+    var country: String = ""
     var title: String
     var keywords: [String]
     var proposalID: String = ""
@@ -323,6 +324,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewThumbnails: [String: NSImage] = [:]
     @Published var reviewTitle = ""
     @Published var reviewKeywords = ""
+    @Published var reviewCountry = ""
     @Published var reviewAIReasons: Set<String> = []
     @Published var reviewAINote = ""
     @Published var reviewLastAction: FixtureReviewAction = .approve
@@ -4026,6 +4028,11 @@ final class BackstageViewModel: ObservableObject {
         scheduleReviewMetadataAutosave()
     }
 
+    func updateReviewCountry(_ value: String) {
+        reviewCountry = value
+        scheduleReviewMetadataAutosave()
+    }
+
     func applyReviewAction(
         _ action: FixtureReviewAction,
         propagate: Bool = false,
@@ -4060,6 +4067,15 @@ final class BackstageViewModel: ObservableObject {
             : action == .editMetadata || action == .propagateTitle
                 ? reviewTitle
                 : nil
+        let currentCountry = focusedReviewItem?.country ?? ""
+        let countryDraft = approvalDraft?.country ?? reviewCountry
+        let approvalCountry: String? = fixtureReviewWindow?.countryWriteEnabled == true
+            && (
+                action == .propagateCountry
+                    || ((action == .approve || action == .editMetadata) && countryDraft != currentCountry)
+            )
+            ? countryDraft
+            : nil
         let approvalKeywords = action == .approve
             ? (approvalDraft?.keywords ?? parsedReviewKeywords())
             : action == .editMetadata || action == .propagateKeywords
@@ -4106,6 +4122,7 @@ final class BackstageViewModel: ObservableObject {
                 propagate: propagate,
                 title: approvalTitle,
                 keywords: approvalKeywords,
+                country: approvalCountry,
                 proposalID: approvalProposalID,
                 aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
                 aiNote: action == .requestAI ? reviewAINote : ""
@@ -4238,6 +4255,21 @@ final class BackstageViewModel: ObservableObject {
         let updatesKeywords = action == .approve
             || action == .editMetadata
             || action == .propagateKeywords
+        let updatesCountry = action == .approve
+            || action == .editMetadata
+            || action == .propagateCountry
+        if updatesCountry {
+            for change in result.changes {
+                let wasMissing = change.before["country"]?.stringValue?.isEmpty ?? true
+                let isMissing = change.after["country"]?.stringValue?.isEmpty ?? true
+                if wasMissing != isMissing {
+                    window.summary.countryMissing = max(
+                        0,
+                        window.summary.countryMissing + (isMissing ? 1 : -1)
+                    )
+                }
+            }
+        }
         window.items = window.items.map { current in
             guard let after = changesByID[current.id] else { return current }
             var item = current
@@ -4246,6 +4278,9 @@ final class BackstageViewModel: ObservableObject {
             }
             if updatesKeywords, let keywords = after["keywords"]?.arrayValue {
                 item.keywords = keywords.compactMap(\.stringValue)
+            }
+            if updatesCountry, let country = after["country"]?.stringValue {
+                item.country = country
             }
             if let editorialState = after["editorialState"]?.stringValue {
                 item.editorialState = editorialState
@@ -4277,7 +4312,7 @@ final class BackstageViewModel: ObservableObject {
                 item.deliveryState = "not-ready"
             case .editMetadata:
                 item.proposalReady = false
-            case .propagateTitle, .propagateKeywords:
+            case .propagateCountry, .propagateTitle, .propagateKeywords:
                 break
             }
             return item
@@ -4324,6 +4359,16 @@ final class BackstageViewModel: ObservableObject {
             items.insert(restoredItem, at: index)
         }
         for change in result.changes {
+            let beforeCountry = change.before["countryAssignment"]?
+                .objectValue?["country_slug"]?.stringValue ?? ""
+            let restoredCountry = change.after["countryAssignment"]?
+                .objectValue?["country_slug"]?.stringValue ?? ""
+            if beforeCountry.isEmpty != restoredCountry.isEmpty {
+                window.summary.countryMissing = max(
+                    0,
+                    window.summary.countryMissing + (restoredCountry.isEmpty ? 1 : -1)
+                )
+            }
             guard let current = existingItems[change.assetID],
                   let restoredState = change.review["editorialState"]?.stringValue
             else { continue }
@@ -4383,6 +4428,15 @@ final class BackstageViewModel: ObservableObject {
         }
         if let value = update["proposedKeywords"]?.arrayValue {
             item.proposedKeywords = value.compactMap(\.stringValue)
+        }
+        if let value = update["country"]?.stringValue {
+            item.country = value
+        }
+        if let value = update["proposedCountry"]?.stringValue {
+            item.proposedCountry = value
+        }
+        if let value = update["countryProposalSource"]?.stringValue {
+            item.countryProposalSource = value
         }
         if let value = update["proposalReason"]?.stringValue {
             item.proposalReason = value
@@ -4792,6 +4846,13 @@ final class BackstageViewModel: ObservableObject {
         await applyReviewAction(.propagateKeywords, propagate: true)
     }
 
+    func propagateReviewCountry() async {
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
+        await applyReviewAction(.propagateCountry, propagate: true)
+    }
+
     func propagateLastReviewAction() async {
         // A local AI draft is the current Review intent even if Approve or
         // Hide was the last completed action. Propagation commits that draft
@@ -4936,6 +4997,9 @@ final class BackstageViewModel: ObservableObject {
                     continue
                 }
                 reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    country: proposal.proposedCountry.isEmpty
+                        ? (reviewItems.first { $0.id == proposal.assetID }?.country ?? "")
+                        : proposal.proposedCountry,
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
@@ -4972,6 +5036,9 @@ final class BackstageViewModel: ObservableObject {
             var restored = 0
             for proposal in proposals where reviewProposalDrafts[proposal.assetID] == nil {
                 reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    country: proposal.proposedCountry.isEmpty
+                        ? (reviewItems.first { $0.id == proposal.assetID }?.country ?? "")
+                        : proposal.proposedCountry,
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
@@ -5088,6 +5155,7 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let draft = reviewProposalDrafts[item.id]
+        reviewCountry = draft?.country ?? item.country
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
         let hasActiveAIRequest = item.editorialState == "requesting-ai"
@@ -5128,6 +5196,7 @@ final class BackstageViewModel: ObservableObject {
                 }
             }
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: item.proposedCountry.isEmpty ? item.country : item.proposedCountry,
                 title: item.proposedTitle,
                 keywords: item.proposedKeywords,
                 proposalID: item.proposalID,
@@ -5146,6 +5215,7 @@ final class BackstageViewModel: ObservableObject {
     private func clearReviewDraft() {
         reviewTitle = ""
         reviewKeywords = ""
+        reviewCountry = ""
         reviewAIReasons = []
         reviewAINote = ""
     }
@@ -5154,14 +5224,17 @@ final class BackstageViewModel: ObservableObject {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
+        let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let existing = reviewProposalDrafts[item.id], existing.isProposal {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: country,
                 title: title,
                 keywords: keywords,
                 proposalID: existing.proposalID,
                 hasManualEdits: existing.hasManualEdits
                     || title != existing.title
-                    || keywords != existing.keywords,
+                    || keywords != existing.keywords
+                    || country != existing.country,
                 proposalReason: existing.proposalReason,
                 proposalStatus: existing.proposalStatus,
                 requestedGeneratorModel: existing.requestedGeneratorModel,
@@ -5169,8 +5242,9 @@ final class BackstageViewModel: ObservableObject {
                 reasoningEffort: existing.reasoningEffort,
                 vision: existing.vision
             )
-        } else if title != item.title || keywords != item.keywords {
+        } else if title != item.title || keywords != item.keywords || country != item.country {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: country,
                 title: title,
                 keywords: keywords
             )
@@ -5199,7 +5273,13 @@ final class BackstageViewModel: ObservableObject {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
-        guard title != item.title || keywords != item.keywords else { return }
+        let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard title != item.title || keywords != item.keywords || country != item.country else { return }
+        if country != item.country, fixtureReviewWindow?.countryWriteEnabled != true {
+            reviewStatus = fixtureReviewWindow?.countryWriteBlockReason
+                ?? "Country writes await the reviewed identity migration."
+            return
+        }
         await applyReviewAction(.editMetadata)
     }
 
@@ -5219,7 +5299,8 @@ final class BackstageViewModel: ObservableObject {
             reviewAIReasons.isEmpty && reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? "Clear AI request"
                 : "Request AI"
-        case .editMetadata: "Save title and keywords"
+        case .editMetadata: "Save Country, title, and keywords"
+        case .propagateCountry: "Propagate Country"
         case .propagateTitle: "Propagate title"
         case .propagateKeywords: "Propagate keywords"
         }

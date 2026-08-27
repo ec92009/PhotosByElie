@@ -477,7 +477,10 @@ struct OwnerCoreTests {
     func backstageUpdateManifestAndVersionComparison() throws {
         let manifest = try backstageUpdateManifestFixture()
         try manifest.validate()
-        #expect(manifest.architectures == ["arm64", "x86_64"])
+        #expect(manifest.architectures == ["arm64"])
+        var legacyUniversal = manifest
+        legacyUniversal.architectures = ["arm64", "x86_64"]
+        try legacyUniversal.validate()
         let current = BackstageReleaseIdentity(
             bundleIdentifier: "com.photosbyelie.backstage",
             version: "219.1",
@@ -542,9 +545,9 @@ struct OwnerCoreTests {
         oversizedArchive.fileSize = BackstageUpdateResourceLimits.hardMaximumArchiveFileSize + 1
         invalidManifests.append(oversizedArchive)
 
-        var thinArchitecture = manifest
-        thinArchitecture.architectures = ["arm64"]
-        invalidManifests.append(thinArchitecture)
+        var intelOnlyArchitecture = manifest
+        intelOnlyArchitecture.architectures = ["x86_64"]
+        invalidManifests.append(intelOnlyArchitecture)
 
         for invalidManifest in invalidManifests {
             #expect(throws: BackstageUpdateError.self) {

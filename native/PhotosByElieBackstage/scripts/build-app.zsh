@@ -55,11 +55,12 @@ cd "$package_root"
 
 binary_paths=()
 if [[ "$configuration" == "release" ]]; then
-  # Official Backstage releases are one signed universal app. Building each
-  # slice in its own SwiftPM scratch tree avoids host-architecture leakage and
-  # keeps the Intel slice deployable on Curie's macOS 15 installation while the
-  # deployment target remains macOS 14.
-  release_architectures=(arm64 x86_64)
+  # Official Backstage releases currently target Apple silicon only. Build the
+  # arm64 slice explicitly in its own SwiftPM scratch tree so the host
+  # architecture cannot leak into the signed artifact. The deployment target
+  # remains macOS 14; Intel support can be restored as a deliberate release
+  # policy change later.
+  release_architectures=(arm64)
   for architecture in "${release_architectures[@]}"; do
     scratch_path="${package_root}/.build/pbe-${configuration}-${architecture}"
     target_triple="${architecture}-apple-macosx14.0"
@@ -89,17 +90,16 @@ if [[ -e "$app" || -L "$app" ]]; then
   rm -rf "$app"
 fi
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
-if (( ${#binary_paths[@]} == 1 )); then
-  cp "${binary_paths[1]}" "$executable"
-else
-  /usr/bin/lipo -create "${binary_paths[@]}" -output "$executable"
+if (( ${#binary_paths[@]} != 1 )); then
+  print -u2 "Apple-silicon-only releases must contain exactly one arm64 build output."
+  exit 1
 fi
+cp "${binary_paths[1]}" "$executable"
 
 if [[ "$configuration" == "release" ]]; then
   executable_architectures="$(/usr/bin/lipo -archs "$executable")"
-  if [[ " $executable_architectures " != *" arm64 "* \
-        || " $executable_architectures " != *" x86_64 "* ]]; then
-    print -u2 "Release executable is not universal arm64 + x86_64: $executable_architectures"
+  if [[ "$executable_architectures" != "arm64" ]]; then
+    print -u2 "Release executable is not the required arm64 Apple-silicon slice: $executable_architectures"
     exit 1
   fi
 fi

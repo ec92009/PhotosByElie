@@ -24,7 +24,7 @@ these fields:
 | `minimumOSVersion` | Dotted numeric macOS minimum, checked before download. |
 | `releaseNotes` | Human-readable notes shown before download. |
 | `artifactFormat` | Exactly `zip`; the archive must contain exactly one Backstage `.app` bundle. |
-| `architectures` | Exactly `arm64` and `x86_64`; official releases are one universal app supporting Apple silicon and Intel Macs. |
+| `architectures` | New official releases are exactly `arm64` (Apple silicon only). Legacy universal `arm64` + `x86_64` manifests remain readable for rollback compatibility. |
 | `downloadURL` | The approved HTTPS artifact URL. The app does not infer or invent this URL. |
 | `fileSize` | Exact archive byte count, from 1 byte through the hard 1 GiB archive ceiling. |
 | `sha256` | Exact 64-character SHA-256 digest of the downloaded archive. |
@@ -35,7 +35,7 @@ these fields:
 The `version`, `build`, bundle identifier, trust metadata, size, and digest must
 be generated from the same real signed artifact. A release tool must refuse to
 write a manifest when the artifact is missing, ad-hoc signed, unsigned, has a
-different bundle identity, lacks either the `arm64` or `x86_64` executable
+different bundle identity, is not the current arm64 Apple-silicon release
 slice, or cannot be verified by `codesign --verify
 --deep --strict`.
 

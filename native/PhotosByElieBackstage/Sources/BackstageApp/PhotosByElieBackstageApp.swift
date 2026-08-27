@@ -467,9 +467,12 @@ private struct BackstageUpdatesView: View {
             LabeledContent("Available version", value: "\(manifest.version) (\(manifest.build))")
             LabeledContent("Minimum macOS", value: manifest.minimumOSVersion)
             if let architectures = manifest.architectures {
+                let architectureSet = Set(architectures)
                 LabeledContent(
                     "Architectures",
-                    value: architectures == ["arm64", "x86_64"]
+                    value: architectures == ["arm64"]
+                        ? "Apple silicon (arm64)"
+                        : architectureSet == Set(["arm64", "x86_64"])
                         ? "Universal (Apple silicon + Intel)"
                         : architectures.joined(separator: ", ")
                 )

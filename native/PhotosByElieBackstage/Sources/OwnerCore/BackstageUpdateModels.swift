@@ -120,9 +120,13 @@ public struct BackstageReleaseManifest: Codable, Sendable, Equatable {
             throw BackstageUpdateError.invalidManifest("Backstage updates must be ZIP archives containing one app bundle.")
         }
         if let architectures {
-            guard Set(architectures) == Set(["arm64", "x86_64"]), architectures.count == 2 else {
+            let architectureSet = Set(architectures)
+            let isAppleSiliconRelease = architectureSet == Set(["arm64"]) && architectures.count == 1
+            let isLegacyUniversalRelease = architectureSet == Set(["arm64", "x86_64"])
+                && architectures.count == 2
+            guard isAppleSiliconRelease || isLegacyUniversalRelease else {
                 throw BackstageUpdateError.invalidManifest(
-                    "Manifest architectures must identify one universal arm64 and x86_64 release."
+                    "Manifest architectures must identify an arm64 Apple-silicon release; legacy universal arm64/x86_64 manifests are accepted for rollback compatibility."
                 )
             }
         }

@@ -128,8 +128,8 @@ architectures="$(/usr/bin/lipo -archs "$executable" 2>/dev/null)" || {
   print -u2 "The Backstage executable architecture could not be inspected."
   exit 1
 }
-if [[ " $architectures " != *" arm64 "* || " $architectures " != *" x86_64 "* ]]; then
-  print -u2 "Refusing to publish a non-universal Backstage release: $architectures"
+if [[ "$architectures" != "arm64" ]]; then
+  print -u2 "Refusing to publish a non-arm64 Apple-silicon Backstage release: $architectures"
   exit 1
 fi
 if [[ ! "$version" =~ '^[0-9]+(\.[0-9]+)*$' || ! "$build" =~ '^[0-9]+$' || ! "$minimum_os" =~ '^[0-9]+(\.[0-9]+)*$' ]]; then

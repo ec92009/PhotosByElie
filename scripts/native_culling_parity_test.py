@@ -1355,9 +1355,10 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("Developer ID Application:", build_script)
         self.assertIn("Apple Development:", build_script)
         self.assertIn('PBE_ALLOW_ADHOC_SIGNING:-0', build_script)
-        self.assertIn('release_architectures=(arm64 x86_64)', build_script)
+        self.assertIn('release_architectures=(arm64)', build_script)
+        self.assertNotIn('release_architectures=(arm64 x86_64)', build_script)
         self.assertIn('--triple "$target_triple"', build_script)
-        self.assertIn('/usr/bin/lipo -create', build_script)
+        self.assertNotIn('/usr/bin/lipo -create', build_script)
         self.assertIn(
             "Release installation is blocked because ad-hoc rebuilds cause recurring Keychain prompts.",
             build_script,
@@ -1390,8 +1391,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "238.12")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "215")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "219")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1411,7 +1412,10 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('"canonicalRef": source_ref', manifest_builder)
         self.assertIn('"commit": source_revision', manifest_builder)
         self.assertIn('verify_backstage_release_source.zsh', manifest_builder)
-        self.assertIn("Refusing to publish a non-universal Backstage release", manifest_builder)
+        self.assertIn(
+            "Refusing to publish a non-arm64 Apple-silicon Backstage release",
+            manifest_builder,
+        )
         self.assertNotIn("--sequesterRsrc", release_publisher)
         self.assertIn("approved title, caption, and keyword metadata", build_script)
         self.assertIn('--entitlements "$entitlements"', build_script)

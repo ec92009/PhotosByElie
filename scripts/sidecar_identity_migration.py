@@ -24,6 +24,37 @@ from urllib.parse import quote
 SCHEMA_VERSION = 4
 FAILURE_STATUSES = {"failed", "error", "not_found", "missing", "unsupported"}
 SAFE_MAPPING_STATUSES = {"ok", "mapped", "collision-existing-canonical", "resolved", "source-tied"}
+PARKABLE_MAPPING_STATUSES = {"missing", "not_found"}
+PARKABLE_QUARANTINE_CLASSES = {"unmapped", "missing-identity"}
+CANONICAL_SOURCE_SNAPSHOT_FIELDS = {
+    "duration",
+    "filename",
+    "metadata_seed_title",
+    "photos_title",
+    "pixel_height",
+    "pixel_width",
+}
+CANONICAL_RAW_SNAPSHOT_FIELDS = {
+    "applePhotosMetadata",
+    "applePhotosTitle",
+    "duration",
+    "fallbackResourceFilename",
+    "fallbackResourceFormat",
+    "favorite",
+    "filename",
+    "index",
+    "modificationDate",
+    "pixelHeight",
+    "pixelWidth",
+    "preferredResourceFilename",
+    "preferredResourceFormat",
+    "resourceFormat",
+    "resourceFormatCounts",
+    "resourceFormats",
+    "resources",
+    "sourceAnchor",
+}
+LEGACY_CONFLICT_EVIDENCE_KEY = "legacySourceConflictEvidence"
 QUARANTINE_CLASSES = {
     "unmapped",
     "ambiguous",
@@ -964,6 +995,11 @@ def _merge_field(table: str, column: str, target: Any, source: Any) -> Any:
         return source
     if _empty(source, default):
         return target
+    if table == "sidecar_assets" and column in CANONICAL_SOURCE_SNAPSHOT_FIELDS:
+        # These columns describe the current canonical PhotoKit snapshot. The
+        # legacy source disagreement is retained as digest-only evidence in
+        # raw_json by _merge_asset_rows; it must not overwrite current state.
+        return target
     if column.endswith("_json"):
         return _merge_json_values(table, column, target, source)
     if column in {"favorite", "hidden"}:
@@ -977,7 +1013,13 @@ def _merge_field(table: str, column: str, target: Any, source: Any) -> Any:
     raise MigrationSafetyError(f"conflicting non-empty field {table}.{column}")
 
 
-def _merge_raw_json(target_raw: Any, source_raw: Any, target_cloud: str) -> str:
+def _merge_raw_json(
+    target_raw: Any,
+    source_raw: Any,
+    target_cloud: str,
+    *,
+    supplemental_conflict_fields: Sequence[str] = (),
+) -> str:
     target = _json_object(target_raw)
     source = _json_object(source_raw)
     for key in ("cloudIdentifier", "cloudId", "phCloudIdentifier", "cloudIdentifierString"):
@@ -999,13 +1041,24 @@ def _merge_raw_json(target_raw: Any, source_raw: Any, target_cloud: str) -> str:
         *(_text(value) for value in source_legacy if _text(value)),
     }
     local_values.discard("")
+    conflict_fields = set(supplemental_conflict_fields)
     for key, value in source.items():
-        if key in {"cloudIdentifier", "cloudId", "phCloudIdentifier", "cloudIdentifierString", "localIdentifier", "legacyLocalIdentifiers"}:
+        if key in {
+            "cloudIdentifier",
+            "cloudId",
+            "phCloudIdentifier",
+            "cloudIdentifierString",
+            "localIdentifier",
+            "legacyLocalIdentifiers",
+            LEGACY_CONFLICT_EVIDENCE_KEY,
+        }:
             continue
         if key not in merged or _empty(merged[key]):
             merged[key] = value
         elif not _empty(value) and merged[key] != value:
-            raise MigrationSafetyError(f"conflicting non-empty raw_json field {key}")
+            if key not in CANONICAL_RAW_SNAPSHOT_FIELDS:
+                raise MigrationSafetyError(f"conflicting non-empty raw_json field {key}")
+            conflict_fields.add(key)
     if local_values:
         # Keep the current canonical local fallback, while retaining the old
         # source-local namespace as audit/provenance rather than overwriting it.
@@ -1013,6 +1066,21 @@ def _merge_raw_json(target_raw: Any, source_raw: Any, target_cloud: str) -> str:
         merged["localIdentifier"] = current_local
         merged["legacyLocalIdentifiers"] = sorted(local_values - {current_local})
     merged["cloudIdentifier"] = target_cloud
+    evidence: list[Any] = []
+    for candidate in (target.get(LEGACY_CONFLICT_EVIDENCE_KEY), source.get(LEGACY_CONFLICT_EVIDENCE_KEY)):
+        if isinstance(candidate, list):
+            for item in candidate:
+                if item not in evidence:
+                    evidence.append(item)
+    if conflict_fields:
+        entry = {
+            "fields": sorted(conflict_fields),
+            "sourceDigest": _digest(_json_dump(source)),
+        }
+        if entry not in evidence:
+            evidence.append(entry)
+    if evidence:
+        merged[LEGACY_CONFLICT_EVIDENCE_KEY] = evidence
     return _json_dump(merged)
 
 
@@ -1205,6 +1273,14 @@ def _merge_asset_rows(connection: sqlite3.Connection, source: str, target: str, 
     source_data = dict(source_row)
     target_data = dict(target_row)
     merged = dict(target_data)
+    snapshot_conflicts = {
+        column
+        for column in CANONICAL_SOURCE_SNAPSHOT_FIELDS
+        if column in source_data
+        and source_data.get(column) != target_data.get(column)
+        and not _empty(source_data.get(column), STATE_DEFAULTS.get(("sidecar_assets", column)))
+        and not _empty(target_data.get(column), STATE_DEFAULTS.get(("sidecar_assets", column)))
+    }
     for column in _table_columns(connection, "sidecar_assets"):
         if column == "asset_id":
             continue
@@ -1213,7 +1289,12 @@ def _merge_asset_rows(connection: sqlite3.Connection, source: str, target: str, 
             merged[column] = f"apple-photos-cloud://{target_cloud}"
             continue
         if column == "raw_json":
-            merged[column] = _merge_raw_json(target_data[column], source_data[column], target_cloud)
+            merged[column] = _merge_raw_json(
+                target_data[column],
+                source_data[column],
+                target_cloud,
+                supplemental_conflict_fields=sorted(snapshot_conflicts),
+            )
             continue
         merged[column] = _merge_field("sidecar_assets", column, target_data[column], source_data[column])
     _update_row(connection, "sidecar_assets", target_data, merged)
@@ -1299,6 +1380,9 @@ def _verify_invariants(
     connection: sqlite3.Connection,
     before_domain: Mapping[str, Any],
     resolutions: Mapping[str, str],
+    *,
+    expected_local_only_count: int,
+    expected_missing_identity_count: int,
 ) -> dict[str, Any]:
     quick = _quick_check(connection)
     foreign_keys = _foreign_key_errors(connection)
@@ -1319,6 +1403,10 @@ def _verify_invariants(
         "canonicalUnique": identity["duplicateCanonicalExtraRows"] == 0,
         "canonicalIdentity": identity,
         "noLegacyLocalOnlyRows": identity["localOnlyCount"] == 0,
+        "parkedLegacyRowsPreserved": (
+            identity["localOnlyCount"] == expected_local_only_count
+            and identity["missingIdentityCount"] == expected_missing_identity_count
+        ),
         "fixtureCountPreserved": before_domain["fixtureCount"] == after_domain["fixtureCount"],
         "tableKeyResults": table_results,
         "fixtureDecisionHistoryPreserved": all(
@@ -1343,7 +1431,7 @@ def _verify_invariants(
     result["allPassed"] = all(
         value
         for key, value in result.items()
-        if isinstance(value, bool) and key != "allPassed"
+        if isinstance(value, bool) and key not in {"allPassed", "noLegacyLocalOnlyRows"}
     )
     if not result["allPassed"]:
         raise MigrationSafetyError("post-migration invariant failed")
@@ -1378,7 +1466,12 @@ def _copy_sqlite_database(source: Path, destination: Path) -> None:
         source_conn.close()
 
 
-def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def build_dry_run(
+    owner_db: Path,
+    mapping: Path | Iterable[Mapping[str, Any]],
+    *,
+    reviewed_partial_plan: bool = False,
+) -> dict[str, Any]:
     """Build a safe report; no output contains a raw Apple identifier."""
     connection = _read_only_connection(owner_db)
     try:
@@ -1393,18 +1486,36 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
         if schema["unknownSurfaceCount"]:
             blocked.append("unknown-schema-or-reference-surface")
         blocked.extend(operational_drain["blockedReasons"])
-        if preserved_references["canonicalInvariantViolationCount"]:
+        if preserved_references["canonicalInvariantViolationCount"] and not reviewed_partial_plan:
             blocked.append("noncanonical-canonical-audit-reference")
-        if classified["quarantine"]["entryCount"]:
+        quarantine_classes = {
+            entry["classification"]
+            for entry in classified["quarantine"]["entries"]
+        }
+        nonparkable_quarantine = quarantine_classes - PARKABLE_QUARANTINE_CLASSES
+        if classified["quarantine"]["entryCount"] and not reviewed_partial_plan:
             blocked.append("unresolved-or-ambiguous-identities-quarantined")
+        elif nonparkable_quarantine:
+            blocked.append("non-parkable-identity-quarantine")
         if classified["mapping"]["malformedCount"] or classified["mapping"]["missingFieldCount"]:
             blocked.append("invalid-source-mapping-input")
-        if classified["mapping"]["failedCount"]:
+        failed_statuses = {
+            status
+            for status, count in classified["mapping"]["statusCounts"].items()
+            if count and status in FAILURE_STATUSES
+        }
+        if classified["mapping"]["failedCount"] and not (
+            reviewed_partial_plan
+            and failed_statuses
+            and failed_statuses <= PARKABLE_MAPPING_STATUSES
+        ):
             blocked.append("failed-source-mapping-rows")
         if classified["mapping"]["ineligibleStatusCount"]:
             blocked.append("ineligible-source-mapping-status")
         if not owner_rows:
             blocked.append("empty-owner-inventory")
+        if not resolutions:
+            blocked.append("empty-eligible-resolution-set")
         report = {
             "schemaVersion": SCHEMA_VERSION,
             "mode": "dry-run",
@@ -1427,6 +1538,9 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
                 "acceptedStatuses": sorted(SAFE_MAPPING_STATUSES),
                 "filenameDateInference": False,
                 "ineligibleRows": "block before transaction",
+                "reviewedPartialPlan": reviewed_partial_plan,
+                "parkedMappingStatuses": sorted(PARKABLE_MAPPING_STATUSES),
+                "parkedQuarantineClasses": sorted(PARKABLE_QUARANTINE_CLASSES),
             },
             "mergeSemantics": {
                 "identity": {
@@ -1443,6 +1557,10 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
                 },
                 "fieldRules": {
                     "nonEmptyConflict": "fail closed",
+                    "canonicalSourceSnapshot": (
+                        "current canonical PhotoKit/resource/title snapshot wins; "
+                        "legacy disagreement is retained as digest-only field evidence"
+                    ),
                     "orderedJsonLists": "stable union without duplicates",
                     "timestamps": "earliest created/requested and latest updated/completed",
                     "attemptCounters": "maximum value",
@@ -1470,7 +1588,17 @@ def build_dry_run(owner_db: Path, mapping: Path | Iterable[Mapping[str, Any]]) -
                 "publicationMutationPerformed": False,
                 "sourceDeletionPerformed": False,
                 "blockedReasons": blocked,
-                "applyReady": not blocked,
+                "rehearsalReady": not blocked,
+                "applyReady": False,
+                "applyGate": (
+                    "successful reviewed disposable rehearsal and separate live authority required"
+                ),
+                "reviewedPartialPlan": reviewed_partial_plan,
+                "parkedQuarantineAccepted": bool(
+                    reviewed_partial_plan
+                    and classified["quarantine"]["entryCount"]
+                    and not nonparkable_quarantine
+                ),
             },
         }
         return {"report": report, "resolutions": resolutions}
@@ -1493,10 +1621,12 @@ def _apply_transaction(
         if not operational_drain["allDrained"]:
             raise MigrationSafetyError("lifecycle work must drain before identity migration")
         preserved_references = inspect_preserved_references(connection, resolutions)
-        if preserved_references["canonicalInvariantViolationCount"]:
-            raise MigrationSafetyError("canonical lifecycle audit reference contains a legacy identity")
         if _quick_check(connection) != ["ok"] or _foreign_key_errors(connection):
             raise MigrationSafetyError("pre-migration SQLite invariant failed")
+        before_identity = _canonical_identity_state(connection)
+        expected_local_only_count = before_identity["localOnlyCount"] - len(resolutions)
+        if expected_local_only_count < 0:
+            raise MigrationSafetyError("eligible resolution count exceeds local-only inventory")
         before_domain = _domain_snapshot(connection, resolution_map)
         before_logical_digest = _logical_database_digest(working_db)
         connection.execute("BEGIN IMMEDIATE")
@@ -1559,7 +1689,13 @@ def _apply_transaction(
             if connection.execute("SELECT 1 FROM fixtures LIMIT 1").fetchone() is None:
                 raise MigrationSafetyError("injected invariant failure")
             connection.execute("DELETE FROM fixtures")
-        invariants = _verify_invariants(connection, before_domain, resolution_map)
+        invariants = _verify_invariants(
+            connection,
+            before_domain,
+            resolution_map,
+            expected_local_only_count=expected_local_only_count,
+            expected_missing_identity_count=before_identity["missingIdentityCount"],
+        )
         connection.commit()
         return (
             {
@@ -1589,16 +1725,21 @@ def rehearse_synthetic(
     output_dir: Path,
     *,
     failure_stage: str = "",
+    reviewed_partial_plan: bool = False,
 ) -> dict[str, Any]:
     """Rehearse on a temporary copy and return only privacy-safe evidence."""
     output_dir = output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    dry = build_dry_run(owner_db, mapping)
+    dry = build_dry_run(
+        owner_db,
+        mapping,
+        reviewed_partial_plan=reviewed_partial_plan,
+    )
     report = dry["report"]
     quarantine_path = output_dir / "quarantine-manifest.json"
     report_path = output_dir / "migration-report.json"
     quarantine_path.write_text(_json_dump(report["quarantine"]) + "\n", encoding="utf-8")
-    if not report["safety"]["applyReady"]:
+    if not report["safety"]["rehearsalReady"]:
         report["rehearsal"] = {
             "syntheticOnly": True,
             "applyPerformed": False,
@@ -1653,7 +1794,11 @@ def rehearse_synthetic(
     restored_hash = hashlib.sha256(restored_path.read_bytes()).hexdigest()
     after_hash = hashlib.sha256(working_path.read_bytes()).hexdigest()
     second_before_hash = after_hash
-    second_dry = build_dry_run(working_path, mapping)
+    second_dry = build_dry_run(
+        working_path,
+        mapping,
+        reviewed_partial_plan=reviewed_partial_plan,
+    )
     second_noop = not second_dry["resolutions"] and second_before_hash == hashlib.sha256(working_path.read_bytes()).hexdigest()
     report["rehearsal"] = {
         "syntheticOnly": True,
@@ -1687,15 +1832,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     dry_parser.add_argument("--owner-db", type=Path, required=True)
     dry_parser.add_argument("--mapping", type=Path, required=True)
     dry_parser.add_argument("--report", type=Path)
+    dry_parser.add_argument("--reviewed-partial-plan", action="store_true")
     rehearse_parser = subparsers.add_parser("rehearse-synthetic")
     rehearse_parser.add_argument("--synthetic-fixture", action="store_true", required=True)
     rehearse_parser.add_argument("--owner-db", type=Path, required=True)
     rehearse_parser.add_argument("--mapping", type=Path, required=True)
     rehearse_parser.add_argument("--output-dir", type=Path, required=True)
     rehearse_parser.add_argument("--failure-stage", default="")
+    rehearse_parser.add_argument("--reviewed-partial-plan", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "dry-run":
-        report = build_dry_run(args.owner_db, args.mapping)["report"]
+        report = build_dry_run(
+            args.owner_db,
+            args.mapping,
+            reviewed_partial_plan=args.reviewed_partial_plan,
+        )["report"]
         encoded = _json_dump(report)
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)
@@ -1707,6 +1858,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.mapping,
         args.output_dir,
         failure_stage=args.failure_stage,
+        reviewed_partial_plan=args.reviewed_partial_plan,
     )
     print(_json_dump(report))
     return 0 if report.get("rehearsal", {}).get("applyPerformed") else 2

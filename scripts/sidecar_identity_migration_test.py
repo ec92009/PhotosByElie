@@ -507,6 +507,75 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertNotIn("local-ambiguous", encoded)
         self.assertGreater(report["quarantine"]["entryCount"], 0)
 
+    def test_reviewed_partial_plan_rehearses_exact_rows_and_preserves_parked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "INSERT INTO sidecar_assets(asset_id, source_anchor, filename, raw_json) "
+                "VALUES ('legacy-parked', 'apple-photos://local-parked', 'parked.jpg', ?) ",
+                (json.dumps({"localIdentifier": "local-parked"}),),
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                    {"localIdentifier": "local-parked", "status": "missing"},
+                ],
+            )
+            report = rehearse_synthetic(
+                owner,
+                mapping,
+                directory / "partial",
+                reviewed_partial_plan=True,
+            )
+            connection = sqlite3.connect(directory / "partial" / "working.sqlite")
+            remaining = connection.execute(
+                "SELECT asset_id FROM sidecar_assets WHERE source_anchor LIKE 'apple-photos://%'"
+            ).fetchall()
+            connection.close()
+
+        self.assertTrue(report["rehearsal"]["applyPerformed"])
+        self.assertTrue(report["rehearsal"]["secondRunNoOp"])
+        self.assertTrue(report["safety"]["rehearsalReady"])
+        self.assertFalse(report["safety"]["applyReady"])
+        self.assertTrue(report["safety"]["reviewedPartialPlan"])
+        self.assertTrue(report["safety"]["parkedQuarantineAccepted"])
+        self.assertEqual(report["quarantine"]["entryCount"], 1)
+        self.assertEqual(report["mapping"]["failedCount"], 1)
+        self.assertEqual(remaining, [("legacy-parked",)])
+        self.assertFalse(report["rehearsal"]["invariants"]["noLegacyLocalOnlyRows"])
+        self.assertTrue(report["rehearsal"]["invariants"]["parkedLegacyRowsPreserved"])
+
+    def test_reviewed_partial_plan_still_blocks_ambiguous_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory, classification=True)
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-ambiguous", "cloudIdentifier": "cloud-c"},
+                    {"localIdentifier": "local-ambiguous", "cloudIdentifier": "cloud-d"},
+                ],
+            )
+            report = rehearse_synthetic(
+                owner,
+                mapping,
+                directory / "ambiguous-partial",
+                reviewed_partial_plan=True,
+            )
+        self.assertIn(
+            "non-parkable-identity-quarantine",
+            report["safety"]["blockedReasons"],
+        )
+        self.assertFalse(report["safety"]["rehearsalReady"])
+        self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+
     def test_duplicate_local_is_quarantined_even_with_one_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
@@ -632,6 +701,44 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         )
         self.assertFalse(report["rehearsal"]["workingCopyCreated"])
 
+    def test_reviewed_partial_plan_preserves_noncanonical_audit_reference_via_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE owner_lifecycle_outbox SET canonical_asset_id = 'legacy-collision'"
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(
+                owner,
+                mapping,
+                directory / "reviewed-audit",
+                reviewed_partial_plan=True,
+            )
+            connection = sqlite3.connect(directory / "reviewed-audit" / "working.sqlite")
+            preserved = connection.execute(
+                "SELECT canonical_asset_id FROM owner_lifecycle_outbox"
+            ).fetchone()[0]
+            resolved = resolve_owner_asset_identity(connection, preserved)
+            connection.close()
+
+        self.assertTrue(report["rehearsal"]["applyPerformed"])
+        self.assertEqual(preserved, "legacy-collision")
+        self.assertEqual(resolved, "cloud-a")
+        self.assertEqual(
+            report["referenceContract"]["preservedReferences"]["canonicalInvariantViolationCount"],
+            1,
+        )
+
     def test_legacy_lifecycle_audit_reference_is_preserved_by_verified_alias(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
@@ -750,6 +857,65 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
             report = rehearse_synthetic(owner, mapping, directory / "conflict")
         self.assertFalse(report["rehearsal"]["applyPerformed"])
         self.assertTrue(report["rehearsal"]["rollbackVerified"])
+
+    def test_canonical_source_snapshot_wins_with_digest_only_legacy_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE sidecar_assets SET filename = 'current.jpg', photos_title = 'Current', raw_json = ? "
+                "WHERE asset_id = 'cloud-a'",
+                (json.dumps({
+                    "cloudIdentifier": "cloud-a",
+                    "localIdentifier": "local-current",
+                    "checksumSha256": "checksum-1",
+                    "index": 1,
+                    "sourceAnchor": "apple-photos-cloud://cloud-a",
+                    "applePhotosTitle": "Current",
+                }),),
+            )
+            connection.execute(
+                "UPDATE sidecar_assets SET filename = 'legacy.jpg', photos_title = 'Legacy', raw_json = ? "
+                "WHERE asset_id = 'legacy-collision'",
+                (json.dumps({
+                    "localIdentifier": "local-collision",
+                    "checksumSha256": "checksum-1",
+                    "index": 99,
+                    "sourceAnchor": "apple-photos://local-collision",
+                    "applePhotosTitle": "Legacy",
+                }),),
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "snapshot")
+            connection = sqlite3.connect(directory / "snapshot" / "working.sqlite")
+            row = connection.execute(
+                "SELECT filename, photos_title, raw_json FROM sidecar_assets WHERE asset_id = 'cloud-a'"
+            ).fetchone()
+            connection.close()
+            raw = json.loads(row[2])
+            evidence = raw["legacySourceConflictEvidence"]
+
+        self.assertTrue(report["rehearsal"]["applyPerformed"])
+        self.assertEqual(row[0], "current.jpg")
+        self.assertEqual(row[1], "Current")
+        self.assertEqual(raw["index"], 1)
+        self.assertEqual(raw["applePhotosTitle"], "Current")
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(
+            set(evidence[0]["fields"]),
+            {"applePhotosTitle", "filename", "index", "photos_title", "sourceAnchor"},
+        )
+        self.assertEqual(len(evidence[0]["sourceDigest"]), 64)
+        self.assertNotIn("legacy.jpg", json.dumps(evidence))
 
 
 if __name__ == "__main__":

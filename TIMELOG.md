@@ -784,8 +784,9 @@ Clock state: running
 | 2026-08-25 | 21:47 CEST | 21:48 CEST | 0:01 | Approved the rehearsed PBB-107 canonical ghost-run dispositions; backup, database transaction, verification, commit, and ticket-update runtime excluded. |
 | 2026-08-25 | 22:02 CEST | 22:03 CEST | 0:01 | Reported that installed Backstage build 200 took roughly 40 seconds to settle Activity after the PBB-107 reconciliation; background diagnosis, implementation, tests, and build verification excluded. |
 | 2026-08-26 | 09:21 CEST | 09:22 CEST | 0:01 | Authorized PBB-105 color-toggle implementation across the grid and shared Quick Look surfaces; background implementation, tests, build, and installation excluded. |
+| 2026-08-27 | 10:11 CEST | 10:12 CEST | 0:01 | Directed the PBE-164 Gallery thumbnail lifecycle correction for bounded visible upgrades and scroll-cancelable APL backfill; background implementation, tests, build, commit, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:27
+Active collaboration time used: 38:28
 Remaining budget: not set

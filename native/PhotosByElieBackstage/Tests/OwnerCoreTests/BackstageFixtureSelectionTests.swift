@@ -1616,6 +1616,84 @@ struct BackstageFixtureSelectionTests {
         #expect(model.currentImageByteCount(for: secondAsset.id) == 900_000)
     }
 
+    @Test("Culling thumbnail upgrades stay bounded and cancel when scrolling resumes")
+    @MainActor
+    func cullingThumbnailUpgradesAreBoundedAndCancelOnScroll() async {
+        let photoLibrary = BoundedUpgradePhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .milliseconds(1)
+        )
+        let assets = (0..<10).map { index in
+            FixtureAsset(
+                id: "asset-bounded-upgrade-\(index)",
+                title: "Bounded upgrade \(index)",
+                filename: "bounded-upgrade-\(index).jpg",
+                mediaType: "photo"
+            )
+        }
+
+        for asset in assets {
+            model.cullingAssetDidAppear(asset)
+        }
+
+        for _ in 0..<100 where photoLibrary.startedUpgradeCount < 4 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(photoLibrary.startedUpgradeCount == 4)
+        #expect(photoLibrary.maximumConcurrentUpgradeRequests == 4)
+
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        for _ in 0..<100 where photoLibrary.cancelledUpgradeCount < 4 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(photoLibrary.cancelledUpgradeCount == 4)
+        #expect(photoLibrary.activeUpgradeRequests == 0)
+    }
+
+    @Test("Idle thumbnail backfill caps the loaded APL set at 2000 items")
+    @MainActor
+    func idleThumbnailBackfillCapsLoadedAPLSet() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailBackfillDelay: .milliseconds(1)
+        )
+        model.libraryItems = (0..<2_005).map { index in
+            PhotoLibraryItem(
+                id: "asset-apl-backfill-\(index)",
+                filename: "apl-backfill-\(index).jpg",
+                creationDate: nil,
+                mediaType: "photo"
+            )
+        }
+
+        model.cullingAssetDidAppear(
+            FixtureAsset(
+                id: "asset-apl-backfill-0",
+                title: "APL backfill 0",
+                filename: "apl-backfill-0.jpg",
+                mediaType: "photo"
+            )
+        )
+
+        for _ in 0..<500 {
+            let lowResolutionRequests = photoLibrary
+                .requestedPixelSizes()
+                .filter { $0 == 180 }
+            if lowResolutionRequests.count >= 2_000 { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        let requestedPixelSizes = photoLibrary.requestedPixelSizes()
+        #expect(requestedPixelSizes.filter { $0 == 180 }.count == 2_000)
+        #expect(requestedPixelSizes.filter { $0 >= 900 }.isEmpty)
+    }
+
     @Test("Focused Quick Look persists a learned current size before returning")
     @MainActor
     func focusedQuickLookPersistsCurrentSizePromptly() async throws {
@@ -2162,6 +2240,72 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
 
     func requestedPixelSizes() -> [Int] {
         lock.withLock { pixelSizes }
+    }
+}
+
+private final class BoundedUpgradePhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var active = 0
+    private var maximumActive = 0
+    private var started = 0
+    private var cancelled = 0
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        guard maxPixelSize >= 900 else {
+            return PhotoPreview(
+                assetID: localIdentifier,
+                jpegData: Self.previewData,
+                pixelWidth: maxPixelSize,
+                pixelHeight: maxPixelSize
+            )
+        }
+
+        lock.withLock {
+            active += 1
+            maximumActive = max(maximumActive, active)
+            started += 1
+        }
+        defer { lock.withLock { active -= 1 } }
+        do {
+            try await Task.sleep(for: .seconds(60))
+        } catch {
+            lock.withLock { cancelled += 1 }
+            throw error
+        }
+        return PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: maxPixelSize,
+            pixelHeight: maxPixelSize,
+            currentImageByteCount: Int64(maxPixelSize * 1_000)
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Synthetic bounded-upgrade test does not export originals.")
+    }
+
+    var activeUpgradeRequests: Int {
+        lock.withLock { active }
+    }
+
+    var maximumConcurrentUpgradeRequests: Int {
+        lock.withLock { maximumActive }
+    }
+
+    var startedUpgradeCount: Int {
+        lock.withLock { started }
+    }
+
+    var cancelledUpgradeCount: Int {
+        lock.withLock { cancelled }
     }
 }
 

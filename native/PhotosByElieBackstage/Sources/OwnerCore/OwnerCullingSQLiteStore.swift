@@ -76,6 +76,8 @@ public struct OwnerCullingSQLiteStore: Sendable {
         let selectedEditorial = Set(editorialFilters)
         let selectedDelivery = Set(deliveryFilters)
         let selectedSources = Set(sourceFilters)
+        let needsUnavailableIdentityFallback = selectedSources.isEmpty
+            || selectedSources.contains(.unavailable)
 
         let connection = try CullingSQLiteConnection(
             databaseURL: databaseURL,
@@ -121,10 +123,47 @@ public struct OwnerCullingSQLiteStore: Sendable {
                 LIMIT 1
               )
             """
+        if needsUnavailableIdentityFallback {
+            fromSQL += """
+                LEFT JOIN exact_identity_cloud_fallbacks AS exact_identity
+                  ON COALESCE(asset.missing_at, '') <> ''
+                 AND exact_identity.local_identifier = json_extract(asset.raw_json, '$.localIdentifier')
+                """
+        }
         bindings.append(.string(cleanFixtureID))
 
+        let exactIdentityCTE = needsUnavailableIdentityFallback
+            ? """
+              WITH exact_identity_cloud_fallbacks AS (
+                SELECT local_identifier, MAX(cloud_identifier) AS cloud_identifier
+                FROM (
+                  SELECT json_extract(raw_json, '$.localIdentifier') AS local_identifier,
+                         CASE
+                           WHEN source_anchor LIKE 'apple-photos-cloud://%'
+                             THEN substr(source_anchor, length('apple-photos-cloud://') + 1)
+                           ELSE COALESCE(
+                             json_extract(raw_json, '$.cloudIdentifier'),
+                             json_extract(raw_json, '$.phCloudIdentifier'),
+                             json_extract(raw_json, '$.cloudIdentifierString'),
+                             ''
+                           )
+                         END AS cloud_identifier
+                  FROM sidecar_assets
+                  WHERE COALESCE(missing_at, '') = ''
+                )
+                WHERE trim(COALESCE(local_identifier, '')) <> ''
+                  AND trim(COALESCE(cloud_identifier, '')) <> ''
+                GROUP BY local_identifier
+                HAVING COUNT(DISTINCT cloud_identifier) = 1
+              )
+              """
+            : ""
+        let exactIdentitySelection = needsUnavailableIdentityFallback
+            ? "COALESCE(exact_identity.cloud_identifier, '')"
+            : "''"
         let rows = try connection.query(
             """
+            \(exactIdentityCTE)
             SELECT asset.asset_id,
                    COALESCE(asset.source_anchor, '') AS source_anchor,
                    COALESCE(asset.raw_json, '{}') AS raw_json,
@@ -157,6 +196,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
                      WHEN COALESCE(latest_source.state, '') = 'source-missing' THEN 0
                      ELSE 1
                    END AS source_available,
+                   \(exactIdentitySelection) AS exact_identity_cloud_fallback,
                    COALESCE((
                      SELECT CAST(COALESCE(
                        json_extract(upload.value, '$.bytes'),
@@ -681,13 +721,18 @@ private func summaryJSON(_ summary: FixtureCullingSummary) -> [String: JSONValue
 private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
     let raw = cullingJSONObject(row["raw_json"]?.stringValue ?? "{}")
     let sourceAnchor = row["source_anchor"]?.stringValue ?? ""
+    let sourceAvailable = (row["source_available"]?.intValue ?? 1) != 0
     let cloudIdentifier = sourceAnchor.hasPrefix("apple-photos-cloud://")
         ? String(sourceAnchor.dropFirst("apple-photos-cloud://".count))
         : ""
+    let exactIdentityCloudFallback = row["exact_identity_cloud_fallback"]?.stringValue ?? ""
     let photoLibraryIdentifier = cloudIdentifier.isEmpty
         ? raw["cloudIdentifier"]?.stringValue
             ?? raw["phCloudIdentifier"]?.stringValue
             ?? raw["cloudIdentifierString"]?.stringValue
+            ?? (!sourceAvailable && !exactIdentityCloudFallback.isEmpty
+                ? exactIdentityCloudFallback
+                : nil)
             ?? raw["localIdentifier"]?.stringValue
             ?? sourceAnchor.replacingOccurrences(of: "apple-photos://", with: "")
         : cloudIdentifier
@@ -719,7 +764,7 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
         "editorialState": .string(editorialState),
         "proposalAvailable": .bool((row["proposal_available"]?.intValue ?? 0) != 0),
         "deliveryState": row["delivery_state"] ?? .string("not-ready"),
-        "sourceAvailable": .bool((row["source_available"]?.intValue ?? 1) != 0),
+        "sourceAvailable": .bool(sourceAvailable),
         "keywords": .array(keywords.map(JSONValue.string)),
         "locationLabel": row["location_label"] ?? .string(""),
         "locationKeywords": .array(

@@ -251,6 +251,64 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(redBurstFrame.items.map(\.id) == ["asset-2"])
     }
 
+    @Test("Unavailable legacy cards retry only through one exact canonical identity sibling")
+    func exactIdentityFallbackIsUniqueAndNeverUsesFilename() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-identity-fallback-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            INSERT INTO sidecar_assets(asset_id, source_anchor, raw_json, filename, missing_at)
+            VALUES
+              ('legacy-exact', 'apple-photos://local-exact',
+               '{"localIdentifier":"local-exact"}', 'Exact stale.JPG', '2026-01-02T00:00:00Z'),
+              ('canonical-exact', 'apple-photos-cloud://cloud-exact',
+               '{"localIdentifier":"local-exact","cloudIdentifier":"cloud-exact"}', 'Different.JPG', NULL),
+              ('legacy-ambiguous', 'apple-photos://local-ambiguous',
+               '{"localIdentifier":"local-ambiguous"}', 'Ambiguous stale.JPG', '2026-01-02T00:00:00Z'),
+              ('canonical-ambiguous-a', 'apple-photos-cloud://cloud-ambiguous-a',
+               '{"localIdentifier":"local-ambiguous","cloudIdentifier":"cloud-ambiguous-a"}', 'A.JPG', NULL),
+              ('canonical-ambiguous-b', 'apple-photos-cloud://cloud-ambiguous-b',
+               '{"localIdentifier":"local-ambiguous","cloudIdentifier":"cloud-ambiguous-b"}', 'B.JPG', NULL),
+              ('legacy-filename-only', 'apple-photos://local-filename-only',
+               '{"localIdentifier":"local-filename-only"}', 'Same Name.JPG', '2026-01-02T00:00:00Z'),
+              ('canonical-filename-only', 'apple-photos-cloud://cloud-filename-only',
+               '{"localIdentifier":"different-local","cloudIdentifier":"cloud-filename-only"}', 'Same Name.JPG', NULL);
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let exact = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "Exact stale",
+            sourceFilters: [.unavailable]
+        )
+        #expect(exact.items.map(\.id) == ["legacy-exact"])
+        #expect(exact.items.first?.photoLibraryIdentifier == "cloud-exact")
+        #expect(exact.items.first?.sourceAvailable == false)
+
+        let ambiguous = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "Ambiguous stale",
+            sourceFilters: [.unavailable]
+        )
+        #expect(ambiguous.items.first?.photoLibraryIdentifier == "local-ambiguous")
+
+        let filenameOnly = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "Same Name",
+            sourceFilters: [.unavailable]
+        )
+        #expect(filenameOnly.items.first?.photoLibraryIdentifier == "local-filename-only")
+    }
+
     @Test("Fixture workflow uses native Culling reads without an Owner action")
     func cullingWorkflowUsesNativeRead() async throws {
         let root = FileManager.default.temporaryDirectory

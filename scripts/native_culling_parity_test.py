@@ -133,6 +133,24 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, preview)
 
+    def test_unavailable_legacy_cards_use_only_a_unique_exact_identity_fallback(self):
+        store = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerCullingSQLiteStore.swift"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "needsUnavailableIdentityFallback",
+            "exact_identity_cloud_fallbacks",
+            "json_extract(raw_json, '$.localIdentifier')",
+            "HAVING COUNT(DISTINCT cloud_identifier) = 1",
+            "exact_identity_cloud_fallback",
+            "!sourceAvailable && !exactIdentityCloudFallback.isEmpty",
+        ):
+            self.assertIn(marker, store)
+        fallback_cte = store.split("let exactIdentityCTE", 1)[1].split(
+            "let exactIdentitySelection", 1
+        )[0]
+        self.assertNotIn("filename", fallback_cte)
+
     def test_owner_core_owns_filter_window_burst_and_hierarchy_rules(self):
         source = (
             NATIVE / "Sources" / "OwnerCore" / "CullingWorkspace.swift"
@@ -1399,8 +1417,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.5")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "224")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.6")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "225")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

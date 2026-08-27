@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -8,14 +9,18 @@ import unittest
 
 try:
     from sidecar_identity_migration import (
+        LIVE_APPLY_CONFIRMATION,
         MigrationSafetyError,
+        apply_reviewed_rehearsal,
         build_dry_run,
         rehearse_synthetic,
         resolve_owner_asset_identity,
     )
 except ModuleNotFoundError:
     from scripts.sidecar_identity_migration import (
+        LIVE_APPLY_CONFIRMATION,
         MigrationSafetyError,
+        apply_reviewed_rehearsal,
         build_dry_run,
         rehearse_synthetic,
         resolve_owner_asset_identity,
@@ -575,6 +580,83 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         )
         self.assertFalse(report["safety"]["rehearsalReady"])
         self.assertFalse(report["rehearsal"]["workingCopyCreated"])
+
+    def test_reviewed_rehearsal_apply_is_exact_atomic_and_noop_afterward(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            original_hash = hashlib.sha256(owner.read_bytes()).hexdigest()
+            rehearsal_dir = directory / "reviewed-rehearsal"
+            rehearsal = rehearse_synthetic(
+                owner,
+                mapping,
+                rehearsal_dir,
+                reviewed_partial_plan=True,
+            )
+            working_hash = hashlib.sha256(
+                (rehearsal_dir / "working.sqlite").read_bytes()
+            ).hexdigest()
+            receipt = apply_reviewed_rehearsal(
+                owner,
+                mapping,
+                rehearsal_dir,
+                directory / "backups",
+                expected_source_sha256=original_hash,
+                confirmation=LIVE_APPLY_CONFIRMATION,
+            )
+
+            post = build_dry_run(owner, mapping, reviewed_partial_plan=True)
+            backup = directory / "backups" / f"Owner-before-pbe143-{original_hash[:12]}.sqlite"
+            backup_hash = hashlib.sha256(backup.read_bytes()).hexdigest()
+
+        self.assertTrue(rehearsal["rehearsal"]["applyPerformed"])
+        self.assertTrue(receipt["applied"])
+        self.assertEqual(receipt["sourceSha256After"], working_hash)
+        self.assertEqual(receipt["postApplyEligibleCount"], 0)
+        self.assertEqual(post["resolutions"], [])
+        self.assertEqual(backup_hash, original_hash)
+
+    def test_reviewed_rehearsal_apply_restores_exact_backup_after_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            original_hash = hashlib.sha256(owner.read_bytes()).hexdigest()
+            rehearsal_dir = directory / "reviewed-rehearsal"
+            rehearse_synthetic(
+                owner,
+                mapping,
+                rehearsal_dir,
+                reviewed_partial_plan=True,
+            )
+            receipt = apply_reviewed_rehearsal(
+                owner,
+                mapping,
+                rehearsal_dir,
+                directory / "backups",
+                expected_source_sha256=original_hash,
+                confirmation=LIVE_APPLY_CONFIRMATION,
+                failure_stage="after-replace",
+            )
+            restored_hash = hashlib.sha256(owner.read_bytes()).hexdigest()
+
+        self.assertFalse(receipt["applied"])
+        self.assertTrue(receipt["rollbackPerformed"])
+        self.assertTrue(receipt["rollbackVerified"])
+        self.assertEqual(restored_hash, original_hash)
 
     def test_duplicate_local_is_quarantined_even_with_one_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

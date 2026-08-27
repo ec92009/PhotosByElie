@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Dry-run and synthetic-only rehearsal for PBE-143 identity migration.
+"""Dry-run, disposable rehearsal, and receipt-bound PBE-143 identity migration.
 
 The migration boundary is deliberately narrow: a source-tied local-to-cloud
-mapping is classified without exposing identifiers, and an apply rehearsal is
-performed only on a temporary copy of synthetic data.  There is no live Owner
-writer or Photos/connector dependency in this module.
+mapping is classified without exposing identifiers. A live Owner replacement
+is available only for the exact output of a successful reviewed rehearsal and
+requires an exact source hash, immutable backup, explicit confirmation, and
+automatic rollback on post-install verification failure.
 """
 
 from __future__ import annotations
@@ -14,14 +15,17 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import sqlite3
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import quote
+import uuid
 
 
 SCHEMA_VERSION = 4
+LIVE_APPLY_CONFIRMATION = "PBE-143-CANONICAL-APPLY"
 FAILURE_STATUSES = {"failed", "error", "not_found", "missing", "unsupported"}
 SAFE_MAPPING_STATUSES = {"ok", "mapped", "collision-existing-canonical", "resolved", "source-tied"}
 PARKABLE_MAPPING_STATUSES = {"missing", "not_found"}
@@ -310,6 +314,33 @@ def _json_value(value: Any, fallback: Any = None) -> Any:
 
 def _json_dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _write_private_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path.write_text(_json_dump(value) + "\n", encoding="utf-8")
+    path.chmod(0o600)
+
+
+def _fsync_file(path: Path) -> None:
+    with path.open("rb") as handle:
+        os.fsync(handle.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _digest(value: Any) -> str:
@@ -2107,6 +2138,198 @@ def rehearse_synthetic(
     return report
 
 
+def apply_reviewed_rehearsal(
+    owner_db: Path,
+    mapping: Path,
+    rehearsal_dir: Path,
+    backup_dir: Path,
+    *,
+    expected_source_sha256: str,
+    confirmation: str,
+    failure_stage: str = "",
+) -> dict[str, Any]:
+    """Atomically install one exact, successful reviewed rehearsal output."""
+    owner_db = owner_db.expanduser().resolve()
+    mapping = mapping.expanduser().resolve()
+    rehearsal_dir = rehearsal_dir.expanduser().resolve()
+    backup_dir = backup_dir.expanduser().resolve()
+    report_path = rehearsal_dir / "migration-report.json"
+    rehearsal_backup_manifest_path = rehearsal_dir / "backup-manifest.json"
+    working_path = rehearsal_dir / "working.sqlite"
+    restored_path = rehearsal_dir / "rollback-restored.sqlite"
+    if confirmation != LIVE_APPLY_CONFIRMATION:
+        raise MigrationSafetyError("canonical apply confirmation does not match PBE-143")
+    if len(expected_source_sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in expected_source_sha256
+    ):
+        raise MigrationSafetyError("expected source SHA-256 is invalid")
+    if not owner_db.is_file() or not mapping.is_file():
+        raise MigrationSafetyError("canonical Owner database or mapping does not exist")
+    if any(Path(f"{owner_db}{suffix}").exists() for suffix in ("-wal", "-shm", "-journal")):
+        raise MigrationSafetyError("canonical Owner database has an active SQLite sidecar")
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        rehearsal_backup_manifest = json.loads(
+            rehearsal_backup_manifest_path.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise MigrationSafetyError("reviewed rehearsal evidence is unreadable") from error
+    rehearsal = report.get("rehearsal", {})
+    safety = report.get("safety", {})
+    invariants = rehearsal.get("invariants", {})
+    required_rehearsal_checks = {
+        "reviewed-partial-plan": safety.get("reviewedPartialPlan") is True,
+        "rehearsal-ready": safety.get("rehearsalReady") is True,
+        "no-rehearsal-blockers": safety.get("blockedReasons") == [],
+        "rehearsal-applied": rehearsal.get("applyPerformed") is True,
+        "rehearsal-not-blocked": rehearsal.get("blocked") is False,
+        "source-read-only": rehearsal.get("sourceReadOnly") is True,
+        "source-unchanged": rehearsal.get("sourceUnchanged") is True,
+        "rollback-restored": rehearsal.get("rollbackRestoreVerified") is True,
+        "second-run-no-op": rehearsal.get("secondRunNoOp") is True,
+        "second-run-empty": rehearsal.get("secondRunEligibleResolutionCount") == 0,
+        "all-invariants": invariants.get("allPassed") is True,
+        "foreign-keys": invariants.get("foreignKeysOk") is True,
+        "quick-check": invariants.get("quickCheckOk") is True,
+        "parked-preserved": invariants.get("parkedLegacyRowsPreserved") is True,
+    }
+    failed_checks = sorted(
+        name for name, passed in required_rehearsal_checks.items() if not passed
+    )
+    if failed_checks:
+        raise MigrationSafetyError(
+            "reviewed rehearsal receipt failed required checks: " + ", ".join(failed_checks)
+        )
+    if not working_path.is_file() or not restored_path.is_file():
+        raise MigrationSafetyError("reviewed rehearsal database evidence is incomplete")
+    current_hash = _sha256_file(owner_db)
+    working_hash = _sha256_file(working_path)
+    restored_hash = _sha256_file(restored_path)
+    if current_hash != expected_source_sha256:
+        raise MigrationSafetyError("canonical Owner source hash changed")
+    if rehearsal_backup_manifest.get("sourceSha256") != current_hash:
+        raise MigrationSafetyError("reviewed rehearsal source hash does not match canonical Owner")
+    if rehearsal_backup_manifest.get("sourcePathDigest") != _digest(str(owner_db)):
+        raise MigrationSafetyError("reviewed rehearsal source path does not match canonical Owner")
+    if rehearsal.get("workingCopySha256After") != working_hash:
+        raise MigrationSafetyError("reviewed rehearsal working copy hash changed")
+    if rehearsal.get("rollbackRestoreSha256") != restored_hash:
+        raise MigrationSafetyError("reviewed rehearsal rollback restore hash changed")
+    if rehearsal.get("backupSha256") != restored_hash:
+        raise MigrationSafetyError("reviewed rehearsal backup and rollback restore differ")
+    if int(report.get("resolution", {}).get("eligibleCount", 0)) <= 0:
+        raise MigrationSafetyError("reviewed rehearsal has no eligible canonical changes")
+
+    backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    backup_dir.chmod(0o700)
+    backup_path = backup_dir / f"Owner-before-pbe143-{current_hash[:12]}.sqlite"
+    receipt_path = backup_dir / f"canonical-apply-receipt-{current_hash[:12]}.json"
+    if backup_path.exists():
+        if _sha256_file(backup_path) != current_hash:
+            raise MigrationSafetyError("existing canonical backup does not match source")
+    else:
+        shutil.copy2(owner_db, backup_path)
+        backup_path.chmod(0o400)
+        _fsync_file(backup_path)
+    if _sha256_file(backup_path) != current_hash:
+        raise MigrationSafetyError("canonical backup failed exact verification")
+    backup_path.chmod(0o400)
+    _fsync_directory(backup_dir)
+
+    candidate = owner_db.parent / f".{owner_db.name}.pbe143-{uuid.uuid4().hex}.sqlite"
+    restore_candidate = owner_db.parent / f".{owner_db.name}.pbe143-restore-{uuid.uuid4().hex}.sqlite"
+    installed = False
+    receipt: dict[str, Any] = {
+        "schemaVersion": SCHEMA_VERSION,
+        "mode": "canonical-reviewed-rehearsal-apply",
+        "confirmation": "PBE-143",
+        "sourcePathDigest": _digest(str(owner_db)),
+        "sourceSha256Before": current_hash,
+        "workingCopySha256": working_hash,
+        "backupSha256": current_hash,
+        "backupPathDigest": _digest(str(backup_path)),
+        "eligibleCount": report["resolution"]["eligibleCount"],
+        "quarantineCount": report["quarantine"]["entryCount"],
+        "mergedCount": rehearsal["mergedCount"],
+        "rewriteOnlyCount": rehearsal["rewriteOnlyCount"],
+        "referenceRewriteCount": rehearsal["referenceRewriteCount"],
+        "identityAliasCount": rehearsal["identityAliasCount"],
+        "applied": False,
+        "rollbackPerformed": False,
+        "rollbackVerified": False,
+        "rawIdentifiersIncluded": False,
+    }
+    try:
+        shutil.copy2(working_path, candidate)
+        candidate.chmod(0o600)
+        _fsync_file(candidate)
+        if _sha256_file(candidate) != working_hash:
+            raise MigrationSafetyError("canonical install candidate failed exact verification")
+        if _sha256_file(owner_db) != current_hash:
+            raise MigrationSafetyError("canonical Owner source changed before atomic replacement")
+        os.replace(candidate, owner_db)
+        installed = True
+        owner_db.chmod(0o600)
+        _fsync_file(owner_db)
+        _fsync_directory(owner_db.parent)
+        if failure_stage == "after-replace":
+            raise MigrationSafetyError("injected post-install verification failure")
+        if _sha256_file(owner_db) != working_hash:
+            raise MigrationSafetyError("installed canonical Owner hash does not match rehearsal")
+        post = build_dry_run(owner_db, mapping, reviewed_partial_plan=True)
+        post_report = post["report"]
+        connection = _read_only_connection(owner_db)
+        try:
+            post_quick_check = _quick_check(connection)
+            post_foreign_key_errors = _foreign_key_errors(connection)
+        finally:
+            connection.close()
+        if post["resolutions"] or post_report["resolution"]["eligibleCount"] != 0:
+            raise MigrationSafetyError("canonical post-apply dry run is not a no-op")
+        if post_quick_check != ["ok"] or post_foreign_key_errors:
+            raise MigrationSafetyError("canonical post-apply SQLite invariant failed")
+        if not post_report["referenceContract"]["operationalDrain"]["allDrained"]:
+            raise MigrationSafetyError("canonical post-apply lifecycle work is not drained")
+        if post_report["quarantine"]["entryCount"] != report["quarantine"]["entryCount"]:
+            raise MigrationSafetyError("canonical post-apply quarantine count changed")
+        if _sha256_file(owner_db) != working_hash:
+            raise MigrationSafetyError("canonical Owner changed during post-apply verification")
+        receipt.update(
+            {
+                "applied": True,
+                "sourceSha256After": working_hash,
+                "postApplyEligibleCount": 0,
+                "postApplyQuarantineCount": post_report["quarantine"]["entryCount"],
+                "postApplyQuickCheck": post_quick_check,
+                "postApplyForeignKeyErrorCount": len(post_foreign_key_errors),
+                "postApplyOperationalDrain": post_report["referenceContract"][
+                    "operationalDrain"
+                ]["allDrained"],
+            }
+        )
+    except Exception as error:
+        receipt["errorType"] = type(error).__name__
+        receipt["error"] = str(error)
+        if installed:
+            shutil.copy2(backup_path, restore_candidate)
+            restore_candidate.chmod(0o600)
+            _fsync_file(restore_candidate)
+            os.replace(restore_candidate, owner_db)
+            owner_db.chmod(0o600)
+            _fsync_file(owner_db)
+            _fsync_directory(owner_db.parent)
+            receipt["rollbackPerformed"] = True
+            receipt["rollbackVerified"] = _sha256_file(owner_db) == current_hash
+        _write_private_json(receipt_path, receipt)
+        return receipt
+    finally:
+        for temporary in (candidate, restore_candidate):
+            if temporary.exists():
+                temporary.unlink()
+    _write_private_json(receipt_path, receipt)
+    return receipt
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     import argparse
 
@@ -2124,6 +2347,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     rehearse_parser.add_argument("--output-dir", type=Path, required=True)
     rehearse_parser.add_argument("--failure-stage", default="")
     rehearse_parser.add_argument("--reviewed-partial-plan", action="store_true")
+    apply_parser = subparsers.add_parser("apply-reviewed-rehearsal")
+    apply_parser.add_argument("--owner-db", type=Path, required=True)
+    apply_parser.add_argument("--mapping", type=Path, required=True)
+    apply_parser.add_argument("--rehearsal-dir", type=Path, required=True)
+    apply_parser.add_argument("--backup-dir", type=Path, required=True)
+    apply_parser.add_argument("--expected-source-sha256", required=True)
+    apply_parser.add_argument("--confirm", required=True)
     args = parser.parse_args(argv)
     if args.command == "dry-run":
         report = build_dry_run(
@@ -2137,15 +2367,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.report.write_text(encoded + "\n", encoding="utf-8")
         print(encoded)
         return 0
-    report = rehearse_synthetic(
+    if args.command == "rehearse-synthetic":
+        report = rehearse_synthetic(
+            args.owner_db,
+            args.mapping,
+            args.output_dir,
+            failure_stage=args.failure_stage,
+            reviewed_partial_plan=args.reviewed_partial_plan,
+        )
+        print(_json_dump(report))
+        return 0 if report.get("rehearsal", {}).get("applyPerformed") else 2
+    receipt = apply_reviewed_rehearsal(
         args.owner_db,
         args.mapping,
-        args.output_dir,
-        failure_stage=args.failure_stage,
-        reviewed_partial_plan=args.reviewed_partial_plan,
+        args.rehearsal_dir,
+        args.backup_dir,
+        expected_source_sha256=args.expected_source_sha256,
+        confirmation=args.confirm,
     )
-    print(_json_dump(report))
-    return 0 if report.get("rehearsal", {}).get("applyPerformed") else 2
+    print(_json_dump(receipt))
+    return 0 if receipt.get("applied") else 2
 
 
 if __name__ == "__main__":

@@ -217,6 +217,74 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             validate_runtime.assert_called_once_with(signed_runtime)
             self.assertEqual(config.runtime_root, signed_runtime.resolve())
 
+    def test_on_demand_environment_overrides_stale_config_data_root(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            configured_root = root / "configured-data"
+            bounded_root = root / "bounded-data"
+            signed_runtime = root / "signed-runtime"
+            configured_root.mkdir()
+            (bounded_root / "assets" / "owner-actions").mkdir(parents=True)
+            (bounded_root / "assets" / "owner-actions" / "Owner.sqlite").touch()
+            signed_runtime.mkdir()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(configured_root),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {
+                    "PBE_CONNECTOR_RUNTIME_ROOT": str(signed_runtime),
+                    "PBE_ON_DEMAND_OWNER_CONNECTOR": "1",
+                    "PBE_REPO_ROOT": str(bounded_root),
+                },
+            ), patch(
+                "scripts.new_owner_connector.validate_runtime"
+            ) as validate_runtime:
+                validate_runtime.return_value.revision = "a" * 40
+                validate_runtime.return_value.file_count = 12
+                validate_runtime.return_value.manifest_sha256 = "b" * 64
+                config = new_owner_connector.load_config(config_path)
+
+            self.assertEqual(config.repo_root, bounded_root.resolve())
+
+    def test_non_bounded_environment_cannot_override_config_data_root(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            configured_root = root / "configured-data"
+            ignored_root = root / "ignored-data"
+            configured_root.mkdir()
+            ignored_root.mkdir()
+            (configured_root / "scripts").mkdir()
+            (configured_root / "scripts" / "sidecar_state_db.py").touch()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(configured_root),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {"PBE_REPO_ROOT": str(ignored_root)},
+                clear=False,
+            ):
+                os.environ.pop("PBE_ON_DEMAND_OWNER_CONNECTOR", None)
+                config = new_owner_connector.load_config(config_path)
+
+            self.assertEqual(config.repo_root, configured_root.resolve())
+
     def test_bounded_connector_drain_uses_a_shared_nonblocking_process_lock(self):
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

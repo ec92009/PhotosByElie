@@ -289,7 +289,18 @@ def load_config(path: Path) -> ConnectorConfig:
     worker_base = str(payload.get("workerBase") or "").strip().rstrip("/")
     connector_id = _clean_connector_id(payload.get("connectorId"))
     token = str(payload.get("token") or "").strip()
-    repo_root = Path(str(payload.get("repoRoot") or "")).expanduser().resolve()
+    # A bounded Backstage launch validates its mutable Owner data root before
+    # starting this connector.  Keep ordinary/legacy launches pinned to the
+    # persisted config, but let that explicit bounded root win so actions and
+    # native Review reads operate on the same Owner.sqlite.
+    bounded_data_root = (
+        os.environ.get("PBE_REPO_ROOT", "").strip()
+        if os.environ.get("PBE_ON_DEMAND_OWNER_CONNECTOR", "").strip() == "1"
+        else ""
+    )
+    repo_root = Path(
+        bounded_data_root or str(payload.get("repoRoot") or "")
+    ).expanduser().resolve()
     # A bounded Backstage launch pins the connector to the signed runtime that
     # shipped inside the app.  The persisted config can legitimately point at
     # an older rollback runtime, so the explicit launch environment must win.
@@ -308,6 +319,12 @@ def load_config(path: Path) -> ConnectorConfig:
         raise RuntimeError("Connector token is missing or too short.")
     if not repo_root.is_dir():
         raise RuntimeError(f"PhotosByElie repoRoot is invalid: {repo_root}")
+    if bounded_data_root and not (
+        repo_root / "assets" / "owner-actions" / "Owner.sqlite"
+    ).is_file():
+        raise RuntimeError(
+            f"PhotosByElie bounded data root is missing Owner.sqlite: {repo_root}"
+        )
 
     runtime_root: Path | None = None
     runtime_revision = ""

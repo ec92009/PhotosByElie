@@ -1417,8 +1417,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.8")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "227")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "239.9")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "228")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

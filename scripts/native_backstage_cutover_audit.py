@@ -71,18 +71,19 @@ def _listening_pids(port: int) -> list[int]:
 def collect_inventory(
     home: Path,
     *,
+    applications_directory: Path = Path("/Applications"),
     live_probes: bool = True,
     connector_url: str = "http://127.0.0.1:8766/photosbyelie/connector-status",
     legacy_route_url: str = "http://127.0.0.1:8766/photosbyelie/open-sidecar",
 ) -> dict[str, Any]:
     """Collect the operator-app, service and compatibility-route inventory."""
-    applications = home / "Applications"
+    legacy_applications = home / "Applications"
     launch_agents = home / "Library" / "LaunchAgents"
     app_state = {
-        BACKSTAGE_APP: _app_info(applications / BACKSTAGE_APP),
-        BRIDGE_APP: _app_info(applications / BRIDGE_APP),
+        BACKSTAGE_APP: _app_info(applications_directory / BACKSTAGE_APP),
+        BRIDGE_APP: _app_info(legacy_applications / BRIDGE_APP),
         **{
-            name: _app_info(applications / name)
+            name: _app_info(legacy_applications / name)
             for name in LEGACY_APPS
         },
     }
@@ -93,7 +94,11 @@ def collect_inventory(
     )
 
     runtime_roots = [
-        applications / BACKSTAGE_APP / "Contents" / "Resources" / "OwnerRuntime",
+        applications_directory
+        / BACKSTAGE_APP
+        / "Contents"
+        / "Resources"
+        / "OwnerRuntime",
     ]
     connector_config = home / ".config" / "photosbyelie" / "connector.json"
     if connector_config.is_file():
@@ -134,6 +139,8 @@ def collect_inventory(
     return {
         "schema": "photosbyelie.native-backstage-cutover-audit.v2",
         "home": str(home),
+        "applicationsDirectory": str(applications_directory),
+        "legacyApplicationsDirectory": str(legacy_applications),
         "applications": app_state,
         "launchAgents": launch_agent_names,
         "services": services,
@@ -147,10 +154,20 @@ def main() -> int:
     """Run the audit and print machine-readable evidence."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--home", type=Path, default=Path.home())
+    parser.add_argument(
+        "--applications-directory",
+        type=Path,
+        default=Path("/Applications"),
+        help="Canonical system Applications directory containing Backstage.",
+    )
     parser.add_argument("--skip-live-probes", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    payload = collect_inventory(args.home, live_probes=not args.skip_live_probes)
+    payload = collect_inventory(
+        args.home,
+        applications_directory=args.applications_directory,
+        live_probes=not args.skip_live_probes,
+    )
     rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

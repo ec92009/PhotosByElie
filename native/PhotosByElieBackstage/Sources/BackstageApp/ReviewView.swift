@@ -735,6 +735,17 @@ private struct VisualRepairComparisonView: View {
     let proposal: VisualRepairProposal?
     @Environment(\.dismiss) private var dismiss
 
+    private var originalComparisonImage: NSImage? {
+        if let original { return original }
+        guard let proposal,
+              VisualRepairComparisonState.isRenderableReference(proposal.originalPreviewReference),
+              let url = URL(string: proposal.originalPreviewReference)
+        else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
+    }
+
     private var proposedImage: NSImage? {
         guard let proposal,
               proposal.derivedAvailable,
@@ -779,7 +790,7 @@ private struct VisualRepairComparisonView: View {
             HStack(alignment: .top, spacing: 12) {
                 comparisonPanel(
                     title: "Original · immutable",
-                    image: original,
+                    image: originalComparisonImage,
                     symbol: "photo",
                     detail: state.originalReference,
                     accessibility: "Original immutable source image"

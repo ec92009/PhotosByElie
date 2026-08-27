@@ -70,12 +70,16 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
     public var attempt: Int
     public var status: VisualRepairProposalStatus
     public var originalReference: String
+    public var originalPreviewReference: String
+    public var originalPreviewSHA256: String
     public var derivedReference: String
     public var derivedAvailable: Bool
+    public var derivedSHA256: String
     public var generatorReference: String
     public var previousProposalID: String
     public var decisionReason: String
     public var generatedAt: String
+    public var materializedAt: String
     public var createdAt: String
     public var updatedAt: String
     public var decidedAt: String
@@ -97,12 +101,16 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
         attempt: Int,
         status: VisualRepairProposalStatus,
         originalReference: String,
+        originalPreviewReference: String = "",
+        originalPreviewSHA256: String = "",
         derivedReference: String,
         derivedAvailable: Bool,
+        derivedSHA256: String = "",
         generatorReference: String,
         previousProposalID: String = "",
         decisionReason: String = "",
         generatedAt: String = "",
+        materializedAt: String = "",
         createdAt: String = "",
         updatedAt: String = "",
         decidedAt: String = "",
@@ -123,12 +131,16 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
         self.attempt = attempt
         self.status = status
         self.originalReference = originalReference
+        self.originalPreviewReference = originalPreviewReference
+        self.originalPreviewSHA256 = originalPreviewSHA256
         self.derivedReference = derivedReference
         self.derivedAvailable = derivedAvailable
+        self.derivedSHA256 = derivedSHA256
         self.generatorReference = generatorReference
         self.previousProposalID = previousProposalID
         self.decisionReason = decisionReason
         self.generatedAt = generatedAt
+        self.materializedAt = materializedAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.decidedAt = decidedAt
@@ -157,12 +169,16 @@ public struct VisualRepairProposal: Identifiable, Codable, Equatable, Sendable {
             rawValue: json["status"]?.stringValue ?? "draft"
         ) ?? .draft
         originalReference = json["originalReference"]?.stringValue ?? ""
+        originalPreviewReference = json["originalPreviewReference"]?.stringValue ?? ""
+        originalPreviewSHA256 = json["originalPreviewSha256"]?.stringValue ?? ""
         derivedReference = json["derivedReference"]?.stringValue ?? ""
         derivedAvailable = json["derivedAvailable"]?.boolValue ?? false
+        derivedSHA256 = json["derivedSha256"]?.stringValue ?? ""
         generatorReference = json["generatorReference"]?.stringValue ?? ""
         previousProposalID = json["previousProposalId"]?.stringValue ?? ""
         decisionReason = json["decisionReason"]?.stringValue ?? ""
         generatedAt = json["generatedAt"]?.stringValue ?? ""
+        materializedAt = json["materializedAt"]?.stringValue ?? ""
         createdAt = json["createdAt"]?.stringValue ?? ""
         updatedAt = json["updatedAt"]?.stringValue ?? ""
         decidedAt = json["decidedAt"]?.stringValue ?? ""

@@ -463,6 +463,44 @@ struct OwnerCoreTests {
         #expect(comparison.message.contains("not configured"))
     }
 
+    @Test("Visual comparison accepts SHA-bound local synthetic artifacts")
+    func visualRepairRenderedArtifactState() throws {
+        let renderedURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-144-\(UUID().uuidString).png")
+        try Data("synthetic-rendered-artifact".utf8).write(to: renderedURL)
+        defer { try? FileManager.default.removeItem(at: renderedURL) }
+        let proposal = VisualRepairProposal(
+            id: "proposal-rendered",
+            fixtureID: "fixture-re",
+            assetID: "asset-synthetic",
+            sourceVersionID: "source-synthetic-v1",
+            defectCategories: VisualRepairDefectCategory.allCases,
+            ladderRung: 1,
+            modelLadder: [VisualRepairModelLadderRung(model: "gpt-5.6-luna", effort: "max")],
+            requestedGeneratorModel: "gpt-5.6-luna",
+            resolvedModel: "gpt-5.6-luna",
+            reasoningEffort: "max",
+            vision: true,
+            attempt: 1,
+            status: .draft,
+            originalReference: "immutable-source-version://source-synthetic-v1",
+            originalPreviewReference: renderedURL.absoluteString,
+            originalPreviewSHA256: "before-sha256",
+            derivedReference: renderedURL.absoluteString,
+            derivedAvailable: true,
+            derivedSHA256: "after-sha256",
+            generatorReference: "openai-synthetic://built-in-imagegen/pbe-144"
+        )
+        let comparison = VisualRepairComparisonState(
+            originalReference: proposal.originalReference,
+            proposal: proposal
+        )
+        #expect(VisualRepairComparisonState.isRenderableReference(proposal.originalPreviewReference))
+        #expect(comparison.proposalAvailable)
+        #expect(comparison.proposedReference == renderedURL.absoluteString)
+        #expect(comparison.isReadOnly)
+    }
+
     @Test("Decodes the published action page fixture")
     func decodesActionPage() throws {
         let url = try #require(Bundle.module.url(forResource: "action-page", withExtension: "json", subdirectory: "Fixtures"))

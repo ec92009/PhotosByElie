@@ -42,9 +42,10 @@ VISUAL_REPAIR_CATEGORY_LABELS = {
 }
 VISUAL_REPAIR_STATUSES = {"draft", "accepted", "rejected", "superseded"}
 VISUAL_REPAIR_ACTIONS = {"accept", "reject", "regenerate"}
-VISUAL_REPAIR_SCHEMA_VERSION = 1
+VISUAL_REPAIR_SCHEMA_VERSION = 2
 SYNTHETIC_GENERATOR = "synthetic"
 SYNTHETIC_GENERATOR_ENV = "PBE_ENABLE_SYNTHETIC_VISUAL_REPAIR"
+SYNTHETIC_OPENAI_PROVIDER_PREFIX = "openai-synthetic://"
 
 
 def now_iso() -> str:
@@ -61,6 +62,10 @@ def _read_json(value: Any, fallback: Any) -> Any:
     except json.JSONDecodeError:
         return fallback
     return parsed
+
+
+def _row_value(row: sqlite3.Row, name: str, fallback: Any = "") -> Any:
+    return row[name] if name in row.keys() else fallback
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
@@ -114,6 +119,21 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           ON visual_repair_events(proposal_id, created_at, event_id);
         """
     )
+    columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(visual_repair_proposals)").fetchall()
+    }
+    additions = {
+        "original_preview_reference": "TEXT NOT NULL DEFAULT ''",
+        "original_preview_sha256": "TEXT NOT NULL DEFAULT ''",
+        "derived_sha256": "TEXT NOT NULL DEFAULT ''",
+        "materialized_at": "TEXT",
+    }
+    for name, declaration in additions.items():
+        if name not in columns:
+            conn.execute(
+                f"ALTER TABLE visual_repair_proposals ADD COLUMN {name} {declaration}"
+            )
 
 
 def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
@@ -272,6 +292,29 @@ def _reference(prefix: str, proposal_id: str) -> str:
     return f"synthetic://visual-repair/{prefix}/{digest}"
 
 
+def _rendered_artifact(repo_root: Path, value: Path, label: str) -> tuple[str, str]:
+    root = repo_root.expanduser().resolve()
+    path = value.expanduser().resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as error:
+        raise ValueError(f"{label} must be stored inside the bounded fixture root") from error
+    if not path.is_file():
+        raise ValueError(f"{label} is not a regular file")
+    if path.suffix.casefold() not in {".jpg", ".jpeg", ".png", ".heic"}:
+        raise ValueError(f"{label} must be a supported rendered image")
+    payload = path.read_bytes()
+    suffix = path.suffix.casefold()
+    valid_signature = (
+        (suffix == ".png" and payload.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (suffix in {".jpg", ".jpeg"} and payload.startswith(b"\xff\xd8\xff"))
+        or (suffix == ".heic" and len(payload) >= 12 and payload[4:8] == b"ftyp")
+    )
+    if not valid_signature:
+        raise ValueError(f"{label} does not contain a valid rendered image signature")
+    return path.as_uri(), hashlib.sha256(payload).hexdigest()
+
+
 def _proposal_json(row: sqlite3.Row, *, idempotent_replay: bool = False) -> dict[str, Any]:
     ladder = _read_json(row["model_ladder_json"], [])
     return {
@@ -293,18 +336,106 @@ def _proposal_json(row: sqlite3.Row, *, idempotent_replay: bool = False) -> dict
         "attempt": int(row["attempt"]),
         "status": str(row["status"]),
         "originalReference": str(row["original_reference"]),
+        "originalPreviewReference": str(_row_value(row, "original_preview_reference") or ""),
+        "originalPreviewSha256": str(_row_value(row, "original_preview_sha256") or ""),
         "derivedReference": str(row["derived_reference"]),
         "derivedAvailable": bool(row["derived_available"]),
+        "derivedSha256": str(_row_value(row, "derived_sha256") or ""),
         "generatorReference": str(row["generator_reference"]),
         "previousProposalId": str(row["previous_proposal_id"] or ""),
         "decisionReason": str(row["decision_reason"] or ""),
         "generatedAt": str(row["generated_at"]),
+        "materializedAt": str(_row_value(row, "materialized_at") or ""),
         "createdAt": str(row["created_at"]),
         "updatedAt": str(row["updated_at"]),
         "decidedAt": str(row["decided_at"] or ""),
         "idempotentReplay": idempotent_replay,
         "readOnlyComparison": True,
     }
+
+
+def materialize_visual_repair_proposal(
+    repo_root: Path,
+    proposal_id: str,
+    original_preview_path: Path,
+    derived_path: Path,
+    *,
+    provider_reference: str,
+    idempotency_key: str = "",
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Attach one approved synthetic before/after pair without invoking a provider."""
+    _synthetic_gate(SYNTHETIC_GENERATOR)
+    provider_reference = str(provider_reference or "").strip()
+    if not provider_reference.startswith(SYNTHETIC_OPENAI_PROVIDER_PREFIX):
+        raise ValueError("rendered synthetic artifacts require an OpenAI synthetic provider receipt")
+    original_reference, original_sha256 = _rendered_artifact(
+        repo_root, Path(original_preview_path), "original preview"
+    )
+    derived_reference, derived_sha256 = _rendered_artifact(
+        repo_root, Path(derived_path), "derived proposal"
+    )
+    if original_sha256 == derived_sha256:
+        raise ValueError("derived proposal must differ from the immutable original preview")
+    with fixture_connect(repo_root) as conn:
+        ensure_schema(conn)
+        row = conn.execute(
+            "SELECT * FROM visual_repair_proposals WHERE proposal_id = ?",
+            (str(proposal_id or "").strip(),),
+        ).fetchone()
+        if not row:
+            raise ValueError("visual repair proposal does not exist")
+        chain = _require_re_scope(conn, str(row["fixture_id"]))
+        _review_asset_source(conn, chain, str(row["asset_id"]), str(row["source_version_id"]))
+        if str(row["status"]) != "draft":
+            raise ValueError("only a draft visual repair proposal can receive a rendered artifact")
+        key = str(idempotency_key or "").strip() or f"visual-materialize:{derived_sha256}"
+        replay = _event_replay(conn, key)
+        if replay:
+            return _proposal_json(row, idempotent_replay=True)
+        existing_original = str(row["original_preview_sha256"] or "")
+        existing_derived = str(row["derived_sha256"] or "")
+        if bool(row["derived_available"]):
+            if existing_original == original_sha256 and existing_derived == derived_sha256:
+                return _proposal_json(row, idempotent_replay=True)
+            raise ValueError("rendered draft is already materialized and cannot be overwritten")
+        timestamp = str(generated_at or now_iso())
+        conn.execute(
+            """
+            UPDATE visual_repair_proposals
+            SET original_preview_reference = ?, original_preview_sha256 = ?,
+                derived_reference = ?, derived_sha256 = ?, derived_available = 1,
+                generator_reference = ?, generated_at = ?, materialized_at = ?, updated_at = ?
+            WHERE proposal_id = ?
+            """,
+            (
+                original_reference,
+                original_sha256,
+                derived_reference,
+                derived_sha256,
+                provider_reference,
+                timestamp,
+                timestamp,
+                timestamp,
+                row["proposal_id"],
+            ),
+        )
+        _record_event(
+            conn,
+            proposal_id=str(row["proposal_id"]),
+            action="materialize",
+            before_status="draft",
+            after_status="draft",
+            idempotency_key=key,
+            reason="Attached one approved synthetic OpenAI before/after pair for read-only comparison.",
+            created_at=timestamp,
+        )
+        conn.commit()
+        updated = conn.execute(
+            "SELECT * FROM visual_repair_proposals WHERE proposal_id = ?",
+            (row["proposal_id"],),
+        ).fetchone()
+        return _proposal_json(updated)
 
 
 def _event_replay(conn: sqlite3.Connection, idempotency_key: str) -> sqlite3.Row | None:

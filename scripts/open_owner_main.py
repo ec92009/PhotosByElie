@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the local Photos By Elie Owner helper and open Owner in Safari."""
+"""Launch the retired local Owner helper for an explicit rollback rehearsal."""
 
 from __future__ import annotations
 
@@ -24,6 +24,9 @@ PORT_LIMIT = 8100
 OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html")
 PREFER_OWN_HELPER = os.environ.get("PBE_OWNER_PREFER_OWN_HELPER", "").lower() in {"1", "true", "yes"}
 CLEAN_START = os.environ.get("PBE_OWNER_CLEAN_START", "1").lower() not in {"0", "false", "no", "off"}
+LEGACY_BROWSER_OWNER_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_BROWSER_OWNER", "").strip() == "1"
+)
 PATH_PREFIXES = (
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -187,6 +190,18 @@ def terminate_server(*_args) -> None:
 
 def main() -> int:
     global server
+
+    if not LEGACY_BROWSER_OWNER_ENABLED:
+        print(
+            "Legacy browser Owner launch is disabled. Use PhotosByElie Backstage.",
+            file=sys.stderr,
+        )
+        print(
+            "For a deliberate rollback rehearsal only, set "
+            "PBE_ENABLE_LEGACY_BROWSER_OWNER=1.",
+            file=sys.stderr,
+        )
+        return 64
 
     if not HELPER.exists():
         notify("Photos By Elie Owner", f"Missing helper script: {HELPER}")

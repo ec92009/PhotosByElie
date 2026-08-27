@@ -1,6 +1,12 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+if [[ "${PBE_ENABLE_LEGACY_BROWSER_OWNER:-}" != "1" ]]; then
+  printf 'Legacy browser Owner launcher installation is disabled. Use PhotosByElie Backstage.\n' >&2
+  printf 'For a deliberate rollback rehearsal only, set PBE_ENABLE_LEGACY_BROWSER_OWNER=1.\n' >&2
+  exit 64
+fi
+
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 app_dir="$HOME/Applications/PhotosByElie Owner.app"
 add_to_dock=0
@@ -22,9 +28,9 @@ while (($#)); do
       cat <<'USAGE'
 Usage: zsh scripts/install_owner_dock_app.zsh [--app-dir PATH] [--add-to-dock] [--open]
 
-Builds a local Dock-friendly "PhotosByElie Owner.app" launcher. The app stops
-stale Owner helpers, starts a fresh localhost Owner helper, then opens Safari
-to the Owner Imports tab so direct Apple Photos import is ready.
+Rollback archaeology only. Builds the retired local "PhotosByElie Owner.app"
+launcher after PBE_ENABLE_LEGACY_BROWSER_OWNER=1 is set deliberately. Normal
+Owner work belongs in PhotosByElie Backstage.
 USAGE
       exit 0
       ;;
@@ -86,6 +92,7 @@ cat > "$executable" <<LAUNCHER
 set -euo pipefail
 
 export PBE_REPO_ROOT="$repo_root"
+export PBE_ENABLE_LEGACY_BROWSER_OWNER=1
 export PBE_OWNER_PATH="\${PBE_OWNER_PATH:-owner.html}"
 export PBE_OWNER_PREFER_OWN_HELPER=1
 export PBE_OWNER_CLEAN_START=1

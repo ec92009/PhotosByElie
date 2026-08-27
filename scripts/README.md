@@ -172,13 +172,23 @@ endpoints; the published site remains static and customer-only.
 
 Loopback origin alone is not Owner authorization. A normal browser or Google login cannot use the PBE Owner endpoints, and the generic photo-action endpoint rejects hosted-gallery authority claims. Backstage keeps its device credential in macOS Keychain and the Worker session token in memory. The browser receives only a single-use opaque handoff, removes it immediately, and exchanges it for an HttpOnly, session-only loopback cookie.
 
-To create the macOS Dock launcher for an Owner import workstation, install the local app bundle and add it to the Dock:
+The former macOS Owner Dock launcher is rollback archaeology, not an operator
+workflow. Its installer and launcher both refuse to run unless the deliberate
+`PBE_ENABLE_LEGACY_BROWSER_OWNER=1` rollback switch is present. Do not install
+or add it to the Dock during normal Backstage operation. A reviewed rollback
+rehearsal may reproduce the historical bundle with:
 
 ```bash
-zsh scripts/install_owner_dock_app.zsh --add-to-dock
+PBE_ENABLE_LEGACY_BROWSER_OWNER=1 \
+  zsh scripts/install_owner_dock_app.zsh --add-to-dock
 ```
 
-The Dock launcher starts from a clean Owner helper state: it stops stale localhost Owner helpers, starts `scripts/local_server.py`, opens Safari to canonical `owner.html`, and leaves PhotoKit authority to the signed Backstage app. Legacy browser-hosted Apple Photos album/import routes remain only as explicit `410 Backstage required` compatibility responses; they do not touch PhotoKit or start a retired helper.
+That historical bundle stops stale localhost Owner helpers, starts
+`scripts/local_server.py`, and opens Safari to canonical `owner.html`. Legacy
+browser-hosted Apple Photos album/import routes remain only as explicit `410
+Backstage required` compatibility responses; they do not touch PhotoKit or
+start a retired Photos helper. Enrollment and recovery remain separate from
+this rollback launcher.
 
 ### Apple Photos access
 

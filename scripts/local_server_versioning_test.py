@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import date
@@ -92,6 +95,49 @@ class RetiredApplePhotosImportTests(unittest.TestCase):
         for source in (installer, package_command):
             self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT", source)
             self.assertIn("exit 64", source)
+
+    def test_retired_browser_owner_launcher_fails_closed_without_rollback_opt_in(self):
+        root = Path(__file__).resolve().parents[1]
+        installer_path = root / "scripts" / "install_owner_dock_app.zsh"
+        launcher_path = root / "scripts" / "open_owner_main.py"
+        installer = installer_path.read_text(encoding="utf-8")
+        launcher = launcher_path.read_text(encoding="utf-8")
+
+        for source in (installer, launcher):
+            self.assertIn("PBE_ENABLE_LEGACY_BROWSER_OWNER", source)
+        self.assertIn("export PBE_ENABLE_LEGACY_BROWSER_OWNER=1", installer)
+        self.assertIn("exit 64", installer)
+        self.assertIn("return 64", launcher)
+
+        with tempfile.TemporaryDirectory() as directory:
+            temporary_root = Path(directory)
+            app_path = temporary_root / "PhotosByElie Owner.app"
+            env = {**os.environ, "HOME": directory}
+            env.pop("PBE_ENABLE_LEGACY_BROWSER_OWNER", None)
+
+            install_result = subprocess.run(
+                ["/bin/zsh", str(installer_path), "--app-dir", str(app_path)],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(install_result.returncode, 64)
+            self.assertIn("Legacy browser Owner launcher installation is disabled", install_result.stderr)
+            self.assertFalse(app_path.exists())
+
+            launch_result = subprocess.run(
+                [sys.executable, str(launcher_path)],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(launch_result.returncode, 64)
+            self.assertIn("Legacy browser Owner launch is disabled", launch_result.stderr)
+            self.assertFalse((temporary_root / "Library" / "Logs" / "PhotosByElie").exists())
 
 
 if __name__ == "__main__":

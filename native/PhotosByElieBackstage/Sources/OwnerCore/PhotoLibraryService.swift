@@ -290,8 +290,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let selected = pageStart < pageEnd
             ? Array(acceptedAssets[pageStart..<pageEnd])
             : []
+        let cloudIdentifiers = cloudIdentifiers(
+            for: selected.map(\.localIdentifier)
+        )
         let rows = selected.enumerated().map { index, asset in
-            libraryIndexRow(asset, index: pageStart + index + 1)
+            libraryIndexRow(
+                asset,
+                index: pageStart + index + 1,
+                cloudIdentifier: cloudIdentifiers[asset.localIdentifier] ?? ""
+            )
         }
         let payload: [String: Any] = [
             "ok": true,
@@ -688,13 +695,16 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
     }
 
-    private func libraryIndexRow(_ asset: PHAsset, index: Int) -> [String: Any] {
+    private func libraryIndexRow(
+        _ asset: PHAsset,
+        index: Int,
+        cloudIdentifier: String
+    ) -> [String: Any] {
         let resources = PHAssetResource.assetResources(for: asset)
         let preferred = preferredOriginalResource(for: asset)
         let acceptedSource = preferredAcceptedStillResource(for: asset)
         let renderedJPEG = preferredRenderedJPEGResource(for: asset)
         let displayResource = renderedJPEG ?? acceptedSource ?? preferred
-        let cloudIdentifier = cloudIdentifier(for: asset.localIdentifier)
         let assetIdentifier = cloudIdentifier.isEmpty ? asset.localIdentifier : cloudIdentifier
         let formats = resources.map(resourceFormat)
         let distinctFormats = formats.reduce(into: [String]()) { result, format in
@@ -835,14 +845,25 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return []
     }
 
-    private func cloudIdentifier(for localIdentifier: String) -> String {
-        guard #available(macOS 12.0, *) else { return "" }
-        let mappings = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: [localIdentifier])
-        guard let result = mappings[localIdentifier] else { return "" }
-        if case .success(let identifier) = result {
-            return identifier.stringValue
+    private func cloudIdentifiers(for localIdentifiers: [String]) -> [String: String] {
+        guard #available(macOS 12.0, *) else { return [:] }
+        var resolved: [String: String] = [:]
+        // PhotoKit accepts a collection and is markedly faster in bounded
+        // batches than one request per asset. Keep the batch below the IPC
+        // page ceiling so this remains a predictable metadata-only read.
+        for start in stride(from: 0, to: localIdentifiers.count, by: 500) {
+            let end = min(start + 500, localIdentifiers.count)
+            let batch = Array(localIdentifiers[start..<end])
+            let mappings = PHPhotoLibrary.shared().cloudIdentifierMappings(
+                forLocalIdentifiers: batch
+            )
+            for localIdentifier in batch {
+                guard let result = mappings[localIdentifier],
+                      case .success(let identifier) = result else { continue }
+                resolved[localIdentifier] = identifier.stringValue
+            }
         }
-        return ""
+        return resolved
     }
 
     private func resourceFormat(_ resource: PHAssetResource) -> String {

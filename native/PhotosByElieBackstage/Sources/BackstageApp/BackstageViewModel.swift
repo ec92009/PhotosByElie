@@ -1895,29 +1895,48 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func upgradeThumbnail(for assetID: String, taskToken: UUID) async {
-        do {
-            let preview = try await cullingPreviewForAsset(
-                forAssetID: assetID,
-                preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
-                maxPixelSize: Self.cullingThumbnailUpgradePixelSize
-            )
+        for attempt in 0..<3 {
             guard !Task.isCancelled,
                   cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
                   cullingVisibleAssetIDs.contains(assetID),
-                  !isCullingScrolling,
-                  let image = NSImage(data: preview.jpegData)
+                  !isCullingScrolling
             else { return }
-            cullingBasicThumbnails[assetID] = cullingThumbnails[assetID]
-            cullingThumbnails[assetID] = image
-            await learnCurrentImageByteCount(
-                from: preview,
-                for: assetID,
-                mediaType: "photo",
-                persistPromptly: false
-            )
-        } catch {
-            // A high-resolution upgrade is opportunistic. Keep the bounded
-            // low-resolution thumbnail and its existing retry/failure state.
+            do {
+                let preview = try await cullingPreviewForAsset(
+                    forAssetID: assetID,
+                    preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
+                    maxPixelSize: Self.cullingThumbnailUpgradePixelSize
+                )
+                guard !Task.isCancelled,
+                      cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
+                      cullingVisibleAssetIDs.contains(assetID),
+                      !isCullingScrolling
+                else { return }
+                guard let image = NSImage(data: preview.jpegData) else {
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+                        continue
+                    }
+                    return
+                }
+                cullingBasicThumbnails[assetID] = cullingThumbnails[assetID]
+                cullingThumbnails[assetID] = image
+                await learnCurrentImageByteCount(
+                    from: preview,
+                    for: assetID,
+                    mediaType: "photo",
+                    persistPromptly: false
+                )
+                return
+            } catch {
+                guard !(error is CancellationError), !Task.isCancelled, attempt < 2 else {
+                    return
+                }
+                // Photos and iCloud previews can fail transiently while an
+                // idle viewport is filling. Retry this card without opening
+                // an unbounded scheduler loop or discarding its basic image.
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+            }
         }
     }
 

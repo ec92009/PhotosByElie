@@ -1723,6 +1723,39 @@ struct BackstageFixtureSelectionTests {
         model.cullingScrollPhaseChanged(isScrolling: true)
     }
 
+    @Test("Idle thumbnail upgrades retry a transient Photos preview failure")
+    @MainActor
+    func idleThumbnailUpgradeRetriesTransientFailure() async throws {
+        let asset = FixtureAsset(
+            id: "visible-flaky",
+            title: "",
+            filename: "visible-flaky.jpg",
+            mediaType: "photo"
+        )
+        let photoLibrary = RecordingPreviewPhotoLibrary(
+            transientUpgradeFailures: [asset.id: 1]
+        )
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .milliseconds(1)
+        )
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingAssetDidAppear(asset)
+        for _ in 0..<50 where model.cullingThumbnails[asset.id] == nil {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let basic = try #require(model.cullingThumbnails[asset.id])
+
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        for _ in 0..<100 where model.cullingThumbnails[asset.id] === basic {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(photoLibrary.requestedIDs(at: 900) == [asset.id, asset.id])
+        #expect(model.cullingThumbnails[asset.id] !== basic)
+        model.cullingScrollPhaseChanged(isScrolling: true)
+    }
+
     @Test("Offscreen cards retain completed idle upgrades and reuse them on return")
     @MainActor
     func offscreenThumbnailRetainsUpgrade() async throws {
@@ -2392,7 +2425,12 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     private var requests: [(String, Int)] = []
     private var thumbnailDelay: Duration = .zero
     private var cancelled = 0
+    private var transientUpgradeFailures: [String: Int]
     private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    init(transientUpgradeFailures: [String: Int] = [:]) {
+        self.transientUpgradeFailures = transientUpgradeFailures
+    }
 
     func authorization() -> PhotoLibraryAccess { .authorized }
 
@@ -2401,9 +2439,18 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
 
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
-        lock.withLock {
+        let shouldFailTransiently = lock.withLock {
             pixelSizes.append(maxPixelSize)
             requests.append((localIdentifier, maxPixelSize))
+            guard maxPixelSize >= 900,
+                  let remaining = transientUpgradeFailures[localIdentifier],
+                  remaining > 0
+            else { return false }
+            transientUpgradeFailures[localIdentifier] = remaining - 1
+            return true
+        }
+        if shouldFailTransiently {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
         }
         if maxPixelSize == 180 {
             let delay = lock.withLock { thumbnailDelay }

@@ -23,6 +23,7 @@ import sidecar_maintenance
 import sidecar_state_db
 from backstage_photos_client import (
     BackstagePhotosClientError,
+    request_identity_mapping,
     request_library_index,
     request_export_original,
     request_metadata_apply_many,
@@ -136,6 +137,24 @@ def success_library_response(request: dict) -> dict:
     }
 
 
+def success_identity_mapping_response(request: dict) -> dict:
+    items = [
+        {
+            "localIdentifier": local_identifier,
+            "cloudIdentifier": f"cloud-{index}",
+            "status": "source-tied",
+        }
+        for index, local_identifier in enumerate(request["localIdentifiers"])
+    ]
+    return {
+        "ok": True,
+        "requestId": request["requestId"],
+        "mode": "identity-map",
+        "count": len(items),
+        "items": items,
+    }
+
+
 def success_metadata_response(request: dict) -> dict:
     operation = request["operation"]
     items = []
@@ -198,6 +217,23 @@ class BackstagePhotosClientTest(unittest.TestCase):
             self.assertEqual(result["mode"], "library-index")
             self.assertEqual(result["count"], 1)
             self.assertEqual(result["items"][0]["assetId"], "asset-1")
+
+    def test_authenticated_identity_mapping_preserves_exact_order(self):
+        with TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            local_identifiers = ["local-a", "local-b"]
+            with FakeBackstagePreviewServer(root, success_identity_mapping_response) as server:
+                result = request_identity_mapping(
+                    local_identifiers,
+                    descriptor_path=server.descriptor,
+                    timeout=1,
+                )
+
+            self.assertEqual(
+                [item["localIdentifier"] for item in result["items"]],
+                local_identifiers,
+            )
+            self.assertEqual(result["count"], 2)
 
     def test_authenticated_metadata_read_and_apply_batches(self):
         with TemporaryDirectory() as temporary_directory:

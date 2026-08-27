@@ -111,6 +111,7 @@ public protocol PhotoLibraryServing: Sendable {
     func requestAuthorization() async -> PhotoLibraryAccess
     func fetch(limit: Int) async -> [PhotoLibraryItem]
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data
+    func identityMap(localIdentifiers: [String]) async throws -> Data
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
@@ -147,6 +148,22 @@ public extension PhotoLibraryServing {
 
     func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data {
         throw PhotoLibraryError.metadataFailed("This Photos library service does not provide metadata apply.")
+    }
+
+    func identityMap(localIdentifiers: [String]) async throws -> Data {
+        let items = localIdentifiers.map { localIdentifier in
+            [
+                "localIdentifier": localIdentifier,
+                "cloudIdentifier": "",
+                "status": "missing",
+            ]
+        }
+        return try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": "identity-map",
+            "count": items.count,
+            "items": items,
+        ], options: [.sortedKeys])
     }
 
     func libraryIndex(limit: Int, offset: Int, dateFrom: Date?, dateTo: Date?) async throws -> Data {
@@ -318,6 +335,28 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             ],
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+    }
+
+    public func identityMap(localIdentifiers: [String]) async throws -> Data {
+        try requireAccess()
+        guard !localIdentifiers.isEmpty, localIdentifiers.count <= 64 else {
+            throw PhotoLibraryError.metadataFailed("Identity mapping requires 1 to 64 local identifiers.")
+        }
+        let mappings = cloudIdentifiers(for: localIdentifiers)
+        let items = localIdentifiers.map { localIdentifier in
+            let cloudIdentifier = mappings[localIdentifier] ?? ""
+            return [
+                "localIdentifier": localIdentifier,
+                "cloudIdentifier": cloudIdentifier,
+                "status": cloudIdentifier.isEmpty ? "missing" : "source-tied",
+            ]
+        }
+        return try JSONSerialization.data(withJSONObject: [
+            "ok": true,
+            "mode": "identity-map",
+            "count": items.count,
+            "items": items,
+        ], options: [.sortedKeys])
     }
 
     public func preview(

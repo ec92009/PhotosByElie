@@ -4,6 +4,7 @@ public enum BackstagePreviewIPCConstants {
     public static let schemaVersion = 1
     public static let operation = "photos.preview"
     public static let libraryIndexOperation = "photos.library-index"
+    public static let identityMapOperation = "photos.identity-map"
     public static let exportOriginalOperation = "photos.export-original"
     public static let metadataReadManyOperation = "photos.metadata-read-many"
     public static let metadataApplyManyOperation = "photos.metadata-apply-many"
@@ -17,6 +18,7 @@ public enum BackstagePreviewIPCConstants {
     public static let maximumResponseBytes = 12 * 1_024 * 1_024
     public static let maximumAssetIDBytes = 2_048
     public static let maximumMetadataItems = 64
+    public static let maximumIdentityMapItems = 64
     public static let maximumMetadataTextBytes = 8 * 1_024
     public static let maximumMetadataKeywords = 512
 
@@ -125,6 +127,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
         guard request.operation == BackstagePreviewIPCConstants.operation
             || request.operation == BackstagePreviewIPCConstants.libraryIndexOperation
+            || request.operation == BackstagePreviewIPCConstants.identityMapOperation
             || request.operation == BackstagePreviewIPCConstants.exportOriginalOperation
             || request.operation == BackstagePreviewIPCConstants.metadataReadManyOperation
             || request.operation == BackstagePreviewIPCConstants.metadataApplyManyOperation else {
@@ -136,6 +139,9 @@ public struct BackstagePreviewIPCProcessor: Sendable {
 
         if request.operation == BackstagePreviewIPCConstants.libraryIndexOperation {
             return await processLibraryIndex(request)
+        }
+        if request.operation == BackstagePreviewIPCConstants.identityMapOperation {
+            return await processIdentityMap(request)
         }
         if request.operation == BackstagePreviewIPCConstants.metadataReadManyOperation {
             return await processMetadata(request, apply: false)
@@ -368,6 +374,76 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func processIdentityMap(_ request: PreviewRequest) async -> Data {
+        let mode = "identity-map"
+        guard let localIdentifiers = request.localIdentifiers,
+              !localIdentifiers.isEmpty,
+              localIdentifiers.count <= BackstagePreviewIPCConstants.maximumIdentityMapItems,
+              localIdentifiers.allSatisfy(validAssetID),
+              Set(localIdentifiers).count == localIdentifiers.count else {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "invalid_identity_map_request",
+                message: "Identity mapping requires 1 to 64 unique local Photos identifiers."
+            )
+        }
+        do {
+            let payloadData = try await identityMapWithTimeout(localIdentifiers: localIdentifiers)
+            guard var payload = try JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
+                  payload["ok"] as? Bool == true,
+                  payload["mode"] as? String == mode,
+                  let items = payload["items"] as? [[String: Any]],
+                  payload["count"] as? Int == items.count,
+                  items.count == localIdentifiers.count,
+                  items.compactMap({ $0["localIdentifier"] as? String }) == localIdentifiers,
+                  items.allSatisfy({ item in
+                      guard item["cloudIdentifier"] is String,
+                            let status = item["status"] as? String else { return false }
+                      return ["source-tied", "missing"].contains(status)
+                  }) else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: mode,
+                    code: "invalid_identity_map_response",
+                    message: "Backstage returned malformed Photos identity mapping data."
+                )
+            }
+            payload["requestId"] = request.requestID
+            let encoded = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            guard encoded.count <= limits.maximumResponseBytes else {
+                return encodeError(
+                    requestID: request.requestID,
+                    mode: mode,
+                    code: "response_oversized",
+                    message: "The identity mapping response exceeds the allowed size."
+                )
+            }
+            return encoded
+        } catch is LibraryIndexTimeoutError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "identity_map_timeout",
+                message: "Backstage timed out while resolving Photos identities."
+            )
+        } catch let error as PhotoLibraryError {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: errorCode(error),
+                message: error.localizedDescription
+            )
+        } catch {
+            return encodeError(
+                requestID: request.requestID,
+                mode: mode,
+                code: "identity_map_failed",
+                message: "Backstage could not resolve Photos identities."
+            )
+        }
+    }
+
     private func processExportOriginal(_ request: PreviewRequest, assetID: String) async -> Data {
         let requestDirectory = exportDirectory
             .appendingPathComponent(request.requestID, isDirectory: true)
@@ -579,6 +655,32 @@ public struct BackstagePreviewIPCProcessor: Sendable {
         }
     }
 
+    private func identityMapWithTimeout(localIdentifiers: [String]) async throws -> Data {
+        let photoLibrary = photoLibrary
+        let operationTimeout = limits.metadataOperationTimeout
+        return try await withCheckedThrowingContinuation { continuation in
+            let gate = LibraryIndexResultGate(continuation)
+            Task {
+                do {
+                    gate.resume(with: .success(
+                        try await photoLibrary.identityMap(localIdentifiers: localIdentifiers)
+                    ))
+                } catch {
+                    gate.resume(with: .failure(error))
+                }
+            }
+            let timeoutTask = Task {
+                do {
+                    try await Task.sleep(for: operationTimeout)
+                } catch {
+                    return
+                }
+                gate.resume(with: .failure(LibraryIndexTimeoutError()))
+            }
+            gate.installTimeout(timeoutTask)
+        }
+    }
+
     private func parseDate(_ value: String?, field: String) throws -> Date? {
         guard let value, !value.isEmpty else { return nil }
         let fractional = ISO8601DateFormatter()
@@ -697,6 +799,7 @@ private struct PreviewRequest: Decodable {
     var dateTo: String?
     var allowICloudDownloads: Bool?
     var requests: [PhotoMetadataApplyRequest]?
+    var localIdentifiers: [String]?
 
     enum CodingKeys: String, CodingKey {
         case requestID = "requestId"
@@ -707,6 +810,7 @@ private struct PreviewRequest: Decodable {
         case dateFrom, dateTo
         case allowICloudDownloads
         case requests
+        case localIdentifiers
     }
 }
 

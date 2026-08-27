@@ -22,6 +22,7 @@ import uuid
 SCHEMA_VERSION = 1
 OPERATION = "photos.preview"
 LIBRARY_OPERATION = "photos.library-index"
+IDENTITY_MAP_OPERATION = "photos.identity-map"
 EXPORT_OPERATION = "photos.export-original"
 METADATA_READ_OPERATION = "photos.metadata-read-many"
 METADATA_APPLY_OPERATION = "photos.metadata-apply-many"
@@ -41,6 +42,7 @@ DEFAULT_EXPORT_TIMEOUT_SECONDS = 1_800.0
 DEFAULT_METADATA_TIMEOUT_SECONDS = 300.0
 MAX_EXPORT_FILENAME_BYTES = 1_024
 MAX_METADATA_ITEMS = 64
+MAX_IDENTITY_MAP_ITEMS = 64
 DEFAULT_DESCRIPTOR_PATH = (
     Path.home()
     / "Library"
@@ -135,6 +137,47 @@ def request_library_index(
         operation_label="Photos library index",
     )
     return _decode_library_response(response_data, request_id, limit, offset)
+
+
+def request_identity_mapping(
+    local_identifiers: list[str],
+    *,
+    descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
+    timeout: float = DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS,
+) -> dict:
+    """Resolve a bounded list of exact PhotoKit local IDs to cloud IDs."""
+
+    if (
+        not isinstance(local_identifiers, list)
+        or not 1 <= len(local_identifiers) <= MAX_IDENTITY_MAP_ITEMS
+        or len(set(local_identifiers)) != len(local_identifiers)
+    ):
+        raise BackstagePhotosClientError(
+            "invalid_identity_map_request",
+            "Identity mapping requires 1 to 64 unique local Photos identifiers.",
+        )
+    for local_identifier in local_identifiers:
+        _validate_asset_id(local_identifier)
+    if not isinstance(timeout, (int, float)) or not 0 < float(timeout) <= DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS:
+        raise BackstagePhotosClientError(
+            "invalid_timeout",
+            "The identity-mapping timeout must be between 0 and 300 seconds.",
+        )
+    descriptor = _read_descriptor(Path(descriptor_path))
+    request_id = str(uuid.uuid4())
+    request = {
+        "requestId": request_id,
+        "operation": IDENTITY_MAP_OPERATION,
+        "authorization": f"Bearer {descriptor['bearerToken']}",
+        "localIdentifiers": local_identifiers,
+    }
+    response_data = _send_request(
+        request,
+        descriptor,
+        timeout,
+        operation_label="Photos identity mapping",
+    )
+    return _decode_identity_mapping_response(response_data, request_id, local_identifiers)
 
 
 def request_export_original(
@@ -626,6 +669,42 @@ def _decode_library_response(response_data: bytes, request_id: str, limit: int, 
     ):
         raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid library-index metadata.")
     response["items"] = items
+    return response
+
+
+def _decode_identity_mapping_response(
+    response_data: bytes,
+    request_id: str,
+    local_identifiers: list[str],
+) -> dict:
+    try:
+        response = json.loads(response_data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned malformed identity-mapping JSON.") from error
+    if not isinstance(response, dict) or response.get("requestId") != request_id:
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned a mismatched identity-mapping request ID.")
+    if response.get("ok") is not True:
+        error_payload = response.get("error") if isinstance(response.get("error"), dict) else {}
+        code = str(error_payload.get("code") or "identity_map_failed")
+        message = str(error_payload.get("message") or "Backstage could not resolve Photos identities.")
+        raise BackstagePhotosClientError(code, message)
+    items = response.get("items")
+    if (
+        response.get("mode") != "identity-map"
+        or not isinstance(items, list)
+        or response.get("count") != len(items)
+        or len(items) != len(local_identifiers)
+    ):
+        raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid identity-mapping metadata.")
+    for expected_local, item in zip(local_identifiers, items, strict=True):
+        if (
+            not isinstance(item, dict)
+            or item.get("localIdentifier") != expected_local
+            or not isinstance(item.get("cloudIdentifier"), str)
+            or item.get("status") not in {"source-tied", "missing"}
+            or (item.get("status") == "source-tied") != bool(item.get("cloudIdentifier"))
+        ):
+            raise BackstagePhotosClientError("invalid_response", "Backstage returned invalid identity-mapping rows.")
     return response
 
 

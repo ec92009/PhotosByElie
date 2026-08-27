@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Collect a private, source-tied PhotoKit identity map through Backstage IPC.
+"""Resolve only Owner's local-only PhotoKit identities through Backstage IPC.
 
 Raw Apple identifiers are written only to an owner-only JSONL file. Console
-output is deliberately limited to counts and a digest so the collection can be
+output is deliberately limited to counts and digests so the collection can be
 audited without exposing library identities.
 """
 
@@ -20,11 +20,10 @@ from typing import Callable
 from backstage_photos_client import (
     DEFAULT_DESCRIPTOR_PATH,
     DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS,
-    request_library_index,
+    MAX_IDENTITY_MAP_ITEMS,
+    request_identity_mapping,
 )
-
-
-MAX_LIBRARY_ASSETS = 1_000_000
+from sidecar_identity_migration import owner_local_identifiers_for_mapping
 
 
 class IdentityCollectionError(RuntimeError):
@@ -53,57 +52,64 @@ def _private_parent(destination: Path) -> None:
     raise IdentityCollectionError("output-path-must-be-new")
 
 
-def _validated_page(payload: dict, *, offset: int, page_size: int, expected_total: int | None) -> tuple[list[dict], int]:
-    """Validate snapshot continuity before any page is committed to disk."""
+def _validate_mapping_response(payload: dict, requested: list[str]) -> list[dict]:
+    """Require an exact ordered response for the requested local IDs."""
 
     rows = payload.get("items")
-    total = payload.get("fetchedCount")
-    skipped = payload.get("skippedCount")
     if (
         payload.get("ok") is not True
-        or payload.get("mode") != "library-index"
-        or payload.get("offset") != offset
-        or payload.get("limit") != page_size
+        or payload.get("mode") != "identity-map"
         or not isinstance(rows, list)
         or payload.get("count") != len(rows)
-        or not isinstance(total, int)
-        or total < 0
-        or total > MAX_LIBRARY_ASSETS
-        or skipped != min(offset, total)
-        or (expected_total is not None and total != expected_total)
+        or len(rows) != len(requested)
     ):
-        raise IdentityCollectionError("library-snapshot-changed-or-invalid")
-    expected_count = min(page_size, max(0, total - offset))
-    if len(rows) != expected_count:
-        raise IdentityCollectionError("library-page-incomplete")
-    if any(not isinstance(row, dict) for row in rows):
-        raise IdentityCollectionError("library-row-invalid")
-    return rows, total
+        raise IdentityCollectionError("identity-map-response-invalid")
+    for expected, row in zip(requested, rows, strict=True):
+        if (
+            not isinstance(row, dict)
+            or row.get("localIdentifier") != expected
+            or not isinstance(row.get("cloudIdentifier"), str)
+            or row.get("status") not in {"source-tied", "missing"}
+            or (row.get("status") == "source-tied") != bool(row.get("cloudIdentifier"))
+        ):
+            raise IdentityCollectionError("identity-map-row-invalid")
+    return rows
 
 
 def collect_identity_mapping(
     destination: Path,
+    owner_db: Path,
     *,
-    page_size: int = 1_000,
+    batch_size: int = MAX_IDENTITY_MAP_ITEMS,
     descriptor_path: Path = DEFAULT_DESCRIPTOR_PATH,
     timeout: float = DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS,
-    fetch_page: Callable[..., dict] = request_library_index,
+    fetch_mapping: Callable[..., dict] = request_identity_mapping,
+    load_local_identifiers: Callable[[Path], list[str]] = owner_local_identifiers_for_mapping,
 ) -> dict:
-    """Collect and atomically publish a private local-to-cloud identity map."""
+    """Resolve Owner's exact local-only IDs and atomically publish a private map."""
 
-    if not isinstance(page_size, int) or not 1 <= page_size <= 1_000:
-        raise IdentityCollectionError("page-size-out-of-bounds")
+    if not isinstance(batch_size, int) or not 1 <= batch_size <= MAX_IDENTITY_MAP_ITEMS:
+        raise IdentityCollectionError("batch-size-out-of-bounds")
     destination = Path(os.path.abspath(Path(destination).expanduser()))
+    owner_db = Path(owner_db).expanduser()
     _private_parent(destination)
+    local_identifiers = load_local_identifiers(owner_db)
+    if (
+        not isinstance(local_identifiers, list)
+        or any(not isinstance(value, str) or not value for value in local_identifiers)
+        or local_identifiers != sorted(set(local_identifiers))
+    ):
+        raise IdentityCollectionError("owner-local-identity-snapshot-invalid")
 
     temporary_path: Path | None = None
     output_stream = None
-    digest = hashlib.sha256(b"pbe143-live-identity-map\0")
-    total: int | None = None
-    offset = 0
-    page_count = 0
+    mapping_digest = hashlib.sha256(b"pbe143-live-identity-map\0")
+    owner_digest = hashlib.sha256(b"pbe143-owner-local-identities\0")
+    for local_identifier in local_identifiers:
+        owner_digest.update(local_identifier.encode("utf-8") + b"\n")
     mapped_count = 0
     missing_cloud_count = 0
+    batch_count = 0
     try:
         file_descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
@@ -112,46 +118,31 @@ def collect_identity_mapping(
         os.fchmod(file_descriptor, 0o600)
         output_stream = os.fdopen(file_descriptor, "w", encoding="utf-8")
 
-        while total is None or offset < total:
-            payload = fetch_page(
-                page_size,
-                offset,
+        for start in range(0, len(local_identifiers), batch_size):
+            requested = local_identifiers[start:start + batch_size]
+            payload = fetch_mapping(
+                requested,
                 descriptor_path=Path(descriptor_path),
                 timeout=timeout,
             )
-            rows, page_total = _validated_page(
-                payload,
-                offset=offset,
-                page_size=page_size,
-                expected_total=total,
-            )
-            if total is None:
-                total = page_total
+            rows = _validate_mapping_response(payload, requested)
             for row in rows:
-                local_identifier = row.get("localIdentifier")
-                cloud_identifier = row.get("cloudIdentifier")
-                if not isinstance(local_identifier, str) or not local_identifier:
-                    raise IdentityCollectionError("library-row-missing-local-identity")
-                if not isinstance(cloud_identifier, str):
-                    raise IdentityCollectionError("library-row-invalid-cloud-identity")
                 mapping_row = {
-                    "localIdentifier": local_identifier,
-                    "cloudIdentifier": cloud_identifier,
-                    "status": "source-tied" if cloud_identifier else "missing",
+                    "localIdentifier": row["localIdentifier"],
+                    "cloudIdentifier": row["cloudIdentifier"],
+                    "status": row["status"],
                 }
                 encoded = json.dumps(mapping_row, ensure_ascii=False, separators=(",", ":"))
                 output_stream.write(encoded + "\n")
-                digest.update(encoded.encode("utf-8") + b"\n")
-                if cloud_identifier:
+                mapping_digest.update(encoded.encode("utf-8") + b"\n")
+                if row["status"] == "source-tied":
                     mapped_count += 1
                 else:
                     missing_cloud_count += 1
-            offset += len(rows)
-            page_count += 1
+            batch_count += 1
 
-        total = total or 0
-        if offset != total or mapped_count + missing_cloud_count != total:
-            raise IdentityCollectionError("library-snapshot-incomplete")
+        if mapped_count + missing_cloud_count != len(local_identifiers):
+            raise IdentityCollectionError("owner-identity-snapshot-incomplete")
         output_stream.flush()
         os.fsync(output_stream.fileno())
         output_stream.close()
@@ -182,25 +173,28 @@ def collect_identity_mapping(
         "mode": "pbe143-live-identity-mapping",
         "readOnlySource": True,
         "privateOutput": True,
-        "sourceRowCount": total,
+        "ownerLocalOnlyCount": len(local_identifiers),
         "mappedCount": mapped_count,
         "missingCloudCount": missing_cloud_count,
-        "pageCount": page_count,
-        "mappingDigest": digest.hexdigest(),
+        "batchCount": batch_count,
+        "ownerLocalIdentifierDigest": owner_digest.hexdigest(),
+        "mappingDigest": mapping_digest.hexdigest(),
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--page-size", type=int, default=1_000)
+    parser.add_argument("--owner-db", required=True, type=Path)
+    parser.add_argument("--batch-size", type=int, default=MAX_IDENTITY_MAP_ITEMS)
     parser.add_argument("--descriptor", type=Path, default=DEFAULT_DESCRIPTOR_PATH)
     parser.add_argument("--timeout", type=float, default=DEFAULT_LIBRARY_INDEX_TIMEOUT_SECONDS)
     arguments = parser.parse_args()
     try:
         summary = collect_identity_mapping(
             arguments.output,
-            page_size=arguments.page_size,
+            arguments.owner_db,
+            batch_size=arguments.batch_size,
             descriptor_path=arguments.descriptor,
             timeout=arguments.timeout,
         )

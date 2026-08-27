@@ -59,6 +59,26 @@ struct BackstagePreviewIPCTests {
         #expect(library.libraryIndexCount == 1)
     }
 
+    @Test("Authenticated identity-map requests preserve exact local-ID order")
+    func authenticatedIdentityMapSucceeds() async throws {
+        let library = PreviewIPCTestLibrary(
+            outcome: .failure(.assetNotFound("asset-1"))
+        )
+        var identityRequest = request(assetID: "ignored")
+        identityRequest["operation"] = BackstagePreviewIPCConstants.identityMapOperation
+        identityRequest.removeValue(forKey: "assetId")
+        identityRequest.removeValue(forKey: "maxPixel")
+        identityRequest["localIdentifiers"] = ["local-a", "local-b"]
+
+        let response = try await process(library: library, request: identityRequest)
+        let items = try #require(response["items"] as? [[String: Any]])
+
+        #expect(response["ok"] as? Bool == true)
+        #expect(response["mode"] as? String == "identity-map")
+        #expect(items.compactMap { $0["localIdentifier"] as? String } == ["local-a", "local-b"])
+        #expect(items.allSatisfy { $0["status"] as? String == "missing" })
+    }
+
     @Test("Authenticated metadata requests stay inside Backstage and preserve batch receipts")
     func authenticatedMetadataBatchSucceeds() async throws {
         let readPayload = try JSONSerialization.data(withJSONObject: [

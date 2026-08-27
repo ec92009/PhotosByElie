@@ -329,6 +329,21 @@ def _read_owner_rows(connection: sqlite3.Connection) -> list[dict[str, Any]]:
     return [dict(row) for row in connection.execute("SELECT * FROM sidecar_assets ORDER BY asset_id")]
 
 
+def owner_local_identifiers_for_mapping(owner_db: Path) -> list[str]:
+    """Return exact local-only Owner identities through an immutable DB read."""
+
+    connection = _read_only_connection(owner_db)
+    try:
+        identifiers = {
+            identity["local"]
+            for identity in (_identity(row) for row in _read_owner_rows(connection))
+            if identity["local"] and not identity["cloud"]
+        }
+        return sorted(identifiers)
+    finally:
+        connection.close()
+
+
 def _load_mapping_rows(mapping: Path | Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     rows: list[Mapping[str, Any]] = []
     malformed = 0

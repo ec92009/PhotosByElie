@@ -4,6 +4,7 @@ import json
 import hashlib
 from pathlib import Path
 import sys
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -24,6 +25,7 @@ from fixture_pipeline import (
     undo_fixture_review_action,
     ai_preview_targets,
     ai_run_status,
+    request_ai_run_cancel,
     effective_fixture_access_grants,
     list_pools,
     list_placements,
@@ -103,6 +105,43 @@ class FixturePipelineTest(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def seed_active_ai_run(self, *, cancel_requested=False):
+        create_fixture(self.root, "AI Run Fixture", fixture_id="ai-run-fixture")
+        timestamp = "2026-08-27T20:46:37Z"
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                INSERT INTO asset_ai_runs (
+                  run_id, trigger, status, requested_count, processed_count,
+                  proposed_count, remaining_count, cancel_requested, owner_pid,
+                  started_at, created_at, updated_at
+                ) VALUES ('run-orphan', 'test', 'running', 3, 1, 1, 2, ?, 424242,
+                          ?, ?, ?)
+                """,
+                (int(cancel_requested), timestamp, timestamp, timestamp),
+            )
+            connection.executemany(
+                """
+                INSERT INTO asset_ai_run_items (run_id, asset_id, status, attempt)
+                VALUES ('run-orphan', ?, ?, 1)
+                """,
+                [
+                    ("asset-1", "proposed"),
+                    ("asset-2", "running"),
+                    ("asset-3", "queued"),
+                ],
+            )
+            connection.execute(
+                """
+                INSERT INTO asset_ai_proposals (
+                  proposal_id, asset_id, run_id, attempt, proposed_title, created_at
+                ) VALUES ('proposal-preserved', 'asset-1', 'run-orphan', 1,
+                          'Preserved draft', ?)
+                """,
+                (timestamp,),
+            )
+            connection.commit()
 
     def enable_synthetic_country_identity_receipt(self):
         """Install a zero-row reviewed migration receipt in this copied test DB."""
@@ -1833,6 +1872,95 @@ class FixturePipelineTest(unittest.TestCase):
                 (proposal_id,),
             ).fetchone()[0]
         self.assertEqual(accepted, "accepted")
+
+    def test_ai_status_reconciles_dead_cancelled_worker_and_preserves_proposals(self):
+        self.seed_active_ai_run(cancel_requested=True)
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            status = ai_run_status(self.root)
+
+        self.assertFalse(status["active"])
+        self.assertEqual(status["ready"], 1)
+        self.assertEqual(status["run"]["status"], "cancelled")
+        self.assertEqual(status["run"]["processed"], 3)
+        self.assertEqual(status["run"]["proposed"], 1)
+        self.assertEqual(status["run"]["skipped"], 2)
+        self.assertEqual(status["run"]["failed"], 0)
+        self.assertEqual(status["run"]["remaining"], 0)
+        with connect(self.root) as connection:
+            proposal = connection.execute(
+                "SELECT status, proposed_title FROM asset_ai_proposals WHERE proposal_id = 'proposal-preserved'"
+            ).fetchone()
+            items = connection.execute(
+                "SELECT asset_id, status FROM asset_ai_run_items WHERE run_id = 'run-orphan' ORDER BY asset_id"
+            ).fetchall()
+            completed_at = connection.execute(
+                "SELECT completed_at FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()[0]
+        self.assertEqual(tuple(proposal), ("ready", "Preserved draft"))
+        self.assertEqual(
+            [(row["asset_id"], row["status"]) for row in items],
+            [("asset-1", "proposed"), ("asset-2", "skipped"), ("asset-3", "skipped")],
+        )
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            repeated = ai_run_status(self.root)
+        self.assertEqual(repeated["run"]["status"], "cancelled")
+        with connect(self.root) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT completed_at FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+                ).fetchone()[0],
+                completed_at,
+            )
+
+    def test_ai_status_marks_dead_uncancelled_worker_failed(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            status = ai_run_status(self.root)
+
+        self.assertFalse(status["active"])
+        self.assertEqual(status["run"]["status"], "failed")
+        self.assertEqual(status["run"]["proposed"], 1)
+        self.assertEqual(status["run"]["skipped"], 1)
+        self.assertEqual(status["run"]["failed"], 1)
+        self.assertEqual(status["run"]["remaining"], 0)
+        self.assertIn("worker process ended", status["run"]["lastError"])
+
+    def test_cancel_dead_worker_terminalizes_immediately(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            result = request_ai_run_cancel(self.root)
+
+        self.assertFalse(result["active"])
+        self.assertTrue(result["orphaned"])
+        self.assertEqual(result["status"], "cancelled")
+        with connect(self.root) as connection:
+            run = connection.execute(
+                "SELECT status, cancel_requested, remaining_count FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()
+        self.assertEqual(tuple(run), ("cancelled", 1, 0))
+
+    def test_cancel_live_worker_remains_cooperative(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=True):
+            result = request_ai_run_cancel(self.root)
+
+        self.assertTrue(result["active"])
+        self.assertFalse(result["orphaned"])
+        self.assertEqual(result["status"], "running")
+        with connect(self.root) as connection:
+            run = connection.execute(
+                "SELECT status, cancel_requested, remaining_count FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()
+            items = connection.execute(
+                "SELECT status FROM asset_ai_run_items WHERE run_id = 'run-orphan' ORDER BY asset_id"
+            ).fetchall()
+        self.assertEqual(tuple(run), ("running", 1, 2))
+        self.assertEqual([row["status"] for row in items], ["proposed", "running", "queued"])
 
     def test_requested_ai_pass_defers_missing_preview_capture_until_the_pass(self):
         root = create_fixture(self.root, "Root", fixture_id="root")

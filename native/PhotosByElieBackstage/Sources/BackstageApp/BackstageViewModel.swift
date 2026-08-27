@@ -4975,7 +4975,12 @@ final class BackstageViewModel: ObservableObject {
     func cancelAIProposalPass() async {
         do {
             fixtureAIStatus = try await fixtureService.cancelAIPass()
-            aiProposalStatus = "Cancellation requested; the current item may finish first."
+            if fixtureAIStatus?.active == true {
+                aiProposalStatus = "Cancellation requested; the current item may finish first."
+            } else {
+                await refreshAIStatus()
+                await loadFixtureReviewWindow(preferredAssetID: reviewSelection.focusedID)
+            }
         } catch {
             aiProposalStatus = "Could not request cancellation: \(error)"
         }

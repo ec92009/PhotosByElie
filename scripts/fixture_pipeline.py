@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
@@ -3300,8 +3301,158 @@ def mark_ai_proposals_loaded(
     return {"ok": True, "count": changed, "proposalIds": selected}
 
 
+def _ai_worker_process_alive(pid: object) -> bool | None:
+    """Return a conservative liveness verdict for one recorded AI worker PID.
+
+    ``None`` means the row lacks enough evidence to reconcile safely. A PID
+    that belongs to another live process is deliberately treated as alive;
+    automatic recovery must never guess that a live PID is stale.
+    """
+
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return None
+    if process_id <= 0:
+        return None
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
+    return True
+
+
+def _refresh_ai_run_counts(conn: sqlite3.Connection, run_id: str, timestamp: str) -> None:
+    counts = {
+        str(row["status"]): int(row["count"])
+        for row in conn.execute(
+            """
+            SELECT status, count(*) count
+            FROM asset_ai_run_items
+            WHERE run_id = ?
+            GROUP BY status
+            """,
+            (run_id,),
+        ).fetchall()
+    }
+    conn.execute(
+        """
+        UPDATE asset_ai_runs
+        SET processed_count = ?, proposed_count = ?, skipped_count = ?,
+            failed_count = ?, remaining_count = ?, updated_at = ?
+        WHERE run_id = ?
+        """,
+        (
+            sum(counts.get(key, 0) for key in ("proposed", "skipped", "failed")),
+            counts.get("proposed", 0),
+            counts.get("skipped", 0),
+            counts.get("failed", 0),
+            counts.get("queued", 0) + counts.get("running", 0),
+            timestamp,
+            run_id,
+        ),
+    )
+
+
+def _terminalize_orphaned_ai_run(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    cancellation_requested: bool,
+    timestamp: str,
+) -> str:
+    """Close a verifiably orphaned pass while preserving completed proposals."""
+
+    run_id = str(row["run_id"])
+    if cancellation_requested:
+        terminal_status = "cancelled"
+        item_message = "AI pass was cancelled after its worker process exited."
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'skipped', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status IN ('queued', 'running')
+            """,
+            (item_message, timestamp, run_id),
+        )
+        last_error = ""
+    else:
+        terminal_status = "failed"
+        item_message = "AI proposal worker process ended before a terminal receipt was persisted."
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'failed', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status = 'running'
+            """,
+            (item_message, timestamp, run_id),
+        )
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'skipped', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status = 'queued'
+            """,
+            ("AI proposal worker exited before this queued item started.", timestamp, run_id),
+        )
+        last_error = item_message
+    _refresh_ai_run_counts(conn, run_id, timestamp)
+    conn.execute(
+        """
+        UPDATE asset_ai_runs
+        SET status = ?, cancel_requested = ?, last_error = ?,
+            completed_at = COALESCE(completed_at, ?), updated_at = ?
+        WHERE run_id = ? AND status IN ('queued', 'running')
+        """,
+        (
+            terminal_status,
+            int(cancellation_requested),
+            last_error,
+            timestamp,
+            timestamp,
+            run_id,
+        ),
+    )
+    return terminal_status
+
+
+def reconcile_orphaned_ai_runs(repo_root: Path) -> dict[str, Any]:
+    """Terminalize active AI runs only when their recorded worker is gone."""
+
+    timestamp = now_iso()
+    reconciled: list[dict[str, str]] = []
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM asset_ai_runs
+            WHERE status IN ('queued', 'running')
+            ORDER BY created_at
+            """
+        ).fetchall()
+        for row in rows:
+            if _ai_worker_process_alive(row["owner_pid"]) is not False:
+                continue
+            terminal_status = _terminalize_orphaned_ai_run(
+                conn,
+                row,
+                cancellation_requested=bool(row["cancel_requested"]),
+                timestamp=timestamp,
+            )
+            reconciled.append({
+                "runId": str(row["run_id"]),
+                "status": terminal_status,
+            })
+        conn.commit()
+    return {"ok": True, "count": len(reconciled), "runs": reconciled}
+
+
 def ai_run_status(repo_root: Path) -> dict[str, Any]:
     """Return the active/latest AI pass and the durable ready-proposal count."""
+    reconcile_orphaned_ai_runs(repo_root)
     conn = connect_read_only(repo_root)
     try:
         active = conn.execute(
@@ -3371,7 +3522,7 @@ def request_ai_run_cancel(repo_root: Path) -> dict[str, Any]:
     with connect(repo_root) as conn:
         row = conn.execute(
             """
-            SELECT run_id FROM asset_ai_runs
+            SELECT * FROM asset_ai_runs
             WHERE status IN ('queued', 'running')
             ORDER BY created_at DESC LIMIT 1
             """
@@ -3382,8 +3533,24 @@ def request_ai_run_cancel(repo_root: Path) -> dict[str, Any]:
             "UPDATE asset_ai_runs SET cancel_requested = 1, updated_at = ? WHERE run_id = ?",
             (timestamp, row["run_id"]),
         )
+        worker_alive = _ai_worker_process_alive(row["owner_pid"])
+        terminal_status = str(row["status"])
+        orphaned = worker_alive is False
+        if orphaned:
+            terminal_status = _terminalize_orphaned_ai_run(
+                conn,
+                row,
+                cancellation_requested=True,
+                timestamp=timestamp,
+            )
         conn.commit()
-    return {"ok": True, "active": True, "runId": str(row["run_id"])}
+    return {
+        "ok": True,
+        "active": terminal_status in {"queued", "running"},
+        "runId": str(row["run_id"]),
+        "status": terminal_status,
+        "orphaned": orphaned,
+    }
 
 
 def effective_fixture_access_grants(repo_root: Path, fixture_id: str) -> list[dict[str, Any]]:

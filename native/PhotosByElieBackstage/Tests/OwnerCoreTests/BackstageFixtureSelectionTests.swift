@@ -1723,9 +1723,9 @@ struct BackstageFixtureSelectionTests {
         model.cullingScrollPhaseChanged(isScrolling: true)
     }
 
-    @Test("Offscreen cards release their larger image but retain the basic thumbnail")
+    @Test("Offscreen cards retain completed idle upgrades and reuse them on return")
     @MainActor
-    func offscreenThumbnailDropsUpgrade() async throws {
+    func offscreenThumbnailRetainsUpgrade() async throws {
         let photoLibrary = RecordingPreviewPhotoLibrary()
         let model = BackstageViewModel(
             photoLibrary: photoLibrary,
@@ -1743,8 +1743,15 @@ struct BackstageFixtureSelectionTests {
             try? await Task.sleep(for: .milliseconds(10))
         }
         #expect(model.cullingThumbnails[asset.id] !== basic)
+        let upgraded = try #require(model.cullingThumbnails[asset.id])
         model.cullingAssetDidDisappear(asset.id)
-        #expect(model.cullingThumbnails[asset.id] === basic)
+        #expect(model.cullingThumbnails[asset.id] === upgraded)
+        model.cullingAssetDidAppear(asset)
+        #expect(model.cullingThumbnails[asset.id] === upgraded)
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingAssetDidDisappear(asset.id)
+        model.cullingAssetDidAppear(asset)
+        model.cullingScrollPhaseChanged(isScrolling: false)
         try? await Task.sleep(for: .milliseconds(40))
         #expect(photoLibrary.requestedIDs(at: 900) == [asset.id])
         model.cancelCullingThumbnailWork()

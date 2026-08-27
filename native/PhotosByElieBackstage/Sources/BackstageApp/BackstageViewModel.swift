@@ -1702,7 +1702,9 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailTimeoutTasks[assetID]?.cancel()
         cullingThumbnailTimeoutTasks.removeValue(forKey: assetID)
         cancelCullingThumbnailUpgrade(for: assetID)
-        restoreBasicCullingThumbnail(for: assetID)
+        // Keep a completed idle high-resolution upgrade in the bounded cache.
+        // Only in-flight work is cancelled when a card leaves the viewport;
+        // an explicit Gallery/work cancellation can still downgrade it.
         cullingThumbnailUpgradeAttempts.remove(assetID)
         scheduleVisibleThumbnailUpgrades()
     }
@@ -1736,6 +1738,7 @@ final class BackstageViewModel: ObservableObject {
                 < Self.cullingThumbnailUpgradeConcurrencyLimit,
               cullingVisibleAssetIDs.contains(assetID),
               !isCullingScrolling,
+              cullingBasicThumbnails[assetID] == nil,
               cullingThumbnails[assetID] != nil
         else { return }
         cullingThumbnailUpgradeAttempts.insert(assetID)
@@ -1755,6 +1758,7 @@ final class BackstageViewModel: ObservableObject {
                   self.cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
                   self.cullingVisibleAssetIDs.contains(assetID),
                   !self.isCullingScrolling,
+                  self.cullingBasicThumbnails[assetID] == nil,
                   self.cullingThumbnails[assetID] != nil
             else { return }
             await self.upgradeThumbnail(for: assetID, taskToken: taskToken)

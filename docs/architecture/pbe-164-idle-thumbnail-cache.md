@@ -11,16 +11,22 @@ promotion, installation and live Gallery acceptance are still required.
   upgrades. Each card is attempted once per idle/visibility interval; a completed
   upgrade is not repeatedly requested. Failed upgrades keep the ordinary image.
 - Resuming scrolling cancels upgrades and the idle backfill. Late cancelled
-  completions cannot replace images. Offscreen cards release the larger image
-  and retain their ordinary thumbnail. Gallery exit and termination cancel all
-  Gallery preview work; no new preview work starts after termination is requested.
+  completions cannot replace images. A completed high-resolution upgrade stays
+  in the bounded thumbnail cache when its card leaves the viewport, so a later
+  revisit can reuse it without dropping back to the ordinary image. Gallery
+  exit and termination cancel all Gallery preview work and may downgrade
+  retained upgrades to release memory; no new preview work starts after
+  termination is requested.
 - A utility-priority idle pass replenishes a bounded set of up to 2,000 ordinary
   thumbnails, with visible/window assets ahead of the already-loaded APL items.
   It does not fetch a new Photos inventory or export originals. Existing cache
   entries and failures are skipped. Explicit Retry remains available for failures.
 - The cache retains up to 2,000 entries with least-recently-used offscreen
-  eviction. Visible cards are protected. Quick Look recovery is reduced to a
-  180px aspect-correct image before entering this cache, not retained at 4000px.
+  eviction. Visible cards are protected, and a retained high-resolution card
+  carries its ordinary fallback only until an explicit Gallery/work
+  cancellation or cache eviction releases it. Quick Look recovery is reduced
+  to a 180px aspect-correct image before entering this cache, not retained at
+  4000px.
 - The four backfill slots reuse the normal thumbnail task, timeout, cancellation
   and retry path. Stalled requests cannot occupy these slots indefinitely.
 - The 2,000 limit bounds the combined current-window/loaded-APL working set. It
@@ -40,9 +46,10 @@ tests were blocked by a missing module described the Xcode test-target path,
 not this supported package path.
 
 Synthetic coverage includes 50 visible cards visited exactly once, four concurrent
-upgrades, cancellation and late completion, offscreen downgrade, 2,000 cached
-180px thumbnails, foreground-safe eviction, idle backfill cancellation/resume,
-Gallery exit, timeout/Retry, and bounded Quick Look recovery. Tests use fake
+upgrades, cancellation and late completion, offscreen high-resolution cache
+reuse, 2,000 cached 180px thumbnails, foreground-safe eviction, idle backfill
+cancellation/resume, Gallery exit, timeout/Retry, and bounded Quick Look
+recovery. Tests use fake
 Photos services; they do not prove live PhotoKit timing or installed UI behavior.
 
 Final verification: all 259 tests across 20 suites pass with

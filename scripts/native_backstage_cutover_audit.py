@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import plistlib
+import re
 import subprocess
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -21,6 +23,12 @@ RETIRED_RUNTIME_FILES = (
 )
 LEGACY_APPS = ("PhotosByElie Owner.app", "PhotosByElie Sidecar.app")
 REQUIRED_LAUNCH_AGENT = "com.photosbyelie.owner-connector.plist"
+INSTALLER_STAGING_PATTERN = re.compile(
+    r"^\.PhotosByElie Backstage\.install-"
+    r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-"
+    r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\.app$"
+)
+INSTALLER_STALE_SECONDS = 15 * 60
 
 
 def _app_info(app: Path) -> dict[str, Any]:
@@ -34,7 +42,47 @@ def _app_info(app: Path) -> dict[str, Any]:
         "installed": True,
         "validBundle": True,
         "bundleIdentifier": info.get("CFBundleIdentifier"),
+        "version": info.get("CFBundleShortVersionString"),
+        "build": info.get("CFBundleVersion"),
         "headless": bool(info.get("LSUIElement", False)),
+    }
+
+
+def _codesign_valid(app: Path) -> bool:
+    """Verify one app without printing signer details or changing the bundle."""
+    result = subprocess.run(
+        ["/usr/bin/codesign", "--verify", "--deep", "--strict", str(app)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def _installer_staging_info(app: Path, *, now: float) -> dict[str, Any]:
+    """Classify one exact installer-shaped bundle without removing it."""
+    info = _app_info(app)
+    age_seconds = max(0, int(now - app.stat().st_mtime))
+    identifier = info.get("bundleIdentifier")
+    signature_valid = bool(info.get("validBundle")) and _codesign_valid(app)
+    if identifier != "com.photosbyelie.backstage" or not signature_valid:
+        state = "unsafe"
+        detail = "Retained: bundle identity or signature is not verified Backstage."
+    elif age_seconds < INSTALLER_STALE_SECONDS:
+        state = "active"
+        detail = "Retained: recent verified staging may belong to an active install."
+    else:
+        state = "staleVerified"
+        detail = "Verified installer-owned stale staging; reconcile before another install."
+    return {
+        "path": str(app),
+        "ageSeconds": age_seconds,
+        "bundleIdentifier": identifier,
+        "version": info.get("version"),
+        "build": info.get("build"),
+        "signatureValid": signature_valid,
+        "state": state,
+        "detail": detail,
     }
 
 
@@ -75,6 +123,7 @@ def collect_inventory(
     live_probes: bool = True,
     connector_url: str = "http://127.0.0.1:8766/photosbyelie/connector-status",
     legacy_route_url: str = "http://127.0.0.1:8766/photosbyelie/open-sidecar",
+    now: float | None = None,
 ) -> dict[str, Any]:
     """Collect the operator-app, service and compatibility-route inventory."""
     legacy_applications = home / "Applications"
@@ -92,6 +141,12 @@ def collect_inventory(
         for path in launch_agents.glob("*photosbyelie*.plist")
         if path.is_file()
     )
+    inventory_time = time.time() if now is None else now
+    installer_staging = [
+        _installer_staging_info(path, now=inventory_time)
+        for path in sorted(applications_directory.iterdir())
+        if INSTALLER_STAGING_PATTERN.fullmatch(path.name)
+    ] if applications_directory.is_dir() else []
 
     runtime_roots = [
         applications_directory
@@ -123,6 +178,7 @@ def collect_inventory(
             app_state[name]["installed"] for name in LEGACY_APPS
         ),
         "ownerLaunchAgentAbsent": REQUIRED_LAUNCH_AGENT not in launch_agent_names,
+        "installerStagingAbsent": not installer_staging,
     }
     services: dict[str, Any] = {"liveProbes": live_probes}
     if live_probes:
@@ -137,7 +193,7 @@ def collect_inventory(
             }
         )
     return {
-        "schema": "photosbyelie.native-backstage-cutover-audit.v2",
+        "schema": "photosbyelie.native-backstage-cutover-audit.v3",
         "home": str(home),
         "applicationsDirectory": str(applications_directory),
         "legacyApplicationsDirectory": str(legacy_applications),
@@ -145,6 +201,7 @@ def collect_inventory(
         "launchAgents": launch_agent_names,
         "services": services,
         "retiredRuntimeArtifacts": retired_runtime_artifacts,
+        "installerStagingBundles": installer_staging,
         "checks": checks,
         "ok": all(checks.values()),
     }

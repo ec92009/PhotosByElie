@@ -6,14 +6,13 @@ The public website and client galleries remain separate.
 
 Backstage is currently installed on Max at:
 
-`/Users/ecohen/Applications/PhotosByElie Backstage.app`
+`/Applications/PhotosByElie Backstage.app`
 
 The installed build's exact version and build are shown in the Backstage
 toolbar and in the **Updates** workspace; do not rely on a copied version label
 from an older handoff.
 
-Open it from Finder, Spotlight, or the Applications folder in your Home
-directory.
+Open it from Finder, Spotlight, or the system Applications folder.
 
 Every Backstage button explains its action after the pointer rests on it for
 half a second. The explanation describes the affected scope and whether the
@@ -68,6 +67,12 @@ during remote acceptance. `photos authorize` is the explicit exception: it asks
 PhotoKit to show the standard macOS permission request and reports the result;
 it does not click or automate that prompt. Cloud/photo mutations remain behind
 the existing Owner action and explicit authorization gates.
+
+The release audit also inventories exact hidden
+`.PhotosByElie Backstage.install-<UUID>.app` paths beside the canonical app.
+Recent verified stages are retained as potentially active; wrong-identity or
+invalid-signature lookalikes are retained as unsafe; only old, identity- and
+signature-verified installer stages are eligible for bounded reconciliation.
 
 ## Updates
 

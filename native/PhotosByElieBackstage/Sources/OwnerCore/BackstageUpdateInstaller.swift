@@ -5,10 +5,16 @@ import Foundation
 /// read-only download and verification boundary.
 public struct BackstageUpdateInstaller: Sendable {
     public static let canonicalBundleName = "PhotosByElie Backstage.app"
+    public static let stagingBundlePrefix = ".PhotosByElie Backstage.install-"
+    public static let stagingBundleSuffix = ".app"
+    public static let defaultStaleStagingAge: TimeInterval = 15 * 60
 
     private let signatureVerifier: any BackstageCodeSignatureVerifying
     private let applicationsDirectory: URL
     private let rollbackDirectory: URL
+    private let staleStagingAge: TimeInterval
+    private let now: @Sendable () -> Date
+    private let removeStagingBundle: @Sendable (URL) throws -> Void
 
     private struct BundleIdentity: Equatable {
         let identifier: String
@@ -19,13 +25,21 @@ public struct BackstageUpdateInstaller: Sendable {
     public init(
         signatureVerifier: any BackstageCodeSignatureVerifying = SystemBackstageCodeSignatureVerifier(),
         applicationsDirectory: URL = URL(fileURLWithPath: "/Applications", isDirectory: true),
-        rollbackDirectory: URL? = nil
+        rollbackDirectory: URL? = nil,
+        staleStagingAge: TimeInterval = Self.defaultStaleStagingAge,
+        now: @escaping @Sendable () -> Date = Date.init,
+        removeStagingBundle: @escaping @Sendable (URL) throws -> Void = {
+            try FileManager.default.removeItem(at: $0)
+        }
     ) {
         self.signatureVerifier = signatureVerifier
         self.applicationsDirectory = applicationsDirectory.standardizedFileURL
         self.rollbackDirectory = rollbackDirectory?.standardizedFileURL
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("PhotosByElie/Backstage/Rollback", isDirectory: true)
+        self.staleStagingAge = max(1, staleStagingAge)
+        self.now = now
+        self.removeStagingBundle = removeStagingBundle
     }
 
     public var canonicalBundleURL: URL {
@@ -36,13 +50,16 @@ public struct BackstageUpdateInstaller: Sendable {
         let fileManager = FileManager.default
         let destination = canonicalBundleURL
         let staging = applicationsDirectory.appendingPathComponent(
-            ".PhotosByElie Backstage.install-\(UUID().uuidString).app",
+            "\(Self.stagingBundlePrefix)\(UUID().uuidString)\(Self.stagingBundleSuffix)",
             isDirectory: true
         )
         var incumbentWasExchanged = false
 
         do {
             try requireExistingDirectory(applicationsDirectory)
+            let reconciledStaging = try reconcileStaleStagingBundles(
+                trust: update.manifest.trust
+            )
             try verifyArchive(update)
             try verifyBundle(update.bundleURL, manifest: update.manifest)
             try copyBundle(from: update.bundleURL, to: staging)
@@ -72,17 +89,157 @@ public struct BackstageUpdateInstaller: Sendable {
                 )
             }
 
-            try? fileManager.removeItem(at: staging)
+            if fileManager.fileExists(atPath: staging.path) {
+                do {
+                    try removeStagingBundle(staging)
+                } catch {
+                    throw BackstageUpdateError.installationFailed(
+                        "The canonical update is installed, but its verified prior staging bundle could not be removed. Keep using the canonical app and audit \(staging.path) before another install."
+                    )
+                }
+            }
             return BackstageInstallationReceipt(
                 manifest: update.manifest,
                 installedBundleURL: destination,
-                rollbackBundleURL: rollback
+                rollbackBundleURL: rollback,
+                reconciledStagingBundleURLs: reconciledStaging
             )
         } catch {
-            try? fileManager.removeItem(at: staging)
+            if fileManager.fileExists(atPath: staging.path) {
+                try? removeStagingBundle(staging)
+            }
             if let updateError = error as? BackstageUpdateError { throw updateError }
             throw BackstageUpdateError.installationFailed(error.localizedDescription)
         }
+    }
+
+    public func auditStagingBundles(
+        trust: BackstageReleaseTrust
+    ) throws -> [BackstageInstallerStagingBundle] {
+        try requireExistingDirectory(applicationsDirectory)
+        let fileManager = FileManager.default
+        let candidates = try fileManager.contentsOfDirectory(
+            at: applicationsDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey, .isDirectoryKey],
+            options: [.skipsSubdirectoryDescendants]
+        ).filter { isExactStagingBundleName($0.lastPathComponent) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        return candidates.map { candidate in
+            let values = try? candidate.resourceValues(forKeys: [
+                .contentModificationDateKey,
+                .isDirectoryKey,
+            ])
+            let age = max(
+                0,
+                now().timeIntervalSince(values?.contentModificationDate ?? .distantPast)
+            )
+            guard values?.isDirectory == true else {
+                return BackstageInstallerStagingBundle(
+                    bundleURL: candidate,
+                    version: nil,
+                    build: nil,
+                    ageSeconds: age,
+                    state: .unsafe,
+                    detail: "The installer-shaped path is not an app directory and was retained."
+                )
+            }
+            let identity: BundleIdentity
+            do {
+                identity = try readIdentity(candidate)
+            } catch {
+                return BackstageInstallerStagingBundle(
+                    bundleURL: candidate,
+                    version: nil,
+                    build: nil,
+                    ageSeconds: age,
+                    state: .unsafe,
+                    detail: "The installer-shaped bundle has no complete Backstage identity and was retained."
+                )
+            }
+            guard identity.identifier == BackstageReleaseManifest.bundleIdentifier else {
+                return BackstageInstallerStagingBundle(
+                    bundleURL: candidate,
+                    version: identity.version,
+                    build: identity.build,
+                    ageSeconds: age,
+                    state: .unsafe,
+                    detail: "The installer-shaped bundle has the wrong bundle identifier and was retained."
+                )
+            }
+            do {
+                try signatureVerifier.verify(
+                    bundleURL: candidate,
+                    expectedBundleIdentifier: identity.identifier,
+                    trust: trust
+                )
+            } catch {
+                return BackstageInstallerStagingBundle(
+                    bundleURL: candidate,
+                    version: identity.version,
+                    build: identity.build,
+                    ageSeconds: age,
+                    state: .unsafe,
+                    detail: "The installer-shaped Backstage bundle failed signature verification and was retained."
+                )
+            }
+            if age < staleStagingAge {
+                return BackstageInstallerStagingBundle(
+                    bundleURL: candidate,
+                    version: identity.version,
+                    build: identity.build,
+                    ageSeconds: age,
+                    state: .active,
+                    detail: "The verified staging bundle is recent enough to belong to an active install and was retained."
+                )
+            }
+            return BackstageInstallerStagingBundle(
+                bundleURL: candidate,
+                version: identity.version,
+                build: identity.build,
+                ageSeconds: age,
+                state: .staleVerified,
+                detail: "The verified installer-owned staging bundle is stale and can be reconciled."
+            )
+        }
+    }
+
+    private func reconcileStaleStagingBundles(
+        trust: BackstageReleaseTrust
+    ) throws -> [URL] {
+        let inventory = try auditStagingBundles(trust: trust)
+        if let active = inventory.first(where: { $0.state == .active }) {
+            throw BackstageUpdateError.installationFailed(
+                "A recent verified Backstage staging bundle may belong to an active install. It was retained at \(active.bundleURL.path); retry after the active install finishes or the stale-age boundary passes."
+            )
+        }
+        if let unsafe = inventory.first(where: { $0.state == .unsafe }) {
+            throw BackstageUpdateError.installationFailed(
+                "An unsafe installer-shaped bundle was retained at \(unsafe.bundleURL.path). Audit its identity and signature before another install."
+            )
+        }
+        var reconciled: [URL] = []
+        for stale in inventory where stale.state == .staleVerified {
+            do {
+                try removeStagingBundle(stale.bundleURL)
+                reconciled.append(stale.bundleURL)
+            } catch {
+                throw BackstageUpdateError.installationFailed(
+                    "The verified stale Backstage staging bundle could not be removed at \(stale.bundleURL.path). The canonical app and rollback were left untouched; reconcile that exact path before retrying."
+                )
+            }
+        }
+        return reconciled
+    }
+
+    private func isExactStagingBundleName(_ name: String) -> Bool {
+        guard name.hasPrefix(Self.stagingBundlePrefix),
+              name.hasSuffix(Self.stagingBundleSuffix) else {
+            return false
+        }
+        let start = name.index(name.startIndex, offsetBy: Self.stagingBundlePrefix.count)
+        let end = name.index(name.endIndex, offsetBy: -Self.stagingBundleSuffix.count)
+        return UUID(uuidString: String(name[start..<end])) != nil
     }
 
     private func verifyArchive(_ update: BackstageVerifiedUpdate) throws {

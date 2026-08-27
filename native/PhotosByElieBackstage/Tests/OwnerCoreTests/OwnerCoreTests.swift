@@ -802,6 +802,292 @@ struct OwnerCoreTests {
             visibleApps.map { $0.resolvingSymlinksInPath() }
                 == [incumbent.resolvingSymlinksInPath()]
         )
+        #expect(receipt.reconciledStagingBundleURLs.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: applications.path).allSatisfy {
+            !$0.hasPrefix(BackstageUpdateInstaller.stagingBundlePrefix)
+        })
+    }
+
+    @Test("Backstage installer reconciles only verified stale interrupted stages")
+    func backstageInstallerReconcilesVerifiedStaleStages() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-stale-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let stale = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        let unrelated = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)not-a-uuid.app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: stale, version: "218.4", build: "70")
+        try createSyntheticBackstageApp(at: unrelated, version: "1.0", build: "1")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: stale.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        let inventory = try installer.auditStagingBundles(trust: manifest.trust)
+        #expect(inventory.map(\.state) == [.staleVerified])
+        let receipt = try installer.install(BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: archive,
+            bundleURL: candidate
+        ))
+
+        #expect(
+            receipt.reconciledStagingBundleURLs.map(\.lastPathComponent)
+                == [stale.lastPathComponent]
+        )
+        #expect(!FileManager.default.fileExists(atPath: stale.path))
+        #expect(FileManager.default.fileExists(atPath: unrelated.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == manifest.build)
+        #expect(try syntheticBackstageBuild(at: #require(receipt.rollbackBundleURL)) == "77")
+    }
+
+    @Test("Backstage installer retains a recent stage as an active install")
+    func backstageInstallerRetainsRecentActiveStage() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-active-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let active = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: active, version: "219.1", build: "77")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-60)],
+            ofItemAtPath: active.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A concurrent installer stage unexpectedly allowed another install.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("active install"))
+        }
+        #expect(FileManager.default.fileExists(atPath: active.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+    }
+
+    @Test("Backstage installer retains an unsafe wrong-identity stage")
+    func backstageInstallerRetainsUnsafeWrongIdentityStage() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-unsafe-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let unsafe = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(
+            at: unsafe,
+            version: "1.0",
+            build: "1",
+            identifier: "com.example.not-backstage"
+        )
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: unsafe.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        let inventory = try installer.auditStagingBundles(trust: manifest.trust)
+        #expect(inventory.map(\.state) == [.unsafe])
+        #expect(throws: BackstageUpdateError.self) {
+            try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+        }
+        #expect(FileManager.default.fileExists(atPath: unsafe.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+    }
+
+    @Test("Backstage installer surfaces a stale-stage cleanup failure before replacement")
+    func backstageInstallerSurfacesStaleStageCleanupFailure() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-cleanup-failure-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let stale = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: stale, version: "218.4", build: "70")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: stale.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now },
+            removeStagingBundle: { _ in
+                throw CocoaError(.fileWriteNoPermission)
+            }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A stale-stage cleanup failure unexpectedly allowed replacement.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("canonical app and rollback were left untouched"))
+        }
+        #expect(FileManager.default.fileExists(atPath: stale.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+    }
+
+    @Test("Backstage installer surfaces post-swap cleanup failure and preserves recovery")
+    func backstageInstallerSurfacesPostSwapCleanupFailure() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-post-swap-cleanup-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            removeStagingBundle: { _ in
+                throw CocoaError(.fileWriteNoPermission)
+            }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A post-swap cleanup failure was silently ignored.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("canonical update is installed"))
+            #expect(error.localizedDescription.contains("audit"))
+        }
+
+        #expect(try syntheticBackstageBuild(at: incumbent) == manifest.build)
+        let rollbackApps = try FileManager.default.contentsOfDirectory(
+            at: rollback,
+            includingPropertiesForKeys: nil
+        ).filter { $0.pathExtension == "app" }
+        #expect(rollbackApps.count == 1)
+        #expect(try syntheticBackstageBuild(at: #require(rollbackApps.first)) == "77")
+        let installerStages = try FileManager.default.contentsOfDirectory(
+            at: applications,
+            includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix(BackstageUpdateInstaller.stagingBundlePrefix) }
+        #expect(installerStages.count == 1)
+        #expect(try syntheticBackstageBuild(at: #require(installerStages.first)) == "77")
     }
 
     @Test("Backstage installer restores the incumbent when post-swap verification fails")
@@ -5333,11 +5619,16 @@ private func createZipArchive(sourceApp: URL, destination: URL) throws {
     }
 }
 
-private func createSyntheticBackstageApp(at appURL: URL, version: String, build: String) throws {
+private func createSyntheticBackstageApp(
+    at appURL: URL,
+    version: String,
+    build: String,
+    identifier: String = BackstageReleaseManifest.bundleIdentifier
+) throws {
     let contents = appURL.appendingPathComponent("Contents", isDirectory: true)
     try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
     let plist: [String: Any] = [
-        "CFBundleIdentifier": BackstageReleaseManifest.bundleIdentifier,
+        "CFBundleIdentifier": identifier,
         "CFBundleShortVersionString": version,
         "CFBundleVersion": build,
         "CFBundlePackageType": "APPL",

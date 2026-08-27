@@ -57,6 +57,15 @@ designated-requirement checks, preserves the incumbent signed app below the
 private Backstage rollback directory, and atomically exchanges the staged app
 into `/Applications/PhotosByElie Backstage.app`.
 
+Before replacement, the installer inventories only exact hidden
+`.PhotosByElie Backstage.install-<UUID>.app` siblings. It retains recent
+signature-verified stages as potentially active, retains wrong-identity or
+invalid-signature paths as unsafe, and removes only old stages whose Backstage
+identity and release trust both verify. A failed reconciliation leaves the
+canonical app and rollback untouched. After a successful exchange, failure to
+remove the displaced incumbent is surfaced with its exact audit path instead
+of being silently ignored.
+
 ## State and safety
 
 The native state model distinguishes `checking`, `current`, `updateAvailable`,

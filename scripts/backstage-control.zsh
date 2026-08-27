@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-app_dir="${PBE_BACKSTAGE_APP:-$HOME/Applications/PhotosByElie Backstage.app}"
+app_dir="${PBE_BACKSTAGE_APP:-/Applications/PhotosByElie Backstage.app}"
 executable="$app_dir/Contents/MacOS/PhotosByElieBackstage"
 
 if [[ ! -x "$executable" ]]; then

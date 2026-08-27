@@ -23,6 +23,8 @@ def _make_app(
     identifier: str,
     *,
     headless: bool = False,
+    version: str = "239.1",
+    build: str = "220",
 ) -> None:
     contents = applications / name / "Contents"
     contents.mkdir(parents=True)
@@ -30,6 +32,8 @@ def _make_app(
         plistlib.dump(
             {
                 "CFBundleIdentifier": identifier,
+                "CFBundleShortVersionString": version,
+                "CFBundleVersion": build,
                 **({"LSUIElement": True} if headless else {}),
             },
             handle,
@@ -171,6 +175,77 @@ class NativeBackstageCutoverAuditTests(unittest.TestCase):
 
             self.assertFalse(payload["ok"])
             self.assertFalse(payload["checks"]["backstageInstalled"])
+
+    def test_stale_verified_installer_stage_is_reported_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            applications = home / "System Applications"
+            _make_app(applications, BACKSTAGE_APP, "com.photosbyelie.backstage")
+            staging = (
+                applications
+                / ".PhotosByElie Backstage.install-11111111-1111-1111-1111-111111111111.app"
+            )
+            _make_app(
+                applications,
+                staging.name,
+                "com.photosbyelie.backstage",
+                version="238.15",
+                build="218",
+            )
+            staging.touch()
+            with patch(
+                "scripts.native_backstage_cutover_audit._codesign_valid",
+                return_value=True,
+            ):
+                payload = collect_inventory(
+                    home,
+                    applications_directory=applications,
+                    live_probes=False,
+                    now=staging.stat().st_mtime + 3_600,
+                )
+
+            self.assertFalse(payload["ok"])
+            self.assertFalse(payload["checks"]["installerStagingAbsent"])
+            self.assertEqual(
+                payload["installerStagingBundles"][0]["state"],
+                "staleVerified",
+            )
+            self.assertTrue(staging.is_dir())
+
+    def test_recent_and_wrong_identity_installer_stages_are_retained(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            applications = home / "System Applications"
+            _make_app(applications, BACKSTAGE_APP, "com.photosbyelie.backstage")
+            active = (
+                applications
+                / ".PhotosByElie Backstage.install-22222222-2222-2222-2222-222222222222.app"
+            )
+            unsafe = (
+                applications
+                / ".PhotosByElie Backstage.install-33333333-3333-3333-3333-333333333333.app"
+            )
+            _make_app(applications, active.name, "com.photosbyelie.backstage")
+            _make_app(applications, unsafe.name, "com.example.not-backstage")
+            with patch(
+                "scripts.native_backstage_cutover_audit._codesign_valid",
+                return_value=True,
+            ):
+                payload = collect_inventory(
+                    home,
+                    applications_directory=applications,
+                    live_probes=False,
+                    now=active.stat().st_mtime + 60,
+                )
+
+            states = {
+                Path(item["path"]).name: item["state"]
+                for item in payload["installerStagingBundles"]
+            }
+            self.assertEqual(states[active.name], "active")
+            self.assertEqual(states[unsafe.name], "unsafe")
+            self.assertTrue(active.is_dir())
+            self.assertTrue(unsafe.is_dir())
 
 
 if __name__ == "__main__":

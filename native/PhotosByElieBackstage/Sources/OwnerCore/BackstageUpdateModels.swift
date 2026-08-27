@@ -205,15 +205,49 @@ public struct BackstageInstallationReceipt: Sendable, Equatable {
     public var manifest: BackstageReleaseManifest
     public var installedBundleURL: URL
     public var rollbackBundleURL: URL?
+    public var reconciledStagingBundleURLs: [URL]
 
     public init(
         manifest: BackstageReleaseManifest,
         installedBundleURL: URL,
-        rollbackBundleURL: URL?
+        rollbackBundleURL: URL?,
+        reconciledStagingBundleURLs: [URL] = []
     ) {
         self.manifest = manifest
         self.installedBundleURL = installedBundleURL
         self.rollbackBundleURL = rollbackBundleURL
+        self.reconciledStagingBundleURLs = reconciledStagingBundleURLs
+    }
+}
+
+public enum BackstageInstallerStagingState: String, Sendable, Equatable {
+    case active
+    case staleVerified
+    case unsafe
+}
+
+public struct BackstageInstallerStagingBundle: Sendable, Equatable {
+    public var bundleURL: URL
+    public var version: String?
+    public var build: String?
+    public var ageSeconds: TimeInterval
+    public var state: BackstageInstallerStagingState
+    public var detail: String
+
+    public init(
+        bundleURL: URL,
+        version: String?,
+        build: String?,
+        ageSeconds: TimeInterval,
+        state: BackstageInstallerStagingState,
+        detail: String
+    ) {
+        self.bundleURL = bundleURL
+        self.version = version
+        self.build = build
+        self.ageSeconds = ageSeconds
+        self.state = state
+        self.detail = detail
     }
 }
 

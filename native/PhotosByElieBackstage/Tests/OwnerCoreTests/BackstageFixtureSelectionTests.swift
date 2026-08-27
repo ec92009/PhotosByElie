@@ -5,6 +5,103 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("View as customer opens one neutral URL without Owner authentication, session, or decisions")
+    @MainActor
+    func customerPhotoHandoff() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID())"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        var opened: [URL] = []
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), preferences: preferences,
+            openExternalURL: { opened.append($0); return true },
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            customerPhotoLinks: CustomerPhotoTestResolver()
+        )
+        model.selection = .culling
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: ["private-id"], selectedIDs: ["private-id"])
+        #expect(model.canViewCustomerPhoto)
+        await model.viewSelectedPhotoAsCustomer()
+        #expect(opened.map(\.absoluteString) == ["https://photos-by-elie.com/photo.html?id=published-id"])
+        #expect(model.authentication.phase == .needsEnrollment)
+        #expect(model.pbeOwnerFixtureSession == nil)
+        #expect(model.cullingHistory.isEmpty && model.cullingStates.isEmpty)
+        #expect(!model.isOpeningCustomerPhoto)
+        #expect(model.customerPhotoStatus.contains("No Owner session"))
+    }
+
+    @Test("Customer handoff reports unavailable evidence and browser failures without fallback")
+    @MainActor
+    func customerPhotoFailureFeedback() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID())"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        for error in [CustomerPhotoLinkError.noVerifiedPublication, .ambiguousPublication, .unavailable] {
+            var opened = false
+            let model = BackstageViewModel(
+                photoLibrary: InertPhotoLibrary(), preferences: preferences,
+                openExternalURL: { _ in opened = true; return true },
+                workflowRecoveryStore: nil, currentImageSizeCache: nil,
+                customerPhotoLinks: CustomerPhotoTestResolver(error: error)
+            )
+            model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+            model.cullingSelection = OwnerSelectionModel(orderedIDs: ["a"], selectedIDs: ["a"])
+            await model.viewSelectedPhotoAsCustomer()
+            #expect(!opened && !model.isOpeningCustomerPhoto)
+            #expect(!model.customerPhotoStatus.isEmpty)
+        }
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), preferences: preferences, openExternalURL: { _ in false },
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            customerPhotoLinks: CustomerPhotoTestResolver()
+        )
+        model.selection = .culling
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        await model.viewSelectedPhotoAsCustomer()
+        #expect(model.customerPhotoStatus.contains("exactly one"))
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["a", "b"])
+        #expect(!model.canViewCustomerPhoto)
+        await model.viewSelectedPhotoAsCustomer()
+        #expect(model.customerPhotoStatus.contains("exactly one"))
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: ["a"], selectedIDs: ["a"])
+        await model.viewSelectedPhotoAsCustomer()
+        #expect(model.customerPhotoStatus.contains("browser could not"))
+    }
+
+    @Test("In-flight customer lookup ignores discard, selection, fixture, or workspace changes", arguments: ["selection", "fixture", "workspace", "cancel"])
+    @MainActor
+    func customerPhotoStaleLookup(change: String) async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID())"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let gate = DispatchSemaphore(value: 0)
+        var opened = false
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), preferences: preferences,
+            openExternalURL: { _ in opened = true; return true },
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            customerPhotoLinks: CustomerPhotoTestResolver(gate: gate)
+        )
+        model.selection = .culling
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        model.cullingSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["a"])
+        let opening = Task { await model.viewSelectedPhotoAsCustomer() }
+        while !model.isOpeningCustomerPhoto { await Task.yield() }
+        #expect(!model.canViewCustomerPhoto)
+        await model.viewSelectedPhotoAsCustomer() // Duplicate must not start a second lookup.
+        switch change {
+        case "selection": model.cullingSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["b"])
+        case "fixture": model.markFixtureSelectionUnavailable("test")
+        case "workspace": model.selection = .review
+        default: opening.cancel()
+        }
+        gate.signal()
+        await opening.value
+        #expect(!opened && !model.isOpeningCustomerPhoto)
+        #expect(model.customerPhotoStatus.contains("No customer page was opened"))
+    }
+
     @Test("Gallery preserves legacy navigation identity and applies bounded saved views")
     @MainActor
     func gallerySavedViewsPreserveCullingPersistence() throws {
@@ -1951,6 +2048,19 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
             "beforePlacementState": .string(beforePlacementState.rawValue),
             "beforeEligibilityState": .string("active"),
         ])
+    }
+}
+
+private struct CustomerPhotoTestResolver: CustomerPhotoLinkResolving {
+    var error: CustomerPhotoLinkError? = nil
+    var gate: DispatchSemaphore? = nil
+
+    func resolve(assetID: String, fixtureID: String) throws -> CustomerPhotoLink {
+        if let gate, gate.wait(timeout: .now() + 5) == .timedOut {
+            throw CustomerPhotoLinkError.unavailable
+        }
+        if let error { throw error }
+        return try CustomerPhotoLink(publishedMediaID: "published-id")
     }
 }
 

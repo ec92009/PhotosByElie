@@ -1,4 +1,11 @@
-# Browser provisioning and Mac Backstage
+# Browser Owner retirement and Mac Backstage
+
+> **Superseded by PBB-128 / PBE-164.** Backstage is the sole Owner workspace;
+> PBE is customer-only. The provisioning and hosted Owner contracts below are
+> historical cutover evidence, not the target design. Native acceptance and
+> customer regression proof must precede their removal. See the
+> [North Star](north-star.md) and the
+> [native customer-preview boundary](pbe-164-native-customer-preview.md).
 
 This document supersedes the former "Cloud Owner anywhere" design. Actionable
 Owner operation is Mac-only. PhotosByElie Backstage may run on any enrolled Mac;

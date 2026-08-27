@@ -200,6 +200,8 @@ final class BackstageViewModel: ObservableObject {
         }
     }
     @Published var isRefreshing = false
+    @Published private(set) var isOpeningCustomerPhoto = false
+    @Published private(set) var customerPhotoStatus = ""
     @Published var authentication = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
     @Published var enrollmentCode = ""
     @Published var authenticationStatus = "Checking this Mac's Keychain session…"
@@ -429,6 +431,7 @@ final class BackstageViewModel: ObservableObject {
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
     private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
+    private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
@@ -591,6 +594,9 @@ final class BackstageViewModel: ObservableObject {
         currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
+        customerPhotoLinks: (any CustomerPhotoLinkResolving)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
         cullingThumbnailTimeout: Duration = .seconds(12),
         cullingThumbnailUpgradeDelay: Duration = .seconds(1),
         currentImageSizeFlushDelay: Duration = .milliseconds(500),
@@ -654,7 +660,49 @@ final class BackstageViewModel: ObservableObject {
         )
         self.workflowRecoveryStore = workflowRecoveryStore
         self.currentImageSizeCache = currentImageSizeCache
+        self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
+    }
+
+    var canViewCustomerPhoto: Bool {
+        selection == .culling && fixtureScopedActionsAllowed
+            && selectedCullingAssetIDs.count == 1 && !isOpeningCustomerPhoto
+    }
+
+    func viewSelectedPhotoAsCustomer() async {
+        guard !isOpeningCustomerPhoto else { return }
+        guard selection == .culling, fixtureScopedActionsAllowed, selectedCullingAssetIDs.count == 1,
+              let assetID = selectedCullingAssetIDs.first else {
+            customerPhotoStatus = "Select exactly one photo in a current fixture to view as customer."
+            return
+        }
+        guard let customerPhotoLinks else {
+            customerPhotoStatus = "Publication evidence is unavailable. No customer page was opened."
+            return
+        }
+        let fixtureID = selectedFixtureID
+        isOpeningCustomerPhoto = true
+        customerPhotoStatus = "Checking the selected photo's public publication receipt…"
+        defer { isOpeningCustomerPhoto = false }
+        do {
+            let link = try await Task.detached(priority: .utility) {
+                try customerPhotoLinks.resolve(assetID: assetID, fixtureID: fixtureID)
+            }.value
+            guard !Task.isCancelled, selection == .culling, fixtureScopedActionsAllowed,
+                  selectedFixtureID == fixtureID, selectedCullingAssetIDs == [assetID] else {
+                customerPhotoStatus = "Selection or workspace changed. No customer page was opened."
+                return
+            }
+            customerPhotoStatus = openExternalURL(link.url)
+                ? "Opened the published customer page. No Owner session was created; normal customer access rules apply."
+                : "The browser could not open the customer page. Please try again."
+        } catch CustomerPhotoLinkError.noVerifiedPublication {
+            customerPhotoStatus = "No verified public page for this photo in this fixture. Private, unpublished, or withdrawn items are not opened."
+        } catch CustomerPhotoLinkError.ambiguousPublication {
+            customerPhotoStatus = "Conflicting live publication receipts. No customer page was opened."
+        } catch {
+            customerPhotoStatus = "Publication evidence could not be read. No customer page was opened."
+        }
     }
 
     func currentImageByteCount(for assetID: String) -> Int64? {

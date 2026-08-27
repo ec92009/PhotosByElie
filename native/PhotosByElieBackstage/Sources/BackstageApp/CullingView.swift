@@ -386,6 +386,12 @@ struct CullingView: View {
     private var cullingHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             cullingTitleBar
+            if !model.customerPhotoStatus.isEmpty {
+                BackstageFeedbackView(
+                    message: model.customerPhotoStatus,
+                    isWorking: model.isOpeningCustomerPhoto
+                )
+            }
             BackstageFeedbackView(
                 message: model.photoStatus,
                 isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex
@@ -961,6 +967,11 @@ struct CullingView: View {
     private var cullingHeaderActions: some View {
         HStack {
             Menu("Workflows") {
+                Button("View as customer", systemImage: "arrow.up.right.square") {
+                    Task { await model.viewSelectedPhotoAsCustomer() }
+                }
+                .disabled(isPreviewMode || !model.canViewCustomerPhoto)
+                .backstageHelp("Open the selected photo's verified published PBE page without creating an Owner session. Select exactly one photo; unpublished or private-only items need a customer delivery link instead.")
                 Button("Open in Review") { model.sendCullingSelection(to: .review) }
                     .disabled(model.cullingSelection.selectedIDs.isEmpty)
                     .backstageHelp("Open the owning Review workspace for the explicit Gallery selection without changing its decisions.")

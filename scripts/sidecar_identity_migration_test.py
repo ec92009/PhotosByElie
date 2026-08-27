@@ -1017,6 +1017,41 @@ class SidecarIdentityMigrationTests(unittest.TestCase):
         self.assertEqual(len(evidence[0]["sourceDigest"]), 64)
         self.assertNotIn("legacy.jpg", json.dumps(evidence))
 
+    def test_available_legacy_twin_clears_stale_canonical_missing_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            owner = self._database(directory)
+            connection = sqlite3.connect(owner)
+            connection.execute(
+                "UPDATE sidecar_assets SET missing_at = '2026-08-01T00:00:00Z' "
+                "WHERE asset_id = 'cloud-a'"
+            )
+            connection.execute(
+                "UPDATE sidecar_assets SET missing_at = NULL "
+                "WHERE asset_id = 'legacy-collision'"
+            )
+            connection.commit()
+            connection.close()
+            mapping = self._mapping(
+                directory,
+                [
+                    {"localIdentifier": "local-collision", "cloudIdentifier": "cloud-a"},
+                    {"localIdentifier": "local-rewrite", "cloudIdentifier": "cloud-b"},
+                ],
+            )
+            report = rehearse_synthetic(owner, mapping, directory / "availability")
+            connection = sqlite3.connect(directory / "availability" / "working.sqlite")
+            missing_at = connection.execute(
+                "SELECT missing_at FROM sidecar_assets WHERE asset_id = 'cloud-a'"
+            ).fetchone()[0]
+            connection.close()
+
+        self.assertTrue(report["rehearsal"]["applyPerformed"])
+        self.assertIsNone(missing_at)
+        self.assertTrue(
+            report["rehearsal"]["invariants"]["availableIdentitySetPreserved"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

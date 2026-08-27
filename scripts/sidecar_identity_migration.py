@@ -1022,6 +1022,13 @@ def _merge_field(table: str, column: str, target: Any, source: Any) -> Any:
     if target == source:
         return target
     default = STATE_DEFAULTS.get((table, column))
+    if table == "sidecar_assets" and column == "missing_at":
+        # Exact source-tied identity proves both rows describe one PhotoKit
+        # asset. Availability is therefore monotonic: a current available row
+        # must clear a stale missing marker on its canonical twin.
+        if _empty(target) or _empty(source):
+            return None
+        return max(_text(target), _text(source))
     if _empty(target, default):
         return source
     if _empty(source, default):
@@ -1657,14 +1664,29 @@ def _dedupe_keys(connection: sqlite3.Connection, resolutions: Mapping[str, str])
     return keys
 
 
+def _available_identity_keys(
+    connection: sqlite3.Connection,
+    resolutions: Mapping[str, str],
+) -> set[str]:
+    if "sidecar_assets" not in _table_names(connection):
+        return set()
+    return {
+        resolutions.get(_text(row[0]), _text(row[0]))
+        for row in connection.execute("SELECT asset_id FROM sidecar_assets WHERE missing_at IS NULL OR trim(missing_at) = ''")
+    }
+
+
 def _domain_snapshot(connection: sqlite3.Connection, resolutions: Mapping[str, str]) -> dict[str, Any]:
     tables = {table: _logical_keys(connection, table, resolutions) for table in INVARIANT_TABLES}
+    available_identities = _available_identity_keys(connection, resolutions)
     return {
         "fixtureCount": int(connection.execute("SELECT count(*) FROM fixtures").fetchone()[0]) if "fixtures" in _table_names(connection) else 0,
         "tableKeyCounts": {table: len(keys) for table, keys in tables.items()},
         "tableKeyDigests": {table: _digest_values(keys) for table, keys in tables.items()},
         "exactDedupeKeyCount": len(_dedupe_keys(connection, resolutions)),
         "exactDedupeKeyDigest": _digest_values(_dedupe_keys(connection, resolutions)),
+        "availableIdentityCount": len(available_identities),
+        "availableIdentityDigest": _digest_values(available_identities),
     }
 
 
@@ -1700,6 +1722,10 @@ def _verify_invariants(
             and identity["missingIdentityCount"] == expected_missing_identity_count
         ),
         "fixtureCountPreserved": before_domain["fixtureCount"] == after_domain["fixtureCount"],
+        "availableIdentitySetPreserved": (
+            before_domain["availableIdentityCount"] == after_domain["availableIdentityCount"]
+            and before_domain["availableIdentityDigest"] == after_domain["availableIdentityDigest"]
+        ),
         "tableKeyResults": table_results,
         "fixtureDecisionHistoryPreserved": all(
             table_results.get(table, True)
@@ -2192,6 +2218,7 @@ def apply_reviewed_rehearsal(
         "foreign-keys": invariants.get("foreignKeysOk") is True,
         "quick-check": invariants.get("quickCheckOk") is True,
         "parked-preserved": invariants.get("parkedLegacyRowsPreserved") is True,
+        "available-identity-set": invariants.get("availableIdentitySetPreserved") is True,
     }
     failed_checks = sorted(
         name for name, passed in required_rehearsal_checks.items() if not passed

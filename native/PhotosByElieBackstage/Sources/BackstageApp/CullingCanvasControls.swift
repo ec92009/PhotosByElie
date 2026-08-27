@@ -16,6 +16,7 @@ struct CullingSearchControls: View {
                     Button(savedView.rawValue) {
                         model.applyGallerySavedView(savedView)
                     }
+                    .backstageHelp("Show \(savedView.rawValue.lowercased()) in Gallery without changing any fixture decisions.")
                 }
             }
             .accessibilityLabel("Gallery saved view")

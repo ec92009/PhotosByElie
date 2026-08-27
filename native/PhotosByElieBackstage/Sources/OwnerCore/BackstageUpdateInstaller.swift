@@ -1,6 +1,38 @@
 import Darwin
 import Foundation
 
+@usableFromInline
+func removeInstallerOwnedStagingBundle(at bundleURL: URL) throws {
+    let fileManager = FileManager.default
+    var directories = [bundleURL]
+    if let enumerator = fileManager.enumerator(
+        at: bundleURL,
+        includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+        options: []
+    ) {
+        for case let candidate as URL in enumerator {
+            let values = try candidate.resourceValues(forKeys: [
+                .isDirectoryKey,
+                .isSymbolicLinkKey,
+            ])
+            if values.isDirectory == true, values.isSymbolicLink != true {
+                directories.append(candidate)
+            }
+        }
+    }
+    for directory in directories {
+        let attributes = try fileManager.attributesOfItem(atPath: directory.path)
+        let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue ?? 0o700
+        if permissions & 0o200 == 0 {
+            try fileManager.setAttributes(
+                [.posixPermissions: permissions | 0o200],
+                ofItemAtPath: directory.path
+            )
+        }
+    }
+    try fileManager.removeItem(at: bundleURL)
+}
+
 /// Performs the explicit installation step only after an update has passed the
 /// read-only download and verification boundary.
 public struct BackstageUpdateInstaller: Sendable {
@@ -29,7 +61,7 @@ public struct BackstageUpdateInstaller: Sendable {
         staleStagingAge: TimeInterval = Self.defaultStaleStagingAge,
         now: @escaping @Sendable () -> Date = Date.init,
         removeStagingBundle: @escaping @Sendable (URL) throws -> Void = {
-            try FileManager.default.removeItem(at: $0)
+            try removeInstallerOwnedStagingBundle(at: $0)
         }
     ) {
         self.signatureVerifier = signatureVerifier

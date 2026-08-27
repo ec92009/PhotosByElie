@@ -64,7 +64,9 @@ invalid-signature paths as unsafe, and removes only old stages whose Backstage
 identity and release trust both verify. A failed reconciliation leaves the
 canonical app and rollback untouched. After a successful exchange, failure to
 remove the displaced incumbent is surfaced with its exact audit path instead
-of being silently ignored.
+of being silently ignored. Cleanup restores owner-write permission only on
+directories inside that exact verified installer-owned stage so the sealed,
+read-only Owner runtime cannot strand a partially removed app bundle.
 
 ## State and safety
 

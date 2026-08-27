@@ -772,6 +772,16 @@ struct OwnerCoreTests {
         let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
         try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
         try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        let readOnlyRuntime = incumbent
+            .appendingPathComponent("Contents/Resources/OwnerRuntime", isDirectory: true)
+        try FileManager.default.createDirectory(at: readOnlyRuntime, withIntermediateDirectories: true)
+        try Data("sealed runtime".utf8).write(
+            to: readOnlyRuntime.appendingPathComponent("runtime.txt")
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o555],
+            ofItemAtPath: readOnlyRuntime.path
+        )
         try Data("verified archive".utf8).write(to: archive)
         manifest.fileSize = Int64(try Data(contentsOf: archive).count)
         manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
@@ -806,6 +816,13 @@ struct OwnerCoreTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: applications.path).allSatisfy {
             !$0.hasPrefix(BackstageUpdateInstaller.stagingBundlePrefix)
         })
+        let rollbackRuntime = rollbackURL
+            .appendingPathComponent("Contents/Resources/OwnerRuntime", isDirectory: true)
+        #expect(FileManager.default.fileExists(atPath: rollbackRuntime.path))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: rollbackRuntime.path
+        )
     }
 
     @Test("Backstage installer reconciles only verified stale interrupted stages")

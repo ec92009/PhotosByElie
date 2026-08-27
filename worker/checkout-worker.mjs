@@ -1469,10 +1469,10 @@ export const createPhotosByElieWorker = ({
     const payload = await parseJson(request);
     const events = Array.isArray(payload.events) ? payload.events : [payload.event || payload];
     if (!analytics || typeof analytics.putEvents !== "function") {
-      return json({ ok: true, accepted: 0, disabled: true });
+      return credentialedJson(request, { ok: true, accepted: 0, disabled: true });
     }
     const saved = await analytics.putEvents(events);
-    return json({ ok: true, accepted: saved.length });
+    return credentialedJson(request, { ok: true, accepted: saved.length });
   };
 
   const maybeSendReadyEmail = async (order, { force = false, throwOnFailure = false } = {}) => {
@@ -3955,6 +3955,7 @@ export const createPhotosByElieWorker = ({
       || path.startsWith("/account/")
       || path.startsWith("/access-console/")
       || path === "/shared-galleries"
+      || path === "/analytics/events"
       || path === "/checkout/account";
     if (usesCredentialedCors && !isCredentialedOriginAllowed(request)) {
       return credentialedErrorJson(request, 403, "cors_origin_forbidden", "This browser origin is not allowed for credentialed requests.");

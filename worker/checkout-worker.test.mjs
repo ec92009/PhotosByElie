@@ -425,7 +425,7 @@ test("KV owner device store revokes its durable device credential", async () => 
   }), null);
 });
 
-test("analytics endpoint stores sanitized public funnel events", async () => {
+test("analytics endpoint stores sanitized public funnel events with credentialed origin CORS", async () => {
   const kv = createFakeKv();
   const analytics = createAnalyticsStore({
     namespace: kv,
@@ -449,8 +449,11 @@ test("analytics endpoint stores sanitized public funnel events", async () => {
       orderId: "PBE-SECRET",
       userAgent: "browser",
     }],
-  }));
+  }, { origin: "https://photos-by-elie.com" }));
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://photos-by-elie.com");
+  assert.equal(response.headers.get("access-control-allow-credentials"), "true");
+  assert.equal(response.headers.get("vary"), "Origin");
   assert.deepEqual(await response.json(), { ok: true, accepted: 1 });
 
   const eventKey = [...kv._debug.keys()].find((key) => key.startsWith("test:analytics:events:2026-05-07:"));
@@ -465,6 +468,29 @@ test("analytics endpoint stores sanitized public funnel events", async () => {
 
   const count = JSON.parse(kv._debug.get("test:analytics:counts:2026-05-07:page_view"));
   assert.equal(count.count, 1);
+});
+
+test("analytics credentialed CORS allows trusted preflight and rejects untrusted origins", async () => {
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog() });
+  const preflight = await worker.fetch(new Request("https://worker.test/analytics/events", {
+    method: "OPTIONS",
+    headers: {
+      origin: "https://photos-by-elie.com",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "content-type",
+    },
+  }));
+  assert.equal(preflight.status, 200);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), "https://photos-by-elie.com");
+  assert.equal(preflight.headers.get("access-control-allow-credentials"), "true");
+  assert.equal(preflight.headers.get("vary"), "Origin");
+
+  const denied = await worker.fetch(jsonRequest("https://worker.test/analytics/events", {
+    events: [{ event: "page_view", path: "/" }],
+  }, { origin: "https://example.invalid" }));
+  assert.equal(denied.status, 403);
+  assert.equal(denied.headers.get("access-control-allow-origin"), "null");
+  assert.equal((await denied.json()).error.code, "cors_origin_forbidden");
 });
 
 test("KV owner action store lists newest actions through its time index", async () => {

@@ -342,6 +342,7 @@ struct CullingView: View {
         }
         .onDisappear {
             quickLook.deactivate()
+            model.cancelCullingThumbnailWork()
         }
         .task {
             guard !isPreviewMode else { return }
@@ -662,13 +663,9 @@ struct CullingView: View {
                     model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                     Task { await model.loadPreview() }
                 }
-                .onAppear {
-                    guard !isPreviewMode else { return }
-                    model.cullingAssetDidAppear(asset)
-                }
-                .onDisappear {
-                    model.cullingAssetDidDisappear(asset.id)
-                }
+                .modifier(CullingCardVisibilityObserver(
+                    model: model, asset: asset, isPreviewMode: isPreviewMode
+                ))
             }
         }
         .padding(.horizontal, 6)
@@ -1257,6 +1254,35 @@ private struct CullingDisplayKeyCommands: ViewModifier {
         guard let color = colors[value] else { return .ignored }
         Task { await model.applyColorShortcut(color) }
         return .handled
+    }
+}
+
+private struct CullingCardVisibilityObserver: ViewModifier {
+    @ObservedObject var model: BackstageViewModel
+    let asset: FixtureAsset
+    let isPreviewMode: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            // LazyVGrid can keep offscreen cards alive. Use viewport visibility,
+            // not allocation/appearance, to own expensive preview requests.
+            content.onScrollVisibilityChange(threshold: 0.01) { visible in
+                guard !isPreviewMode else { return }
+                if visible {
+                    model.cullingAssetDidAppear(asset)
+                } else {
+                    model.cullingAssetDidDisappear(asset.id)
+                }
+            }
+            .onDisappear { model.cullingAssetDidDisappear(asset.id) }
+        } else {
+            content.onAppear {
+                guard !isPreviewMode else { return }
+                model.cullingAssetDidAppear(asset)
+            }
+            .onDisappear { model.cullingAssetDidDisappear(asset.id) }
+        }
     }
 }
 

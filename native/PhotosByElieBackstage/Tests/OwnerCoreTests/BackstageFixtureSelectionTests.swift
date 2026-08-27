@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import BackstageUI
@@ -1682,16 +1683,182 @@ struct BackstageFixtureSelectionTests {
         )
 
         for _ in 0..<500 {
-            let lowResolutionRequests = photoLibrary
-                .requestedPixelSizes()
-                .filter { $0 == 180 }
-            if lowResolutionRequests.count >= 2_000 { break }
+            if model.cullingThumbnails.count == 2_000 { break }
             try? await Task.sleep(for: .milliseconds(10))
         }
 
         let requestedPixelSizes = photoLibrary.requestedPixelSizes()
         #expect(requestedPixelSizes.filter { $0 == 180 }.count == 2_000)
         #expect(requestedPixelSizes.filter { $0 >= 900 }.isEmpty)
+        #expect(model.cullingThumbnails.count == 2_000)
+        #expect(model.cullingThumbnails["asset-apl-backfill-0"] != nil)
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        await model.loadThumbnail(for: "new-foreground-card")
+        #expect(model.cullingThumbnails.count == 2_000)
+        #expect(model.cullingThumbnails["new-foreground-card"] != nil)
+        #expect(model.cullingThumbnails["asset-apl-backfill-0"] != nil)
+    }
+
+    @Test("Idle upgrades visit every visible card once without repeating completed work")
+    @MainActor
+    func idleThumbnailUpgradesFinishWithoutRepeating() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .milliseconds(1)
+        )
+        let assets = (0..<50).map {
+            FixtureAsset(id: "visible-\($0)", title: "", filename: "\($0).jpg", mediaType: "photo")
+        }
+        for asset in assets { model.cullingAssetDidAppear(asset) }
+        for _ in 0..<100 {
+            if Set(photoLibrary.requestedIDs(at: 900)).count == assets.count { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        try? await Task.sleep(for: .milliseconds(40))
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        try? await Task.sleep(for: .milliseconds(40))
+        #expect(photoLibrary.requestedIDs(at: 900).sorted() == assets.map(\.id).sorted())
+        model.cullingScrollPhaseChanged(isScrolling: true)
+    }
+
+    @Test("Offscreen cards release their larger image but retain the basic thumbnail")
+    @MainActor
+    func offscreenThumbnailDropsUpgrade() async throws {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .milliseconds(1)
+        )
+        let asset = FixtureAsset(id: "visible", title: "", filename: "visible.jpg", mediaType: "photo")
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        model.cullingAssetDidAppear(asset)
+        for _ in 0..<50 where model.cullingThumbnails[asset.id] == nil {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let basic = try #require(model.cullingThumbnails[asset.id])
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        for _ in 0..<50 where model.cullingThumbnails[asset.id] === basic {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.cullingThumbnails[asset.id] !== basic)
+        model.cullingAssetDidDisappear(asset.id)
+        #expect(model.cullingThumbnails[asset.id] === basic)
+        try? await Task.sleep(for: .milliseconds(40))
+        #expect(photoLibrary.requestedIDs(at: 900) == [asset.id])
+        model.cancelCullingThumbnailWork()
+    }
+
+    @Test("Quick Look recovery keeps only a bounded aspect-correct basic thumbnail")
+    @MainActor
+    func recoveredQuickLookThumbnailIsBounded() throws {
+        let source = NSImage(size: NSSize(width: 4_000, height: 2_000), flipped: false) { rect in
+            NSColor.systemGreen.setFill()
+            rect.fill()
+            return true
+        }
+        let thumbnail = BackstageViewModel.basicThumbnail(from: source)
+        #expect(thumbnail.size == NSSize(width: 180, height: 90))
+        let bitmap = try #require(thumbnail.representations.first as? NSBitmapImageRep)
+        #expect(bitmap.pixelsWide == 180)
+        #expect(bitmap.pixelsHigh == 90)
+    }
+
+    @Test("Late larger-image completions after scrolling cannot replace basic thumbnails")
+    @MainActor
+    func cancelledThumbnailUpgradeIgnoresLateResult() async throws {
+        let photoLibrary = BoundedUpgradePhotoLibrary(returnsAfterCancellation: true)
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary, cullingThumbnailUpgradeDelay: .milliseconds(1)
+        )
+        let asset = FixtureAsset(id: "late", title: "", filename: "late.jpg", mediaType: "photo")
+        model.cullingAssetDidAppear(asset)
+        for _ in 0..<50 where photoLibrary.startedUpgradeCount == 0 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(photoLibrary.startedUpgradeCount == 1)
+        let basic = try #require(model.cullingThumbnails[asset.id])
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        for _ in 0..<50 where photoLibrary.activeUpgradeRequests > 0 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(photoLibrary.cancelledUpgradeCount == 1)
+        #expect(model.cullingThumbnails[asset.id] === basic)
+        model.cancelCullingThumbnailWork()
+    }
+
+    @Test("Idle backfill cancels on scroll, resumes missing thumbnails, and stops on Gallery exit")
+    @MainActor
+    func idleBackfillCancelsAndResumes() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailBackfillDelay: .milliseconds(1)
+        )
+        model.libraryItems = (0..<20).map {
+            PhotoLibraryItem(id: "apl-\($0)", filename: "\($0).jpg", creationDate: nil, mediaType: "photo")
+        }
+        await model.loadThumbnail(for: "apl-0")
+        photoLibrary.setThumbnailDelay(.seconds(60))
+        let asset = FixtureAsset(id: "apl-0", title: "", filename: "0.jpg", mediaType: "photo")
+        model.cullingAssetDidAppear(asset)
+        for _ in 0..<50 where photoLibrary.requestedIDs(at: 180).count < 5 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(photoLibrary.requestedIDs(at: 180).count == 5)
+        model.cullingScrollPhaseChanged(isScrolling: true)
+        for _ in 0..<50 where photoLibrary.cancelledThumbnails < 4 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(photoLibrary.cancelledThumbnails == 4)
+        try? await Task.sleep(for: .milliseconds(40))
+        #expect(photoLibrary.requestedIDs(at: 180).count == 5)
+        photoLibrary.setThumbnailDelay(.zero)
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        for _ in 0..<100 where model.cullingThumbnails.count < 20 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.cullingThumbnails.count == 20)
+        #expect(model.cullingThumbnailFailures.isEmpty)
+        #expect(photoLibrary.requestedIDs(at: 900).isEmpty)
+        model.cancelCullingThumbnailWork()
+        let count = photoLibrary.requestedPixelSizes().count
+        model.cullingScrollPhaseChanged(isScrolling: false)
+        try? await Task.sleep(for: .milliseconds(40))
+        #expect(photoLibrary.requestedPixelSizes().count == count)
+    }
+
+    @Test("A stalled backfill times out and remains explicitly retryable")
+    @MainActor
+    func idleBackfillTimeoutCanRetry() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            cullingThumbnailTimeout: .milliseconds(40),
+            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailBackfillDelay: .milliseconds(1)
+        )
+        model.libraryItems = (0..<10).map {
+            PhotoLibraryItem(id: "apl-\($0)", filename: "\($0).jpg", creationDate: nil, mediaType: "photo")
+        }
+        await model.loadThumbnail(for: "apl-0")
+        photoLibrary.setThumbnailDelay(.seconds(60))
+        model.cullingAssetDidAppear(FixtureAsset(id: "apl-0", title: "", filename: "0.jpg", mediaType: "photo"))
+        for _ in 0..<100 where model.cullingThumbnailFailures.count < 9 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.cullingThumbnailFailures.count == 9)
+        #expect(model.cullingThumbnailFailures["apl-1"] == .timedOut)
+        photoLibrary.setThumbnailDelay(.zero)
+        model.retryThumbnail(for: "apl-1")
+        for _ in 0..<50 where model.cullingThumbnails["apl-1"] == nil {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(model.cullingThumbnails["apl-1"] != nil)
+        #expect(model.cullingThumbnailFailures["apl-1"] == nil)
+        model.cancelCullingThumbnailWork()
     }
 
     @Test("Focused Quick Look persists a learned current size before returning")
@@ -2215,6 +2382,9 @@ private final class StalledThumbnailPhotoLibrary: PhotoLibraryServing, @unchecke
 private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
     private let lock = NSLock()
     private var pixelSizes: [Int] = []
+    private var requests: [(String, Int)] = []
+    private var thumbnailDelay: Duration = .zero
+    private var cancelled = 0
     private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
 
     func authorization() -> PhotoLibraryAccess { .authorized }
@@ -2224,7 +2394,19 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
 
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
-        lock.withLock { pixelSizes.append(maxPixelSize) }
+        lock.withLock {
+            pixelSizes.append(maxPixelSize)
+            requests.append((localIdentifier, maxPixelSize))
+        }
+        if maxPixelSize == 180 {
+            let delay = lock.withLock { thumbnailDelay }
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                lock.withLock { cancelled += 1 }
+                throw error
+            }
+        }
         return PhotoPreview(
             assetID: localIdentifier,
             jpegData: Self.previewData,
@@ -2241,6 +2423,16 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     func requestedPixelSizes() -> [Int] {
         lock.withLock { pixelSizes }
     }
+
+    func requestedIDs(at pixelSize: Int) -> [String] {
+        lock.withLock { requests.filter { $0.1 == pixelSize }.map(\.0) }
+    }
+
+    func setThumbnailDelay(_ delay: Duration) {
+        lock.withLock { thumbnailDelay = delay }
+    }
+
+    var cancelledThumbnails: Int { lock.withLock { cancelled } }
 }
 
 private final class BoundedUpgradePhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
@@ -2249,7 +2441,12 @@ private final class BoundedUpgradePhotoLibrary: PhotoLibraryServing, @unchecked 
     private var maximumActive = 0
     private var started = 0
     private var cancelled = 0
+    private let returnsAfterCancellation: Bool
     private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    init(returnsAfterCancellation: Bool = false) {
+        self.returnsAfterCancellation = returnsAfterCancellation
+    }
 
     func authorization() -> PhotoLibraryAccess { .authorized }
 
@@ -2277,7 +2474,7 @@ private final class BoundedUpgradePhotoLibrary: PhotoLibraryServing, @unchecked 
             try await Task.sleep(for: .seconds(60))
         } catch {
             lock.withLock { cancelled += 1 }
-            throw error
+            if !returnsAfterCancellation { throw error }
         }
         return PhotoPreview(
             assetID: localIdentifier,

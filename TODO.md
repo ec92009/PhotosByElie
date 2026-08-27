@@ -1,6 +1,10 @@
-# Photos By Elie Backlog
+# Photos By Elie Historical Backlog Snapshot
 
 Last updated: 2026-07-21
+
+> Archived reference only. YouTrack is the authoritative current PhotosByElie
+> ticket queue. Do not use the facts or numbered items below for current ticket
+> selection without fresh-reading YouTrack.
 
 ## Current Facts
 

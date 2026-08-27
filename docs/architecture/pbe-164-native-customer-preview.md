@@ -1,7 +1,8 @@
 # PBE-164: Native View as customer
 
-Status: customer-only cutover implemented in source; release promotion, installation,
-and production customer acceptance remain separate receipts.
+Status: customer-only cutover accepted in production under PBE-164 on
+2026-08-27. Restricted enrollment/recovery and private or fixture-wide customer
+handoffs remain separate boundaries.
 
 ## Product boundary
 
@@ -61,16 +62,21 @@ identity verification, one-time Backstage enrollment, device inspection, and
 revocation. Its provisioning-only policy hides every workflow card except
 Backstage enrollment. Server-side role and device checks remain authoritative.
 
-## Remaining release gates
+## Separate remaining boundaries
 
-- Signed release promotion and installed UI/customer-page acceptance remain
-  separate from source tests.
+- PBE-164's signed release, installed UI, customer-page, and production
+  acceptance receipts are complete. Later Backstage releases must continue to
+  preserve the same customer-only authority boundary.
 - Private-only customer deliveries and fixture-wide previews require their own
   exact customer-link evidence. This public-photo handoff deliberately does not
-  guess those links or grant access. Do not treat it as complete PBE-164 parity.
-- PBE-164's inventory source receipt is `9eb3dd66` on
-  `codex/pbe-164-owner-retirement-inventory`. It describes the later detachment,
-  removal, and deployment order; this implementation does not execute those steps.
+  guess those links or grant access.
+- The restricted `owner.html` enrollment/recovery surface remains until the
+  native replacement and independent recovery/revocation path tracked by
+  PBB-133 are accepted. It is not a browser Owner workflow.
+- PBE-164's initial inventory source receipt remains `9eb3dd66` on
+  `codex/pbe-164-owner-retirement-inventory`; the ticket's later production
+  receipts record the completed customer-only cutover and guarded legacy
+  rollback boundary.
 - Curie=Max fixture parity remains parked by user decision.
 
 ## Tests and acceptance

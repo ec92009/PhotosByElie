@@ -119,10 +119,12 @@ Photos By Elie is finished when Elie can independently run five real workflows e
 
 Customer and client portions of all five workflows should work from a normal browser with secure access control, mobile usability, cloud-backed state, and no unpaid access to protected originals. Owner decisions and mutations run only in PhotosByElie Backstage on an enrolled Mac. PBE remains a customer-facing web application, and even a Backstage-opened customer preview carries no Owner authority.
 
-PBB-128 tracks remaining native acceptance. PBE-164 has a source-level
-customer-only cutover awaiting separate release and production receipts; the
-currently deployed site must not be treated as cut over until those receipts
-are recorded.
+PBB-128 tracks remaining native acceptance outside this boundary. PBE-164's
+customer-only cutover was accepted in production on 2026-08-27 with separate
+source, signed-release, installed-app, and public-site receipts. That completed
+cutover does not retire the restricted enrollment and recovery surface tracked
+by PBB-133, or claim private and fixture-wide customer-link coverage that still
+requires exact delivery evidence.
 
 ## Deviation Check
 

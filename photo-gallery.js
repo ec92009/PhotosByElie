@@ -1,6 +1,12 @@
 ((async () => {
 const pbeOwnerGalleryKey = "pbe-owner";
 const requestedGalleryKey = String(new URLSearchParams(window.location.search).get("gallery") || "").trim().toLowerCase();
+if (requestedGalleryKey === pbeOwnerGalleryKey) {
+  const customerGalleryURL = new URL("./gallery.html", window.location.href);
+  customerGalleryURL.searchParams.set("gallery", "selection");
+  window.location.replace(customerGalleryURL.href);
+  return;
+}
 const markNoIndex = () => {
   if (document.head.querySelector('meta[name="robots"]')) return;
   const robots = document.createElement("meta");

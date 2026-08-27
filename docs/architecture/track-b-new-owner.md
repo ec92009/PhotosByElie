@@ -43,10 +43,12 @@ Device revocation blocks subsequent token minting. Every sensitive Owner request
 also resolves the device record, so revocation fails closed before the current
 bearer naturally expires.
 
-## Hosted PBE Owner mode
+## Retired hosted PBE Owner mode
 
-Backstage is the only launch point. From the current fixture in the global
-sidebar it:
+Backstage no longer presents this browser-Owner launch point. The native
+**View as customer** action opens only an exact verified customer photo URL and
+does not mint an Owner session. The sequence below is retained solely as the
+rollback/test contract for the unreachable compatibility implementation:
 
 1. verifies that its Backstage device session is active;
 2. attaches to or launches the existing loopback `scripts/local_server.py` host;

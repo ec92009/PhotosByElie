@@ -981,7 +981,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(flag, app)
 
-    def test_shared_feedback_surface_is_adopted_by_remaining_workflow_surfaces(self):
+    def test_shared_feedback_surface_is_adopted_by_active_workflow_surfaces(self):
         source_dir = NATIVE / "Sources" / "BackstageApp"
         culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
         review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
@@ -1012,10 +1012,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("isWorking: model.isRunningDelivery", upload)
         self.assertNotIn("Text(model.uploadRecoveryStatus)", upload)
 
-        self.assertIn("BackstageFeedbackView(", picker)
-        self.assertIn("message: model.pbeOwnerSessionStatus", picker)
-        self.assertIn("isWorking: model.isLaunchingPBEOwner", picker)
-        self.assertNotIn("Text(model.pbeOwnerSessionStatus)", picker)
+        self.assertNotIn("BackstageFeedbackView(", picker)
+        self.assertNotIn("model.pbeOwnerSessionStatus", picker)
+        self.assertNotIn("model.isLaunchingPBEOwner", picker)
 
     def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
         model_source = (

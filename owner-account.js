@@ -2,8 +2,8 @@
   const topbar = document.querySelector('.topbar');
   if (!topbar || topbar.querySelector('[data-owner-account-toggle]')) return;
 
-  const loginButton = document.querySelector('[data-new-owner-login], [data-acs-login]');
-  const logoutButton = document.querySelector('[data-new-owner-logout], [data-acs-logout]');
+  const loginButton = document.querySelector('[data-backstage-setup-login], [data-new-owner-login], [data-acs-login]');
+  const logoutButton = document.querySelector('[data-backstage-setup-logout], [data-new-owner-logout], [data-acs-logout]');
   if (!loginButton && !logoutButton) return;
 
   let utilities = topbar.querySelector('.header-utility-controls');

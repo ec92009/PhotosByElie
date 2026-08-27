@@ -3,13 +3,11 @@ const params = new URLSearchParams(window.location.search);
 const requestedCollectionKey = String(params.get("gallery") || "").trim().toLowerCase();
 const isRequestedPBEOwnerCollection = requestedCollectionKey === "pbe-owner";
 if (isRequestedPBEOwnerCollection) {
-  document.body.dataset.gallery = "pbe-owner";
-  if (!document.head.querySelector('meta[name="robots"]')) {
-    const robots = document.createElement("meta");
-    robots.name = "robots";
-    robots.content = "noindex,nofollow";
-    document.head.append(robots);
-  }
+  params.delete("gallery");
+  const customerPhotoURL = new URL("./photo.html", window.location.href);
+  for (const [key, value] of params) customerPhotoURL.searchParams.append(key, value);
+  window.location.replace(customerPhotoURL.href);
+  return;
 }
 if (typeof window.photosByEliePageReady !== "function") throw new Error("Photo readiness is unavailable.");
 await window.photosByEliePageReady();

@@ -3,262 +3,75 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Photos By Elie | Backstage provisioning</title>
-  <meta name="description" content="Provision or revoke a PhotosByElie Backstage credential. Owner workflows run only in the macOS app."/>
+  <title>Photos By Elie | Backstage setup</title>
+  <meta name="description" content="Provision, inspect, or revoke a PhotosByElie Backstage credential. Owner workflows run only in the macOS app."/>
   <meta name="robots" content="noindex,nofollow"/>
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/branding/photosbyelie-camera-tripod-logo-512.png"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=226.0"/>
-  <link rel="manifest" href="./site.webmanifest?v=226.0"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/branding/photosbyelie-touch-icon-180.png?v=239.0"/>
+  <link rel="manifest" href="./site.webmanifest?v=239.0"/>
   <meta name="theme-color" content="#263f4a"/>
   <meta name="apple-mobile-web-app-title" content="Photos By Elie"/>
-  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;localStorage.setItem('byelie-language','en');document.documentElement.lang='en';document.documentElement.dataset.language='en'}catch{}})();</script>
-  <link rel="stylesheet" href="./shared.css?v=226.0"/>
-  <link rel="stylesheet" href="./styles.css?v=226.0"/>
-  <link rel="stylesheet" href="./photos.css?v=226.0"/>
-  <link rel="stylesheet" href="./new-owner.css?v=226.0"/>
+  <script>(()=>{try{const saved=localStorage.getItem('byelie-theme');if(saved==='light'||saved==='dark')document.documentElement.dataset.theme=saved;document.documentElement.lang='en'}catch{}})();</script>
+  <link rel="stylesheet" href="./shared.css?v=239.0"/>
+  <link rel="stylesheet" href="./styles.css?v=239.0"/>
+  <link rel="stylesheet" href="./photos.css?v=239.0"/>
+  <link rel="stylesheet" href="./new-owner.css?v=239.0"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body data-gallery="new-owner" data-owner-writer="backstage" data-owner-provisioning-only>
+<body data-gallery="backstage-setup" data-owner-provisioning-only>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar shell">
     <a class="header-back-button mobile-header-back" href="./" aria-label="Back to Photos"><span aria-hidden="true">&lt;</span></a>
     <div class="brand"><img class="site-logo" src="./assets/branding/photosbyelie-camera-tripod-logo-512.png" alt="Photos By Elie camera logo"/>PHOTOS BY ELIE</div>
-    <nav class="version-switch" aria-label="Site navigation">
+    <nav class="version-switch" aria-label="Setup navigation">
       <a href="./">Photos</a> <span>|</span>
-      <a class="is-active" href="./owner.html" aria-current="page">Backstage provisioning</a>
+      <a class="is-active" href="./owner.html" aria-current="page">Backstage setup</a>
     </nav>
-    <span class="site-version-badge">v226.0</span>
+    <span class="site-version-badge">v239.0</span>
   </header>
 
   <main id="main-content" class="shell new-owner-shell">
     <section class="panel new-owner-hero">
       <div>
-        <p class="eyebrow">Credential provisioning</p>
-        <h1>Backstage</h1>
-        <p class="gallery-status" data-new-owner-status aria-live="polite">Checking the provisioning identity…</p>
+        <p class="eyebrow">Restricted recovery</p>
+        <h1>Backstage setup</h1>
+        <p class="gallery-status" data-backstage-setup-status aria-live="polite">Checking the provisioning identity…</p>
       </div>
-      <div class="new-owner-session" data-new-owner-session></div>
+      <div class="new-owner-session" data-backstage-setup-session></div>
     </section>
 
-    <section class="panel new-owner-panel" data-new-owner-root>
+    <section class="panel new-owner-panel" data-backstage-setup-root>
       <div class="new-owner-toolbar">
         <div>
-          <strong data-new-owner-worker-base>Worker pending</strong>
-          <span>Backstage credential service</span>
+          <strong>Credential service</strong>
+          <span>Enrollment, inspection, revocation, and recovery only</span>
         </div>
         <div class="new-owner-toolbar-actions">
-          <button class="btn secondary" type="button" data-new-owner-refresh data-owner-workflow-control>Refresh</button>
-          <button class="btn secondary" type="button" data-new-owner-login>Google sign-in</button>
-          <button class="btn secondary" type="button" data-new-owner-logout>Sign out</button>
-          <a class="btn secondary" href="#" data-new-owner-download-connector data-owner-workflow-control hidden>Download Mac connector</a>
+          <button class="btn secondary" type="button" data-backstage-setup-login>Google sign-in</button>
+          <button class="btn secondary" type="button" data-backstage-setup-logout>Sign out</button>
         </div>
       </div>
 
-      <dl class="owner-counts new-owner-counts">
-        <div><dt>Owner</dt><dd data-new-owner-count="owner">locked</dd></div>
-        <div><dt>People</dt><dd data-new-owner-count="people">0</dd></div>
-        <div><dt>Groups</dt><dd data-new-owner-count="groups">0</dd></div>
-        <div><dt>Fixtures</dt><dd data-new-owner-count="fixtures">0</dd></div>
-        <div><dt>Actions</dt><dd data-new-owner-count="action">0</dd></div>
-        <div><dt>Connectors</dt><dd data-new-owner-count="connector">0</dd></div>
-      </dl>
-
-      <section class="new-owner-cutover-notice" aria-label="Backstage writer status">
+      <section class="new-owner-cutover-notice" aria-label="Backstage workspace boundary">
         <div>
-          <p class="eyebrow">Provisioning only</p>
-          <h2>Backstage is the only Owner workspace</h2>
-          <p>A normal PBE browser login never grants Owner actions. A direct Google sign-in as <strong>ec92009@gmail.com</strong> may only create or revoke the show-once credential that Backstage stores in macOS Keychain.</p>
+          <p class="eyebrow">Setup only</p>
+          <h2>Owner work stays in the macOS app</h2>
+          <p>This unlinked recovery page can enroll or revoke a Backstage device after direct identity verification. It cannot open a fixture, review media, change metadata, upload, publish, or perform another Owner action.</p>
         </div>
-        <span class="new-owner-chip is-live">Provisioning only</span>
+        <span class="new-owner-chip is-live">Setup only</span>
       </section>
 
       <div class="new-owner-grid">
-        <section class="new-owner-card new-owner-card-wide" id="build-a-fixture" aria-label="Build a Fixture" data-web-owner-mutation-surface>
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Universal intake</p>
-              <h2>Build a Fixture</h2>
-            </div>
-          </div>
-          <div class="fixture-builder-steps" aria-label="Fixture workflow">
-            <span class="is-current">1 Fixture</span><span>2 Search</span><span>3 Snapshot</span><span>4 Cull</span><span>5 Deliver</span>
-          </div>
-          <div class="fixture-builder-create">
-            <label>Parent
-              <select data-fixture-parent><option value="">New root fixture</option></select>
-            </label>
-            <label>Name<input type="text" data-fixture-name placeholder="Fixture name"></label>
-            <label>Template
-              <select data-fixture-template><option value="">Ordinary fixture</option><option value="real-estate">Real Estate</option><option value="family">Family</option><option value="event">Event</option></select>
-            </label>
-            <button class="btn secondary" type="button" data-fixture-create>Create fixture</button>
-          </div>
-          <div class="fixture-builder-current">
-            <label>Open fixture<select data-fixture-current><option value="">Choose a fixture</option></select></label>
-            <strong data-fixture-breadcrumbs>No fixture selected</strong>
-            <label>Rename to<input type="text" data-fixture-rename-name placeholder="Keep the stable fixture ID"></label>
-            <button class="btn secondary" type="button" data-fixture-rename disabled>Rename</button>
-            <label>Move under<select data-fixture-move-parent><option value="">Root level</option></select></label>
-            <button class="btn secondary" type="button" data-fixture-move disabled>Move</button>
-            <button class="btn secondary" type="button" data-fixture-archive disabled>Archive</button>
-            <button class="btn secondary" type="button" data-fixture-reopen disabled>Reopen</button>
-          </div>
-          <fieldset class="fixture-builder-search">
-            <legend>Universal asset search</legend>
-            <label>Search<input type="search" data-fixture-query placeholder="filename, title, keyword, place"></label>
-            <label>Media<select data-fixture-media><option value="">Photos + videos</option><option value="photo">Photos</option><option value="video">Videos</option></select></label>
-            <label>Decision<select data-fixture-pick><option value="">Any decision</option><option value="undecided">Undecided</option><option value="picked">Picked</option><option value="rejected">Rejected</option></select></label>
-            <label>Editorial<select data-fixture-metadata><option value="">Any editorial state</option><option value="unreviewed">Unreviewed</option><option value="proposed">Proposed</option><option value="approved">Approved</option><option value="rework">Rework</option></select></label>
-            <label>Date from<input type="date" data-fixture-date-from></label>
-            <label>Date to<input type="date" data-fixture-date-to></label>
-            <label>Album IDs<input type="text" data-fixture-albums placeholder="Comma-separated IDs"></label>
-            <label>Camera<input type="text" data-fixture-camera placeholder="Camera model"></label>
-            <label>Lens<input type="text" data-fixture-lens placeholder="Lens model"></label>
-            <label>Rating<select data-fixture-rating><option value="">Any rating</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
-            <label>Color<select data-fixture-color><option value="">Any color</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="blue">Blue</option><option value="purple">Purple</option></select></label>
-            <label>Delivery<select data-fixture-delivery-state><option value="">Any delivery state</option><option value="verified">Verified</option><option value="failed">Failed</option><option value="pending">Pending</option></select></label>
-            <label>Already in fixture<select data-fixture-filter-parent><option value="">Any fixture</option></select></label>
-            <label class="fixture-builder-check"><input type="checkbox" data-fixture-dedupe-exact> Exact identity/checksum dedupe</label>
-            <button class="btn secondary" type="button" data-fixture-search>Search without changing assets</button>
-          </fieldset>
-          <div class="fixture-builder-status" data-fixture-status aria-live="polite">Loading the recursive fixture tree from this Mac…</div>
-          <fieldset class="fixture-builder-search fixture-builder-upload-run">
-            <legend>Adopt an Upload Bridge run</legend>
-            <label>Exact run ID<input type="text" data-fixture-upload-run-id placeholder="ub-YYYYMMDDTHHMMSSZ-…"></label>
-            <label class="fixture-builder-check"><input type="checkbox" data-fixture-upload-run-historical> Historical run without captured editorial hashes</label>
-            <button class="btn secondary" type="button" data-fixture-upload-run-plan disabled>Preview adoption</button>
-            <button class="btn" type="button" data-fixture-upload-run-commit disabled>Adopt verified items</button>
-            <div data-fixture-upload-run-output>Choose a fixture, enter the exact run ID, and preview before adopting. Uploading alone never changes Apple Photos.</div>
-          </fieldset>
-          <div class="fixture-builder-results" data-fixture-results></div>
-          <div class="fixture-builder-placement-actions">
-            <label>Route selected assets to fixtures<select multiple data-fixture-placement-targets aria-label="Destination fixtures"></select></label>
-            <button class="btn secondary" type="button" data-fixture-place-selected disabled>Place selected</button>
-            <button class="btn secondary" type="button" data-fixture-placement-list disabled>Review placements</button>
-          </div>
-          <div class="fixture-builder-placements" data-fixture-placements></div>
-          <div class="fixture-builder-pool-actions">
-            <label>Pool name<input type="text" data-fixture-pool-name placeholder="Stable culling snapshot"></label>
-            <button class="btn" type="button" data-fixture-pool-create disabled>Create snapshot pool</button>
-            <button class="btn secondary" type="button" data-fixture-pool-refresh-preview disabled>Preview pool refresh</button>
-            <button class="btn secondary" type="button" data-fixture-pool-refresh-apply disabled>Apply as new snapshot</button>
-            <button class="btn secondary" type="button" data-fixture-delivery disabled>Review delivery plan</button>
-            <button class="btn secondary" type="button" data-fixture-photos-plan disabled>Preview Photos give-back</button>
-            <button class="btn secondary" type="button" data-fixture-photos-commit disabled>Commit verified Photos metadata</button>
-          </div>
-          <div class="fixture-builder-delivery" data-fixture-delivery-output></div>
-          <p class="new-owner-card-note">Search and snapshot are private. Source assets are never copied, deleted, uploaded, or messaged. Open the snapshot in native Backstage Culling; browser Owner no longer launches a second operator app.</p>
-        </section>
-
-        <section class="new-owner-card" aria-label="Waste Basket" data-web-owner-mutation-surface>
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Recoverable rejects</p>
-              <h2>Waste Basket</h2>
-            </div>
-          </div>
-          <p>Review basketed photos on this Mac, select one or many, restore them, permanently discard them, or empty the basket.</p>
-          <div class="new-owner-action-controls new-owner-action-controls-start">
-            <a class="btn" href="./owner-review.html?view=blocked" data-new-owner-waste-basket>Manage Waste Basket</a>
-          </div>
-          <p class="new-owner-card-note" data-new-owner-waste-basket-status>The Mac connector opens the private local review surface; nothing in the Waste Basket is public.</p>
-        </section>
-
-        <section class="new-owner-card new-owner-card-wide" aria-label="Cloud access snapshot">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Access</p>
-              <h2>D1 role state</h2>
-            </div>
-          </div>
-          <div data-new-owner-access class="new-owner-access-list"></div>
-        </section>
-
-        <section class="new-owner-card new-owner-card-wide" aria-label="Apple Photos Real Estate intake" data-legacy-re-intake data-web-owner-mutation-surface>
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Compatibility intake</p>
-              <h2>Legacy Apple Photos → Real Estate</h2>
-            </div>
-          </div>
-          <div class="new-owner-re-routing">
-            <label>Track<input value="RE" readonly aria-label="Real Estate track"></label>
-            <label>Fixture<input value="La Concha" list="new-owner-re-fixtures" data-new-owner-re-fixture></label>
-            <div class="new-owner-re-field">
-              <label for="owner-re-project">Sub-fixture / project</label>
-              <select id="owner-re-project" data-new-owner-re-project>
-                <option value="Apartment 1">Apartment 1</option>
-                <option value="Apartment 2">Apartment 2</option>
-                <option value="Street">Street</option>
-                <option value="Main lobby">Main lobby</option>
-                <option value="Pool">Pool</option>
-                <option value="Tennis court">Tennis court</option>
-                <option value="__new__">New…</option>
-              </select>
-              <input type="text" placeholder="New sub-fixture name" aria-label="New sub-fixture name" data-new-owner-re-project-new hidden>
-            </div>
-            <datalist id="new-owner-re-fixtures"><option value="La Concha"></datalist>
-          </div>
-          <div class="new-owner-re-actions">
-            <button class="btn secondary" type="button" data-new-owner-re-load>Load Apple Photos albums</button>
-            <button class="btn secondary" type="button" data-new-owner-re-preflight disabled>Preview selected albums</button>
-            <button class="btn" type="button" data-new-owner-re-assign disabled>Assign selected photos</button>
-          </div>
-          <div data-new-owner-re-status class="new-owner-re-status" aria-live="polite">Load albums from this Mac to begin.</div>
-          <div data-new-owner-re-preview class="new-owner-re-preview"></div>
-          <div data-new-owner-re-albums class="new-owner-re-albums" aria-label="Apple Photos albums"></div>
-          <p class="new-owner-card-note">Choose an existing sub-fixture or select <strong>New…</strong> to name another one. You can also type a new fixture name. Assignment builds a persistent local <strong>RE / Fixture / Sub-fixture</strong> intake and registers the fixture for Real Estate import. It does not publish, upload, expose a gallery, or message anyone.</p>
-        </section>
-
-        <section class="new-owner-card" aria-label="Owner action queue" data-web-owner-mutation-surface>
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Actions</p>
-              <h2>Owner queue</h2>
-            </div>
-          </div>
-          <div class="new-owner-action-controls">
-            <button class="btn secondary" type="button" data-new-owner-queue-check>Queue check</button>
-            <button class="btn secondary" type="button" data-new-owner-sync-photos>Refresh Photos</button>
-            <button class="btn secondary" type="button" data-new-owner-upload-publish>Upload next approved</button>
-            <div class="new-owner-local-connector" data-new-owner-local-connector>Detecting this Mac connector...</div>
-            <span data-new-owner-action-status aria-live="polite"></span>
-          </div>
-          <p class="new-owner-card-note">Culling, metadata and uploads now live in native Backstage. Browser Owner retains authentication, enrollment, health and audit only.</p>
-          <div data-new-owner-action class="new-owner-action-result"></div>
-        </section>
-
-        <section class="new-owner-card" aria-label="Migration lanes">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Cloud Owner</p>
-              <h2>Work lanes</h2>
-            </div>
-          </div>
-          <div data-new-owner-lanes class="new-owner-lane-list"></div>
-        </section>
-
-        <section class="new-owner-card" aria-label="Mac connectors">
-          <div class="owner-card-titlebar">
-            <div>
-              <p class="eyebrow">Hardware bridge</p>
-              <h2>Mac connectors</h2>
-            </div>
-          </div>
-          <div data-new-owner-connectors class="new-owner-lane-list"></div>
-          <p class="new-owner-card-note">Each Mac uses its own revocable credential and grants Photos access locally.</p>
-        </section>
-
-        <section class="new-owner-card" aria-label="Backstage enrollment">
+        <section class="new-owner-card new-owner-card-wide" aria-label="Backstage enrollment">
           <div class="owner-card-titlebar">
             <div>
               <p class="eyebrow">Native authentication</p>
-              <h2>Backstage enrollment</h2>
+              <h2>Backstage devices</h2>
             </div>
           </div>
-          <p class="new-owner-card-note">Create a show-once, independently revocable API credential for PhotosByElie Backstage on any Mac. It can be created only after a direct Google sign-in as ec92009@gmail.com. It does not unlock Owner actions in this browser.</p>
+          <p class="new-owner-card-note">Create a show-once, independently revocable credential for PhotosByElie Backstage on a Mac. The native app stores it in macOS Keychain.</p>
           <div class="new-owner-action-controls new-owner-action-controls-start">
             <button class="btn secondary" type="button" data-backstage-enroll-create>Create one-time code…</button>
             <button class="btn secondary" type="button" data-backstage-enroll-copy disabled>Copy code</button>
@@ -272,13 +85,12 @@
           <div class="backstage-device-list" data-backstage-device-list aria-live="polite"></div>
         </section>
       </div>
-
     </section>
   </main>
 
-  <script src="./media-config.js?v=226.0"></script>
-  <script src="./owner-account.js?v=226.0"></script>
-  <script src="./owner-settings.js?v=226.0"></script>
-  <script src="./new-owner.js?v=226.0"></script>
+  <script src="./media-config.js?v=239.0"></script>
+  <script src="./owner-account.js?v=239.0"></script>
+  <script src="./owner-settings.js?v=239.0"></script>
+  <script src="./backstage-provisioning.js?v=239.0"></script>
 </body>
 </html>

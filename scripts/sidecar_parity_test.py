@@ -32,17 +32,12 @@ class SidecarParityInventoryTest(unittest.TestCase):
             contract,
         )
 
-    def test_shared_page_keeps_global_culling_controls(self):
+    def test_shared_page_is_an_inert_retirement_notice(self):
         html = (ROOT / "sidecar.html").read_text(encoding="utf-8")
-        for marker in (
-            'data-sidecar-page="culling"', 'data-sidecar-page="review"',
-            'data-sidecar-search', 'data-sidecar-filter="rating"',
-            'data-sidecar-filter="color"', 'data-sidecar-filter="pickState"',
-            'data-sidecar-filter="mediaType"', 'data-sidecar-burst-cull',
-            'data-sidecar-upload-plan', 'data-sidecar-commit-plan',
-            'data-sidecar-empty-wastebasket',
-        ):
-            self.assertIn(marker, html)
+        self.assertIn("Sidecar moved to Backstage", html)
+        self.assertIn('content="noindex,nofollow"', html)
+        self.assertNotIn("sidecar.js", html)
+        self.assertNotIn("data-sidecar-", html)
 
     def test_fixture_scope_uses_the_shared_shortcut_and_decision_layer(self):
         source = (ROOT / "sidecar.js").read_text(encoding="utf-8")
@@ -53,18 +48,14 @@ class SidecarParityInventoryTest(unittest.TestCase):
         for key in ('"ArrowLeft"', '"ArrowRight"', '" "'):
             self.assertIn(key, source)
 
-    def test_owner_exposes_universal_fixture_search_and_recovery_controls(self):
+    def test_owner_exposes_only_backstage_enrollment_and_recovery(self):
         html = (ROOT / "owner.html").read_text(encoding="utf-8")
-        for marker in (
-            "data-fixture-archive", "data-fixture-reopen", "data-fixture-date-from",
-            "data-fixture-date-to", "data-fixture-albums", "data-fixture-camera",
-            "data-fixture-lens", "data-fixture-rating", "data-fixture-color",
-            "data-fixture-delivery-state", "data-fixture-filter-parent", "data-fixture-dedupe-exact",
-            "data-fixture-placement-targets", "data-fixture-place-selected", "data-fixture-placement-list",
-            "data-fixture-upload-run-id", "data-fixture-upload-run-plan",
-            "data-fixture-upload-run-commit",
-        ):
-            self.assertIn(marker, html)
+        self.assertIn('aria-label="Backstage enrollment"', html)
+        self.assertIn("data-backstage-enroll-create", html)
+        self.assertIn("data-backstage-devices-refresh", html)
+        self.assertIn("backstage-provisioning.js", html)
+        self.assertNotIn("new-owner.js", html)
+        self.assertNotIn("data-fixture-", html)
 
     def test_upload_run_handoff_requires_fixture_preview_before_commit(self):
         sidecar = (ROOT / "sidecar.js").read_text(encoding="utf-8")

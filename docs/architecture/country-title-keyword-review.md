@@ -1,11 +1,12 @@
 # Country + Title/Keyword Review
 
-Date: 2026-08-13
+Date: 2026-08-13; current-state refresh 2026-08-28
 
-Ticket: PBE-153
+Tickets: PBE-153 investigation; PBE-154 migration; PBE-155 native field;
+PBE-171 Apple Photos suggestion; PBE-172 documentation refresh
 
-Status: investigation complete; no Country runtime implementation exists;
-PBE-155 is blocked by PBE-154's identity and migration gate
+Status: implemented and installed. PBE-154, PBE-155, and PBE-171 are Done;
+signed Backstage v240.0 build 238 is the verified current receipt.
 
 ## Decision
 
@@ -33,22 +34,28 @@ Photos intake-to-curated-catalog path without introducing another state writer.
 The ticket's mobile requirement therefore means a usable narrow Backstage window,
 not a new tablet/browser Owner surface.
 
-## Current paths and authorities
+## Investigation baseline paths and authorities
 
-| Workflow | Current surface | Read path | Mutation path | Durable state |
+This table records the 2026-08-13 starting point. It is retained as historical
+design evidence rather than a description of the current operator surface.
+
+| Workflow | 2026-08-13 surface | Read path | Mutation path | Durable state |
 | --- | --- | --- | --- | --- |
 | Country assignment | `owner-review.html?view=unknown`, rendered by `unknown-classifier.js` | Unknown/Reserve browser data plus the compatibility `country-assignments.json` index | `hidden-actions.js:assignUnknownsToCountry` -> localhost `assign-country` in `scripts/local_server.py` | `Owner.sqlite:country_assignments`, with JSON/JSONL compatibility exports |
 | Legacy title/keyword review | `owner-review.html?view=title-keywords`, rendered by `title-keyword-review.js` | `/__photosbyelie/title-keyword-review-queue` built by `title_keyword_review_queue_payload` | `save-title-keyword-review-approvals` and `apply-title-keyword-review-approvals` | `title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions`; applied metadata is in the public catalog |
 | Native fixture Review | `ReviewView.swift`, with `ReviewInspector` and `ReviewTitleKeywordEditor` | `FixtureWorkflowService.reviewWindow` -> `fixture-review-window` -> `fixture_review_window` | Worker action -> enrolled local connector -> `fixture-review-apply`; undo through `fixture-review-undo` | fixture placement, `asset_editorial_state`, `sidecar_decisions`, `asset_ai_proposals`, and `fixture_review_operations` |
 
-The native Review contract already establishes the right boundary: Backstage is
-an action submitter and private-media reader, while the connector owns validated
-SQLite transactions and receipts.
+The current native Review contract keeps the same authority boundary with a
+shorter local path: Backstage's transactional OwnerCore store validates and
+applies Review/Culling changes directly to `Owner.sqlite`. Actions that cross
+the Worker, Photos, delivery, or publication boundary remain action-submitted
+work. The localhost Country page and its `assign-country` route are retained as
+compatibility/rollback history, not the normal Country workflow.
 
-## Observed data gap
+## Historical observed data gap
 
-Read-only snapshot from the canonical `Owner.sqlite` and compatibility index on
-2026-08-13:
+The following read-only snapshot from the canonical `Owner.sqlite` and
+compatibility index was captured on 2026-08-13 before PBE-154:
 
 | Evidence | Count |
 | --- | ---: |
@@ -64,21 +71,23 @@ The 247 collection resolutions are 212 Spain, 26 Portugal, and 9 USA. The
 legacy country index contains 475 Portugal, 434 Mexico, 343 USA, 249 France,
 and 52 Spain assignments.
 
-The important blocker is identity, not layout:
+At investigation time, the important blocker was identity, not layout:
 
 - none of the 1,553 legacy country IDs directly match a native
   `sidecar_assets.asset_id`;
 - none directly match a `public_catalog_publications.media_id`;
 - none of the 130 legacy title/keyword queue IDs directly match either native
   asset IDs or publication media IDs;
-- `FixtureReviewItem` currently carries native asset identity but no Country;
-- the connector's `photo-moderation` payload does not forward `gallery_key` or
-  `country`, and its native fixture routes have no Country operation.
+- `FixtureReviewItem` then carried native asset identity but no Country;
+- the connector's `photo-moderation` payload did not forward `gallery_key` or
+  `country`, and its native fixture routes had no Country operation.
 
-Normal code calls `import_country_assignments` before the first country write,
-which backfills SQLite only while the table is empty. A combined reader must not
-silently treat the empty table as complete, and it must not retain JSON as a
-second normal source of truth after migration.
+The legacy path called `import_country_assignments` before the first country
+write and backfilled SQLite only while the table was empty. PBE-154 replaced
+that ambiguity with Country schema v2 and an explicit migration receipt: all
+1,553 legacy rows remain auditable unmapped rows because no deterministic
+native identity exists. Normal Review reads and writes no longer treat JSON as
+a current-state authority.
 
 No filename, capture-date, location-text, or visual similarity inference is an
 acceptable identity bridge. Until an explicit mapping exists, legacy rows must
@@ -140,16 +149,15 @@ reordering their meaning.
 ### Authority and identity
 
 `Owner.sqlite:country_assignments` remains the sole current-state authority for
-explicit Country. Before native writes are enabled, its identity contract must
-be migrated from legacy public `media_id` values to the durable Review asset
-identity, with every legacy value either:
+explicit Country. PBE-154 migrated its identity contract to Country schema v2,
+with every legacy public `media_id` value either:
 
 1. mapped through reviewed, deterministic identity evidence; or
 2. retained as an explicit unmapped migration row/audit item.
 
-The migration may evolve the table schema, but it must not create a second
-current-state Country table. A separate append-only operation/history table is
-allowed because it is a receipt, not competing current state.
+The completed migration did not create a second current-state Country table.
+Its append-only migration and operation/history tables are receipts, not
+competing current state.
 
 After migration, JSON is regenerated only as a compatibility/audit view. Normal
 Backstage reads and writes use SQLite.
@@ -190,7 +198,8 @@ audit receipt begins only when Owner action accepts or changes Country.
 
 ### Save, correction, and application
 
-Extend the existing connector-owned `fixture-review-apply` contract:
+The implemented native OwnerCore Review contract preserves the external
+`fixture-review-apply` shape:
 
 1. `FixtureReviewItem` returns current Country, proposed Country, suggestion
    source, and AI provenance beside title and keywords.
@@ -200,7 +209,7 @@ Extend the existing connector-owned `fixture-review-apply` contract:
 3. `edit-metadata` autosave accepts Country, Title, and Keywords; unchanged
    fields are preserved.
 4. `approve` accepts the focused asset's active proposal/draft for all three
-   fields in one connector-owned SQLite transaction.
+   fields in one audited SQLite transaction.
 5. `propagate-country` follows the existing title/keyword propagation contract
    and records exact before/after snapshots in `fixture_review_operations`.
 
@@ -275,11 +284,11 @@ The legacy JSON/JSONL files are not an undo mechanism.
   arrows, Space, and Return retain native behavior.
 - Narrow-window reflow preserves source order and does not duplicate controls.
 
-## Bounded implementation plan
+## Completed implementation lineage
 
-PBE-154 owns Gate 0. PBE-155 owns Phases 1-4 and remains blocked until PBE-154
-delivers a reviewed, deterministic identity migration. This investigation
-specifies that future work; it does not implement a Country runtime path.
+The decomposition below is retained as the historical implementation plan.
+PBE-154's reviewed migration receipt unlocked PBE-155; both are Done, and
+PBE-171 subsequently added deterministic Apple Photos location suggestions.
 
 ### PBE-154 / Gate 0: identity and migration
 
@@ -292,7 +301,7 @@ specifies that future work; it does not implement a Country runtime path.
 4. Add integrity checks that reject guessed, duplicate, or conflicting identity
    mappings.
 
-This PBE-154 gate blocks PBE-155 runtime implementation today.
+This gate was satisfied by PBE-154 before native Country writes were enabled.
 
 ### PBE-155 / Phase 1: connector-owned Country contract
 
@@ -351,7 +360,7 @@ This PBE-154 gate blocks PBE-155 runtime implementation today.
 | Undo | Exact before state restores atomically; repeat undo is harmless; stale undo conflicts instead of overwriting a newer change |
 | Shared draft safety | Country autosave/propagation preserves unchanged Title/Keywords; combined approval applies the active three-field draft atomically; editorial state, selection, focus, offset, and fixture remain stable |
 | Publication boundary | Required Unknown blocks public readiness but not T/K approval; Country correction marks an existing publication for later update without publishing |
-| Connector | Worker action validates fixture, asset, country, scope, and count; Backstage never writes business rows directly |
+| Action boundary | OwnerCore validates fixture, asset, country, scope, and count in one audited SQLite transaction; Worker/connector actions remain separate for external Photos, delivery, and publication effects |
 | AI proposal | Country proposal carries model/source provenance, loads as an editable draft, and never becomes accepted without Owner action |
 | Native models | JSON decode/encode covers current/proposed/suggested Country, explicit clear, Unknown, missing count, operation result, and error/conflict cases |
 | View model | Autosave/propagate/undo patches loaded items and summary in place; stale responses cannot overwrite a newer fixture/window request |
@@ -384,12 +393,29 @@ On a candidate build, with no deployment implied:
 10. Load an AI Country proposal, edit it, accept it, and confirm the proposal's
     model/source provenance remains inspectable and no value is auto-accepted.
 11. Confirm no catalog publication, Photos write-back, or deployment occurs from
-    Country autosave or propagation alone.
+   Country autosave or propagation alone.
+
+### Installed acceptance receipts
+
+- PBE-155 installed build 236 verified first assignment, correction, clearing
+  to Unknown, two-hour Country-only propagation, exact Undo, proposal
+  draft-safety, normal and narrow layouts, and VoiceOver order.
+- PBE-171 installed build 238 verified an Unknown asset whose exact Apple Photos
+  location is United States: the picker visibly seeds **USA**, the accepted
+  value remains **Unknown**, unrelated Title autosave omits Country, and only
+  explicit Approve or an explicit picker change submits `country=usa`.
+- PBE-170 installed build 237 removed the orphaned AI-run spinner and Cancel
+  state without starting a new pass or changing accepted metadata.
+- The current integrated source is canonical `release/backstage` revision
+  `75726f1413aadd392e63fb3df3b29e6eee48ba24`; build 238 is signed, arm64,
+  authenticated, Photos-authorized, and retains build 237 as rollback.
 
 ## Conclusion
 
-One-page Country plus title/keyword review is desirable and consistent with the
-Backstage-only Owner direction. The UI work is straightforward; the current
-identity split and incomplete SQLite backfill are the real constraints. Complete
-PBE-154's Gate 0 first; PBE-155 can then implement Country as a peer,
-AI-assisted proposed metadata field inside native Review.
+One-page Country plus title/keyword review is implemented and consistent with
+the Backstage-only Owner direction. `country_assignments` is the accepted-value
+authority; native Review owns the audited local transaction; catalog and exact
+Apple Photos location evidence remain visible suggestions; AI output remains an
+editable proposal; and publication, Photos write-back, and source replacement
+stay separate explicit operations. Legacy unmapped identities remain
+quarantined rather than guessed.

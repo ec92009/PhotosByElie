@@ -2,9 +2,9 @@
 import Foundation
 
 public enum OwnerContract {
-    public static let openAPIVersion = "1.1.0"
-    public static let specSHA256 = "8c702d102d66f548d5ee3400d445b182fd05a431a86d1a5238f1b2efe96124a9"
-    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
+    public static let openAPIVersion = "1.2.0"
+    public static let specSHA256 = "f0cffd7d2be7540243d916154d3cdc770bbf742839d41f275e2f7799c8f86906"
+    public static let schemaNames = ["ActionCreate", "ActionState", "ErrorEnvelope", "Health", "Job", "OwnerAction", "OwnerDevice", "OwnerEnrollmentClaim", "OwnerEnrollmentHandoff", "OwnerTokenBundle", "PBEOwnerSession", "PBEOwnerSessionCreate", "Page", "Progress"]
     public static let exampleSections = ["authentication", "error", "idempotency", "pagination", "progress"]
 
     public enum Operation: String, CaseIterable, Sendable {
@@ -12,6 +12,9 @@ public enum OwnerContract {
         case applySidecarDecisionBatch = "applySidecarDecisionBatch"
         case archiveGroup = "archiveGroup"
         case beginGoogleLogin = "beginGoogleLogin"
+        case beginOwnerEnrollmentHandoff = "beginOwnerEnrollmentHandoff"
+        case cancelOwnerEnrollmentHandoff = "cancelOwnerEnrollmentHandoff"
+        case claimOwnerEnrollmentHandoff = "claimOwnerEnrollmentHandoff"
         case closePBEOwnerSession = "closePBEOwnerSession"
         case createAction = "createAction"
         case createDeliveryLinks = "createDeliveryLinks"
@@ -63,6 +66,9 @@ public enum OwnerContract {
         .applySidecarDecisionBatch: Endpoint(method: "POST", path: "/sidecar/decisions/apply-batch"),
         .archiveGroup: Endpoint(method: "POST", path: "/acs/groups/{groupId}/archive"),
         .beginGoogleLogin: Endpoint(method: "GET", path: "/auth/google/login"),
+        .beginOwnerEnrollmentHandoff: Endpoint(method: "POST", path: "/enrollment-handoffs"),
+        .cancelOwnerEnrollmentHandoff: Endpoint(method: "POST", path: "/enrollment-handoffs/{handoffId}/cancel"),
+        .claimOwnerEnrollmentHandoff: Endpoint(method: "POST", path: "/enrollment-handoffs/{handoffId}/claim"),
         .closePBEOwnerSession: Endpoint(method: "POST", path: "/pbe-owner/sessions/{sessionId}/close"),
         .createAction: Endpoint(method: "POST", path: "/actions"),
         .createDeliveryLinks: Endpoint(method: "POST", path: "/delivery-links"),

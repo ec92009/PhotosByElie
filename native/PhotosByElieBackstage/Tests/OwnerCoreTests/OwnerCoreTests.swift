@@ -1493,10 +1493,11 @@ struct OwnerCoreTests {
 
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
-        #expect(OwnerContract.openAPIVersion == "1.1.0")
+        #expect(OwnerContract.openAPIVersion == "1.2.0")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")
         #expect(OwnerContract.endpoints[.createOwnerTokens]?.path == "/auth/tokens")
+        #expect(OwnerContract.endpoints[.beginOwnerEnrollmentHandoff]?.path == "/enrollment-handoffs")
         #expect(OwnerContract.schemaNames.contains("ErrorEnvelope"))
         #expect(Set(OwnerContract.exampleSections) == [
             "authentication", "pagination", "error", "idempotency", "progress",
@@ -2188,6 +2189,119 @@ struct OwnerCoreTests {
             let decoded = try JSONDecoder.ownerAPI.decode(Envelope.self, from: data)
             #expect(abs(decoded.accessExpiresAt.timeIntervalSince1970 - expectedTimestamp) < 0.000_001)
         }
+    }
+
+    @Test("Native enrollment keeps the claim secret off the browser URL and stores only a completed credential")
+    func nativeEnrollmentHandoff() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/enrollment-handoffs": [
+                .init(status: 201, body: """
+                {
+                  "ok":true,
+                  "handoff":{
+                    "id":"owner-enrollment-one",
+                    "state":"pending",
+                    "claimSecret":"native-claim-secret",
+                    "binding":"native-binding",
+                    "authorizationURL":"https://auth.example.test/api/owner/enrollment-handoffs/owner-enrollment-one/authorize",
+                    "expiresAt":"2030-03-17T17:46:40Z"
+                  }
+                }
+                """),
+            ],
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim": [
+                .init(status: 202, body: #"{"ok":true,"state":"pending"}"#),
+                .init(status: 201, body: """
+                {
+                  "ok":true,
+                  "state":"completed",
+                  "device":{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z"
+                  },
+                  "deviceCredential":"native-device-credential-0123456789012345678901234567890123456789"
+                }
+                """),
+            ],
+            "/api/v1/auth/tokens": [
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"native-access",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+            "/api/v1/devices": [
+                .init(status: 200, body: """
+                {
+                  "ok":true,
+                  "devices":[{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z"
+                  }]
+                }
+                """),
+            ],
+            "/api/v1/devices/owner-device-native/revoke": [
+                .init(status: 200, body: """
+                {
+                  "ok":true,
+                  "device":{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z",
+                    "revokedAt":"2026-08-28T08:05:00Z"
+                  }
+                }
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let handoff = try await service.beginNativeEnrollment(
+            name: "Max",
+            binding: "native-binding"
+        )
+        #expect(handoff.authorizationURL.query == nil)
+        #expect(handoff.authorizationURL.absoluteString.contains(handoff.claimSecret) == false)
+        #expect(try await session.load() == nil)
+        #expect(try await service.claimNativeEnrollment(handoff) == nil)
+        #expect(try await session.load() == nil)
+
+        let snapshot = try #require(try await service.claimNativeEnrollment(handoff))
+        #expect(snapshot.phase == .authenticated)
+        #expect(snapshot.deviceId == "owner-device-native")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential?.hasPrefix("native-device-credential-") == true)
+        #expect(saved.accessToken == "native-access")
+        #expect(try await client.listOwnerDevices().map(\.name) == ["Max"])
+        #expect(try await client.revokeOwnerDevice(id: "owner-device-native").revokedAt != nil)
+        let requests = await transport.requests()
+        #expect(requests.map(\.url?.path) == [
+            "/api/v1/enrollment-handoffs",
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim",
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim",
+            "/api/v1/auth/tokens",
+            "/api/v1/devices",
+            "/api/v1/devices/owner-device-native/revoke",
+        ])
+        #expect(requests.prefix(4).allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+        #expect(requests.suffix(2).allSatisfy {
+            $0.value(forHTTPHeaderField: "Authorization") == "Bearer native-access"
+        })
     }
 
     @Test("Owner API dates reject malformed or timezone-free values")

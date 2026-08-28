@@ -789,7 +789,12 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewCountry == "usa")
         model.updateReviewTitle("Edited title")
         #expect(model.reviewProposalDrafts[item.id]?.country == "")
-        try await Task.sleep(for: .milliseconds(700))
+        for _ in 0..<30 {
+            if await reviewService.recordedManifests().last?["reviewAction"]?.stringValue == "edit-metadata" {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
         #expect(model.reviewItems.first?.country == "")
         let autosaves = await reviewService.recordedManifests()
         #expect(autosaves.last?["reviewAction"]?.stringValue == "edit-metadata")

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: PhotosByElie Owner API
-  version: 1.1.0
+  version: 1.2.0
   description: >
     Versioned cloud boundary used by PhotosByElie Backstage on an enrolled Mac.
     Google browser login is provisioning-only. Owner.sqlite and Apple Photos
@@ -93,9 +93,11 @@ paths:
   /devices:
     get:
       tags: [Authentication]
-      security: [{ googleProvisioningSession: [] }]
+      security:
+        - googleProvisioningSession: []
+        - ownerSession: []
       operationId: listOwnerDevices
-      description: Available only to a direct Google browser sign-in as ec92009@gmail.com.
+      description: Available to the direct Owner provisioning identity or a verified active Backstage device session.
       responses:
         "200":
           description: Enrolled native Owner devices
@@ -139,7 +141,9 @@ paths:
         schema: { type: string }
     post:
       tags: [Authentication]
-      security: [{ googleProvisioningSession: [] }]
+      security:
+        - googleProvisioningSession: []
+        - ownerSession: []
       operationId: revokeOwnerDevice
       responses:
         "200":
@@ -152,6 +156,73 @@ paths:
                   device: { $ref: "#/components/schemas/OwnerDevice" }
         "404":
           $ref: "#/components/responses/Error"
+  /enrollment-handoffs:
+    post:
+      tags: [Authentication]
+      security: []
+      operationId: beginOwnerEnrollmentHandoff
+      description: >
+        Starts a five-minute native-led enrollment. The browser authorization
+        URL contains only the handoff id; the independent claim secret and
+        device binding remain in Backstage memory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, platform, binding]
+              properties:
+                name: { type: string }
+                platform: { type: string }
+                binding: { type: string, writeOnly: true }
+      responses:
+        "201":
+          description: Pending native enrollment handoff
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  handoff: { $ref: "#/components/schemas/OwnerEnrollmentHandoff" }
+  /enrollment-handoffs/{handoffId}/claim:
+    parameters:
+      - in: path
+        name: handoffId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Authentication]
+      security: []
+      operationId: claimOwnerEnrollmentHandoff
+      description: >
+        Polls or atomically consumes the authorized handoff. The show-once
+        device credential is returned only to the bound native claimant.
+      responses:
+        "202": { description: Awaiting browser authorization }
+        "201":
+          description: Handoff consumed and device enrolled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerEnrollmentClaim" }
+        "401": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "410": { $ref: "#/components/responses/Error" }
+  /enrollment-handoffs/{handoffId}/cancel:
+    parameters:
+      - in: path
+        name: handoffId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Authentication]
+      security: []
+      operationId: cancelOwnerEnrollmentHandoff
+      description: Cancels a pending or authorized native enrollment handoff using its native binding and claim secret.
+      responses:
+        "200": { description: Handoff cancelled }
+        "409": { $ref: "#/components/responses/Error" }
   /owner/session:
     get:
       tags: [Authentication]
@@ -723,6 +794,24 @@ components:
         createdAt: { type: string, format: date-time }
         lastUsedAt: { type: string }
         revokedAt: { type: string }
+    OwnerEnrollmentHandoff:
+      type: object
+      required: [id, state, claimSecret, binding, authorizationURL, expiresAt]
+      properties:
+        id: { type: string }
+        state: { type: string, enum: [pending] }
+        claimSecret: { type: string, writeOnly: true }
+        binding: { type: string, writeOnly: true }
+        authorizationURL: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    OwnerEnrollmentClaim:
+      type: object
+      required: [ok, state, device, deviceCredential]
+      properties:
+        ok: { type: boolean }
+        state: { type: string, enum: [completed] }
+        device: { $ref: "#/components/schemas/OwnerDevice" }
+        deviceCredential: { type: string, writeOnly: true }
     PBEOwnerSessionCreate:
       type: object
       additionalProperties: false

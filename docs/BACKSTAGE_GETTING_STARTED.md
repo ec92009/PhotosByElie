@@ -6,14 +6,13 @@ The public website and client galleries remain separate.
 
 Backstage is currently installed on Max at:
 
-`/Users/ecohen/Applications/PhotosByElie Backstage.app`
+`/Applications/PhotosByElie Backstage.app`
 
 The installed build's exact version and build are shown in the Backstage
 toolbar and in the **Updates** workspace; do not rely on a copied version label
 from an older handoff.
 
-Open it from Finder, Spotlight, or the Applications folder in your Home
-directory.
+Open it from Finder, Spotlight, or the system Applications folder.
 
 Every Backstage button explains its action after the pointer rests on it for
 half a second. The explanation describes the affected scope and whether the
@@ -26,7 +25,7 @@ the button's accessibility hint.
 1. Open **PhotosByElie Backstage**.
 2. In **Overview**, confirm that **Authentication** says **Authenticated** and
    that no orange connection warning appears in the toolbar.
-3. Open **Culling** and choose **Allow Photos** if macOS asks for permission.
+3. Open **Gallery** and choose **Allow Photos** if macOS asks for permission.
    Grant full Photos access. Backstage should report how many recent Photos
    previews it cached.
 4. Open **Fixtures** and choose **Reload tree**. Confirm that the current
@@ -55,9 +54,9 @@ scripts/backstage-control.zsh real-estate originals preflight \
   --pretty
 ```
 
-The response includes Backstage release metadata, Photos Bridge compatibility
-and authorization, Backstage Photos access, Owner session state, connector
-identity, and an actionable message. Exit code `0` means local readiness; `2`
+The response includes Backstage release metadata, Backstage Photos access,
+Owner session state, connector identity, and an actionable message. Exit code
+`0` means local readiness; `2`
 means a readiness gate needs attention; `64` means invalid arguments.
 `release verify` checks the Backstage/helper release path without requiring
 first-run Photos/TCC access. `health`, `doctor`, and `photos health` include
@@ -69,12 +68,49 @@ PhotoKit to show the standard macOS permission request and reports the result;
 it does not click or automate that prompt. Cloud/photo mutations remain behind
 the existing Owner action and explicit authorization gates.
 
+The release audit also inventories exact hidden
+`.PhotosByElie Backstage.install-<UUID>.app` paths beside the canonical app.
+Recent verified stages are retained as potentially active; wrong-identity or
+invalid-signature lookalikes are retained as unsafe; only old, identity- and
+signature-verified installer stages are eligible for bounded reconciliation.
+
 ## Updates
 
 Open **Updates** to see the exact installed bundle identifier, version, and
 build. **Check for updates** reads only the configured authoritative HTTPS
 release manifest. When a newer compatible release is available, Backstage shows
 its version/build, minimum macOS version, release notes, and archive size.
+
+Production signed builds use
+`https://download.photos-by-elie.com/backstage/releases/latest.json`. Release
+owners publish only from the reviewed commit recorded in the app and from the
+canonical `refs/heads/release/backstage` source line. The manifest builder
+proves that exact commit is reachable from that branch on `origin`, then writes
+both the commit and canonical ref into the release manifest. An unpushed,
+worktree-only, or unrelated-branch commit fails closed before publication.
+
+Promoting source is a separate reviewed Git action. In a clean isolated
+worktree, fetch `refs/heads/release/backstage`, inspect its divergence from the
+reviewed commit, and update it with an ordinary non-force push only when the
+existing remote tip is an ancestor of the reviewed commit. Verify the exact
+remote tip with `git ls-remote origin refs/heads/release/backstage`, then build
+and sign from the reviewed commit. Never force-push or rewrite the canonical
+release branch to reconcile divergence. The public PBE web release remains a
+separate release boundary and is not changed by this Backstage process.
+
+After that explicit source promotion and signed build, publish with:
+
+```zsh
+scripts/publish_backstage_release.zsh \
+  --app 'native/PhotosByElieBackstage/dist/PhotosByElie Backstage.app' \
+  --release-notes 'Short operator-facing summary'
+```
+
+Use `--dry-run` to perform the complete local archive and manifest validation
+without changing Cloudflare. The dry run still checks canonical remote source
+reachability. Publication keeps versioned archives immutable, verifies the
+uploaded bytes, preserves the previous manifest—including its source commit
+and ref—for rollback, and updates `latest.json` only as the final write.
 
 **Download and verify** writes a unique archive below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,
@@ -110,7 +146,7 @@ not authorize that mutating download-session action.
 Backstage restores its working layout between launches: the main and Quick
 Look window frames, the last selected workspace, the navigation sidebar's
 visibility and width, the Fixtures and People & Access dividers, and the
-independent Culling and Review inspector visibility and width. Quick Look does
+independent Gallery and Review inspector visibility and width. Quick Look does
 not reopen stale media automatically; its saved frame is used the next time a
 preview is opened.
 
@@ -118,20 +154,18 @@ preview is opened.
 
 Enrollment is normally needed only once per Mac.
 
-1. In a browser, sign in as Owner at
-   [photos-by-elie.com/owner.html](https://photos-by-elie.com/owner.html).
-2. Find **Backstage enrollment**.
-3. Choose **Create one-time code…**, confirm the prompt, and then choose
-   **Copy code**.
-4. Return to Backstage **Overview**.
-5. Paste the code into **One-time enrollment code** and choose
-   **Enroll this Mac**.
-6. Clear the clipboard after Backstage reports that enrollment was stored in
-   this Mac's Keychain.
+1. Open Backstage **Overview** and choose **Set up this Mac**.
+2. Complete the Owner account-picker and confirmation in the browser.
+3. Return to Backstage. It polls the five-minute handoff, stores the revocable
+   device credential in this Mac's Keychain, and renews a short-lived session.
 
-The code is a one-time device credential. It does not grant Photos access and
-does not change catalog data. If **Authentication** already says
-**Authenticated**, do not create another code.
+The browser URL carries only the handoff id. The independent claim secret and
+Mac binding remain in Backstage memory, and no credential passes through the
+URL or clipboard. A handoff is single-use and rejects expiry, cancellation,
+binding mismatch, replay, and unauthorized identities. **Use one-time code
+fallback** remains available until native setup, revocation, and clean-state
+recovery receive installed/live acceptance. Enrollment does not grant Photos
+access or change Owner.sqlite, fixtures, media, or publication state.
 
 ## A useful mental model
 
@@ -139,7 +173,8 @@ Backstage separates work into distinct stages:
 
 1. **Fixtures** define where media belongs.
 2. **People & Access** defines who belongs to which access groups.
-3. **Culling** records picks, rejects, and ratings.
+3. **Gallery** is the canonical fixture asset browser; its **Culling —
+   Undecided** saved view is the decision queue.
 4. **Metadata** prepares titles, captions, keywords, and verified Photos
    give-back.
 5. **Waste Basket** handles recoverable removals and explicitly confirmed
@@ -160,7 +195,7 @@ client. Catalog registration does not deploy the website.
 Use **Overview** to check this Mac's authentication.
 
 - **Authenticated** means the app has a working session. Once connected,
-  Backstage removes the redundant green toolbar indicator. In Culling and
+  Backstage removes the redundant green toolbar indicator. In Gallery and
   Review, that top-right space becomes the collapse/expand control for the
   preview or editorial panel.
 - **Refresh session** reloads the session from the credential stored in
@@ -254,7 +289,7 @@ moved, removed, or restored without deleting the asset.
 ### Create a culling snapshot
 
 After selecting search results, choose **Create stable culling snapshot**.
-The snapshot freezes that candidate set for review. Choose **Open in Culling**
+The snapshot freezes that candidate set for review. Choose **Open in Gallery**
 to switch Backstage to the exact immutable pool in its saved order. It does
 not open Safari or localhost, and it does not publish or upload the selected
 files.
@@ -286,10 +321,11 @@ Archiving a group preserves its history. Use the existing fixture/access model
 when a group must inherit access to a fixture; do not create duplicate grants
 for every child fixture.
 
-## Culling
+## Gallery
 
-**Culling** reads the Photos library and records review decisions through the
-audited Owner action path.
+**Gallery** reads the Photos library and records review decisions through the
+audited Owner action path. Choose **All fixture assets** to browse every active
+decision state, or **Culling — Undecided** for the bounded culling queue.
 
 1. Choose **Allow Photos** on the first run. **Refresh previews** updates the
    responsive cache of the 2,000 most recent Photos items. **Reconcile
@@ -297,10 +333,15 @@ audited Owner action path.
    registers newly seen items in Owner, and marks no-longer-present items as
    unavailable only after the complete scan. Reconciliation preserves all
    existing culling decisions, approvals, and tombstones.
+   Visible cards load a bounded thumbnail first and opportunistically upgrade
+   after scrolling settles. A failed card stops its spinner and offers an
+   individual retry; Quick Look remains an independent preview path.
 2. When working from a saved fixture pool, confirm the pool name and immutable
-   asset count above the list. Search and the Media, Decision, Rating, and
-   Color filters only narrow that pool; the total and matching counts remain
-   visible.
+   asset count above the list. Search and the Decision, Rating, and Color
+   filters only narrow that pool; the total and matching counts remain visible.
+   Backstage Gallery and Review source candidates are still photos only.
+   Generated Real Estate videos are downstream Delivery outputs, not fixture
+   or review candidates.
 3. Backstage shows at most 200 matching rows at once. Use **Previous** and
    **Next** to move through a large pool without changing its membership or
    order.
@@ -314,22 +355,26 @@ audited Owner action path.
    the matching fixture-local shortcuts; X remains the separate global
    recoverable Waste Basket action. Only a confirmed **Empty Waste Basket**
    operation activates a global tombstone.
-7. Use **Rating** and **Apply rating** for zero to five stars. The number keys
-   0 through 5 apply the corresponding value.
-8. Use **Color** and **Apply color** for the five labels or to clear a label.
-9. Choose **Quick Look** or press Space to inspect photos, videos, and
-   panoramas without leaving Backstage. The read-only metadata panel never
+7. Use the rating control for zero to five stars. The number keys 0 through 5
+   apply the corresponding value; 0 clears the rating.
+8. Use the direct color buttons to assign a label. Choosing a color already
+   applied to every selected item clears it.
+9. Choose **Quick Look** or press Space to inspect still photos and panoramas
+   without leaving Backstage. The metadata panel never
    covers the item: it stacks below landscape previews and beside portrait
    previews while showing the current filename, title, keywords, capture time,
    rating, color, and state. While
    Quick Look is open, Left/Right moves to the previous/next visible item, P and
-   H apply fixture Include/Exclude, 1–5 set rating, and 6–9 set
-   red/yellow/green/blue. When P or H removes the current item from
-   the active filters, Quick Look stays open on the next surviving item (or
-   the preceding survivor at the end). Temporary preview files stay in the
-   app cache and are replaced on the next preview. Long preparation and
+   H apply fixture Include/Exclude, 0 clears rating, 1–5 set rating, and 6–9
+   toggle red/yellow/green/blue. Pressing the same color again clears it. The
+   same 0–9 router applies in Gallery, Review,
+   Metadata, Uploads, and Waste Basket, and the visible metadata refreshes as
+   soon as a rating or color change succeeds. When P or H removes the current
+   item from the active filters, Quick Look stays open on the next surviving
+   item (or the preceding survivor at the end). Temporary preview files stay
+   in the app cache and are replaced on the next preview. Long preparation and
    decision operations show progress and can stop after the current audited
-   batch. The Culling inspector shows the Owner title and keywords, capture
+   batch. The Gallery inspector shows the Owner title and keywords, capture
    date, original dimensions and megapixels, resource format, and filename.
    Original file size appears when a verified upload receipt already recorded
    it; otherwise Backstage says it is unavailable rather than downloading the
@@ -337,17 +382,18 @@ audited Owner action path.
 10. Choose **Undo** or press Command-Z to reverse the latest decision batch.
    Backstage keeps up to 100 session steps and restores the earlier cloud
    decision state and selection.
-11. **Send to Metadata** and **Send to Uploads** retain the current selection
-    while switching to that separate workspace. Neither button publishes or
-    uploads by itself.
+11. Use the **Metadata**, **Review**, or **Uploads** workspace directly from the
+    sidebar. Each owning workspace retains the shared selection when it is
+    relevant; Gallery no longer duplicates those navigation actions in its
+    footer.
 
-Opening a pool or choosing **Reload decisions** rehydrates pick, rating, and
-color state from the canonical cloud ledger. The pool order and scope remain
-unchanged.
+Opening a pool or using **Refresh previews** rehydrates pick, rating, and color
+state from the canonical cloud ledger. The pool order and scope remain
+unchanged; there is no separate footer reload command.
 
-**Export originals…** asks for a destination folder and exports verified
-original resources. It is separate from fixture upload and catalog
-publication.
+The Gallery header **Workflows** menu can open Review or ask for a destination
+folder to export verified original resources. These actions are separate from
+fixture upload and catalog publication.
 
 ## Review
 
@@ -361,6 +407,13 @@ Available** is active, completing the proposal does not remove that card if its
 new **Approved** or **Hidden** state is also selected; the next explicit reload
 reapplies the proposal filter.
 
+When the current fixture and Review filters contain capture-time burst groups,
+**Select burst** (or **B**) selects likely duplicate frames while leaving the
+probable second-frame survivor unselected. This changes selection only; use
+**Hide** to apply the existing audited Review action, and use **Undo** to
+reverse that decision batch. The current fixture, ordered queue, focused item,
+and Quick Look context remain intact.
+
 1. Edit the title or keywords directly. Changes autosave after a short pause.
    The down arrow beside either field propagates only that field through the
    intended two-hour shoot window.
@@ -372,8 +425,11 @@ reapplies the proposal filter.
    thumbnails are black and white. An AI-review mark carries a 30-point
    question mark.
    Quick Look shows the same basic metadata context; Left/Right moves to the
-   previous/next visible item, A approves, H hides, and U returns the current
-   item to Culling.
+   previous/next visible item, P or A approves, H hides, X moves the item to
+   the recoverable Waste Basket, U returns the current item to the Gallery's
+   Culling saved view, 0
+   clears rating, 1–5 set rating, and 6–9 toggle red/yellow/green/blue;
+   pressing the same color again clears it.
 3. **Propagate** repeats the most recent Approve, Hide, or AI-review mark
    through the same bounded shoot window. It does not run AI.
 4. AI reasons and the optional note are only a local form until **Update AI
@@ -383,20 +439,21 @@ reapplies the proposal filter.
 
 ## Metadata
 
-The upper Metadata sections manage Owner metadata and review decisions. The
-final section writes approved metadata back to Apple Photos through the signed
-Photos Bridge.
+The upper Metadata sections manage direct Owner metadata, the keyword
+blacklist, and the AI model ladder. Backstage Review is Backstage's sole
+title/keyword proposal-review surface. The final Metadata section writes approved metadata back to
+Apple Photos through Backstage's native PhotoKit services.
 
-Photos Bridge runs as a background-only helper. It should not appear in the
-Dock or as a second operator application. On **Overview**, the **Signed Photos
-helper** card reports its version/build, whether it is compatible with the
-installed Backstage release, and whether it is authorized for Photos. Use
-**Check helper** after an upgrade or permissions change. Backstage blocks culling
-and metadata give-back while the helper is stale, missing, or unauthorized.
+Backstage is the only normal-release Photos authority; there is no second
+operator application or helper to install. On **Overview**, the **Signed Photos
+helper** card reports the bundled helper compatibility and authorization state.
+Use **Check helper** after an upgrade or permissions change. Backstage blocks
+culling and metadata give-back while its own signed helper is stale, missing,
+or unauthorized.
 
 ### Edit metadata
 
-1. Select an item in **Culling**.
+1. Select an item in **Gallery**.
 2. Open **Metadata** and choose **Use selected Photos item**.
 3. Edit the title, caption, or comma-separated keywords.
 4. Choose **Save title, caption & keywords**.
@@ -407,15 +464,17 @@ Command-Z while Metadata is active) to restore that exact prior state through
 another audited Max action. The last 100 changes in the current Backstage
 session remain reversible; a failed undo keeps its history entry for retry.
 
-**Queue selected for review** sends the selected item or items to the existing
-metadata review queue. The keyword blacklist is replaced as one managed set;
-review it carefully before choosing **Replace blacklist**.
+Select the current asset's preview or press Space to open canonical Quick
+Look. The shared shortcuts remain available there: 0 clears rating, 1–5 set
+rating, and 6–9 toggle red/yellow/green/blue. Pressing the same color again
+clears it. Successful changes immediately
+refresh the visible Quick Look metadata.
 
-### Review AI proposals
-
-Choose **Load proposals**, compare the current and proposed metadata, and then
-choose **Approve**, **Reject**, or **Block** for each proposal. These decisions
-are audited actions; they are not direct SQLite edits.
+The keyword blacklist is replaced as one managed set; review it carefully
+before choosing **Replace blacklist**. Metadata loads the saved AI model ladder
+directly from authoritative `Owner.sqlite` without requiring a localhost helper
+or connector daemon. Use Backstage **Review** to compare title/keyword proposals, then
+choose **Approve** or return the item through **Needs AI** with specific reasons.
 
 ### Give approved metadata back to Photos
 
@@ -442,7 +501,22 @@ The Waste Basket has two intentionally different normal actions:
 - **Empty Waste Basket** changes recoverable entries into active global
   tombstones only after explicit confirmation.
 
-Use **Refresh**, select the items to restore, and choose **Put back**.
+The table uses bounded Photos thumbnails: while a preview is loading it says
+**Loading preview…**, and a failed preview offers **Retry preview** without
+fetching the original just to populate the list. Select a column heading to
+sort; equal values retain a deterministic ledger order. Command-click,
+Shift-click, and keyboard selection work across refresh. **Delete Selected**
+applies the guarded tombstone transition only to selected recoverable rows;
+the larger count line distinguishes recoverable entries from active global
+tombstones. Use **Refresh**, select the items to restore, and choose
+**Put back**. **Empty Waste Basket** remains the explicit all-recoverable-items
+path.
+
+Select exactly one row and press Space, or choose **Quick Look**, to inspect it.
+Within Quick Look, 0 clears rating, 1–5 set rating, and 6–9 toggle
+red/yellow/green/blue through the same shared router used by the other photo
+workspaces. These metadata changes do not restore or tombstone the item.
+
 Emptying retains source media, R2 objects, and history. A tombstoned item can
 return only through the separate explicit tombstone-restore path; ordinary X
 and restore remain idempotent and auditable.
@@ -460,7 +534,10 @@ file name, capture date, state, and any eligibility error.
    the current selection.
    Press **R** to open the guarded Return to Review action, **H** to open the
    guarded fixture-hide action, or **Space** to open a larger preview with the
-   canonical title and keywords. Press Space again to close it.
+   canonical title and keywords. In Quick Look, 0 clears rating, 1–5 set
+   rating, and 6–9 toggle red/yellow/green/blue; pressing the same color again
+   clears it, and the metadata pane refreshes after each successful change.
+   Press Space again to close it.
 4. Read the persistent queue-window line. It says how many of the eligible
    items are shown and how many remain outside the loaded window. The server
    loads at most 200 of the oldest eligible items by upload-readiness time;
@@ -526,15 +603,16 @@ claim the same action through its polling fallback.
 
 ### Enrollment required
 
-Return to the browser Owner page and create a fresh one-time code. A code that
-was already exchanged should not be reused.
+Choose **Set up this Mac** in Overview. If browser authorization is cancelled
+or expires, start a new handoff; an earlier handoff cannot be reused. Use the
+restricted one-time-code fallback only while the native route is unavailable.
 
 ### Photos access is required
 
 Choose **Allow Photos**. If macOS no longer prompts, open **System Settings →
-Privacy & Security → Photos** and grant Full Access to both **PhotosByElie
-Backstage** and **PhotosByElie Photos Bridge**, then return to the app and choose
-**Refresh**. The Overview helper card must report **Compatible** and
+Privacy & Security → Photos** and grant Full Access to **PhotosByElie
+Backstage**, then return to the app and choose **Refresh**. The Overview helper
+card must report **Compatible** and
 **authorized** before culling or metadata give-back.
 
 ### Photos indexed, but an item is absent
@@ -560,17 +638,17 @@ fixture and item counts, and inspect **Activity**. The browser Owner remains
 available for authentication, enrollment, connector health, access review,
 and audit, but Backstage is the active mutation workspace.
 
-Browser Owner and fixture pages do not launch Sidecar. During the native
-rehearsal window only, the compatibility UI can be enabled deliberately by
-starting the connector with `PBE_ENABLE_LEGACY_SIDECAR=1`; ordinary operation
-leaves this switch unset and exposes only Backstage as the operator app.
+Browser Owner and the retired Sidecar pages do not launch PhotoKit work.
+Ordinary operation exposes only Backstage as the operator app; legacy browser
+import routes fail closed with `410 Backstage required`.
 
 ## Safety summary
 
 - `Owner.sqlite` remains the private Owner source of truth.
 - Normal Backstage mutations pass through the Worker audit ledger and the Max
   connector; the app does not directly edit business rows.
-- Photos writes use the signed Photos Bridge and are verified by re-reading.
+- Photos writes use Backstage's signed native PhotoKit services and are verified
+  by re-reading.
 - Upload, delivery, publication, deployment, and client messaging are separate
   decisions.
 - Public buyer pages and private client pages remain independent of Backstage.

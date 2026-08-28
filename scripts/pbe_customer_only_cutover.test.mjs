@@ -50,6 +50,14 @@ test("restricted Backstage recovery stays unlinked and provisioning-only", () =>
   assert.doesNotMatch(provisioning, /fixture|culling|review|upload|publish|owner action/i);
 });
 
+test("Backstage exposes only the neutral customer preview browser action", () => {
+  const fixturePicker = read("native/PhotosByElieBackstage/Sources/BackstageApp/FixturePicker.swift");
+  const culling = read("native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift");
+  assert.doesNotMatch(fixturePicker, /Open PBE Owner|launchPBEOwner|End PBE Owner|pbeOwnerFixtureSession/);
+  assert.match(culling, /Button\("View as customer"[\s\S]*viewSelectedPhotoAsCustomer/);
+  assert.match(culling, /without creating an Owner session/);
+});
+
 test("bookmarked browser Owner workspaces are inert retirement notices", () => {
   const retiredPages = [
     ["owner-review.html", "Review moved to Backstage"],
@@ -62,4 +70,26 @@ test("bookmarked browser Owner workspaces are inert retirement notices", () => {
     assert.match(html, new RegExp(`<h1>${heading}</h1>`), page);
     assert.doesNotMatch(html, /<script\b|owner\.html|data-(?:owner|sidecar|acs)-|owner-(?:review|auth|tools)|sidecar\.js|access-console\.js/i, page);
   }
+});
+
+test("the connector cannot start a browser Owner helper in normal operation", () => {
+  const connector = read("scripts/new_owner_connector.py");
+  assert.match(connector, /PBE_ENABLE_LEGACY_BROWSER_OWNER/);
+  assert.match(connector, /if not LEGACY_BROWSER_OWNER_ENABLED:[\s\S]*Browser Waste Basket is retired/);
+  assert.match(connector, /parsed\.path == LOCAL_WASTE_BASKET_OPEN_PATH[\s\S]*send_response\(410\)/);
+});
+
+test("source-of-truth docs record the accepted customer-only cutover", () => {
+  const northStar = read("docs/architecture/north-star.md");
+  const customerPreview = read("docs/architecture/pbe-164-native-customer-preview.md");
+  const readme = read("README.md");
+  const historicalBacklog = read("TODO.md");
+
+  assert.match(northStar, /PBE-164's[\s\S]*customer-only cutover was accepted in production on 2026-08-27/);
+  assert.doesNotMatch(northStar, /customer-only cutover awaiting separate release and production receipts/);
+  assert.match(customerPreview, /Status: customer-only cutover accepted in production under PBE-164/);
+  assert.doesNotMatch(customerPreview, /production customer acceptance remain separate receipts/);
+  assert.match(readme, /TODO\.md[\s\S]*historical backlog reference; YouTrack is the authoritative current ticket queue/);
+  assert.match(historicalBacklog, /^# Photos By Elie Historical Backlog Snapshot/m);
+  assert.match(historicalBacklog, /Archived reference only\. YouTrack is the authoritative current PhotosByElie[\s\S]*ticket queue/);
 });

@@ -1,6 +1,6 @@
 # Photos By Elie North Star
 
-Last updated: 2026-08-13
+Last updated: 2026-08-27
 
 ## Purpose
 
@@ -58,12 +58,12 @@ Elie can photograph travel, art, Real Estate, family, or events; decide who may 
    - Attendees can buy or download allowed items.
    - Event access does not leak into other galleries or admin powers.
 
-6. **Owner On Any Mac**
-   - Backstage is a macOS app and may run on any enrolled Mac.
-   - Launching PBE from Backstage is the only path into an actionable hosted PBE Owner session.
-   - A normal PBE browser login, including Google login, never grants X, review, hide, or other Owner workflow actions.
-   - The sole browser exception is credential provisioning: a direct Google sign-in as `ec92009@gmail.com` may create a show-once Backstage credential, list its non-secret metadata, or revoke it (rotation is revoke then create), but cannot perform Owner workflow actions.
-   - Backstage stores the credential in macOS Keychain and uses it to mint a short-lived, fixture-frozen Owner session. Max, David, Curie, or another enrolled Mac may host the local connector without changing the authoritative fixture or writer.
+6. **Owner In Backstage**
+   - PhotosByElie Backstage is the sole Owner workspace and may run on any enrolled Mac.
+   - PBE is a customer-facing web application. It does not expose Owner navigation, provisioning, review, culling, metadata, upload, publication, fixture, lifecycle, or mutation controls.
+   - Backstage may open a customer-safe PBE URL to inspect the experience as a visitor or authorized customer. That link carries no Owner capability and cannot upgrade browser authority.
+   - Max, David, Curie, or another enrolled Mac may host local source connectors without changing the authoritative fixture or writer. Connectors provide bounded access to Apple Photos and local files; they do not serve a browser Owner workspace.
+   - Backstage stores enrolled credentials in macOS Keychain. Enrollment, revocation, and rotation are native Backstage operations rather than PBE browser features.
    - Elie can switch Macs without losing cloud-backed workflow and audit state.
 
 7. **Access And Roles**
@@ -119,10 +119,12 @@ Photos By Elie is finished when Elie can independently run five real workflows e
 
 Customer and client portions of all five workflows should work from a normal browser with secure access control, mobile usability, cloud-backed state, and no unpaid access to protected originals. Owner decisions and mutations run only in PhotosByElie Backstage on an enrolled Mac. PBE remains a customer-facing web application, and even a Backstage-opened customer preview carries no Owner authority.
 
-PBB-128 tracks remaining native acceptance. PBE-164 has a source-level
-customer-only cutover awaiting separate release and production receipts; the
-currently deployed site must not be treated as cut over until those receipts
-are recorded.
+PBB-128 tracks remaining native acceptance outside this boundary. PBE-164's
+customer-only cutover was accepted in production on 2026-08-27 with separate
+source, signed-release, installed-app, and public-site receipts. That completed
+cutover does not retire the restricted enrollment and recovery surface tracked
+by PBB-133, or claim private and fixture-wide customer-link coverage that still
+requires exact delivery evidence.
 
 ## Deviation Check
 

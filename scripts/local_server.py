@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import argparse
 import copy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from functools import partial
 import hashlib
 import os
 import ipaddress
 import json
 import mimetypes
-import plistlib
 import re
 import signal
 import shutil
@@ -30,6 +29,11 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
+
+try:
+    from .backstage_photos_client import BackstagePhotosClientError, request_preview
+except ImportError:
+    from backstage_photos_client import BackstagePhotosClientError, request_preview  # type: ignore
 
 try:
     from .pbe_owner_session import (
@@ -62,6 +66,7 @@ PBE_OWNER_SESSION_CLOSE_PATH = "/__photosbyelie/pbe-owner/session/close"
 PBE_OWNER_GALLERY_PATH = "/__photosbyelie/pbe-owner/gallery"
 PBE_OWNER_ACTION_PATH = "/__photosbyelie/pbe-owner/action"
 PBE_OWNER_ACTION_STATUS_PATH = "/__photosbyelie/pbe-owner/action/status"
+PBE_OWNER_PROJECTION_RETRY_PATH = "/__photosbyelie/pbe-owner/action/projection-retry"
 PBE_OWNER_HOST_BOOTSTRAP_PATH = "/__photosbyelie/pbe-owner/host/bootstrap"
 R2_PROGRESS_PATH = "/__photosbyelie/r2-progress"
 R2_COVERAGE_PATH = "/__photosbyelie/r2-coverage"
@@ -128,6 +133,9 @@ LIFECYCLE_WRITING_ACTIONS = frozenset({
 CONNECTOR_RUNTIME_ROOT = Path(
     os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(Path(__file__).resolve().parents[1]))
 ).expanduser().resolve()
+ON_DEMAND_CONNECTOR_PATH = (
+    "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+)
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
@@ -147,12 +155,6 @@ REAL_ESTATE_PUBLIC_ROOT = Path("assets/real-estate")
 REAL_ESTATE_SOURCE_ROOT = Path("/Volumes/Saturn/Pictures/RE")
 REAL_ESTATE_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".mov", ".mp4", ".m4v"}
 IMPORT_SOURCE_THUMB_ROOT = Path(".review-logs/import-source-thumbs")
-APPLE_PHOTOS_BRIDGE = Path("scripts/apple_photos_bridge.swift")
-APPLE_PHOTOS_BRIDGE_APP_INSTALLER = Path("scripts/install_sidecar_photos_bridge_app.zsh")
-APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
-APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "MacOS" / "PhotosByElie Photos Bridge"
-APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT = APPLE_PHOTOS_BRIDGE_APP / "Contents" / "Resources" / "BridgeSource.sha256"
-BACKSTAGE_APP = Path.home() / "Applications" / "PhotosByElie Backstage.app"
 APPLE_PHOTOS_IMPORT_ROOT = Path("tmp/apple-photos-import")
 REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
     os.environ.get(
@@ -160,14 +162,15 @@ REAL_ESTATE_APPLE_PHOTOS_INTAKE_ROOT = Path(
         str(Path.home() / "Pictures" / "PhotosByElie" / "Real Estate Intake"),
     )
 )
-APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS = 12 * 60 * 60
-APPLE_PHOTOS_ALBUMS_CACHE: dict[str, object] = {"payload": None, "loaded_at": 0.0}
-APPLE_PHOTOS_ALBUMS_CACHE_LOCK = threading.Lock()
-APPLE_PHOTOS_IMPORT_PROGRESS: dict[str, dict] = {}
-APPLE_PHOTOS_IMPORT_PROGRESS_LOCK = threading.Lock()
-APPLE_PHOTOS_PROGRESS_PREFIX = "PBE_APPLE_PHOTOS_PROGRESS "
-APPLE_PHOTOS_PROGRESS_ITEM_LIMIT = 60
 SOURCE_PREVIEW_CACHE_ROOT = Path(".review-logs/source-previews")
+
+
+def _apple_photos_backstage_required() -> dict:
+    return {
+        "ok": False,
+        "code": "backstage_required",
+        "error": "Legacy browser-hosted Apple Photos import is retired. Run the signed PhotosByElie Backstage app on this Mac.",
+    }
 IMPORT_SOURCE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp"}
 SOURCE_PREVIEW_BROWSER_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 SOURCE_PREVIEW_GENERATABLE_IMAGE_EXTENSIONS = {".heic", ".heif", ".tif", ".tiff", ".png", ".webp"}
@@ -210,6 +213,11 @@ OWNER_ACTION_LOCK = threading.Lock()
 R2_BACKGROUND_TASKS: dict[str, dict] = {}
 R2_BACKGROUND_LOCK = threading.Lock()
 PHOTOS_INCREMENTAL_SYNC_LOCK = threading.Lock()
+ON_DEMAND_CONNECTOR_LOCK = threading.Lock()
+ON_DEMAND_CONNECTOR_PROCESS: subprocess.Popen[str] | None = None
+PHOTOS_SYNC_STALE_AFTER_SECONDS = 60 * 60
+PHOTOS_SYNC_LEASE_SECONDS = 15 * 60
+PHOTOS_SYNC_DB_RETRY_DELAYS_SECONDS = (0.25, 0.5, 1.0, 2.0)
 PRICE_PUBLISH_TASKS: dict[str, dict] = {}
 PRICE_PUBLISH_LOCK = threading.Lock()
 R2_SWEEP_PHASES = {
@@ -251,6 +259,86 @@ def _connector_runtime_script(name: str, fallback_root: Path | None = None) -> P
     if candidate.is_symlink() or not candidate.is_file():
         raise RuntimeError(f"Connector runtime script is missing or unsafe: {name}")
     return candidate
+
+
+def _start_on_demand_owner_connector(repo_root: Path) -> dict[str, object]:
+    """Start one short-lived connector drain for work owned by Backstage.
+
+    The PBE Owner host is itself launched by signed Backstage. It can therefore
+    wake the sealed connector runtime when a browser action is queued, without
+    recreating the former always-on LaunchAgent or placing credentials in a
+    process argument. The durable Worker/Owner ledgers remain authoritative;
+    this child is only a bounded drain/acceleration process.
+    """
+    global ON_DEMAND_CONNECTOR_PROCESS
+    with ON_DEMAND_CONNECTOR_LOCK:
+        if ON_DEMAND_CONNECTOR_PROCESS is not None:
+            if ON_DEMAND_CONNECTOR_PROCESS.poll() is None:
+                return {
+                    "started": False,
+                    "active": True,
+                    "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+                }
+            ON_DEMAND_CONNECTOR_PROCESS = None
+
+        root = repo_root.resolve()
+        runtime_script = _connector_runtime_script("new_owner_connector.py", root)
+        config_path = Path.home() / ".config" / "photosbyelie" / "connector.json"
+        owner_database = root / "assets" / "owner-actions" / "Owner.sqlite"
+        if config_path.is_symlink() or not config_path.is_file():
+            return {
+                "started": False,
+                "active": False,
+                "error": "The trusted connector configuration is unavailable on this Mac.",
+            }
+        if owner_database.is_symlink() or not owner_database.is_file():
+            return {
+                "started": False,
+                "active": False,
+                "error": "The configured Owner.sqlite data root is unavailable on this Mac.",
+            }
+
+        environment = os.environ.copy()
+        for key in tuple(environment):
+            if key.startswith("PYTHON"):
+                environment.pop(key, None)
+        environment["PATH"] = ON_DEMAND_CONNECTOR_PATH
+        environment["PBE_CONNECTOR_RUNTIME_ROOT"] = str(CONNECTOR_RUNTIME_ROOT)
+        environment["PBE_REPO_ROOT"] = str(root)
+        environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
+        ON_DEMAND_CONNECTOR_PROCESS = subprocess.Popen(
+            [
+                sys.executable,
+                str(runtime_script),
+                "--config",
+                str(config_path),
+                "--once",
+            ],
+            cwd=str(root),
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    return {
+        "started": True,
+        "active": True,
+        "pid": ON_DEMAND_CONNECTOR_PROCESS.pid,
+    }
+
+
+def _wake_on_demand_owner_connector_for_hosted_request(
+    repo_root: Path,
+    queued: dict,
+) -> dict[str, object]:
+    if queued.get("state") not in {"queued", "running"}:
+        return {
+            "started": False,
+            "active": False,
+            "reason": "no-drain-needed",
+        }
+    return _start_on_demand_owner_connector(repo_root)
 
 
 def _local_machine_names() -> list[str]:
@@ -396,6 +484,7 @@ from owner_state_db import (  # noqa: E402
     mark_access_user_published as mark_access_user_published_db,
     media_lifecycle_snapshot,
     record_import_operation as record_import_operation_db,
+    reconcile_stale_import_operations,
     update_import_operation as update_import_operation_db,
     upsert_access_user as upsert_access_user_db,
     upsert_r2_object_state,
@@ -421,10 +510,13 @@ from waste_basket_gateway import (  # noqa: E402
     EMPTY_CONFIRMATION_TOKEN,
     WasteBasketError,
     assert_recoverable_entries_in_fixture,
+    deployed_lifecycle_outbox,
     empty_waste_basket as empty_waste_basket_gateway,
     move_to_waste_basket as move_to_waste_basket_gateway,
     hosted_lifecycle_request_status,
+    latest_hosted_lifecycle_request,
     queue_hosted_lifecycle_request,
+    replace_completed_hosted_lifecycle_result,
     restore_from_waste_basket as restore_from_waste_basket_gateway,
     restore_tombstone as restore_tombstone_gateway,
 )
@@ -434,6 +526,7 @@ from fixture_pipeline import (  # noqa: E402
     adopt_upload_run,
     archive_fixture,
     connect as fixture_connect,
+    connect_read_only as fixture_connect_read_only,
     configure_asset_destinations,
     create_fixture,
     create_pool,
@@ -469,13 +562,18 @@ from fixture_pipeline import (  # noqa: E402
     set_fixture_asset_state,
     request_ai_run_cancel,
 )
+from visual_repair_proposals import (  # noqa: E402
+    decide_visual_repair_proposal,
+    list_visual_repair_proposals,
+    request_visual_repair_proposal,
+)
 from fixture_policy import (  # noqa: E402
     apply_fixture_policy_migration,
     configure_fixture as configure_fixture_policy,
     fixture_configuration,
     plan_fixture_policy_migration,
 )
-from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback, writeback_plan  # noqa: E402
+from apple_photos_metadata_writer import BackstagePhotosMetadataAdapter, commit_writeback, writeback_plan  # noqa: E402
 from native_publication_pipeline import (  # noqa: E402
     create_r2_reconciliation_run,
     create_upload_run as create_native_upload_run,
@@ -648,6 +746,242 @@ def assert_pbe_owner_restore_scope(repo_root: Path, session: dict, payload: dict
         ) from error
 
 
+def _hosted_projection_token(status: dict, lifecycle: dict, result: dict) -> str:
+    """Return an opaque optimistic-concurrency token for one projection state."""
+
+    retry = result.get("projectionRetry") if isinstance(result.get("projectionRetry"), dict) else {}
+    projection = result.get("projection") if isinstance(result.get("projection"), dict) else {}
+    body = {
+        "requestId": str(status.get("requestId") or ""),
+        "sessionId": str(status.get("sessionId") or ""),
+        "fixtureId": str(status.get("fixtureId") or ""),
+        "operation": str(status.get("operation") or ""),
+        "assetIds": sorted(str(value) for value in status.get("assetIds") or []),
+        "operationId": str(lifecycle.get("operationId") or ""),
+        "operationDigest": str(lifecycle.get("operationDigest") or ""),
+        "revision": int(lifecycle.get("revision") or 0),
+        "projectionState": str(projection.get("state") or ""),
+        "projectionError": str(projection.get("error_code") or ""),
+        "attempt": int(retry.get("attempt") or 0),
+    }
+    return hashlib.sha256(
+        json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _normalized_hosted_lifecycle_result(repo_root: Path, status: dict) -> dict:
+    """Expose authoritative, projection, and publication state separately."""
+
+    result = dict(status.get("result") or {})
+    request_id = str(status.get("requestId") or "").strip()
+    operation_id = str(result.get("operationId") or "").strip()
+    expected_operation_id = f"owner-action:hosted-lifecycle:{request_id}"
+    lifecycle: dict = {}
+    if request_id and operation_id == expected_operation_id:
+        try:
+            candidate = deployed_lifecycle_outbox(repo_root, operation_id)
+            expected_operation = (
+                "restore"
+                if status.get("operation") == "waste-basket-restore"
+                else "x"
+                if status.get("operation") in {"waste-basket-x", "waste-basket-x-many"}
+                else ""
+            )
+            receipt_ids = sorted(
+                str(item.get("canonicalAssetId") or "")
+                for item in candidate.get("receipts") or []
+            )
+            if (
+                expected_operation
+                and candidate.get("operation") == expected_operation
+                and receipt_ids == sorted(str(value) for value in status.get("assetIds") or [])
+            ):
+                lifecycle = candidate
+        except WasteBasketError:
+            lifecycle = {}
+
+    worker_catalog = result.get("worker_catalog") if isinstance(result.get("worker_catalog"), dict) else {}
+    projection = result.get("projection") if isinstance(result.get("projection"), dict) else {}
+    if not projection:
+        if worker_catalog.get("state") == "skipped-no-static-catalog":
+            projection = {"state": "skipped-no-static-catalog", "retryable": False}
+        elif worker_catalog.get("ok") is True:
+            projection = {"state": "applied", "retryable": False}
+        elif worker_catalog:
+            projection = {
+                "state": "partial",
+                "retryable": True,
+                "error_code": "worker_catalog_projection_failed",
+            }
+        elif result.get("operationId"):
+            projection = {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_unconfirmed",
+            }
+
+    authoritative_committed = bool(lifecycle)
+    result.update({
+        "requestId": request_id,
+        "authoritative_committed": authoritative_committed,
+        "authoritative": {
+            "state": "committed" if authoritative_committed else "unconfirmed",
+            **({
+                "operationId": lifecycle["operationId"],
+                "operationDigest": lifecycle["operationDigest"],
+                "revision": lifecycle["revision"],
+                "receiptState": lifecycle["state"],
+            } if lifecycle else {}),
+        },
+        "projection": projection,
+        "catalog_publish_pending": bool(result.get("catalog_publish_pending", True)),
+        "catalogPublication": result.get("catalogPublication") or {
+            "state": "pending",
+            "receipt": None,
+        },
+    })
+    retry = dict(result.get("projectionRetry") or {})
+    retryable = bool(projection.get("retryable"))
+    retry.update({
+        "available": bool(retryable and lifecycle and authoritative_committed),
+        "operationRevision": int(lifecycle.get("revision") or 0),
+    })
+    if retry["available"]:
+        retry["token"] = _hosted_projection_token(status, lifecycle, result)
+    else:
+        retry.pop("token", None)
+    result["projectionRetry"] = retry
+    return result
+
+
+def _latest_pbe_owner_action(repo_root: Path, session: dict) -> dict | None:
+    """Return browser-safe status for the newest request in one Owner lease."""
+
+    status = latest_hosted_lifecycle_request(
+        repo_root,
+        session_id=str(session["id"]),
+        fixture_id=str(session["fixtureId"]),
+    )
+    if status is None:
+        return None
+    state = str(status.get("state") or "")
+    if state == "completed":
+        return {
+            "ok": True,
+            "state": "completed",
+            **_normalized_hosted_lifecycle_result(repo_root, status),
+        }
+    return {
+        "ok": state != "failed",
+        "requestId": str(status.get("requestId") or ""),
+        "state": state,
+        **({"error": str(status.get("error") or "")} if status.get("error") else {}),
+    }
+
+
+def retry_hosted_lifecycle_projection(repo_root: Path, session: dict, payload: dict) -> dict:
+    """Retry only compatibility/static projection for one durable hosted action."""
+
+    request_id = str(payload.get("requestId") or "").strip()
+    token = str(payload.get("projectionToken") or "").strip()
+    raw_operation_revision = payload.get("operationRevision")
+    if isinstance(raw_operation_revision, bool):
+        raw_operation_revision = None
+    if isinstance(raw_operation_revision, int):
+        operation_revision = raw_operation_revision
+    elif isinstance(raw_operation_revision, str) and raw_operation_revision.strip().isdigit():
+        operation_revision = int(raw_operation_revision.strip())
+    else:
+        raise PBEOwnerSessionError(
+            "Projection retry requires the exact authoritative operation revision.",
+            code="pbe_owner_projection_revision_invalid",
+            status=400,
+        )
+    if not request_id or not token or operation_revision < 1:
+        raise PBEOwnerSessionError(
+            "Projection retry requires its opaque request, token, and operation revision.",
+            code="pbe_owner_projection_retry_invalid",
+            status=400,
+        )
+    try:
+        status = hosted_lifecycle_request_status(
+            repo_root,
+            request_id,
+            session_id=str(session["id"]),
+            fixture_id=str(session["fixtureId"]),
+        )
+    except WasteBasketError as error:
+        raise PBEOwnerSessionError(
+            "The projection retry is unavailable for this Owner session.",
+            code="pbe_owner_projection_retry_unavailable",
+            status=404,
+        ) from error
+    result = _normalized_hosted_lifecycle_result(repo_root, status)
+    retry = result.get("projectionRetry") or {}
+    if retry.get("lastAcceptedToken") == token:
+        return result
+    if status.get("state") != "completed" or not result.get("authoritative_committed"):
+        raise PBEOwnerSessionError(
+            "Projection retry requires a completed authoritative lifecycle action.",
+            code="pbe_owner_projection_authority_incomplete",
+            status=409,
+        )
+    if not retry.get("available"):
+        raise PBEOwnerSessionError(
+            "This lifecycle projection is not retryable.",
+            code="pbe_owner_projection_not_retryable",
+            status=409,
+        )
+    if operation_revision != int(retry.get("operationRevision") or 0) or token != retry.get("token"):
+        raise PBEOwnerSessionError(
+            "The lifecycle projection changed before retry; refresh its status.",
+            code="pbe_owner_projection_stale",
+            status=409,
+        )
+    operation = str(status.get("operation") or "")
+    projection_operation = {
+        "waste-basket-x": "x",
+        "waste-basket-x-many": "x",
+        "waste-basket-restore": "restore",
+    }.get(operation)
+    if not projection_operation:
+        raise PBEOwnerSessionError(
+            "This hosted lifecycle operation has no projection-only retry path.",
+            code="pbe_owner_projection_operation_forbidden",
+            status=409,
+        )
+    projected = project_lifecycle_catalog_state(
+        repo_root,
+        projection_operation,
+        list(status.get("assetIds") or []),
+    )
+    persisted_result = {
+        **dict(status.get("result") or {}),
+        **projected,
+        "authoritative_committed": True,
+        "projectionRetry": {
+            "attempt": int(retry.get("attempt") or 0) + 1,
+            "lastAcceptedToken": token,
+        },
+    }
+    try:
+        updated = replace_completed_hosted_lifecycle_result(
+            repo_root,
+            request_id,
+            session_id=str(session["id"]),
+            fixture_id=str(session["fixtureId"]),
+            expected_result=dict(status.get("result") or {}),
+            result=persisted_result,
+        )
+    except WasteBasketError as error:
+        raise PBEOwnerSessionError(
+            "The lifecycle projection changed before retry; refresh its status.",
+            code="pbe_owner_projection_stale",
+            status=409,
+        ) from error
+    return _normalized_hosted_lifecycle_result(repo_root, updated)
+
+
 class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
@@ -786,6 +1120,9 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             return
         if path == PBE_OWNER_ACTION_PATH:
             self._handle_pbe_owner_action()
+            return
+        if path == PBE_OWNER_PROJECTION_RETRY_PATH:
+            self._handle_pbe_owner_projection_retry()
             return
         if path == SOURCE_EDIT_PATH:
             self._handle_source_edit()
@@ -1061,7 +1398,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+        try:
+            latest_action = _latest_pbe_owner_action(Path.cwd(), session)
+        except (WasteBasketError, sqlite3.Error, OSError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {"code": "pbe_owner_action_status_failed", "message": str(error)},
+            })
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "session": session,
+            "latestAction": latest_action,
+        })
 
     def _handle_pbe_owner_gallery(self) -> None:
         if not self._is_loopback_request():
@@ -1090,7 +1439,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
-        self._send_json(HTTPStatus.OK, {"ok": True, "session": session})
+        try:
+            latest_action = _latest_pbe_owner_action(Path.cwd(), session)
+        except (WasteBasketError, sqlite3.Error, OSError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {"code": "pbe_owner_action_status_failed", "message": str(error)},
+            })
+            return
+        self._send_json(HTTPStatus.OK, {
+            "ok": True,
+            "session": session,
+            "latestAction": latest_action,
+        })
 
     def _handle_pbe_owner_session_close(self) -> None:
         if not self._is_loopback_request():
@@ -1153,19 +1514,25 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 fixture_id=str(session["fixtureId"]),
                 request_key=request_key,
             )
+            connector_wake = _wake_on_demand_owner_connector_for_hosted_request(
+                Path.cwd(),
+                queued,
+            )
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
         except ValueError as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": {"code": "pbe_owner_action_invalid", "message": str(error)}})
             return
-        except (sqlite3.Error, subprocess.CalledProcessError, OSError) as error:
+        except (sqlite3.Error, subprocess.CalledProcessError, OSError, RuntimeError) as error:
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"ok": False, "error": {"code": "pbe_owner_action_failed", "message": str(error)}})
             return
         self._send_json(HTTPStatus.ACCEPTED, {
             "ok": True,
             "requestId": queued["requestId"],
             "state": queued["state"],
+            "connectorWake": connector_wake,
+            **({"resumed": True} if queued.get("resumedActive") else {}),
         })
 
     def _handle_pbe_owner_action_status(self) -> None:
@@ -1175,18 +1542,19 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         try:
             session = self._pbe_authorized_browser_session()
             request_id = str(parse_qs(urlparse(self.path).query).get("requestId", [""])[0]).strip()
-            if not request_id:
-                raise PBEOwnerSessionError(
-                    "Hosted lifecycle status requires an opaque request ID.",
-                    code="pbe_owner_request_required",
-                    status=400,
+            if request_id:
+                status = hosted_lifecycle_request_status(
+                    Path.cwd(),
+                    request_id,
+                    session_id=str(session["id"]),
+                    fixture_id=str(session["fixtureId"]),
                 )
-            status = hosted_lifecycle_request_status(
-                Path.cwd(),
-                request_id,
-                session_id=str(session["id"]),
-                fixture_id=str(session["fixtureId"]),
-            )
+            else:
+                status = latest_hosted_lifecycle_request(
+                    Path.cwd(),
+                    session_id=str(session["id"]),
+                    fixture_id=str(session["fixtureId"]),
+                )
         except PBEOwnerSessionError as error:
             self._send_pbe_error(error)
             return
@@ -1196,18 +1564,28 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
                 "error": {"code": "pbe_owner_request_unavailable", "message": str(error)},
             })
             return
+        if status is None:
+            self._send_json(HTTPStatus.OK, {"ok": True, "requestId": "", "state": "idle"})
+            return
+        request_id = str(status.get("requestId") or request_id)
         if status["state"] == "completed":
-            result = dict(status.get("result") or {})
+            result = _normalized_hosted_lifecycle_result(Path.cwd(), status)
             result["ok"] = True
+            result["state"] = "completed"
             self._send_json(HTTPStatus.OK, result)
             return
-        if status["state"] == "failed":
-            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
-                "ok": False,
-                "error": {
-                    "code": "pbe_owner_action_failed",
-                    "message": status.get("error") or "The trusted connector could not complete this action.",
-                },
+        if status["state"] in {"failed", "blocked"}:
+            self._send_json(HTTPStatus.OK, {
+                "ok": True,
+                "requestId": request_id,
+                "state": status["state"],
+                "error": status.get("error") or "The trusted connector could not complete this action.",
+                **({
+                    "disposition": status.get("disposition"),
+                    "attemptCount": status.get("attemptCount"),
+                    "maxAttempts": status.get("maxAttempts"),
+                    "nextAction": status.get("nextAction"),
+                } if status["state"] == "blocked" else {}),
             })
             return
         self._send_json(HTTPStatus.OK, {
@@ -1216,6 +1594,30 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
             "state": status["state"],
             **({"error": status["error"]} if status.get("error") else {}),
         })
+
+    def _handle_pbe_owner_projection_retry(self) -> None:
+        if not self._is_loopback_request():
+            self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
+            return
+        try:
+            self._require_same_origin_browser_post()
+            session = self._pbe_authorized_browser_session()
+            payload = self._read_json_body()
+            with OWNER_ACTION_LOCK:
+                result = retry_hosted_lifecycle_projection(Path.cwd(), session, payload)
+        except PBEOwnerSessionError as error:
+            self._send_pbe_error(error)
+            return
+        except (OSError, sqlite3.Error, subprocess.CalledProcessError, ValueError) as error:
+            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "ok": False,
+                "error": {
+                    "code": "pbe_owner_projection_retry_failed",
+                    "message": str(error),
+                },
+            })
+            return
+        self._send_json(HTTPStatus.OK, {"ok": True, **result})
 
     def _handle_source_edit_import_all(self) -> None:
         if not self._is_loopback_request():
@@ -1484,99 +1886,25 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        query = parse_qs(urlparse(self.path).query)
-        refresh = str((query.get("refresh") or [""])[0]).strip().lower() in {"1", "true", "yes"}
-        cache_only = str((query.get("cacheOnly") or query.get("cache_only") or [""])[0]).strip().lower() in {
-            "1",
-            "true",
-            "yes",
-        }
-        if not refresh:
-            cached = _cached_apple_photos_albums_payload()
-            if cached:
-                self._send_json(HTTPStatus.OK, _with_apple_photos_import_stats(Path.cwd(), cached))
-                return
-            if cache_only:
-                self._send_json(
-                    HTTPStatus.OK,
-                    {
-                        "ok": True,
-                        "albums": [],
-                        "albumImportStats": _apple_photos_album_import_stats(Path.cwd()),
-                        "cacheMiss": True,
-                        "cacheTtlSeconds": APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS,
-                    },
-                )
-                return
-        try:
-            started = time.monotonic()
-            result = _run_apple_photos_bridge(Path.cwd(), ["albums"])
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        if result.get("ok"):
-            result = {
-                **result,
-                "cached": False,
-                "cacheMiss": False,
-                "loadedAt": datetime.now(timezone.utc).isoformat(),
-                "durationMs": round((time.monotonic() - started) * 1000),
-                "cacheTtlSeconds": APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS,
-            }
-            _store_apple_photos_albums_payload(result)
-        if result.get("ok"):
-            result = _with_apple_photos_import_stats(Path.cwd(), result)
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_preflight(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        try:
-            payload = self._read_json_body()
-            result = _apple_photos_preflight(Path.cwd(), payload)
-            operation = _record_apple_photos_import_operation(
-                Path.cwd(),
-                payload,
-                result,
-                state="preflighted" if result.get("ok") else "failed",
-                error=str(result.get("error") or ""),
-            )
-            result = {**result, "operation": operation}
-        except ValueError as error:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_import(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        payload: dict = {}
-        try:
-            payload = self._read_json_body()
-            result = _start_apple_photos_import(Path.cwd(), payload)
-        except ValueError as error:
-            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
-            self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(error)})
-            return
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            _finish_apple_photos_import_progress(_apple_photos_progress_id(payload), "failed", {"error": str(error)})
-            self._send_json(HTTPStatus.BAD_GATEWAY, {"ok": False, "error": str(error)})
-            return
-        self._send_json(HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY, result)
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_apple_photos_import_progress(self) -> None:
         if not self._is_loopback_request():
             self._send_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "localhost-only endpoint"})
             return
-        query = parse_qs(urlparse(self.path).query)
-        progress_id = _clean_apple_photos_progress_id((query.get("progress_id") or query.get("task_id") or [""])[0])
-        progress = _apple_photos_import_progress(progress_id) if progress_id else _latest_apple_photos_import_progress()
-        self._send_json(HTTPStatus.OK, {"ok": True, "progress": progress})
+        self._send_json(HTTPStatus.GONE, _apple_photos_backstage_required())
 
     def _handle_import_source_thumb(self) -> None:
         if not self._is_loopback_request():
@@ -2250,152 +2578,52 @@ def _new_owner_re_album_payload(item: dict, manifest: dict) -> dict:
 
 
 def _new_owner_apple_photos_real_estate_result(repo_root: Path, action: dict, connector_id: str) -> dict:
-    """Run private Apple Photos -> RE intake modes through NewOwner's existing Mac bridge."""
+    """Fail closed after the browser-hosted Apple Photos importer was retired."""
+    del repo_root
     manifest = _new_owner_manifest(action)
-    mode = str(manifest.get("mode") or "").strip()
+    message = _apple_photos_backstage_required()
     completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    base_result = {
-        "connectorId": connector_id,
-        "surface": "new-owner-local-bridge",
-        "actionId": str(action.get("id") or ""),
-        "type": "sidecar-culling-review",
-        "workflow": "apple-photos-real-estate-intake",
-        "mode": mode,
-        "readOnly": mode != "apple-photos-re-assign",
-        "published": False,
-        "completedAt": completed_at,
+    return {
+        "ok": False,
+        "connector": {
+            "id": connector_id,
+            "type": "sidecar-culling-review",
+            "completedAt": completed_at,
+        },
+        "result": {
+            "connectorId": connector_id,
+            "surface": "new-owner-backstage-required",
+            "actionId": str(action.get("id") or ""),
+            "type": "sidecar-culling-review",
+            "workflow": "apple-photos-real-estate-intake",
+            "mode": str(manifest.get("mode") or "").strip(),
+            "readOnly": True,
+            "published": False,
+            "completedAt": completed_at,
+            **message,
+        },
+        "preview": {"items": [], "stateCounts": []},
     }
 
-    if mode == "apple-photos-re-albums":
-        bridge = _run_apple_photos_bridge(repo_root, ["albums"])
-        if not bridge.get("ok"):
-            raise RuntimeError(str(bridge.get("error") or "Apple Photos albums could not be loaded."))
-        albums = [item for item in bridge.get("albums", []) if isinstance(item, dict)]
-        result = {
-            **base_result,
-            "albums": albums,
-            "recordsPrepared": len(albums),
-            "message": f"Loaded {len(albums):,} Apple Photos album(s) from this Mac.",
-        }
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": result,
-            "preview": {"items": [], "stateCounts": []},
-        }
 
-    raw_albums = manifest.get("albums")
-    if not isinstance(raw_albums, list) or not raw_albums:
-        raise ValueError("Choose at least one Apple Photos album for Real Estate intake.")
-    if len(raw_albums) > 24:
-        raise ValueError("Choose no more than 24 Apple Photos albums at a time.")
-    albums = [_new_owner_re_album_payload(item, manifest) for item in raw_albums if isinstance(item, dict)]
-    albums = [item for item in albums if item["albumLocalIdentifier"] or item["albumName"]]
-    if not albums:
-        raise ValueError("The selected Apple Photos albums do not have valid identifiers.")
-    assignment = _apple_photos_real_estate_assignment({
-        "destinationKind": "real_estate",
-        "intakeAssignment": manifest.get("intakeAssignment"),
-    })
-
-    if mode == "apple-photos-re-preflight":
-        preflights = []
-        items = []
-        for album in albums:
-            preflight = _apple_photos_preflight(repo_root, album)
-            if not preflight.get("ok"):
-                raise RuntimeError(str(preflight.get("error") or f"Could not inspect {album['albumName'] or 'Apple Photos album'}."))
-            preflights.append(preflight)
-            album_row = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-            album_id = str(album_row.get("localIdentifier") or album["albumLocalIdentifier"])
-            album_name = str(album_row.get("title") or album["albumName"] or "Apple Photos album")
-            # The PhotoKit bridge returns its dry-run rows as ``items``.  Keep
-            # only rows that survived format checks and the conservative burst
-            # filter; blocked rows remain summarized by the preflight so the UI
-            # can explain why the album count is larger than the preview count.
-            for candidate in preflight.get("items", []):
-                if not isinstance(candidate, dict):
-                    continue
-                if candidate.get("eligible") is not True:
-                    continue
-                asset_id = str(candidate.get("localIdentifier") or "").strip()
-                if not asset_id:
-                    continue
-                items.append({
-                    **candidate,
-                    "assetId": asset_id,
-                    "albumLocalIdentifier": album_id,
-                    "albumName": album_name,
-                })
-        limit = _new_owner_manifest_limit(manifest, default=60)
-        items = items[:limit]
-        inspected_count = sum(int(row.get("count") or 0) for row in preflights)
-        burst_filtered_count = sum(
-            int((row.get("burstFilter") or {}).get("skippedCount") or 0)
-            for row in preflights
-            if isinstance(row.get("burstFilter"), dict)
-        )
-        filter_note = (
-            f" from {inspected_count:,} item(s); {burst_filtered_count:,} burst frame(s) filtered"
-            if burst_filtered_count
-            else f" from {inspected_count:,} item(s)"
-            if inspected_count != len(items)
-            else ""
-        )
-        result = {
-            **base_result,
-            "intakeAssignment": assignment,
-            "albumCount": len(albums),
-            "candidateCount": sum(int(row.get("candidateCount") or 0) for row in preflights),
-            "recordsPrepared": len(items),
-            "inspectedCount": inspected_count,
-            "burstFilteredCount": burst_filtered_count,
-            "preflights": preflights,
-            "message": (
-                f"Prepared {len(items):,} private Apple Photos candidate(s) for "
-                f"{assignment['track']} / {assignment['fixture']} / {assignment['project']}"
-                f"{filter_note}."
-            ),
-        }
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": result,
-            "preview": {"items": items, "stateCounts": []},
-        }
-
-    if mode == "apple-photos-re-assign":
-        import_payload = {
-            "albums": albums,
-            "selectedAssetIds": manifest.get("selectedAssetIds") or [],
-            "filterBursts": bool(manifest.get("filterBursts", True)),
-            "allowIcloudDownloads": bool(manifest.get("allowIcloudDownloads", True)),
-            "destinationKind": "real_estate",
-            "intakeAssignment": assignment,
-        }
-        imported = _start_apple_photos_import(repo_root, import_payload)
-        if not imported.get("ok"):
-            raise RuntimeError(str(imported.get("error") or "Apple Photos Real Estate assignment failed."))
-        return {
-            "ok": True,
-            "connector": {"id": connector_id, "type": "sidecar-culling-review", "completedAt": completed_at},
-            "result": {
-                **base_result,
-                **imported,
-                "intakeAssignment": imported.get("intakeAssignment") or assignment,
-                "published": False,
-            },
-            "preview": {"items": [], "stateCounts": []},
-        }
-
-    raise ValueError(f"Unsupported Apple Photos Real Estate intake mode: {mode or 'missing'}")
+def _request_backstage_preview_for_sync(
+    photo_id: str,
+    destination: Path,
+    max_pixel: int,
+    timeout: float,
+) -> dict:
+    """Request one incremental-sync preview through Backstage-owned IPC."""
+    try:
+        return request_preview(photo_id, destination, max_pixel, timeout=timeout)
+    except BackstagePhotosClientError as error:
+        return error.as_payload()
 
 
 def _incremental_photos_sync(
     repo_root: Path,
     *,
     limit: int = 25,
-    adapter: SignedPhotosBridgeAdapter | None = None,
+    adapter: BackstagePhotosMetadataAdapter | None = None,
     preview_runner: Callable[..., dict] | None = None,
     cancel_requested: Callable[[], bool] | None = None,
     progress: Callable[[dict], None] | None = None,
@@ -2403,8 +2631,8 @@ def _incremental_photos_sync(
     """Read a bounded least-recently-scanned PhotoKit slice and import fingerprints."""
     bounded_limit = max(1, min(int(limit or 25), 50))
     started = time.monotonic()
-    adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
-    preview_runner = preview_runner or _run_apple_photos_bridge
+    adapter = adapter or BackstagePhotosMetadataAdapter(repo_root)
+    preview_runner = preview_runner or _request_backstage_preview_for_sync
     with fixture_connect(repo_root) as connection:
         rows = connection.execute(
             """
@@ -2478,37 +2706,56 @@ def _incremental_photos_sync(
     preview_by_id: dict[str, dict] = {}
     with tempfile.TemporaryDirectory(prefix="pbe-incremental-photos-sync-") as temp_dir:
         temp_root = Path(temp_dir)
-        preview_requests: list[dict] = []
         destination_by_id: dict[str, Path] = {}
         for target in targets:
             photos_id = target["photosAssetId"]
             destination = temp_root / f"{hashlib.sha256(photos_id.encode()).hexdigest()[:24]}.jpg"
             destination_by_id[photos_id] = destination
-            preview_requests.append({
-                "assetId": photos_id,
-                "destination": str(destination),
-                "maxPixel": 1600,
-            })
-        preview_input = temp_root / "preview-requests.json"
-        preview_input.write_text(
-            json.dumps(preview_requests, ensure_ascii=False),
-            encoding="utf-8",
-        )
         report("Rendering comparison previews")
-        preview_payload = (
-            {"ok": False, "error": "Stopped before preview rendering", "items": []}
-            if stopped()
-            else preview_runner(
-                repo_root,
-                ["preview-many", "--input", str(preview_input)],
-            )
-        )
-        if preview_payload.get("ok"):
-            preview_by_id = {
-                str(row.get("assetId") or ""): row
-                for row in preview_payload.get("items") or []
-                if isinstance(row, dict)
+        preview_payload: dict = {"ok": True, "items": []}
+        if stopped():
+            preview_payload = {
+                "ok": False,
+                "error": "Stopped before preview rendering",
+                "items": [],
             }
+        else:
+            for target in targets:
+                if stopped():
+                    preview_payload = {
+                        "ok": False,
+                        "error": "Stopped during preview rendering",
+                        "items": [],
+                    }
+                    break
+                photos_id = target["photosAssetId"]
+                try:
+                    preview = preview_runner(
+                        photos_id,
+                        destination_by_id[photos_id],
+                        1600,
+                        60.0,
+                    )
+                except Exception as error:
+                    preview = {
+                        "ok": False,
+                        "error": str(error) or error.__class__.__name__,
+                    }
+                if not isinstance(preview, dict):
+                    preview = {
+                        "ok": False,
+                        "error": "Backstage preview runner returned an invalid payload.",
+                    }
+                preview_payload["items"].append({
+                    "assetId": photos_id,
+                    **preview,
+                })
+            if preview_payload["ok"]:
+                preview_by_id = {
+                    str(row.get("assetId") or ""): row
+                    for row in preview_payload["items"]
+                    if isinstance(row, dict)
+                }
 
         snapshots: list[dict] = []
         failures: list[dict] = []
@@ -2608,6 +2855,214 @@ def _incremental_photos_sync(
     }
 
 
+def _retry_photos_sync_db_write(operation, *, delays=PHOTOS_SYNC_DB_RETRY_DELAYS_SECONDS):
+    """Retry one idempotent Photos-sync receipt write during a transient SQLite lock."""
+    for delay in (*delays, None):
+        try:
+            return operation()
+        except sqlite3.OperationalError as error:
+            message = str(error).casefold()
+            if not any(token in message for token in ("locked", "busy")) or delay is None:
+                raise
+            time.sleep(delay)
+
+
+def _photos_sync_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _photos_sync_process_alive(pid: object) -> bool:
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return False
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _photos_sync_lease_expiry(timestamp: datetime) -> str:
+    return (timestamp + timedelta(seconds=PHOTOS_SYNC_LEASE_SECONDS)).isoformat().replace("+00:00", "Z")
+
+
+def _reconcile_stale_photos_sync_runs(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = PHOTOS_SYNC_STALE_AFTER_SECONDS,
+) -> dict:
+    """Recover interrupted Photos-sync rows without deleting their audit receipts."""
+    database = repo_root / OWNER_ACTION_ROOT / "Owner.sqlite"
+    if not database.is_file():
+        return {
+            "ok": True,
+            "recoveredCount": 0,
+            "recoveredRunIds": [],
+            "reviewedCount": 0,
+            "reviewRunIds": [],
+            "skippedCount": 0,
+        }
+    if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
+        return {
+            "ok": True,
+            "recoveredCount": 0,
+            "recoveredRunIds": [],
+            "reviewedCount": 0,
+            "reviewRunIds": [],
+            "skippedCount": 0,
+            "activeWorker": True,
+        }
+
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    try:
+
+        def recover() -> tuple[list[str], list[str], int]:
+            recovered: list[str] = []
+            reviewed: list[str] = []
+            skipped = 0
+            with fixture_connect(repo_root) as connection:
+                rows = connection.execute(
+                    """
+                    SELECT run_id, created_at, updated_at, worker_pid, worker_token,
+                           recovery_state
+                    FROM photos_sync_runs
+                    WHERE status = 'running'
+                    ORDER BY updated_at, run_id
+                    """
+                ).fetchall()
+                for row in rows:
+                    heartbeat = _photos_sync_timestamp(row["updated_at"] or row["created_at"])
+                    if heartbeat is None:
+                        skipped += 1
+                        continue
+                    age_seconds = max(0, int((current - heartbeat).total_seconds()))
+                    if age_seconds < stale_after_seconds:
+                        continue
+                    run_id = str(row["run_id"])
+                    worker_token = str(row["worker_token"] or "").strip()
+                    worker_pid = int(row["worker_pid"] or 0)
+                    legacy = not worker_token or worker_pid <= 0
+                    if legacy:
+                        if str(row["recovery_state"] or ""):
+                            continue
+                        update = connection.execute(
+                            """
+                            UPDATE photos_sync_runs
+                            SET recovery_state = 'needs-review',
+                                recovery_reason = ?,
+                                recovery_checked_at = ?
+                            WHERE run_id = ? AND status = 'running'
+                              AND COALESCE(recovery_state, '') = ''
+                            """,
+                            (
+                                "Legacy Photos sync row has no durable worker PID/token; "
+                                f"last heartbeat was {age_seconds} seconds ago and needs explicit review.",
+                                timestamp,
+                                run_id,
+                            ),
+                        )
+                    elif worker_pid == os.getpid():
+                        # The process-local sync lock is held by a live worker, so a
+                        # row reaching this branch represents a thread that ended
+                        # without a receipt.
+                        update = connection.execute(
+                            """
+                            UPDATE photos_sync_runs
+                            SET status = 'failed',
+                                stage = 'Recovered after interruption',
+                                recovery_state = 'recovered',
+                                recovery_reason = ?,
+                                recovery_checked_at = ?,
+                                error_text = ?,
+                                completed_at = ?,
+                                updated_at = ?
+                            WHERE run_id = ? AND status = 'running'
+                              AND worker_token = ?
+                            """,
+                            (
+                                "Photos sync worker is no longer active in this process; "
+                                f"last heartbeat was {age_seconds} seconds ago.",
+                                timestamp,
+                                "Photos sync worker ended before its terminal receipt was persisted.",
+                                timestamp,
+                                timestamp,
+                                run_id,
+                                worker_token,
+                            ),
+                        )
+                    elif not _photos_sync_process_alive(worker_pid):
+                        update = connection.execute(
+                            """
+                            UPDATE photos_sync_runs
+                            SET status = 'failed',
+                                stage = 'Recovered after interruption',
+                                recovery_state = 'recovered',
+                                recovery_reason = ?,
+                                recovery_checked_at = ?,
+                                error_text = ?,
+                                completed_at = ?,
+                                updated_at = ?
+                            WHERE run_id = ? AND status = 'running'
+                              AND worker_pid = ? AND worker_token = ?
+                            """,
+                            (
+                                "Recorded Photos sync worker process is no longer alive; "
+                                f"last heartbeat was {age_seconds} seconds ago.",
+                                timestamp,
+                                "Photos sync worker process ended before its terminal receipt was persisted.",
+                                timestamp,
+                                timestamp,
+                                run_id,
+                                worker_pid,
+                                worker_token,
+                            ),
+                        )
+                    else:
+                        skipped += 1
+                        continue
+                    if legacy:
+                        if update.rowcount:
+                            reviewed.append(run_id)
+                        continue
+                    if update.rowcount:
+                        recovered.append(run_id)
+                connection.commit()
+            return recovered, reviewed, skipped
+
+        recovered, reviewed, skipped = _retry_photos_sync_db_write(recover)
+    finally:
+        PHOTOS_INCREMENTAL_SYNC_LOCK.release()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredRunIds": recovered,
+        "reviewedCount": len(reviewed),
+        "reviewRunIds": reviewed,
+        "skippedCount": skipped,
+    }
+
+
 def _photos_sync_run_status(repo_root: Path, run_id: str) -> dict:
     with fixture_connect(repo_root) as connection:
         row = connection.execute(
@@ -2637,48 +3092,67 @@ def _photos_sync_run_status(repo_root: Path, run_id: str) -> dict:
         "cancelRequested": bool(row["cancel_requested"]),
         "error": str(row["error_text"] or ""),
         "completedAt": str(row["completed_at"] or ""),
+        "workerPid": int(row["worker_pid"] or 0),
+        "leaseExpiresAt": str(row["lease_expires_at"] or ""),
+        "recoveryState": str(row["recovery_state"] or ""),
+        "recoveryReason": str(row["recovery_reason"] or ""),
     }
 
 
 def _request_photos_sync_cancel(repo_root: Path, run_id: str) -> dict:
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    with fixture_connect(repo_root) as connection:
-        row = connection.execute(
-            "SELECT status FROM photos_sync_runs WHERE run_id = ?",
-            (run_id,),
-        ).fetchone()
-        if not row:
-            raise ValueError("Photos sync run does not exist")
-        if str(row["status"]) == "running":
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET cancel_requested = 1,
-                    stage = 'Stopping after the current PhotoKit checkpoint',
-                    updated_at = ?
-                WHERE run_id = ?
-                """,
-                (timestamp, run_id),
-            )
-            connection.commit()
+    lease_expires_at = _photos_sync_lease_expiry(datetime.now(timezone.utc))
+
+    def request_cancel() -> None:
+        with fixture_connect(repo_root) as connection:
+            row = connection.execute(
+                "SELECT status FROM photos_sync_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if not row:
+                raise ValueError("Photos sync run does not exist")
+            if str(row["status"]) == "running":
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET cancel_requested = 1,
+                        stage = 'Stopping after the current PhotoKit checkpoint',
+                        updated_at = ?, lease_expires_at = ?
+                    WHERE run_id = ?
+                    """,
+                    (timestamp, lease_expires_at, run_id),
+                )
+                connection.commit()
+
+    _retry_photos_sync_db_write(request_cancel)
     return _photos_sync_run_status(repo_root, run_id)
 
 
-def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
+def _run_photos_sync_task(
+    repo_root: Path,
+    run_id: str,
+    limit: int,
+    worker_token: str = "",
+) -> None:
     if not PHOTOS_INCREMENTAL_SYNC_LOCK.acquire(blocking=False):
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = 'failed', stage = 'Could not start',
-                    error_text = 'Another Apple Photos sync pass is already running.',
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (timestamp, timestamp, run_id),
-            )
-            connection.commit()
+
+        def record_busy() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = 'failed', stage = 'Could not start',
+                        error_text = 'Another Apple Photos sync pass is already running.',
+                        completed_at = ?, updated_at = ?, lease_expires_at = NULL
+                    WHERE run_id = ?
+                      AND (worker_token = ? OR COALESCE(worker_token, '') = '')
+                    """,
+                    (timestamp, timestamp, run_id, worker_token),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(record_busy)
         return
 
     def cancelled() -> bool:
@@ -2691,24 +3165,32 @@ def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
 
     def update_progress(values: dict) -> None:
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET stage = ?, requested_count = ?, scanned_count = ?,
-                    remaining_count = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (
-                    str(values.get("stage") or "Working"),
-                    int(values.get("requested") or 0),
-                    int(values.get("scanned") or 0),
-                    int(values.get("remaining") or 0),
-                    timestamp,
-                    run_id,
-                ),
-            )
-            connection.commit()
+        lease_expires_at = _photos_sync_lease_expiry(datetime.now(timezone.utc))
+
+        def write_progress() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET stage = ?, requested_count = ?, scanned_count = ?,
+                        remaining_count = ?, updated_at = ?, lease_expires_at = ?
+                    WHERE run_id = ?
+                      AND (worker_token = ? OR COALESCE(worker_token, '') = '')
+                    """,
+                    (
+                        str(values.get("stage") or "Working"),
+                        int(values.get("requested") or 0),
+                        int(values.get("scanned") or 0),
+                        int(values.get("remaining") or 0),
+                        timestamp,
+                        lease_expires_at,
+                        run_id,
+                        worker_token,
+                    ),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(write_progress)
 
     try:
         result = _incremental_photos_sync(
@@ -2721,77 +3203,111 @@ def _run_photos_sync_task(repo_root: Path, run_id: str, limit: int) -> None:
         terminal = "cancelled" if result.get("cancelled") else "completed"
         stage = "Stopped safely" if terminal == "cancelled" else "Completed"
         completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = ?, stage = ?, requested_count = ?, scanned_count = ?,
-                    remaining_count = ?, baseline_count = ?, unchanged_count = ?,
-                    metadata_only_count = ?, appearance_count = ?,
-                    source_missing_count = ?, source_returned_count = ?,
-                    failed_count = ?, failures_json = ?, elapsed_seconds = ?,
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (
-                    terminal,
-                    stage,
-                    int(result.get("requested") or 0),
-                    int(result.get("scanned") or 0),
-                    int(result.get("remaining") or 0),
-                    int(changes.get("baseline") or 0),
-                    int(changes.get("unchanged") or 0),
-                    int(changes.get("metadataOnly") or 0),
-                    int(changes.get("appearance") or 0),
-                    int(changes.get("sourceMissing") or 0),
-                    int(changes.get("sourceReturned") or 0),
-                    len(result.get("failures") or []),
-                    json.dumps(result.get("failures") or [], ensure_ascii=False),
-                    float(result.get("elapsedSeconds") or 0),
-                    completed_at,
-                    completed_at,
-                    run_id,
-                ),
-            )
-            connection.commit()
+
+        def record_terminal() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = ?, stage = ?, requested_count = ?, scanned_count = ?,
+                        remaining_count = ?, baseline_count = ?, unchanged_count = ?,
+                        metadata_only_count = ?, appearance_count = ?,
+                        source_missing_count = ?, source_returned_count = ?,
+                        failed_count = ?, failures_json = ?, elapsed_seconds = ?,
+                        completed_at = ?, updated_at = ?, lease_expires_at = NULL
+                    WHERE run_id = ?
+                      AND (worker_token = ? OR COALESCE(worker_token, '') = '')
+                    """,
+                    (
+                        terminal,
+                        stage,
+                        int(result.get("requested") or 0),
+                        int(result.get("scanned") or 0),
+                        int(result.get("remaining") or 0),
+                        int(changes.get("baseline") or 0),
+                        int(changes.get("unchanged") or 0),
+                        int(changes.get("metadataOnly") or 0),
+                        int(changes.get("appearance") or 0),
+                        int(changes.get("sourceMissing") or 0),
+                        int(changes.get("sourceReturned") or 0),
+                        len(result.get("failures") or []),
+                        json.dumps(result.get("failures") or [], ensure_ascii=False),
+                        float(result.get("elapsedSeconds") or 0),
+                        completed_at,
+                        completed_at,
+                        run_id,
+                        worker_token,
+                    ),
+                )
+                connection.commit()
+
+        _retry_photos_sync_db_write(record_terminal)
     except Exception as error:  # noqa: BLE001 - persist the audit receipt for retry.
         completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE photos_sync_runs
-                SET status = 'failed', stage = 'Failed', error_text = ?,
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (str(error), completed_at, completed_at, run_id),
+
+        def record_failure() -> None:
+            with fixture_connect(repo_root) as connection:
+                connection.execute(
+                    """
+                    UPDATE photos_sync_runs
+                    SET status = 'failed', stage = 'Failed', error_text = ?,
+                        completed_at = ?, updated_at = ?, lease_expires_at = NULL
+                    WHERE run_id = ?
+                      AND (worker_token = ? OR COALESCE(worker_token, '') = '')
+                    """,
+                    (str(error), completed_at, completed_at, run_id, worker_token),
+                )
+                connection.commit()
+
+        try:
+            _retry_photos_sync_db_write(record_failure)
+        except Exception as receipt_error:  # noqa: BLE001 - startup recovery handles the durable row.
+            print(
+                f"Photos sync run {run_id} failed before its receipt could be persisted: {receipt_error}",
+                file=sys.stderr,
             )
-            connection.commit()
     finally:
         PHOTOS_INCREMENTAL_SYNC_LOCK.release()
 
 
 def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
+    _reconcile_stale_photos_sync_runs(repo_root)
     bounded_limit = max(1, min(int(limit or 25), 50))
     run_id = f"photos-sync-{uuid.uuid4().hex[:16]}"
+    worker_token = f"photos-worker-{uuid.uuid4().hex}"
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    with fixture_connect(repo_root) as connection:
-        connection.execute(
-            """
-            INSERT INTO photos_sync_runs (
-              run_id, status, stage, requested_count, remaining_count,
-              created_at, updated_at
-            ) VALUES (?, 'running', 'Queued', ?, ?, ?, ?)
-            """,
-            (run_id, bounded_limit, bounded_limit, timestamp, timestamp),
-        )
-        connection.commit()
-    worker = threading.Thread(
-        target=_run_photos_sync_task,
-        args=(repo_root, run_id, bounded_limit),
-        daemon=True,
-    )
-    worker.start()
+    lease_expires_at = _photos_sync_lease_expiry(datetime.now(timezone.utc))
+
+    def create_run() -> None:
+        with fixture_connect(repo_root) as connection:
+            connection.execute(
+                """
+                INSERT INTO photos_sync_runs (
+                  run_id, status, stage, requested_count, remaining_count,
+                  worker_pid, worker_token, lease_expires_at,
+                  created_at, updated_at
+                ) VALUES (?, 'running', 'Queued', ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    bounded_limit,
+                    bounded_limit,
+                    os.getpid(),
+                    worker_token,
+                    lease_expires_at,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            connection.commit()
+
+    _retry_photos_sync_db_write(create_run)
+    # The action-scoped connector exits as soon as this function returns. A
+    # daemon thread would be killed with that process and leave a durable
+    # `running` row that Backstage polls forever. Keep the bounded PhotoKit
+    # pass inside this one connector action so shutdown can wait for the work
+    # and the action always persists a terminal receipt before it exits.
+    _run_photos_sync_task(repo_root, run_id, bounded_limit, worker_token)
     return {**_photos_sync_run_status(repo_root, run_id), "started": True}
 
 
@@ -3006,6 +3522,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             propagate=bool(manifest.get("propagate")),
             title=manifest.get("title") if "title" in manifest else None,
             keywords=manifest.get("keywords") if "keywords" in manifest else None,
+            country=manifest.get("country") if "country" in manifest else None,
+            proposal_id=str(manifest.get("proposalId") or ""),
             ai_reasons=manifest.get("aiReasons") or [],
             ai_note=str(manifest.get("aiNote") or ""),
             actor="owner-connector",
@@ -3018,6 +3536,43 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 str(manifest.get("operationId") or ""),
                 actor="owner-connector",
+            ),
+        })
+    elif mode == "fixture-visual-repair-proposal-list":
+        result.update({
+            "readOnly": True,
+            "visualRepairProposals": list_visual_repair_proposals(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                asset_ids=manifest.get("assetIds") or [],
+                include_history=bool(manifest.get("includeHistory")),
+            ),
+        })
+    elif mode == "fixture-visual-repair-proposal-request":
+        result.update({
+            "readOnly": False,
+            "visualRepairProposal": request_visual_repair_proposal(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+                str(manifest.get("assetId") or ""),
+                str(manifest.get("sourceVersionId") or ""),
+                manifest.get("defectCategories") or [],
+                generator=str(manifest.get("generator") or ""),
+                requested_generator_model=str(manifest.get("requestedGeneratorModel") or ""),
+                idempotency_key=str(manifest.get("idempotencyKey") or ""),
+            ),
+        })
+    elif mode == "fixture-visual-repair-proposal-decide":
+        result.update({
+            "readOnly": False,
+            "visualRepairProposal": decide_visual_repair_proposal(
+                repo_root,
+                str(manifest.get("proposalId") or ""),
+                str(manifest.get("decision") or ""),
+                fixture_id=str(manifest.get("fixtureId") or ""),
+                reason=str(manifest.get("reason") or ""),
+                generator=str(manifest.get("generator") or ""),
+                idempotency_key=str(manifest.get("idempotencyKey") or ""),
             ),
         })
     elif mode == "fixture-ai-status":
@@ -3399,11 +3954,154 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         # here rewrites every discarded row and Owner settings on each list
         # request, which makes a native read mutate the live Owner database.
         lifecycle = media_lifecycle_snapshot(repo_root, sync_compat=False)
+        lifecycle_states = [
+            item for item in lifecycle.get("states") or []
+            if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
+        ]
+        indexed_assets: dict[str, dict[str, str]] = {}
+        lifecycle_ids = [
+            str(item.get("media_id") or "").strip()
+            for item in lifecycle_states
+            if str(item.get("media_id") or "").strip()
+        ]
+        if lifecycle_ids:
+            try:
+                with fixture_connect_read_only(repo_root) as connection:
+                    table_names = {
+                        str(row["name"])
+                        for row in connection.execute(
+                            """
+                            SELECT name
+                            FROM sqlite_master
+                            WHERE type = 'table'
+                              AND name IN ('sidecar_assets', 'sidecar_upload_bridge_run_items')
+                            """
+                        ).fetchall()
+                    }
+                    for start in range(0, len(lifecycle_ids), 500):
+                        batch = lifecycle_ids[start:start + 500]
+                        placeholders = ",".join("?" for _ in batch)
+                        if table_names == {"sidecar_assets", "sidecar_upload_bridge_run_items"}:
+                            rows = connection.execute(
+                                f"""
+                                WITH bridge_candidates AS (
+                                    SELECT
+                                        b.photo_id,
+                                        b.asset_id,
+                                        b.filename,
+                                        ROW_NUMBER() OVER (
+                                            PARTITION BY b.photo_id
+                                            ORDER BY
+                                                CASE
+                                                    WHEN b.upload_status = 'uploaded' AND b.status = 'uploaded' THEN 0
+                                                    WHEN b.upload_status = 'uploaded' OR b.status = 'uploaded' THEN 1
+                                                    ELSE 2
+                                                END,
+                                                COALESCE(b.updated_at, b.created_at, '') DESC,
+                                                b.run_item_id DESC
+                                        ) AS row_number
+                                    FROM sidecar_upload_bridge_run_items AS b
+                                    WHERE b.photo_id IN ({placeholders})
+                                )
+                                SELECT
+                                    bridge.photo_id AS media_id,
+                                    bridge.asset_id AS photo_library_identifier,
+                                    COALESCE(
+                                        NULLIF(
+                                            CASE WHEN json_valid(sidecar.raw_json)
+                                                 THEN json_extract(sidecar.raw_json, '$.preferredResourceFilename')
+                                                 ELSE '' END,
+                                            ''
+                                        ),
+                                        NULLIF(bridge.filename, ''),
+                                        sidecar.filename,
+                                        ''
+                                    ) AS filename,
+                                    COALESCE(NULLIF(sidecar.photos_title, ''), '') AS title,
+                                    COALESCE(sidecar.captured_at, '') AS captured_at
+                                FROM bridge_candidates AS bridge
+                                LEFT JOIN sidecar_assets AS sidecar
+                                  ON sidecar.asset_id = bridge.asset_id
+                                WHERE bridge.row_number = 1
+                                """,
+                                batch,
+                            ).fetchall()
+                            direct_rows = connection.execute(
+                                f"""SELECT asset_id AS media_id,
+                                           '' AS photo_library_identifier,
+                                           COALESCE(
+                                               NULLIF(
+                                                   CASE WHEN json_valid(raw_json)
+                                                        THEN json_extract(raw_json, '$.preferredResourceFilename')
+                                                        ELSE '' END,
+                                                   ''
+                                               ),
+                                               filename,
+                                               ''
+                                           ) AS filename,
+                                           COALESCE(NULLIF(photos_title, ''), '') AS title,
+                                           captured_at
+                                    FROM sidecar_assets
+                                    WHERE asset_id IN ({placeholders})""",
+                                batch,
+                            ).fetchall()
+                        else:
+                            rows = connection.execute(
+                                f"""SELECT asset_id AS media_id, '' AS photo_library_identifier,
+                                           COALESCE(
+                                               NULLIF(
+                                                   CASE WHEN json_valid(raw_json)
+                                                        THEN json_extract(raw_json, '$.preferredResourceFilename')
+                                                        ELSE '' END,
+                                                   ''
+                                               ),
+                                               filename,
+                                               ''
+                                           ) AS filename,
+                                           COALESCE(NULLIF(photos_title, ''), '') AS title,
+                                           captured_at
+                                    FROM sidecar_assets
+                                    WHERE asset_id IN ({placeholders})""",
+                                batch,
+                            ).fetchall()
+                            direct_rows = []
+                        indexed_assets.update({
+                            str(row["media_id"]): {
+                                "photoLibraryIdentifier": str(row["photo_library_identifier"] or ""),
+                                "filename": str(row["filename"] or ""),
+                                "title": str(row["title"] or ""),
+                                "capturedAt": str(row["captured_at"] or ""),
+                            }
+                            for row in rows
+                        })
+                        for row in direct_rows:
+                            indexed_assets.setdefault(
+                                str(row["media_id"]),
+                                {
+                                    "photoLibraryIdentifier": "",
+                                    "filename": str(row["filename"] or ""),
+                                    "title": str(row["title"] or ""),
+                                    "capturedAt": str(row["captured_at"] or ""),
+                                },
+                            )
+            except (OSError, sqlite3.Error):
+                # Lifecycle browsing remains available when the read-only Photos
+                # index is absent or temporarily unavailable. Owner.sqlite stays
+                # authoritative for lifecycle state; identity enrichment is best-effort.
+                indexed_assets = {}
         all_states = [
             {
                 "mediaId": str(item.get("media_id") or ""),
                 "state": str(item.get("lifecycle_state") or ""),
-                "title": str(item.get("title") or ""),
+                "title": indexed_assets.get(str(item.get("media_id") or ""), {}).get(
+                    "title",
+                    "",
+                ) or str(item.get("title") or ""),
+                "filename": indexed_assets.get(str(item.get("media_id") or ""), {}).get("filename", ""),
+                "capturedAt": indexed_assets.get(str(item.get("media_id") or ""), {}).get("capturedAt", ""),
+                "photoLibraryIdentifier": indexed_assets.get(
+                    str(item.get("media_id") or ""), {}
+                ).get("photoLibraryIdentifier", ""),
                 "mediaType": str(item.get("media_type") or ""),
                 "sourceSlug": str(item.get("source_slug") or item.get("previous_slug") or ""),
                 "hiddenAt": str(item.get("hidden_at") or ""),
@@ -3411,8 +4109,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 "restoredAt": str(item.get("restored_at") or ""),
                 "updatedAt": str(item.get("updated_at") or ""),
             }
-            for item in lifecycle.get("states") or []
-            if str(item.get("lifecycle_state") or "") in {"hidden", "discarded"}
+            for item in lifecycle_states
         ]
         requested_states = {
             str(value or "").strip()
@@ -3461,7 +4158,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             repo_root,
             str(manifest.get("fixtureId") or ""),
             manifest.get("assetIds") or [],
-            adapter=SignedPhotosBridgeAdapter(repo_root),
+            adapter=BackstagePhotosMetadataAdapter(repo_root),
         )})
     elif mode == "fixture-photos-writeback-commit":
         result.update({"readOnly": False, "photosWriteback": commit_writeback(repo_root, str(manifest.get("fixtureId") or ""), manifest.get("assetIds") or [])})
@@ -3499,6 +4196,9 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "fixture-deliverable-link": "Linked a ready fixture deliverable without sending a client message.",
         "fixture-publication-plan": "Prepared exact public-catalog eligibility without rebuilding or deploying the site.",
         "fixture-lifecycle-list": "Loaded the private lifecycle ledger without changing any media.",
+        "fixture-visual-repair-proposal-list": "Loaded RE visual repair drafts without changing source or review state.",
+        "fixture-visual-repair-proposal-request": "Recorded a synthetic RE visual repair draft; no image bytes were generated or retained.",
+        "fixture-visual-repair-proposal-decide": "Recorded the RE visual repair draft decision without publishing, uploading, or replacing a source.",
         "fixture-upload-run-adoption-plan": "Previewed the exact completed Upload Bridge items eligible for fixture adoption; nothing changed.",
         "fixture-upload-run-adoption-commit": "Adopted checksum-verified completed upload items into the chosen fixture and reconstructed their R2 receipts.",
         "fixture-photos-writeback-plan": "Prepared the Apple Photos metadata give-back plan without changing Photos.",
@@ -3944,6 +4644,15 @@ def main() -> int:
     parser.add_argument("--backstage-bootstrap-file", default="", help=argparse.SUPPRESS)
     args = parser.parse_args()
     _bootstrap_local_tool_path()
+    try:
+        recovery = _reconcile_stale_photos_sync_runs(Path.cwd())
+        if recovery.get("recoveredCount"):
+            print(
+                "Recovered interrupted Photos sync runs: "
+                f"{recovery['recoveredCount']}"
+            )
+    except Exception as error:  # noqa: BLE001 - the local server remains usable if recovery is temporarily locked.
+        print(f"Photos sync recovery check skipped: {error}", file=sys.stderr)
 
     bootstrap_secret = os.environ.pop("PBE_BACKSTAGE_BOOTSTRAP_SECRET", "")
     document_root = Path.cwd().resolve()
@@ -4473,8 +5182,11 @@ def _lifecycle_blocked_ids(repo_root: Path) -> set[str]:
     return set(_lifecycle_snapshot(repo_root).get("blockedPhotoIds") or [])
 
 
-def _assert_no_lifecycle_blocked_public_rows(repo_root: Path) -> None:
-    blocked_ids = _lifecycle_blocked_ids(repo_root)
+def _assert_no_lifecycle_blocked_public_rows(
+    repo_root: Path,
+    blocked_ids: set[str] | None = None,
+) -> None:
+    blocked_ids = blocked_ids if blocked_ids is not None else _lifecycle_blocked_ids(repo_root)
     if not blocked_ids:
         return
     public_ids = set(_public_catalog_origin_by_id(repo_root))
@@ -6676,12 +7388,20 @@ def _groups_without_photo_ids(groups: dict[str, list[dict]], photo_ids: set[str]
     }
 
 
-def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> dict:
+def _write_state(
+    repo_root: Path,
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_groups: dict[str, list[dict]],
+    *,
+    lifecycle_snapshot: dict | None = None,
+) -> dict:
     _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
-    discarded_ids = _lifecycle_discarded_ids(repo_root)
+    lifecycle_snapshot = lifecycle_snapshot or _lifecycle_snapshot(repo_root)
+    discarded_ids = set(lifecycle_snapshot.get("discardedPhotoIds") or [])
     hidden_ids = (
         {photo.get("id") for photos in hidden_groups.values() for photo in photos if photo.get("id")}
-        | _lifecycle_hidden_ids(repo_root)
+        | set(lifecycle_snapshot.get("hiddenPhotoIds") or [])
     )
     blocked_ids = discarded_ids | hidden_ids
     expo_groups = _groups_without_photo_ids(expo_groups, blocked_ids)
@@ -6700,7 +7420,7 @@ def _write_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_gr
         "live-local-action",
     )
     write_photos_data_from_site(repo_root, expo_groups, reserve_groups)
-    _assert_no_lifecycle_blocked_public_rows(repo_root)
+    _assert_no_lifecycle_blocked_public_rows(repo_root, blocked_ids)
     site = load_site_data(repo_root)
     return {
         "data": site.get("data", {}),
@@ -6734,10 +7454,197 @@ def _write_worker_catalog(repo_root: Path) -> dict:
     }
 
 
-def _write_catalog_state(repo_root: Path, expo_groups: dict[str, list[dict]], reserve_groups: dict[str, list[dict]], hidden_groups: dict[str, list[dict]]) -> tuple[dict, dict]:
-    site_state = _write_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+def _write_catalog_state(
+    repo_root: Path,
+    expo_groups: dict[str, list[dict]],
+    reserve_groups: dict[str, list[dict]],
+    hidden_groups: dict[str, list[dict]],
+    *,
+    lifecycle_snapshot: dict | None = None,
+) -> tuple[dict, dict]:
+    site_state = _write_state(
+        repo_root,
+        expo_groups,
+        reserve_groups,
+        hidden_groups,
+        lifecycle_snapshot=lifecycle_snapshot,
+    )
     worker_catalog = _write_worker_catalog(repo_root)
     return site_state, worker_catalog
+
+
+def project_lifecycle_catalog_state(repo_root: Path, operation: str, photo_ids: list[str]) -> dict:
+    """Project an already-committed lifecycle result into static catalog files.
+
+    This helper intentionally has no gateway, connector, cloud, or lifecycle
+    writer dependency. Its caller must first prove the durable authoritative
+    operation and immutable hosted request identity.
+    """
+
+    projection_started = time.perf_counter()
+    timing: dict[str, float] = {}
+    normalized_operation = str(operation or "").strip().lower()
+    ids = _normalized_photo_ids(photo_ids)
+    if normalized_operation not in {"x", "restore", "empty"}:
+        raise ValueError("unsupported lifecycle catalog projection operation")
+    if (not ids and normalized_operation != "empty") or len(ids) > 500:
+        raise ValueError("lifecycle catalog projection requires 1 to 500 photo ids")
+    if not ids:
+        return {
+            "projected_ids": [],
+            "missing_ids": [],
+            "catalog_publish_pending": False,
+            "projection": {"state": "applied", "retryable": False},
+            "worker_catalog": {"ok": True, "state": "not-needed"},
+            "site": {},
+            "catalogPublication": {"state": "not-needed", "receipt": None},
+        }
+    phase_started = time.perf_counter()
+    try:
+        expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+        timing["static_state_load_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
+        return {
+            "projected_ids": [],
+            "catalog_publish_pending": True,
+            "projection": {"state": "skipped-no-static-catalog", "retryable": False},
+            "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
+            "site": {"ok": False, "state": "skipped-no-static-catalog"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
+        }
+    timing["static_state_load_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+
+    phase_started = time.perf_counter()
+    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+    timing["hidden_reference_repair_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    projected_ids: list[str] = []
+    missing_ids: list[str] = []
+    projected_at = datetime.now(timezone.utc).isoformat()
+    phase_started = time.perf_counter()
+    for photo_id in ids:
+        if normalized_operation == "x":
+            if _find_photo(hidden_groups, photo_id):
+                projected_ids.append(photo_id)
+                continue
+            found = _find_and_remove(expo_groups, photo_id)
+            source_state = "expo"
+            if not found:
+                found = _find_and_remove(reserve_groups, photo_id)
+                source_state = "reserve"
+            if not found:
+                missing_ids.append(photo_id)
+                continue
+            source_slug, source_photo = found
+            hidden_groups[source_slug].append(
+                _hidden_review_photo(source_photo, source_slug, source_state, projected_at)
+            )
+            projected_ids.append(photo_id)
+            continue
+        if normalized_operation == "restore":
+            if _find_photo(expo_groups, photo_id) or _find_photo(reserve_groups, photo_id):
+                projected_ids.append(photo_id)
+                continue
+            found = _find_and_remove(hidden_groups, photo_id)
+            if not found:
+                missing_ids.append(photo_id)
+                continue
+            hidden_slug, hidden_photo = found
+            target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
+            if _restore_hidden_photo_to_normal_group(
+                expo_groups,
+                reserve_groups,
+                hidden_photo,
+                photo_id,
+                target_state,
+                target_slug,
+            ):
+                projected_ids.append(photo_id)
+            else:
+                missing_ids.append(photo_id)
+            continue
+        _remove_existing(expo_groups, photo_id)
+        _remove_existing(reserve_groups, photo_id)
+        _remove_existing(hidden_groups, photo_id)
+        projected_ids.append(photo_id)
+
+    timing["catalog_projection_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    phase_started = time.perf_counter()
+    try:
+        lifecycle_snapshot = _lifecycle_snapshot(repo_root)
+    except Exception:  # noqa: BLE001 - authority is already committed.
+        timing["lifecycle_snapshot_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
+        return {
+            "projected_ids": [],
+            "missing_ids": missing_ids,
+            "catalog_publish_pending": True,
+            "projection": {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_failed",
+            },
+            "worker_catalog": {"ok": False, "state": "pending"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
+        }
+    timing["lifecycle_snapshot_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    phase_started = time.perf_counter()
+    try:
+        site_state, worker_catalog = _write_catalog_state(
+            repo_root,
+            expo_groups,
+            reserve_groups,
+            hidden_groups,
+            lifecycle_snapshot=lifecycle_snapshot,
+        )
+    except Exception:  # noqa: BLE001 - authority is already committed.
+        timing["artifact_write_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+        timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
+        return {
+            "projected_ids": [],
+            "missing_ids": missing_ids,
+            "catalog_publish_pending": True,
+            "projection": {
+                "state": "pending",
+                "retryable": True,
+                "error_code": "catalog_projection_failed",
+            },
+            "worker_catalog": {"ok": False, "state": "pending"},
+            "catalogPublication": {"state": "pending", "receipt": None},
+            "projection_timing": timing,
+        }
+    timing["artifact_write_ms"] = round((time.perf_counter() - phase_started) * 1000, 1)
+    timing["total_ms"] = round((time.perf_counter() - projection_started) * 1000, 1)
+
+    worker_ok = worker_catalog.get("ok") is True
+    if missing_ids:
+        projection = {
+            "state": "partial",
+            "retryable": False,
+            "error_code": "catalog_projection_assets_missing",
+            "missing_ids": missing_ids,
+        }
+    elif not worker_ok:
+        projection = {
+            "state": "partial",
+            "retryable": True,
+            "error_code": "worker_catalog_projection_failed",
+        }
+    else:
+        projection = {"state": "applied", "retryable": False}
+    return {
+        "projected_ids": projected_ids,
+        "missing_ids": missing_ids,
+        "hidden_ids": sorted(lifecycle_snapshot.get("hiddenPhotoIds") or []),
+        "catalog_publish_pending": True,
+        "projection": projection,
+        "worker_catalog": worker_catalog,
+        "site": site_state,
+        "catalogPublication": {"state": "pending", "receipt": None},
+        "projection_timing": timing,
+    }
 
 
 def _split_keyword_text(value: object) -> list[str]:
@@ -7496,8 +8403,8 @@ def _source_preview_photo_from_owner_sidecar(repo_root: Path, media_id: str) -> 
 
     PBE Owner fixture rows are intentionally not public-catalog rows.  Their
     stable asset id is backed by Owner.sqlite and their renderable preview is
-    obtained through the signed Photos Bridge, using the PhotoKit local
-    identifier retained in raw_json.  Keep this lookup metadata-only: the
+    obtained through authenticated IPC to the signed PhotosByElie Backstage app,
+    using the PhotoKit local identifier retained in raw_json. Keep this lookup metadata-only: the
     sidecar may describe a source without exposing a filesystem path.
     """
     clean_id = str(media_id or "").strip()
@@ -7601,22 +8508,19 @@ def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, me
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = cache_path.with_name(f".{cache_path.name}.{uuid.uuid4().hex}.tmp")
-    bridge_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
+    photo_identifier = str(photo.get("photoLibraryIdentifier") or media_id).strip() or media_id
     try:
-        result = _run_apple_photos_bridge(
-            repo_root,
-            [
-                "preview",
-                "--asset-id",
-                bridge_identifier,
-                "--destination",
-                str(temporary_path),
-                "--max-pixel",
-                "900",
-            ],
-        )
+        try:
+            result = request_preview(
+                photo_identifier,
+                temporary_path,
+                900,
+                timeout=60.0,
+            )
+        except BackstagePhotosClientError as error:
+            result = error.as_payload()
         if not isinstance(result, dict) or not result.get("ok"):
-            message = str((result or {}).get("error") or "Photos Bridge did not return a preview.")
+            message = str((result or {}).get("error") or "Backstage did not return a preview.")
             return _source_preview_error(
                 HTTPStatus.BAD_GATEWAY,
                 media_id,
@@ -7632,7 +8536,7 @@ def _apple_photos_source_preview(repo_root: Path, photo: dict, media_id: str, me
                 media_type,
                 "Apple Photos PhotoKit preview",
                 str(photo.get("title") or media_id),
-                "Photos Bridge reported success without producing a preview file.",
+                "Backstage reported success without producing a preview file.",
             )
         temporary_path.replace(cache_path)
         return {
@@ -10128,492 +11032,10 @@ def _apple_photos_filter_bursts(payload: dict) -> bool:
     return True
 
 
-def _clean_apple_photos_progress_id(value: object) -> str:
-    text = str(value or "").strip()
-    if not text or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", text):
-        return ""
-    return text
-
-
-def _apple_photos_progress_id(payload: dict) -> str:
-    for key in ("progressId", "progress_id", "taskId", "task_id"):
-        progress_id = _clean_apple_photos_progress_id(payload.get(key))
-        if progress_id:
-            return progress_id
-    return ""
-
-
-def _apple_photos_import_progress(progress_id: str) -> dict | None:
-    if not progress_id:
-        return None
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.get(progress_id)
-        return copy.deepcopy(progress) if progress else None
-
-
-def _latest_apple_photos_import_progress() -> dict | None:
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progresses = [copy.deepcopy(progress) for progress in APPLE_PHOTOS_IMPORT_PROGRESS.values()]
-    if not progresses:
-        return None
-    progresses.sort(
-        key=lambda progress: (
-            1 if str(progress.get("state") or "") == "running" else 0,
-            str(progress.get("updatedAt") or progress.get("startedAt") or ""),
-        ),
-        reverse=True,
-    )
-    return progresses[0]
-
-
-def _apple_photos_progress_album_payload(payload: dict) -> dict:
-    album = payload.get("album") if isinstance(payload.get("album"), dict) else {}
-    return {
-        "albumLocalIdentifier": str(album.get("localIdentifier") or payload.get("albumLocalIdentifier") or "").strip(),
-        "albumName": str(album.get("title") or payload.get("albumName") or "Apple Photos album").strip() or "Apple Photos album",
-    }
-
-
-def _start_apple_photos_import_progress(progress_id: str, albums: list[dict]) -> None:
-    if not progress_id:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    album_rows = []
-    seen: set[str] = set()
-    for payload in albums:
-        album = _apple_photos_progress_album_payload(payload)
-        album_id = album["albumLocalIdentifier"] or album["albumName"]
-        if not album_id or album_id in seen:
-            continue
-        seen.add(album_id)
-        album_rows.append({
-            **album,
-            "state": "queued",
-            "importableCount": 0,
-            "checkedCount": 0,
-            "materializedCount": 0,
-            "items": [],
-        })
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        APPLE_PHOTOS_IMPORT_PROGRESS[progress_id] = {
-            "id": progress_id,
-            "state": "running",
-            "message": "Preparing Apple Photos import...",
-            "startedAt": now,
-            "updatedAt": now,
-            "totalAlbums": len(album_rows),
-            "completedAlbums": 0,
-            "importableCount": 0,
-            "checkedCount": 0,
-            "materializedCount": 0,
-            "albums": album_rows,
-        }
-
-
-def _progress_event_album_key(event: dict) -> str:
-    album = event.get("album") if isinstance(event.get("album"), dict) else {}
-    return str(album.get("localIdentifier") or event.get("albumLocalIdentifier") or album.get("title") or event.get("albumName") or "").strip()
-
-
-def _progress_event_album_title(event: dict) -> str:
-    album = event.get("album") if isinstance(event.get("album"), dict) else {}
-    return str(album.get("title") or event.get("albumName") or "Apple Photos album").strip() or "Apple Photos album"
-
-
-def _progress_album_row(progress: dict, event: dict) -> dict:
-    album_key = _progress_event_album_key(event)
-    album_title = _progress_event_album_title(event)
-    albums = progress.setdefault("albums", [])
-    for row in albums:
-        if str(row.get("albumLocalIdentifier") or row.get("albumName") or "") == album_key:
-            return row
-    row = {
-        "albumLocalIdentifier": album_key,
-        "albumName": album_title,
-        "state": "queued",
-        "importableCount": 0,
-        "checkedCount": 0,
-        "materializedCount": 0,
-        "items": [],
-    }
-    albums.append(row)
-    progress["totalAlbums"] = len(albums)
-    return row
-
-
-def _progress_item_from_event(event: dict, state: str) -> dict:
-    progress_value = None
-    try:
-        progress_value = float(event.get("progress"))
-    except (TypeError, ValueError):
-        progress_value = None
-    if progress_value is not None:
-        progress_value = max(0.0, min(1.0, progress_value))
-    try:
-        progress_percent = int(event.get("progressPercent"))
-    except (TypeError, ValueError):
-        progress_percent = int(round(progress_value * 100)) if progress_value is not None else None
-    if progress_percent is not None:
-        progress_percent = max(0, min(100, progress_percent))
-    item = {
-        "localIdentifier": str(event.get("localIdentifier") or ""),
-        "filename": str(event.get("filename") or "Apple Photos asset"),
-        "index": int(event.get("index") or 0),
-        "status": state,
-        "reason": str(event.get("reason") or ""),
-        "relativePath": str(event.get("relativePath") or ""),
-        "path": str(event.get("path") or ""),
-        "mediaType": str(event.get("mediaType") or ""),
-        "exportStrategy": str(event.get("exportStrategy") or ""),
-        "resourceFormat": str(event.get("resourceFormat") or ""),
-        "preferredResourceFilename": str(event.get("preferredResourceFilename") or ""),
-        "preferredResourceFormat": str(event.get("preferredResourceFormat") or ""),
-        "fallbackResourceFilename": str(event.get("fallbackResourceFilename") or ""),
-        "fallbackResourceFormat": str(event.get("fallbackResourceFormat") or ""),
-        "localJPEGFallbackAvailable": bool(event.get("localJPEGFallbackAvailable") or False),
-        "updatedAt": datetime.now(timezone.utc).isoformat(),
-    }
-    resource_formats = event.get("resourceFormats")
-    if isinstance(resource_formats, list):
-        item["resourceFormats"] = [str(value) for value in resource_formats if str(value or "").strip()]
-    try:
-        elapsed_seconds = int(round(float(event.get("elapsedSeconds"))))
-    except (TypeError, ValueError):
-        elapsed_seconds = None
-    if progress_value is not None:
-        item["progress"] = progress_value
-    if progress_percent is not None:
-        item["progressPercent"] = progress_percent
-    if elapsed_seconds is not None and elapsed_seconds >= 0:
-        item["elapsedSeconds"] = elapsed_seconds
-    return item
-
-
-def _apple_photos_asset_progress_message(item: dict, album_name: str) -> str:
-    filename = item.get("filename") or "Apple Photos asset"
-    status = str(item.get("status") or "").strip()
-    percent = item.get("progressPercent")
-    elapsed = item.get("elapsedSeconds")
-    resource_format = str(item.get("resourceFormat") or "").strip()
-    format_suffix = f" ({resource_format})" if resource_format else ""
-    elapsed_label = f" after {elapsed}s" if isinstance(elapsed, int) and elapsed > 0 else ""
-    if status == "waiting_for_render":
-        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the rendered JPEG from {album_name}..."
-    if status == "render_fallback":
-        return f"Rendered JPEG stalled for {filename}{format_suffix}; trying the local source fallback from {album_name}..."
-    if status == "exporting_local_resource":
-        return f"Exporting the local source file for {filename}{format_suffix} from {album_name}..."
-    if status == "waiting_for_local_resource":
-        return f"Waiting{elapsed_label} for Photos to write the local source file for {filename}{format_suffix} from {album_name}..."
-    if status == "converting_local_jpeg":
-        return f"Converting the local source file to JPEG for {filename}{format_suffix} from {album_name}..."
-    if status == "waiting_for_file":
-        return f"Photos reports 100% for {filename}{format_suffix}; waiting{elapsed_label} for the exported file from {album_name}..."
-    if status == "waiting_for_photos":
-        return f"Waiting{elapsed_label} for Photos to provide {filename}{format_suffix} from {album_name}..."
-    if status == "exporting_resource":
-        return f"Photos is exporting {filename}{format_suffix} from {album_name}{elapsed_label}..."
-    if status == "encoding_jpeg":
-        return f"Encoding JPEG for {filename} from {album_name}..."
-    if status == "writing_file":
-        return f"Writing {filename} to the temporary import folder..."
-    if percent is None:
-        return f"Photos is exporting {filename} from {album_name}..."
-    return f"Photos reports {percent}% for {filename}{format_suffix} from {album_name}..."
-
-
-def _append_apple_photos_progress_item(album_row: dict, item: dict) -> None:
-    item_key = item.get("localIdentifier") or f"{item.get('index')}:{item.get('filename')}"
-    items = [
-        existing for existing in album_row.get("items", [])
-        if (existing.get("localIdentifier") or f"{existing.get('index')}:{existing.get('filename')}") != item_key
-    ]
-    album_row["items"] = [item, *items][:APPLE_PHOTOS_PROGRESS_ITEM_LIMIT]
-
-
-def _recount_apple_photos_progress(progress: dict) -> None:
-    albums = progress.get("albums") if isinstance(progress.get("albums"), list) else []
-    progress["importableCount"] = sum(int(row.get("importableCount") or 0) for row in albums if isinstance(row, dict))
-    progress["checkedCount"] = sum(int(row.get("checkedCount") or 0) for row in albums if isinstance(row, dict))
-    progress["materializedCount"] = sum(int(row.get("materializedCount") or 0) for row in albums if isinstance(row, dict))
-    progress["completedAlbums"] = sum(1 for row in albums if isinstance(row, dict) and str(row.get("state") or "") in {"done", "failed"})
-
-
-def _update_apple_photos_import_progress_from_event(progress_id: str, event: dict) -> None:
-    if not progress_id or not isinstance(event, dict):
-        return
-    event_name = str(event.get("event") or "").strip()
-    now = datetime.now(timezone.utc).isoformat()
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
-            "id": progress_id,
-            "state": "running",
-            "startedAt": now,
-            "albums": [],
-        })
-        progress["state"] = "running"
-        progress["updatedAt"] = now
-        album_row = _progress_album_row(progress, event)
-        album_row["albumName"] = _progress_event_album_title(event)
-        album_row["importableCount"] = max(0, int(event.get("candidateCount") or album_row.get("importableCount") or 0))
-        album_row["checkedCount"] = max(0, int(event.get("attemptedCount") or album_row.get("checkedCount") or 0))
-        album_row["materializedCount"] = max(0, int(event.get("materializedCount") or album_row.get("materializedCount") or 0))
-        if event_name == "materialize_start":
-            album_row["state"] = "running"
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["message"] = f"Exporting {album_row['albumName']}..."
-        elif event_name == "asset_start":
-            item = _progress_item_from_event(event, "materializing")
-            album_row["state"] = "running"
-            album_row["currentItem"] = item
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = f"Exporting {item['filename']} from {album_row['albumName']}..."
-        elif event_name == "asset_progress":
-            state = str(event.get("status") or "materializing")
-            item = _progress_item_from_event(event, state)
-            album_row["state"] = "running"
-            album_row["currentItem"] = item
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = _apple_photos_asset_progress_message(item, album_row["albumName"])
-        elif event_name in {"asset_done", "asset_failed"}:
-            state = "materialized" if event_name == "asset_done" else str(event.get("status") or "unavailable")
-            item = _progress_item_from_event(event, state)
-            current = album_row.get("currentItem") if isinstance(album_row.get("currentItem"), dict) else {}
-            if current.get("localIdentifier") == item.get("localIdentifier"):
-                album_row.pop("currentItem", None)
-            _append_apple_photos_progress_item(album_row, item)
-            progress["currentAlbumLocalIdentifier"] = album_row.get("albumLocalIdentifier") or ""
-            progress["currentItem"] = item
-            progress["message"] = (
-                f"Exported {item['filename']}."
-                if state == "materialized"
-                else f"{item['filename']} was not exported: {item.get('reason') or 'Photos export failed'}"
-            )
-        elif event_name == "materialize_done":
-            album_row["state"] = "done"
-            album_row.pop("currentItem", None)
-            progress["message"] = f"Finished exporting {album_row['albumName']}."
-        _recount_apple_photos_progress(progress)
-
-
-def _finish_apple_photos_import_progress(progress_id: str, state: str, result: dict | None = None) -> None:
-    if not progress_id:
-        return
-    now = datetime.now(timezone.utc).isoformat()
-    result = result if isinstance(result, dict) else {}
-    with APPLE_PHOTOS_IMPORT_PROGRESS_LOCK:
-        progress = APPLE_PHOTOS_IMPORT_PROGRESS.setdefault(progress_id, {
-            "id": progress_id,
-            "startedAt": now,
-            "albums": [],
-        })
-        progress["state"] = state
-        progress["updatedAt"] = now
-        progress["completedAt"] = now
-        if result.get("message"):
-            progress["message"] = str(result.get("message") or "")
-        elif result.get("error"):
-            progress["message"] = str(result.get("error") or "")
-            progress["error"] = str(result.get("error") or "")
-        else:
-            progress["message"] = "Apple Photos export finished." if state == "done" else "Apple Photos export failed."
-        _recount_apple_photos_progress(progress)
-
-
-def _run_apple_photos_bridge_streaming(repo_root: Path, command: list[str], progress_id: str) -> dict:
-    try:
-        process = subprocess.Popen(
-            command,
-            cwd=repo_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge. Install Xcode Command Line Tools.") from error
-    stdout_chunks: list[str] = []
-    stderr_lines: list[str] = []
-
-    def read_stdout() -> None:
-        if process.stdout is None:
-            return
-        stdout_chunks.append(process.stdout.read() or "")
-
-    def read_stderr() -> None:
-        if process.stderr is None:
-            return
-        for raw_line in process.stderr:
-            line = raw_line.rstrip("\r\n")
-            if line.startswith(APPLE_PHOTOS_PROGRESS_PREFIX):
-                try:
-                    event = json.loads(line[len(APPLE_PHOTOS_PROGRESS_PREFIX):])
-                except json.JSONDecodeError:
-                    stderr_lines.append(line)
-                    continue
-                _update_apple_photos_import_progress_from_event(progress_id, event)
-            elif line.strip():
-                stderr_lines.append(line)
-
-    stdout_thread = threading.Thread(target=read_stdout, daemon=True)
-    stderr_thread = threading.Thread(target=read_stderr, daemon=True)
-    stdout_thread.start()
-    stderr_thread.start()
-    try:
-        return_code = process.wait(timeout=900)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return_code = process.wait(timeout=10)
-        stdout_thread.join(timeout=2)
-        stderr_thread.join(timeout=2)
-        _finish_apple_photos_import_progress(progress_id, "failed", {
-            "error": "Apple Photos bridge timed out while exporting assets.",
-        })
-        return {
-            "ok": False,
-            "error": "Apple Photos bridge timed out while exporting assets.",
-            "code": "photos_bridge_timeout",
-        }
-    stdout_thread.join(timeout=5)
-    stderr_thread.join(timeout=5)
-    output = "".join(stdout_chunks).strip()
-    payload = json.loads(output or "{}")
-    stderr = "\n".join(stderr_lines).strip()
-    if return_code != 0 and payload.get("ok") is not False:
-        message = (stderr or output or f"Apple Photos bridge exited {return_code}").strip()
-        return {"ok": False, "error": message, "code": "photos_bridge_error"}
-    if stderr and payload.get("ok") is False:
-        payload.setdefault("stderr", stderr)
-    return payload
-
-
-def _bundle_release(app: Path, expected_identifier: str) -> tuple[tuple[int, ...], int] | None:
-    try:
-        with (app / "Contents" / "Info.plist").open("rb") as handle:
-            info = plistlib.load(handle)
-        if info.get("CFBundleIdentifier") != expected_identifier:
-            return None
-        version = tuple(int(part) for part in str(info["CFBundleShortVersionString"]).split("."))
-        build = int(str(info["CFBundleVersion"]))
-    except (KeyError, OSError, TypeError, ValueError, plistlib.InvalidFileException):
-        return None
-    return version, build
-
-
-def _installed_bridge_satisfies_backstage_release() -> bool:
-    bridge = _bundle_release(APPLE_PHOTOS_BRIDGE_APP, "com.photosbyelie.photos-bridge")
-    backstage = _bundle_release(BACKSTAGE_APP, "com.photosbyelie.backstage")
-    return bridge is not None and backstage is not None and bridge >= backstage
-
-
-def _ensure_apple_photos_bridge_app(repo_root: Path) -> None:
-    installer = _connector_runtime_script(APPLE_PHOTOS_BRIDGE_APP_INSTALLER.name, repo_root)
-    bridge_source = _connector_runtime_script(APPLE_PHOTOS_BRIDGE.name, repo_root)
-    if not installer.exists():
-        raise RuntimeError(f"Photos Bridge app installer is missing: {installer}")
-    if not bridge_source.exists():
-        raise RuntimeError(f"Apple Photos bridge is missing: {bridge_source}")
-    needs_build = not APPLE_PHOTOS_BRIDGE_APP_EXECUTABLE.exists()
-    if not needs_build:
-        if _installed_bridge_satisfies_backstage_release():
-            return
-        try:
-            installed_fingerprint = APPLE_PHOTOS_BRIDGE_APP_SOURCE_FINGERPRINT.read_text(
-                encoding="utf-8"
-            ).strip()
-            source_fingerprint = hashlib.sha256(bridge_source.read_bytes()).hexdigest()
-            needs_build = installed_fingerprint != source_fingerprint
-        except OSError:
-            needs_build = True
-    if not needs_build:
-        return
-    result = subprocess.run(
-        ["zsh", str(installer)],
-        cwd=repo_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        message = (result.stderr or result.stdout or f"Photos Bridge installer exited {result.returncode}").strip()
-        raise RuntimeError(message)
-
-
-def _run_apple_photos_bridge(repo_root: Path, args: list[str], *, progress_id: str = "") -> dict:
-    _ensure_apple_photos_bridge_app(repo_root)
-    progress_id = _clean_apple_photos_progress_id(progress_id)
-    with tempfile.TemporaryDirectory(prefix="pbe-photos-bridge-result-") as result_dir:
-        result_path = Path(result_dir) / "result.json"
-        command = [
-            "open",
-            "-W",
-            "-n",
-            str(APPLE_PHOTOS_BRIDGE_APP),
-            "--args",
-            *args,
-            "--result-destination",
-            str(result_path),
-        ]
-        try:
-            result = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, timeout=900, check=False)
-        except FileNotFoundError as error:
-            raise RuntimeError("macOS open is required to launch the bundled Apple Photos bridge.") from error
-        except subprocess.TimeoutExpired:
-            if progress_id:
-                _finish_apple_photos_import_progress(progress_id, "failed", {
-                    "error": "Photos Bridge app timed out while exporting assets.",
-                })
-            return {
-                "ok": False,
-                "error": "Photos Bridge app timed out while exporting assets.",
-                "code": "photos_bridge_timeout",
-            }
-        output = ""
-        if result_path.exists():
-            output = result_path.read_text(encoding="utf-8").strip()
-        elif result.stdout:
-            output = result.stdout.strip()
-    payload = json.loads(output or "{}")
-    if result.returncode != 0 and payload.get("ok") is not False:
-        message = (result.stderr or result.stdout or output or f"Photos Bridge app exited {result.returncode}").strip()
-        return {"ok": False, "error": message, "code": "photos_bridge_error"}
-    if result.stderr and payload.get("ok") is False:
-        payload.setdefault("stderr", result.stderr.strip())
-    if not payload and not output:
-        return {
-            "ok": False,
-            "error": "Photos Bridge app did not write a result payload.",
-            "code": "photos_bridge_empty_result",
-        }
-    return payload
-
-
-def _cached_apple_photos_albums_payload() -> dict | None:
-    now = time.time()
-    with APPLE_PHOTOS_ALBUMS_CACHE_LOCK:
-        payload = copy.deepcopy(APPLE_PHOTOS_ALBUMS_CACHE.get("payload"))
-        loaded_at = float(APPLE_PHOTOS_ALBUMS_CACHE.get("loaded_at") or 0.0)
-    if not isinstance(payload, dict) or loaded_at <= 0:
-        return None
-    age = max(0.0, now - loaded_at)
-    if age > APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS:
-        return None
-    payload["cached"] = True
-    payload["cacheMiss"] = False
-    payload["cacheAgeSeconds"] = round(age)
-    payload["cacheTtlSeconds"] = APPLE_PHOTOS_ALBUM_CACHE_TTL_SECONDS
-    return payload
-
-
-def _store_apple_photos_albums_payload(payload: dict) -> None:
-    with APPLE_PHOTOS_ALBUMS_CACHE_LOCK:
-        APPLE_PHOTOS_ALBUMS_CACHE["payload"] = copy.deepcopy(payload)
-        APPLE_PHOTOS_ALBUMS_CACHE["loaded_at"] = time.time()
-
-
 def _apple_photos_preflight(repo_root: Path, payload: dict) -> dict:
-    return _run_apple_photos_bridge(repo_root, ["preflight", *_apple_photos_payload_args(payload)])
+    """Return the retired-import response without touching Apple Photos."""
+    del repo_root, payload
+    return _apple_photos_backstage_required()
 
 
 def _apple_photos_nothing_materialized_message(payload: dict) -> str:
@@ -10636,7 +11058,19 @@ def _record_legacy_folder_import_operation(
 ) -> dict:
     if not task or task.get("operation") != "repair":
         return {}
+    reconcile_stale_import_operations(repo_root)
     mode = "selected_folder" if source_root else "fixed_anchors"
+    task_state = str(task.get("state") or "queued").strip().lower()
+    operation_state = task_state if task_state in {"queued", "running", "done", "failed", "cancelled"} else "queued"
+    worker_pid = int(
+        task.get("external_pid")
+        or task.get("currentChildPid")
+        or os.getpid()
+    )
+    worker_token = f"import-worker-{uuid.uuid4().hex}"
+    worker_lease = (
+        datetime.now(timezone.utc) + timedelta(seconds=15 * 60)
+    ).isoformat().replace("+00:00", "Z")
     source = {
         "kind": "legacy_folder",
         "mode": mode,
@@ -10652,7 +11086,7 @@ def _record_legacy_folder_import_operation(
         repo_root,
         {
             "label": f"Legacy folder -> expo: {source_root.name if source_root else 'fixed anchors'}",
-            "state": "queued",
+            "state": operation_state,
             "sourceKind": "legacy_folder",
             "source": source,
             "destinationKind": "expo",
@@ -10669,6 +11103,9 @@ def _record_legacy_folder_import_operation(
                 "watermarkPublicPreviews": True,
             },
             "task": task,
+            "workerPid": worker_pid if operation_state in {"queued", "running"} else 0,
+            "workerToken": worker_token if operation_state in {"queued", "running"} else "",
+            "leaseExpiresAt": worker_lease if operation_state in {"queued", "running"} else "",
         },
     )
     return operation
@@ -11180,449 +11617,6 @@ def _merge_apple_photos_batch_sidecars(batch_root: Path, materialized_albums: li
         "duplicateCount": duplicate_count,
         "skippedCount": skipped_count,
     }
-
-
-def _start_apple_photos_batch_import(repo_root: Path, payload: dict, album_payloads: list[dict]) -> dict:
-    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
-    if not preflight_only and _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
-    if progress_id:
-        _start_apple_photos_import_progress(progress_id, album_payloads)
-    preflight_rows: list[dict] = []
-    operation_rows: list[dict] = []
-    failed_albums: list[dict] = []
-    prepared_rows: list[tuple[int, dict, dict, dict]] = []
-    for index, album_payload in enumerate(album_payloads, start=1):
-        try:
-            preflight = _apple_photos_preflight(repo_root, album_payload)
-        except (OSError, RuntimeError, json.JSONDecodeError) as error:
-            album = {
-                "localIdentifier": str(album_payload.get("albumLocalIdentifier") or ""),
-                "title": str(album_payload.get("albumName") or "Apple Photos album"),
-            }
-            failed_albums.append({"album": album, "error": str(error)})
-            continue
-        state = "preflighted" if preflight.get("ok") else "failed"
-        operation = _record_apple_photos_import_operation(
-            repo_root,
-            album_payload,
-            preflight,
-            state=state,
-            error=str(preflight.get("error") or ""),
-        )
-        operation_rows.append(operation)
-        preflight_rows.append(preflight)
-        album_payload = {**album_payload, "operationId": operation.get("operationId") or album_payload.get("operationId")}
-        if not preflight.get("ok"):
-            failed_albums.append({
-                "album": preflight.get("album") or {},
-                "error": str(preflight.get("error") or "Apple Photos dry run failed."),
-            })
-            continue
-        if int(preflight.get("candidateCount") or 0) <= 0:
-            failed_albums.append({
-                "album": preflight.get("album") or {},
-                "error": "No eligible local assets are available in this album.",
-                "code": "no_eligible_assets",
-            })
-            continue
-        prepared_rows.append((index, album_payload, preflight, operation))
-    if preflight_only:
-        return {
-            "ok": any(bool(row.get("ok")) for row in preflight_rows),
-            "batch": True,
-            "dryRun": True,
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-    if not prepared_rows:
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": "No selected Apple Photos albums have eligible local assets to import.",
-            "code": "no_eligible_assets",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    batch_root, intake_routing = _apple_photos_intake_destination(repo_root, payload, "batch")
-    materialized_albums: list[dict] = []
-    for index, album_payload, preflight, operation in prepared_rows:
-        album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-        destination = batch_root / _apple_photos_batch_album_dir(index, str(album.get("title") or "album"))
-        export_result = _run_apple_photos_bridge(
-            repo_root,
-            ["export", *_apple_photos_payload_args(album_payload), "--destination", str(destination)],
-            progress_id=progress_id,
-        )
-        if not export_result.get("ok"):
-            operation = update_import_operation_db(
-                repo_root,
-                str(operation.get("operationId") or ""),
-                state="failed",
-                error=str(export_result.get("error") or "Apple Photos export failed"),
-            )
-            failed_albums.append({**export_result, "album": album, "operation": operation})
-            continue
-        materialized = int(export_result.get("materializedCount") or 0)
-        if materialized <= 0:
-            nothing_message = _apple_photos_nothing_materialized_message(album_payload)
-            operation = update_import_operation_db(
-                repo_root,
-                str(operation.get("operationId") or ""),
-                state="failed",
-                error=nothing_message,
-            )
-            failed_albums.append({
-                **export_result,
-                "ok": False,
-                "album": album,
-                "operation": operation,
-                "error": nothing_message,
-                "code": "nothing_materialized",
-            })
-            continue
-        materialized_albums.append({**export_result, "preflight": preflight, "operation": operation})
-    if not materialized_albums:
-        nothing_message = _apple_photos_nothing_materialized_message({
-            "allowIcloudDownloads": any(_apple_photos_allow_icloud_downloads(album_payload) for _, album_payload, _, _ in prepared_rows),
-        })
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": nothing_message,
-            "code": "nothing_materialized",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "failedAlbums": failed_albums,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    batch_sidecar = _merge_apple_photos_batch_sidecars(batch_root, materialized_albums)
-    unique_materialized = int(batch_sidecar.get("assetCount") or 0)
-    if unique_materialized <= 0:
-        result = {
-            "ok": False,
-            "batch": True,
-            "error": "The selected albums only produced duplicate or invalid temporary assets.",
-            "code": "nothing_materialized",
-            "preflights": preflight_rows,
-            "operations": operation_rows,
-            "materializedAlbums": materialized_albums,
-            "failedAlbums": failed_albums,
-            "batchSidecar": batch_sidecar,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(batch_root, intake_routing, unique_materialized)
-        review_stage["batchSidecar"] = batch_sidecar
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            batch_root,
-            f"Apple Photos import: {len(materialized_albums):,} album(s)",
-        )
-        review_stage = _apple_photos_review_stage(batch_root, materialized_albums, batch_sidecar=batch_sidecar)
-    updated_operations: list[dict] = []
-    for row in materialized_albums:
-        operation = row.get("operation") if isinstance(row.get("operation"), dict) else {}
-        updated = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="done",
-            task=review_stage,
-        )
-        row["operation"] = updated
-        updated_operations.append(updated)
-    result = {
-        "ok": True,
-        "batch": True,
-        "preflights": preflight_rows,
-        "materializedAlbums": materialized_albums,
-        "failedAlbums": failed_albums,
-        "batchSidecar": batch_sidecar,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operations": updated_operations,
-        "message": (
-            (
-                f"Apple Photos assigned {unique_materialized:,} unique asset(s) to "
-                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-                "The local fixture is registered for RE import; nothing was published."
-            )
-            if intake_routing
-            else (
-                f"Apple Photos exported {unique_materialized:,} unique asset(s)"
-                f" from {len(materialized_albums):,} album(s) to a temporary import folder. Starting Expo import next."
-            )
-        ),
-    }
-    _finish_apple_photos_import_progress(progress_id, "done", result)
-    return result
-
-
-def _start_apple_photos_selected_asset_import(
-    repo_root: Path,
-    payload: dict,
-    album_payloads: list[dict],
-    selected_asset_ids: list[str],
-) -> dict:
-    """Materialize only checked PhotoKit assets and route them through the chosen intake lane."""
-    if _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    if not album_payloads:
-        album_payloads = [payload]
-    preflights: list[dict] = []
-    allowed_asset_ids: set[str] = set()
-    for album_payload in album_payloads:
-        preflight = _apple_photos_preflight(repo_root, album_payload)
-        preflights.append(preflight)
-        for item in preflight.get("items") or []:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("status") or "") not in {"candidate", "materialized"}:
-                continue
-            asset_id = str(item.get("localIdentifier") or "").strip()
-            if asset_id:
-                allowed_asset_ids.add(asset_id)
-    unknown = [asset_id for asset_id in selected_asset_ids if asset_id not in allowed_asset_ids]
-    if unknown:
-        raise ValueError("Selected Apple Photos assets must belong to the selected albums and pass dry run")
-
-    destination, intake_routing = _apple_photos_intake_destination(repo_root, payload, "selected-assets")
-    materialized_rows: list[dict] = []
-    failures: list[dict] = []
-    for index, asset_id in enumerate(selected_asset_ids, start=1):
-        asset_root = destination / f"{index:04d}-{hashlib.sha256(asset_id.encode('utf-8')).hexdigest()[:10]}"
-        args = ["materialize-one", "--asset-id", asset_id, "--destination", str(asset_root)]
-        if _apple_photos_allow_icloud_downloads(payload):
-            args.append("--allow-icloud-downloads")
-        export_result = _run_apple_photos_bridge(repo_root, args)
-        if export_result.get("ok") and int(export_result.get("materializedCount") or 0) > 0:
-            materialized_rows.append(export_result)
-        else:
-            failures.append({
-                "assetLocalIdentifier": asset_id,
-                "error": str(export_result.get("error") or "Apple Photos asset was not materialized"),
-            })
-    if not materialized_rows:
-        return {
-            "ok": False,
-            "batch": True,
-            "code": "nothing_materialized",
-            "error": _apple_photos_nothing_materialized_message(payload),
-            "preflights": preflights,
-            "failedAssets": failures,
-        }
-
-    batch_sidecar = _merge_apple_photos_batch_sidecars(destination, materialized_rows)
-    materialized_count = int(batch_sidecar.get("assetCount") or 0)
-    if materialized_count <= 0:
-        return {
-            "ok": False,
-            "batch": True,
-            "code": "nothing_materialized",
-            "error": "The selected Apple Photos assets only produced duplicate or invalid local files.",
-            "preflights": preflights,
-            "failedAssets": failures,
-        }
-
-    operation_payload = {**payload, "selectedAssetIds": selected_asset_ids}
-    synthetic_preflight = {
-        "ok": True,
-        "candidateCount": len(selected_asset_ids),
-        "count": sum(int(row.get("count") or 0) for row in preflights),
-        "items": [
-            item
-            for row in preflights
-            for item in (row.get("items") or [])
-            if isinstance(item, dict) and str(item.get("localIdentifier") or "") in set(selected_asset_ids)
-        ],
-    }
-    operation = _record_apple_photos_import_operation(
-        repo_root,
-        operation_payload,
-        synthetic_preflight,
-        state="done",
-    )
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized_count)
-        message = (
-            f"Apple Photos assigned {materialized_count:,} selected asset(s) to "
-            f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-            "The local fixture is registered for RE import; nothing was published."
-        )
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            destination,
-            f"Apple Photos selection: {materialized_count:,} asset(s)",
-        )
-        review_stage = _apple_photos_review_stage(destination, materialized_rows, batch_sidecar=batch_sidecar)
-        message = (
-            f"Apple Photos exported {materialized_count:,} selected asset(s) to a temporary import folder. "
-            "Starting Expo import next."
-        )
-    review_stage["batchSidecar"] = batch_sidecar
-    operation = update_import_operation_db(
-        repo_root,
-        str(operation.get("operationId") or ""),
-        state="done",
-        task=review_stage,
-    )
-    return {
-        "ok": True,
-        "batch": True,
-        "selectedAssets": True,
-        "preflights": preflights,
-        "materializedAlbums": materialized_rows,
-        "failedAssets": failures,
-        "batchSidecar": batch_sidecar,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operations": [operation],
-        "message": message,
-    }
-
-
-def _start_apple_photos_import(repo_root: Path, payload: dict) -> dict:
-    album_payloads = _apple_photos_album_batch_payloads(payload)
-    selected_asset_ids = _apple_photos_selected_asset_ids(payload)
-    preflight_only = bool(payload.get("dryRun") or payload.get("dry_run"))
-    if selected_asset_ids and not preflight_only:
-        return _start_apple_photos_selected_asset_import(
-            repo_root,
-            payload,
-            album_payloads,
-            selected_asset_ids,
-        )
-    if album_payloads:
-        return _start_apple_photos_batch_import(repo_root, payload, album_payloads)
-    if not preflight_only and _active_apple_photos_import_task(repo_root):
-        return _apple_photos_import_busy_response(repo_root)
-    progress_id = "" if preflight_only else _apple_photos_progress_id(payload)
-    if progress_id:
-        _start_apple_photos_import_progress(progress_id, [payload])
-    preflight = _apple_photos_preflight(repo_root, payload)
-    if not preflight.get("ok"):
-        operation = _record_apple_photos_import_operation(
-            repo_root,
-            payload,
-            preflight,
-            state="failed",
-            error=str(preflight.get("error") or ""),
-        )
-        result = {**preflight, "operation": operation}
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    operation = _record_apple_photos_import_operation(repo_root, payload, preflight, state="preflighted")
-    payload = {**payload, "operationId": operation.get("operationId") or payload.get("operationId")}
-    if preflight_only:
-        return {**preflight, "dryRun": True, "operation": operation}
-    candidate_count = int(preflight.get("candidateCount") or 0)
-    if candidate_count <= 0:
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error="No eligible Apple Photos assets are available to import.",
-        )
-        result = {
-            **preflight,
-            "ok": False,
-            "error": "No eligible Apple Photos assets are available to import.",
-            "code": "no_eligible_assets",
-            "operation": operation,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    album = preflight.get("album") if isinstance(preflight.get("album"), dict) else {}
-    destination, intake_routing = _apple_photos_intake_destination(
-        repo_root,
-        payload,
-        str(album.get("title") or "album"),
-    )
-    export_result = _run_apple_photos_bridge(
-        repo_root,
-        ["export", *_apple_photos_payload_args(payload), "--destination", str(destination)],
-        progress_id=progress_id,
-    )
-    if not export_result.get("ok"):
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error=str(export_result.get("error") or "Apple Photos export failed"),
-        )
-        result = {**export_result, "operation": operation}
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    materialized = int(export_result.get("materializedCount") or 0)
-    if materialized <= 0:
-        nothing_message = _apple_photos_nothing_materialized_message(payload)
-        operation = update_import_operation_db(
-            repo_root,
-            str(operation.get("operationId") or ""),
-            state="failed",
-            error=nothing_message,
-        )
-        result = {
-            **export_result,
-            "ok": False,
-            "error": nothing_message,
-            "code": "nothing_materialized",
-            "operation": operation,
-        }
-        _finish_apple_photos_import_progress(progress_id, "failed", result)
-        return result
-    if intake_routing:
-        review_source = _remember_apple_photos_real_estate_source(repo_root, intake_routing)
-        review_stage = _apple_photos_real_estate_stage(destination, intake_routing, materialized)
-    else:
-        review_source = _remember_apple_photos_review_source(
-            repo_root,
-            destination,
-            f"Apple Photos import: {album.get('title') or payload.get('albumName') or 'album'}",
-        )
-        review_stage = _apple_photos_review_stage(destination, [{**export_result, "preflight": preflight}])
-    operation = update_import_operation_db(
-        repo_root,
-        str(operation.get("operationId") or ""),
-        state="done",
-        task=review_stage,
-    )
-    result = {
-        "ok": True,
-        "preflight": preflight,
-        "materialized": export_result,
-        "reviewStage": review_stage,
-        "reviewSource": review_source,
-        "intakeAssignment": review_stage.get("intakeAssignment") or {},
-        "destinationKind": "real_estate" if intake_routing else "expo",
-        "operation": operation,
-        "message": (
-            (
-                f"Apple Photos assigned {materialized:,} asset(s) to "
-                f"{intake_routing['track']} / {intake_routing['fixture']} / {intake_routing['project']}. "
-                "The local fixture is registered for RE import; nothing was published."
-            )
-            if intake_routing
-            else f"Apple Photos exported {materialized:,} asset(s) to a temporary import folder. Starting Expo import next."
-        ),
-    }
-    _finish_apple_photos_import_progress(progress_id, "done", result)
-    return result
 
 
 def _run_r2_gap_fill_task(task_id: str, repo_root: Path, log_path: Path, limit: int) -> None:
@@ -13299,19 +13293,9 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
         "waste-basket-empty",
         "waste-basket-tombstone-restore",
     }
-    compatibility_state_available = True
-    try:
+    if action not in gateway_actions:
         expo_groups, reserve_groups, hidden_groups = _state_groups(repo_root)
-    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
-        if action not in gateway_actions:
-            raise
-        # Synthetic connector/Owner SQLite tests need the authoritative
-        # gateway without a checked-out static catalog or Node helper.
-        compatibility_state_available = False
-        expo_groups = {slug: [] for slug in ORDER}
-        reserve_groups = {slug: [] for slug in ORDER}
-        hidden_groups = {slug: [] for slug in ORDER}
-    _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
+        _repair_hidden_references(repo_root, hidden_groups, expo_groups, reserve_groups)
     moved = None
 
     if action in {"waste-basket-x", "waste-basket-x-many"}:
@@ -13331,44 +13315,14 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
             deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
         )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": "waste-basket-x",
-                "photo_ids": photo_ids,
-                "moved_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        moved_ids = []
-        for current_photo_id in photo_ids:
-            found = _find_and_remove(hidden_groups, current_photo_id)
-            if found:
-                source_slug, source_photo = found
-                hidden_groups[source_slug].append(
-                    _hidden_review_photo(source_photo, source_slug, "hidden", datetime.now(timezone.utc).isoformat())
-                )
-                moved_ids.append(current_photo_id)
-                continue
-            found = _find_and_remove(expo_groups, current_photo_id) or _find_and_remove(reserve_groups, current_photo_id)
-            if found:
-                source_slug, source_photo = found
-                hidden_groups[source_slug].append(
-                    _hidden_review_photo(source_photo, source_slug, "expo", datetime.now(timezone.utc).isoformat())
-                )
-                moved_ids.append(current_photo_id)
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        projection_result = project_lifecycle_catalog_state(repo_root, "x", photo_ids)
         return {
             **gateway_result,
             "action": "waste-basket-x",
             "photo_ids": photo_ids,
-            "moved_ids": moved_ids,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            "moved_ids": projection_result.get("projected_ids", []),
+            "authoritative_committed": True,
+            **projection_result,
         }
 
     if action in {"waste-basket-restore", "waste-basket-tombstone-restore"}:
@@ -13401,77 +13355,15 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
                 fixture_id=payload.get("fixture_id") or "",
                 deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
             )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": action,
-                "photo_ids": photo_ids,
-                "restored_ids": photo_ids,
-                "projected_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "authoritative_committed": True,
-                "projection": {
-                    "state": "skipped-no-static-catalog",
-                    "retryable": False,
-                },
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        restored_ids = []
-        for current_photo_id in photo_ids:
-            found = _find_and_remove(hidden_groups, current_photo_id)
-            if not found:
-                continue
-            hidden_slug, hidden_photo = found
-            target_state, target_slug = _hidden_provenance(hidden_photo, "expo", hidden_slug)
-            restored = _restore_hidden_photo_to_normal_group(
-                expo_groups,
-                reserve_groups,
-                hidden_photo,
-                current_photo_id,
-                target_state,
-                target_slug,
-            )
-            if restored:
-                restored_ids.append(current_photo_id)
         authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
-        try:
-            site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
-        except Exception:  # noqa: BLE001 - the authoritative transaction has already committed.
-            return {
-                **gateway_result,
-                "action": action,
-                "photo_ids": photo_ids,
-                "restored_ids": authoritative_ids,
-                "projected_ids": [],
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "authoritative_committed": True,
-                "projection": {
-                    "state": "pending",
-                    "retryable": True,
-                    "error_code": "catalog_projection_failed",
-                },
-                "worker_catalog": {"ok": False, "state": "pending"},
-            }
-        projection_complete = bool(worker_catalog.get("ok"))
+        projection_result = project_lifecycle_catalog_state(repo_root, "restore", authoritative_ids)
         return {
             **gateway_result,
             "action": action,
             "photo_ids": photo_ids,
             "restored_ids": authoritative_ids,
-            "projected_ids": restored_ids,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
             "authoritative_committed": True,
-            "projection": {
-                "state": "applied" if projection_complete else "partial",
-                "retryable": not projection_complete,
-                **({"error_code": "worker_catalog_projection_failed"} if not projection_complete else {}),
-            },
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            **projection_result,
         }
 
     if action == "waste-basket-empty":
@@ -13487,24 +13379,15 @@ def apply_photo_action(repo_root: Path, payload: dict) -> dict:
             request_key=payload.get("request_key") or payload.get("requestKey") or "",
             owner_mode=bool(payload.get("owner_mode") or payload.get("ownerMode")),
             owner_authorized=bool(payload.get("owner_authorized") or payload.get("ownerAuthorized")),
+            deployed_lifecycle=payload.get("_trusted_deployed_lifecycle"),
         )
-        if not compatibility_state_available:
-            return {
-                **gateway_result,
-                "action": action,
-                "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-                "catalog_publish_pending": True,
-                "worker_catalog": {"ok": False, "state": "skipped-no-static-catalog"},
-                "site": {"ok": False, "state": "skipped-no-static-catalog"},
-            }
-        site_state, worker_catalog = _write_catalog_state(repo_root, expo_groups, reserve_groups, hidden_groups)
+        authoritative_ids = _normalized_photo_ids(gateway_result.get("assetIds") or photo_ids)
+        projection_result = project_lifecycle_catalog_state(repo_root, "empty", authoritative_ids)
         return {
             **gateway_result,
             "action": action,
-            "hidden_ids": sorted(_lifecycle_hidden_ids(repo_root)),
-            "catalog_publish_pending": True,
-            "worker_catalog": worker_catalog,
-            "site": site_state,
+            "authoritative_committed": True,
+            **projection_result,
         }
 
     if action == "sync-country-keywords":

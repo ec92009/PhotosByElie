@@ -16,6 +16,8 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("Security"),
                 .linkedFramework("Photos"),
+                .linkedFramework("Network"),
+                .linkedFramework("OSAKit"),
                 .linkedLibrary("sqlite3"),
             ]
         ),

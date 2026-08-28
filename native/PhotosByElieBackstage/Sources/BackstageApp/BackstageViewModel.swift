@@ -2,12 +2,26 @@ import AppKit
 import Foundation
 import OwnerCore
 
+private enum ActivityRefreshError: Error {
+    case timedOut
+}
+
 struct CullingHistoryEntry: Identifiable, Sendable {
     var id = UUID()
     var label: String
     var changes: [SidecarDecisionChange] = []
     var fixtureChanges: [FixtureAssetState] = []
+    var wasteBasketMediaIDs: [String] = []
+    var wasteBasketActionID: String = ""
+    var reviewOperationID: String = ""
+    var fixtureID: String = ""
+    var windowOffset: Int = 0
     var selectedIDs: Set<String>
+    var anchorID: String?
+    var focusedID: String?
+    var cullingItems: [FixtureAsset] = []
+    var cullingItemIndexes: [String: Int] = [:]
+    var orderedIDs: [String] = []
 }
 
 enum MetadataHistoryKind: Sendable {
@@ -22,9 +36,11 @@ struct MetadataHistoryEntry: Identifiable, Sendable {
 }
 
 struct ReviewMetadataDraft: Sendable, Equatable {
+    var country: String = ""
     var title: String
     var keywords: [String]
     var proposalID: String = ""
+    var hasManualEdits: Bool = false
     var proposalReason: String = ""
     var proposalStatus: String = ""
     var requestedGeneratorModel: String = ""
@@ -40,6 +56,8 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var id = UUID()
     var operationID: String = ""
     var fixtureChanges: [FixtureAssetState] = []
+    var wasteBasketMediaIDs: [String] = []
+    var wasteBasketActionID: String = ""
     var label: String
     var fixtureID: String
     var mode: FixtureReviewMode
@@ -51,12 +69,15 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var selectedIDs: Set<String>
     var anchorID: String?
     var focusedID: String?
+    var reviewItems: [FixtureReviewItem] = []
+    var reviewItemIndexes: [String: Int] = [:]
 }
 
 enum CullingThumbnailFailure: Equatable, Sendable {
     case photosAccess
     case assetUnavailable
     case previewUnavailable
+    case timedOut
 
     init(error: Error) {
         guard let photoError = error as? PhotoLibraryError else {
@@ -68,7 +89,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
             self = .photosAccess
         case .assetNotFound, .unsupportedMediaType:
             self = .assetUnavailable
-        case .resourceNotFound, .previewUnavailable, .exportFailed:
+        case .resourceNotFound, .previewUnavailable, .exportFailed, .metadataFailed:
             self = .previewUnavailable
         }
     }
@@ -78,6 +99,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
         case .photosAccess: "Photos access needed"
         case .assetUnavailable: "Photo unavailable"
         case .previewUnavailable: "Preview unavailable"
+        case .timedOut: "Preview timed out"
         }
     }
 
@@ -89,13 +111,15 @@ enum CullingThumbnailFailure: Equatable, Sendable {
             "This asset is not in the current Photos library. Retry after Photos sync completes."
         case .previewUnavailable:
             "Photos could not prepare this preview. Retry after a transient or iCloud download failure."
+        case .timedOut:
+            "Photos took too long to prepare this preview. Retry this card or open Quick Look."
         }
     }
 
     var systemImage: String {
         switch self {
         case .photosAccess: "lock.shield"
-        case .assetUnavailable, .previewUnavailable: "photo.badge.exclamationmark"
+        case .assetUnavailable, .previewUnavailable, .timedOut: "photo.badge.exclamationmark"
         }
     }
 
@@ -106,6 +130,19 @@ enum CullingThumbnailFailure: Equatable, Sendable {
     var offersPhotosAccess: Bool {
         self == .photosAccess
     }
+}
+
+enum GallerySavedView: String, CaseIterable, Identifiable {
+    case allAssets = "All fixture assets"
+    case culling = "Culling — Undecided"
+    case reviewQueue = "Review queue"
+    case approved = "Approved"
+    case uploadQueue = "Upload queue"
+    case live = "Live"
+    case hidden = "Hidden"
+    case unavailable = "Unavailable"
+
+    var id: String { rawValue }
 }
 
 @MainActor
@@ -124,6 +161,10 @@ final class BackstageViewModel: ObservableObject {
         case publication = "Publication"
         case updates = "Updates"
         var id: String { rawValue }
+
+        var title: String {
+            self == .culling ? "Gallery" : rawValue
+        }
     }
 
     @Published var selection: Section? {
@@ -162,10 +203,17 @@ final class BackstageViewModel: ObservableObject {
         }
     }
     @Published var isRefreshing = false
+    @Published private(set) var isOpeningCustomerPhoto = false
+    @Published private(set) var customerPhotoStatus = ""
     @Published var authentication = OwnerAuthenticationSnapshot(phase: .needsEnrollment)
     @Published var enrollmentCode = ""
     @Published var authenticationStatus = "Checking this Mac's Keychain session…"
     @Published var isAuthenticating = false
+    @Published private(set) var isSettingUpThisMac = false
+    @Published private(set) var enrolledOwnerDevices: [OwnerDevice] = []
+    @Published private(set) var ownerDeviceManagementStatus = "Enrolled Macs have not been refreshed."
+    @Published private(set) var isRefreshingOwnerDevices = false
+    @Published private(set) var pendingOwnerDeviceRevocation: OwnerDevice?
     @Published var photoAccess: PhotoLibraryAccess
     @Published var libraryItems: [PhotoLibraryItem] = []
     @Published var selectedPhotoIDs: Set<String> = []
@@ -173,10 +221,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var photoStatus = "Photo library not loaded."
     @Published var isLoadingPhotos = false
     @Published var isReconcilingPhotosIndex = false
-    private var hasReconciledRecentPhotosIndex = false
     @Published var metadataReport: MetadataGiveBackReport?
     @Published var metadataStatus = "Preview approved global metadata before writing it to Photos."
     @Published var isRunningMetadata = false
+    @Published private(set) var metadataGiveBackPlannedAssetIDs: [String]?
     @Published private(set) var fixtures: [FixtureNode] = []
     @Published private(set) var selectedFixtureID = ""
     @Published private(set) var selectedFixtureBreadcrumb = ""
@@ -223,7 +271,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingPool: FixturePool?
     @Published var fixtureCullingWindow: FixtureCullingWindow?
     @Published private(set) var fixtureCullingMediaAvailability: FixtureCullingMediaAvailability?
-    @Published var cullingViews: Set<FixtureCullingView> = Set(FixtureCullingView.selectableCases)
+    @Published var cullingViews: Set<FixtureCullingView> = [.undecided]
     @Published var isLoadingFixtureCulling = false
     @Published var cullingGridDensity = 5
     @Published private(set) var cullingGridAvailableWidth = 0.0
@@ -244,6 +292,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingRating = 0
     @Published var cullingColor: SidecarColor = .none
     @Published var cullingSelection = OwnerSelectionModel<String>()
+    @Published var cullingScrollTargetID: String?
     @Published var cullingStates: [String: SidecarDecisionState] = [:]
     @Published var cullingHistory: [CullingHistoryEntry] = []
     @Published var cullingStatus = "Select indexed Photos and apply a culling decision."
@@ -251,15 +300,25 @@ final class BackstageViewModel: ObservableObject {
     @Published var cullingMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var cullingRatingFilters = Set(0...5)
     @Published var cullingColorFilters = Set(CullingColorFilter.selectableCases)
+    @Published var galleryEditorialFilters: Set<GalleryEditorialFilter> = []
+    @Published var galleryDeliveryFilters: Set<GalleryDeliveryFilter> = []
+    @Published var gallerySourceFilters: Set<GallerySourceFilter> = [.available]
+    @Published var galleryBurstsOnly = false
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
     @Published var cullingThumbnailFailures: [String: CullingThumbnailFailure] = [:]
+    @Published private(set) var currentImageByteCounts: [String: Int64] = [:]
     @Published var isLoadingPreview = false
     @Published var isLoadingCullingDecisions = false
     @Published var cullingDecisionProgress = 0
     @Published var cullingDecisionTotal = 0
     @Published var isApplyingCullingDecision = false
+    @Published private(set) var cullingWasteBasketQueueing = false
+    @Published private(set) var cullingWasteBasketPendingActionID: String?
+    @Published private(set) var cullingWasteBasketPendingAction: OwnerAction?
+    @Published private(set) var cullingWasteBasketPendingActionIDs: Set<String> = []
+    @Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []
     @Published var cullingCancellationRequested = false
     @Published var fixtureReviewWindow: FixtureReviewWindow?
     @Published var reviewMode: FixtureReviewMode = .full
@@ -273,15 +332,27 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewThumbnails: [String: NSImage] = [:]
     @Published var reviewTitle = ""
     @Published var reviewKeywords = ""
+    @Published var reviewCountry = ""
+    private var reviewCountrySuggestionSeedAssetID: String?
+    private var reviewCountrySuggestionSeedValue = ""
     @Published var reviewAIReasons: Set<String> = []
     @Published var reviewAINote = ""
     @Published var reviewLastAction: FixtureReviewAction = .approve
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
+    @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
+    @Published private(set) var reviewWasteBasketQueueing = false
+    @Published private(set) var reviewWasteBasketPendingActionIDs: Set<String> = []
+    @Published private(set) var reviewWasteBasketPendingActionID: String?
+    @Published private(set) var reviewWasteBasketPendingAction: OwnerAction?
     @Published var reviewScrollTargetID: String?
     @Published var fixtureAIStatus: FixtureAIStatus?
     @Published var reviewProposalDrafts: [String: ReviewMetadataDraft] = [:]
     @Published var reviewProposalConflictIDs: Set<String> = []
+    @Published var reviewVisualProposals: [String: VisualRepairProposal] = [:]
+    @Published var visualRepairDefectCategories: Set<VisualRepairDefectCategory> = []
+    @Published var visualRepairStatus = "Production visual generation is not configured; comparison remains read-only."
+    @Published var isLoadingVisualRepairProposals = false
     @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
     @Published var isRunningAIPass = false
@@ -292,16 +363,28 @@ final class BackstageViewModel: ObservableObject {
     @Published var metadataBlacklist = ""
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
     @Published var metadataHistory: [MetadataHistoryEntry] = []
-    @Published var metadataProposals: [MetadataProposal] = []
-    @Published var metadataProposalStatus = "Load the local AI proposal queue to review it."
     @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
     @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
     @Published var metadataModelLadderStatus = "Every rung sends a bounded JPEG; vision is always on."
+    @Published private(set) var hasLoadedMetadataModelLadder = false
+    @Published private(set) var isLoadingMetadataModelLadder = false
     @Published var isSavingMetadataModelLadder = false
     @Published var lifecycleItems: [LifecycleItem] = []
     @Published var selectedLifecycleIDs: Set<String> = []
+    // Waste Basket previews are independent from the scrolling Culling cache.
+    // Quick Look, fixture refreshes, and Culling window changes must not evict
+    // a lifecycle row that is still visible.
+    @Published var lifecycleThumbnails: [String: NSImage] = [:]
+    @Published var lifecycleThumbnailFailures: [String: CullingThumbnailFailure] = [:]
     @Published var lifecycleStatus = "Load the private lifecycle ledger to review recoverable rejects."
+    @Published var lifecycleCountSummary = "0 recoverable • 0 active global tombstones"
     @Published var isRunningLifecycle = false
+    @Published private(set) var lifecycleQueueing = false
+    @Published private(set) var lifecyclePendingActionID: String?
+    @Published private(set) var lifecyclePendingAction: OwnerAction?
+    @Published private(set) var lifecycleRestoreQueueing = false
+    @Published private(set) var lifecycleRestorePendingActionID: String?
+    @Published private(set) var lifecycleRestorePendingActionIDs: Set<String> = []
     @Published var deliveryPlan: FixtureDeliveryPlan?
     @Published var selectedDeliveryIDs: Set<String> = []
     @Published var deliveryStatus = "Choose a fixture and load its delivery plan."
@@ -320,13 +403,12 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativePublicationBatchNumber = 0
     @Published var nativePublicationBatchCount = 0
     @Published var nativeUploadThumbnails: [String: NSImage] = [:]
-    @Published var nativeUploadPreviewImage: NSImage?
-    @Published var nativeUploadPreviewItemID = ""
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
+    @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
+    @Published var activityStatus = "Refresh to load the latest audited cloud activity."
     @Published var isSyncingPhotos = false
-    @Published var isCancellingPhotosSync = false
     @Published var r2Reconciliation: R2ReconciliationReport?
     @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
     @Published var isRunningR2Reconciliation = false
@@ -337,44 +419,87 @@ final class BackstageViewModel: ObservableObject {
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
     @Published var updateState: BackstageUpdateState = .idle
-    @Published var photosBridgeHealth = PhotosBridgeHealth(
-        installed: false,
-        headless: false,
-        bundleIdentifier: "",
-        version: "",
-        build: "",
-        photoAccess: "checking",
-        compatible: false,
-        message: "Checking the signed Photos helper…"
-    )
     private var nativePublicationCancellationRequested = false
-    private var photosSyncCancellationRequested = false
+    private var didCheckOwnerWorkflowRecovery = false
+    private var didStartAutomaticRecentPhotosDiscovery = false
     private var r2ReconciliationCancellationRequested = false
+    private var terminationRequested = false
+    private var aiPassMonitoringDetached = false
 
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
     let photoLibrary: any PhotoLibraryServing
+    let previewIPCServer: BackstagePreviewIPCServer
     let metadataService: MetadataGiveBackService
     let fixtureService: FixtureWorkflowService
     let accessService: AccessControlService
     let decisionService: SidecarDecisionService
     let metadataReviewService: MetadataReviewService
+    let visualRepairService: VisualRepairProposalService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
-    let photosBridgeHealthService: PhotosBridgeHealthService
     let updateService: BackstageUpdateService
+    let updateInstaller: BackstageUpdateInstaller
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
+    private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
+    private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
+    private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
+    private var nativeEnrollmentTask: Task<Void, Never>?
+    private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
+    private var reviewAIStatusRefreshTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var cullingThumbnailTaskTokens: [String: UUID] = [:]
+    private var cullingThumbnailTimeoutTasks: [String: Task<Void, Never>] = [:]
+    private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
+    private var cullingThumbnailUpgradeTaskTokens: [String: UUID] = [:]
+    // Attempt once per idle/visibility interval, including failures. Completion
+    // must advance the queue, not immediately resubmit the same first four IDs.
+    private var cullingThumbnailUpgradeAttempts = Set<String>()
+    private var cullingBasicThumbnails: [String: NSImage] = [:]
+    private var cullingThumbnailRecency: [String] = []
+    private var cullingThumbnailBackfillTask: Task<Void, Never>?
+    private var cullingThumbnailBackfillTaskToken: UUID?
+    private var pendingCurrentImageByteCounts: [String: Int64] = [:]
+    private var currentImageSizeFlushTask: Task<Void, Never>?
+    private var thumbnailPreferredIdentifiers: [String: String] = [:]
+    private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
+    private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
+    private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
+    private var lifecycleRestorePendingActions: [String: OwnerAction] = [:]
+    private var lifecycleRestorePendingActionOrder: [String] = []
+    private var locallyObservedLifecycleActions: [String: OwnerAction] = [:]
+    private var lifecycleRecoverableCount = 0
+    private var lifecycleTombstoneCount = 0
+    private var cullingWasteBasketPendingActions: [String: OwnerAction] = [:]
+    private var cullingWasteBasketPendingActionOrder: [String] = []
+    private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
+    private var reviewWasteBasketPendingActionOrder: [String] = []
+    private var cullingStableWindowIndexes: [String: Int] = [:]
+    private var pendingGalleryRevealIDs: [String] = []
+    private var pendingGalleryRevealSource = ""
+    private var lifecycleMonitorTask: Task<Void, Never>?
+    private var cullingVisibleAssetIDs = Set<String>()
+    private var isCullingScrolling = false
+    private var shouldInjectNextCullingThumbnailFailure: Bool
+    private var controlledFailedCullingAssetID: String?
+    private let cullingThumbnailTimeout: Duration
+    private let cullingThumbnailUpgradeDelay: Duration
+    private let cullingThumbnailBackfillDelay: Duration
+    private let currentImageSizeFlushDelay: Duration
+    private let activityRefreshTimeout: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
+    private var reviewAIStatusRefreshGeneration = 0
+    private var reviewAIAvailabilityToken = ""
+    private var reviewAIWindowRefreshPending = false
     private let preferences: UserDefaults
     private var fixtureSelectionCoordinator: FixtureSelectionCoordinator
     private static let selectedSectionPreferenceKey =
@@ -387,6 +512,10 @@ final class BackstageViewModel: ObservableObject {
         "PhotosByElieBackstage.cullingPreviewPanelVisible"
     private static let reviewPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.reviewPreviewPanelVisible"
+    private static let cullingThumbnailUpgradePixelSize = 900
+    private static let cullingThumbnailUpgradeConcurrencyLimit = 4
+    private static let cullingThumbnailBackfillAssetLimit = 2_000
+    private static let cullingThumbnailBackfillConcurrencyLimit = 4
 
     var selectedFixturePoolSummary: FixturePoolSummary? {
         fixturePools.first(where: { $0.id == selectedFixturePoolID })
@@ -447,6 +576,20 @@ final class BackstageViewModel: ObservableObject {
             && pbeOwnerFixtureSession == nil
     }
 
+    var isREReviewScope: Bool {
+        VisualRepairScope.isREReview(path: fixtures.path(to: selectedFixtureID))
+    }
+
+    func visualRepairComparisonState(for item: FixtureReviewItem) -> VisualRepairComparisonState {
+        let originalReference = item.sourceVersionID.isEmpty
+            ? "immutable-source-asset://\(item.id)"
+            : "immutable-source-version://\(item.sourceVersionID)"
+        return VisualRepairComparisonState(
+            originalReference: originalReference,
+            proposal: reviewVisualProposals[item.id]
+        )
+    }
+
     var fixtureEffectivePolicySummary: String {
         let policy = fixtureEffectivePolicy
         return [
@@ -467,18 +610,40 @@ final class BackstageViewModel: ObservableObject {
         api: OwnerAPIClient = OwnerAPIClient(),
         photoLibrary: any PhotoLibraryServing = PhotoKitLibraryService(),
         preferences: UserDefaults = .standard,
-        pbeOwnerHost: any PBEOwnerHostServing = PBEOwnerLocalHostService(),
+        pbeOwnerHost: (any PBEOwnerHostServing)? = nil,
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
-        updateService: BackstageUpdateService = BackstageUpdateService()
+        updateService: BackstageUpdateService = BackstageUpdateService(),
+        updateInstaller: BackstageUpdateInstaller = BackstageUpdateInstaller(),
+        authenticationService: OwnerAuthenticationService? = nil,
+        fixtureService: FixtureWorkflowService? = nil,
+        lifecycleService: LifecycleService? = nil,
+        workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map(OwnerWorkflowRecoverySQLiteStore.init(databaseURL:)),
+        currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
+        customerPhotoLinks: (any CustomerPhotoLinkResolving)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
+        cullingThumbnailTimeout: Duration = .seconds(12),
+        cullingThumbnailUpgradeDelay: Duration = .seconds(1),
+        cullingThumbnailBackfillDelay: Duration = .milliseconds(350),
+        currentImageSizeFlushDelay: Duration = .milliseconds(500),
+        activityRefreshTimeout: Duration = .seconds(5),
+        injectNextCullingThumbnailFailure: Bool = ProcessInfo.processInfo.environment[
+            "PBE_CULLING_PREVIEW_FAIL_ONCE"
+        ] == "1"
     ) {
         self.preferences = preferences
         self.updateService = updateService
+        self.updateInstaller = updateInstaller
         self.installedRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
         )
         self.selection = preferences.string(forKey: Self.selectedSectionPreferenceKey)
-            .flatMap(Section.init(rawValue:)) ?? .overview
+            .flatMap(Section.init(rawValue:)) ?? .culling
         let legacyPreviewVisibility =
             preferences.object(forKey: Self.legacyPreviewPanelVisibilityPreferenceKey) == nil
                 ? true
@@ -492,23 +657,174 @@ final class BackstageViewModel: ObservableObject {
                 ? legacyPreviewVisibility
                 : preferences.bool(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey)
         self.api = api
-        self.authenticationService = OwnerAuthenticationService(api: api)
+        self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
+        self.cullingThumbnailTimeout = cullingThumbnailTimeout
+        self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
+        self.cullingThumbnailBackfillDelay = cullingThumbnailBackfillDelay
+        self.currentImageSizeFlushDelay = currentImageSizeFlushDelay
+        self.activityRefreshTimeout = activityRefreshTimeout
+        self.shouldInjectNextCullingThumbnailFailure = injectNextCullingThumbnailFailure
+        self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
         self.metadataService = MetadataGiveBackService(runner: runner)
-        self.fixtureService = FixtureWorkflowService(
+        self.fixtureService = fixtureService ?? FixtureWorkflowService(
+            runner: runner,
+            connectorIdentity: LocalOwnerConnectorIdentity(),
+            localReviewService: LocalFixtureReviewService()
+        )
+        self.accessService = AccessControlService(api: api)
+        let decisionService = SidecarDecisionService(api: api)
+        self.decisionService = decisionService
+        self.metadataReviewService = MetadataReviewService(runner: runner)
+        self.visualRepairService = VisualRepairProposalService(
             runner: runner,
             connectorIdentity: LocalOwnerConnectorIdentity()
         )
-        self.accessService = AccessControlService(api: api)
-        self.decisionService = SidecarDecisionService(api: api)
-        self.metadataReviewService = MetadataReviewService(runner: runner)
-        self.lifecycleService = LifecycleService(runner: runner)
+        self.lifecycleService = lifecycleService ?? LifecycleService(runner: runner)
         self.deliveryService = FixtureDeliveryService(runner: runner)
-        self.photosBridgeHealthService = PhotosBridgeHealthService()
-        self.pbeOwnerHost = pbeOwnerHost
+        self.pbeOwnerHost = pbeOwnerHost ?? PBEOwnerNativeHostService(
+            api: api,
+            photoLibrary: photoLibrary,
+            sidecarDecisionService: decisionService
+        )
+        self.workflowRecoveryStore = workflowRecoveryStore
+        self.currentImageSizeCache = currentImageSizeCache
+        self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
+    }
+
+    var canViewCustomerPhoto: Bool {
+        selection == .culling && fixtureScopedActionsAllowed
+            && selectedCullingAssetIDs.count == 1 && !isOpeningCustomerPhoto
+    }
+
+    func viewSelectedPhotoAsCustomer() async {
+        guard !isOpeningCustomerPhoto else { return }
+        guard selection == .culling, fixtureScopedActionsAllowed, selectedCullingAssetIDs.count == 1,
+              let assetID = selectedCullingAssetIDs.first else {
+            customerPhotoStatus = "Select exactly one photo in a current fixture to view as customer."
+            return
+        }
+        guard let customerPhotoLinks else {
+            customerPhotoStatus = "Publication evidence is unavailable. No customer page was opened."
+            return
+        }
+        let fixtureID = selectedFixtureID
+        isOpeningCustomerPhoto = true
+        customerPhotoStatus = "Checking the selected photo's public publication receipt…"
+        defer { isOpeningCustomerPhoto = false }
+        do {
+            let link = try await Task.detached(priority: .utility) {
+                try customerPhotoLinks.resolve(assetID: assetID, fixtureID: fixtureID)
+            }.value
+            guard !Task.isCancelled, selection == .culling, fixtureScopedActionsAllowed,
+                  selectedFixtureID == fixtureID, selectedCullingAssetIDs == [assetID] else {
+                customerPhotoStatus = "Selection or workspace changed. No customer page was opened."
+                return
+            }
+            customerPhotoStatus = openExternalURL(link.url)
+                ? "Opened the published customer page. No Owner session was created; normal customer access rules apply."
+                : "The browser could not open the customer page. Please try again."
+        } catch CustomerPhotoLinkError.noVerifiedPublication {
+            customerPhotoStatus = "No verified public page for this photo in this fixture. Private, unpublished, or withdrawn items are not opened."
+        } catch CustomerPhotoLinkError.ambiguousPublication {
+            customerPhotoStatus = "Conflicting live publication receipts. No customer page was opened."
+        } catch {
+            customerPhotoStatus = "Publication evidence could not be read. No customer page was opened."
+        }
+    }
+
+    func currentImageByteCount(for assetID: String) -> Int64? {
+        currentImageByteCounts[assetID]
+    }
+
+    private func hydrateCurrentImageByteCounts(for assetIDs: [String]) async {
+        guard let currentImageSizeCache else { return }
+        let ids = Array(Set(assetIDs)).filter { !$0.isEmpty }
+        guard !ids.isEmpty else { return }
+        do {
+            let values = try await Task.detached(priority: .utility) {
+                try currentImageSizeCache.values(assetIDs: ids)
+            }.value
+            currentImageByteCounts.merge(values) { _, persisted in persisted }
+        } catch {
+            // This cache is opportunistic. Owner workflow remains available if
+            // its compatibility table is absent or temporarily busy.
+        }
+    }
+
+    private func learnCurrentImageByteCount(
+        from preview: PhotoPreview,
+        for assetID: String,
+        mediaType: String,
+        persistPromptly: Bool
+    ) async {
+        let normalizedType = mediaType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalizedType != "video", normalizedType != "movie",
+              let byteCount = preview.currentImageByteCount,
+              byteCount > 0
+        else { return }
+        currentImageByteCounts[assetID] = byteCount
+        pendingCurrentImageByteCounts[assetID] = byteCount
+        if persistPromptly {
+            currentImageSizeFlushTask?.cancel()
+            currentImageSizeFlushTask = nil
+            await flushCurrentImageByteCounts()
+        } else {
+            scheduleCurrentImageSizeFlush()
+        }
+    }
+
+    private func scheduleCurrentImageSizeFlush() {
+        guard currentImageSizeFlushTask == nil else { return }
+        currentImageSizeFlushTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: self.currentImageSizeFlushDelay)
+            guard !Task.isCancelled else { return }
+            await self.flushCurrentImageByteCounts()
+        }
+    }
+
+    private func flushCurrentImageByteCounts() async {
+        currentImageSizeFlushTask = nil
+        guard let currentImageSizeCache, !pendingCurrentImageByteCounts.isEmpty else { return }
+        let values = pendingCurrentImageByteCounts
+        pendingCurrentImageByteCounts.removeAll()
+        do {
+            try await Task.detached(priority: .utility) {
+                try currentImageSizeCache.upsert(values, updatedAt: Date())
+            }.value
+        } catch {
+            pendingCurrentImageByteCounts.merge(values) { current, _ in current }
+        }
+    }
+
+    private func pendingLifecycleActionStatus(
+        _ operation: String,
+        action: OwnerAction,
+        availability: String
+    ) -> String {
+        let state = action.state.rawValue
+        let phase = action.diagnosticPhaseName
+        var message = operation
+            + " action "
+            + action.id
+            + " remains durable ("
+            + state
+            + "); current phase: "
+            + phase
+            + "."
+        if let detail = action.progress?.detail, !detail.isEmpty {
+            message += " " + detail + "."
+        }
+        if let elapsed = action.diagnosticPhaseElapsedMs {
+            message += " Last recorded phase "
+                + elapsed.formatted(.number.precision(.fractionLength(0...1)))
+                + " ms."
+        }
+        return message + " " + availability
     }
 
     @discardableResult
@@ -661,6 +977,7 @@ final class BackstageViewModel: ObservableObject {
                     sessionToken: minted.sessionToken
                 )
             }
+            await pbeOwnerHost.stopIfLaunched()
             pbeOwnerSessionToken = ""
             closePBEOwnerSession()
             pbeOwnerSessionStatus = "PBE Owner unavailable: \(userFacingMessage(for: error))"
@@ -749,9 +1066,10 @@ final class BackstageViewModel: ObservableObject {
         publishFixtureSelection(persist: persistSelection)
     }
 
-    func markFixtureSelectionUnavailable(_ reason: String) {
+    func markFixtureSelectionUnavailable(_ reason: String, notice: String? = nil) {
         fixtureSelectionCoordinator.markUnavailable(reason)
         publishFixtureSelection(persist: false)
+        fixtureSelectionNotice = notice
     }
 
     private var fixtureSelectionOperationInFlight: Bool {
@@ -782,12 +1100,14 @@ final class BackstageViewModel: ObservableObject {
     /// remains untouched until the user invokes an explicit audited action.
     private func resetFixtureScopedViewState() {
         metadataReport = nil
+        metadataGiveBackPlannedAssetIDs = nil
         metadataStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped metadata give-back is unavailable."
             : "Run a metadata plan for \(selectedFixtureBreadcrumb)."
         cullingFilterTask?.cancel()
         cullingBackfillTask?.cancel()
         cullingWindowRequestSerial += 1
+        cancelCullingThumbnailWork()
         cullingPool = nil
         fixtureCullingWindow = nil
         fixtureCullingMediaAvailability = nil
@@ -796,6 +1116,7 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
+        cullingThumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         cullingStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped Culling is unavailable."
@@ -826,8 +1147,6 @@ final class BackstageViewModel: ObservableObject {
         nativeUploadPlan = nil
         nativeUploadRun = nil
         nativeUploadThumbnails = [:]
-        nativeUploadPreviewImage = nil
-        nativeUploadPreviewItemID = ""
         deliverables = []
         publicationPlan = nil
     }
@@ -918,17 +1237,36 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func installVerifiedUpdate() async {
+        guard case let .verified(update) = updateState else { return }
+        updateState = .installing(update.manifest)
+        do {
+            let installer = updateInstaller
+            let receipt = try await Task.detached {
+                try installer.install(update)
+            }.value
+            updateState = .installed(receipt)
+        } catch {
+            let updateError = (error as? BackstageUpdateError)
+                ?? BackstageUpdateError.installationFailed(error.localizedDescription)
+            updateState = .failed(
+                message: updateError.localizedDescription,
+                recovery: updateError.recoveryGuidance
+            )
+        }
+    }
+
     func bootstrapAuthentication() async {
-        photosBridgeHealth = await photosBridgeHealthService.probe()
+        await reconcileInterruptedOwnerWorkflows()
+        photoAccess = photoLibrary.authorization()
         isAuthenticating = true
         defer { isAuthenticating = false }
         authentication = await ensuredAuthentication()
         switch authentication.phase {
         case .authenticated:
             authenticationStatus = "Authenticated with this Mac's revocable device credential."
-            await refreshActions()
             await loadFixtures()
-            await syncPhotosIncrementally()
+            await refreshActions()
         case .renewalFailed:
             authenticationStatus = "This Mac remains enrolled, but its Owner session could not be renewed. Check the connection and retry."
             status = "Retry Owner session"
@@ -950,8 +1288,47 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func refreshPhotosBridgeHealth() async {
-        photosBridgeHealth = await photosBridgeHealthService.probe()
+    func reconcileInterruptedOwnerWorkflows() async {
+        guard !didCheckOwnerWorkflowRecovery else { return }
+        didCheckOwnerWorkflowRecovery = true
+        guard let workflowRecoveryStore else {
+            ownerWorkflowRecoveryStatus = "Workflow recovery unavailable: Owner.sqlite could not be resolved."
+            return
+        }
+        do {
+            let report = try await Task.detached(priority: .utility) {
+                try workflowRecoveryStore.reconcile()
+            }.value
+            if report.changed == 0 {
+                ownerWorkflowRecoveryStatus = "No stale Owner workflow rows needed recovery."
+            } else {
+                let recovered = report.photosRecovered + report.uploadsRecovered
+                let review = report.photosNeedsReview + report.uploadsNeedsReview
+                ownerWorkflowRecoveryStatus = "Workflow recovery: \(recovered) interrupted run\(recovered == 1 ? "" : "s") recovered; \(review) legacy run\(review == 1 ? "" : "s") marked needs review."
+            }
+        } catch {
+            ownerWorkflowRecoveryStatus = "Workflow recovery failed closed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func refreshPhotosAccess() {
+        photoAccess = photoLibrary.authorization()
+    }
+
+    func startPreviewIPC() {
+        do {
+            try previewIPCServer.start()
+        } catch {
+            NSLog("PhotosByElie Backstage preview IPC unavailable: %@", error.localizedDescription)
+        }
+    }
+
+    func authorizePhotosAccess() async {
+        if photoLibrary.authorization() == .notDetermined {
+            photoAccess = await photoLibrary.requestAuthorization()
+        } else {
+            refreshPhotosAccess()
+        }
     }
 
     func enroll() async {
@@ -974,7 +1351,121 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func setUpThisMac() {
+        guard nativeEnrollmentTask == nil else { return }
+        nativeEnrollmentTask = Task { [weak self] in
+            await self?.runNativeEnrollment()
+        }
+    }
+
+    private func runNativeEnrollment() async {
+        isSettingUpThisMac = true
+        isAuthenticating = true
+        authenticationStatus = "Preparing a private, five-minute enrollment handoff…"
+        defer {
+            isSettingUpThisMac = false
+            isAuthenticating = false
+            nativeEnrollmentTask = nil
+            nativeEnrollmentHandoff = nil
+        }
+        do {
+            let handoff = try await authenticationService.beginNativeEnrollment(
+                name: Host.current().localizedName ?? "This Mac"
+            )
+            nativeEnrollmentHandoff = handoff
+            guard openExternalURL(handoff.authorizationURL) else {
+                await authenticationService.cancelNativeEnrollment(handoff)
+                authenticationStatus = "The Owner sign-in page could not be opened. No enrollment was created."
+                return
+            }
+            authenticationStatus = "Finish the Owner identity check in your browser. Backstage will receive the credential directly."
+            while !Task.isCancelled, Date() < handoff.expiresAt {
+                if let snapshot = try await authenticationService.claimNativeEnrollment(handoff) {
+                    authentication = snapshot
+                    authenticationStatus = "This Mac is enrolled. Its revocable credential is stored in Keychain."
+                    await refreshActions()
+                    await loadFixtures()
+                    return
+                }
+                try await Task.sleep(for: .seconds(1))
+            }
+            await authenticationService.cancelNativeEnrollment(handoff)
+            authenticationStatus = Task.isCancelled
+                ? "Mac setup was cancelled. No credential was stored."
+                : "Mac setup expired. Choose Set up this Mac to try again."
+        } catch is CancellationError {
+            if let nativeEnrollmentHandoff {
+                await authenticationService.cancelNativeEnrollment(nativeEnrollmentHandoff)
+            }
+            authenticationStatus = "Mac setup was cancelled. No credential was stored."
+        } catch {
+            authenticationStatus = "Mac setup failed: \(userFacingMessage(for: error))"
+            status = "Enrollment failed"
+        }
+    }
+
+    func cancelMacSetup() {
+        nativeEnrollmentTask?.cancel()
+        if let nativeEnrollmentHandoff {
+            Task { [authenticationService] in
+                await authenticationService.cancelNativeEnrollment(nativeEnrollmentHandoff)
+            }
+        }
+    }
+
+    func refreshOwnerDevices() async {
+        guard authentication.phase == .authenticated else {
+            enrolledOwnerDevices = []
+            ownerDeviceManagementStatus = "Enroll this Mac before managing device credentials."
+            return
+        }
+        isRefreshingOwnerDevices = true
+        defer { isRefreshingOwnerDevices = false }
+        do {
+            enrolledOwnerDevices = try await api.listOwnerDevices()
+                .sorted { $0.createdAt > $1.createdAt }
+            ownerDeviceManagementStatus = enrolledOwnerDevices.isEmpty
+                ? "No enrolled Macs were returned."
+                : "\(enrolledOwnerDevices.count) enrolled Mac\(enrolledOwnerDevices.count == 1 ? "" : "s")."
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            ownerDeviceManagementStatus = "Enrolled Macs unavailable: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func requestOwnerDeviceRevocation(_ device: OwnerDevice) {
+        pendingOwnerDeviceRevocation = device
+    }
+
+    func cancelOwnerDeviceRevocation() {
+        pendingOwnerDeviceRevocation = nil
+    }
+
+    func confirmOwnerDeviceRevocation() async {
+        guard let device = pendingOwnerDeviceRevocation else { return }
+        pendingOwnerDeviceRevocation = nil
+        isRefreshingOwnerDevices = true
+        defer { isRefreshingOwnerDevices = false }
+        do {
+            _ = try await api.revokeOwnerDevice(id: device.id)
+            if authentication.deviceId == device.id {
+                authentication = try await authenticationService.signOut()
+                enrolledOwnerDevices = []
+                ownerDeviceManagementStatus = "This Mac was revoked and its local Keychain credential was removed."
+                authenticationStatus = "This Mac was revoked. Choose Set up this Mac to enroll it again."
+                status = "Enrollment required"
+            } else {
+                enrolledOwnerDevices.removeAll { $0.id == device.id }
+                ownerDeviceManagementStatus = "Revoked \(device.name). It can no longer renew an Owner session."
+            }
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            ownerDeviceManagementStatus = "Revocation failed: \(userFacingMessage(for: error))"
+        }
+    }
+
     func signOut() async {
+        cancelMacSetup()
         if pbeOwnerFixtureSession != nil {
             await endPBEOwnerSession(reason: "PBE Owner closed before sign-out.")
         }
@@ -984,6 +1475,7 @@ final class BackstageViewModel: ObservableObject {
             authentication = try await authenticationService.signOut()
             actions = []
             fixtures = []
+            enrolledOwnerDevices = []
             markFixtureSelectionUnavailable(
                 "Fixtures are unavailable while Backstage is signed out. Fixture-scoped actions are disabled."
             )
@@ -999,27 +1491,74 @@ final class BackstageViewModel: ObservableObject {
         defer { isRefreshing = false }
         guard await prepareAuthenticatedOperation() else { return }
         do {
-            actions = try await api.listActions(limit: 50).actions
+            let fetched = try await fetchActionsWithTimeout().actions
+            actions = mergeLocallyObservedLifecycleActions(into: fetched)
             authentication = await authenticationService.currentSnapshot()
             status = "Connected"
+            activityStatus = actions.isEmpty
+                ? "Activity is up to date. No recent cloud actions."
+                : "Loaded \(actions.count) recent audited action\(actions.count == 1 ? "" : "s")."
+        } catch ActivityRefreshError.timedOut {
+            activityStatus = "Cloud Activity timed out after 5 seconds. Local workflow recovery remains available; retry when online."
+            status = "Activity refresh timed out"
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
             if authentication.phase == .authenticated {
                 status = userFacingMessage(for: error)
             }
+            activityStatus = "Cloud Activity unavailable: \(userFacingMessage(for: error))"
         }
     }
 
+    private func fetchActionsWithTimeout() async throws -> OwnerActionPage {
+        try await withThrowingTaskGroup(of: OwnerActionPage.self) { group in
+            group.addTask { [api] in
+                try await api.listActions(limit: 50)
+            }
+            group.addTask { [activityRefreshTimeout] in
+                try await Task.sleep(for: activityRefreshTimeout)
+                throw ActivityRefreshError.timedOut
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else {
+                throw CancellationError()
+            }
+            return first
+        }
+    }
+
+    private func retainLocallyObservedLifecycleAction(_ action: OwnerAction) {
+        locallyObservedLifecycleActions[action.id] = action
+        actions = mergeLocallyObservedLifecycleActions(into: actions)
+    }
+
+    private func mergeLocallyObservedLifecycleActions(
+        into fetched: [OwnerAction]
+    ) -> [OwnerAction] {
+        var merged = fetched
+        for local in locallyObservedLifecycleActions.values {
+            if let index = merged.firstIndex(where: { $0.id == local.id }) {
+                let remote = merged[index]
+                let remoteUpdated = remote.updatedAt ?? remote.createdAt ?? Date.distantPast
+                let localUpdated = local.updatedAt ?? local.createdAt ?? Date.distantPast
+                if localUpdated >= remoteUpdated {
+                    merged[index] = local
+                }
+            } else {
+                merged.append(local)
+            }
+        }
+        return merged
+            .sorted {
+                ($0.updatedAt ?? $0.createdAt ?? Date.distantPast)
+                    > ($1.updatedAt ?? $1.createdAt ?? Date.distantPast)
+            }
+            .prefix(50)
+            .map { $0 }
+    }
+
     func authorizeAndLoadPhotos() async {
-        if photoLibrary.authorization() == .notDetermined {
-            photoAccess = await photoLibrary.requestAuthorization()
-        } else {
-            photoAccess = photoLibrary.authorization()
-        }
-        await refreshPhotosBridgeHealth()
-        if !photosBridgeHealth.compatible || photosBridgeHealth.photoAccess != "authorized" {
-            cullingStatus = photosBridgeHealth.message
-        }
+        await authorizePhotosAccess()
         await refreshPhotos()
     }
 
@@ -1047,7 +1586,7 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Reconciling the complete Photos library with Owner…"
         defer { isReconcilingPhotosIndex = false }
         do {
-            let report = try await fixtureService.reconcilePhotosIndex()
+            let report = try await fixtureService.reconcilePhotosIndex(fullLibrary: true)
             await refreshPhotos()
             if hasCurrentCullingFixture, cullingPool == nil {
                 await loadFixtureCullingWindow()
@@ -1065,13 +1604,22 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func refreshPhotosAndRecentIndex(force: Bool = false) async {
+    func refreshPhotosAndRecentIndex() async {
         await refreshPhotos()
-        await reconcileRecentPhotosIndex(force: force)
+        await reconcileRecentPhotosIndex()
     }
 
-    func reconcileRecentPhotosIndex(force: Bool = false) async {
-        guard force || !hasReconciledRecentPhotosIndex else { return }
+    func discoverRecentPhotosAtStartupIfNeeded() async {
+        guard !didStartAutomaticRecentPhotosDiscovery else { return }
+        didStartAutomaticRecentPhotosDiscovery = true
+        await reconcileRecentPhotosIndex()
+        guard !Task.isCancelled else { return }
+        if !selectedFixtureID.isEmpty {
+            await loadFixtureCullingWindow(preservingVisibleWindow: true)
+        }
+    }
+
+    func reconcileRecentPhotosIndex() async {
         guard !isReconcilingPhotosIndex else { return }
         guard [.authorized, .limited].contains(photoAccess) else { return }
         guard await prepareAuthenticatedOperation() else { return }
@@ -1079,23 +1627,13 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Synchronizing recent Photos with the Owner index…"
         defer { isReconcilingPhotosIndex = false }
         do {
-            let start = Calendar.current.date(
-                byAdding: .day,
-                value: -45,
-                to: Date()
-            ) ?? Date().addingTimeInterval(-45 * 24 * 60 * 60)
-            let dateFormatter = DateFormatter()
-            dateFormatter.calendar = Calendar(identifier: .gregorian)
-            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let report = try await fixtureService.reconcilePhotosIndex(
-                dateFrom: dateFormatter.string(from: start)
-            )
-            hasReconciledRecentPhotosIndex = true
+            let report = try await fixtureService.reconcilePhotosIndex()
             photoStatus = [
-                "Recent Photos synchronized",
+                "Recent Photos discovered",
                 "\(report.importedCount.formatted()) indexed",
+                report.checkpointCaptureDate.isEmpty
+                    ? "resume point unchanged"
+                    : "resume point \(report.checkpointCaptureDate)",
             ].joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
@@ -1114,7 +1652,12 @@ final class BackstageViewModel: ObservableObject {
         photoStatus = "Loading preview…"
         defer { isLoadingPreview = false }
         do {
-            let preview = try await previewForAsset(
+            // The focused pane is the high-resolution culling preview. When
+            // Photos contains a rendered JPG alongside a RAW resource, the
+            // generic PhotoKit image-data request may choose the RAW resource
+            // and surface its unrendered color profile. Keep this path on the
+            // same rendered-JPG source as the idle thumbnail upgrade.
+            let preview = try await renderedJPEGPreviewForAsset(
                 forAssetID: id,
                 maxPixelSize: 1_600
             )
@@ -1126,25 +1669,114 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func requestThumbnail(for assetID: String) {
+    func requestThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil,
+        preferRenderedJPEG: Bool = false,
+        priority: TaskPriority? = nil
+    ) {
+        guard !terminationRequested else { return }
+        if cullingThumbnailTasks[assetID]?.isCancelled == true {
+            cullingThumbnailTasks[assetID] = nil
+            cullingThumbnailTaskTokens[assetID] = nil
+            cullingThumbnailTimeoutTasks[assetID]?.cancel()
+            cullingThumbnailTimeoutTasks[assetID] = nil
+        }
+        if let preferredIdentifier = preferredIdentifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !preferredIdentifier.isEmpty {
+            thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+        }
         guard cullingThumbnails[assetID] == nil,
-              cullingThumbnailTasks[assetID] == nil
+              cullingThumbnailTasks[assetID] == nil,
+              !(controlledFailedCullingAssetID == assetID && cullingThumbnailFailures[assetID] != nil)
         else { return }
-        cullingThumbnailTasks[assetID] = Task { [weak self] in
-            guard let self else { return }
-            await self.loadThumbnail(for: assetID)
+        let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
+        let taskToken = UUID()
+        cullingThumbnailTaskTokens[assetID] = taskToken
+        let timeout = cullingThumbnailTimeout
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = Task { [weak self] in
+            do {
+                try await Task.sleep(for: timeout)
+            } catch {
+                return
+            }
+            guard let self,
+                  !Task.isCancelled,
+                  self.cullingThumbnailTaskTokens[assetID] == taskToken,
+                  self.cullingThumbnails[assetID] == nil
+            else { return }
+            self.cullingThumbnailTasks[assetID]?.cancel()
             self.cullingThumbnailTasks[assetID] = nil
+            self.cullingThumbnailTaskTokens[assetID] = nil
+            self.cullingThumbnailTimeoutTasks[assetID] = nil
+            self.cullingThumbnailFailures[assetID] = .timedOut
+        }
+        cullingThumbnailTasks[assetID] = Task(priority: priority) { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.cullingThumbnailTaskTokens[assetID] == taskToken {
+                    self.cullingThumbnailTimeoutTasks[assetID]?.cancel()
+                    self.cullingThumbnailTimeoutTasks[assetID] = nil
+                    self.cullingThumbnailTaskTokens[assetID] = nil
+                    self.cullingThumbnailTasks[assetID] = nil
+                }
+            }
+            guard !Task.isCancelled,
+                  self.cullingThumbnailTaskTokens[assetID] == taskToken else { return }
+            await self.loadThumbnail(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier,
+                preferRenderedJPEG: preferRenderedJPEG
+            )
         }
     }
 
-    func loadThumbnail(for assetID: String) async {
-        guard cullingThumbnails[assetID] == nil else { return }
+    func requestLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) {
+        if let preferredIdentifier = preferredIdentifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !preferredIdentifier.isEmpty {
+            lifecycleThumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+        }
+        guard lifecycleThumbnails[assetID] == nil,
+              lifecycleThumbnailTasks[assetID] == nil
+        else { return }
+        let preferredIdentifier = lifecycleThumbnailPreferredIdentifiers[assetID]
+        let taskToken = UUID()
+        lifecycleThumbnailTaskTokens[assetID] = taskToken
+        lifecycleThumbnailTasks[assetID] = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.lifecycleThumbnailTaskTokens[assetID] == taskToken {
+                    self.lifecycleThumbnailTaskTokens[assetID] = nil
+                    self.lifecycleThumbnailTasks[assetID] = nil
+                }
+            }
+            await self.loadLifecycleThumbnail(
+                for: assetID,
+                preferredIdentifier: preferredIdentifier
+            )
+        }
+    }
+
+    func loadLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) async {
+        guard lifecycleThumbnails[assetID] == nil else { return }
+        let preferredIdentifier = preferredIdentifier
+            ?? lifecycleThumbnailPreferredIdentifiers[assetID]
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
-                let preview = try await previewForAsset(
+                let preview = try await renderedJPEGPreviewForAsset(
                     forAssetID: assetID,
+                    preferredIdentifier: preferredIdentifier,
                     maxPixelSize: 180
                 )
                 guard let image = NSImage(data: preview.jpegData) else {
@@ -1155,12 +1787,335 @@ final class BackstageViewModel: ObservableObject {
                     }
                     break
                 }
-                if cullingThumbnails.count >= 300,
-                   let oldest = cullingThumbnails.keys.first {
-                    cullingThumbnails.removeValue(forKey: oldest)
+                lifecycleThumbnails[assetID] = image
+                lifecycleThumbnailFailures.removeValue(forKey: assetID)
+                return
+            } catch {
+                lastFailure = CullingThumbnailFailure(error: error)
+                guard !Task.isCancelled, attempt < 2 else { break }
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+            }
+        }
+        if !Task.isCancelled {
+            lifecycleThumbnailFailures[assetID] = lastFailure
+        }
+    }
+
+    func retryLifecycleThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) {
+        guard lifecycleThumbnails[assetID] == nil else { return }
+        lifecycleThumbnailTasks[assetID]?.cancel()
+        lifecycleThumbnailTasks[assetID] = nil
+        lifecycleThumbnailTaskTokens[assetID] = nil
+        lifecycleThumbnailFailures.removeValue(forKey: assetID)
+        requestLifecycleThumbnail(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+                ?? lifecycleThumbnailPreferredIdentifiers[assetID]
+        )
+    }
+
+    func cullingAssetDidAppear(_ asset: FixtureAsset) {
+        guard !asset.id.isEmpty, !terminationRequested else { return }
+        cullingVisibleAssetIDs.insert(asset.id)
+        touchCullingThumbnail(asset.id)
+        requestThumbnail(for: asset.id, preferredIdentifier: asset.photoLibraryIdentifier)
+        scheduleThumbnailUpgrade(for: asset.id)
+        scheduleCullingThumbnailBackfill()
+    }
+
+    func cullingAssetDidDisappear(_ assetID: String) {
+        cullingVisibleAssetIDs.remove(assetID)
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks.removeValue(forKey: assetID)
+        cullingThumbnailTaskTokens.removeValue(forKey: assetID)
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks.removeValue(forKey: assetID)
+        cancelCullingThumbnailUpgrade(for: assetID)
+        // Keep a completed idle high-resolution upgrade in the bounded cache.
+        // Only in-flight work is cancelled when a card leaves the viewport;
+        // an explicit Gallery/work cancellation can still downgrade it.
+        cullingThumbnailUpgradeAttempts.remove(assetID)
+        scheduleVisibleThumbnailUpgrades()
+    }
+
+    func cullingScrollPhaseChanged(isScrolling: Bool) {
+        isCullingScrolling = isScrolling
+        guard !terminationRequested else { return }
+        guard !isScrolling else {
+            let tasks = Array(cullingThumbnailUpgradeTasks.values)
+            cullingThumbnailUpgradeTasks.removeAll()
+            cullingThumbnailUpgradeTaskTokens.removeAll()
+            tasks.forEach { $0.cancel() }
+            cullingThumbnailUpgradeAttempts = Set(cullingBasicThumbnails.keys)
+            cancelCullingThumbnailBackfill()
+            return
+        }
+        // An idle backfill request may have been cancelled while its card
+        // stayed on-screen. Restart the base request without needing a reappear.
+        for assetID in cullingVisibleAssetIDs where cullingThumbnailFailures[assetID] == nil {
+            requestThumbnail(for: assetID)
+        }
+        scheduleVisibleThumbnailUpgrades()
+        scheduleCullingThumbnailBackfill()
+    }
+
+    private func scheduleThumbnailUpgrade(for assetID: String) {
+        guard !terminationRequested,
+              cullingThumbnailUpgradeTasks[assetID] == nil,
+              !cullingThumbnailUpgradeAttempts.contains(assetID),
+              cullingThumbnailUpgradeTasks.count
+                < Self.cullingThumbnailUpgradeConcurrencyLimit,
+              cullingVisibleAssetIDs.contains(assetID),
+              !isCullingScrolling,
+              cullingBasicThumbnails[assetID] == nil,
+              cullingThumbnails[assetID] != nil
+        else { return }
+        cullingThumbnailUpgradeAttempts.insert(assetID)
+        let taskToken = UUID()
+        cullingThumbnailUpgradeTaskTokens[assetID] = taskToken
+        cullingThumbnailUpgradeTasks[assetID] = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.cullingThumbnailUpgradeTaskTokens[assetID] == taskToken {
+                    self.cullingThumbnailUpgradeTaskTokens[assetID] = nil
+                    self.cullingThumbnailUpgradeTasks[assetID] = nil
+                    self.scheduleVisibleThumbnailUpgrades()
                 }
+            }
+            try? await Task.sleep(for: self.cullingThumbnailUpgradeDelay)
+            guard !Task.isCancelled,
+                  self.cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
+                  self.cullingVisibleAssetIDs.contains(assetID),
+                  !self.isCullingScrolling,
+                  self.cullingBasicThumbnails[assetID] == nil,
+                  self.cullingThumbnails[assetID] != nil
+            else { return }
+            await self.upgradeThumbnail(for: assetID, taskToken: taskToken)
+        }
+    }
+
+    private func scheduleVisibleThumbnailUpgrades() {
+        guard !isCullingScrolling else { return }
+        for assetID in cullingVisibleAssetIDs.sorted() {
+            guard cullingThumbnailUpgradeTasks.count
+                < Self.cullingThumbnailUpgradeConcurrencyLimit
+            else { break }
+            scheduleThumbnailUpgrade(for: assetID)
+        }
+    }
+
+    private func cancelCullingThumbnailUpgrade(for assetID: String) {
+        cullingThumbnailUpgradeTaskTokens[assetID] = nil
+        cullingThumbnailUpgradeTasks[assetID]?.cancel()
+        cullingThumbnailUpgradeTasks[assetID] = nil
+    }
+
+    private func scheduleCullingThumbnailBackfill() {
+        guard !terminationRequested, !isCullingScrolling,
+              !cullingVisibleAssetIDs.isEmpty,
+              cullingThumbnailBackfillTask == nil else { return }
+        let assets = cullingThumbnailBackfillAssets.filter {
+            cullingThumbnails[$0.id] == nil && cullingThumbnailFailures[$0.id] == nil
+        }
+        guard !assets.isEmpty else { return }
+        let taskToken = UUID()
+        cullingThumbnailBackfillTaskToken = taskToken
+        cullingThumbnailBackfillTask = Task(priority: .utility) { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.cullingThumbnailBackfillTaskToken == taskToken {
+                    self.cullingThumbnailBackfillTaskToken = nil
+                    self.cullingThumbnailBackfillTask = nil
+                }
+            }
+            try? await Task.sleep(for: self.cullingThumbnailBackfillDelay)
+            guard !Task.isCancelled,
+                  self.cullingThumbnailBackfillTaskToken == taskToken,
+                  !self.isCullingScrolling
+            else { return }
+
+            var nextIndex = 0
+            await withTaskGroup(of: Void.self) { group in
+                for _ in 0..<Self.cullingThumbnailBackfillConcurrencyLimit {
+                    guard nextIndex < assets.count else { break }
+                    let asset = assets[nextIndex]
+                    nextIndex += 1
+                    group.addTask { [weak self] in
+                        await self?.backfillCullingThumbnail(
+                            for: asset,
+                            taskToken: taskToken
+                        )
+                    }
+                }
+                while await group.next() != nil {
+                    guard !Task.isCancelled,
+                          self.cullingThumbnailBackfillTaskToken == taskToken,
+                          !self.isCullingScrolling
+                    else {
+                        group.cancelAll()
+                        return
+                    }
+                    guard nextIndex < assets.count else { continue }
+                    let asset = assets[nextIndex]
+                    nextIndex += 1
+                    group.addTask { [weak self] in
+                        await self?.backfillCullingThumbnail(
+                            for: asset,
+                            taskToken: taskToken
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var cullingThumbnailBackfillAssets: [FixtureAsset] {
+        let currentAssets = cullingAssets
+        let visible = currentAssets.filter { cullingVisibleAssetIDs.contains($0.id) }
+        let remaining = currentAssets.filter { !cullingVisibleAssetIDs.contains($0.id) }
+        let loadedPhotos = libraryItems
+            .filter { !$0.mediaType.lowercased().contains("video") }
+            .map {
+                FixtureAsset(
+                    id: $0.id,
+                    title: "",
+                    filename: $0.filename,
+                    mediaType: $0.mediaType
+                )
+            }
+
+        var seen = Set<String>()
+        let ordered = (visible + remaining + loadedPhotos).filter { asset in
+            !asset.id.isEmpty && seen.insert(asset.id).inserted
+        }
+        return Array(ordered.prefix(Self.cullingThumbnailBackfillAssetLimit))
+    }
+
+    private func backfillCullingThumbnail(
+        for asset: FixtureAsset,
+        taskToken: UUID
+    ) async {
+        guard cullingThumbnailBackfillTaskToken == taskToken,
+              !Task.isCancelled,
+              !isCullingScrolling,
+              cullingThumbnails[asset.id] == nil,
+              cullingThumbnailTasks[asset.id] == nil,
+              cullingThumbnailFailures[asset.id] == nil
+        else { return }
+        // Use the same deduplication, timeout and retry path as a visible card.
+        // Cancel this owned task when the utility pass is interrupted.
+        requestThumbnail(
+            for: asset.id,
+            preferredIdentifier: asset.photoLibraryIdentifier,
+            priority: .utility
+        )
+        guard let task = cullingThumbnailTasks[asset.id] else { return }
+        await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    private func cancelCullingThumbnailBackfill() {
+        cullingThumbnailBackfillTaskToken = nil
+        cullingThumbnailBackfillTask?.cancel()
+        cullingThumbnailBackfillTask = nil
+    }
+
+    private func upgradeThumbnail(for assetID: String, taskToken: UUID) async {
+        for attempt in 0..<3 {
+            guard !Task.isCancelled,
+                  cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
+                  cullingVisibleAssetIDs.contains(assetID),
+                  !isCullingScrolling
+            else { return }
+            do {
+                let preview = try await cullingPreviewForAsset(
+                    forAssetID: assetID,
+                    preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
+                    maxPixelSize: Self.cullingThumbnailUpgradePixelSize
+                )
+                guard !Task.isCancelled,
+                      cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
+                      cullingVisibleAssetIDs.contains(assetID),
+                      !isCullingScrolling
+                else { return }
+                guard let image = NSImage(data: preview.jpegData) else {
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+                        continue
+                    }
+                    return
+                }
+                cullingBasicThumbnails[assetID] = cullingThumbnails[assetID]
                 cullingThumbnails[assetID] = image
+                await learnCurrentImageByteCount(
+                    from: preview,
+                    for: assetID,
+                    mediaType: "photo",
+                    persistPromptly: false
+                )
+                return
+            } catch {
+                guard !(error is CancellationError), !Task.isCancelled, attempt < 2 else {
+                    return
+                }
+                // Photos and iCloud previews can fail transiently while an
+                // idle viewport is filling. Retry this card without opening
+                // an unbounded scheduler loop or discarding its basic image.
+                try? await Task.sleep(for: .milliseconds(180 * (attempt + 1)))
+            }
+        }
+    }
+
+    func loadThumbnail(
+        for assetID: String,
+        preferredIdentifier: String? = nil,
+        preferRenderedJPEG: Bool = false
+    ) async {
+        guard cullingThumbnails[assetID] == nil else { return }
+        if shouldInjectNextCullingThumbnailFailure {
+            shouldInjectNextCullingThumbnailFailure = false
+            controlledFailedCullingAssetID = assetID
+            cullingThumbnailFailures[assetID] = .previewUnavailable
+            cullingStatus = "Controlled preview failure ready. Retry this card; no culling decision changed."
+            return
+        }
+        let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+        var lastFailure = CullingThumbnailFailure.previewUnavailable
+        for attempt in 0..<3 {
+            guard !Task.isCancelled else { return }
+            do {
+                let preview: PhotoPreview
+                if preferRenderedJPEG {
+                    preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: assetID,
+                        preferredIdentifier: preferredIdentifier,
+                        maxPixelSize: 180
+                    )
+                } else {
+                    preview = try await previewForAsset(
+                        forAssetID: assetID,
+                        preferredIdentifier: preferredIdentifier,
+                        maxPixelSize: 180
+                    )
+                }
+                guard let image = NSImage(data: preview.jpegData) else {
+                    lastFailure = .previewUnavailable
+                    if attempt < 2 {
+                        try? await Task.sleep(for: .milliseconds(180))
+                        continue
+                    }
+                    break
+                }
+                guard !Task.isCancelled else { return }
+                cacheCullingThumbnail(image, for: assetID)
                 cullingThumbnailFailures.removeValue(forKey: assetID)
+                scheduleThumbnailUpgrade(for: assetID)
                 return
             } catch {
                 lastFailure = CullingThumbnailFailure(error: error)
@@ -1173,12 +2128,108 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func retryThumbnail(for assetID: String) {
+    func retryThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
         guard cullingThumbnails[assetID] == nil else { return }
+        if controlledFailedCullingAssetID == assetID {
+            controlledFailedCullingAssetID = nil
+        }
         cullingThumbnailTasks[assetID]?.cancel()
         cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailTaskTokens[assetID] = nil
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
-        requestThumbnail(for: assetID)
+        requestThumbnail(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+        )
+    }
+
+    private func cacheCullingThumbnail(_ image: NSImage, for assetID: String) {
+        // Retain the entire bounded ordinary-thumbnail working set. Never let
+        // background replenishment evict a card the user is looking at.
+        while cullingThumbnails[assetID] == nil,
+              cullingThumbnails.count >= Self.cullingThumbnailBackfillAssetLimit {
+            let oldest = cullingThumbnailRecency.first {
+                cullingThumbnails[$0] != nil && !cullingVisibleAssetIDs.contains($0)
+            } ?? cullingThumbnails.keys.sorted().first {
+                !cullingVisibleAssetIDs.contains($0)
+            }
+            guard let oldest else { return }
+            cullingThumbnails.removeValue(forKey: oldest)
+            cullingThumbnailRecency.removeAll { $0 == oldest }
+            cullingBasicThumbnails.removeValue(forKey: oldest)
+            cullingThumbnailUpgradeAttempts.remove(oldest)
+        }
+        cullingThumbnails[assetID] = image
+        touchCullingThumbnail(assetID)
+    }
+
+    private func touchCullingThumbnail(_ assetID: String) {
+        cullingThumbnailRecency.removeAll { $0 == assetID }
+        if cullingThumbnails[assetID] != nil {
+            cullingThumbnailRecency.append(assetID)
+        }
+    }
+
+    private func restoreBasicCullingThumbnail(for assetID: String) {
+        if let basic = cullingBasicThumbnails.removeValue(forKey: assetID),
+           cullingThumbnails[assetID] != nil {
+            cullingThumbnails[assetID] = basic
+        }
+    }
+
+    private func recoverCullingThumbnail(_ image: NSImage, for assetID: String) {
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailTaskTokens[assetID] = nil
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = nil
+        cullingThumbnailFailures.removeValue(forKey: assetID)
+        // Quick Look can return a 4000px image. Do not retain that full image
+        // in a working set sized for 2000 ordinary thumbnails.
+        cacheCullingThumbnail(Self.basicThumbnail(from: image), for: assetID)
+    }
+
+    static func basicThumbnail(from image: NSImage) -> NSImage {
+        let longest = max(image.size.width, image.size.height)
+        guard longest > 180 else { return image }
+        let scale = 180 / longest
+        let width = max(1, Int(image.size.width * scale))
+        let height = max(1, Int(image.size.height * scale))
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+            isPlanar: false, colorSpaceName: .deviceRGB,
+            bytesPerRow: 0, bitsPerPixel: 0
+        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return image }
+        let size = NSSize(width: width, height: height)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        let thumbnail = NSImage(size: size)
+        thumbnail.addRepresentation(bitmap)
+        return thumbnail
+    }
+
+    func cancelCullingThumbnailWork() {
+        cullingThumbnailTasks.values.forEach { $0.cancel() }
+        cullingThumbnailTasks.removeAll()
+        cullingThumbnailTaskTokens.removeAll()
+        cullingThumbnailTimeoutTasks.values.forEach { $0.cancel() }
+        cullingThumbnailTimeoutTasks.removeAll()
+        cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
+        cullingThumbnailUpgradeTasks.removeAll()
+        cullingThumbnailUpgradeTaskTokens.removeAll()
+        for assetID in Array(cullingBasicThumbnails.keys) {
+            restoreBasicCullingThumbnail(for: assetID)
+        }
+        cullingThumbnailUpgradeAttempts.removeAll()
+        cancelCullingThumbnailBackfill()
+        cullingVisibleAssetIDs.removeAll()
+        isCullingScrolling = false
     }
 
     func exportSelected(to directory: URL) async {
@@ -1213,6 +2264,28 @@ final class BackstageViewModel: ObservableObject {
         await runMetadata(commit: true)
     }
 
+    var metadataGiveBackAssetIDs: [String] {
+        let assetID = metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return assetID.isEmpty ? [] : [assetID]
+    }
+
+    var metadataGiveBackScopeDescription: String {
+        guard let assetID = metadataGiveBackAssetIDs.first else {
+            return "Entire current fixture"
+        }
+        return "Exact item \(assetID)"
+    }
+
+    var metadataGiveBackCommitReady: Bool {
+        guard let report = metadataReport,
+              report.isDryRun,
+              report.fixtureID == selectedFixtureID,
+              report.readyCount > 0,
+              let plannedAssetIDs = metadataGiveBackPlannedAssetIDs
+        else { return false }
+        return plannedAssetIDs == metadataGiveBackAssetIDs
+    }
+
     func retryMetadataFailures() async {
         guard let metadataReport else { return }
         guard fixtureScopedActionsAllowed else {
@@ -1221,6 +2294,7 @@ final class BackstageViewModel: ObservableObject {
         }
         guard metadataReport.fixtureID == selectedFixtureID else {
             self.metadataReport = nil
+            metadataGiveBackPlannedAssetIDs = nil
             metadataStatus = "The prior metadata report belongs to another fixture. Run a new plan for the current fixture."
             return
         }
@@ -1232,6 +2306,7 @@ final class BackstageViewModel: ObservableObject {
                 fixtureID: selectedFixtureID
             )
             self.metadataReport = retried
+            metadataGiveBackPlannedAssetIDs = nil
             metadataStatus = reportStatus(retried)
         } catch {
             metadataStatus = userFacingMessage(for: error)
@@ -1294,12 +2369,17 @@ final class BackstageViewModel: ObservableObject {
             : cullingViews.sorted(by: { $0.rawValue < $1.rawValue }).map(\.label).joined(separator: " + ")
     }
 
+    var gallerySavedViewLabel: String {
+        GallerySavedView.allCases.first(where: matchesGallerySavedView)?.rawValue ?? "Custom"
+    }
+
     var cullingRatingFilterLabel: String {
-        if cullingRatingFilters.count == 6 { return "All ratings" }
-        if cullingRatingFilters.count == 1, let rating = cullingRatingFilters.first {
-            return rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")"
-        }
-        return "\(cullingRatingFilters.count) ratings"
+        let rating = cullingMinimumRating
+        return rating == 0 ? "All ratings" : "\(rating)+ stars"
+    }
+
+    var cullingMinimumRating: Int {
+        cullingRatingFilters.min() ?? 0
     }
 
     var cullingColorFilterLabel: String {
@@ -1312,8 +2392,74 @@ final class BackstageViewModel: ObservableObject {
         toggle(view, in: &cullingViews)
     }
 
-    func toggleCullingRatingFilter(_ rating: Int) {
-        toggle(rating, in: &cullingRatingFilters)
+    func showAllFixtureAssetsInGallery() {
+        applyGallerySavedView(.allAssets)
+    }
+
+    func showCullingSavedView() {
+        applyGallerySavedView(.culling)
+    }
+
+    func openInGallery(assetIDs: [String], sourceLabel: String) async {
+        let ids = assetIDs.reduce(into: [String]()) { result, rawID in
+            let id = rawID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty, !result.contains(id) else { return }
+            result.append(id)
+        }
+        guard !selectedFixtureID.isEmpty else {
+            cullingStatus = "Choose a fixture before opening an asset in Gallery."
+            return
+        }
+        guard let targetID = ids.first else {
+            cullingStatus = "Select an asset before opening Gallery."
+            return
+        }
+
+        let preset = gallerySavedViewPreset(.allAssets)
+        cullingPool = nil
+        cullingViews = preset.views
+        cullingRatingFilters = Set(0...5)
+        cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = preset.editorial
+        galleryDeliveryFilters = preset.delivery
+        gallerySourceFilters = preset.sources
+        galleryBurstsOnly = false
+        cullingSearch = targetID
+        cullingWindowOffset = 0
+        pendingGalleryRevealIDs = ids
+        pendingGalleryRevealSource = sourceLabel
+        selection = .culling
+        await loadFixtureCullingWindow()
+    }
+
+    func applyGallerySavedView(_ savedView: GallerySavedView) {
+        let preset = gallerySavedViewPreset(savedView)
+        cullingSearch = ""
+        cullingViews = preset.views
+        cullingRatingFilters = Set(0...5)
+        cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = preset.editorial
+        galleryDeliveryFilters = preset.delivery
+        gallerySourceFilters = preset.sources
+        galleryBurstsOnly = false
+        applyCullingFilters()
+    }
+
+    func toggleGalleryEditorialFilter(_ filter: GalleryEditorialFilter) {
+        toggleOptional(filter, in: &galleryEditorialFilters)
+    }
+
+    func toggleGalleryDeliveryFilter(_ filter: GalleryDeliveryFilter) {
+        toggleOptional(filter, in: &galleryDeliveryFilters)
+    }
+
+    func toggleGallerySourceFilter(_ filter: GallerySourceFilter) {
+        toggle(filter, in: &gallerySourceFilters)
+    }
+
+    func setCullingMinimumRating(_ rating: Int) {
+        let minimum = min(5, max(0, rating))
+        cullingRatingFilters = Set(minimum...5)
     }
 
     func toggleCullingColorFilter(_ color: CullingColorFilter) {
@@ -1326,6 +2472,56 @@ final class BackstageViewModel: ObservableObject {
             selection.remove(value)
         } else {
             selection.insert(value)
+        }
+    }
+
+    private func toggleOptional<Value: Hashable>(_ value: Value, in selection: inout Set<Value>) {
+        if selection.contains(value) {
+            selection.remove(value)
+        } else {
+            selection.insert(value)
+        }
+    }
+
+    private func matchesGallerySavedView(_ savedView: GallerySavedView) -> Bool {
+        let preset = gallerySavedViewPreset(savedView)
+        return cullingViews == preset.views
+            && cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && cullingRatingFilters == Set(0...5)
+            && cullingColorFilters == Set(CullingColorFilter.selectableCases)
+            && galleryEditorialFilters == preset.editorial
+            && galleryDeliveryFilters == preset.delivery
+            && gallerySourceFilters == preset.sources
+            && !galleryBurstsOnly
+    }
+
+    private func gallerySavedViewPreset(
+        _ savedView: GallerySavedView
+    ) -> (
+        views: Set<FixtureCullingView>,
+        editorial: Set<GalleryEditorialFilter>,
+        delivery: Set<GalleryDeliveryFilter>,
+        sources: Set<GallerySourceFilter>
+    ) {
+        let allViews = Set(FixtureCullingView.selectableCases)
+        let allSources = Set(GallerySourceFilter.allCases)
+        return switch savedView {
+        case .allAssets:
+            (allViews, [], [], allSources)
+        case .culling:
+            ([.undecided], [], [], [.available])
+        case .reviewQueue:
+            ([.picked], [.needsReview, .aiRequested, .proposalAvailable], [], [.available])
+        case .approved:
+            ([.picked], [.approved], [], [.available])
+        case .uploadQueue:
+            ([.picked], [.approved], [.needsUpload, .uploading, .failed], [.available])
+        case .live:
+            ([.picked], [], [.live], [.available])
+        case .hidden:
+            ([.hidden], [], [], [.available])
+        case .unavailable:
+            (allViews, [], [], [.unavailable])
         }
     }
 
@@ -1422,7 +2618,113 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var selectedCullingAssetIDs: [String] {
-        visibleCullingAssets.map(\.id).filter(cullingSelection.selectedIDs.contains)
+        cullingSelection.selectedInDisplayOrder
+    }
+
+    var cullingReturnToReviewEligibleIDs: [String] {
+        let selected = Set(selectedCullingAssetIDs)
+        return cullingAssets.compactMap { asset in
+            guard selected.contains(asset.id),
+                  asset.editorialState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "approved"
+            else { return nil }
+            return asset.id
+        }
+    }
+
+    var cullingReturnToReviewSkippedCount: Int {
+        max(0, selectedCullingAssetIDs.count - cullingReturnToReviewEligibleIDs.count)
+    }
+
+    var cullingReturnToReviewLiveCount: Int {
+        let eligible = Set(cullingReturnToReviewEligibleIDs)
+        return cullingAssets.filter {
+            eligible.contains($0.id)
+                && $0.deliveryState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "live"
+        }.count
+    }
+
+    var canReturnCullingSelectionToReview: Bool {
+        !selectedFixtureID.isEmpty
+            && cullingPool == nil
+            && !isApplyingCullingDecision
+            && !cullingReturnToReviewEligibleIDs.isEmpty
+    }
+
+    var cullingReturnToReviewConfirmationMessage: String {
+        let eligible = cullingReturnToReviewEligibleIDs.count
+        let live = cullingReturnToReviewLiveCount
+        let skipped = cullingReturnToReviewSkippedCount
+        var parts = [
+            "This reverses approval for \(eligible.formatted()) selected asset\(eligible == 1 ? "" : "s") while preserving metadata and fixture picks."
+        ]
+        if live > 0 {
+            parts.append("The current deployed rendition for \(live.formatted()) live asset\(live == 1 ? "" : "s") remains live until a separate replacement or unpublish action.")
+        }
+        if skipped > 0 {
+            parts.append("\(skipped.formatted()) selected asset\(skipped == 1 ? " is" : "s are") not approved and will be skipped.")
+        }
+        parts.append("The audited action can be undone during this Backstage session.")
+        return parts.joined(separator: " ")
+    }
+
+    var cullingClearDecisionLabel: String {
+        let placements = selectedCullingPlacementStates
+        if placements == [.hidden] { return "Unhide" }
+        if placements == [.picked] { return "Unpick" }
+        return "Clear decisions"
+    }
+
+    var canClearCullingDecision: Bool {
+        !selectedCullingAssetIDs.isEmpty
+            && selectedCullingPlacementStates.contains(where: { $0 != .undecided })
+    }
+
+    var cullingClearDecisionHelp: String {
+        switch cullingClearDecisionLabel {
+        case "Unhide":
+            "Return the hidden selection to Undecided in the current fixture."
+        case "Unpick":
+            "Return the picked selection to Undecided in the current fixture."
+        default:
+            "Return every selected fixture decision to Undecided."
+        }
+    }
+
+    private var selectedCullingPlacementStates: Set<FixturePlacementState> {
+        let assetsByID = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
+        return Set(selectedCullingAssetIDs.compactMap { id in
+            if let rawValue = cullingStates[id]?.pickState,
+               let placement = FixturePlacementState(rawValue: rawValue) {
+                return placement
+            }
+            return assetsByID[id]?.placementState
+        })
+    }
+
+    var cullingSelectionRating: Int? {
+        let ids = selectedCullingAssetIDs
+        guard let firstID = ids.first else { return nil }
+        let firstRating = cullingStates[firstID]?.rating
+            ?? cullingAssets.first(where: { $0.id == firstID })?.rating
+            ?? 0
+        guard ids.dropFirst().allSatisfy({ id in
+            let rating = cullingStates[id]?.rating
+                ?? cullingAssets.first(where: { $0.id == id })?.rating
+                ?? 0
+            return rating == firstRating
+        }) else { return nil }
+        return firstRating
+    }
+
+    func cullingSelectionHasColor(_ color: SidecarColor) -> Bool {
+        let ids = selectedCullingAssetIDs
+        guard !ids.isEmpty else { return false }
+        return ids.allSatisfy { id in
+            let currentColor = cullingStates[id]?.color
+                ?? cullingAssets.first(where: { $0.id == id })?.color
+                ?? ""
+            return currentColor == color.rawValue
+        }
     }
 
     var hasCurrentCullingFixture: Bool {
@@ -1448,6 +2750,11 @@ final class BackstageViewModel: ObservableObject {
 
     var selectedReviewAssetIDs: [String] {
         reviewItems.map(\.id).filter(reviewSelection.selectedIDs.contains)
+    }
+
+    var canSelectReviewBurstCandidates: Bool {
+        !isRunningReview
+            && !CullingWorkspace.reviewBurstRejectCandidates(in: reviewItems).isEmpty
     }
 
     var focusedReviewItem: FixtureReviewItem? {
@@ -1485,13 +2792,11 @@ final class BackstageViewModel: ObservableObject {
 
     func applyCullingFilters(debounceNanoseconds: UInt64 = 0) {
         cullingWindowOffset = 0
-        cullingBackfillTask?.cancel()
-        cullingFilterTask?.cancel()
+        invalidateCullingWindowLoads()
         if !selectedFixtureID.isEmpty, cullingPool == nil {
             // Invalidate the old response immediately. Until the audited
             // fixture query completes, the grid must not fall back to the
             // unrelated recent-Photos preview cache or show stale results.
-            cullingWindowRequestSerial += 1
             fixtureCullingWindow = nil
             isLoadingFixtureCulling = true
             clearCullingSelection()
@@ -1511,6 +2816,19 @@ final class BackstageViewModel: ObservableObject {
         cullingStatus = "\(cullingWorkspace.summary.filtered.formatted()) of \(cullingWorkspace.summary.total.formatted()) items match."
     }
 
+    /// Prevent a read-only window request from replacing a newer local
+    /// decision after a filter transition. The next explicit load receives a
+    /// fresh serial, while the current in-memory decision remains authoritative
+    /// until the mutation result has been applied.
+    private func invalidateCullingWindowLoads() {
+        cullingWindowRequestSerial += 1
+        cullingBackfillTask?.cancel()
+        cullingBackfillTask = nil
+        cullingFilterTask?.cancel()
+        cullingFilterTask = nil
+        cancelCullingThumbnailBackfill()
+    }
+
     func scheduleCullingSearchRefresh() {
         applyCullingFilters(debounceNanoseconds: 250_000_000)
     }
@@ -1520,6 +2838,10 @@ final class BackstageViewModel: ObservableObject {
         cullingMediaFilters = [.photos]
         cullingRatingFilters = Set(0...5)
         cullingColorFilters = Set(CullingColorFilter.selectableCases)
+        galleryEditorialFilters = []
+        galleryDeliveryFilters = []
+        gallerySourceFilters = Set(GallerySourceFilter.allCases)
+        galleryBurstsOnly = false
         let allViews = Set(FixtureCullingView.selectableCases)
         let viewsChanged = cullingViews != allViews
         cullingViews = allViews
@@ -1582,6 +2904,13 @@ final class BackstageViewModel: ObservableObject {
     var canDecreaseCullingThumbnailSize: Bool {
         cullingGridDensity < CullingGridLayout.maximumColumnsThatFit(
             width: cullingGridAvailableWidth
+        )
+    }
+
+    var cullingGridColumnWidth: Double {
+        CullingGridLayout.columnWidth(
+            width: max(cullingGridAvailableWidth, CullingGridLayout.minimumColumnWidth),
+            columns: cullingGridDensity
         )
     }
 
@@ -1666,7 +2995,9 @@ final class BackstageViewModel: ObservableObject {
         cullingSelection = OwnerSelectionModel(orderedIDs: fixturePool.assets.map(\.id))
         selectedPhotoIDs = []
         photoPreview = nil
+        cancelCullingThumbnailWork()
         cullingThumbnails = [:]
+        cullingThumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
         selection = .culling
@@ -1676,14 +3007,16 @@ final class BackstageViewModel: ObservableObject {
     func showAllPhotosInCulling() {
         cullingPool = nil
         cullingWindowOffset = 0
+        cancelCullingThumbnailWork()
         cullingThumbnails = [:]
+        cullingThumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         Task { await loadFixtureCullingWindow() }
     }
 
     func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false) async {
         guard !selectedFixtureID.isEmpty else {
-            cullingStatus = "Choose a fixture to begin culling."
+            cullingStatus = "Choose a fixture to browse its Gallery."
             return
         }
         if !preservingVisibleWindow {
@@ -1696,6 +3029,7 @@ final class BackstageViewModel: ObservableObject {
             fixtureCullingWindow = nil
             clearCullingSelection()
             photoPreview = nil
+            cancelCullingThumbnailWork()
             cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
         }
         defer {
@@ -1722,7 +3056,11 @@ final class BackstageViewModel: ObservableObject {
                     search: requestedSearch,
                     mediaTypes: ["photo"],
                     ratings: ratings,
-                    colors: colors
+                    colors: colors,
+                    editorialFilters: galleryEditorialFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    deliveryFilters: galleryDeliveryFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    sourceFilters: gallerySourceFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    burstsOnly: galleryBurstsOnly
                 )
             }
 
@@ -1731,6 +3069,12 @@ final class BackstageViewModel: ObservableObject {
             guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
             fixtureCullingMediaAvailability = window.mediaAvailability
             fixtureCullingWindow = window
+            cullingStableWindowIndexes = Dictionary(
+                uniqueKeysWithValues: window.items.enumerated().map { index, item in
+                    (item.id, window.offset + index)
+                }
+            )
+            await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             cullingStates = Dictionary(uniqueKeysWithValues: window.items.map { asset in
                 (
                     asset.id,
@@ -1746,9 +3090,12 @@ final class BackstageViewModel: ObservableObject {
                 )
             })
             replaceCullingItems()
+            let didRevealGallerySelection = applyPendingGalleryRevealIfPossible()
             if !preservingVisibleWindow {
                 photoPreview = nil
-                cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+                if !didRevealGallerySelection {
+                    cullingStatus = "\(window.summary.filtered.formatted()) \(window.view.label.lowercased()) of \(window.summary.universe.formatted()) eligible items."
+                }
             }
         } catch {
             guard requestSerial == cullingWindowRequestSerial else { return }
@@ -1768,6 +3115,38 @@ final class BackstageViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             await self?.loadFixtureCullingWindow(preservingVisibleWindow: true)
         }
+    }
+
+    @discardableResult
+    private func applyPendingGalleryRevealIfPossible() -> Bool {
+        guard !pendingGalleryRevealIDs.isEmpty else { return false }
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        let requested = Set(pendingGalleryRevealIDs)
+        let matched = visibleIDs.filter(requested.contains)
+        let requestedCount = pendingGalleryRevealIDs.count
+        let source = pendingGalleryRevealSource
+        pendingGalleryRevealIDs = []
+        pendingGalleryRevealSource = ""
+        guard let focusedID = matched.first else {
+            cullingStatus = "The selected \(source) asset is not in the current fixture Gallery."
+            return true
+        }
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: visibleIDs,
+            selectedIDs: Set(matched),
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
+        cullingScrollTargetID = focusedID
+        if requestedCount == 1 {
+            cullingStatus = "Opened the selected \(source) asset in Gallery."
+        } else if matched.count == requestedCount {
+            cullingStatus = "Opened all \(matched.count.formatted()) selected \(source) assets in Gallery."
+        } else {
+            cullingStatus = "Opened \(matched.count.formatted()) of \(requestedCount.formatted()) selected \(source) assets in Gallery; the others are outside this exact result."
+        }
+        return true
     }
 
     func loadFixtures() async {
@@ -1810,9 +3189,10 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             await presentAuthenticationFailureIfNeeded(error)
-            let reason = "Fixtures could not load: \(userFacingMessage(for: error)) Fixture-scoped actions are disabled."
-            fixtureStatus = reason
-            markFixtureSelectionUnavailable(reason)
+            let failure = fixtureTreeFailureMessage(for: error)
+            let reason = "\(failure) Fixture-scoped actions are disabled."
+            fixtureStatus = "\(failure) Select Reload tree to retry."
+            markFixtureSelectionUnavailable(reason, notice: "Select Reload tree to retry.")
         }
     }
 
@@ -2183,7 +3563,26 @@ final class BackstageViewModel: ObservableObject {
         )
     }
 
-    func applyPickShortcut(_ action: SidecarPickAction) async {
+    func toggleCullingColor(_ color: SidecarColor) async {
+        guard !selectedCullingAssetIDs.isEmpty else {
+            cullingStatus = "Select one or more Photos items."
+            return
+        }
+        cullingColor = cullingSelectionHasColor(color) ? .none : color
+        await applyColor()
+    }
+
+    @discardableResult
+    func applyPickShortcut(
+        _ action: SidecarPickAction,
+        removalDirection: OwnerSelectionDirection = .next
+    ) async -> Bool {
+        if case .unpick = action, !canClearCullingDecision {
+            cullingStatus = selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Photos items."
+                : "The selected items are already Undecided."
+            return false
+        }
         let semanticAction: FixtureCullingAction = switch action {
         case .pick: .include
         case .reject: .exclude
@@ -2195,47 +3594,289 @@ final class BackstageViewModel: ObservableObject {
         ) {
         case .unavailable:
             cullingStatus = "Choose a current fixture before using P, H, or U. X still moves the asset to the recoverable Waste Basket."
+            return false
         case let .fixtureState(state):
             let label = switch state {
             case .picked: "Include"
             case .hidden: "Exclude"
             case .undecided: "Clear fixture decision"
             }
-            await applyFixturePlacement(state, label: label)
+            return await applyFixturePlacement(
+                state,
+                label: label,
+                removalDirection: removalDirection
+            )
         case .globalTombstone:
-            return
+            return false
         }
     }
 
-    func moveCullingSelectionToWasteBasket() async {
+    func moveCullingSelectionToWasteBasket(
+        removalDirection: OwnerSelectionDirection = .next,
+        onTerminal: ((Bool, String?) -> Void)? = nil
+    ) async {
+        guard !isApplyingCullingDecision,
+              !cullingWasteBasketQueueing else {
+            cullingStatus = cullingWasteBasketQueueing
+                ? "This Culling X action is already queued; the Culling workspace remains available while it completes."
+                : "Finish the current Culling action first."
+            return
+        }
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             cullingStatus = "Select one or more Photos items."
             return
         }
-        do {
-            let action = try await lifecycleService.moveToWasteBasket(
-                mediaIDs: ids,
-                fixtureID: selectedFixtureID,
-                source: "backstage-culling"
-            )
-            cullingStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket through action \(action.id)."
-        } catch {
-            cullingStatus = "Waste Basket move failed: \(userFacingMessage(for: error))"
+        let previousIDs = visibleCullingAssets.map(\.id)
+        for (index, id) in previousIDs.enumerated()
+        where cullingStableWindowIndexes[id] == nil {
+            cullingStableWindowIndexes[id] = (fixtureCullingWindow?.offset ?? 0) + index
         }
-        if !selectedFixtureID.isEmpty, cullingPool == nil {
-            await loadFixtureCullingWindow()
+        let focusedID = cullingSelection.focusedID ?? ids.first
+        let fixtureID = selectedFixtureID
+        var historyEntry = CullingHistoryEntry(
+            label: "Waste Basket",
+            wasteBasketMediaIDs: ids,
+            fixtureID: fixtureID,
+            windowOffset: fixtureCullingWindow?.offset ?? cullingWindowOffset,
+            selectedIDs: cullingSelection.selectedIDs,
+            anchorID: cullingSelection.anchorID,
+            focusedID: cullingSelection.focusedID,
+            cullingItems: cullingAssets.filter { ids.contains($0.id) },
+            cullingItemIndexes: Dictionary(
+                uniqueKeysWithValues: cullingAssets.enumerated().compactMap { index, item in
+                    ids.contains(item.id) ? (item.id, index) : nil
+                }
+            )
+        )
+        cullingWasteBasketQueueing = true
+        cullingStatus = "Submitting X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Culling remains available."
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let action = try await self.lifecycleService.enqueueMoveToWasteBasket(
+                    mediaIDs: ids,
+                    fixtureID: fixtureID,
+                    source: "backstage-culling"
+                )
+                self.cullingWasteBasketQueueing = false
+                historyEntry.wasteBasketActionID = action.id
+                self.beginCullingWasteBasketAction(action)
+                self.cullingHistory.append(historyEntry)
+                if self.cullingHistory.count > 100 {
+                    self.cullingHistory.removeFirst(self.cullingHistory.count - 100)
+                }
+                let replacementID = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                    historyEntry,
+                    previousIDs: previousIDs,
+                    focusedID: focusedID,
+                    removalDirection: removalDirection
+                )
+                self.cullingStatus = "Queued X for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). The local Culling grid is updated; durable reconciliation continues in the background."
+                onTerminal?(true, replacementID)
+                do {
+                    let completedAction = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.updateCullingWasteBasketAction(update)
+                            self.cullingStatus = self.pendingLifecycleActionStatus(
+                                "Culling X",
+                                action: update,
+                                availability: "Culling remains available while it completes."
+                            )
+                        }
+                    }
+                    let undoWasRequested = self.cullingWasteBasketDeferredUndoActionIDs.contains(action.id)
+                    self.finishCullingWasteBasketAction(action.id)
+                    let receipt = LifecycleActionReceipt.summarize(
+                        completedAction,
+                        requestedCount: ids.count
+                    )
+                    if !undoWasRequested {
+                        self.cullingStatus = "Culling X completed through action \(action.id). \(receipt.statusSummary). Every affected item remains recoverable in Waste Basket."
+                    }
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.cullingStatus = self.pendingLifecycleActionStatus(
+                            "Culling X",
+                            action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                            availability: "Culling remains available; check Activity for the full receipt."
+                        )
+                    } else {
+                        self.finishCullingWasteBasketAction(action.id)
+                        self.cullingHistory.removeAll { $0.id == historyEntry.id }
+                        if self.selectedFixtureID == historyEntry.fixtureID,
+                           !self.restoreWasteBasketCullingEntryInCurrentWindow(historyEntry) {
+                            await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                        }
+                        let receipt = LifecycleActionReceipt(
+                            affected: 0,
+                            skipped: 0,
+                            failed: ids.count
+                        )
+                        self.cullingStatus = "Waste Basket move failed; the local Culling grid was restored. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
+                        onTerminal?(false, nil)
+                    }
+                }
+            } catch {
+                self.cullingWasteBasketQueueing = false
+                let receipt = LifecycleActionReceipt(
+                    affected: 0,
+                    skipped: 0,
+                    failed: ids.count
+                )
+                self.cullingStatus = "Waste Basket move failed. \(receipt.statusSummary). \(self.userFacingMessage(for: error))"
+                onTerminal?(false, nil)
+            }
         }
     }
 
     func applyColorShortcut(_ color: SidecarColor) async {
-        cullingColor = color
-        await applyColor()
+        await toggleCullingColor(color)
+    }
+
+    func returnCullingSelectionToReview() async {
+        guard !isApplyingCullingDecision else { return }
+        let eligibleIDs = cullingReturnToReviewEligibleIDs
+        let skippedCount = cullingReturnToReviewSkippedCount
+        let liveCount = cullingReturnToReviewLiveCount
+        guard !selectedFixtureID.isEmpty, let anchorID = eligibleIDs.first else {
+            cullingStatus = selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Gallery assets first."
+                : "Return to Review is available only for approved Gallery assets."
+            return
+        }
+        let entry = CullingHistoryEntry(
+            label: "Return to Review",
+            fixtureID: selectedFixtureID,
+            windowOffset: fixtureCullingWindow?.offset ?? cullingWindowOffset,
+            selectedIDs: cullingSelection.selectedIDs,
+            anchorID: cullingSelection.anchorID,
+            focusedID: cullingSelection.focusedID,
+            cullingItems: cullingAssets.filter { eligibleIDs.contains($0.id) },
+            cullingItemIndexes: Dictionary(
+                uniqueKeysWithValues: cullingAssets.enumerated().compactMap { index, item in
+                    eligibleIDs.contains(item.id) ? (item.id, index) : nil
+                }
+            ),
+            orderedIDs: visibleCullingAssets.map(\.id)
+        )
+        isApplyingCullingDecision = true
+        cullingStatus = "Returning \(eligibleIDs.count.formatted()) approved Gallery asset\(eligibleIDs.count == 1 ? "" : "s") to Review…"
+        defer { isApplyingCullingDecision = false }
+        do {
+            let result = try await fixtureService.applyReview(
+                .returnToReview,
+                fixtureID: selectedFixtureID,
+                assetIDs: eligibleIDs,
+                anchorAssetID: anchorID
+            )
+            var completedEntry = entry
+            completedEntry.reviewOperationID = result.operationID
+            cullingHistory.append(completedEntry)
+            if cullingHistory.count > 100 {
+                cullingHistory.removeFirst(cullingHistory.count - 100)
+            }
+            retainCullingReviewResultInCurrentWindow(result.changes)
+            reconcileCullingSelection(after: completedEntry, primaryChangedID: anchorID)
+            let returnedCount = result.changes.count
+            var message = "Returned \(returnedCount.formatted()) approved asset\(returnedCount == 1 ? "" : "s") to Review. Metadata and fixture picks were preserved."
+            if liveCount > 0 {
+                message += " \(liveCount.formatted()) current live rendition\(liveCount == 1 ? " remains" : "s remain") live until a separate replacement or unpublish action."
+            }
+            if skippedCount > 0 {
+                message += " Skipped \(skippedCount.formatted()) selected asset\(skippedCount == 1 ? "" : "s") that were not approved."
+            }
+            cullingStatus = message
+            scheduleFixtureCullingBackfill()
+        } catch {
+            cullingStatus = "Return to Review failed; no Gallery state changed. \(userFacingMessage(for: error))"
+        }
+    }
+
+    private func retainCullingReviewResultInCurrentWindow(
+        _ changes: [FixtureReviewChange]
+    ) {
+        let reviewsByID = Dictionary(uniqueKeysWithValues: changes.map { ($0.assetID, $0.review) })
+        if var window = fixtureCullingWindow {
+            window.items = window.items.map { current in
+                guard let review = reviewsByID[current.id] else { return current }
+                var item = current
+                if let editorialState = review["editorialState"]?.stringValue {
+                    item.editorialState = editorialState
+                }
+                if let deliveryState = review["deliveryState"]?.stringValue {
+                    item.deliveryState = deliveryState
+                }
+                return item
+            }
+            fixtureCullingWindow = window
+        }
+        for change in changes {
+            var decision = cullingStates[change.assetID]
+                ?? SidecarDecisionState(assetId: change.assetID)
+            if let editorialState = change.review["editorialState"]?.stringValue {
+                decision.metadataState = editorialState
+            }
+            cullingStates[change.assetID] = decision
+        }
+        replaceCullingItems()
+    }
+
+    private func reconcileCullingSelection(
+        after entry: CullingHistoryEntry,
+        primaryChangedID: String
+    ) {
+        let visibleIDs = visibleCullingAssets.map(\.id)
+        var selection = OwnerSelectionModel(
+            orderedIDs: entry.orderedIDs,
+            selectedIDs: entry.selectedIDs,
+            anchorID: entry.anchorID,
+            focusedID: entry.focusedID
+        )
+        if visibleIDs.contains(primaryChangedID) {
+            selection.replaceItems(visibleIDs)
+        } else {
+            _ = selection.replaceItems(
+                visibleIDs,
+                selectingSuccessorAfterRemoving: primaryChangedID,
+                direction: .next
+            )
+        }
+        if selection.selectedIDs.isEmpty, let fallback = visibleIDs.first {
+            selection = OwnerSelectionModel(
+                orderedIDs: visibleIDs,
+                selectedIDs: [fallback],
+                anchorID: fallback,
+                focusedID: fallback
+            )
+        }
+        cullingSelection = selection
+        selectedPhotoIDs = selection.selectedIDs
+        cullingScrollTargetID = selection.focusedID
     }
 
     func applyRatingShortcut(_ rating: Int) async {
         cullingRating = min(5, max(0, rating))
         await applyRating()
+    }
+
+    @discardableResult
+    func applyQuickLookRating(_ rating: Int, assetID: String) async -> Bool {
+        let value = min(5, max(0, rating))
+        return await applyCullingDecisions(
+            [.rating(assetID, value: value)],
+            label: value == 0 ? "Clear rating" : "Rate \(value)"
+        )
+    }
+
+    @discardableResult
+    func applyQuickLookColor(_ color: SidecarColor, assetID: String) async -> Bool {
+        await applyCullingDecisions(
+            [.color(assetID, value: color)],
+            label: color == .none ? "Clear color" : "\(color.label) color"
+        )
     }
 
     func sendCullingSelection(to destination: Section) {
@@ -2308,9 +3949,12 @@ final class BackstageViewModel: ObservableObject {
         }
         reviewWindowRequestSerial += 1
         let requestSerial = reviewWindowRequestSerial
+        let preservedSelectedIDs = reviewSelection.selectedIDs
+        let preservedAnchorID = reviewSelection.anchorID
+        let preservedFocusedID = reviewSelection.focusedID
         let currentID = preferredAssetID
-            ?? reviewSelection.focusedID
-            ?? selectedReviewAssetIDs.first
+            ?? preservedFocusedID
+            ?? preservedSelectedIDs.first
         preserveCurrentReviewDraft()
         isRunningReview = true
         reviewStatus = "Loading the oldest unresolved picked photos…"
@@ -2333,17 +3977,34 @@ final class BackstageViewModel: ObservableObject {
             )
             guard requestSerial == reviewWindowRequestSerial, !Task.isCancelled else { return }
             hydrateReviewProposalDrafts(from: window.items)
+            reviewAIWindowRefreshPending = false
             fixtureReviewWindow = window
+            await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             let orderedIDs = window.items.map(\.id)
             let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
                 ?? orderedIDs.first
+            let restoredSelectedIDs = preservedSelectedIDs.intersection(orderedIDs)
+            let selectedIDs: Set<String>
+            if preferredAssetID == nil, !restoredSelectedIDs.isEmpty {
+                selectedIDs = restoredSelectedIDs
+            } else {
+                selectedIDs = Set(replacementID.map { [$0] } ?? [])
+            }
+            let anchorID = preferredAssetID ?? preservedAnchorID
+            let focusID = preferredAssetID ?? preservedFocusedID
+            let restoredAnchorID = anchorID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? replacementID
+            let restoredFocusedID = focusID.flatMap {
+                orderedIDs.contains($0) ? $0 : nil
+            } ?? replacementID
             reviewSelection = OwnerSelectionModel(
                 orderedIDs: orderedIDs,
-                selectedIDs: Set(replacementID.map { [$0] } ?? []),
-                anchorID: replacementID,
-                focusedID: replacementID
+                selectedIDs: selectedIDs,
+                anchorID: restoredAnchorID,
+                focusedID: restoredFocusedID
             )
-            reviewScrollTargetID = replacementID
+            reviewScrollTargetID = restoredFocusedID
             syncReviewDraft()
             let queueScope = reviewStateFilters
                 .sorted { $0.rawValue < $1.rawValue }
@@ -2352,7 +4013,19 @@ final class BackstageViewModel: ObservableObject {
             let scope = reviewProposalAvailableOnly
                 ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
                 : (queueScope.isEmpty ? "No states" : queueScope)
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) photos • oldest first."
+            let mediaScope: String
+            switch reviewMediaFilters {
+            case let filters where filters == Set(CullingMediaFilter.selectableCases):
+                mediaScope = "items"
+            case let filters where filters == [.photos]:
+                mediaScope = "photos"
+            case let filters where filters == [.videos]:
+                mediaScope = "videos"
+            default:
+                mediaScope = "items"
+            }
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
+            await refreshVisualRepairProposals(for: window.items)
             await refreshAIStatus()
         } catch {
             guard requestSerial == reviewWindowRequestSerial else { return }
@@ -2367,6 +4040,74 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             reviewStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func toggleVisualRepairCategory(_ category: VisualRepairDefectCategory) {
+        if visualRepairDefectCategories.contains(category) {
+            visualRepairDefectCategories.remove(category)
+        } else {
+            visualRepairDefectCategories.insert(category)
+        }
+    }
+
+    /// The local domain and persistence path accept only an injected synthetic
+    /// generator. Production visual generation remains an explicit gate until
+    /// a bounded, privacy-reviewed provider is configured.
+    var visualRepairGenerationConfigured: Bool { false }
+
+    func refreshVisualRepairProposals(for items: [FixtureReviewItem]) async {
+        guard isREReviewScope else {
+            reviewVisualProposals = [:]
+            isLoadingVisualRepairProposals = false
+            visualRepairStatus = "Visual repair drafts are limited to the RE fixture review subtree."
+            return
+        }
+        isLoadingVisualRepairProposals = true
+        defer { isLoadingVisualRepairProposals = false }
+        do {
+            let proposals = try await visualRepairService.proposals(
+                fixtureID: selectedFixtureID,
+                assetIDs: items.map(\.id)
+            )
+            reviewVisualProposals = proposals.reduce(into: [String: VisualRepairProposal]()) { result, proposal in
+                guard result[proposal.assetID] == nil else { return }
+                result[proposal.assetID] = proposal
+            }
+            visualRepairStatus = proposals.isEmpty
+                ? "No visual repair draft is available. Production visual generation is not configured."
+                : "Loaded \(proposals.count.formatted()) visual repair draft\(proposals.count == 1 ? "" : "s") for read-only comparison."
+        } catch {
+            reviewVisualProposals = [:]
+            visualRepairStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func decideVisualRepair(
+        _ decision: VisualRepairDecision,
+        for assetID: String
+    ) async {
+        guard isREReviewScope,
+              let proposal = reviewVisualProposals[assetID] else {
+            visualRepairStatus = "No RE visual repair draft is available for this item."
+            return
+        }
+        if decision == .regenerate, !visualRepairGenerationConfigured {
+            visualRepairStatus = "Regeneration is unavailable until a privacy-reviewed visual generator is configured."
+            return
+        }
+        do {
+            let updated = try await visualRepairService.decide(
+                decision,
+                fixtureID: selectedFixtureID,
+                proposalID: proposal.id,
+                generator: decision == .regenerate ? "synthetic" : "",
+                idempotencyKey: "backstage-visual-\(decision.rawValue)-\(proposal.id)"
+            )
+            reviewVisualProposals[assetID] = updated
+            visualRepairStatus = "Recorded visual draft \(decision.rawValue); comparison remains read-only."
+        } catch {
+            visualRepairStatus = userFacingMessage(for: error)
         }
     }
 
@@ -2390,6 +4131,40 @@ final class BackstageViewModel: ObservableObject {
     func selectAllReviewItems() {
         reviewSelection.selectAll()
         syncReviewDraft()
+    }
+
+    func selectReviewBurstCandidates() {
+        let items = reviewItems
+        guard !items.isEmpty else {
+            reviewStatus = isRunningReview
+                ? "Wait for the Review queue to finish loading."
+                : "No Review items are loaded."
+            return
+        }
+        let ids = CullingWorkspace.reviewBurstRejectCandidates(in: items)
+        guard !ids.isEmpty else {
+            reviewStatus = "No adjacent capture-time bursts found in the current Review filter."
+            return
+        }
+
+        preserveCurrentReviewDraft()
+        let orderedIDs = items.map(\.id)
+        let candidateIDs = Set(ids)
+        let focusedID = reviewSelection.focusedID.flatMap {
+            candidateIDs.contains($0) ? $0 : nil
+        } ?? ids.first
+        let anchorID = reviewSelection.anchorID.flatMap {
+            candidateIDs.contains($0) ? $0 : nil
+        } ?? ids.first
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(ids),
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        reviewScrollTargetID = focusedID
+        syncReviewDraft()
+        reviewStatus = "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across Review capture-time bursts; each second frame remains unselected. Choose Hide to apply the audited Review action."
     }
 
     func clearReviewSelection() {
@@ -2485,9 +4260,15 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func moveReviewSelectionToWasteBasket() async {
-        guard !isRunningReview else {
-            reviewStatus = "Finish the current Review action first."
+    func moveReviewSelectionToWasteBasket(
+        removalDirection: OwnerSelectionDirection = .next,
+        onTerminal: ((Bool, String?) -> Void)? = nil
+    ) async {
+        guard !isRunningReview,
+              !reviewWasteBasketQueueing else {
+            reviewStatus = reviewWasteBasketQueueing
+                ? "This Review X action is already queued; the Review workspace remains available while it completes."
+                : "Finish the current Review action first."
             return
         }
         let ids = selectedReviewAssetIDs
@@ -2495,36 +4276,109 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Select one or more Review items."
             return
         }
+        let fixtureID = selectedFixtureID
         let focusedID = reviewSelection.focusedID ?? ids.first
-        isRunningReview = true
-        reviewStatus = "Moving \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") to the recoverable Waste Basket…"
-        defer { isRunningReview = false }
-        do {
-            let action = try await lifecycleService.moveToWasteBasket(
-                mediaIDs: ids,
-                fixtureID: selectedFixtureID,
-                source: "backstage-review"
+        let previousIDs = reviewItems.map(\.id)
+        var historyEntry = ReviewHistoryEntry(
+            wasteBasketMediaIDs: ids,
+            label: "Waste Basket",
+            fixtureID: selectedFixtureID,
+            mode: reviewMode,
+            stateFilters: reviewStateFilters,
+            proposalAvailableOnly: reviewProposalAvailableOnly,
+            mediaFilters: reviewMediaFilters,
+            search: reviewSearch,
+            offset: reviewWindowOffset,
+            selectedIDs: reviewSelection.selectedIDs,
+            anchorID: reviewSelection.anchorID,
+            focusedID: reviewSelection.focusedID,
+            reviewItems: reviewItems.filter { ids.contains($0.id) },
+            reviewItemIndexes: Dictionary(
+                uniqueKeysWithValues: reviewItems.enumerated().compactMap { index, item in
+                    ids.contains(item.id) ? (item.id, index) : nil
+                }
             )
-            guard var window = fixtureReviewWindow else {
-                reviewStatus = "Review window is no longer available."
-                return
+        )
+        reviewWasteBasketQueueing = true
+        reviewStatus = "Submitting X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s")… Review remains available."
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let action = try await self.lifecycleService.enqueueMoveToWasteBasket(
+                    mediaIDs: ids,
+                    fixtureID: fixtureID,
+                    source: "backstage-review"
+                )
+                self.reviewWasteBasketQueueing = false
+                historyEntry.wasteBasketActionID = action.id
+                self.beginReviewWasteBasketAction(action)
+                self.reviewHistory.append(historyEntry)
+                if self.reviewHistory.count > 100 {
+                    self.reviewHistory.removeFirst(self.reviewHistory.count - 100)
+                }
+                var replacementID: String?
+                if var window = self.fixtureReviewWindow {
+                    window.items.removeAll { ids.contains($0.id) }
+                    self.fixtureReviewWindow = window
+                    let orderedIDs = self.reviewItems.map(\.id)
+                    var selection = OwnerSelectionModel(
+                        orderedIDs: previousIDs,
+                        selectedIDs: Set(focusedID.map { [$0] } ?? []),
+                        anchorID: focusedID,
+                        focusedID: focusedID
+                    )
+                    replacementID = focusedID.flatMap {
+                        selection.replaceItems(
+                            orderedIDs,
+                            selectingSuccessorAfterRemoving: $0,
+                            direction: removalDirection
+                        )
+                    }
+                    self.reviewSelection = selection
+                    self.syncReviewDraft()
+                }
+                self.reviewStatus = "Queued X for \(ids.count.formatted()) Review item\(ids.count == 1 ? "" : "s") as action \(action.id). The local Review list is updated; durable reconciliation continues in the background."
+                onTerminal?(true, replacementID)
+                do {
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.updateReviewWasteBasketAction(update)
+                            self.reviewStatus = self.pendingLifecycleActionStatus(
+                                "Review X",
+                                action: update,
+                                availability: "Review remains available while it completes."
+                            )
+                        }
+                    }
+                    self.finishReviewWasteBasketAction(action.id)
+                    self.reviewStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to Waste Basket through action \(action.id)."
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.reviewStatus = self.pendingLifecycleActionStatus(
+                            "Review X",
+                            action: self.reviewWasteBasketPendingActions[action.id] ?? action,
+                            availability: "Review remains available; check Activity for the full receipt."
+                        )
+                    } else {
+                        self.finishReviewWasteBasketAction(action.id)
+                        self.reviewHistory.removeAll { $0.id == historyEntry.id }
+                        if self.selectedFixtureID == historyEntry.fixtureID,
+                           !self.restoreWasteBasketReviewEntryInCurrentWindow(historyEntry) {
+                            await self.loadFixtureReviewWindow(
+                                preferredAssetID: historyEntry.focusedID ?? historyEntry.selectedIDs.first
+                            )
+                        }
+                        self.reviewStatus = "Waste Basket move failed; the local Review list was restored. \(self.userFacingMessage(for: error))"
+                        onTerminal?(false, nil)
+                    }
+                }
+            } catch {
+                self.reviewWasteBasketQueueing = false
+                self.reviewStatus = "Waste Basket move failed: \(self.userFacingMessage(for: error))"
+                onTerminal?(false, nil)
             }
-            window.items.removeAll { ids.contains($0.id) }
-            fixtureReviewWindow = window
-            let orderedIDs = reviewItems.map(\.id)
-            let replacementID = orderedIDs.contains(focusedID ?? "")
-                ? focusedID
-                : orderedIDs.first
-            reviewSelection = OwnerSelectionModel(
-                orderedIDs: orderedIDs,
-                selectedIDs: Set(replacementID.map { [$0] } ?? []),
-                anchorID: replacementID,
-                focusedID: replacementID
-            )
-            syncReviewDraft()
-            reviewStatus = "Moved \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") to Waste Basket through action \(action.id)."
-        } catch {
-            reviewStatus = "Waste Basket move failed: \(userFacingMessage(for: error))"
         }
     }
 
@@ -2538,7 +4392,20 @@ final class BackstageViewModel: ObservableObject {
         scheduleReviewMetadataAutosave()
     }
 
-    func applyReviewAction(_ action: FixtureReviewAction, propagate: Bool = false) async {
+    func updateReviewCountry(_ value: String) {
+        if value != reviewCountry {
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        }
+        reviewCountry = value
+        scheduleReviewMetadataAutosave()
+    }
+
+    func applyReviewAction(
+        _ action: FixtureReviewAction,
+        propagate: Bool = false,
+        removalDirection: OwnerSelectionDirection = .next
+    ) async {
         guard !isRunningReview else {
             reviewStatus = "Finish the current Review action first."
             return
@@ -2552,16 +4419,38 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Select one or more Review items."
             return
         }
+        let reviewClickStartedAt = Date()
         // Approve submits the visible anchor draft in the same audited request.
         // The Owner pipeline resolves every other selected or propagated item
         // from its own active proposal, so one photo's metadata cannot leak
         // across a multi-selection or two-hour propagation scope.
         let approvalDraft = action == .approve ? reviewProposalDrafts[anchor] : nil
+        let approvalProposalID = action == .approve
+            && approvalDraft?.isProposal == true
+            && approvalDraft?.hasManualEdits == false
+            ? approvalDraft?.proposalID
+            : nil
         let approvalTitle = action == .approve
             ? (approvalDraft?.title ?? reviewTitle)
             : action == .editMetadata || action == .propagateTitle
                 ? reviewTitle
                 : nil
+        let currentCountry = focusedReviewItem?.country ?? ""
+        let countrySuggestionIsUntouched = reviewCountrySuggestionSeedAssetID == anchor
+            && reviewCountrySuggestionSeedValue == reviewCountry
+        let countryDraft = action == .approve && countrySuggestionIsUntouched
+            ? reviewCountry
+            : approvalDraft?.country ?? reviewCountry
+        let approvalCountry: String? = fixtureReviewWindow?.countryWriteEnabled == true
+            && (
+                action == .propagateCountry
+                    || (action == .approve && countryDraft != currentCountry)
+                    || (action == .editMetadata
+                        && countryDraft != currentCountry
+                        && !countrySuggestionIsUntouched)
+            )
+            ? countryDraft
+            : nil
         let approvalKeywords = action == .approve
             ? (approvalDraft?.keywords ?? parsedReviewKeywords())
             : action == .editMetadata || action == .propagateKeywords
@@ -2569,6 +4458,12 @@ final class BackstageViewModel: ObservableObject {
                 : nil
         let oldItems = reviewItems
         let oldIndex = oldItems.firstIndex(where: { $0.id == anchor }) ?? 0
+        let reviewItemsBeforeAction = oldItems.filter { ids.contains($0.id) }
+        let reviewItemIndexes = Dictionary(
+            uniqueKeysWithValues: oldItems.enumerated().compactMap { index, item in
+                ids.contains(item.id) ? (item.id, index) : nil
+            }
+        )
         let historyEntry = ReviewHistoryEntry(
             operationID: "",
             label: reviewActionLabel(action),
@@ -2581,7 +4476,9 @@ final class BackstageViewModel: ObservableObject {
             offset: reviewWindowOffset,
             selectedIDs: reviewSelection.selectedIDs,
             anchorID: reviewSelection.anchorID,
-            focusedID: reviewSelection.focusedID
+            focusedID: reviewSelection.focusedID,
+            reviewItems: reviewItemsBeforeAction,
+            reviewItemIndexes: reviewItemIndexes
         )
         if [.approve, .hide, .requestAI].contains(action) {
             reviewLastAction = action
@@ -2600,6 +4497,8 @@ final class BackstageViewModel: ObservableObject {
                 propagate: propagate,
                 title: approvalTitle,
                 keywords: approvalKeywords,
+                country: approvalCountry,
+                proposalID: approvalProposalID,
                 aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
                 aiNote: action == .requestAI ? reviewAINote : ""
             )
@@ -2635,17 +4534,30 @@ final class BackstageViewModel: ObservableObject {
                         offset: historyEntry.offset,
                         selectedIDs: historyEntry.selectedIDs,
                         anchorID: historyEntry.anchorID,
-                        focusedID: historyEntry.focusedID
+                        focusedID: historyEntry.focusedID,
+                        reviewItems: historyEntry.reviewItems,
+                        reviewItemIndexes: historyEntry.reviewItemIndexes
                     )
                 )
             }
             retainReviewResultInCurrentWindow(result, action: action)
             let orderedIDs = reviewItems.map(\.id)
-            let replacementID = orderedIDs.contains(anchor)
-                ? anchor
-                : orderedIDs.indices.contains(oldIndex)
-                    ? orderedIDs[oldIndex]
-                    : orderedIDs.last
+            let replacementID: String?
+            if orderedIDs.contains(anchor) {
+                replacementID = anchor
+            } else {
+                switch removalDirection {
+                case .next:
+                    replacementID = orderedIDs.indices.contains(oldIndex)
+                        ? orderedIDs[oldIndex]
+                        : orderedIDs.last
+                case .previous:
+                    let previousIndex = oldIndex - 1
+                    replacementID = orderedIDs.indices.contains(previousIndex)
+                        ? orderedIDs[previousIndex]
+                        : orderedIDs.first
+                }
+            }
             let retainedSelection = Set(ids).intersection(orderedIDs)
             reviewSelection = OwnerSelectionModel(
                 orderedIDs: orderedIDs,
@@ -2656,11 +4568,36 @@ final class BackstageViewModel: ObservableObject {
                 focusedID: orderedIDs.contains(anchor) ? anchor : replacementID
             )
             syncReviewDraft()
-            reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s")."
-            await refreshAIStatus()
+            recordReviewUITiming(result.timing, clickedAt: reviewClickStartedAt)
+            reviewStatus = "\(reviewActionLabel(action)) affected \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s").\(reviewTimingSuffix(result.timing))"
+            scheduleReviewAIStatusRefresh()
         } catch {
             reviewStatus = "\(reviewActionLabel(action)) failed: \(error)"
         }
+    }
+
+    private func recordReviewUITiming(
+        _ serverTiming: [String: JSONValue],
+        clickedAt: Date
+    ) {
+        let refreshedAt = Date()
+        let formatter = ISO8601DateFormatter()
+        var timing = serverTiming
+        var uiTiming = timing["ui"]?.objectValue ?? [:]
+        uiTiming["clickStartedAt"] = .string(formatter.string(from: clickedAt))
+        uiTiming["uiRefreshedAt"] = .string(formatter.string(from: refreshedAt))
+        uiTiming["clickToRefreshDurationMs"] = .number(
+            max(0, refreshedAt.timeIntervalSince(clickedAt) * 1000)
+        )
+        timing["ui"] = .object(uiTiming)
+        reviewLastTiming = timing
+    }
+
+    private func reviewTimingSuffix(_ timing: [String: JSONValue]) -> String {
+        guard let duration = timing["localTransaction"]?.objectValue?["durationMs"]?.intValue else {
+            return ""
+        }
+        return " Local SQLite transaction: \(duration) ms."
     }
 
     /// Keep decisions visible for the lifetime of the current Review surface.
@@ -2693,6 +4630,21 @@ final class BackstageViewModel: ObservableObject {
         let updatesKeywords = action == .approve
             || action == .editMetadata
             || action == .propagateKeywords
+        let updatesCountry = action == .approve
+            || action == .editMetadata
+            || action == .propagateCountry
+        if updatesCountry {
+            for change in result.changes {
+                let wasMissing = change.before["country"]?.stringValue?.isEmpty ?? true
+                let isMissing = change.after["country"]?.stringValue?.isEmpty ?? true
+                if wasMissing != isMissing {
+                    window.summary.countryMissing = max(
+                        0,
+                        window.summary.countryMissing + (isMissing ? 1 : -1)
+                    )
+                }
+            }
+        }
         window.items = window.items.map { current in
             guard let after = changesByID[current.id] else { return current }
             var item = current
@@ -2701,6 +4653,9 @@ final class BackstageViewModel: ObservableObject {
             }
             if updatesKeywords, let keywords = after["keywords"]?.arrayValue {
                 item.keywords = keywords.compactMap(\.stringValue)
+            }
+            if updatesCountry, let country = after["country"]?.stringValue {
+                item.country = country
             }
             if let editorialState = after["editorialState"]?.stringValue {
                 item.editorialState = editorialState
@@ -2732,7 +4687,7 @@ final class BackstageViewModel: ObservableObject {
                 item.deliveryState = "not-ready"
             case .editMetadata:
                 item.proposalReady = false
-            case .propagateTitle, .propagateKeywords:
+            case .propagateCountry, .propagateTitle, .propagateKeywords:
                 break
             }
             return item
@@ -2746,6 +4701,141 @@ final class BackstageViewModel: ObservableObject {
             )
         }
         fixtureReviewWindow = window
+    }
+
+    /// Apply the exact undo receipt to the current page when it carries the
+    /// normalized Review state. This avoids a second full-window read after
+    /// the audited undo transaction while preserving the safe reload fallback
+    /// for older or incomplete receipts.
+    private func retainReviewUndoResultInCurrentWindow(
+        _ result: FixtureReviewUndoResult,
+        restoring restoredItems: [FixtureReviewItem],
+        indexes: [String: Int]
+    ) -> Bool {
+        guard !restoredItems.isEmpty,
+              !result.changes.isEmpty,
+              result.changes.allSatisfy({ !$0.review.isEmpty }),
+              var window = fixtureReviewWindow
+        else { return false }
+
+        let changesByID = Dictionary(
+            uniqueKeysWithValues: result.changes.map { ($0.assetID, $0) }
+        )
+        let existingItems = Dictionary(
+            uniqueKeysWithValues: window.items.map { ($0.id, $0) }
+        )
+        var items = window.items
+        let existingIDs = Set(items.map(\.id))
+        for restoredItem in restoredItems where !existingIDs.contains(restoredItem.id) {
+            let index = min(
+                max(0, indexes[restoredItem.id] ?? items.count),
+                items.count
+            )
+            items.insert(restoredItem, at: index)
+        }
+        for change in result.changes {
+            let beforeCountry = change.before["countryAssignment"]?
+                .objectValue?["country_slug"]?.stringValue ?? ""
+            let restoredCountry = change.after["countryAssignment"]?
+                .objectValue?["country_slug"]?.stringValue ?? ""
+            if beforeCountry.isEmpty != restoredCountry.isEmpty {
+                window.summary.countryMissing = max(
+                    0,
+                    window.summary.countryMissing + (restoredCountry.isEmpty ? 1 : -1)
+                )
+            }
+            guard let current = existingItems[change.assetID],
+                  let restoredState = change.review["editorialState"]?.stringValue
+            else { continue }
+            window.summary.applyEditorialStateTransition(
+                from: current.editorialState,
+                to: restoredState
+            )
+        }
+        window.items = items.map { current in
+            guard let change = changesByID[current.id] else { return current }
+            return applyReviewItemUpdate(current, from: change.review)
+        }
+        fixtureReviewWindow = window
+        hydrateReviewProposalDrafts(from: window.items)
+        return true
+    }
+
+    private func applyReviewItemUpdate(
+        _ current: FixtureReviewItem,
+        from update: [String: JSONValue]
+    ) -> FixtureReviewItem {
+        var item = current
+        if let value = update["title"]?.stringValue { item.title = value }
+        if let value = update["caption"]?.stringValue { item.caption = value }
+        if let value = update["keywords"]?.arrayValue {
+            item.keywords = value.compactMap(\.stringValue)
+        }
+        if let value = update["rating"]?.intValue { item.rating = value }
+        if let value = update["color"]?.stringValue { item.color = value }
+        if let value = update["placementState"]?.stringValue {
+            item.placementState = value
+        }
+        if let value = update["editorialState"]?.stringValue {
+            item.editorialState = value
+        }
+        if let value = update["aiReasons"]?.arrayValue {
+            item.aiReasons = value.compactMap(\.stringValue)
+        }
+        if let value = update["aiNote"]?.stringValue { item.aiNote = value }
+        if let value = update["aiAttemptCount"]?.intValue {
+            item.aiAttemptCount = value
+        }
+        if let value = update["aiLastError"]?.stringValue {
+            item.aiLastError = value
+        }
+        if let value = update["proposalReady"]?.boolValue {
+            item.proposalReady = value
+        }
+        if let value = update["proposalContextAvailable"]?.boolValue {
+            item.proposalContextAvailable = value
+        }
+        if let value = update["proposalId"]?.stringValue {
+            item.proposalID = value
+        }
+        if let value = update["proposedTitle"]?.stringValue {
+            item.proposedTitle = value
+        }
+        if let value = update["proposedKeywords"]?.arrayValue {
+            item.proposedKeywords = value.compactMap(\.stringValue)
+        }
+        if let value = update["country"]?.stringValue {
+            item.country = value
+        }
+        if let value = update["proposedCountry"]?.stringValue {
+            item.proposedCountry = value
+        }
+        if let value = update["countryProposalSource"]?.stringValue {
+            item.countryProposalSource = value
+        }
+        if let value = update["proposalReason"]?.stringValue {
+            item.proposalReason = value
+        }
+        if let value = update["proposalStatus"]?.stringValue {
+            item.proposalStatus = value
+        }
+        if let value = update["requestedGeneratorModel"]?.stringValue {
+            item.requestedGeneratorModel = value
+        }
+        if let value = update["resolvedModel"]?.stringValue {
+            item.resolvedModel = value
+        }
+        if let value = update["reasoningEffort"]?.stringValue {
+            item.reasoningEffort = value
+        }
+        if let value = update["vision"]?.boolValue { item.vision = value }
+        if let value = update["modelLadder"]?.arrayValue {
+            item.modelLadder = value.compactMap(\.stringValue)
+        }
+        if let value = update["deliveryState"]?.stringValue {
+            item.deliveryState = value
+        }
+        return item
     }
 
     /// Local action retention must honor the same filters as a fresh Owner
@@ -2827,14 +4917,89 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func undoLastReviewAction() async {
+        guard !reviewWasteBasketQueueing else {
+            reviewStatus = "Finish queueing the current Waste Basket action before undoing it."
+            return
+        }
         guard let entry = reviewHistory.last else {
             reviewStatus = "Nothing to undo in this Backstage session."
             return
         }
+        guard !reviewWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID) else {
+            reviewStatus = "This Waste Basket action must finish before its Undo can be queued."
+            return
+        }
+        let reviewClickStartedAt = Date()
         isRunningReview = true
         reviewStatus = "Undoing \(entry.label.lowercased())…"
         defer { isRunningReview = false }
         do {
+            if !entry.wasteBasketMediaIDs.isEmpty {
+                reviewWasteBasketQueueing = true
+                let action = try await lifecycleService.enqueueRestore(
+                    mediaIDs: entry.wasteBasketMediaIDs
+                )
+                reviewWasteBasketQueueing = false
+                beginReviewWasteBasketAction(action)
+                reviewHistory.removeLast()
+                var retainedLocally = false
+                if selectedFixtureID == entry.fixtureID {
+                    reviewMode = entry.mode
+                    reviewStateFilters = entry.stateFilters
+                    reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                    reviewMediaFilters = entry.mediaFilters
+                    reviewSearch = entry.search
+                    reviewWindowOffset = entry.offset
+                    retainedLocally = restoreWasteBasketReviewEntryInCurrentWindow(entry)
+                }
+                reviewStatus = "Queued Undo for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") as action \(action.id). The local Review list is restored; durable reconciliation continues in the background."
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                            Task { @MainActor [weak self] in
+                                guard let self else { return }
+                                self.updateReviewWasteBasketAction(update)
+                                self.reviewStatus = self.pendingLifecycleActionStatus(
+                                    "Review Undo",
+                                    action: update,
+                                    availability: "Review remains available while it completes."
+                                )
+                            }
+                        }
+                        self.finishReviewWasteBasketAction(action.id)
+                        if !retainedLocally {
+                            if self.selectedFixtureID == entry.fixtureID {
+                                await self.loadFixtureReviewWindow(
+                                    preferredAssetID: entry.focusedID ?? entry.selectedIDs.first
+                                )
+                            } else if !self.selectedFixtureID.isEmpty {
+                                await self.loadFixtureReviewWindow()
+                            }
+                        }
+                        self.reviewStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                    } catch {
+                        if let ownerError = error as? OwnerActionRunError,
+                           ownerError == .timedOut {
+                            self.reviewStatus = self.pendingLifecycleActionStatus(
+                                "Review Undo",
+                                action: self.reviewWasteBasketPendingActions[action.id] ?? action,
+                                availability: "Review remains available; check Activity for the full receipt."
+                            )
+                        } else {
+                            self.finishReviewWasteBasketAction(action.id)
+                            if !self.reviewHistory.contains(where: { $0.id == entry.id }) {
+                                self.reviewHistory.append(entry)
+                            }
+                            if retainedLocally, self.selectedFixtureID == entry.fixtureID {
+                                self.removeWasteBasketReviewEntryFromCurrentWindow(entry)
+                            }
+                            self.reviewStatus = "Waste Basket Undo failed; the local Review list was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                        }
+                    }
+                }
+                return
+            }
             if !entry.fixtureChanges.isEmpty {
                 let grouped = Dictionary(
                     grouping: entry.fixtureChanges,
@@ -2876,19 +5041,29 @@ final class BackstageViewModel: ObservableObject {
                 reviewMediaFilters = [.photos]
                 reviewSearch = entry.search
                 reviewWindowOffset = entry.offset
-                let window = try await fixtureService.reviewWindow(
-                    fixtureID: entry.fixtureID,
-                    mode: entry.mode,
-                    stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
-                    proposalAvailableOnly: entry.proposalAvailableOnly,
-                    mediaFilters: [CullingMediaFilter.photos.rawValue],
-                    offset: entry.offset,
-                    limit: reviewWindowLimit,
-                    search: entry.search
+                let retainedLocally = retainReviewUndoResultInCurrentWindow(
+                    result,
+                    restoring: entry.reviewItems,
+                    indexes: entry.reviewItemIndexes
                 )
-                hydrateReviewProposalDrafts(from: window.items)
-                fixtureReviewWindow = window
-                let orderedIDs = window.items.map(\.id)
+                let orderedIDs: [String]
+                if retainedLocally {
+                    orderedIDs = reviewItems.map(\.id)
+                } else {
+                    let window = try await fixtureService.reviewWindow(
+                        fixtureID: entry.fixtureID,
+                        mode: entry.mode,
+                        stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
+                        proposalAvailableOnly: entry.proposalAvailableOnly,
+                        mediaFilters: [CullingMediaFilter.photos.rawValue],
+                        offset: entry.offset,
+                        limit: reviewWindowLimit,
+                        search: entry.search
+                    )
+                    hydrateReviewProposalDrafts(from: window.items)
+                    fixtureReviewWindow = window
+                    orderedIDs = window.items.map(\.id)
+                }
                 let restoredSelectedIDs = entry.selectedIDs.intersection(orderedIDs)
                 let restoredFocusedID = entry.focusedID.flatMap {
                     orderedIDs.contains($0) ? $0 : nil
@@ -2909,13 +5084,121 @@ final class BackstageViewModel: ObservableObject {
             } else if !selectedFixtureID.isEmpty {
                 await loadFixtureReviewWindow()
             }
+            recordReviewUITiming(result.timing, clickedAt: reviewClickStartedAt)
             reviewStatus = result.alreadyUndone
                 ? "The Review action was already undone; the current fixture stayed \(selectedFixtureBreadcrumb)."
-                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb)."
-            await refreshAIStatus()
+                : "Undid \(entry.label.lowercased()) for \(result.changes.count.formatted()) item\(result.changes.count == 1 ? "" : "s"); the current fixture stayed \(selectedFixtureBreadcrumb).\(reviewTimingSuffix(result.timing))"
+            scheduleReviewAIStatusRefresh()
         } catch {
+            reviewWasteBasketQueueing = false
             reviewStatus = "Undo failed: \(error)"
         }
+    }
+
+    var reviewUndoIsBlockedByPendingWasteBasketAction: Bool {
+        guard let actionID = reviewHistory.last?.wasteBasketActionID,
+              !actionID.isEmpty else {
+            return false
+        }
+        return reviewWasteBasketPendingActionIDs.contains(actionID)
+    }
+
+    private func beginReviewWasteBasketAction(_ action: OwnerAction) {
+        reviewWasteBasketPendingActionIDs.insert(action.id)
+        reviewWasteBasketPendingActions[action.id] = action
+        reviewWasteBasketPendingActionOrder.removeAll { $0 == action.id }
+        reviewWasteBasketPendingActionOrder.append(action.id)
+        refreshLatestReviewWasteBasketAction()
+    }
+
+    private func updateReviewWasteBasketAction(_ action: OwnerAction) {
+        guard reviewWasteBasketPendingActionIDs.contains(action.id) else { return }
+        reviewWasteBasketPendingActions[action.id] = action
+        refreshLatestReviewWasteBasketAction()
+    }
+
+    private func finishReviewWasteBasketAction(_ actionID: String) {
+        reviewWasteBasketPendingActionIDs.remove(actionID)
+        reviewWasteBasketPendingActions.removeValue(forKey: actionID)
+        reviewWasteBasketPendingActionOrder.removeAll { $0 == actionID }
+        refreshLatestReviewWasteBasketAction()
+    }
+
+    private func refreshLatestReviewWasteBasketAction() {
+        reviewWasteBasketPendingActionID = reviewWasteBasketPendingActionOrder.last
+        reviewWasteBasketPendingAction = reviewWasteBasketPendingActionID.flatMap {
+            reviewWasteBasketPendingActions[$0]
+        }
+    }
+
+    /// Reinsert same-session Review X items without a full queue reload. The
+    /// durable restore request has already been accepted before this cache repair.
+    private func restoreWasteBasketReviewEntryInCurrentWindow(
+        _ entry: ReviewHistoryEntry
+    ) -> Bool {
+        guard var window = fixtureReviewWindow,
+              window.fixtureID == entry.fixtureID,
+              window.mode == entry.mode else {
+            return false
+        }
+        let restoredIDs = Set(entry.wasteBasketMediaIDs)
+        var items = window.items.filter { !restoredIDs.contains($0.id) }
+        for item in entry.reviewItems.sorted(by: {
+            entry.reviewItemIndexes[$0.id, default: .max]
+                < entry.reviewItemIndexes[$1.id, default: .max]
+        }) {
+            let index = min(entry.reviewItemIndexes[item.id, default: items.count], items.count)
+            items.insert(item, at: index)
+        }
+        window.items = items
+        fixtureReviewWindow = window
+        hydrateReviewProposalDrafts(from: entry.reviewItems)
+        let orderedIDs = items.map(\.id)
+        let selectedIDs = entry.selectedIDs.intersection(orderedIDs)
+        let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? selectedIDs.first
+            ?? orderedIDs.first
+        let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? focusedID
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: selectedIDs.isEmpty
+                ? Set(focusedID.map { [$0] } ?? [])
+                : selectedIDs,
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        reviewScrollTargetID = focusedID
+        syncReviewDraft()
+        return true
+    }
+
+    /// Roll back an optimistic same-session Waste Basket restore after the
+    /// durable restore action reaches a terminal failure.
+    private func removeWasteBasketReviewEntryFromCurrentWindow(
+        _ entry: ReviewHistoryEntry
+    ) {
+        guard var window = fixtureReviewWindow,
+              window.fixtureID == entry.fixtureID,
+              window.mode == entry.mode else {
+            return
+        }
+        let removedIDs = Set(entry.wasteBasketMediaIDs)
+        window.items.removeAll { removedIDs.contains($0.id) }
+        fixtureReviewWindow = window
+        let orderedIDs = window.items.map(\.id)
+        let preferredIndex = entry.reviewItemIndexes.values.min() ?? 0
+        let replacementID = orderedIDs.indices.contains(preferredIndex)
+            ? orderedIDs[preferredIndex]
+            : orderedIDs.last
+        reviewSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(replacementID.map { [$0] } ?? []),
+            anchorID: replacementID,
+            focusedID: replacementID
+        )
+        reviewScrollTargetID = replacementID
+        syncReviewDraft()
     }
 
     func saveReviewMetadata() async {
@@ -2938,6 +5221,13 @@ final class BackstageViewModel: ObservableObject {
         await applyReviewAction(.propagateKeywords, propagate: true)
     }
 
+    func propagateReviewCountry() async {
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
+        await applyReviewAction(.propagateCountry, propagate: true)
+    }
+
     func propagateLastReviewAction() async {
         // A local AI draft is the current Review intent even if Approve or
         // Hide was the last completed action. Propagation commits that draft
@@ -2950,9 +5240,30 @@ final class BackstageViewModel: ObservableObject {
         await applyReviewAction(action, propagate: true)
     }
 
+    private func scheduleReviewAIStatusRefresh() {
+        reviewAIStatusRefreshTask?.cancel()
+        reviewAIStatusRefreshGeneration += 1
+        let generation = reviewAIStatusRefreshGeneration
+        aiProposalStatus = "Refreshing AI status…"
+        reviewAIStatusRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshAIStatus(forGeneration: generation)
+        }
+    }
+
     func refreshAIStatus() async {
+        await refreshAIStatus(forGeneration: nil)
+    }
+
+    private func refreshAIStatus(forGeneration generation: Int?) async {
         do {
-            fixtureAIStatus = try await fixtureService.aiStatus()
+            let status = try await fixtureService.aiStatus()
+            guard !Task.isCancelled else { return }
+            if let generation, generation != reviewAIStatusRefreshGeneration {
+                return
+            }
+            fixtureAIStatus = status
+            reviewAIAvailabilityToken = Self.aiAvailabilityToken(for: status)
             guard let status = fixtureAIStatus else { return }
             if let run = status.run, status.active {
                 aiProposalStatus = [
@@ -2971,8 +5282,43 @@ final class BackstageViewModel: ObservableObject {
             }
         } catch {
             guard !isTransientCancellation(error) else { return }
+            if let generation, generation != reviewAIStatusRefreshGeneration {
+                return
+            }
             aiProposalStatus = "AI status unavailable: \(error)"
         }
+    }
+
+    /// Poll AI progress without making the operator press a batch-load button.
+    /// The Review window is rebuilt only when the durable ready-proposal
+    /// frontier changes; clean arrivals hydrate as drafts, while the loader
+    /// preserves the current page, selection, focus, and draft text.
+    func refreshReviewAIAvailability() async {
+        let previousToken = reviewAIAvailabilityToken
+        await refreshAIStatus()
+        let availabilityChanged = previousToken != reviewAIAvailabilityToken
+        let hasAvailableProposals = readyAIProposalCount > 0
+            || (fixtureAIStatus?.run?.proposed ?? 0) > 0
+        guard availabilityChanged || reviewAIWindowRefreshPending else { return }
+        guard hasAvailableProposals,
+              !selectedFixtureID.isEmpty,
+              fixtureReviewWindow != nil
+        else { return }
+        guard !isRunningReview else {
+            reviewAIWindowRefreshPending = true
+            return
+        }
+        reviewAIWindowRefreshPending = false
+        await loadFixtureReviewWindow()
+    }
+
+    private static func aiAvailabilityToken(for status: FixtureAIStatus) -> String {
+        [
+            String(status.ready),
+            status.run?.id ?? "",
+            String(status.run?.proposed ?? 0),
+            status.run?.status ?? "",
+        ].joined(separator: "|")
     }
 
     func runAIProposalPass() async {
@@ -2986,12 +5332,14 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isRunningAIPass = true
+        aiPassMonitoringDetached = false
         aiProposalStatus = "Starting or attaching to the requested AI pass…"
         defer { isRunningAIPass = false }
         do {
             fixtureAIStatus = try await fixtureService.startAIPass()
             repeat {
                 try await Task.sleep(for: .seconds(2))
+                guard !aiPassMonitoringDetached else { return }
                 fixtureAIStatus = try await fixtureService.aiStatus()
                 await refreshAIStatus()
             } while fixtureAIStatus?.active == true
@@ -3001,10 +5349,27 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    /// Stop only Backstage's progress monitor after the durable AI worker has
+    /// been confirmed. The worker is already in its own process group and
+    /// continues to persist proposals and its terminal receipt independently.
+    @discardableResult
+    func detachAIProposalPassForTermination() -> Bool {
+        guard isRunningAIPass, fixtureAIStatus?.active == true else { return false }
+        aiPassMonitoringDetached = true
+        isRunningAIPass = false
+        aiProposalStatus = "AI pass detached. It will continue in the background."
+        return true
+    }
+
     func cancelAIProposalPass() async {
         do {
             fixtureAIStatus = try await fixtureService.cancelAIPass()
-            aiProposalStatus = "Cancellation requested; the current item may finish first."
+            if fixtureAIStatus?.active == true {
+                aiProposalStatus = "Cancellation requested; the current item may finish first."
+            } else {
+                await refreshAIStatus()
+                await loadFixtureReviewWindow(preferredAssetID: reviewSelection.focusedID)
+            }
         } catch {
             aiProposalStatus = "Could not request cancellation: \(error)"
         }
@@ -3018,12 +5383,17 @@ final class BackstageViewModel: ObservableObject {
             var conflicts: Set<String> = []
             for proposal in proposals {
                 let existing = reviewProposalDrafts[proposal.assetID]
-                let hasManualConflict = existing.map { !$0.isProposal } ?? false
+                let hasManualConflict = existing.map {
+                    !$0.isProposal || $0.hasManualEdits
+                } ?? false
                 if hasManualConflict, !replacingConflicts {
                     conflicts.insert(proposal.assetID)
                     continue
                 }
                 reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    country: proposal.proposedCountry.isEmpty
+                        ? (reviewItems.first { $0.id == proposal.assetID }?.country ?? "")
+                        : proposal.proposedCountry,
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
@@ -3060,6 +5430,9 @@ final class BackstageViewModel: ObservableObject {
             var restored = 0
             for proposal in proposals where reviewProposalDrafts[proposal.assetID] == nil {
                 reviewProposalDrafts[proposal.assetID] = ReviewMetadataDraft(
+                    country: proposal.proposedCountry.isEmpty
+                        ? (reviewItems.first { $0.id == proposal.assetID }?.country ?? "")
+                        : proposal.proposedCountry,
                     title: proposal.proposedTitle,
                     keywords: proposal.proposedKeywords,
                     proposalID: proposal.id,
@@ -3144,9 +5517,16 @@ final class BackstageViewModel: ObservableObject {
                         to: directory
                     ).destination)
                 } else {
-                    let preview = try await photoLibrary.preview(
-                        localIdentifier: item.photoLibraryIdentifier,
+                    let preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: item.id,
+                        preferredIdentifier: item.photoLibraryIdentifier,
                         maxPixelSize: 4_000
+                    )
+                    await learnCurrentImageByteCount(
+                        from: preview,
+                        for: item.id,
+                        mediaType: item.mediaType,
+                        persistPromptly: true
                     )
                     let destination = directory
                         .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
@@ -3169,6 +5549,19 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         let draft = reviewProposalDrafts[item.id]
+        if let draft {
+            reviewCountry = draft.country
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        } else if item.country.isEmpty, !item.suggestedCountry.isEmpty {
+            reviewCountry = item.suggestedCountry
+            reviewCountrySuggestionSeedAssetID = item.id
+            reviewCountrySuggestionSeedValue = item.suggestedCountry
+        } else {
+            reviewCountry = item.country
+            reviewCountrySuggestionSeedAssetID = nil
+            reviewCountrySuggestionSeedValue = ""
+        }
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
         let hasActiveAIRequest = item.editorialState == "requesting-ai"
@@ -3184,9 +5577,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     /// Make durable ready/loaded proposal metadata visible without changing
-    /// the proposal's audit status. Explicit "Load proposals" remains the
-    /// transition that marks a ready proposal as loaded.
+    /// the proposal's audit status. Clean arrivals replace only an untouched
+    /// proposal draft; a manual draft remains visible and is surfaced as a
+    /// conflict for the explicit replacement action.
     private func hydrateReviewProposalDrafts(from items: [FixtureReviewItem]) {
+        var conflicts = reviewProposalConflictIDs
         for item in items
         where item.proposalContextAvailable && !item.proposalID.isEmpty {
             if let existing = reviewProposalDrafts[item.id] {
@@ -3198,13 +5593,16 @@ final class BackstageViewModel: ObservableObject {
                     refreshed.reasoningEffort = item.reasoningEffort
                     refreshed.vision = item.vision
                     reviewProposalDrafts[item.id] = refreshed
+                    conflicts.remove(item.id)
                     continue
                 }
-                if !existing.isProposal {
+                if !existing.isProposal || existing.hasManualEdits {
+                    conflicts.insert(item.id)
                     continue
                 }
             }
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: item.proposedCountry.isEmpty ? item.country : item.proposedCountry,
                 title: item.proposedTitle,
                 keywords: item.proposedKeywords,
                 proposalID: item.proposalID,
@@ -3215,12 +5613,17 @@ final class BackstageViewModel: ObservableObject {
                 reasoningEffort: item.reasoningEffort,
                 vision: item.vision
             )
+            conflicts.remove(item.id)
         }
+        reviewProposalConflictIDs = conflicts
     }
 
     private func clearReviewDraft() {
         reviewTitle = ""
         reviewKeywords = ""
+        reviewCountry = ""
+        reviewCountrySuggestionSeedAssetID = nil
+        reviewCountrySuggestionSeedValue = ""
         reviewAIReasons = []
         reviewAINote = ""
     }
@@ -3229,11 +5632,21 @@ final class BackstageViewModel: ObservableObject {
         guard let item = focusedReviewItem else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
+        let visibleCountry = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let country = reviewCountrySuggestionSeedAssetID == item.id
+            && reviewCountrySuggestionSeedValue == visibleCountry
+            ? item.country
+            : visibleCountry
         if let existing = reviewProposalDrafts[item.id], existing.isProposal {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: country,
                 title: title,
                 keywords: keywords,
                 proposalID: existing.proposalID,
+                hasManualEdits: existing.hasManualEdits
+                    || title != existing.title
+                    || keywords != existing.keywords
+                    || country != existing.country,
                 proposalReason: existing.proposalReason,
                 proposalStatus: existing.proposalStatus,
                 requestedGeneratorModel: existing.requestedGeneratorModel,
@@ -3241,8 +5654,9 @@ final class BackstageViewModel: ObservableObject {
                 reasoningEffort: existing.reasoningEffort,
                 vision: existing.vision
             )
-        } else if title != item.title || keywords != item.keywords {
+        } else if title != item.title || keywords != item.keywords || country != item.country {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
+                country: country,
                 title: title,
                 keywords: keywords
             )
@@ -3255,6 +5669,12 @@ final class BackstageViewModel: ObservableObject {
         preserveCurrentReviewDraft()
         reviewMetadataAutosaveTask?.cancel()
         guard let assetID = focusedReviewItem?.id else { return }
+        if let draft = reviewProposalDrafts[assetID], draft.isProposal {
+            reviewStatus = draft.hasManualEdits
+                ? "AI proposal draft edited. Press Approve to accept it."
+                : "AI proposal remains a draft until you press Approve."
+            return
+        }
         reviewMetadataAutosaveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
@@ -3269,9 +5689,21 @@ final class BackstageViewModel: ObservableObject {
 
     private func saveReviewMetadataIfNeeded() async {
         guard let item = focusedReviewItem else { return }
+        // A visible AI proposal is an editable draft, never an autosave source.
+        // Text-field focus commits can invoke their bindings during window
+        // teardown even when the owner made no edit, so fail closed here as
+        // well as in the scheduler. Only the explicit Approve action may
+        // consume the proposal and write its three metadata fields.
+        guard reviewProposalDrafts[item.id]?.isProposal != true else { return }
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
-        guard title != item.title || keywords != item.keywords else { return }
+        let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard title != item.title || keywords != item.keywords || country != item.country else { return }
+        if country != item.country, fixtureReviewWindow?.countryWriteEnabled != true {
+            reviewStatus = fixtureReviewWindow?.countryWriteBlockReason
+                ?? "Country writes await the reviewed identity migration."
+            return
+        }
         await applyReviewAction(.editMetadata)
     }
 
@@ -3291,7 +5723,8 @@ final class BackstageViewModel: ObservableObject {
             reviewAIReasons.isEmpty && reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? "Clear AI request"
                 : "Request AI"
-        case .editMetadata: "Save title and keywords"
+        case .editMetadata: "Save Country, title, and keywords"
+        case .propagateCountry: "Propagate Country"
         case .propagateTitle: "Propagate title"
         case .propagateKeywords: "Propagate keywords"
         }
@@ -3339,19 +5772,150 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Nothing to undo in this Backstage session."
             return
         }
-        if !entry.fixtureChanges.isEmpty {
-            do {
-                let grouped = Dictionary(grouping: entry.fixtureChanges, by: \.beforePlacementState)
-                for (state, changes) in grouped {
-                    _ = try await fixtureService.applyState(
-                        state,
-                        assetIDs: changes.map(\.assetID),
-                        fixtureID: changes.first?.fixtureID ?? selectedFixtureID,
-                        reason: "Undo \(entry.label)"
+        if !entry.wasteBasketMediaIDs.isEmpty {
+            if cullingWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID),
+               let pendingAction = cullingWasteBasketPendingActions[entry.wasteBasketActionID] {
+                cullingHistory.removeLast()
+                let restoredLocally = selectedFixtureID == entry.fixtureID
+                    && restoreWasteBasketCullingEntryInCurrentWindow(entry)
+                cullingWasteBasketDeferredUndoActionIDs.insert(entry.wasteBasketActionID)
+                cullingStatus = "Undo requested for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s"). The local Culling grid is restored; durable Put Back will queue as soon as X finishes."
+                Task { @MainActor [weak self] in
+                    await self?.finishDeferredCullingWasteBasketUndo(
+                        entry,
+                        after: pendingAction,
+                        restoredLocally: restoredLocally
                     )
                 }
+                return
+            }
+            cullingWasteBasketQueueing = true
+            do {
+                let action = try await lifecycleService.enqueueRestore(
+                    mediaIDs: entry.wasteBasketMediaIDs
+                )
+                cullingWasteBasketQueueing = false
+                beginCullingWasteBasketAction(action)
                 cullingHistory.removeLast()
-                await loadFixtureCullingWindow()
+                let restoredLocally = selectedFixtureID == entry.fixtureID
+                    && restoreWasteBasketCullingEntryInCurrentWindow(entry)
+                cullingStatus = "Queued Undo for \(entry.wasteBasketMediaIDs.count.formatted()) Waste Basket item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") as action \(action.id). The local Culling grid is restored; durable reconciliation continues in the background."
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                            Task { @MainActor [weak self] in
+                                guard let self else { return }
+                                self.updateCullingWasteBasketAction(update)
+                                self.cullingStatus = self.pendingLifecycleActionStatus(
+                                    "Culling Undo",
+                                    action: update,
+                                    availability: "Culling remains available while it completes."
+                                )
+                            }
+                        }
+                        self.finishCullingWasteBasketAction(action.id)
+                        if !restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                            await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                        }
+                        self.cullingStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+                    } catch {
+                        if let ownerError = error as? OwnerActionRunError,
+                           ownerError == .timedOut {
+                            self.cullingStatus = self.pendingLifecycleActionStatus(
+                                "Culling Undo",
+                                action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                                availability: "Culling remains available; check Activity for the full receipt."
+                            )
+                        } else {
+                            self.finishCullingWasteBasketAction(action.id)
+                            if !self.cullingHistory.contains(where: { $0.id == entry.id }) {
+                                self.cullingHistory.append(entry)
+                            }
+                            if restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                                _ = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                                    entry,
+                                    previousIDs: self.visibleCullingAssets.map(\.id),
+                                    focusedID: entry.focusedID,
+                                    removalDirection: .next
+                                )
+                            }
+                            self.cullingStatus = "Waste Basket Undo failed; the local Culling grid was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                        }
+                    }
+                }
+            } catch {
+                cullingWasteBasketQueueing = false
+                cullingStatus = "Undo failed; the history step was preserved. \(userFacingMessage(for: error))"
+            }
+            return
+        }
+        if !entry.reviewOperationID.isEmpty {
+            isApplyingCullingDecision = true
+            defer { isApplyingCullingDecision = false }
+            do {
+                let result = try await fixtureService.undoReview(
+                    operationID: entry.reviewOperationID
+                )
+                retainCullingReviewResultInCurrentWindow(result.changes)
+                cullingHistory.removeLast()
+                let orderedIDs = visibleCullingAssets.map(\.id)
+                let selectedIDs = entry.selectedIDs.intersection(Set(orderedIDs))
+                let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+                    ?? selectedIDs.first
+                    ?? orderedIDs.first
+                let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+                    ?? focusedID
+                cullingSelection = OwnerSelectionModel(
+                    orderedIDs: orderedIDs,
+                    selectedIDs: selectedIDs.isEmpty
+                        ? Set(focusedID.map { [$0] } ?? [])
+                        : selectedIDs,
+                    anchorID: anchorID,
+                    focusedID: focusedID
+                )
+                selectedPhotoIDs = cullingSelection.selectedIDs
+                cullingScrollTargetID = focusedID
+                cullingStatus = result.alreadyUndone
+                    ? "Return to Review was already undone; Gallery refreshed from the authoritative receipt."
+                    : "Undid Return to Review and restored the exact approval and delivery states."
+                scheduleFixtureCullingBackfill()
+            } catch {
+                cullingStatus = "Undo failed; the Return to Review history step was preserved. \(userFacingMessage(for: error))"
+            }
+            return
+        }
+        if !entry.fixtureChanges.isEmpty {
+            do {
+                let restoredChanges = try await fixtureService.undoState(
+                    entry.fixtureChanges,
+                    reason: "Undo \(entry.label)"
+                )
+                for change in restoredChanges {
+                    var decision = cullingStates[change.assetID]
+                        ?? SidecarDecisionState(assetId: change.assetID)
+                    decision.pickState = change.placementState.rawValue
+                    cullingStates[change.assetID] = decision
+                }
+                cullingHistory.removeLast()
+                replaceCullingItems()
+                let orderedIDs = visibleCullingAssets.map(\.id)
+                let selectedIDs = entry.selectedIDs.intersection(Set(orderedIDs))
+                let focusedID = entry.focusedID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? selectedIDs.first ?? orderedIDs.first
+                let anchorID = entry.anchorID.flatMap {
+                    orderedIDs.contains($0) ? $0 : nil
+                } ?? focusedID
+                cullingSelection = OwnerSelectionModel(
+                    orderedIDs: orderedIDs,
+                    selectedIDs: selectedIDs.isEmpty
+                        ? Set(focusedID.map { [$0] } ?? [])
+                        : selectedIDs,
+                    anchorID: anchorID,
+                    focusedID: focusedID
+                )
+                selectedPhotoIDs = cullingSelection.selectedIDs
                 cullingStatus = "Undid \(entry.label)."
             } catch {
                 cullingStatus = "Undo failed; the history step was preserved. \(error)"
@@ -3388,6 +5952,328 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    var canUndoCurrentSection: Bool {
+        switch selection ?? .overview {
+        case .culling:
+            !cullingHistory.isEmpty
+        case .review:
+            !reviewHistory.isEmpty
+                && !isRunningReview
+                && !reviewWasteBasketQueueing
+                && !reviewUndoIsBlockedByPendingWasteBasketAction
+        case .metadata:
+            !metadataHistory.isEmpty
+        default:
+            false
+        }
+    }
+
+    var currentUndoMenuTitle: String {
+        switch selection ?? .overview {
+        case .culling where !cullingHistory.isEmpty:
+            "Undo Culling"
+        case .review where !reviewHistory.isEmpty:
+            "Undo Review"
+        case .metadata where !metadataHistory.isEmpty:
+            "Undo Metadata"
+        default:
+            "Undo"
+        }
+    }
+
+    func undoCurrentSection() async {
+        switch selection ?? .overview {
+        case .culling:
+            await undoLastCullingDecision()
+        case .review:
+            await undoLastReviewAction()
+        case .metadata:
+            await undoLastMetadataChange()
+        default:
+            break
+        }
+    }
+
+    private func finishDeferredCullingWasteBasketUndo(
+        _ entry: CullingHistoryEntry,
+        after pendingAction: OwnerAction,
+        restoredLocally: Bool
+    ) async {
+        while true {
+            do {
+                _ = try await lifecycleService.awaitCompletion(of: pendingAction) { [weak self] update in
+                    Task { @MainActor [weak self] in
+                        self?.updateCullingWasteBasketAction(update)
+                    }
+                }
+                finishCullingWasteBasketAction(pendingAction.id)
+                break
+            } catch let ownerError as OwnerActionRunError where ownerError == .timedOut {
+                cullingStatus = "Undo is still waiting for X action \(pendingAction.id) to finish. The local Culling grid remains restored."
+                continue
+            } catch {
+                finishCullingWasteBasketAction(pendingAction.id)
+                cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+                cullingStatus = "X did not complete, so no durable Put Back was needed. The local Culling grid remains restored. \(userFacingMessage(for: error))"
+                return
+            }
+        }
+
+        do {
+            let restoreAction = try await lifecycleService.enqueueRestore(
+                mediaIDs: entry.wasteBasketMediaIDs
+            )
+            beginCullingWasteBasketAction(restoreAction)
+            cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+            cullingStatus = "Queued durable Put Back for the immediate Undo as action \(restoreAction.id). The local Culling grid remains restored while reconciliation completes."
+            monitorCullingWasteBasketRestore(
+                restoreAction,
+                entry: entry,
+                restoredLocally: restoredLocally
+            )
+        } catch {
+            cullingWasteBasketDeferredUndoActionIDs.remove(pendingAction.id)
+            if restoredLocally, selectedFixtureID == entry.fixtureID {
+                _ = removeWasteBasketCullingEntryFromCurrentWindow(
+                    entry,
+                    previousIDs: visibleCullingAssets.map(\.id),
+                    focusedID: entry.focusedID,
+                    removalDirection: .next
+                )
+            }
+            if !cullingHistory.contains(where: { $0.id == entry.id }) {
+                cullingHistory.append(entry)
+            }
+            cullingStatus = "Undo could not be queued after X completed; the history step was preserved. \(userFacingMessage(for: error))"
+        }
+    }
+
+    private func monitorCullingWasteBasketRestore(
+        _ action: OwnerAction,
+        entry: CullingHistoryEntry,
+        restoredLocally: Bool
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.updateCullingWasteBasketAction(update)
+                        self.cullingStatus = self.pendingLifecycleActionStatus(
+                            "Culling Undo",
+                            action: update,
+                            availability: "Culling remains available while it completes."
+                        )
+                    }
+                }
+                self.finishCullingWasteBasketAction(action.id)
+                if !restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                    await self.loadFixtureCullingWindow(preservingVisibleWindow: true)
+                }
+                self.cullingStatus = "Restored \(entry.wasteBasketMediaIDs.count.formatted()) item\(entry.wasteBasketMediaIDs.count == 1 ? "" : "s") from Waste Basket through action \(action.id)."
+            } catch {
+                if let ownerError = error as? OwnerActionRunError,
+                   ownerError == .timedOut {
+                    self.cullingStatus = self.pendingLifecycleActionStatus(
+                        "Culling Undo",
+                        action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                        availability: "Culling remains available; check Activity for the full receipt."
+                    )
+                } else {
+                    self.finishCullingWasteBasketAction(action.id)
+                    if !self.cullingHistory.contains(where: { $0.id == entry.id }) {
+                        self.cullingHistory.append(entry)
+                    }
+                    if restoredLocally, self.selectedFixtureID == entry.fixtureID {
+                        _ = self.removeWasteBasketCullingEntryFromCurrentWindow(
+                            entry,
+                            previousIDs: self.visibleCullingAssets.map(\.id),
+                            focusedID: entry.focusedID,
+                            removalDirection: .next
+                        )
+                    }
+                    self.cullingStatus = "Waste Basket Undo failed; the local Culling grid was returned to the authoritative pending state. \(self.userFacingMessage(for: error))"
+                }
+            }
+        }
+    }
+
+    private func beginCullingWasteBasketAction(_ action: OwnerAction) {
+        cullingWasteBasketPendingActionIDs.insert(action.id)
+        cullingWasteBasketPendingActions[action.id] = action
+        cullingWasteBasketPendingActionOrder.removeAll { $0 == action.id }
+        cullingWasteBasketPendingActionOrder.append(action.id)
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func updateCullingWasteBasketAction(_ action: OwnerAction) {
+        guard cullingWasteBasketPendingActionIDs.contains(action.id) else { return }
+        cullingWasteBasketPendingActions[action.id] = action
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func finishCullingWasteBasketAction(_ actionID: String) {
+        cullingWasteBasketPendingActionIDs.remove(actionID)
+        cullingWasteBasketPendingActions.removeValue(forKey: actionID)
+        cullingWasteBasketPendingActionOrder.removeAll { $0 == actionID }
+        refreshLatestCullingWasteBasketAction()
+    }
+
+    private func refreshLatestCullingWasteBasketAction() {
+        cullingWasteBasketPendingActionID = cullingWasteBasketPendingActionOrder.last
+        cullingWasteBasketPendingAction = cullingWasteBasketPendingActionID.flatMap {
+            cullingWasteBasketPendingActions[$0]
+        }
+    }
+
+    @discardableResult
+    private func removeWasteBasketCullingEntryFromCurrentWindow(
+        _ entry: CullingHistoryEntry,
+        previousIDs: [String],
+        focusedID: String?,
+        removalDirection: OwnerSelectionDirection
+    ) -> String? {
+        guard var window = fixtureCullingWindow,
+              window.fixtureID == entry.fixtureID,
+              window.offset == entry.windowOffset else {
+            replaceCullingItems()
+            return nil
+        }
+        let removedIDs = Set(entry.wasteBasketMediaIDs)
+        window.items.removeAll { removedIDs.contains($0.id) }
+        adjustCullingSummary(&window, for: entry.cullingItems, delta: -1)
+        fixtureCullingWindow = window
+        let orderedIDs = visibleCullingAssets.map(\.id)
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: Set(focusedID.map { [$0] } ?? []),
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        let replacementID = focusedID.flatMap {
+            selection.replaceItems(
+                orderedIDs,
+                selectingSuccessorAfterRemoving: $0,
+                direction: removalDirection
+            )
+        }
+        cullingSelection = selection
+        selectedPhotoIDs = selection.selectedIDs
+        return replacementID
+    }
+
+    private func restoreWasteBasketCullingEntryInCurrentWindow(
+        _ entry: CullingHistoryEntry
+    ) -> Bool {
+        guard var window = fixtureCullingWindow,
+              window.fixtureID == entry.fixtureID,
+              window.offset == entry.windowOffset else {
+            return false
+        }
+        let restoredIDs = Set(entry.wasteBasketMediaIDs)
+        var items = window.items.filter { !restoredIDs.contains($0.id) }
+        let newlyRestoredItems = entry.cullingItems.filter { restoredItem in
+            !items.contains(where: { $0.id == restoredItem.id })
+        }
+        items.append(contentsOf: newlyRestoredItems)
+        items.sort { left, right in
+            let leftIndex = cullingStableWindowIndexes[left.id]
+                ?? entry.cullingItemIndexes[left.id].map { entry.windowOffset + $0 }
+                ?? .max
+            let rightIndex = cullingStableWindowIndexes[right.id]
+                ?? entry.cullingItemIndexes[right.id].map { entry.windowOffset + $0 }
+                ?? .max
+            return leftIndex < rightIndex
+        }
+        window.items = items
+        adjustCullingSummary(&window, for: newlyRestoredItems, delta: 1)
+        fixtureCullingWindow = window
+        let orderedIDs = visibleCullingAssets.map(\.id)
+        let selectedIDs = entry.selectedIDs.intersection(orderedIDs)
+        let focusedID = entry.focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? selectedIDs.first
+            ?? orderedIDs.first
+        let anchorID = entry.anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? focusedID
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: selectedIDs.isEmpty
+                ? Set(focusedID.map { [$0] } ?? [])
+                : selectedIDs,
+            anchorID: anchorID,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
+        return true
+    }
+
+    private func adjustCullingSummary(
+        _ window: inout FixtureCullingWindow,
+        for items: [FixtureAsset],
+        delta: Int
+    ) {
+        guard !items.isEmpty else { return }
+        window.summary.filtered = max(0, window.summary.filtered + (items.count * delta))
+        window.summary.universe = max(0, window.summary.universe + (items.count * delta))
+        for item in items {
+            switch item.placementState {
+            case .undecided:
+                window.summary.undecided = max(0, window.summary.undecided + delta)
+            case .picked:
+                window.summary.picked = max(0, window.summary.picked + delta)
+            case .hidden:
+                window.summary.hidden = max(0, window.summary.hidden + delta)
+            }
+        }
+    }
+
+    func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL? {
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent(
+            "com.photosbyelie.backstage/WasteBasketQuickLook",
+            isDirectory: true
+        )
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            if item.mediaType == "video" {
+                let receipt = try await exportOriginalForAsset(
+                    forAssetID: item.mediaID,
+                    preferredIdentifier: item.photoLibraryIdentifier,
+                    to: directory
+                )
+                lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Photos."
+                return receipt.destination
+            }
+
+            let preview = try await renderedJPEGPreviewForAsset(
+                forAssetID: item.mediaID,
+                preferredIdentifier: item.photoLibraryIdentifier,
+                maxPixelSize: 4_000
+            )
+            await learnCurrentImageByteCount(
+                from: preview,
+                for: item.mediaID,
+                mediaType: item.mediaType,
+                persistPromptly: true
+            )
+            let destination = directory
+                .appendingPathComponent(item.mediaID.replacingOccurrences(of: "/", with: "_"))
+                .appendingPathExtension("jpg")
+            try preview.jpegData.write(to: destination, options: .atomic)
+            lifecycleStatus = "Prepared one private Waste Basket Quick Look item from Apple Photos."
+            return destination
+        } catch {
+            lifecycleStatus = "Waste Basket Quick Look unavailable: \(userFacingMessage(for: error))"
+            return nil
+        }
+    }
+
     func prepareQuickLookURLs() async -> [URL] {
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
@@ -3421,9 +6307,19 @@ final class BackstageViewModel: ObservableObject {
                     )
                     urls.append(receipt.destination)
                 } else {
-                    let preview = try await photoLibrary.preview(
-                        localIdentifier: photoLibraryIdentifier(for: id),
+                    let preview = try await renderedJPEGPreviewForAsset(
+                        forAssetID: id,
+                        preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
+                    )
+                    if let image = NSImage(data: preview.jpegData) {
+                        recoverCullingThumbnail(image, for: id)
+                    }
+                    await learnCurrentImageByteCount(
+                        from: preview,
+                        for: id,
+                        mediaType: asset?.mediaType ?? "photo",
+                        persistPromptly: true
                     )
                     let destination = directory
                         .appendingPathComponent(id.replacingOccurrences(of: "/", with: "_"))
@@ -3442,10 +6338,17 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func applyCullingDecisions(_ decisions: [SidecarDecision], label: String) async {
+    @discardableResult
+    private func applyCullingDecisions(
+        _ decisions: [SidecarDecision],
+        label: String
+    ) async -> Bool {
         guard await preparePhotosMutation() else {
             cullingStatus = photosMutationReadinessMessage()
-            return
+            return false
+        }
+        if cullingPool == nil {
+            invalidateCullingWindowLoads()
         }
         let selectedBefore = cullingSelection.selectedIDs
         isApplyingCullingDecision = true
@@ -3467,7 +6370,7 @@ final class BackstageViewModel: ObservableObject {
                     }
                     replaceCullingItems()
                     cullingStatus = "Stopped after \(cullingDecisionProgress.formatted()) of \(decisions.count.formatted()) items; completed batches remain audited and undoable."
-                    return
+                    return false
                 }
                 let end = min(decisions.count, start + 200)
                 let batch = try await decisionService.applyDetailed(
@@ -3493,8 +6396,10 @@ final class BackstageViewModel: ObservableObject {
             }
             replaceCullingItems()
             cullingStatus = "\(label) saved for \(changes.count) item\(changes.count == 1 ? "" : "s") in the cloud ledger."
+            return true
         } catch {
             cullingStatus = userFacingMessage(for: error)
+            return false
         }
     }
 
@@ -3531,20 +6436,22 @@ final class BackstageViewModel: ObservableObject {
         return current
     }
 
+    @discardableResult
     private func applyFixturePlacement(
         _ state: FixturePlacementState,
-        label: String
-    ) async {
+        label: String,
+        removalDirection: OwnerSelectionDirection = .next
+    ) async -> Bool {
         let ids = selectedCullingAssetIDs
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             cullingStatus = "Choose a fixture and select one or more Photos items."
-            return
+            return false
         }
-        guard await preparePhotosMutation() else {
-            cullingStatus = photosMutationReadinessMessage()
-            return
+        if cullingPool == nil {
+            invalidateCullingWindowLoads()
         }
         let selectedBefore = cullingSelection.selectedIDs
+        let anchorBefore = cullingSelection.anchorID
         let focusedBefore = cullingSelection.focusedID ?? ids.last
         let previousStates = ids.map { ($0, cullingStates[$0]) }
         for id in ids {
@@ -3556,7 +6463,8 @@ final class BackstageViewModel: ObservableObject {
         if let focusedBefore {
             _ = cullingSelection.replaceItems(
                 visibleIDs,
-                selectingSuccessorAfterRemoving: focusedBefore
+                selectingSuccessorAfterRemoving: focusedBefore,
+                direction: removalDirection
             )
         } else {
             cullingSelection.replaceItems(visibleIDs)
@@ -3588,14 +6496,18 @@ final class BackstageViewModel: ObservableObject {
             cullingHistory.append(CullingHistoryEntry(
                 label: label,
                 fixtureChanges: changes,
-                selectedIDs: selectedBefore
+                selectedIDs: selectedBefore,
+                anchorID: anchorBefore,
+                focusedID: focusedBefore
             ))
             if cullingPool == nil {
                 scheduleFixtureCullingBackfill()
             } else {
                 replaceCullingItems()
             }
-            cullingStatus = "\(label) saved for \(changes.count) fixture item\(changes.count == 1 ? "" : "s")."
+            let skipped = max(0, ids.count - changes.count)
+            cullingStatus = "\(label) saved. Affected \(changes.count.formatted()) • skipped \(skipped.formatted()) • failed 0."
+            return true
         } catch {
             for (id, previousState) in previousStates {
                 if let previousState {
@@ -3619,7 +6531,8 @@ final class BackstageViewModel: ObservableObject {
                     await self?.loadPreview()
                 }
             }
-            cullingStatus = userFacingMessage(for: error)
+            cullingStatus = "\(label) failed. Affected 0 • skipped 0 • failed \(ids.count.formatted()). \(userFacingMessage(for: error))"
+            return false
         }
     }
 
@@ -3675,18 +6588,6 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func queueMetadataReview() async {
-        let ids = selectedPhotoIDs.isEmpty
-            ? [metadataAssetID].filter { !$0.isEmpty }
-            : selectedCullingAssetIDs
-        do {
-            let action = try await metadataReviewService.queueReview(assetIDs: ids)
-            metadataReviewStatus = "\(ids.count) item\(ids.count == 1 ? "" : "s") queued for review by action \(action.id)."
-        } catch {
-            metadataReviewStatus = userFacingMessage(for: error)
-        }
-    }
-
     func saveMetadataBlacklist() async {
         do {
             let terms = metadataBlacklist.components(separatedBy: ",")
@@ -3734,17 +6635,19 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadMetadataProposals() async {
+    func loadMetadataModelLadderIfNeeded() async {
+        guard !hasLoadedMetadataModelLadder, !isLoadingMetadataModelLadder else { return }
+        isLoadingMetadataModelLadder = true
+        defer { isLoadingMetadataModelLadder = false }
         do {
-            let queue = try await metadataReviewService.proposals()
-            if let loaded = queue.modelLadder, !loaded.isEmpty {
+            let loaded = try await metadataReviewService.modelLadder()
+            if !loaded.isEmpty {
                 metadataModelLadder = loaded
             }
-            metadataProposals = queue.photos
-            metadataProposalStatus = "\(queue.photos.count) pending proposal\(queue.photos.count == 1 ? "" : "s") loaded from Owner.sqlite."
+            hasLoadedMetadataModelLadder = true
             metadataModelLadderStatus = "Saved ladder loaded: \(metadataModelLadder.map(\.label).joined(separator: " → "))."
         } catch {
-            metadataProposalStatus = userFacingMessage(for: error)
+            metadataModelLadderStatus = userFacingMessage(for: error)
         }
     }
 
@@ -3786,23 +6689,6 @@ final class BackstageViewModel: ObservableObject {
         metadataModelLadder.swapAt(index, destination)
     }
 
-    func decideProposal(
-        _ proposal: MetadataProposal,
-        disposition: MetadataProposalDisposition
-    ) async {
-        do {
-            let action = try await metadataReviewService.decide(
-                proposal,
-                disposition: disposition,
-                comment: disposition == .reject ? "Rejected in native Backstage" : ""
-            )
-            metadataProposals.removeAll { $0.id == proposal.id }
-            metadataProposalStatus = "\(disposition.rawValue.capitalized) saved by audited action \(action.id)."
-        } catch {
-            metadataProposalStatus = userFacingMessage(for: error)
-        }
-    }
-
     private func recordMetadataHistory(_ entry: MetadataHistoryEntry) {
         metadataHistory.append(entry)
         if metadataHistory.count > 100 {
@@ -3810,7 +6696,7 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadLifecycle() async {
+    func loadLifecycle(successStatus: String? = nil) async {
         isRunningLifecycle = true
         lifecycleStatus = "Loading the private lifecycle ledger…"
         defer { isRunningLifecycle = false }
@@ -3818,40 +6704,262 @@ final class BackstageViewModel: ObservableObject {
             let ledger = try await lifecycleService.ledger()
             lifecycleItems = ledger.items
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
-            lifecycleStatus = "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
+            lifecycleRecoverableCount = ledger.hiddenCount
+            lifecycleTombstoneCount = ledger.discardedCount
+            refreshLifecycleCountSummary()
+            lifecycleStatus = successStatus
+                ?? "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
         } catch {
             lifecycleStatus = userFacingMessage(for: error)
         }
     }
 
     func restoreLifecycleSelection() async {
-        let ids = lifecycleItems
-            .filter { selectedLifecycleIDs.contains($0.id) && $0.state == "hidden" }
-            .map(\.id)
+        guard !isRunningLifecycle, !lifecycleRestoreQueueing else {
+            lifecycleStatus = lifecycleRestoreQueueing
+                ? "This Put Back action is already being queued; the Waste Basket remains available."
+                : "Finish the current Waste Basket refresh first."
+            return
+        }
+        let selectedItems = lifecycleItems.enumerated().compactMap { index, item in
+            selectedLifecycleIDs.contains(item.id) && item.state == "hidden"
+                ? (index, item)
+                : nil
+        }
+        let ids = selectedItems.map { $0.1.id }
         guard !ids.isEmpty else {
             lifecycleStatus = "Select one or more recoverable items."
             return
         }
-        isRunningLifecycle = true
-        defer { isRunningLifecycle = false }
+        let priorSelection = selectedLifecycleIDs
+        lifecycleRestoreQueueing = true
+        lifecycleStatus = "Submitting Put Back for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… The Waste Basket remains available."
         do {
-            let action = try await lifecycleService.restore(mediaIDs: ids)
-            lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
-            await loadLifecycle()
+            let action = try await lifecycleService.enqueueRestore(mediaIDs: ids)
+            lifecycleRestoreQueueing = false
+            beginLifecycleRestoreAction(action)
+            let removedIDs = Set(ids)
+            lifecycleItems.removeAll { removedIDs.contains($0.id) }
+            selectedLifecycleIDs.subtract(removedIDs)
+            lifecycleRecoverableCount = max(0, lifecycleRecoverableCount - ids.count)
+            refreshLifecycleCountSummary()
+            lifecycleStatus = "Queued Put Back for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). The selected row\(ids.count == 1 ? " is" : "s are") removed locally; durable reconciliation continues in the background."
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
+                    _ = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.updateLifecycleRestoreAction(update)
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Put Back",
+                                action: update,
+                                availability: "The remaining Waste Basket rows and Quick Look remain available."
+                            )
+                        }
+                    }
+                    self.finishLifecycleRestoreAction(action.id)
+                    self.lifecycleStatus = "Restored \(ids.count) item\(ids.count == 1 ? "" : "s") with saved private titles through action \(action.id)."
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Put Back",
+                            action: self.lifecycleRestorePendingActions[action.id] ?? action,
+                            availability: "The remaining Waste Basket rows and Quick Look remain available; check Activity for the full receipt."
+                        )
+                    } else {
+                        self.finishLifecycleRestoreAction(action.id)
+                        for (index, item) in selectedItems.sorted(by: { $0.0 < $1.0 }) {
+                            guard !self.lifecycleItems.contains(where: { $0.id == item.id }) else {
+                                continue
+                            }
+                            self.lifecycleItems.insert(item, at: min(index, self.lifecycleItems.count))
+                        }
+                        self.selectedLifecycleIDs.formUnion(priorSelection)
+                        self.lifecycleRecoverableCount += selectedItems.count
+                        self.refreshLifecycleCountSummary()
+                        self.lifecycleStatus = "Put Back failed; the selected Waste Basket row\(ids.count == 1 ? " was" : "s were") restored locally. \(self.userFacingMessage(for: error))"
+                    }
+                }
+            }
         } catch {
+            lifecycleRestoreQueueing = false
             lifecycleStatus = userFacingMessage(for: error)
         }
     }
 
+    private func beginLifecycleRestoreAction(_ action: OwnerAction) {
+        lifecycleRestorePendingActionIDs.insert(action.id)
+        lifecycleRestorePendingActions[action.id] = action
+        lifecycleRestorePendingActionOrder.removeAll { $0 == action.id }
+        lifecycleRestorePendingActionOrder.append(action.id)
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func updateLifecycleRestoreAction(_ action: OwnerAction) {
+        guard lifecycleRestorePendingActionIDs.contains(action.id) else { return }
+        lifecycleRestorePendingActions[action.id] = action
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func finishLifecycleRestoreAction(_ actionID: String) {
+        lifecycleRestorePendingActionIDs.remove(actionID)
+        lifecycleRestorePendingActions.removeValue(forKey: actionID)
+        lifecycleRestorePendingActionOrder.removeAll { $0 == actionID }
+        refreshLatestLifecycleRestoreAction()
+    }
+
+    private func refreshLatestLifecycleRestoreAction() {
+        lifecycleRestorePendingActionID = lifecycleRestorePendingActionOrder.last
+    }
+
+    private func refreshLifecycleCountSummary() {
+        lifecycleCountSummary = "\(lifecycleRecoverableCount.formatted()) recoverable • \(lifecycleTombstoneCount.formatted()) active global tombstone\(lifecycleTombstoneCount == 1 ? "" : "s")"
+    }
+
     func emptyWasteBasket() async {
-        isRunningLifecycle = true
-        defer { isRunningLifecycle = false }
-        do {
-            let action = try await lifecycleService.emptyWasteBasket(confirmed: true)
-            lifecycleStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
-            await loadLifecycle()
-        } catch {
-            lifecycleStatus = userFacingMessage(for: error)
+        guard !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
+            lifecycleStatus = lifecycleQueueing || lifecyclePendingActionID != nil
+                ? "A Waste Basket action is already queued; browsing and Quick Look remain available while it completes."
+                : "Finish the current Waste Basket action first."
+            return
+        }
+        lifecycleQueueing = true
+        lifecycleStatus = "Submitting Empty Waste Basket… Browsing and Quick Look remain available."
+        lifecycleMonitorTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let action = try await self.lifecycleService.enqueueEmptyWasteBasket(confirmed: true)
+                self.lifecycleQueueing = false
+                self.lifecyclePendingActionID = action.id
+                self.lifecyclePendingAction = action
+                self.retainLocallyObservedLifecycleAction(action)
+                self.lifecycleStatus = "Empty Waste Basket queued as action \(action.id). Browsing and Quick Look remain available while it completes."
+                do {
+                    let completed = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.lifecyclePendingAction = update
+                            self.retainLocallyObservedLifecycleAction(update)
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Empty Waste Basket",
+                                action: update,
+                                availability: "Browsing and Quick Look remain available while it completes."
+                            )
+                        }
+                    }
+                    self.retainLocallyObservedLifecycleAction(completed)
+                    self.lifecyclePendingActionID = nil
+                    self.lifecyclePendingAction = nil
+                    let lifecycle = completed.result?["lifecycle"]?.objectValue
+                    let retainedLocalOnlyCount = lifecycle?["retainedLocalOnlyAssetIds"]?.arrayValue?.count ?? 0
+                    let completionStatus: String
+                    if retainedLocalOnlyCount > 0 {
+                        let emptiedCount = completed.result?["result"]?.objectValue?["assetIds"]?.arrayValue?.count ?? 0
+                        completionStatus = "Empty Waste Basket activated the audited global tombstone state for \(emptiedCount.formatted()) deployed item\(emptiedCount == 1 ? "" : "s") through action \(action.id). \(retainedLocalOnlyCount.formatted()) local-only item\(retainedLocalOnlyCount == 1 ? " remains" : "s remain") recoverable because no cloud media exists. Source and R2 media were retained."
+                    } else {
+                        completionStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
+                    }
+                    await self.loadLifecycle(successStatus: completionStatus)
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Empty Waste Basket",
+                            action: self.lifecyclePendingAction ?? action,
+                            availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
+                        )
+                    } else {
+                        let failed = self.lifecyclePendingAction ?? action
+                        self.retainLocallyObservedLifecycleAction(failed)
+                        self.lifecyclePendingActionID = nil
+                        self.lifecyclePendingAction = nil
+                        self.lifecycleStatus = "Empty Waste Basket action \(action.id) failed. All current rows remain recoverable; no retry was started. \(self.userFacingMessage(for: error))"
+                    }
+                }
+            } catch {
+                self.lifecycleQueueing = false
+                self.lifecyclePendingAction = nil
+                self.lifecycleStatus = "Empty Waste Basket was not queued. No items changed. \(self.userFacingMessage(for: error))"
+            }
+            self.lifecycleMonitorTask = nil
+        }
+    }
+
+    var selectedRecoverableLifecycleIDs: [String] {
+        lifecycleItems
+            .filter { selectedLifecycleIDs.contains($0.id) && $0.state == "hidden" }
+            .map(\.id)
+            .sorted()
+    }
+
+    func emptyWasteBasketSelection() async {
+        guard !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
+            lifecycleStatus = lifecycleQueueing || lifecyclePendingActionID != nil
+                ? "A Waste Basket action is already queued; browsing and Quick Look remain available while it completes."
+                : "Finish the current Waste Basket action first."
+            return
+        }
+        let ids = selectedRecoverableLifecycleIDs
+        guard !ids.isEmpty else {
+            lifecycleStatus = "Select one or more recoverable items before choosing Delete Selected."
+            return
+        }
+        lifecycleQueueing = true
+        lifecycleStatus = "Submitting Delete Selected for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Browsing and Quick Look remain available."
+        lifecycleMonitorTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let action = try await self.lifecycleService.enqueueEmptyWasteBasket(
+                    mediaIDs: ids,
+                    confirmed: true
+                )
+                self.lifecycleQueueing = false
+                self.lifecyclePendingActionID = action.id
+                self.lifecyclePendingAction = action
+                self.retainLocallyObservedLifecycleAction(action)
+                self.lifecycleStatus = "Delete Selected queued as action \(action.id). Browsing and Quick Look remain available while it completes."
+                do {
+                    let completed = try await self.lifecycleService.awaitCompletion(of: action) { [weak self] update in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.lifecyclePendingAction = update
+                            self.retainLocallyObservedLifecycleAction(update)
+                            self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                                "Delete Selected",
+                                action: update,
+                                availability: "Browsing and Quick Look remain available while it completes."
+                            )
+                        }
+                    }
+                    self.retainLocallyObservedLifecycleAction(completed)
+                    self.lifecyclePendingActionID = nil
+                    self.lifecyclePendingAction = nil
+                    self.lifecycleStatus = "Deleted \(ids.count.formatted()) selected recoverable item\(ids.count == 1 ? "" : "s") through action \(action.id). Source media and R2 objects were retained."
+                    await self.loadLifecycle()
+                } catch {
+                    if let ownerError = error as? OwnerActionRunError,
+                       ownerError == .timedOut {
+                        self.lifecycleStatus = self.pendingLifecycleActionStatus(
+                            "Delete Selected",
+                            action: self.lifecyclePendingAction ?? action,
+                            availability: "Browsing and Quick Look remain available; check Activity for the full receipt."
+                        )
+                    } else {
+                        let failed = self.lifecyclePendingAction ?? action
+                        self.retainLocallyObservedLifecycleAction(failed)
+                        self.lifecyclePendingActionID = nil
+                        self.lifecyclePendingAction = nil
+                        self.lifecycleStatus = "Delete Selected action \(action.id) failed. The selected rows remain recoverable; no retry was started. \(self.userFacingMessage(for: error))"
+                    }
+                }
+            } catch {
+                self.lifecycleQueueing = false
+                self.lifecyclePendingAction = nil
+                self.lifecycleStatus = "Delete Selected was not queued. No items changed. \(self.userFacingMessage(for: error))"
+            }
+            self.lifecycleMonitorTask = nil
         }
     }
 
@@ -3889,6 +6997,7 @@ final class BackstageViewModel: ObservableObject {
                 order: order
             )
             nativeUploadPlan = plan
+            await hydrateCurrentImageByteCounts(for: plan.items.map(\.id))
             selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
             if !plan.cloudAllowed {
                 nativeUploadStatus = "\(plan.fixtureName) policy does not permit cloud publication."
@@ -3922,27 +7031,72 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func loadNativeUploadPreview(for item: NativeUploadPlanItem) async {
-        if nativeUploadPreviewItemID == item.id, nativeUploadPreviewImage != nil {
-            return
+    func prepareNativeUploadQuickLookURL(for item: NativeUploadPlanItem) async -> URL? {
+        let result = await prepareCanonicalQuickLookURL(
+            assetID: item.id,
+            localIdentifier: item.photoLibraryIdentifier,
+            namespace: "UploadQuickLook"
+        )
+        if result == nil {
+            nativeUploadStatus = "The Upload preview could not be prepared. The approved item is unchanged."
         }
-        nativeUploadPreviewItemID = item.id
-        nativeUploadPreviewImage = nil
-        do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: item.photoLibraryIdentifier,
-                maxPixelSize: 1_600
-            )
-            guard nativeUploadPreviewItemID == item.id else { return }
-            nativeUploadPreviewImage = NSImage(data: preview.jpegData)
-        } catch {
-            nativeUploadStatus = "The preview could not be prepared. The approved upload item is unchanged."
-        }
+        return result
     }
 
-    func clearNativeUploadPreview() {
-        nativeUploadPreviewItemID = ""
-        nativeUploadPreviewImage = nil
+    func prepareMetadataQuickLookURL(
+        for assetID: String,
+        preferredIdentifier: String? = nil
+    ) async -> URL? {
+        let result = await prepareCanonicalQuickLookURL(
+            assetID: assetID,
+            localIdentifier: preferredIdentifier ?? photoLibraryIdentifier(for: assetID),
+            namespace: "MetadataQuickLook"
+        )
+        if result == nil {
+            metadataReviewStatus = "The Metadata preview could not be prepared. No metadata was changed."
+        }
+        return result
+    }
+
+    private func prepareCanonicalQuickLookURL(
+        assetID: String,
+        localIdentifier: String,
+        namespace: String
+    ) async -> URL? {
+        let directory = FileManager.default.urls(
+            for: .cachesDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent(
+            "com.photosbyelie.backstage/\(namespace)",
+            isDirectory: true
+        )
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            let preview = try await renderedJPEGPreviewForAsset(
+                forAssetID: assetID,
+                preferredIdentifier: localIdentifier,
+                maxPixelSize: 4_000
+            )
+            await learnCurrentImageByteCount(
+                from: preview,
+                for: assetID,
+                mediaType: "photo",
+                persistPromptly: true
+            )
+            let safeName = assetID
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: ":", with: "_")
+            let destination = directory
+                .appendingPathComponent(safeName)
+                .appendingPathExtension("jpg")
+            try preview.jpegData.write(to: destination, options: .atomic)
+            return destination
+        } catch {
+            return nil
+        }
     }
 
     func returnSelectedUploadsToReview() async {
@@ -4011,10 +7165,6 @@ final class BackstageViewModel: ObservableObject {
             selectedDeliveryIDs.subtract(hiddenIDs)
             for id in hiddenIDs {
                 nativeUploadThumbnails.removeValue(forKey: id)
-            }
-            if nativeUploadPreviewItemID.isEmpty == false,
-               hiddenIDs.contains(nativeUploadPreviewItemID) {
-                clearNativeUploadPreview()
             }
             if let current = nativeUploadPlan {
                 nativeUploadPlan = NativeUploadPlan(
@@ -4114,26 +7264,10 @@ final class BackstageViewModel: ObservableObject {
         guard !isSyncingPhotos else { return }
         guard authentication.phase == .authenticated else { return }
         isSyncingPhotos = true
-        isCancellingPhotosSync = false
-        photosSyncCancellationRequested = false
-        defer {
-            isSyncingPhotos = false
-            isCancellingPhotosSync = false
-            photosSyncCancellationRequested = false
-        }
+        defer { isSyncingPhotos = false }
         do {
-            var report = try await deliveryService.startPhotosSync(limit: limit)
+            let report = try await deliveryService.syncPhotos(limit: limit)
             photosSyncReport = report
-            if photosSyncCancellationRequested, !report.runID.isEmpty {
-                report = try await deliveryService.cancelPhotosSync(runID: report.runID)
-                photosSyncReport = report
-            }
-            while !report.isFinished {
-                photosSyncStatus = "\(report.stage) • \(report.scanned) of \(report.requested) checked • \(report.remaining) remaining."
-                try await Task.sleep(for: .seconds(1))
-                report = try await deliveryService.photosSyncStatus(runID: report.runID)
-                photosSyncReport = report
-            }
             if report.attached {
                 photosSyncStatus = "An Apple Photos sync pass is already running."
             } else if report.status == "cancelled" {
@@ -4150,29 +7284,24 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func cancelPhotosSync() async {
-        guard isSyncingPhotos else { return }
-        photosSyncCancellationRequested = true
-        isCancellingPhotosSync = true
-        photosSyncStatus = "Stopping safely after the current PhotoKit checkpoint…"
-        guard let runID = photosSyncReport?.runID, !runID.isEmpty else { return }
-        do {
-            photosSyncReport = try await deliveryService.cancelPhotosSync(runID: runID)
-        } catch {
-            photosSyncStatus = userFacingMessage(for: error)
-            isCancellingPhotosSync = false
-        }
-    }
+    func prepareForTermination() async {
+        terminationRequested = true
 
-    func runPhotosSyncLoop() async {
-        while !Task.isCancelled {
-            do {
-                try await Task.sleep(for: .seconds(15 * 60))
-            } catch {
-                return
-            }
-            await syncPhotosIncrementally()
-        }
+        // These tasks only hydrate or refresh the UI. They must not keep the
+        // process alive after the window closes.
+        // Leave fixture-window reads alone. They own loading flags and may
+        // still be between a debounce and the audited query; canceling them
+        // here could strand that flag and prevent the drain from completing.
+        reviewAIStatusRefreshTask?.cancel()
+        cancelCullingThumbnailWork()
+        reviewThumbnailTasks.values.forEach { $0.cancel() }
+
+        // A delayed Review text edit is durable work even though its network
+        // action has not started yet. Flush it synchronously before draining
+        // the other active operation flags.
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        await saveReviewMetadataIfNeeded()
     }
 
     private func startNativePublication(assetIDs: [String]) async {
@@ -4325,11 +7454,6 @@ final class BackstageViewModel: ObservableObject {
         for id in attemptedIDs.subtracting(failedIDs) {
             nativeUploadThumbnails.removeValue(forKey: id)
         }
-        if !nativeUploadPreviewItemID.isEmpty,
-           !retainedIDs.contains(nativeUploadPreviewItemID) {
-            clearNativeUploadPreview()
-        }
-
         do {
             let summary = try await deliveryService.nativeUploadPlan(
                 fixtureID: selectedFixtureID,
@@ -4606,18 +7730,14 @@ final class BackstageViewModel: ObservableObject {
 
     private func preparePhotosMutation() async -> Bool {
         photoAccess = photoLibrary.authorization()
-        photosBridgeHealth = await photosBridgeHealthService.probe()
         return [.authorized, .limited].contains(photoAccess)
-            && photosBridgeHealth.installed
-            && photosBridgeHealth.compatible
-            && photosBridgeHealth.photoAccess == "authorized"
     }
 
     private func photosMutationReadinessMessage() -> String {
         guard [.authorized, .limited].contains(photoAccess) else {
             return "Backstage Photos access is required before culling or metadata give-back. Choose Allow Photos or grant Full Access in System Settings."
         }
-        return photosBridgeHealth.message
+        return "Backstage native Photos access is ready."
     }
 
     private func presentAuthenticationFailureIfNeeded(_ error: Error) async {
@@ -4625,6 +7745,18 @@ final class BackstageViewModel: ObservableObject {
               envelope.error.code == "google_login_required" else { return }
         authentication = await authenticationService.currentSnapshot()
         updateAuthenticationRecoveryStatus()
+    }
+
+    private func fixtureTreeFailureMessage(for error: Error) -> String {
+        if let ownerActionError = error as? OwnerActionRunError,
+           case .timedOut = ownerActionError {
+            return "Fixture tree refresh timed out."
+        }
+        if let envelope = error as? APIErrorEnvelope,
+           envelope.error.code == "google_login_required" {
+            return "Backstage authentication expired."
+        }
+        return "Fixture tree unavailable: \(userFacingMessage(for: error))"
     }
 
     private func isTransientCancellation(_ error: Error) -> Bool {
@@ -4695,7 +7827,16 @@ final class BackstageViewModel: ObservableObject {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
             return
         }
+        let scopedAssetIDs = metadataGiveBackAssetIDs
+        if commit, !metadataGiveBackCommitReady {
+            metadataStatus = "Run a fresh preview for the current write scope before committing to Apple Photos."
+            return
+        }
         let operationFixtureID = selectedFixtureID
+        if !commit {
+            metadataReport = nil
+            metadataGiveBackPlannedAssetIDs = nil
+        }
         isRunningMetadata = true
         defer { isRunningMetadata = false }
         if commit, !(await preparePhotosMutation()) {
@@ -4704,14 +7845,16 @@ final class BackstageViewModel: ObservableObject {
         }
         do {
             let report = try await (commit
-                ? metadataService.commit(fixtureID: operationFixtureID)
-                : metadataService.plan(fixtureID: operationFixtureID))
+                ? metadataService.commit(fixtureID: operationFixtureID, assetIDs: scopedAssetIDs)
+                : metadataService.plan(fixtureID: operationFixtureID, assetIDs: scopedAssetIDs))
             guard selectedFixtureID == operationFixtureID else {
                 metadataReport = nil
+                metadataGiveBackPlannedAssetIDs = nil
                 metadataStatus = "The current fixture changed before metadata completed; the stale report was discarded."
                 return
             }
             metadataReport = report
+            metadataGiveBackPlannedAssetIDs = commit ? nil : scopedAssetIDs
             metadataStatus = reportStatus(report)
         } catch {
             metadataStatus = userFacingMessage(for: error)
@@ -4751,6 +7894,81 @@ final class BackstageViewModel: ObservableObject {
                 return try await photoLibrary.preview(
                     localIdentifier: identifier,
                     maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func cullingPreviewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.cullingPreview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func renderedJPEGPreviewForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.renderedJPEGPreview(
+                    localIdentifier: identifier,
+                    maxPixelSize: maxPixelSize
+                )
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    throw error
+                }
+                lastError = error
+            }
+        }
+        throw lastError ?? PhotoLibraryError.assetNotFound(assetID)
+    }
+
+    private func exportOriginalForAsset(
+        forAssetID assetID: String,
+        preferredIdentifier: String? = nil,
+        to directory: URL
+    ) async throws -> PhotoExportReceipt {
+        var lastError: Error?
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            do {
+                return try await photoLibrary.exportOriginal(
+                    localIdentifier: identifier,
+                    to: directory
                 )
             } catch {
                 if error is CancellationError || Task.isCancelled {

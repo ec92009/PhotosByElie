@@ -19,6 +19,18 @@ public enum SidecarColor: String, Codable, Sendable, CaseIterable {
     public var label: String {
         self == .none ? "No color" : rawValue.capitalized
     }
+
+    /// Color assignment is a toggle: applying the same non-empty color to
+    /// every target clears it; otherwise the requested color is assigned.
+    public func toggleTarget(for currentColors: [String]) -> SidecarColor {
+        guard self != .none,
+              !currentColors.isEmpty,
+              currentColors.allSatisfy({ $0 == rawValue })
+        else {
+            return self
+        }
+        return .none
+    }
 }
 
 public struct SidecarDecisionState: Codable, Sendable, Equatable {
@@ -60,6 +72,18 @@ public struct SidecarDecisionChange: Sendable, Equatable {
     public var state: SidecarDecisionState
     public var before: SidecarDecisionState
     public var changedFamilies: [String]
+}
+
+public protocol SidecarDecisionServing: Sendable {
+    func applyDetailed(
+        _ decisions: [SidecarDecision],
+        idempotencyKey: String
+    ) async throws -> [SidecarDecisionChange]
+    func toggleColor(
+        _ requested: SidecarColor,
+        assetIDs: [String],
+        idempotencyKey: String
+    ) async throws -> [SidecarDecisionChange]
 }
 
 /// Canonical Sidecar decision payload. This deliberately mirrors the web
@@ -120,7 +144,7 @@ public struct SidecarDecision: Codable, Identifiable, Sendable, Equatable {
 private struct DecisionQuery: Codable { let assetIds: [String] }
 private struct DecisionBatch: Codable { let decisions: [SidecarDecision] }
 
-public actor SidecarDecisionService {
+public actor SidecarDecisionService: SidecarDecisionServing {
     private let api: OwnerAPIClient
 
     public init(api: OwnerAPIClient) {
@@ -157,6 +181,23 @@ public actor SidecarDecisionService {
         idempotencyKey: String = UUID().uuidString
     ) async throws -> [SidecarDecisionChange] {
         try parseChanges(try await apply(decisions, idempotencyKey: idempotencyKey))
+    }
+
+    public func toggleColor(
+        _ requested: SidecarColor,
+        assetIDs: [String],
+        idempotencyKey: String = UUID().uuidString
+    ) async throws -> [SidecarDecisionChange] {
+        let uniqueAssetIDs = Array(Set(assetIDs)).sorted()
+        guard requested != .none, !uniqueAssetIDs.isEmpty else { return [] }
+        let current = try await queryStates(assetIDs: uniqueAssetIDs)
+        let target = requested.toggleTarget(
+            for: uniqueAssetIDs.map { current[$0]?.color ?? "" }
+        )
+        return try await applyDetailed(
+            uniqueAssetIDs.map { SidecarDecision.color($0, value: target) },
+            idempotencyKey: idempotencyKey
+        )
     }
 
     public func queryStates(assetIDs: [String]) async throws -> [String: SidecarDecisionState] {

@@ -61,6 +61,7 @@ public struct OwnerEnrollmentCode: Codable, Sendable, Equatable {
 
 public enum OwnerAuthenticationError: Error, Equatable {
     case invalidEnrollmentCode
+    case incompleteEnrollmentHandoff
 }
 
 public actor OwnerAuthenticationService {
@@ -230,6 +231,48 @@ public actor OwnerAuthenticationService {
         persistenceFailureSnapshot = nil
         await api.setAccessToken(tokens.accessToken)
         return snapshot(for: credentials)
+    }
+
+    public func beginNativeEnrollment(
+        name: String,
+        platform: String = "macOS",
+        binding: String = UUID().uuidString
+    ) async throws -> OwnerEnrollmentHandoff {
+        try await api.beginOwnerEnrollmentHandoff(
+            name: name,
+            platform: platform,
+            binding: binding
+        )
+    }
+
+    public func claimNativeEnrollment(
+        _ handoff: OwnerEnrollmentHandoff
+    ) async throws -> OwnerAuthenticationSnapshot? {
+        let claim = try await api.claimOwnerEnrollmentHandoff(handoff)
+        guard claim.state == "completed" else { return nil }
+        guard let deviceId = claim.device?.id,
+              let deviceCredential = claim.deviceCredential,
+              !deviceCredential.isEmpty else {
+            throw OwnerAuthenticationError.incompleteEnrollmentHandoff
+        }
+        let tokens = try await api.exchangeDeviceCredential(
+            deviceId: deviceId,
+            deviceCredential: deviceCredential
+        )
+        let credentials = applying(tokens, to: OwnerCredentialSet(
+            deviceId: deviceId,
+            deviceCredential: deviceCredential,
+            accessToken: nil,
+            accessExpiresAt: nil
+        ))
+        try await session.save(credentials)
+        persistenceFailureSnapshot = nil
+        await api.setAccessToken(tokens.accessToken)
+        return snapshot(for: credentials)
+    }
+
+    public func cancelNativeEnrollment(_ handoff: OwnerEnrollmentHandoff) async {
+        _ = try? await api.cancelOwnerEnrollmentHandoff(handoff)
     }
 
     public func signOut() async throws -> OwnerAuthenticationSnapshot {

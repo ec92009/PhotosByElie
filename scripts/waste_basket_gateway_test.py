@@ -10,6 +10,8 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -259,6 +261,52 @@ class WasteBasketGatewayTests(unittest.TestCase):
                 (f"expo/{asset_id}_900.jpg", asset_id, NOW, NOW, NOW),
             )
 
+    def _seed_uploaded_r2_identity(
+        self,
+        *,
+        upload_asset_id: str,
+        photo_id: str,
+    ) -> None:
+        """Record one successful durable upload identity and its current R2 objects."""
+        run_id = f"run-{photo_id}"
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT OR REPLACE INTO sidecar_upload_bridge_runs
+                     (run_id, mode, status, execute_upload, limit_count,
+                      started_at, completed_at, summary_json, created_at, updated_at)
+                   VALUES (?, 'execute', 'completed', 1, 1, ?, ?, '{}', ?, ?)""",
+                (run_id, NOW, NOW, NOW, NOW),
+            )
+            connection.execute(
+                """INSERT OR REPLACE INTO sidecar_upload_bridge_run_items
+                     (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                      queued_at, status, export_status, planned_keys_json,
+                      created_at, updated_at, upload_status, upload_keys_json)
+                   VALUES (?, ?, ?, ?, ?, 'photo', ?, 'uploaded', 'exported', '[]',
+                           ?, ?, 'uploaded', '[]')""",
+                (
+                    f"item-{photo_id}",
+                    run_id,
+                    upload_asset_id,
+                    photo_id,
+                    f"{photo_id}.jpg",
+                    NOW,
+                    NOW,
+                    NOW,
+                ),
+            )
+            for bucket, object_key, kind in (
+                ("public", f"expo/{photo_id}_900.jpg", "public-preview"),
+                ("private", f"masters/{photo_id}.jpg", "private-master"),
+            ):
+                connection.execute(
+                    """INSERT OR REPLACE INTO r2_objects
+                         (bucket, object_key, photo_id, object_kind, lifecycle_state,
+                          first_seen_at, last_seen_at, source, bytes, updated_at)
+                       VALUES (?, ?, ?, ?, 'current', ?, ?, 'synthetic-upload', 12, ?)""",
+                    (bucket, object_key, photo_id, kind, NOW, NOW, NOW),
+                )
+
     def _arm(self, operation_id: str, *, operation: str = "x", revision: int = 17) -> dict:
         members = gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
         denied = operation not in {"restore", "tombstone-restore"}
@@ -272,11 +320,13 @@ class WasteBasketGatewayTests(unittest.TestCase):
             json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         return {
+            "ok": True,
             "operationId": operation_id,
             "operationDigest": digest,
             "operation": operation,
             "denied": denied,
             "revision": revision,
+            "state": "armed",
             "members": [{
                 "canonicalAssetId": item["canonicalAssetId"],
                 "canonicalMediaId": item["canonicalMediaId"],
@@ -372,6 +422,176 @@ class WasteBasketGatewayTests(unittest.TestCase):
             self.root, queued["requestId"], result={"attacker": True}, db_path=self.db,
         )
         self.assertEqual(replay["result"], {"ok": True, "restored": ["asset-1"]})
+
+    def test_hosted_retry_budget_blocks_with_an_actionable_disposition(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="bounded-missing-r2", db_path=self.db,
+        )
+        error = "canonical R2 mapping is missing for asset-1"
+        for attempt in range(gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS):
+            claimed = gateway.claim_hosted_lifecycle_request(
+                self.root, queued["requestId"], self.db
+            )
+            self.assertEqual(claimed["attemptCount"], attempt + 1)
+            finished = gateway.finish_hosted_lifecycle_request(
+                self.root,
+                queued["requestId"],
+                error=error,
+                retryable=True,
+                db_path=self.db,
+            )
+            if attempt + 1 < gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS:
+                self.assertEqual(finished["state"], "queued")
+            else:
+                self.assertEqual(finished["state"], "blocked")
+                self.assertEqual(finished["disposition"], "blocked")
+                self.assertEqual(finished["attemptCount"], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+                self.assertIn("Repair the canonical R2 mapping", finished["nextAction"])
+
+        with sqlite3.connect(self.db) as connection:
+            row = connection.execute(
+                """SELECT state, disposition, attempt_count, completed_at, blocked_at
+                   FROM owner_hosted_lifecycle_requests WHERE request_id = ?""",
+                (queued["requestId"],),
+            ).fetchone()
+        self.assertEqual(row[0], "failed")
+        self.assertEqual(row[1], "blocked")
+        self.assertEqual(row[2], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        self.assertTrue(row[3])
+        self.assertTrue(row[4])
+
+    def test_existing_over_budget_request_is_blocked_without_another_attempt(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="legacy-over-budget", db_path=self.db,
+        )
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                """UPDATE owner_hosted_lifecycle_requests
+                   SET state = 'running', attempt_count = ?,
+                       error_text = 'canonical R2 mapping is missing for asset-1'
+                   WHERE request_id = ?""",
+                (gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS + 1000, queued["requestId"]),
+            )
+        blocked = gateway.claim_hosted_lifecycle_request(
+            self.root, queued["requestId"], self.db
+        )
+        self.assertEqual(blocked["state"], "blocked")
+        self.assertEqual(blocked["attemptCount"], gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS + 1000)
+        self.assertIn("Automatic retries stopped", blocked["error"])
+
+    def test_active_hosted_request_is_recovered_without_replaying_a_new_intent(self) -> None:
+        with patch.object(gateway.uuid, "uuid4", return_value=uuid.UUID(int=(1 << 128) - 1)):
+            queued = gateway.queue_hosted_lifecycle_request(
+                self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+                session_id="session-one", fixture_id="fixture-1",
+                request_key="first-browser-intent", db_path=self.db,
+            )
+        resumed = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-2"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="second-browser-intent", db_path=self.db,
+        )
+        self.assertEqual(resumed["requestId"], queued["requestId"])
+        self.assertTrue(resumed["resumedActive"])
+        self.assertEqual(resumed["operation"], "waste-basket-x")
+        self.assertEqual(resumed["assetIds"], ["asset-1"])
+        self.assertEqual(
+            gateway.latest_hosted_lifecycle_request(
+                self.root, session_id="session-one", fixture_id="fixture-1", db_path=self.db,
+            )["requestId"],
+            queued["requestId"],
+        )
+        self.assertIsNone(gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="other-session", fixture_id="fixture-1", db_path=self.db,
+        ))
+        self.assertIsNone(gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="session-one", fixture_id="other-fixture", db_path=self.db,
+        ))
+        with sqlite3.connect(self.db) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM owner_hosted_lifecycle_requests"
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+
+        gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"], result={"ok": True}, db_path=self.db,
+        )
+        with patch.object(gateway.uuid, "uuid4", return_value=uuid.UUID(int=0)):
+            next_request = gateway.queue_hosted_lifecycle_request(
+                self.root, operation="waste-basket-restore", asset_ids=["asset-2"],
+                session_id="session-one", fixture_id="fixture-1",
+                request_key="third-browser-intent", db_path=self.db,
+            )
+        self.assertNotEqual(next_request["requestId"], queued["requestId"])
+        self.assertNotIn("resumedActive", next_request)
+        with sqlite3.connect(self.db) as connection:
+            connection.execute(
+                "UPDATE owner_hosted_lifecycle_requests SET created_at = ?",
+                (NOW,),
+            )
+        latest = gateway.latest_hosted_lifecycle_request(
+            self.root, session_id="session-one", fixture_id="fixture-1", db_path=self.db,
+        )
+        self.assertEqual(latest["requestId"], next_request["requestId"])
+
+    def test_completed_hosted_result_projection_update_is_scoped_and_optimistic(self) -> None:
+        queued = gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-restore", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1",
+            request_key="projection-result", db_path=self.db,
+        )
+        gateway.claim_hosted_lifecycle_request(self.root, queued["requestId"], self.db)
+        original = {
+            "ok": True,
+            "operationId": f"owner-action:hosted-lifecycle:{queued['requestId']}",
+            "authoritative_committed": True,
+            "projection": {"state": "pending", "retryable": True},
+        }
+        gateway.finish_hosted_lifecycle_request(
+            self.root, queued["requestId"], result=original, db_path=self.db,
+        )
+        replacement = {
+            **original,
+            "projection": {"state": "applied", "retryable": False},
+        }
+        updated = gateway.replace_completed_hosted_lifecycle_result(
+            self.root,
+            queued["requestId"],
+            session_id="session-one",
+            fixture_id="fixture-1",
+            expected_result=original,
+            result=replacement,
+            db_path=self.db,
+        )
+        self.assertEqual(updated["state"], "completed")
+        self.assertEqual(updated["operation"], "waste-basket-restore")
+        self.assertEqual(updated["assetIds"], ["asset-1"])
+        self.assertEqual(updated["result"], replacement)
+        with self.assertRaisesRegex(gateway.WasteBasketError, "changed before retry"):
+            gateway.replace_completed_hosted_lifecycle_result(
+                self.root,
+                queued["requestId"],
+                session_id="session-one",
+                fixture_id="fixture-1",
+                expected_result=original,
+                result={"attacker": True},
+                db_path=self.db,
+            )
+        with self.assertRaisesRegex(gateway.WasteBasketError, "unavailable"):
+            gateway.replace_completed_hosted_lifecycle_result(
+                self.root,
+                queued["requestId"],
+                session_id="other-session",
+                fixture_id="fixture-1",
+                expected_result=replacement,
+                result=replacement,
+                db_path=self.db,
+            )
 
     def test_culling_review_and_owner_gallery_share_authorized_gateway(self) -> None:
         culling = gateway.move_to_waste_basket(
@@ -552,7 +772,7 @@ class WasteBasketGatewayTests(unittest.TestCase):
         self.assertEqual(first["kind"], "owner-sqlite-no-local-commit-v1")
         self.assertEqual(
             first["proofDigest"],
-            "e2125d2819062d75a7cf4b9421b99756c2a61f06af15975dfbd503831fd6c477",
+            "d38789c3b4a245e996a8384bd8c0d4864bff6e13002833765fb6ae577846e0f3",
         )
         gateway.move_to_waste_basket(
             self.root,
@@ -725,6 +945,229 @@ class WasteBasketGatewayTests(unittest.TestCase):
         )
         self.assertEqual(restored["operation"], "tombstone-restore")
         self.assertFalse(gateway.is_globally_blocked(self.root, "asset-1", self.db))
+
+    def test_derivation_uses_unambiguous_durable_legacy_upload_identity(self) -> None:
+        self._seed_asset("legacy-upload-id")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET raw_json = ? WHERE asset_id = 'asset-4'",
+                (json.dumps({"localIdentifier": "legacy-upload-id"}),),
+            )
+            connection.execute("DELETE FROM r2_objects WHERE photo_id = 'asset-4'")
+            connection.execute(
+                """UPDATE media_lifecycle
+                      SET public_preview_keys_json = '[]', private_keys_json = '[]'
+                    WHERE media_id = 'asset-4'"""
+            )
+        self._seed_uploaded_r2_identity(
+            upload_asset_id="legacy-upload-id",
+            photo_id="canonical-media-4",
+        )
+
+        members = gateway.derive_deployed_lifecycle_members(self.root, ["asset-4"], self.db)
+
+        self.assertEqual(members, [{
+            "canonicalAssetId": "asset-4",
+            "canonicalMediaId": "canonical-media-4",
+            "bindings": [
+                {"bucket": "private", "objectKey": "masters/canonical-media-4.jpg"},
+                {"bucket": "public", "objectKey": "expo/canonical-media-4_900.jpg"},
+            ],
+        }])
+
+    def test_derivation_rejects_ambiguous_durable_upload_identity(self) -> None:
+        self._seed_asset("legacy-upload-id")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET raw_json = ? WHERE asset_id = 'asset-4'",
+                (json.dumps({"localIdentifier": "legacy-upload-id"}),),
+            )
+            connection.execute("DELETE FROM r2_objects WHERE photo_id = 'asset-4'")
+            connection.execute(
+                """UPDATE media_lifecycle
+                      SET public_preview_keys_json = '[]', private_keys_json = '[]'
+                    WHERE media_id = 'asset-4'"""
+            )
+        for photo_id in ("canonical-media-4a", "canonical-media-4b"):
+            self._seed_uploaded_r2_identity(
+                upload_asset_id="legacy-upload-id",
+                photo_id=photo_id,
+            )
+
+        with self.assertRaisesRegex(gateway.WasteBasketError, "ambiguous canonical R2 mapping"):
+            gateway.derive_deployed_lifecycle_members(self.root, ["asset-4"], self.db)
+        self.assertIn(
+            "Repair the canonical R2 mapping",
+            gateway._blocked_hosted_lifecycle_error(
+                "ambiguous canonical R2 mapping for asset-4",
+                gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS,
+            ),
+        )
+
+    def test_lifecycle_scope_allows_only_assets_with_no_cloud_media_evidence(self) -> None:
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO sidecar_assets
+                     (asset_id, source_anchor, media_type, filename, raw_json, indexed_at, updated_at)
+                   VALUES ('local-only', 'apple-photos-cloud://local-only', 'photo',
+                           'local-only.jpg', '{}', ?, ?)""",
+                (NOW, NOW),
+            )
+
+        scope = gateway.classify_deployed_lifecycle_scope(
+            self.root,
+            ["local-only"],
+            self.db,
+        )
+
+        self.assertEqual(scope, {
+            "scope": "local-only",
+            "assetIds": ["local-only"],
+            "members": [],
+            "reason": "no-cloud-media-evidence",
+        })
+
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO public_catalog_publications
+                     (asset_id, source_version_hash, media_id, state, created_at, updated_at)
+                   VALUES ('local-only', 'source-v1', 'missing-media', 'failed', ?, ?)""",
+                (NOW, NOW),
+            )
+        with self.assertRaisesRegex(gateway.WasteBasketError, "canonical R2 mapping is missing"):
+            gateway.classify_deployed_lifecycle_scope(
+                self.root,
+                ["local-only"],
+                self.db,
+            )
+
+    def test_lifecycle_scope_partitions_mixed_deployed_and_local_only_assets(self) -> None:
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """INSERT INTO sidecar_assets
+                     (asset_id, source_anchor, media_type, filename, raw_json, indexed_at, updated_at)
+                   VALUES ('local-only', 'apple-photos-cloud://local-only', 'photo',
+                           'local-only.jpg', '{}', ?, ?)""",
+                (NOW, NOW),
+            )
+
+        scope = gateway.classify_deployed_lifecycle_scope(
+            self.root,
+            ["asset-1", "local-only"],
+            self.db,
+        )
+
+        self.assertEqual(scope["scope"], "mixed")
+        self.assertEqual(scope["assetIds"], ["asset-1", "local-only"])
+        self.assertEqual(scope["deployedAssetIds"], ["asset-1"])
+        self.assertEqual(scope["localOnlyAssetIds"], ["local-only"])
+        self.assertEqual(scope["members"][0]["canonicalAssetId"], "asset-1")
+
+    def test_complete_lifecycle_schema_skips_hot_path_migrations(self) -> None:
+        gateway.ensure_schema(self.root, self.db)
+
+        with patch.object(sidecar_state_db, "ensure_schema") as sidecar_schema, patch.object(
+            gateway.owner_state_db, "ensure_schema"
+        ) as owner_schema, patch.object(
+            gateway.fixture_pipeline, "ensure_schema"
+        ) as fixture_schema:
+            gateway.ensure_schema(self.root, self.db)
+
+        sidecar_schema.assert_not_called()
+        owner_schema.assert_not_called()
+        fixture_schema.assert_not_called()
+
+    def test_explicit_empty_adopts_legacy_hidden_rows_and_uses_legacy_preview_keys(self) -> None:
+        self._seed_asset("legacy-hidden")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """UPDATE media_lifecycle
+                   SET lifecycle_state = 'hidden', hidden_at = ?, previous_state = 'active',
+                       public_preview_keys_json = ?, private_keys_json = '[]'
+                 WHERE media_id = ?""",
+                (NOW, json.dumps(["expo/legacy-hidden_900.jpg"]), "legacy-hidden"),
+            )
+            connection.execute(
+                "DELETE FROM r2_objects WHERE photo_id = ?",
+                ("legacy-hidden",),
+            )
+            connection.commit()
+
+        members = gateway.derive_deployed_lifecycle_members(self.root, ["legacy-hidden"], self.db)
+        self.assertEqual(
+            members[0]["bindings"],
+            [{"bucket": "public", "objectKey": "expo/legacy-hidden_900.jpg"}],
+        )
+        emptied = gateway.empty_waste_basket(
+            self.root,
+            confirmed=True,
+            confirmation_token=gateway.EMPTY_CONFIRMATION_TOKEN,
+            request_key="legacy-empty-1",
+            db_path=self.db,
+        )
+        self.assertEqual(emptied["assetIds"], ["legacy-hidden"])
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            entry = connection.execute(
+                "SELECT state FROM owner_waste_basket_entries WHERE asset_id = ?",
+                ("legacy-hidden",),
+            ).fetchone()
+            self.assertEqual(entry["state"], "tombstoned")
+            self.assertEqual(
+                connection.execute(
+                    "SELECT lifecycle_state FROM media_lifecycle WHERE media_id = ?",
+                    ("legacy-hidden",),
+                ).fetchone()["lifecycle_state"],
+                "discarded",
+            )
+            self.assertGreater(
+                connection.execute(
+                    "SELECT count(*) FROM owner_waste_basket_provenance WHERE entry_id = (SELECT entry_id FROM owner_waste_basket_entries WHERE asset_id = ?)",
+                    ("legacy-hidden",),
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_explicit_empty_materializes_sidecar_parents_for_orphaned_legacy_rows(self) -> None:
+        asset_id = "legacy-orphaned-sidecar"
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            connection.execute(
+                """
+                INSERT INTO media_lifecycle
+                  (media_id, lifecycle_state, previous_state, source_slug, title,
+                   hidden_at, updated_at)
+                VALUES (?, 'hidden', 'active', 'expo', 'Legacy orphan', ?, ?)
+                """,
+                (asset_id, NOW, NOW),
+            )
+            connection.commit()
+
+        emptied = gateway.empty_waste_basket(
+            self.root,
+            [asset_id],
+            confirmed=True,
+            confirmation_token=gateway.EMPTY_CONFIRMATION_TOKEN,
+            request_key="legacy-orphaned-empty-1",
+            db_path=self.db,
+        )
+        self.assertEqual(emptied["state"], "tombstoned")
+        with sidecar_state_db.connect(self.root, self.db) as connection:
+            self.assertIsNotNone(
+                connection.execute(
+                    "SELECT 1 FROM sidecar_assets WHERE asset_id = ?", (asset_id,)
+                ).fetchone()
+            )
+            self.assertIsNotNone(
+                connection.execute(
+                    "SELECT 1 FROM sidecar_decisions WHERE asset_id = ?", (asset_id,)
+                ).fetchone()
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT tombstone_state FROM sidecar_tombstones WHERE asset_id = ?",
+                    (asset_id,),
+                ).fetchone()[0],
+                "active",
+            )
 
     def test_direct_bypasses_are_rejected_even_with_legacy_marker(self) -> None:
         with self.assertRaises(ValueError):

@@ -21,6 +21,7 @@ targets:
     dependencies:
       - sdk: Security.framework
       - sdk: Photos.framework
+      - sdk: Network.framework
       - sdk: libsqlite3.tbd
     settings:
       base:
@@ -36,6 +37,8 @@ targets:
       # Compile the production UI sources directly into this developer-only
       # app host while SwiftPM keeps the release targets modular.
       - path: Sources/BackstageApp
+        excludes:
+          - graphify-out
     dependencies:
       - target: OwnerCore
       - sdk: Security.framework
@@ -49,9 +52,9 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: PhotosByElie Backstage
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Backstage reads Photos for private culling, preview, and export workflows.
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Verified metadata give-back is performed through the signed PhotosByElie bridge.
-        MARKETING_VERSION: 226.1
-        CURRENT_PROJECT_VERSION: 89
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Backstage applies approved metadata updates to selected photos.
+        MARKETING_VERSION: "230.16"
+        CURRENT_PROJECT_VERSION: 126
         ENABLE_DEBUG_DYLIB: YES
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) BACKSTAGE_XCODE_HOST"
 

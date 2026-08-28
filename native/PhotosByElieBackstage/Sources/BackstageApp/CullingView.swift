@@ -9,13 +9,24 @@ import SwiftUI
 private enum CullingQuickLookPresenter {
     static func present(
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection = .next,
+        onReturnToReview: @escaping () -> Void
     ) {
         let ids = model.selectedCullingAssetIDs
-        guard !ids.isEmpty else { return }
+        guard !ids.isEmpty else {
+            model.cullingStatus = "Select one Culling item before opening Quick Look."
+            return
+        }
+        guard ids.count == 1 else {
+            model.cullingStatus = "Quick Look opens one selected Culling item at a time."
+            return
+        }
+        let presentationID = coordinator.beginPresentation()
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
             let urls = await model.prepareQuickLookURLs()
+            guard coordinator.isCurrentPresentation(presentationID) else { return }
             let prepared = zip(ids, urls).compactMap { assetID, url in
                 metadata(for: assetID, model: model).map { (url, $0) }
             }
@@ -23,54 +34,113 @@ private enum CullingQuickLookPresenter {
             coordinator.present(
                 urls: prepared.map(\.0),
                 metadata: prepared.map(\.1),
+                presentation: presentationID,
                 onShortcut: { [weak model, weak coordinator] shortcut, assetID in
                     guard let model, let coordinator,
                           !model.isApplyingCullingDecision
                     else { return false }
+                    let previousIDs = model.visibleCullingAssets.map(\.id)
+                    let wasVisible = previousIDs.contains(assetID)
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: coordinator,
+                        completion: { succeeded in
+                            guard succeeded else { return }
+                            advanceOrRefresh(
+                                assetID: assetID,
+                                previousIDs: previousIDs,
+                                wasVisible: wasVisible,
+                                model: model,
+                                coordinator: coordinator,
+                                direction: direction,
+                                onReturnToReview: onReturnToReview
+                            )
+                        }
+                    ) {
+                        return true
+                    }
                     switch shortcut {
-                    case .previous:
+                    case .previous, .next, .previousRow, .nextRow:
+                        guard let delta = shortcut.selectionDelta(
+                            rowStride: model.cullingGridDensity
+                        ), let navigationDirection = shortcut.ownerSelectionDirection else {
+                            return false
+                        }
                         navigate(
-                            by: -1,
+                            by: delta,
+                            direction: navigationDirection,
                             from: assetID,
                             model: model,
-                            coordinator: coordinator
-                        )
-                    case .next:
-                        navigate(
-                            by: 1,
-                            from: assetID,
-                            model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            onReturnToReview: onReturnToReview
                         )
                     case .pick:
                         applyPlacement(
                             .pick,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
                     case .hide:
                         applyPlacement(
                             .reject,
                             assetID: assetID,
                             model: model,
-                            coordinator: coordinator
+                            coordinator: coordinator,
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
                         )
-                    case let .rating(value):
-                        model.clickCullingAsset(assetID, modifiers: [])
+                    case .wasteBasket:
+                        applyWasteBasket(
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator,
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
+                        )
+                    case .rating, .color:
+                        return false
+                    case .undo:
+                        guard !model.cullingHistory.isEmpty else { return false }
                         Task { [weak model, weak coordinator] in
                             guard let model, let coordinator else { return }
-                            await model.applyRatingShortcut(value)
-                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                            await model.undoLastCullingDecision()
+                            guard coordinator.isVisible else { return }
+                            if model.selectedCullingAssetIDs.count == 1 {
+                                present(
+                                    model: model,
+                                    coordinator: coordinator,
+                                    direction: direction,
+                                    onReturnToReview: onReturnToReview
+                                )
+                            } else {
+                                coordinator.dismiss()
+                            }
                         }
-                    case let .color(value):
-                        model.clickCullingAsset(assetID, modifiers: [])
-                        Task { [weak model, weak coordinator] in
-                            guard let model, let coordinator else { return }
-                            await model.applyColorShortcut(value)
-                            refreshMetadata(assetID, model: model, coordinator: coordinator)
+                    case .unpick:
+                        applyPlacement(
+                            .unpick,
+                            assetID: assetID,
+                            model: model,
+                            coordinator: coordinator,
+                            removalDirection: direction,
+                            onReturnToReview: onReturnToReview
+                        )
+                    case .returnToReview:
+                        if !model.cullingSelection.selectedIDs.contains(assetID) {
+                            model.clickCullingAsset(assetID, modifiers: [])
                         }
-                    case .approve, .unpick:
+                        guard model.canReturnCullingSelectionToReview else {
+                            model.cullingStatus = "Return to Review is available only for approved Gallery assets."
+                            return true
+                        }
+                        coordinator.dismiss()
+                        onReturnToReview()
+                    case .approve:
                         return false
                     }
                     return true
@@ -81,38 +151,166 @@ private enum CullingQuickLookPresenter {
 
     private static func navigate(
         by delta: Int,
+        direction: OwnerSelectionDirection,
         from assetID: String,
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        onReturnToReview: @escaping () -> Void
     ) {
         model.clickCullingAsset(assetID, modifiers: [])
         model.moveCullingSelection(by: delta, extending: false)
         guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
-        present(model: model, coordinator: coordinator)
+        present(
+            model: model,
+            coordinator: coordinator,
+            direction: direction,
+            onReturnToReview: onReturnToReview
+        )
     }
 
     private static func applyPlacement(
         _ action: SidecarPickAction,
         assetID: String,
         model: BackstageViewModel,
-        coordinator: BackstageQuickLookCoordinator
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
     ) {
-        let wasVisible = model.visibleCullingAssets.contains { $0.id == assetID }
-        model.clickCullingAsset(assetID, modifiers: [])
+        let previousIDs = model.visibleCullingAssets.map(\.id)
+        // Quick Look can be opened from a command-click multi-selection. Do
+        // not collapse that selection merely because the focused Quick Look
+        // item is the target of H/P; the action must apply to the complete
+        // explicit selection. Select the item only when it was not already
+        // part of the selection.
+        if !model.cullingSelection.selectedIDs.contains(assetID) {
+            model.clickCullingAsset(assetID, modifiers: [])
+        }
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
-            await model.applyPickShortcut(action)
+            let succeeded = await model.applyPickShortcut(
+                action,
+                removalDirection: removalDirection
+            )
             guard coordinator.isVisible else { return }
-            let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
-            if wasVisible && !remainsVisible {
-                if model.focusedCullingAssetID == nil {
-                    coordinator.dismiss()
-                } else {
-                    present(model: model, coordinator: coordinator)
-                }
-            } else {
+            guard succeeded else {
                 refreshMetadata(assetID, model: model, coordinator: coordinator)
+                return
             }
+            advanceAfterSuccessfulDecision(
+                assetID: assetID,
+                previousIDs: previousIDs,
+                model: model,
+                coordinator: coordinator,
+                direction: removalDirection,
+                onReturnToReview: onReturnToReview
+            )
+        }
+    }
+
+    private static func advanceAfterSuccessfulDecision(
+        assetID: String,
+        previousIDs: [String],
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
+    ) {
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: [assetID],
+            anchorID: assetID,
+            focusedID: assetID
+        )
+        // H/P are completed editorial decisions, so Quick Look advances even
+        // when the current filters continue to show the acted-on item.
+        let remainingIDs = model.visibleCullingAssets.map(\.id).filter { $0 != assetID }
+        let replacement = selection.replaceItems(
+            remainingIDs,
+            selectingSuccessorAfterRemoving: assetID,
+            direction: direction
+        )
+        model.cullingSelection = selection
+        model.selectedPhotoIDs = selection.selectedIDs
+        if replacement != nil {
+            present(
+                model: model,
+                coordinator: coordinator,
+                direction: direction,
+                onReturnToReview: onReturnToReview
+            )
+        } else {
+            coordinator.dismiss()
+        }
+    }
+
+    private static func applyWasteBasket(
+        assetID: String,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        removalDirection: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
+    ) {
+        if !model.cullingSelection.selectedIDs.contains(assetID) {
+            model.clickCullingAsset(assetID, modifiers: [])
+        }
+        Task { [weak model, weak coordinator] in
+            guard let model, let coordinator else { return }
+            await model.moveCullingSelectionToWasteBasket(
+                removalDirection: removalDirection
+            ) { succeeded, replacementID in
+                guard coordinator.isVisible else { return }
+                guard succeeded else { return }
+                if replacementID != nil {
+                    present(
+                        model: model,
+                        coordinator: coordinator,
+                        direction: removalDirection,
+                        onReturnToReview: onReturnToReview
+                    )
+                } else {
+                    coordinator.dismiss()
+                }
+            }
+        }
+    }
+
+    private static func advanceOrRefresh(
+        assetID: String,
+        previousIDs: [String],
+        wasVisible: Bool,
+        model: BackstageViewModel,
+        coordinator: BackstageQuickLookCoordinator,
+        direction: OwnerSelectionDirection,
+        onReturnToReview: @escaping () -> Void
+    ) {
+        guard coordinator.isVisible else { return }
+        let remainsVisible = model.visibleCullingAssets.contains { $0.id == assetID }
+        guard wasVisible && !remainsVisible else {
+            refreshMetadata(assetID, model: model, coordinator: coordinator)
+            return
+        }
+        var selection = OwnerSelectionModel(
+            orderedIDs: previousIDs,
+            selectedIDs: [assetID],
+            anchorID: assetID,
+            focusedID: assetID
+        )
+        let replacement = selection.replaceItems(
+            model.visibleCullingAssets.map(\.id),
+            selectingSuccessorAfterRemoving: assetID,
+            direction: direction
+        )
+        model.cullingSelection = selection
+        model.selectedPhotoIDs = selection.selectedIDs
+        if replacement != nil {
+            present(
+                model: model,
+                coordinator: coordinator,
+                direction: direction,
+                onReturnToReview: onReturnToReview
+            )
+        } else {
+            coordinator.dismiss()
         }
     }
 
@@ -139,11 +337,19 @@ private enum CullingQuickLookPresenter {
             filename: asset.filename,
             title: asset.title,
             keywords: asset.keywords,
+            locationLabel: asset.locationLabel,
             capturedAt: asset.capturedAt,
+            sourceSize: BackstageQuickLookSourceSize(
+                mediaType: asset.mediaType,
+                pixelWidth: asset.pixelWidth,
+                pixelHeight: asset.pixelHeight,
+                byteCount: asset.originalByteCount,
+                currentImageByteCount: model.currentImageByteCount(for: assetID)
+            ),
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: decision?.pickState ?? asset.placementState.rawValue,
-            shortcutHint: "Shortcuts: ←/→ navigate • H exclude • P include • 1–5 rating • 6–9 color"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • R return approved to Review • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
         )
     }
 }
@@ -153,27 +359,32 @@ struct CullingView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @State private var confirmingReturnToReview = false
 
     var body: some View {
         GeometryReader { viewport in
-            let topInset = viewport.safeAreaInsets.top
-            let bottomInset = viewport.safeAreaInsets.bottom
-
             HSplitView {
                 cullingWorkspacePane
+                    .frame(height: viewport.size.height, alignment: .topLeading)
                 cullingPreviewPane
+                    .frame(height: viewport.size.height, alignment: .topLeading)
             }
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit"))
-            .padding(.top, topInset)
-            .padding(.bottom, bottomInset)
             .frame(
                 width: viewport.size.width,
-                height: max(0, viewport.size.height - topInset - bottomInset),
+                height: viewport.size.height,
                 alignment: .top
             )
         }
-        .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.snappy(duration: 0.24), value: model.isPreviewPanelVisible)
+        .onAppear {
+            quickLook.activate()
+        }
+        .onDisappear {
+            quickLook.deactivate()
+            model.cancelCullingThumbnailWork()
+        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
@@ -183,35 +394,73 @@ struct CullingView: View {
                 await model.refreshPhotos()
             }
             if !model.selectedFixtureID.isEmpty {
-                await model.loadFixtureCullingWindow()
+                if model.fixtureCullingWindow == nil {
+                    await model.loadFixtureCullingWindow()
+                } else {
+                    model.replaceCullingItems()
+                }
             } else {
                 await model.refreshCullingDecisions()
             }
+            await model.discoverRecentPhotosAtStartupIfNeeded()
         }
+        .confirmationDialog(
+            "Return the selected approved assets to Review?",
+            isPresented: $confirmingReturnToReview
+        ) {
+            Button("Return \(model.cullingReturnToReviewEligibleIDs.count.formatted()) to Review") {
+                Task { await model.returnCullingSelectionToReview() }
+            }
+            .backstageHelp("Confirm the audited approval reversal while preserving metadata, fixture picks, and any currently deployed rendition.")
+            Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without changing approval or delivery state.")
+        } message: {
+            Text(model.cullingReturnToReviewConfirmationMessage)
+        }
+    }
+
+    private func requestReturnToReview() {
+        guard model.canReturnCullingSelectionToReview else {
+            model.cullingStatus = model.selectedCullingAssetIDs.isEmpty
+                ? "Select one or more Gallery assets first."
+                : "Return to Review is available only for approved Gallery assets."
+            return
+        }
+        confirmingReturnToReview = true
     }
 
     private var cullingWorkspacePane: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             cullingHeader
             cullingGrid
+            cullingFooter
         }
-        .padding()
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .frame(minWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // The footer owns the action, status, and keyboard-help copy. The inset
-        // reserves its height from the grid so resizing cannot cover it.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                Divider()
-                cullingActions
-            }
-            .padding(.top, 8)
+    }
+
+    private var cullingFooter: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider()
+            cullingActions
         }
+        .padding(.top, 4)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .bottomLeading)
+        .layoutPriority(2)
     }
 
     private var cullingHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             cullingTitleBar
+            if !model.customerPhotoStatus.isEmpty {
+                BackstageFeedbackView(
+                    message: model.customerPhotoStatus,
+                    isWorking: model.isOpeningCustomerPhoto
+                )
+            }
             BackstageFeedbackView(
                 message: model.photoStatus,
                 isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex
@@ -233,7 +482,7 @@ struct CullingView: View {
                 Spacer()
                 cullingHeaderActions
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 cullingHeading
                 cullingHeaderActions
             }
@@ -244,39 +493,94 @@ struct CullingView: View {
 
     private var cullingFilterControls: some View {
         FlowLayout(spacing: 8) {
-            Text("Status").font(.caption.weight(.semibold))
-            ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
-                Toggle(
-                    view.label,
-                    isOn: Binding(
-                        get: { model.cullingViews.contains(view) },
-                        set: { _ in model.toggleCullingViewFilter(view) }
+            HStack(spacing: 8) {
+                ForEach(FixtureCullingView.selectableCases, id: \.self) { view in
+                    Toggle(
+                        view.label,
+                        isOn: Binding(
+                            get: { model.cullingViews.contains(view) },
+                            set: { _ in model.toggleCullingViewFilter(view) }
+                        )
                     )
-                )
+                    .toggleStyle(.checkbox)
+                }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Status filter")
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
+            CullingRatingSlider(
+                rating: model.cullingMinimumRating,
+                isDisabled: false,
+                accessibilityLabel: "Minimum rating filter",
+                help: "Click or drag across the stars to show that rating and above. Zero shows all ratings."
+            ) { rating in
+                model.setCullingMinimumRating(rating)
+            }
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
+            HStack(spacing: CullingCompactControlMetrics.groupSpacing) {
+                ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
+                    LightroomColorFilterButton(
+                        color: color,
+                        isSelected: model.cullingColorFilters.contains(color)
+                    ) {
+                        model.toggleCullingColorFilter(color)
+                    }
+                }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Color filter")
+            Divider()
+                .frame(width: 1, height: 18)
+                .frame(height: CullingCompactControlMetrics.height)
+            Toggle("Bursts", isOn: $model.galleryBurstsOnly)
                 .toggleStyle(.checkbox)
-            }
-            Divider().frame(width: 1, height: 18)
-            Text("Rating").font(.caption.weight(.semibold))
-            ForEach(0...5, id: \.self) { value in
-                LightroomRatingFilterButton(
-                    rating: value,
-                    isSelected: model.cullingRatingFilters.contains(value)
-                ) {
-                    model.toggleCullingRatingFilter(value)
+                .frame(height: CullingCompactControlMetrics.height)
+                .backstageHelp("Show only assets that belong to a capture-time burst. This filter has no mutation shortcut.")
+            Menu("Editorial") {
+                ForEach(GalleryEditorialFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.galleryEditorialFilters.contains(filter) },
+                            set: { _ in model.toggleGalleryEditorialFilter(filter) }
+                        )
+                    )
                 }
             }
-            Divider().frame(width: 1, height: 18)
-            Text("Color").font(.caption.weight(.semibold))
-            ForEach(CullingColorFilter.selectableCases, id: \.self) { color in
-                LightroomColorFilterButton(
-                    color: color,
-                    isSelected: model.cullingColorFilters.contains(color)
-                ) {
-                    model.toggleCullingColorFilter(color)
+            .accessibilityLabel("Editorial filters")
+            Menu("Delivery") {
+                ForEach(GalleryDeliveryFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.galleryDeliveryFilters.contains(filter) },
+                            set: { _ in model.toggleGalleryDeliveryFilter(filter) }
+                        )
+                    )
                 }
             }
+            .accessibilityLabel("Delivery and publication filters")
+            Menu("Source") {
+                ForEach(GallerySourceFilter.allCases) { filter in
+                    Toggle(
+                        filter.label,
+                        isOn: Binding(
+                            get: { model.gallerySourceFilters.contains(filter) },
+                            set: { _ in model.toggleGallerySourceFilter(filter) }
+                        )
+                    )
+                }
+            }
+            .accessibilityLabel("Source availability filters")
             Button("Clear filters") { model.clearCullingFilters() }
-                .backstageHelp("Restore the default Culling status, rating, color, and search filters.")
+                .frame(height: CullingCompactControlMetrics.height)
+                .backstageHelp("Show all Gallery decision states, ratings, colors, and search results.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
@@ -284,6 +588,10 @@ struct CullingView: View {
         .onChange(of: model.cullingViews) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingRatingFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.cullingColorFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryEditorialFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryDeliveryFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.gallerySourceFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryBurstsOnly) { _, _ in model.applyCullingFilters() }
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -332,13 +640,13 @@ struct CullingView: View {
                     .backstageHelp("Make each Culling thumbnail larger, showing fewer assets at once.")
             }
             .buttonStyle(.bordered)
-            .backstageHelp(model.cullingUsesFill
-                ? "Switch thumbnails to Fit so each complete image remains visible inside its card."
-                : "Switch thumbnails to Fill so images crop to cover their cards edge to edge.")
             Button(model.cullingUsesFill ? "Fill" : "Fit") {
                 model.toggleCullingFitFill()
             }
             .buttonStyle(.bordered)
+            .backstageHelp(model.cullingUsesFill
+                ? "Switch thumbnails to Fit so each complete image remains visible inside its card. This changes display only; fixture decisions stay unchanged."
+                : "Switch thumbnails to Fill so images crop to cover their cards edge to edge. This changes display only; fixture decisions stay unchanged.")
         }
     }
 
@@ -354,10 +662,16 @@ struct CullingView: View {
                 .modifier(
                     CullingPrimaryKeyCommands(
                         model: model,
-                        quickLook: quickLook
+                        quickLook: quickLook,
+                        onReturnToReview: requestReturnToReview
                     )
                 )
                 .modifier(CullingDisplayKeyCommands(model: model))
+                .onChange(of: model.cullingScrollTargetID) { _, target in
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    model.cullingScrollTargetID = nil
+                }
         }
         .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
@@ -384,6 +698,7 @@ struct CullingView: View {
         }
         .focusable()
         .overlay { cullingGridOverlay }
+        .modifier(CullingScrollPhaseObserver(model: model))
     }
 
     private var cullingGridCards: some View {
@@ -411,16 +726,20 @@ struct CullingView: View {
                     isFocused: model.cullingSelection.focusedID == asset.id,
                     usesFill: model.cullingUsesFill
                 )
+                .frame(
+                    width: CGFloat(model.cullingGridColumnWidth),
+                    alignment: .topLeading
+                )
+                .clipped()
                 .id(asset.id)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                     Task { await model.loadPreview() }
                 }
-                .onAppear {
-                    guard !isPreviewMode else { return }
-                    model.requestThumbnail(for: asset.id)
-                }
+                .modifier(CullingCardVisibilityObserver(
+                    model: model, asset: asset, isPreviewMode: isPreviewMode
+                ))
             }
         }
         .padding(.horizontal, 6)
@@ -474,126 +793,172 @@ struct CullingView: View {
     }
 
     private var cullingActions: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            cullingDestinationActions
+        VStack(alignment: .leading, spacing: 4) {
             cullingDecisionActions
             cullingHistoryActions
-            BackstageFeedbackView(
-                message: model.cullingStatus,
-                isWorking: model.isLoadingFixtureCulling
-                    || model.isLoadingCullingDecisions
-                    || model.isApplyingCullingDecision
-                    || model.isLoadingPreview
-            )
+            cullingStatusFeedback
             cullingOperationProgress
-            Text("Shortcuts: P include in fixture • H exclude from fixture • X move to recoverable Waste Basket • U clear fixture decision • 0–5 rating • 6–9 color • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("P pick • H hide • U clears the selected fixture decision • R returns approved assets to Review after confirmation • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
+        .controlSize(.small)
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .bottomLeading)
         .layoutPriority(2)
     }
 
-    private var cullingDestinationActions: some View {
-        HStack {
-            Button("Open in Review") { model.sendCullingSelection(to: .review) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Review and carry the current Culling selection into that workspace.")
-            Button("Send to Metadata") { model.sendCullingSelection(to: .metadata) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Metadata and carry the current Culling selection into its editing workflow.")
-            Button("Send to Uploads") { model.sendCullingSelection(to: .uploads) }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Open Uploads and carry the current Culling selection into the publication tray.")
-            Spacer()
+    @ViewBuilder
+    private var cullingStatusFeedback: some View {
+        let isWorking = model.isLoadingFixtureCulling
+            || model.isLoadingCullingDecisions
+            || model.isApplyingCullingDecision
+            || model.cullingWasteBasketQueueing
+            || model.cullingWasteBasketPendingActionID != nil
+            || model.isLoadingPreview
+        if isWorking {
+            BackstageFeedbackView(message: model.cullingStatus, isWorking: true)
+        } else {
+            Text(model.cullingStatus)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 
     private var cullingDecisionActions: some View {
-        FlowLayout(spacing: 8) {
-            Text("\(model.cullingSelection.selectedIDs.count) selected")
-            cullingPlacementPicker
-            Button("Apply fixture decision") {
-                Task { await model.applyPickShortcut(model.cullingPickAction) }
+        FlowLayout(spacing: 4) {
+            Button("P Pick") {
+                Task { await model.applyPickShortcut(.pick) }
             }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("P Pick selected items")
+            .backstageHelp("Instantly pick the explicit selection in the current fixture. The existing audited fixture writer reports affected, skipped, and failed items.")
+            Button("H Hide") {
+                Task { await model.applyPickShortcut(.reject) }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .accessibilityLabel("H Hide selected items")
+            .backstageHelp("Instantly hide the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
+            Button("U \(model.cullingClearDecisionLabel)") {
+                Task { await model.applyPickShortcut(.unpick) }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(!model.canClearCullingDecision || model.isApplyingCullingDecision)
+            .accessibilityLabel("U \(model.cullingClearDecisionLabel) selected items")
+            .accessibilityValue(
+                model.cullingSelection.selectedIDs.isEmpty
+                    ? "No items selected."
+                    : model.canClearCullingDecision
+                        ? "Returns the selected fixture items to Undecided."
+                        : "Selected items are already Undecided."
+            )
+            .backstageHelp("\(model.cullingClearDecisionHelp) This uses the same reversible fixture writer as the U shortcut and does not affect the Waste Basket.")
+            Button("R Return to Review…") {
+                requestReturnToReview()
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .disabled(!model.canReturnCullingSelectionToReview)
+            .accessibilityLabel("R Return selected approved assets to Review")
+            .accessibilityValue(
+                model.cullingReturnToReviewEligibleIDs.isEmpty
+                    ? "No approved assets selected."
+                    : "\(model.cullingReturnToReviewEligibleIDs.count.formatted()) approved selected; confirmation required."
+            )
+            .backstageHelp("Review the confirmation for reversing approval. Metadata and fixture picks are preserved; a live deployed rendition remains live until separately replaced or unpublished.")
+            Button("X Waste Basket") {
+                Task { await model.moveCullingSelectionToWasteBasket() }
+            }
+            .frame(height: CullingCompactControlMetrics.height)
             .disabled(
                 model.cullingSelection.selectedIDs.isEmpty
                     || model.isApplyingCullingDecision
-                    || !model.hasCurrentCullingFixture
+                    || model.cullingWasteBasketQueueing
             )
-            .backstageHelp("Apply the selected Include, Exclude, or Undecided fixture decision to every selected asset.")
-            cullingRatingPicker
-            Button("Apply rating") {
-                Task { await model.applyRating() }
+            .accessibilityLabel("X move selected items to the recoverable Waste Basket")
+            .backstageHelp("Move the explicit selection to the recoverable Waste Basket through the guarded lifecycle writer; it does not create a global tombstone directly.")
+            CullingRatingSlider(
+                rating: model.cullingSelectionRating,
+                isDisabled: model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision,
+                accessibilityLabel: "Selected photo rating",
+                help: "Click or drag across the stars to assign 1–5. Choose the current rating again to clear it. Shortcuts: 0–5."
+            ) { rating in
+                Task { await model.applyRatingShortcut(rating) }
             }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .backstageHelp("Apply the chosen star rating to every selected asset.")
-            cullingColorPicker
-            Button("Apply color") {
-                Task { await model.applyColor() }
+            HStack(spacing: CullingCompactControlMetrics.groupSpacing) {
+                ForEach(SidecarColor.allCases.filter { $0 != .none }, id: \.self) { color in
+                    cullingColorAssignmentButton(color)
+                }
             }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
-            .backstageHelp("Apply the chosen color label to every selected asset.")
-            Button("Quick Look") {
-                CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
-            }
-            .keyboardShortcut(.space, modifiers: [])
-            .disabled(model.cullingSelection.selectedIDs.isEmpty)
-            .backstageHelp("Open the focused selected asset in Quick Look without changing its Culling decision.")
-            Button("Export originals…") {
-                guard let directory = chooseExportDirectory() else { return }
-                Task { await model.exportSelected(to: directory) }
-            }
-            .disabled(model.cullingSelection.selectedIDs.isEmpty)
-            .backstageHelp("Choose a folder and export the original files for all selected assets.")
+            .frame(height: CullingCompactControlMetrics.height)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Color assignment")
         }
-        .labelsHidden()
     }
 
-    private var cullingPlacementPicker: some View {
-        Picker("Fixture decision", selection: $model.cullingPickAction) {
-            ForEach(SidecarPickAction.allCases, id: \.self) { action in
-                Text(cullingPickLabel(action)).tag(action)
-            }
+    private func cullingColorAssignmentButton(_ color: SidecarColor) -> some View {
+        let isSelected = model.cullingSelectionHasColor(color)
+        return Button {
+            Task { await model.toggleCullingColor(color) }
+        } label: {
+            CullingColorSwatch(
+                fill: cullingAssignmentColor(color),
+                isSelected: isSelected,
+                showsSlash: false
+            )
+            .modifier(CullingCompactControlChrome(
+                width: CullingCompactControlMetrics.colorWidth,
+                isSelected: isSelected
+            ))
         }
-        .frame(width: 180)
+        .buttonStyle(.plain)
+        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+        .accessibilityLabel("Assign \(color.label) color")
+        .accessibilityValue(isSelected
+            ? "Applied to every selected asset; press again to clear."
+            : "Not applied to every selected asset.")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .backstageHelp(cullingColorAssignmentHelp(color))
     }
 
-    private var cullingRatingPicker: some View {
-        Picker("Rating", selection: $model.cullingRating) {
-            ForEach(0...5, id: \.self) { rating in
-                Text(rating == 0 ? "No rating" : "\(rating) star\(rating == 1 ? "" : "s")")
-                    .tag(rating)
-            }
+    private func cullingColorAssignmentHelp(_ color: SidecarColor) -> String {
+        let shortcut: String? = switch color {
+        case .red: "6"
+        case .yellow: "7"
+        case .green: "8"
+        case .blue: "9"
+        case .purple, .none: nil
         }
-        .frame(width: 170)
+        let suffix = shortcut.map { " (\($0))." } ?? "."
+        return "Toggle \(color.label.lowercased()) on selected assets\(suffix)"
     }
 
-    private var cullingColorPicker: some View {
-        Picker("Color", selection: $model.cullingColor) {
-            ForEach(SidecarColor.allCases, id: \.self) {
-                Text($0.label).tag($0)
-            }
+    private func cullingAssignmentColor(_ color: SidecarColor) -> Color {
+        switch color {
+        case .none: .clear
+        case .red: .red
+        case .yellow: .yellow
+        case .green: .green
+        case .blue: .blue
+        case .purple: .purple
         }
-        .frame(width: 145)
     }
 
     private var cullingHistoryActions: some View {
-        HStack {
+        HStack(spacing: 6) {
+            Text("\(model.cullingSelection.selectedIDs.count) selected")
+                .foregroundStyle(.secondary)
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(model.cullingHistory.isEmpty)
                 .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()
-            Button("Reload decisions") {
-                Task { await model.refreshCullingDecisions() }
+            if !model.cullingSelection.selectedIDs.isEmpty {
+                Button("Clear selection") { model.clearCullingSelection() }
+                    .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
             }
-            .backstageHelp("Reload the latest persisted ratings, colors, and fixture decisions for the visible assets.")
-            Button("Clear selection") { model.clearCullingSelection() }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
-                .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
         }
     }
 
@@ -620,14 +985,6 @@ struct CullingView: View {
                     .disabled(model.cullingCancellationRequested)
                     .backstageHelp("Request cancellation of the Culling operation currently in progress.")
             }
-        }
-    }
-
-    private func cullingPickLabel(_ action: SidecarPickAction) -> String {
-        switch action {
-        case .pick: "Include"
-        case .reject: "Exclude"
-        case .unpick: "Undecided"
         }
     }
 
@@ -663,16 +1020,14 @@ struct CullingView: View {
     }
     private var cullingHeading: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(
-                model.cullingPool?.name
-                    ?? (model.selectedFixtureBreadcrumb.isEmpty
-                        ? nil
-                        : model.selectedFixtureBreadcrumb)
-                    ?? "Fixture Culling"
-            )
+            Text("Gallery")
             .font(.largeTitle.bold())
             if let pool = model.cullingPool {
                 Text("Fixture pool \(pool.id) • \(pool.assetCount) immutable ordered assets")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if !model.selectedFixtureBreadcrumb.isEmpty {
+                Text("Fixture: \(model.selectedFixtureBreadcrumb) • View: \(model.gallerySavedViewLabel)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -683,18 +1038,42 @@ struct CullingView: View {
         [
             model.selectedFixtureID,
             model.cullingViews.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryEditorialFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryDeliveryFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.gallerySourceFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryBurstsOnly ? "bursts" : "all-captures",
+            model.cullingSearch,
+            model.cullingRatingFilters.sorted().map(String.init).joined(separator: ","),
+            model.cullingColorFilters.map(\.rawValue).sorted().joined(separator: ","),
             String(model.cullingWorkspace.offset),
-            model.visibleCullingAssets.first?.id ?? "empty",
         ].joined(separator: ":")
     }
 
     private var cullingHeaderActions: some View {
         HStack {
+            Menu("Workflows") {
+                Button("View as customer", systemImage: "arrow.up.right.square") {
+                    Task { await model.viewSelectedPhotoAsCustomer() }
+                }
+                .disabled(isPreviewMode || !model.canViewCustomerPhoto)
+                .backstageHelp("Open the selected photo's verified published PBE page without creating an Owner session. Select exactly one photo; unpublished or private-only items need a customer delivery link instead.")
+                Button("Open in Review") { model.sendCullingSelection(to: .review) }
+                    .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                    .backstageHelp("Open the owning Review workspace for the explicit Gallery selection without changing its decisions.")
+                Button("Export selected originals…") {
+                    guard let directory = chooseExportDirectory() else { return }
+                    Task { await model.exportSelected(to: directory) }
+                }
+                .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .backstageHelp("Choose a destination for verified original resources from the explicit Gallery selection; this does not upload or publish them.")
+            }
+            .disabled(model.cullingSelection.selectedIDs.isEmpty)
+            .accessibilityLabel("Gallery workflows")
             if model.cullingPool != nil {
                 Button("All Photos") {
                     model.showAllPhotosInCulling()
                 }
-                .backstageHelp("Leave the current fixture pool and show the complete indexed Photos library in Culling.")
+                .backstageHelp("Leave the current fixture pool and show the complete indexed Photos library in Gallery.")
             }
             Button("Allow Photos") {
                 Task { await model.authorizeAndLoadPhotos() }
@@ -702,27 +1081,29 @@ struct CullingView: View {
             .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
             Button {
                 Task {
-                    await model.refreshPhotos()
+                    await model.refreshPhotosAndRecentIndex()
                     if !model.selectedFixtureID.isEmpty {
                         await model.loadFixtureCullingWindow()
                     }
                 }
             } label: {
-                if model.isLoadingPhotos {
+                if model.isLoadingPhotos || model.isReconcilingPhotosIndex {
                     HStack(spacing: 6) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Refreshing previews…")
+                        Text("Discovering recent Photos…")
                     }
                 } else {
-                    Text("Refresh previews")
+                    Text("Refresh & discover")
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
             .accessibilityLabel(
-                model.isLoadingPhotos ? "Refreshing Photos previews" : "Refresh Photos previews"
+                model.isLoadingPhotos || model.isReconcilingPhotosIndex
+                    ? "Discovering recent Photos"
+                    : "Refresh previews and discover recent Photos"
             )
-            .backstageHelp("Refresh local Photos previews and then reload the active fixture Culling window.")
+            .backstageHelp("Refresh local previews, resume recent-photo discovery from the durable Owner checkpoint, and reload Gallery. A seven-day overlap safely rechecks the boundary without changing decisions.")
             Button {
                 Task { await model.reconcilePhotosLibraryIndex() }
             } label: {
@@ -731,11 +1112,11 @@ struct CullingView: View {
                         .controlSize(.small)
                         .accessibilityLabel("Reconciling complete Photos library")
                 } else {
-                    Text("Reconcile library")
+                    Text("Full library audit")
                 }
             }
             .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
-            .backstageHelp("Stream the complete Photos library through the signed helper and reconcile Owner without changing existing decisions.")
+            .backstageHelp("Explicitly audit the complete Photos library and reconcile unavailable assets. This maintenance pass can take several minutes and does not change existing decisions.")
         }
     }
 
@@ -753,8 +1134,21 @@ struct CullingView: View {
                     : asset.resourceFormat
             )
             metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
+            metadataRow("Fixture state", value: asset.placementState.galleryLabel)
+            metadataRow("Editorial", value: asset.galleryEditorialLabel)
+            if asset.proposalAvailable {
+                metadataRow("AI proposal", value: "Proposal Available")
+            }
+            metadataRow("Delivery / publication", value: asset.galleryDeliveryLabel)
+            metadataRow("Source", value: asset.sourceAvailable ? "Available" : "Unavailable")
             metadataRow("Dimensions", value: formattedDimensions(asset))
-            metadataRow("Original size", value: formattedOriginalSize(asset.originalByteCount))
+            if let byteCount = model.currentImageByteCount(for: asset.id) {
+                metadataRow("Current image size", value: formattedCurrentImageSize(byteCount))
+            }
+            metadataRow(
+                "Location",
+                value: asset.locationLabel.isEmpty ? "No location" : asset.locationLabel
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text("Keywords")
                     .font(.caption.weight(.semibold))
@@ -798,10 +1192,7 @@ struct CullingView: View {
         return "\(asset.pixelWidth) × \(asset.pixelHeight) • \(megapixels.formatted(.number.precision(.fractionLength(1)))) MP"
     }
 
-    private func formattedOriginalSize(_ byteCount: Int64) -> String {
-        guard byteCount > 0 else {
-            return "Unavailable without requesting the original; it may be cloud-only."
-        }
+    private func formattedCurrentImageSize(_ byteCount: Int64) -> String {
         return ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
     }
 
@@ -829,9 +1220,55 @@ struct CullingView: View {
     }
 }
 
+private extension FixturePlacementState {
+    var galleryLabel: String {
+        switch self {
+        case .undecided: "Undecided"
+        case .picked: "Picked"
+        case .hidden: "Hidden"
+        }
+    }
+}
+
+private extension FixtureAsset {
+    var galleryEditorialLabel: String {
+        switch editorialState {
+        case "requesting-ai": "AI Requested"
+        case "proposed": "Proposal Available"
+        case "approved": "Approved"
+        default: "Needs Review"
+        }
+    }
+
+    var galleryDeliveryLabel: String {
+        switch deliveryState {
+        case "needs-upload": "Needs Upload"
+        case "uploading": "Uploading"
+        case "live": "Live"
+        case "failed": "Failed"
+        default: "Not Ready"
+        }
+    }
+
+    var galleryStateBadges: [String] {
+        var badges = [placementState.galleryLabel, galleryEditorialLabel]
+        if proposalAvailable, editorialState != "proposed" {
+            badges.append("Proposal Available")
+        }
+        if deliveryState != "not-ready" {
+            badges.append(galleryDeliveryLabel)
+        }
+        if !sourceAvailable {
+            badges.append("Unavailable")
+        }
+        return badges
+    }
+}
+
 private struct CullingPrimaryKeyCommands: ViewModifier {
     @ObservedObject var model: BackstageViewModel
     @ObservedObject var quickLook: BackstageQuickLookCoordinator
+    let onReturnToReview: () -> Void
 
     func body(content: Content) -> some View {
         content
@@ -841,7 +1278,11 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
                 return .handled
             }
             .onKeyPress(.space) {
-                CullingQuickLookPresenter.present(model: model, coordinator: quickLook)
+                CullingQuickLookPresenter.present(
+                    model: model,
+                    coordinator: quickLook,
+                    onReturnToReview: onReturnToReview
+                )
                 return .handled
             }
             .onKeyPress("p") {
@@ -856,12 +1297,18 @@ private struct CullingPrimaryKeyCommands: ViewModifier {
                 Task { await model.moveCullingSelectionToWasteBasket() }
                 return .handled
             }
+            .onKeyPress("z", phases: .down) { press in
+                guard press.modifiers.contains(.command) else { return .ignored }
+                Task { await model.undoLastCullingDecision() }
+                return .handled
+            }
             .onKeyPress("u") {
                 Task { await model.applyPickShortcut(.unpick) }
                 return .handled
             }
-            .onKeyPress("b") {
-                model.selectVisibleBurstCandidates()
+            .onKeyPress("r") {
+                guard model.canReturnCullingSelectionToReview else { return .ignored }
+                onReturnToReview()
                 return .handled
             }
     }
@@ -905,6 +1352,50 @@ private struct CullingDisplayKeyCommands: ViewModifier {
         guard let color = colors[value] else { return .ignored }
         Task { await model.applyColorShortcut(color) }
         return .handled
+    }
+}
+
+private struct CullingCardVisibilityObserver: ViewModifier {
+    @ObservedObject var model: BackstageViewModel
+    let asset: FixtureAsset
+    let isPreviewMode: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            // LazyVGrid can keep offscreen cards alive. Use viewport visibility,
+            // not allocation/appearance, to own expensive preview requests.
+            content.onScrollVisibilityChange(threshold: 0.01) { visible in
+                guard !isPreviewMode else { return }
+                if visible {
+                    model.cullingAssetDidAppear(asset)
+                } else {
+                    model.cullingAssetDidDisappear(asset.id)
+                }
+            }
+            .onDisappear { model.cullingAssetDidDisappear(asset.id) }
+        } else {
+            content.onAppear {
+                guard !isPreviewMode else { return }
+                model.cullingAssetDidAppear(asset)
+            }
+            .onDisappear { model.cullingAssetDidDisappear(asset.id) }
+        }
+    }
+}
+
+private struct CullingScrollPhaseObserver: ViewModifier {
+    @ObservedObject var model: BackstageViewModel
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.onScrollPhaseChange { _, phase in
+                model.cullingScrollPhaseChanged(isScrolling: phase.isScrolling)
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -985,6 +1476,19 @@ private struct CullingAssetCard: View {
                         .accessibilityLabel("Picked")
                 }
             }
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(asset.galleryStateBadges, id: \.self) { badge in
+                        Text(badge)
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .foregroundStyle(.white)
+                            .background(.black.opacity(0.72), in: Capsule())
+                    }
+                }
+                .padding(6)
+            }
             HStack(spacing: 5) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(asset.title.isEmpty ? asset.filename : asset.title)
@@ -1052,38 +1556,147 @@ private struct CullingAssetCard: View {
 
 }
 
-private struct LightroomRatingFilterButton: View {
-    let rating: Int
-    let isSelected: Bool
-    let action: () -> Void
+private enum CullingCompactControlMetrics {
+    static let ratingWidth: CGFloat = 108
+    static let ratingHorizontalPadding: CGFloat = 10
+    static let colorWidth: CGFloat = 30
+    static let height: CGFloat = 28
+    static let cornerRadius: CGFloat = 6
+    static let swatchSize: CGFloat = 20
+    static let swatchCornerRadius: CGFloat = 4
+    static let groupSpacing: CGFloat = 2
+}
 
-    var body: some View {
-        Button(action: action) {
-            Group {
-                if rating == 0 {
-                    Image(systemName: "star.slash")
-                } else {
-                    Image(systemName: "star.fill")
-                }
-            }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(isSelected ? Color.yellow : Color.secondary)
-            .frame(width: 22, height: 22)
+private struct CullingCompactControlChrome: ViewModifier {
+    let width: CGFloat
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .frame(width: width, height: CullingCompactControlMetrics.height)
             .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.accentColor.opacity(0.24) : .clear)
+                RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
+                    .fill(isSelected ? Color.primary.opacity(0.10) : Color(nsColor: .controlBackgroundColor))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.8) : .clear)
+                RoundedRectangle(cornerRadius: CullingCompactControlMetrics.cornerRadius)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
             )
+    }
+}
+
+private struct CullingColorSwatch: View {
+    let fill: Color
+    let isSelected: Bool
+    let showsSlash: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: CullingCompactControlMetrics.swatchCornerRadius)
+                .fill(fill)
+            RoundedRectangle(cornerRadius: CullingCompactControlMetrics.swatchCornerRadius)
+                .stroke(
+                    isSelected ? Color.primary.opacity(0.72) : Color.secondary,
+                    lineWidth: isSelected ? 2 : 1
+                )
+            if showsSlash {
+                Image(systemName: "slash")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+            } else if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
         }
-        .buttonStyle(.plain)
-        .backstageHelp(rating == 0
-            ? "Toggle whether unrated assets are included in the current Culling results."
-            : "Toggle whether \(rating)-star assets are included in the current Culling results.")
-        .accessibilityLabel(rating == 0 ? "Unrated" : "\(rating) stars")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .frame(
+            width: CullingCompactControlMetrics.swatchSize,
+            height: CullingCompactControlMetrics.swatchSize
+        )
+    }
+}
+
+private struct CullingRatingSlider: View {
+    let rating: Int?
+    let isDisabled: Bool
+    let accessibilityLabel: String
+    let help: String
+    let action: (Int) -> Void
+
+    @State private var pendingRating: Int?
+
+    private var displayedRating: Int {
+        pendingRating ?? rating ?? 0
+    }
+
+    private var accessibilityValue: String {
+        guard let rating else { return "Mixed" }
+        if accessibilityLabel == "Minimum rating filter" {
+            return rating == 0 ? "All ratings" : "\(rating) stars and above"
+        }
+        return rating == 0 ? "Unrated" : "\(rating) star\(rating == 1 ? "" : "s")"
+    }
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 1) {
+                ForEach(1...5, id: \.self) { value in
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(value <= displayedRating ? Color.yellow : Color.secondary.opacity(0.38))
+                }
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, CullingCompactControlMetrics.ratingHorizontalPadding)
+
+            GeometryReader { geometry in
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { gesture in
+                                guard !isDisabled else { return }
+                                pendingRating = rating(at: gesture.location.x, width: geometry.size.width)
+                            }
+                            .onEnded { gesture in
+                                guard !isDisabled else { return }
+                                let selectedRating = rating(at: gesture.location.x, width: geometry.size.width)
+                                pendingRating = nil
+                                action(selectedRating)
+                            }
+                    )
+            }
+        }
+        .modifier(CullingCompactControlChrome(
+            width: CullingCompactControlMetrics.ratingWidth,
+            isSelected: rating != nil
+        ))
+        .disabled(isDisabled)
+        .backstageHelp(help)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
+        .accessibilityAdjustableAction { direction in
+            guard !isDisabled else { return }
+            let current = rating ?? 0
+            switch direction {
+            case .increment:
+                action(min(5, current + 1))
+            case .decrement:
+                action(max(0, current - 1))
+            @unknown default:
+                break
+            }
+        }
+        .accessibilityAction(named: "Clear rating") {
+            guard !isDisabled else { return }
+            action(0)
+        }
+    }
+
+    private func rating(at location: CGFloat, width: CGFloat) -> Int {
+        guard width > 0 else { return 0 }
+        let normalized = min(max(location / width, 0), 0.999_999)
+        return min(5, max(0, Int(normalized * 6)))
     }
 }
 
@@ -1094,23 +1707,15 @@ private struct LightroomColorFilterButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(filterColor)
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(isSelected ? Color.white : Color.secondary, lineWidth: isSelected ? 2 : 1)
-                if color == .none {
-                    Image(systemName: "slash")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 20, height: 20)
-            .padding(2)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isSelected ? Color.accentColor.opacity(0.35) : .clear)
+            CullingColorSwatch(
+                fill: filterColor,
+                isSelected: isSelected,
+                showsSlash: color == .none
             )
+            .modifier(CullingCompactControlChrome(
+                width: CullingCompactControlMetrics.colorWidth,
+                isSelected: isSelected
+            ))
         }
         .buttonStyle(.plain)
         .backstageHelp("Toggle whether assets labeled \(color.label.lowercased()) are included in the current Culling results.")
@@ -1233,7 +1838,7 @@ struct AdaptiveFixtureFieldPair<Left: View, Right: View>: View {
 }
 
 #if DEBUG
-#Preview("Culling — Wide") {
+#Preview("Gallery — Wide") {
     CullingView(
         model: CullingPreviewFixtures.model(),
         isPreviewMode: true

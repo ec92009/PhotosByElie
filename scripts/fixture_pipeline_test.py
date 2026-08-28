@@ -4,6 +4,7 @@ import json
 import hashlib
 from pathlib import Path
 import sys
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -24,6 +25,7 @@ from fixture_pipeline import (
     undo_fixture_review_action,
     ai_preview_targets,
     ai_run_status,
+    request_ai_run_cancel,
     effective_fixture_access_grants,
     list_pools,
     list_placements,
@@ -50,7 +52,14 @@ from fixture_pipeline import (
     editorial_version_hash,
 )
 from requested_ai_proposal_pass import _prompt, run_requested_ai_pass
-from sidecar_state_db import connect, record_decision, upsert_assets
+from sidecar_state_db import (
+    connect,
+    is_jpeg_source_row,
+    mark_invalid_source_assets_missing,
+    record_decision,
+    restore_heic_source_assets_missing_at,
+    upsert_assets,
+)
 
 
 def seed_active_tombstone(repo_root: Path, asset_id: str) -> None:
@@ -96,6 +105,387 @@ class FixturePipelineTest(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def seed_active_ai_run(self, *, cancel_requested=False):
+        create_fixture(self.root, "AI Run Fixture", fixture_id="ai-run-fixture")
+        timestamp = "2026-08-27T20:46:37Z"
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                INSERT INTO asset_ai_runs (
+                  run_id, trigger, status, requested_count, processed_count,
+                  proposed_count, remaining_count, cancel_requested, owner_pid,
+                  started_at, created_at, updated_at
+                ) VALUES ('run-orphan', 'test', 'running', 3, 1, 1, 2, ?, 424242,
+                          ?, ?, ?)
+                """,
+                (int(cancel_requested), timestamp, timestamp, timestamp),
+            )
+            connection.executemany(
+                """
+                INSERT INTO asset_ai_run_items (run_id, asset_id, status, attempt)
+                VALUES ('run-orphan', ?, ?, 1)
+                """,
+                [
+                    ("asset-1", "proposed"),
+                    ("asset-2", "running"),
+                    ("asset-3", "queued"),
+                ],
+            )
+            connection.execute(
+                """
+                INSERT INTO asset_ai_proposals (
+                  proposal_id, asset_id, run_id, attempt, proposed_title, created_at
+                ) VALUES ('proposal-preserved', 'asset-1', 'run-orphan', 1,
+                          'Preserved draft', ?)
+                """,
+                (timestamp,),
+            )
+            connection.commit()
+
+    def enable_synthetic_country_identity_receipt(self):
+        """Install a zero-row reviewed migration receipt in this copied test DB."""
+        with connect(self.root) as connection:
+            connection.execute("ALTER TABLE country_assignments RENAME TO country_assignments_v1")
+            connection.executescript(
+                """
+                CREATE TABLE country_assignments (
+                  assignment_id TEXT PRIMARY KEY,
+                  asset_id TEXT UNIQUE,
+                  media_id TEXT UNIQUE,
+                  country_slug TEXT NOT NULL,
+                  source_slug TEXT,
+                  batch_id TEXT,
+                  assigned_at TEXT,
+                  updated_at TEXT,
+                  identity_status TEXT NOT NULL,
+                  identity_source TEXT NOT NULL DEFAULT '',
+                  identity_evidence_json TEXT NOT NULL DEFAULT '[]',
+                  migration_id TEXT NOT NULL,
+                  migrated_at TEXT NOT NULL
+                ) WITHOUT ROWID;
+                CREATE TABLE country_assignment_identity_migrations (
+                  migration_id TEXT PRIMARY KEY,
+                  plan_hash TEXT NOT NULL UNIQUE,
+                  source_count INTEGER NOT NULL,
+                  mapped_count INTEGER NOT NULL,
+                  unmapped_count INTEGER NOT NULL,
+                  applied_at TEXT NOT NULL
+                ) WITHOUT ROWID;
+                CREATE TABLE country_assignment_identity_migration_rows (
+                  migration_id TEXT NOT NULL,
+                  legacy_media_id TEXT NOT NULL,
+                  country_slug TEXT NOT NULL,
+                  migration_state TEXT NOT NULL,
+                  asset_id TEXT,
+                  evidence_json TEXT NOT NULL DEFAULT '[]',
+                  reason TEXT NOT NULL DEFAULT '',
+                  PRIMARY KEY (migration_id, legacy_media_id)
+                ) WITHOUT ROWID;
+                INSERT INTO country_assignment_identity_migrations
+                  (migration_id, plan_hash, source_count, mapped_count, unmapped_count, applied_at)
+                VALUES ('synthetic-reviewed', 'synthetic-plan', 0, 0, 0, '2026-08-27T12:00:00Z');
+                DROP TABLE country_assignments_v1;
+                """
+            )
+            connection.commit()
+
+    def test_country_review_is_peer_metadata_but_writes_fail_closed_until_identity_receipt(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-2", "asset-3"],
+            "picked",
+        )
+        locked = fixture_review_window(self.root, root["fixtureId"])
+        self.assertFalse(locked["countryWriteEnabled"])
+        self.assertEqual(locked["summary"]["countryMissing"], 3)
+        self.assertEqual(locked["items"][0]["country"], "")
+        with self.assertRaisesRegex(RuntimeError, "PBE-154"):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-1"],
+                "edit-metadata",
+                country="spain",
+            )
+
+        self.enable_synthetic_country_identity_receipt()
+        assigned = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="spain",
+        )
+        self.assertEqual(assigned["items"][0]["after"]["country"], "spain")
+        propagated = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "propagate-country",
+            anchor_asset_id="asset-1",
+            country="portugal",
+        )
+        self.assertEqual(
+            {item["assetId"] for item in propagated["items"]},
+            {"asset-1", "asset-2"},
+        )
+        self.assertEqual(
+            {item["after"]["country"] for item in propagated["items"]},
+            {"portugal"},
+        )
+        window = fixture_review_window(self.root, root["fixtureId"])
+        self.assertTrue(window["countryWriteEnabled"])
+        self.assertEqual(window["summary"]["countryMissing"], 1)
+        self.assertEqual(
+            {item["assetId"]: item["country"] for item in window["items"]},
+            {"asset-1": "portugal", "asset-2": "portugal", "asset-3": ""},
+        )
+        undone = undo_fixture_review_action(self.root, propagated["operationId"])
+        self.assertFalse(undone["alreadyUndone"])
+        restored = fixture_review_window(self.root, root["fixtureId"])
+        self.assertEqual(
+            {item["assetId"]: item["country"] for item in restored["items"]},
+            {"asset-1": "spain", "asset-2": "", "asset-3": ""},
+        )
+        cleared = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="",
+        )
+        self.assertEqual(cleared["items"][0]["after"]["country"], "")
+
+    def test_country_review_seeds_exact_apple_photos_location_without_accepting_it(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE sidecar_assets
+                SET location_label = 'United States',
+                    location_keywords_json = '["United States"]'
+                WHERE asset_id = 'asset-1'
+                """
+            )
+            connection.commit()
+
+        proposed = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(proposed["country"], "")
+        self.assertEqual(proposed["suggestedCountry"], "usa")
+        self.assertEqual(proposed["countrySuggestionSource"], "Apple Photos location")
+
+        self.enable_synthetic_country_identity_receipt()
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "edit-metadata",
+            country="spain",
+        )
+        accepted = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(accepted["country"], "spain")
+        self.assertEqual(accepted["suggestedCountry"], "")
+        self.assertEqual(accepted["countrySuggestionSource"], "accepted assignment")
+
+    def test_country_review_fails_closed_when_catalog_and_photos_location_conflict(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                UPDATE sidecar_assets
+                SET location_label = 'United States',
+                    location_keywords_json = '["United States"]'
+                WHERE asset_id = 'asset-1'
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO catalog_collection_resolutions (
+                  asset_id, source_version_hash, collection_slug, provider, resolved_at
+                ) VALUES ('asset-1', 'conflict-version', 'spain', 'test', '2026-08-28T00:00:00Z')
+                """
+            )
+            connection.commit()
+
+        item = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(item["country"], "")
+        self.assertEqual(item["suggestedCountry"], "")
+        self.assertEqual(
+            item["countrySuggestionSource"],
+            "conflicting catalog and Apple Photos location",
+        )
+
+    def test_requested_ai_country_stays_an_editable_proposal_until_owner_approval(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        self.enable_synthetic_country_identity_receipt()
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "request-ai",
+            ai_reasons=["use shoot context"],
+        )
+        preview = self.root / "asset-1.jpg"
+        preview.write_bytes(b"bounded-preview")
+        record_ai_preview(self.root, "asset-1", preview)
+
+        result = run_requested_ai_pass(
+            self.root,
+            trigger="test",
+            proposer=lambda _item: {
+                "country": "spain",
+                "title": "Apartment Entrance in La Concha",
+                "keywords": ["La Concha", "architecture"],
+                "confidence": "high",
+                "reason": "The supplied location context supports Spain.",
+                "needs_owner_context": False,
+            },
+        )
+        self.assertEqual(result["proposed"], 1)
+        proposal = ready_ai_proposals(self.root)["items"][0]
+        self.assertEqual(proposal["proposedCountry"], "spain")
+        self.assertEqual(proposal["countryProposalSource"], "ai-vision-context")
+        before = fixture_review_window(self.root, root["fixtureId"])["items"][0]
+        self.assertEqual(before["country"], "")
+        self.assertEqual(before["proposedCountry"], "spain")
+
+        approved = apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+            proposal_id=proposal["proposalId"],
+        )
+        self.assertEqual(approved["items"][0]["after"]["country"], "spain")
+
+    def test_source_index_requires_a_real_jpeg_or_heic_resource(self):
+        raw_only = {
+            "localIdentifier": "raw-only",
+            "filename": "20220807 153244 00170.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW"],
+            "resourceFormat": "RAW",
+            "preferredResourceFilename": "20220807 153244 00170.dng",
+            "preferredResourceFormat": "RAW",
+            "fallbackResourceFilename": "20220807 153244 00170.dng",
+            "fallbackResourceFormat": "RAW",
+            "localJPEGFallbackAvailable": True,
+            "resources": [{
+                "originalFilename": "20220807 153244 00170.dng",
+                "uniformTypeIdentifier": "com.adobe.raw-image",
+                "format": "RAW",
+            }],
+        }
+        self.assertFalse(is_jpeg_source_row(raw_only))
+        self.assertEqual(upsert_assets(self.root, [raw_only]), 0)
+        with connect(self.root) as connection:
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT asset_id FROM sidecar_assets WHERE asset_id = ?",
+                    ("raw-only",),
+                ).fetchone()
+            )
+
+        jpeg_backed = {
+            "localIdentifier": "jpeg-backed",
+            "filename": "20220807 153244 00171.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW", "JPEG"],
+            "resourceFormat": "RAW+JPEG",
+            "preferredResourceFormat": "RAW",
+            "fallbackResourceFilename": "20220807 153244 00171.jpg",
+            "fallbackResourceFormat": "JPEG",
+            "resources": [
+                {"originalFilename": "20220807 153244 00171.dng", "format": "RAW"},
+                {"originalFilename": "20220807 153244 00171.jpg", "format": "JPEG"},
+            ],
+        }
+        self.assertTrue(is_jpeg_source_row(jpeg_backed))
+        self.assertEqual(upsert_assets(self.root, [jpeg_backed]), 1)
+
+        heic_backed = {
+            "localIdentifier": "heic-backed",
+            "filename": "IMG_4497.jpg",
+            "mediaType": "photo",
+            "resourceFormats": ["RAW", "HEIC"],
+            "resourceFormat": "RAW+HEIC",
+            "preferredResourceFilename": "IMG_4497.HEIC",
+            "preferredResourceFormat": "HEIC",
+            "resources": [
+                {"originalFilename": "IMG_4497.dng", "format": "RAW"},
+                {"originalFilename": "IMG_4497.HEIC", "format": "HEIC"},
+            ],
+        }
+        self.assertTrue(is_jpeg_source_row(heic_backed))
+        self.assertEqual(upsert_assets(self.root, [heic_backed]), 1)
+
+        # Existing non-Photos callers use compact rows without resource
+        # metadata; retain that compatibility while the Photos path remains
+        # strict whenever PhotoKit resource metadata is present.
+        self.assertTrue(is_jpeg_source_row({"localIdentifier": "legacy", "filename": "legacy.jpg"}))
+
+        with connect(self.root) as connection:
+            connection.execute(
+                """
+                INSERT INTO sidecar_assets (
+                  asset_id, source_anchor, media_type, filename, raw_json,
+                  indexed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "stale-raw-only",
+                    "apple-photos://stale-raw-only",
+                    "photo",
+                    "stale.jpg",
+                    json.dumps(raw_only),
+                    "2026-08-18T10:00:00Z",
+                    "2026-08-18T10:00:00Z",
+                ),
+            )
+        self.assertEqual(mark_invalid_source_assets_missing(self.root), 1)
+        with connect(self.root) as connection:
+            self.assertTrue(
+                connection.execute(
+                    "SELECT missing_at FROM sidecar_assets WHERE asset_id = ?",
+                    ("stale-raw-only",),
+                ).fetchone()["missing_at"]
+            )
+
+            connection.execute(
+                """
+                INSERT INTO sidecar_assets (
+                  asset_id, source_anchor, media_type, filename, raw_json,
+                  missing_at, indexed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "stale-heic",
+                    "apple-photos://stale-heic",
+                    "photo",
+                    "stale-heic.jpg",
+                    json.dumps(heic_backed),
+                    "repair-stamp",
+                    "2026-08-18T10:00:00Z",
+                    "2026-08-18T10:00:00Z",
+                ),
+            )
+        self.assertEqual(
+            restore_heic_source_assets_missing_at(self.root, "repair-stamp"),
+            1,
+        )
+        with connect(self.root) as connection:
+            self.assertIsNone(
+                connection.execute(
+                    "SELECT missing_at FROM sidecar_assets WHERE asset_id = ?",
+                    ("stale-heic",),
+                ).fetchone()["missing_at"]
+            )
 
     def test_recursive_tree_keeps_stable_ids_and_rejects_cycles(self):
         root = create_fixture(self.root, "RE", fixture_id="root")
@@ -237,6 +627,74 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
+    def test_culling_and_review_keep_photos_keywords_and_expose_location_separately(self):
+        upsert_assets(self.root, [{
+            "localIdentifier": "asset-gps",
+            "filename": "IMG_4497.jpg",
+            "mediaType": "photo",
+            "creationDate": "2026-08-05T17:40:00Z",
+            "photosKeywords": ["Travel"],
+            "location": {
+                "latitude": 36.56,
+                "longitude": -4.61,
+            },
+            "preferredResourceFilename": "IMG_4497.HEIC",
+            "fallbackResourceFilename": "IMG_4497.HEIC",
+            "resourceFormat": "JPEG",
+        }])
+        with connect(self.root) as connection:
+            connection.execute(
+                "UPDATE sidecar_assets SET location_label = ?, location_keywords_json = ? WHERE asset_id = ?",
+                ("Spain", '["Spain"]', "asset-gps"),
+            )
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, fixture["fixtureId"], ["asset-gps"], "picked")
+
+        culling_item = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="picked",
+            search="IMG_4497",
+        )["items"][0]
+        review_item = fixture_review_window(
+            self.root,
+            fixture["fixtureId"],
+            search="IMG_4497",
+        )["items"][0]
+        self.assertEqual(culling_item["keywords"], ["Travel"])
+        self.assertEqual(review_item["keywords"], ["Travel"])
+        self.assertEqual(culling_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(review_item["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(
+            search_assets(self.root, {"query": "IMG_4497"})["items"][0]["locationLabel"],
+            "Fuengirola, Costa del Sol, Spain",
+        )
+
+        record_decision(
+            self.root,
+            {
+                "assetId": "asset-gps",
+                "action": "metadata",
+                "metadataState": "approved",
+                "keywords": [],
+            },
+        )
+        culling_after_decision = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="picked",
+            search="IMG_4497",
+        )["items"][0]
+        review_after_decision = fixture_review_window(
+            self.root,
+            fixture["fixtureId"],
+            search="IMG_4497",
+        )["items"][0]
+        self.assertEqual(culling_after_decision["keywords"], [])
+        self.assertEqual(review_after_decision["keywords"], [])
+        self.assertEqual(culling_after_decision["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+        self.assertEqual(review_after_decision["locationLabel"], "Fuengirola, Costa del Sol, Spain")
+
     def test_culling_universe_is_still_only_even_with_stale_video_filters(self):
         upsert_assets(self.root, [{
             "localIdentifier": "asset-video",
@@ -326,6 +784,65 @@ class FixturePipelineTest(unittest.TestCase):
             fully_filtered["mediaAvailability"],
             {"photos": 3, "videos": 0},
         )
+
+    def test_culling_filter_changes_are_read_only_for_color_and_fixture_exclude(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(
+            self.root,
+            fixture["fixtureId"],
+            ["asset-1"],
+            "hidden",
+        )
+        record_decision(
+            self.root,
+            {"assetId": "asset-1", "action": "color", "color": "red"},
+        )
+        with connect(self.root) as conn:
+            before = {
+                "global": tuple(conn.execute(
+                    "SELECT rating, color, pick_state FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixture": tuple(conn.execute(
+                    "SELECT placement_state, eligibility_state FROM fixture_asset_decisions WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixtureEvents": conn.execute(
+                    "SELECT count(*) FROM fixture_asset_decision_events WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()[0],
+            }
+
+        excluded = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            views=["undecided", "picked", "hidden"],
+            colors=["none", "yellow", "green", "blue", "purple"],
+        )
+        self.assertNotIn("asset-1", [item["assetId"] for item in excluded["items"]])
+
+        restored = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            views=["undecided", "picked", "hidden"],
+            colors=["none", "red", "yellow", "green", "blue", "purple"],
+        )
+        restored_item = next(
+            item for item in restored["items"] if item["assetId"] == "asset-1"
+        )
+        self.assertEqual(restored_item["color"], "red")
+        self.assertEqual(restored_item["placementState"], "hidden")
+
+        with connect(self.root) as conn:
+            after = {
+                "global": tuple(conn.execute(
+                    "SELECT rating, color, pick_state FROM sidecar_decisions WHERE asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixture": tuple(conn.execute(
+                    "SELECT placement_state, eligibility_state FROM fixture_asset_decisions WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()),
+                "fixtureEvents": conn.execute(
+                    "SELECT count(*) FROM fixture_asset_decision_events WHERE fixture_id = 'root' AND asset_id = 'asset-1'"
+                ).fetchone()[0],
+            }
+        self.assertEqual(after, before)
 
     def test_culling_window_includes_original_metadata_without_exporting(self):
         fixture = create_fixture(self.root, "Root", fixture_id="root")
@@ -530,6 +1047,10 @@ class FixturePipelineTest(unittest.TestCase):
                 ("asset-2", "Second proposal", ["Second", "Proposal"]),
             ],
         )
+        self.assertGreaterEqual(
+            approved["timing"]["localTransaction"]["durationMs"],
+            0,
+        )
         with connect(self.root) as conn:
             decisions = conn.execute(
                 """
@@ -563,6 +1084,19 @@ class FixturePipelineTest(unittest.TestCase):
 
         undone = undo_fixture_review_action(self.root, approved["operationId"])
         self.assertEqual(undone["count"], 2)
+        self.assertGreaterEqual(
+            undone["timing"]["localTransaction"]["durationMs"],
+            0,
+        )
+        self.assertEqual(
+            undone["items"][0]["review"]["placementState"],
+            "picked",
+        )
+        self.assertEqual(
+            undone["items"][0]["review"]["editorialState"],
+            "proposed",
+        )
+        self.assertTrue(undone["items"][0]["review"]["proposalReady"])
         with connect(self.root) as conn:
             restored_statuses = conn.execute(
                 """
@@ -576,12 +1110,26 @@ class FixturePipelineTest(unittest.TestCase):
             [("proposal-1", "ready"), ("proposal-2", "loaded")],
         )
 
+        with self.assertRaisesRegex(
+            ValueError,
+            "proposal was superseded or is no longer active",
+        ):
+            apply_fixture_review_action(
+                self.root,
+                root["fixtureId"],
+                ["asset-1"],
+                "approve",
+                anchor_asset_id="asset-1",
+                proposal_id="proposal-stale",
+            )
+
         explicitly_edited = apply_fixture_review_action(
             self.root,
             root["fixtureId"],
             ["asset-1"],
             "approve",
             anchor_asset_id="asset-1",
+            proposal_id="proposal-1",
             title="Owner-edited proposal",
             keywords=["Owner", "Edited"],
         )
@@ -1254,6 +1802,7 @@ class FixturePipelineTest(unittest.TestCase):
         proposals = ready_ai_proposals(self.root)
         self.assertEqual(proposals["count"], 1)
         self.assertEqual(proposals["items"][0]["proposedTitle"], "Visible family scene")
+        self.assertEqual(proposals["items"][0]["proposedCountry"], "")
         self.assertEqual(proposals["items"][0]["canonicalTitle"], "")
         self.assertEqual(
             proposals["items"][0]["requestedGeneratorModel"],
@@ -1384,6 +1933,95 @@ class FixturePipelineTest(unittest.TestCase):
                 (proposal_id,),
             ).fetchone()[0]
         self.assertEqual(accepted, "accepted")
+
+    def test_ai_status_reconciles_dead_cancelled_worker_and_preserves_proposals(self):
+        self.seed_active_ai_run(cancel_requested=True)
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            status = ai_run_status(self.root)
+
+        self.assertFalse(status["active"])
+        self.assertEqual(status["ready"], 1)
+        self.assertEqual(status["run"]["status"], "cancelled")
+        self.assertEqual(status["run"]["processed"], 3)
+        self.assertEqual(status["run"]["proposed"], 1)
+        self.assertEqual(status["run"]["skipped"], 2)
+        self.assertEqual(status["run"]["failed"], 0)
+        self.assertEqual(status["run"]["remaining"], 0)
+        with connect(self.root) as connection:
+            proposal = connection.execute(
+                "SELECT status, proposed_title FROM asset_ai_proposals WHERE proposal_id = 'proposal-preserved'"
+            ).fetchone()
+            items = connection.execute(
+                "SELECT asset_id, status FROM asset_ai_run_items WHERE run_id = 'run-orphan' ORDER BY asset_id"
+            ).fetchall()
+            completed_at = connection.execute(
+                "SELECT completed_at FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()[0]
+        self.assertEqual(tuple(proposal), ("ready", "Preserved draft"))
+        self.assertEqual(
+            [(row["asset_id"], row["status"]) for row in items],
+            [("asset-1", "proposed"), ("asset-2", "skipped"), ("asset-3", "skipped")],
+        )
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            repeated = ai_run_status(self.root)
+        self.assertEqual(repeated["run"]["status"], "cancelled")
+        with connect(self.root) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT completed_at FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+                ).fetchone()[0],
+                completed_at,
+            )
+
+    def test_ai_status_marks_dead_uncancelled_worker_failed(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            status = ai_run_status(self.root)
+
+        self.assertFalse(status["active"])
+        self.assertEqual(status["run"]["status"], "failed")
+        self.assertEqual(status["run"]["proposed"], 1)
+        self.assertEqual(status["run"]["skipped"], 1)
+        self.assertEqual(status["run"]["failed"], 1)
+        self.assertEqual(status["run"]["remaining"], 0)
+        self.assertIn("worker process ended", status["run"]["lastError"])
+
+    def test_cancel_dead_worker_terminalizes_immediately(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=False):
+            result = request_ai_run_cancel(self.root)
+
+        self.assertFalse(result["active"])
+        self.assertTrue(result["orphaned"])
+        self.assertEqual(result["status"], "cancelled")
+        with connect(self.root) as connection:
+            run = connection.execute(
+                "SELECT status, cancel_requested, remaining_count FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()
+        self.assertEqual(tuple(run), ("cancelled", 1, 0))
+
+    def test_cancel_live_worker_remains_cooperative(self):
+        self.seed_active_ai_run()
+
+        with patch("fixture_pipeline._ai_worker_process_alive", return_value=True):
+            result = request_ai_run_cancel(self.root)
+
+        self.assertTrue(result["active"])
+        self.assertFalse(result["orphaned"])
+        self.assertEqual(result["status"], "running")
+        with connect(self.root) as connection:
+            run = connection.execute(
+                "SELECT status, cancel_requested, remaining_count FROM asset_ai_runs WHERE run_id = 'run-orphan'"
+            ).fetchone()
+            items = connection.execute(
+                "SELECT status FROM asset_ai_run_items WHERE run_id = 'run-orphan' ORDER BY asset_id"
+            ).fetchall()
+        self.assertEqual(tuple(run), ("running", 1, 2))
+        self.assertEqual([row["status"] for row in items], ["proposed", "running", "queued"])
 
     def test_requested_ai_pass_defers_missing_preview_capture_until_the_pass(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
@@ -1632,6 +2270,7 @@ class FixturePipelineTest(unittest.TestCase):
             "previous AI draft under review",
             prompt,
         )
+        self.assertIn('"country_proposal_enabled": false', prompt)
 
     def test_request_ai_preserves_photos_only_current_metadata(self):
         upsert_assets(self.root, [

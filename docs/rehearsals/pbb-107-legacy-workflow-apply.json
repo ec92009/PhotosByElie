@@ -1,0 +1,32 @@
+{
+  "canonicalIntegrity": "ok",
+  "canonicalMutationPerformed": true,
+  "containsRowIdentifiers": false,
+  "generatedAt": "2026-08-25T19:56:45Z",
+  "manualReviewRequired": 0,
+  "mode": "approved-canonical-transaction",
+  "photosSync": {
+    "cancelledBeforeScan": 19,
+    "failedBeforeCheckpoint": 2,
+    "runningRowsAfter": 0,
+    "runningRowsBefore": 21
+  },
+  "rollbackBackup": {
+    "created": true,
+    "integrity": "ok",
+    "privateBackupRetained": true,
+    "preWriteInventoryVerified": true
+  },
+  "schema": "photosbyelie.pbb107LegacyWorkflowCanonicalApply.v1",
+  "uploadBridge": {
+    "allTableItemRowsValueEquivalent": true,
+    "cancelledBeforeExport": 3,
+    "interruptedPartial": 1,
+    "itemRowsInTable": 10360,
+    "runningRowsAfter": 0,
+    "runningRowsBefore": 4,
+    "scopedItemRowsPreserved": 2332,
+    "untouchedItemsPreserved": 2329,
+    "uploadedItemsPreserved": 3
+  }
+}

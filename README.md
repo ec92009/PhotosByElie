@@ -254,7 +254,8 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 - `scripts/build_new_owner_connector_package.zsh`: builds the Owner-only downloadable Mac connector ZIP with the permission-bearing Photos Bridge app and credential-free installer
 - `AGENTS.md`: repo-level working preferences, versioning SOP, and timelog SOP
 - `SHOW_ME_SOP.md`: preview/reporting workflow
-- `SUMMARY.md`, `HANDOFF.md`, `TODO.md`, and `TIMELOG.md`: durable cross-thread context, handoff state, numbered backlog, and active collaboration clock
+- `SUMMARY.md`, `HANDOFF.md`, and `TODO.md`: durable cross-thread context, handoff state, and historical backlog reference; YouTrack is the authoritative current ticket queue
+- `TIMELOG.md`: active collaboration clock
 - `VERSION`: current visible version without the leading `v`
 - `docs/sops/`: local SOP copies/adaptations, including versioning, active collaboration timelog tracking, Lightroom image ingestion, and repo/media cleanup guardrails
 - `docs/commerce/PRICE_OFFER_STRATEGY.md`: launch price, bundle, refund/support, and implementation strategy draft for owner approval

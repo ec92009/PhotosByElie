@@ -51,9 +51,10 @@ not available:
 Use --load to load/reload them immediately. Without --load, this only writes the
 plist files so the schedule can be reviewed first.
 
-The Photos index sync plist must keep using sidecar_maintenance.py. Do not point
-scheduled tasks at scripts/apple_photos_bridge.swift directly; Sidecar needs the
-installed PhotosByElie Photos Bridge.app identity for macOS Photos permission.
+The scheduled jobs use sidecar_maintenance.py only. Its PhotoKit work is routed
+through authenticated IPC to the signed PhotosByElie Backstage app and fails
+closed when Backstage is unavailable. This installer never installs or launches
+the retired Photos Bridge helper.
 USAGE
       exit 0
       ;;
@@ -69,12 +70,6 @@ mkdir -p "$launch_agents_dir" "$log_dir"
 if [[ -z "$python_bin" || ! -x "$python_bin" ]]; then
   printf 'Could not find an executable python3. Set PYTHON3=/path/to/python3 and retry.\n' >&2
   exit 1
-fi
-if [[ -x "$repo_root/scripts/install_sidecar_photos_bridge_app.zsh" ]]; then
-  "$repo_root/scripts/install_sidecar_photos_bridge_app.zsh"
-else
-  printf 'Warning: Photos Bridge app installer is missing or not executable. Photos index sync may not receive macOS Photos access.\n' >&2
-  printf 'Do not fall back to raw swift scripts/apple_photos_bridge.swift for Sidecar scheduled jobs.\n' >&2
 fi
 photos_plist="$launch_agents_dir/$photos_label.plist"
 ai_plist="$launch_agents_dir/$ai_label.plist"
@@ -155,8 +150,8 @@ write_plist \
 
 printf 'Installed %s\n' "$photos_plist"
 printf 'Installed %s\n' "$ai_plist"
-printf 'Photos index sync requires PhotosByElie Photos Bridge.app to have Full Access in System Settings > Privacy & Security > Photos.\n'
-printf 'Scheduled PhotoKit work should run sidecar_maintenance.py so it can launch that app bundle; raw Swift uses the wrong permission identity.\n'
+printf 'Scheduled PhotoKit work uses authenticated IPC to PhotosByElie Backstage.\n'
+printf 'Keep PhotosByElie Backstage installed and available; jobs fail closed when it is unavailable.\n'
 
 if (( load_after )); then
   unload_plist "$photos_plist"

@@ -22,6 +22,10 @@ import {
   createMemoryOwnerDeviceAuthStore,
 } from "./owner-device-auth-store.mjs";
 import {
+  createD1OwnerEnrollmentHandoffStore,
+  createMemoryOwnerEnrollmentHandoffStore,
+} from "./owner-enrollment-handoff-store.mjs";
+import {
   REAL_ESTATE_PASSWORD_ITERATIONS,
   createRealEstateAuth,
   realEstatePasswordHash,
@@ -1126,6 +1130,165 @@ test("Owner API v1 re-authenticates Keychain device credentials and independentl
   assert.equal(revokedDeviceTokens.status, 401);
 });
 
+test("native Mac enrollment handoff is short-lived, browser-authorized, bound and single-use", async () => {
+  let currentNow = new Date("2026-08-28T08:00:00.000Z");
+  const now = () => currentNow;
+  const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
+  const ownerEnrollmentHandoffStore = createMemoryOwnerEnrollmentHandoffStore({ now });
+  const ownerIdentity = {
+    email: "ec92009@gmail.com",
+    provider: "google-oauth",
+    purpose: "browser",
+    expiresAt: "2026-08-28T09:00:00.000Z",
+    sessionSeconds: 3600,
+  };
+  let activeIdentity = ownerIdentity;
+  const googleOAuthAuth = {
+    optionalSession: async () => activeIdentity,
+    requireSession: async () => activeIdentity,
+    loginUrlFor: async (_request, { returnTo }) => `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`,
+    issueSessionToken: async (identity) => `access-${identity.deviceId}`,
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([
+      { email: "ec92009@gmail.com", tier: "owner" },
+      { email: "another-owner@example.test", tier: "owner" },
+    ]),
+    accessAdminEmail: "ec92009@gmail.com",
+    ownerDeviceAuthStore,
+    ownerEnrollmentHandoffStore,
+    randomUUID: deterministicIds(),
+    now,
+  });
+
+  const startResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Max Backstage",
+    platform: "macOS",
+    binding: "native-binding-one",
+  }));
+  assert.equal(startResponse.status, 201);
+  const started = await startResponse.json();
+  assert.equal(started.handoff.state, "pending");
+  assert.equal(started.handoff.binding, "native-binding-one");
+  assert.equal(new URL(started.handoff.authorizationURL).search, "");
+  assert.equal(started.handoff.authorizationURL.includes(started.handoff.claimSecret), false);
+
+  const wrongClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: "native-binding-one", claimSecret: "wrong-secret" }
+  ));
+  assert.equal(wrongClaim.status, 401);
+
+  const pendingClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(pendingClaim.status, 202);
+  assert.deepEqual(await pendingClaim.json(), { ok: true, state: "pending" });
+
+  const confirmation = await worker.fetch(new Request(started.handoff.authorizationURL));
+  assert.equal(confirmation.status, 200);
+  const confirmationHTML = await confirmation.text();
+  assert.match(confirmationHTML, /Set up this Mac/);
+  assert.equal(confirmationHTML.includes(started.handoff.claimSecret), false);
+
+  const authorize = await worker.fetch(new Request(started.handoff.authorizationURL, {
+    method: "POST",
+    headers: { origin: "https://worker.test" },
+  }));
+  assert.equal(authorize.status, 200);
+  assert.match(await authorize.text(), /This Mac is approved/);
+
+  const claimResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(claimResponse.status, 201);
+  const claimed = await claimResponse.json();
+  assert.equal(claimed.state, "completed");
+  assert.match(claimed.device.id, /^owner-device-/);
+  assert.match(claimed.deviceCredential, /^[A-Za-z0-9_-]{40,}$/);
+
+  const replay = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(replay.status, 409);
+
+  const cancellable = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Cancelled Mac",
+    platform: "macOS",
+    binding: "native-binding-cancelled",
+  }));
+  const cancellableBody = await cancellable.json();
+  activeIdentity = { ...ownerIdentity, email: "another-owner@example.test" };
+  const wrongIdentity = await worker.fetch(new Request(cancellableBody.handoff.authorizationURL));
+  assert.equal(wrongIdentity.status, 403);
+  activeIdentity = ownerIdentity;
+  const cancelResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${cancellableBody.handoff.id}/cancel`,
+    { binding: cancellableBody.handoff.binding, claimSecret: cancellableBody.handoff.claimSecret }
+  ));
+  assert.equal(cancelResponse.status, 200);
+  const cancelledClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${cancellableBody.handoff.id}/claim`,
+    { binding: cancellableBody.handoff.binding, claimSecret: cancellableBody.handoff.claimSecret }
+  ));
+  assert.equal(cancelledClaim.status, 409);
+
+  const expiring = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Recovery Mac",
+    platform: "macOS",
+    binding: "native-binding-two",
+  }));
+  const expiringBody = await expiring.json();
+  currentNow = new Date("2026-08-28T08:06:00.000Z");
+  const expired = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${expiringBody.handoff.id}/claim`,
+    { binding: expiringBody.handoff.binding, claimSecret: expiringBody.handoff.claimSecret }
+  ));
+  assert.equal(expired.status, 410);
+});
+
+test("D1 native enrollment claim atomically consumes one authorized handoff", async () => {
+  const database = new TestD1();
+  const now = () => new Date("2026-08-28T08:00:00.000Z");
+  const store = createD1OwnerEnrollmentHandoffStore({ database, now });
+  await store.create({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    name: "Max",
+    platform: "macOS",
+    createdAt: "2026-08-28T08:00:00.000Z",
+    expiresAt: "2026-08-28T08:05:00.000Z",
+  }, "claim-d1");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:01:00.000Z",
+  })).outcome, "pending");
+  assert.equal((await store.authorize({
+    id: "owner-enrollment-d1",
+    email: "ec92009@gmail.com",
+    authorizedAt: "2026-08-28T08:01:00.000Z",
+  })).state, "authorized");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:02:00.000Z",
+  })).outcome, "accepted");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:02:01.000Z",
+  })).outcome, "claimed");
+});
+
 test("PBE Owner sessions require Backstage, freeze fixture identities, close and honor device revocation", async () => {
   let currentNow = new Date("2026-08-12T12:00:00.000Z");
   const now = () => currentNow;
@@ -1192,6 +1355,28 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   assert.equal(tokenResponse.status, 201);
   const backstageTokens = await tokenResponse.json();
 
+  const secondEnrollmentResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/devices", {
+    name: "Recovery Mac",
+    platform: "macOS",
+  }, bearer(browserToken)));
+  assert.equal(secondEnrollmentResponse.status, 201);
+  const secondEnrollment = await secondEnrollmentResponse.json();
+  const nativeDeviceList = await worker.fetch(new Request("https://worker.test/api/v1/devices", {
+    headers: bearer(backstageTokens.accessToken),
+  }));
+  assert.equal(nativeDeviceList.status, 200);
+  assert.deepEqual((await nativeDeviceList.json()).devices.map((device) => device.name), [
+    "Max Backstage",
+    "Recovery Mac",
+  ]);
+  const nativeRevoke = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/devices/${encodeURIComponent(secondEnrollment.device.id)}/revoke`,
+    {},
+    bearer(backstageTokens.accessToken)
+  ));
+  assert.equal(nativeRevoke.status, 200);
+  assert.equal((await nativeRevoke.json()).device.name, "Recovery Mac");
+
   const browserMint = await worker.fetch(jsonRequest("https://worker.test/api/v1/pbe-owner/sessions", {
     fixtureId: "fixture-la-concha",
     fixtureBreadcrumb: "RE › La Concha",
@@ -1230,7 +1415,16 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   assert.equal(minted.session.fixtureId, "fixture-la-concha");
   assert.equal(minted.session.lifecycleWriter, "pbb-79-waste-basket");
   assert.equal(minted.session.fixtureRevision, "fixture-revision:one");
-  assert.deepEqual(minted.session.capabilities, ["gallery.read", "waste-basket.x", "waste-basket.restore"]);
+  assert.deepEqual(minted.session.capabilities, [
+    "gallery.read",
+    "waste-basket.x",
+    "waste-basket.restore",
+    "fixture.hide",
+    "fixture.review",
+    "fixture.clear",
+    "asset.rating",
+    "asset.color",
+  ]);
 
   const statusResponse = await worker.fetch(new Request("https://worker.test/api/v1/pbe-owner/session", {
     headers: bearer(minted.sessionToken),
@@ -1373,7 +1567,24 @@ test("background Owner connectors use scoped credentials and report health", asy
 
   const completeResponse = await worker.fetch(jsonRequest(
     `https://worker.test/owner/connector/actions/${queued.id}/complete`,
-    { result: { recordsPrepared: 24 }, timing: { executedAt: "2026-07-22T10:00:01.000Z" } },
+    {
+      result: { recordsPrepared: 24 },
+      timing: {
+        executedAt: "2026-07-22T10:00:01.000Z",
+        connector: {
+          schema: "photosbyelie.ownerActionTiming.v1",
+          actionId: queued.id,
+          phases: {
+            "action.execute": {
+              startedAt: "2026-07-22T10:00:00.100Z",
+              endedAt: "2026-07-22T10:00:00.900Z",
+              elapsedMs: 800,
+              outcome: "ok",
+            },
+          },
+        },
+      },
+    },
     connectorHeaders
   ));
   const completed = (await completeResponse.json()).action;
@@ -1381,6 +1592,8 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(completed.completedBy, "connector:david");
   assert.equal(completed.result.recordsPrepared, 24);
   assert.equal(completed.timing.executedAt, "2026-07-22T10:00:01.000Z");
+  assert.equal(completed.timing.connector.schema, "photosbyelie.ownerActionTiming.v1");
+  assert.equal(completed.timing.connector.phases["action.execute"].elapsedMs, 800);
   assert.ok(completed.timing.completedAt);
 
   const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {
@@ -5136,6 +5349,75 @@ test("deployed Worker serves public R2 previews through the media route", async 
   assert.equal(missing.status, 404);
   assert.equal(missing.headers.get("cache-control"), "private, no-store, max-age=0");
   assert.equal(missing.headers.get("cdn-cache-control"), "no-store");
+});
+
+test("deployed Worker serves only the approved Backstage release manifest and immutable archives", async () => {
+  const manifest = new TextEncoder().encode('{"schemaVersion":1}\n');
+  const archive = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+  const bucket = createFakeR2({
+    "backstage/releases/latest.json": {
+      body: manifest,
+      httpMetadata: { contentType: "text/plain" },
+    },
+    "backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip": {
+      body: archive,
+      httpMetadata: { contentType: "application/octet-stream" },
+    },
+    "backstage/releases/private.txt": {
+      body: new TextEncoder().encode("not public"),
+    },
+  });
+
+  const manifestResponse = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(manifestResponse.status, 200);
+  assert.equal(manifestResponse.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(manifestResponse.headers.get("cache-control"), "public, max-age=60, must-revalidate");
+  assert.equal(manifestResponse.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(await manifestResponse.text(), '{"schemaVersion":1}\n');
+
+  const archiveUrl = "https://download.photos-by-elie.com/backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip";
+  const archiveResponse = await deployedWorker.fetch(new Request(archiveUrl), { PUBLIC_MEDIA: bucket });
+  assert.equal(archiveResponse.status, 200);
+  assert.equal(archiveResponse.headers.get("content-type"), "application/zip");
+  assert.equal(archiveResponse.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(
+    archiveResponse.headers.get("content-disposition"),
+    'attachment; filename="PhotosByElie-Backstage-v237.1-build-188.zip"',
+  );
+  assert.equal(Buffer.from(await archiveResponse.arrayBuffer()).toString("hex"), "504b0304");
+
+  const headResponse = await deployedWorker.fetch(new Request(archiveUrl, { method: "HEAD" }), { PUBLIC_MEDIA: bucket });
+  assert.equal(headResponse.status, 200);
+  assert.equal(headResponse.headers.get("content-length"), "4");
+  assert.equal((await headResponse.arrayBuffer()).byteLength, 0);
+
+  for (const path of [
+    "/backstage/releases/private.txt",
+    "/backstage/releases/../private.txt",
+    "/backstage/releases/PhotosByElie-Backstage-latest.zip",
+  ]) {
+    const denied = await deployedWorker.fetch(
+      new Request(`https://download.photos-by-elie.com${path}`),
+      { PUBLIC_MEDIA: bucket },
+    );
+    assert.equal(denied.status, 404, path);
+  }
+
+  const post = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json", { method: "POST" }),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(post.status, 405);
+  assert.equal(post.headers.get("allow"), "GET, HEAD");
+
+  const unavailable = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    {},
+  );
+  assert.equal(unavailable.status, 503);
 });
 
 test("deployed Worker root redirects direct auth-domain visits to Account", async () => {

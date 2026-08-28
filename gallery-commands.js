@@ -4,7 +4,7 @@
   if (globalScope) globalScope.photosByElieGalleryCommands = api;
 })(typeof globalThis === "undefined" ? null : globalThis, () => {
   const MAX_SELECTION = 500;
-  const GROUP_ORDER = Object.freeze(["selection", "view", "rating-color", "workflow"]);
+  const GROUP_ORDER = Object.freeze(["filters", "selection", "view", "actions-rating-color", "workflow"]);
 
   const asList = (value) => Array.isArray(value) ? value : value ? [value] : [];
   const resolvedValue = (value, context) => typeof value === "function" ? value(context) : value;

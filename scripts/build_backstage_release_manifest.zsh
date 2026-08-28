@@ -1,6 +1,17 @@
 #!/bin/zsh
 set -euo pipefail
 
+script_dir="${0:A:h}"
+repo_root="${script_dir:h}"
+release_metadata="${repo_root}/native/PhotosByElieBackstage/release-metadata.zsh"
+source_verifier="${script_dir}/verify_backstage_release_source.zsh"
+
+if [[ ! -r "$release_metadata" || ! -x "$source_verifier" ]]; then
+  print -u2 "Backstage release provenance tooling is incomplete."
+  exit 1
+fi
+source "$release_metadata"
+
 usage() {
   print -u2 "Usage: $0 --artifact signed-backstage.zip --download-url https://... --release-notes '...' --output manifest.json"
 }
@@ -58,7 +69,13 @@ stage_root="$(mktemp -d "${TMPDIR:-/tmp}/pbe-backstage-manifest.XXXXXX")"
 temporary_output=""
 cleanup() {
   [[ -n "$temporary_output" && -f "$temporary_output" ]] && rm -f -- "$temporary_output"
-  [[ -d "$stage_root" ]] && rm -rf -- "$stage_root"
+  if [[ -d "$stage_root" ]]; then
+    # Release apps intentionally contain a read-only embedded Owner runtime.
+    # Restore write permission only inside this build-owned temporary tree so
+    # cleanup remains complete without weakening the signed app or source.
+    chmod -R u+w "$stage_root"
+    rm -rf -- "$stage_root"
+  fi
 }
 trap cleanup EXIT
 
@@ -86,8 +103,33 @@ bundle_identifier="$(plist_value CFBundleIdentifier)"
 version="$(plist_value CFBundleShortVersionString)"
 build="$(plist_value CFBundleVersion)"
 minimum_os="$(plist_value LSMinimumSystemVersion)"
+executable_name="$(plist_value CFBundleExecutable)"
+source_revision="$(plist_value PBEOwnerRuntimeRevision)"
+source_ref="$(plist_value PBEBackstageReleaseSourceRef)"
 if [[ "$bundle_identifier" != "com.photosbyelie.backstage" ]]; then
   print -u2 "Unexpected Backstage bundle identifier: $bundle_identifier"
+  exit 1
+fi
+if [[ "$source_ref" != "$PBE_BACKSTAGE_RELEASE_SOURCE_REF" ]]; then
+  print -u2 "The signed artifact does not name the approved canonical release source ref."
+  exit 1
+fi
+"$source_verifier" \
+  --repo "$repo_root" \
+  --revision "$source_revision" \
+  --canonical-ref "$source_ref"
+
+executable="$app/Contents/MacOS/$executable_name"
+if [[ ! -f "$executable" || -L "$executable" ]]; then
+  print -u2 "The Backstage app bundle is missing its regular executable."
+  exit 1
+fi
+architectures="$(/usr/bin/lipo -archs "$executable" 2>/dev/null)" || {
+  print -u2 "The Backstage executable architecture could not be inspected."
+  exit 1
+}
+if [[ "$architectures" != "arm64" ]]; then
+  print -u2 "Refusing to publish a non-arm64 Apple-silicon Backstage release: $architectures"
   exit 1
 fi
 if [[ ! "$version" =~ '^[0-9]+(\.[0-9]+)*$' || ! "$build" =~ '^[0-9]+$' || ! "$minimum_os" =~ '^[0-9]+(\.[0-9]+)*$' ]]; then
@@ -96,6 +138,11 @@ if [[ ! "$version" =~ '^[0-9]+(\.[0-9]+)*$' || ! "$build" =~ '^[0-9]+$' || ! "$m
 fi
 
 /usr/bin/codesign --verify --deep --strict "$app"
+if ! /usr/bin/codesign -d --entitlements :- "$app" 2>/dev/null \
+  | python3 -c 'import plistlib, sys; entitlements = plistlib.loads(sys.stdin.buffer.read()); raise SystemExit(0 if entitlements.get("com.apple.security.personal-information.photos-library") is True else 1)'; then
+  print -u2 "Refusing to publish Backstage without the signed Photos Library entitlement."
+  exit 1
+fi
 signature_details="$(/usr/bin/codesign -dvvv "$app" 2>&1)"
 if [[ "$signature_details" == *"Signature=adhoc"* ]]; then
   print -u2 "Refusing to generate a release manifest for an ad-hoc signed artifact."
@@ -117,7 +164,7 @@ file_size="$(stat -f '%z' "$artifact")"
 sha256="$(shasum -a 256 "$artifact" | awk '{print $1}')"
 mkdir -p "${output:h}"
 temporary_output="${output}.tmp.$$"
-python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" <<'PY'
+python3 - "$temporary_output" "$version" "$build" "$minimum_os" "$release_notes" "$download_url" "$file_size" "$sha256" "$team_identifier" "$signing_identity" "$designated_requirement" "$architectures" "$source_revision" "$source_ref" <<'PY'
 import json
 import pathlib
 import sys
@@ -134,6 +181,9 @@ import sys
     team_identifier,
     signing_identity,
     designated_requirement,
+    architectures,
+    source_revision,
+    source_ref,
 ) = sys.argv[1:]
 manifest = {
     "schemaVersion": 1,
@@ -144,9 +194,14 @@ manifest = {
     "minimumOSVersion": minimum_os,
     "releaseNotes": release_notes,
     "artifactFormat": "zip",
+    "architectures": architectures.split(),
     "downloadURL": download_url,
     "fileSize": int(file_size),
     "sha256": sha256,
+    "source": {
+        "commit": source_revision,
+        "canonicalRef": source_ref,
+    },
     "trust": {
         "teamIdentifier": team_identifier,
         "signingIdentity": signing_identity,

@@ -13,6 +13,8 @@ const galleryHtml = read("gallery.html");
 const photoHtml = read("photo.html");
 const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
+const galleryCardJs = read("gallery-card.js");
+const ownerSessionJs = read("pbe-owner-session.js");
 const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
@@ -30,7 +32,7 @@ test("command registry keeps role gating, stable group order, and disabled posit
     ],
   });
 
-  assert.deepEqual(GROUP_ORDER, ["selection", "view", "rating-color", "workflow"]);
+  assert.deepEqual(GROUP_ORDER, ["filters", "selection", "view", "actions-rating-color", "workflow"]);
   assert.equal(MAX_SELECTION, 500);
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview"]);
   assert.equal(registry.command("clear").enabled, false);
@@ -78,6 +80,90 @@ test("contextual gallery bar replaces the passive hint and owns view commands", 
   assert.match(photosCss, /html\[data-gallery-action-labels="true"\] \.gallery-command-label/);
   assert.match(photosCss, /html\.is-tap-first \.gallery-command-shortcut/);
   assert.match(galleryJs, /document\.body\.append\(topButton\)/);
+});
+
+test("Owner rating and color controls match the compact Backstage contract", () => {
+  assert.match(galleryJs, /data-gallery-rating-slider/);
+  assert.match(galleryJs, /role="slider"/);
+  assert.match(galleryJs, /aria-valuemin="0" aria-valuemax="5"/);
+  assert.match(galleryJs, /ratingFromPointer/);
+  assert.match(galleryJs, /ratingSlider\.setPointerCapture/);
+  assert.match(galleryJs, /event\.key === "Home" \? 0/);
+  assert.match(galleryJs, /event\.key === "End" \? 5/);
+  assert.match(galleryJs, /colorSwatchHtml/);
+  assert.match(photosCss, /\.gallery-rating-slider\{/);
+  assert.match(photosCss, /\.gallery-color-swatch\.is-red\{--owner-swatch:#ff453a\}/);
+  assert.match(ownerSessionJs, /ownerState:[\s\S]*rating:[\s\S]*color:[\s\S]*placement:[\s\S]*editorial:/);
+});
+
+test("hosted Owner separates filters from mutations and renders durable card indicators", () => {
+  const burstCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "burst"'),
+    galleryJs.indexOf('id: "approve"'),
+  );
+  assert.match(galleryJs, /data-gallery-owner-filter-row/);
+  assert.match(galleryJs, /renderOwnerFilterRow/);
+  assert.doesNotMatch(galleryJs, /gallery-command-section is-filters/);
+  assert.match(galleryJs, /gallery-command-section is-actions/);
+  assert.doesNotMatch(galleryJs, /gallery-command-section-label">View/);
+  assert.match(galleryJs, /data-gallery-rating-filter/);
+  assert.match(galleryJs, /data-gallery-owner-color-filter/);
+  assert.match(galleryJs, /data-gallery-owner-placement-filter/);
+  assert.match(galleryJs, /ownerMinRating/);
+  assert.match(galleryJs, /selectedOwnerColorFilters/);
+  assert.match(galleryJs, /selectedOwnerPlacementFilters/);
+  assert.match(galleryJs, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear decisions"/);
+  assert.match(burstCommand, /group: "filters"/);
+  assert.doesNotMatch(burstCommand, /shortcut:/);
+  assert.match(galleryJs, /gallery-owner-card-rating/);
+  assert.match(galleryJs, /gallery-owner-card-color/);
+  assert.match(galleryJs, /owner-color-\$\{supportedColor\}/);
+  assert.match(photosCss, /\.gallery-owner-card-color\{/);
+  assert.match(photosCss, /border:5px solid var\(--owner-card-color\)/);
+  assert.doesNotMatch(photosCss, /\.mock-photo-card\.has-owner-color \.mock-photo::after/);
+  assert.match(photosCss, /\.gallery-owner-card-rating\{/);
+  assert.match(photosCss, /\.gallery-owner-filter-row\{/);
+  assert.match(galleryCardJs, /mediaOverlayHtml/);
+});
+
+test("hosted Owner card clicks stop at selection while explicit Like controls remain", () => {
+  assert.match(
+    galleryJs,
+    /card\.addEventListener\("click", \(event\) => \{[\s\S]*?event\.target\.closest\("button"\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?event\.stopPropagation\(\);[\s\S]*?selectOwnerPhotoFromPointer[\s\S]*?\}, \{ capture: true \}\);/,
+  );
+  assert.match(galleryJs, /data-gallery-like/);
+  assert.match(galleryJs, /id: "like"[\s\S]*?shortcut: "l"/);
+});
+
+test("hosted Owner projects authoritative mutation results into its cards", () => {
+  assert.match(galleryJs, /const color = item\.color \?\? item\.state\?\.color \?\? value/);
+  assert.match(galleryJs, /methodName === "hide"[\s\S]*ownerState\.placement/);
+  assert.match(galleryJs, /ownerPlacements/);
+  assert.match(galleryJs, /clearFixtureDecisionState/);
+  assert.match(galleryJs, /applyOwnerCommandState\(methodName, value, normalized\.succeededItems\)/);
+});
+
+test("hosted PBE Owner removes Pick and keeps Review capability-gated", () => {
+  const pickCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "pick"'),
+    galleryJs.indexOf('id: "hide"'),
+  );
+  const reviewCommand = galleryJs.slice(
+    galleryJs.indexOf('id: "review"'),
+    galleryJs.indexOf('id: "waste-basket"'),
+  );
+  assert.match(pickCommand, /isPBEOwnerGallery[\s\S]*hidden: true/);
+  assert.match(reviewCommand, /ownerCapabilityState\("review"\)/);
+  assert.match(reviewCommand, /removes: !isPBEOwnerGallery/);
+  assert.match(galleryJs, /returned to Review/);
+});
+
+test("gallery cards bound native Owner preview bursts and retry transient failures", () => {
+  assert.match(galleryCardJs, /loading="lazy" decoding="async"/);
+  assert.match(galleryCardJs, /const ownerPreviewRetryDelays = \[250, 750, 1500\]/);
+  assert.match(galleryCardJs, /source\.pathname\.startsWith\("\/__photosbyelie\/source-preview\/"\)/);
+  assert.match(galleryCardJs, /source\.searchParams\.set\("retry", String\(retry \+ 1\)\)/);
+  assert.match(galleryCardJs, /if \(retryOwnerPreview\(image\)\) return;/);
 });
 
 test("selection, round-trip state, and Quick Look follow the integrated contract", () => {

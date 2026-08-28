@@ -155,9 +155,13 @@ const defaultFilterState = {
   orientation: "all",
   sort: "newest",
   dateFrom: galleryDateRange.dateFrom,
-  dateTo: galleryDateRange.dateTo
+  dateTo: galleryDateRange.dateTo,
+  ownerMinRating: 0,
+  ownerColors: "none,red,yellow,green,blue",
+  ownerPlacements: "picked",
 };
 const persistedFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
+const storedFilterKeys = [...persistedFilterKeys, ...(isPBEOwnerGallery ? ["ownerMinRating", "ownerColors", "ownerPlacements"] : [])];
 const publicFilterState = (state = {}) => Object.fromEntries(
   Object.keys(defaultFilterState).map((key) => [key, state[key] ?? defaultFilterState[key]])
 );
@@ -428,7 +432,7 @@ const readFilterState = () => {
   try {
     const savedState = JSON.parse(localStorage.getItem(filterStateKey) || "{}");
     const persistedState = Object.fromEntries(
-      persistedFilterKeys.map((key) => [key, savedState[key] ?? defaultFilterState[key]])
+      storedFilterKeys.map((key) => [key, savedState[key] ?? defaultFilterState[key]])
     );
     return normalizeDateFilterState({
       ...defaultFilterState,
@@ -478,7 +482,7 @@ seedInlineDatePickerSelections();
 const writeFilterState = () => {
   if (isSelectionGallery) return;
   const persistedState = Object.fromEntries(
-    persistedFilterKeys.map((key) => [key, filterState[key] || defaultFilterState[key]])
+    storedFilterKeys.map((key) => [key, filterState[key] ?? defaultFilterState[key]])
   );
   localStorage.setItem(filterStateKey, JSON.stringify(persistedState));
 };
@@ -533,6 +537,28 @@ const metadataValue = (photo, label) => (
 
 const previewDimensions = (photo) => window.photosByEliePreviewDimensions?.(photo) || null;
 const galleryFilterKeys = ["query", "orientation", "dateFrom", "dateTo"];
+const ownerColorFilterValues = ["none", "red", "yellow", "green", "blue"];
+const ownerPlacementFilterValues = ["picked", "hidden", "undecided"];
+const ownerMinRatingFilter = () => Math.max(0, Math.min(5, Number(filterState.ownerMinRating) || 0));
+const selectedOwnerColorFilters = () => new Set(
+  String(filterState.ownerColors ?? defaultFilterState.ownerColors)
+    .split(",")
+    .filter((color) => ownerColorFilterValues.includes(color))
+);
+const selectedOwnerPlacementFilters = () => new Set(
+  String(filterState.ownerPlacements ?? defaultFilterState.ownerPlacements)
+    .split(",")
+    .filter((placement) => ownerPlacementFilterValues.includes(placement))
+);
+const ownerFilterCount = () => {
+  if (!isPBEOwnerGallery) return 0;
+  const minRating = ownerMinRatingFilter();
+  const colors = selectedOwnerColorFilters();
+  const placements = selectedOwnerPlacementFilters();
+  return Number(minRating > 0)
+    + Number(colors.size !== ownerColorFilterValues.length)
+    + Number(placements.size !== 1 || !placements.has("picked"));
+};
 const ownerSuperSearchText = (photo) => {
   if (!localModerationEnabled) return "";
   return ownerSuperSearchIndex.get(photo?.id)?.text || "";
@@ -542,8 +568,18 @@ const filterContext = () => ({
   collectionTitle: localizedCollectionTitle(),
   extraSearchText: ownerSuperSearchText,
 });
-const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys);
-const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext());
+const activeFilterCount = () => photoFilter.activeFilterCount(filterState, galleryFilterKeys) + ownerFilterCount();
+const matchesOwnerFilterState = (photo) => {
+  if (!isPBEOwnerGallery) return true;
+  const rating = Math.max(0, Math.min(5, Number(photo?.ownerState?.rating) || 0));
+  const color = String(photo?.ownerState?.color || "none").trim().toLowerCase() || "none";
+  const placement = String(photo?.ownerState?.placement || "undecided").trim().toLowerCase() || "undecided";
+  return rating >= ownerMinRatingFilter()
+    && selectedOwnerColorFilters().has(color)
+    && selectedOwnerPlacementFilters().has(placement);
+};
+const matchesFilterState = (photo) => photoFilter.matchesPhoto(photo, { ...filterState, mediaType: "all" }, filterContext())
+  && matchesOwnerFilterState(photo);
 const sortPhotos = (photos) => photoFilter.sortItems(photos, filterState, filterContext());
 const filteredVisiblePhotos = (photos = visiblePhotos()) => sortPhotos(photos.filter(matchesFilterState));
 
@@ -690,6 +726,7 @@ const ensureGalleryFilterControls = () => {
       <option value="price-asc" data-i18n="gallery.lowest_price">Lowest price</option>
     </select></label>
     <button class="btn secondary gallery-filter-clear" type="button" data-clear-gallery-filters data-i18n="gallery.clear">Clear</button>
+    ${isPBEOwnerGallery ? '<div class="gallery-owner-filter-row" data-gallery-owner-filter-row aria-label="Owner filters"></div>' : ""}
   `;
   if (galleryActions && isSelectionGallery) {
     galleryActions.after(filterBar);
@@ -1592,11 +1629,21 @@ const ownerAdapterMethod = (name) => typeof ownerCommandAdapter?.[name] === "fun
 
 const normalizeOwnerCommandResult = (result, requestedIds) => {
   const itemResults = Array.isArray(result?.results) ? result.results : [];
-  if (!itemResults.length) return { succeeded: [...requestedIds], failed: [] };
-  const succeeded = itemResults
+  if (!itemResults.length) {
+    return {
+      succeeded: [...requestedIds],
+      succeededItems: requestedIds.map((photoId) => ({ photoId })),
+      failed: [],
+    };
+  }
+  const succeededItems = itemResults
     .filter((item) => item?.ok !== false)
-    .map((item) => String(item.photoId || item.photo_id || item.id || ""))
-    .filter(Boolean);
+    .map((item) => ({
+      ...item,
+      photoId: String(item.photoId || item.photo_id || item.id || ""),
+    }))
+    .filter((item) => item.photoId);
+  const succeeded = succeededItems.map((item) => item.photoId);
   const succeededIds = new Set(succeeded);
   const failed = itemResults
     .filter((item) => item?.ok === false)
@@ -1610,7 +1657,57 @@ const normalizeOwnerCommandResult = (result, requestedIds) => {
       failed.push({ photoId, reason: "No result was returned for this photo." });
     }
   });
-  return { succeeded, failed };
+  return { succeeded, succeededItems, failed };
+};
+
+const ownerPhotoForId = (photoId) => (gallery?.photos || []).find((photo) => photo.id === photoId) || null;
+
+const applyOwnerCommandState = (methodName, value, succeededItems) => {
+  succeededItems.forEach((item) => {
+    const photoId = item.photoId;
+    const photo = ownerPhotoForId(photoId);
+    if (!photo) return;
+    photo.ownerState = { ...(photo.ownerState || {}) };
+    if (methodName === "setRating") {
+      const rating = item.rating ?? item.state?.rating ?? value;
+      photo.ownerState.rating = Math.max(0, Math.min(5, Number(rating) || 0));
+    }
+    if (methodName === "setColor") {
+      const color = item.color ?? item.state?.color ?? value;
+      photo.ownerState.color = String(color || "").trim().toLowerCase();
+    }
+    if (methodName === "hide") photo.ownerState.placement = String(item.placement || "hidden").trim().toLowerCase();
+    if (methodName === "review") photo.ownerState.placement = String(item.placement || "picked").trim().toLowerCase();
+    if (methodName === "unpick") photo.ownerState.placement = "undecided";
+  });
+};
+
+const ownerCommandSuccessStatus = (methodName, value, count) => {
+  const subject = `${count} photo${count === 1 ? "" : "s"}`;
+  if (methodName === "setRating") return `${subject} rated ${Number(value) || 0}.`;
+  if (methodName === "setColor") return `${subject} labeled ${String(value || "").toLowerCase()}.`;
+  if (methodName === "review") return `${subject} returned to Review.`;
+  if (methodName === "unpick") return `${subject} returned to Undecided.`;
+  if (methodName === "hide") return `${subject} hidden from this fixture.`;
+  return `${subject} updated.`;
+};
+
+const ownerCardPresentation = (photo) => {
+  if (!isPBEOwnerGallery) return { className: "", html: "" };
+  const rating = Math.max(0, Math.min(5, Number(photo?.ownerState?.rating) || 0));
+  const color = String(photo?.ownerState?.color || "").trim().toLowerCase();
+  const supportedColor = ["red", "yellow", "green", "blue"].includes(color) ? color : "";
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-owner-card-star${index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  const colorFrame = supportedColor
+    ? '<span class="gallery-owner-card-color" aria-hidden="true"></span>'
+    : "";
+  const stateLabel = `Rating ${rating} of 5${supportedColor ? `, ${supportedColor} color` : ", no color"}`;
+  return {
+    className: supportedColor ? `has-owner-color owner-color-${supportedColor}` : "",
+    html: `${colorFrame}<span class="gallery-owner-card-rating" aria-label="${escapeHtml(stateLabel)}" title="${escapeHtml(stateLabel)}">${stars}</span>`,
+  };
 };
 
 const runOwnerAdapterCommand = async (methodName, { value = null, removes = false, currentPhoto = null } = {}) => {
@@ -1630,6 +1727,7 @@ const runOwnerAdapterCommand = async (methodName, { value = null, removes = fals
     const normalized = normalizeOwnerCommandResult(result, requestedIds);
     normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
     normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
+    applyOwnerCommandState(methodName, value, normalized.succeededItems);
     if (removes) {
       normalized.succeeded.forEach((photoId) => {
         selectedPhotoIds.delete(photoId);
@@ -1645,12 +1743,14 @@ const runOwnerAdapterCommand = async (methodName, { value = null, removes = fals
         }
       }
       renderGallery();
+    } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
+      renderGallery({ scrollSelection: false });
     } else {
       updateSelection({ scroll: false });
     }
     setGalleryStatus(normalized.failed.length
       ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed and remain selected.`
-      : `${requestedIds.length} photo${requestedIds.length === 1 ? "" : "s"} updated.`);
+      : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
     return normalized;
   } catch (error) {
     requestedIds.forEach((photoId) => selectionErrors.set(photoId, error?.message || "Owner command failed."));
@@ -1752,10 +1852,46 @@ const openGalleryPreview = () => {
 };
 
 const commandShortcut = (key, options = {}) => ({ key, ...options });
+const focusedControlOwnsGalleryKey = (target, key) => {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return true;
+  // Clicking a card's selection button must not consume the next mutation
+  // shortcut. Preserve only the keys that activate the focused button itself.
+  return target.tagName === "BUTTON" && [" ", "Spacebar", "Enter"].includes(key);
+};
 const ownerCapabilityState = (methodName, activeReason = "Requires the active Backstage fixture session.") => ({
   enabled: Boolean(ownerAdapterMethod(methodName)) && selectedPhotoIds.size > 0,
   disabledReason: selectedPhotoIds.size ? activeReason : "Select at least one photo.",
 });
+
+const ownerCommandPhotos = (context = {}) => context.currentPhoto?.id
+  ? [context.currentPhoto]
+  : selectedOwnerPhotos();
+
+const clearFixtureDecisionState = (context = {}) => {
+  const photos = ownerCommandPhotos(context);
+  const placements = new Set(photos.map((photo) => (
+    String(photo?.ownerState?.placement || "undecided").trim().toLowerCase() || "undecided"
+  )));
+  const hiddenOnly = placements.size === 1 && placements.has("hidden");
+  const pickedOnly = placements.size === 1 && placements.has("picked");
+  const actionable = [...placements].some((placement) => placement !== "undecided");
+  return {
+    label: hiddenOnly ? "Unhide" : pickedOnly ? "Unpick" : "Clear decisions",
+    tooltip: hiddenOnly
+      ? "Return the hidden selection to Undecided."
+      : pickedOnly
+        ? "Return the picked selection to Undecided."
+        : "Return the selected fixture decisions to Undecided.",
+    enabled: Boolean(ownerAdapterMethod("unpick")) && photos.length > 0 && actionable,
+    disabledReason: !photos.length
+      ? "Select at least one photo."
+      : !ownerAdapterMethod("unpick")
+        ? "Requires the active Backstage fixture session."
+        : "The selection is already Undecided.",
+  };
+};
 
 const galleryCommands = [
   {
@@ -1827,16 +1963,18 @@ const galleryCommands = [
     },
   },
   ...[0, 1, 2, 3, 4, 5].map((rating) => ({
-    id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: rating,
+    id: `rating-${rating}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "actions-rating-color", order: rating,
     label: rating ? `Rating ${rating}` : "Clear Rating", icon: rating ? "★" : "☆", shortcut: String(rating), shortcutLabel: String(rating),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    ratingValue: rating,
     state: () => ownerCapabilityState("setRating"),
     execute: (context) => runOwnerAdapterCommand("setRating", { value: rating, currentPhoto: context.currentPhoto }),
   })),
   ...[[6, "red"], [7, "yellow"], [8, "green"], [9, "blue"]].map(([key, color], index) => ({
-    id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "rating-color", order: 10 + index,
+    id: `color-${color}`, roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "actions-rating-color", order: 10 + index,
     label: `${color[0].toUpperCase()}${color.slice(1)}`, icon: "●", shortcut: String(key), shortcutLabel: String(key),
     quickLookLegend: true, selectionEffect: "preserve", executionScope: "selection-or-current",
+    colorValue: color,
     state: () => ownerCapabilityState("setColor"),
     execute: (context) => runOwnerAdapterCommand("setColor", { value: color, currentPhoto: context.currentPhoto }),
   })),
@@ -1853,7 +1991,9 @@ const galleryCommands = [
   {
     id: "pick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 20,
     label: "Pick", icon: "P", shortcut: "p", shortcutLabel: "P", quickLookLegend: true, selectionEffect: "preserve",
-    state: () => ownerWorkflowContext() === "review"
+    state: () => isPBEOwnerGallery
+      ? { hidden: true, enabled: false, disabledReason: "Already in the picked Owner fixture." }
+      : ownerWorkflowContext() === "review"
       ? { enabled: false, disabledReason: "Already picked." }
       : ownerCapabilityState("pick"),
     execute: (context) => runOwnerAdapterCommand("pick", { currentPhoto: context.currentPhoto }),
@@ -1863,7 +2003,10 @@ const galleryCommands = [
     label: "Hide", icon: "H", shortcut: "h", shortcutLabel: "H", quickLookLegend: true,
     tooltip: "Fixture-local Hide; never a global tombstone.", selectionEffect: "remove-successes",
     state: () => ownerCapabilityState("hide"),
-    execute: (context) => runOwnerAdapterCommand("hide", { removes: true, currentPhoto: context.currentPhoto }),
+    execute: (context) => runOwnerAdapterCommand("hide", {
+      removes: !selectedOwnerPlacementFilters().has("hidden"),
+      currentPhoto: context.currentPhoto,
+    }),
   },
   {
     id: "review", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 40,
@@ -1871,7 +2014,7 @@ const galleryCommands = [
     state: () => ownerWorkflowContext() === "review"
       ? { enabled: false, disabledReason: "Already in Review." }
       : ownerCapabilityState("review"),
-    execute: (context) => runOwnerAdapterCommand("review", { removes: true, currentPhoto: context.currentPhoto }),
+    execute: (context) => runOwnerAdapterCommand("review", { removes: !isPBEOwnerGallery, currentPhoto: context.currentPhoto }),
   },
   {
     id: "waste-basket", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 50,
@@ -1885,14 +2028,17 @@ const galleryCommands = [
   },
   {
     id: "unpick", roles: ["owner"], surfaces: ["gallery", "quick-look"], group: "workflow", order: 60,
-    label: "Unpick", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
-    tooltip: "Clear the active fixture decision; this is not Undo.", selectionEffect: "preserve",
-    state: () => ownerCapabilityState("unpick"),
-    execute: (context) => runOwnerAdapterCommand("unpick", { currentPhoto: context.currentPhoto }),
+    label: "Clear decisions", icon: "U", shortcut: "u", shortcutLabel: "U", quickLookLegend: true,
+    selectionEffect: "remove-successes",
+    state: clearFixtureDecisionState,
+    execute: (context) => runOwnerAdapterCommand("unpick", {
+      removes: !selectedOwnerPlacementFilters().has("undecided"),
+      currentPhoto: context.currentPhoto,
+    }),
   },
   {
-    id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "workflow", order: 70,
-    label: () => `Burst ${burstCandidateIds()?.length || 0}`, icon: "B", shortcut: "b", shortcutLabel: "B", selectionEffect: "replace",
+    id: "burst", roles: ["owner"], surfaces: ["gallery"], group: "filters", order: 10,
+    label: () => `Burst ${burstCandidateIds()?.length || 0}`, icon: "B", selectionEffect: "replace",
     state: () => {
       const candidates = burstCandidateIds();
       const current = new Set(selectedPhotoIds);
@@ -1977,9 +2123,248 @@ const commandButtonHtml = (command) => {
   `;
 };
 
+const selectedOwnerPhotos = () => {
+  const selected = new Set(selectedPhotoIds);
+  return renderedGalleryPhotos.filter((photo) => selected.has(photo.id));
+};
+
+const commonOwnerValue = (key, fallback) => {
+  const values = selectedOwnerPhotos().map((photo) => photo?.ownerState?.[key] ?? fallback);
+  if (!values.length) return { value: fallback, mixed: false };
+  const value = values[0];
+  return { value, mixed: values.some((candidate) => candidate !== value) };
+};
+
+const ratingSliderHtml = (commands) => {
+  const command = commands.find((candidate) => candidate.ratingValue === 0) || commands[0];
+  const { value, mixed } = commonOwnerValue("rating", 0);
+  const rating = Math.max(0, Math.min(5, Number(value) || 0));
+  const title = command.enabled
+    ? mixed ? "Set one rating for the mixed selection." : `Rating ${rating}. Drag, click, or use 0–5.`
+    : command.disabledReason;
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-rating-star${!mixed && index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  return `
+    <span class="gallery-rating-slider${mixed ? " is-mixed" : ""}"
+      data-gallery-rating-slider data-rating="${rating}" role="slider"
+      aria-label="Rating"
+      aria-valuemin="0" aria-valuemax="5" aria-valuenow="${rating}"
+      aria-valuetext="${mixed ? "Mixed ratings" : rating ? `${rating} stars` : "Unrated"}"
+      aria-disabled="${!command.enabled}" tabindex="${command.enabled ? "0" : "-1"}" title="${escapeHtml(title)}">
+      <span class="gallery-rating-zero" aria-hidden="true">○</span>${stars}
+      <span class="gallery-command-shortcut" aria-hidden="true">(0–5)</span>
+    </span>
+  `;
+};
+
+const colorSwatchHtml = (command) => {
+  const current = commonOwnerValue("color", "");
+  const applied = !current.mixed && current.value === command.colorValue;
+  const title = command.enabled ? `${command.label} (${command.shortcutLabel})` : command.disabledReason;
+  return `
+    <button class="gallery-color-swatch is-${escapeHtml(command.colorValue)}${applied ? " is-applied" : ""}"
+      type="button" data-gallery-command="${escapeHtml(command.id)}"
+      ${command.enabled ? "" : "disabled"} title="${escapeHtml(title)}"
+      aria-label="${escapeHtml(`${command.label} (${command.shortcutLabel})${applied ? ", applied" : ""}${command.enabled ? "" : `. ${command.disabledReason}`}`)}"
+      aria-pressed="${applied}"><span aria-hidden="true"></span></button>
+  `;
+};
+
+const commandGroupHtml = (entry) => {
+  if (entry.group !== "actions-rating-color") return entry.commands.map(commandButtonHtml).join("");
+  const ratings = entry.commands.filter((command) => Number.isInteger(command.ratingValue));
+  const colors = entry.commands.filter((command) => command.colorValue);
+  return `${ratingSliderHtml(ratings)}${colors.map(colorSwatchHtml).join("")}`;
+};
+
+const ownerRatingFilterHtml = () => {
+  const rating = ownerMinRatingFilter();
+  const stars = Array.from({ length: 5 }, (_, index) => `
+    <span class="gallery-rating-star${index < rating ? " is-filled" : ""}" aria-hidden="true">★</span>
+  `).join("");
+  return `
+    <span class="gallery-rating-slider gallery-rating-filter" data-gallery-rating-filter data-rating="${rating}"
+      role="slider" aria-label="Minimum rating filter" aria-valuemin="0" aria-valuemax="5"
+      aria-valuenow="${rating}" aria-valuetext="${rating ? `${rating} stars or more` : "All ratings"}"
+      tabindex="0" title="Show photos rated ${rating ? `${rating} stars or more` : "0–5"}">
+      <span class="gallery-rating-zero" aria-hidden="true">○</span>${stars}
+    </span>
+  `;
+};
+
+const ownerColorFilterHtml = () => {
+  const selected = selectedOwnerColorFilters();
+  return ownerColorFilterValues.map((color) => {
+    const active = selected.has(color);
+    const label = color === "none" ? "No color" : `${color[0].toUpperCase()}${color.slice(1)}`;
+    return `
+      <button class="gallery-color-swatch gallery-color-filter is-${escapeHtml(color)}${active ? " is-applied" : ""}"
+        type="button" data-gallery-owner-color-filter="${escapeHtml(color)}" title="Filter: ${escapeHtml(label)}"
+        aria-label="Filter by ${escapeHtml(label)}" aria-pressed="${active}">
+        <span aria-hidden="true">${color === "none" ? "∕" : ""}</span>
+      </button>
+    `;
+  }).join("");
+};
+
+const ownerPlacementFilterHtml = () => {
+  const selected = selectedOwnerPlacementFilters();
+  return ownerPlacementFilterValues.map((placement) => {
+    const active = selected.has(placement);
+    const label = `${placement[0].toUpperCase()}${placement.slice(1)}`;
+    return `
+      <button class="gallery-command-button gallery-placement-filter${active ? " is-applied" : ""}"
+        type="button" data-gallery-owner-placement-filter="${escapeHtml(placement)}"
+        title="Filter: ${escapeHtml(label)}" aria-label="Filter by ${escapeHtml(label)}"
+        aria-pressed="${active}">
+        <span class="gallery-command-label">${escapeHtml(label)}</span>
+      </button>
+    `;
+  }).join("");
+};
+
+const galleryCommandGroupsHtml = (groups) => groups.map((entry) => `
+  <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replaceAll("-", " "))}">
+    ${commandGroupHtml(entry)}
+  </span>
+`).join("");
+
+const bindOwnerRatingFilter = (root) => {
+  const ratingFilter = root?.querySelector("[data-gallery-rating-filter]");
+  let ratingFilterPointerActive = false;
+  ratingFilter?.addEventListener("pointerdown", (event) => {
+    ratingFilterPointerActive = true;
+    ratingFilter.setPointerCapture?.(event.pointerId);
+    previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointermove", (event) => {
+    if (ratingFilterPointerActive) previewRatingSlider(ratingFilter, ratingFromPointer(event, ratingFilter));
+  });
+  ratingFilter?.addEventListener("pointerup", () => {
+    if (!ratingFilterPointerActive) return;
+    ratingFilterPointerActive = false;
+    commitOwnerFilterState({ ownerMinRating: Number(ratingFilter.dataset.rating) || 0 });
+  });
+  ratingFilter?.addEventListener("pointercancel", () => { ratingFilterPointerActive = false; });
+  ratingFilter?.addEventListener("keydown", (event) => {
+    const current = Number(ratingFilter.dataset.rating) || 0;
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? 5
+        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
+          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
+            : null;
+    if (next === null) return;
+    event.preventDefault();
+    commitOwnerFilterState({ ownerMinRating: next });
+  });
+};
+
+const renderOwnerFilterRow = () => {
+  const row = filterBar?.querySelector("[data-gallery-owner-filter-row]");
+  if (!row || !galleryCommandRegistry) return;
+  const focusedRatingFilter = Boolean(document.activeElement?.matches?.("[data-gallery-rating-filter]"));
+  const focusedColorFilter = document.activeElement?.dataset?.galleryOwnerColorFilter || "";
+  const focusedPlacementFilter = document.activeElement?.dataset?.galleryOwnerPlacementFilter || "";
+  const burst = galleryCommandRegistry.list().find((command) => command.id === "burst");
+  row.innerHTML = `
+    <span class="gallery-owner-filter-label">Filters</span>
+    ${ownerPlacementFilterHtml()}
+    ${burst ? commandButtonHtml(burst) : ""}
+    ${ownerRatingFilterHtml()}${ownerColorFilterHtml()}
+  `;
+  row.querySelector("[data-gallery-command=\"burst\"]")?.addEventListener("click", async () => {
+    await galleryCommandRegistry.dispatch("burst", { source: "filter" });
+    renderGalleryCommandBar();
+  });
+  bindOwnerRatingFilter(row);
+  row.querySelectorAll("[data-gallery-owner-color-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = selectedOwnerColorFilters();
+      const color = button.dataset.galleryOwnerColorFilter;
+      if (selected.has(color)) selected.delete(color);
+      else selected.add(color);
+      commitOwnerFilterState({ ownerColors: ownerColorFilterValues.filter((candidate) => selected.has(candidate)).join(",") });
+    });
+  });
+  row.querySelectorAll("[data-gallery-owner-placement-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = selectedOwnerPlacementFilters();
+      const placement = button.dataset.galleryOwnerPlacementFilter;
+      if (selected.has(placement)) selected.delete(placement);
+      else selected.add(placement);
+      if (!selected.size) selected.add("picked");
+      commitOwnerFilterState({
+        ownerPlacements: ownerPlacementFilterValues.filter((candidate) => selected.has(candidate)).join(","),
+      });
+    });
+  });
+  if (focusedRatingFilter) row.querySelector("[data-gallery-rating-filter]")?.focus({ preventScroll: true });
+  else if (focusedColorFilter) row.querySelector(`[data-gallery-owner-color-filter="${CSS.escape(focusedColorFilter)}"]`)?.focus({ preventScroll: true });
+  else if (focusedPlacementFilter) row.querySelector(`[data-gallery-owner-placement-filter="${CSS.escape(focusedPlacementFilter)}"]`)?.focus({ preventScroll: true });
+};
+
+const ownerCommandSectionsHtml = (groups) => {
+  const viewGroups = groups.filter((entry) => ["selection", "view"].includes(entry.group));
+  const actionGroups = groups.filter((entry) => !["filters", "selection", "view"].includes(entry.group));
+  return `
+    <span class="gallery-command-section is-view" role="group" aria-label="Selection and view">
+      ${galleryCommandGroupsHtml(viewGroups)}
+    </span>
+    <span class="gallery-command-section is-actions" role="group" aria-label="Actions">
+      <span class="gallery-command-section-label">Actions</span>${galleryCommandGroupsHtml(actionGroups)}
+    </span>
+  `;
+};
+
+const ratingFromPointer = (event, element) => {
+  const bounds = element.getBoundingClientRect();
+  if (!bounds.width) return 0;
+  const ratio = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+  return Math.max(0, Math.min(5, Math.round(ratio * 5)));
+};
+
+const dispatchRating = async (rating) => {
+  await galleryCommandRegistry.dispatch(`rating-${Math.max(0, Math.min(5, rating))}`, { source: "rating-slider" });
+  renderGalleryCommandBar();
+};
+
+const previewRatingSlider = (element, rating) => {
+  const value = Math.max(0, Math.min(5, rating));
+  element.dataset.rating = String(value);
+  element.setAttribute("aria-valuenow", String(value));
+  element.setAttribute("aria-valuetext", value ? `${value} stars` : "Unrated");
+  element.classList.remove("is-mixed");
+  element.querySelectorAll(".gallery-rating-star").forEach((star, index) => {
+    star.classList.toggle("is-filled", index < value);
+  });
+};
+
+const commitOwnerFilterState = (updates) => {
+  filterState = { ...filterState, ...updates };
+  writeFilterState();
+  cancelPaginationSequence();
+  visibleLimit = pageSize;
+  selectedIndex = 0;
+  renderGallery({ scrollSelection: false });
+};
+
+const mountPBEOwnerSessionInCommandBar = (sessionRoot = document.querySelector("[data-pbe-owner-session]")) => {
+  if (!isPBEOwnerGallery || !sessionRoot || !galleryCommandBar) return;
+  const commandScroll = galleryCommandBar.querySelector("[data-gallery-command-scroll]");
+  if (!commandScroll) return;
+  commandScroll.append(sessionRoot);
+  sessionRoot.classList.add("is-command-mounted");
+  document.body.classList.add("pbe-owner-session-command-mounted");
+};
+
 const renderGalleryCommandBar = () => {
   if (!galleryCommandBar || !galleryCommandRegistry) return;
+  const ownerSessionRoot = isPBEOwnerGallery
+    ? document.querySelector("[data-pbe-owner-session]")
+    : null;
   const focusedCommand = document.activeElement?.dataset?.galleryCommand || "";
+  const focusedRating = Boolean(document.activeElement?.matches?.("[data-gallery-rating-slider]"));
   const commands = galleryCommandRegistry.list();
   const groups = galleryCommandModel.GROUP_ORDER
     .map((group) => ({ group, commands: commands.filter((command) => command.group === group) }))
@@ -1987,11 +2372,7 @@ const renderGalleryCommandBar = () => {
   galleryCommandBar.innerHTML = `
     <div class="gallery-command-scroll" data-gallery-command-scroll>
       <span class="gallery-command-count-slot" data-gallery-command-count-slot></span>
-      ${groups.map((entry) => `
-        <span class="gallery-command-group" role="group" aria-label="${escapeHtml(entry.group.replace("-", " "))}">
-          ${entry.commands.map(commandButtonHtml).join("")}
-        </span>
-      `).join("")}
+      ${isPBEOwnerGallery ? ownerCommandSectionsHtml(groups) : galleryCommandGroupsHtml(groups)}
     </div>
   `;
   const countSlot = galleryCommandBar.querySelector("[data-gallery-command-count-slot]");
@@ -2002,7 +2383,39 @@ const renderGalleryCommandBar = () => {
       renderGalleryCommandBar();
     });
   });
+  const ratingSlider = galleryCommandBar.querySelector("[data-gallery-rating-slider]");
+  let ratingPointerActive = false;
+  if (ratingSlider?.getAttribute("aria-disabled") !== "true") {
+    ratingSlider?.addEventListener("pointerdown", (event) => {
+      ratingPointerActive = true;
+      ratingSlider.setPointerCapture?.(event.pointerId);
+      previewRatingSlider(ratingSlider, ratingFromPointer(event, ratingSlider));
+    });
+    ratingSlider?.addEventListener("pointermove", (event) => {
+      if (ratingPointerActive) previewRatingSlider(ratingSlider, ratingFromPointer(event, ratingSlider));
+    });
+    ratingSlider?.addEventListener("pointerup", () => {
+      if (!ratingPointerActive) return;
+      ratingPointerActive = false;
+      dispatchRating(Number(ratingSlider.dataset.rating) || 0);
+    });
+    ratingSlider?.addEventListener("pointercancel", () => { ratingPointerActive = false; });
+  }
+  ratingSlider?.addEventListener("keydown", (event) => {
+    const current = Number(ratingSlider.dataset.rating) || 0;
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? 5
+        : ["ArrowRight", "ArrowUp"].includes(event.key) ? Math.min(5, current + 1)
+          : ["ArrowLeft", "ArrowDown"].includes(event.key) ? Math.max(0, current - 1)
+            : null;
+    if (next === null) return;
+    event.preventDefault();
+    dispatchRating(next);
+  });
+  renderOwnerFilterRow();
+  mountPBEOwnerSessionInCommandBar(ownerSessionRoot);
   if (focusedCommand) galleryCommandBar.querySelector(`[data-gallery-command="${CSS.escape(focusedCommand)}"]`)?.focus({ preventScroll: true });
+  else if (focusedRating) galleryCommandBar.querySelector("[data-gallery-rating-slider]")?.focus({ preventScroll: true });
   const height = Math.ceil(galleryCommandBar.getBoundingClientRect().height);
   if (height) document.documentElement.style.setProperty("--gallery-command-bar-height", `${height}px`);
 };
@@ -2124,6 +2537,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
             ${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}
           </button>
       ` : "";
+    const ownerPresentation = ownerCardPresentation(photo);
     const actionHtml = `
       <div class="gallery-card-selection">${selectButton}</div>
       ${likeButton ? `<div class="gallery-card-actions">${likeButton}</div>` : ""}
@@ -2134,6 +2548,8 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       href,
       collectionKey: galleryKey,
       actionHtml,
+      mediaOverlayHtml: ownerPresentation.html,
+      cardClass: ownerPresentation.className,
       ownerEditable: false,
     });
   }).join("");
@@ -2173,10 +2589,11 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       card.addEventListener("click", (event) => {
         if (event.target.closest("button")) return;
         event.preventDefault();
+        event.stopPropagation();
         const index = Number(card.dataset.photoIndex || 0);
         const photo = visibleSubset[index];
         if (photo) selectOwnerPhotoFromPointer(photo.id, visibleSubset, event);
-      });
+      }, { capture: true });
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
         window.location.assign(versionedHref(card.dataset.photoHref || card.querySelector("[data-photo-link]")?.getAttribute("href")));
@@ -2299,10 +2716,7 @@ if (galleryRoot && gallery) {
   window.addEventListener("keydown", async (event) => {
     if (event.defaultPrevented) return;
     const target = event.target;
-    if (target instanceof HTMLElement) {
-      if (target.isContentEditable) return;
-      if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
-    }
+    if (focusedControlOwnsGalleryKey(target, event.key)) return;
     if (ownerCullingEnabled && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const photos = filteredVisiblePhotos();
       if (photos.length && ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(event.key)) {

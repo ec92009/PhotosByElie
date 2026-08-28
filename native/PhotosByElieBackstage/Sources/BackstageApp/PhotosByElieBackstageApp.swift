@@ -3,12 +3,26 @@ import AppKit
 import SwiftUI
 
 public struct BackstageApplication: App {
-    @StateObject private var model = BackstageViewModel()
-    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var model: BackstageViewModel
+    @NSApplicationDelegateAdaptor(BackstageApplicationDelegate.self)
+    private var applicationDelegate
     @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
     private var navigationSidebarVisible = true
 
-    public init() {}
+    public init() {
+        // PBB-92: a current Backstage launch is the final authority over any
+        // helper left by an older install or rollback. Retirement is
+        // recoverable and intentionally does not touch historical archives.
+        do {
+            _ = try RetiredPhotosBridgeService().retireInstalledArtifacts()
+        } catch {
+            NSLog(
+                "PBB-92 could not retire a legacy Photos Bridge artifact: %@",
+                error.localizedDescription
+            )
+        }
+        _model = StateObject(wrappedValue: BackstageViewModel())
+    }
 
     public var body: some Scene {
         WindowGroup("PhotosByElie Backstage") {
@@ -20,7 +34,7 @@ public struct BackstageApplication: App {
                         .padding(.bottom, 10)
                     Divider()
                     List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
-                        Label(section.rawValue, systemImage: icon(for: section))
+                        Label(section.title, systemImage: icon(for: section))
                             .tag(section)
                     }
                 }
@@ -39,9 +53,9 @@ public struct BackstageApplication: App {
                         ToolbarItem(placement: .primaryAction) {
                             HStack(spacing: 10) {
                                 Text(backstageVersionLabel)
-                                    .font(.caption.monospacedDigit())
+                                    .font(.caption.monospacedDigit().weight(.semibold))
                                     .foregroundStyle(.secondary)
-                                    .help("Installed PhotosByElie Backstage version")
+                                    .help("Installed PhotosByElie Backstage version and build")
                                 if model.authentication.phase == .authenticated {
                                     if model.selection == .culling || model.selection == .review {
                                         Button {
@@ -53,8 +67,8 @@ public struct BackstageApplication: App {
                                         }
                                         .backstageHelp(
                                             model.isPreviewPanelVisible
-                                                ? "Collapse the Culling or Review preview inspector to give the main workspace more room."
-                                                : "Expand the Culling or Review preview inspector beside the main workspace."
+                                                ? "Collapse the Gallery or Review preview inspector to give the main workspace more room."
+                                                : "Expand the Gallery or Review preview inspector beside the main workspace."
                                         )
                                     }
                                 } else if model.status != "Connected" {
@@ -72,18 +86,16 @@ public struct BackstageApplication: App {
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
             .frame(minWidth: 1_120, minHeight: 720)
+            .onAppear { applicationDelegate.attach(model: model) }
+            .task { model.startPreviewIPC() }
             .task { await model.bootstrapAuthentication() }
-            .task { await model.runPhotosSyncLoop() }
             .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in
                 guard oldFixtureID != newFixtureID, !newFixtureID.isEmpty else { return }
                 Task { await model.refreshVisibleFixtureSurface() }
             }
-            .onChange(of: scenePhase) { _, phase in
-                guard phase == .active else { return }
-                Task { await model.syncPhotosIncrementally() }
-            }
         }
         .commands {
+            BackstageUndoCommands(model: model)
             CommandMenu("Backstage") {
                 Button("Refresh Activity") {
                     Task { await model.refreshActions() }
@@ -108,7 +120,7 @@ public struct BackstageApplication: App {
         let build = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleVersion"
         ) as? String ?? "?"
-        return "v\(short) (\(build))"
+        return "Backstage v\(short) · build \(build)"
     }
 
     @ViewBuilder
@@ -147,7 +159,7 @@ public struct BackstageApplication: App {
         case .activity: "clock.arrow.circlepath"
         case .fixtures: "folder.badge.gearshape"
         case .access: "person.2"
-        case .culling: "checkmark.rectangle.stack"
+        case .culling: "photo.stack"
         case .review: "checkmark.bubble"
         case .metadata: "tag"
         case .wasteBasket: "trash"
@@ -155,6 +167,33 @@ public struct BackstageApplication: App {
         case .delivery: "shippingbox"
         case .publication: "globe"
         case .updates: "arrow.triangle.2.circlepath"
+        }
+    }
+}
+
+private struct BackstageUndoCommands: Commands {
+    @ObservedObject var model: BackstageViewModel
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some Commands {
+        CommandGroup(replacing: .undoRedo) {
+            Button(model.currentUndoMenuTitle) {
+                if model.canUndoCurrentSection {
+                    Task { await model.undoCurrentSection() }
+                } else {
+                    undoManager?.undo()
+                }
+            }
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!model.canUndoCurrentSection && undoManager?.canUndo != true)
+            .backstageHelp("Undo the latest reversible change in the active Backstage section.")
+
+            Button("Redo") {
+                undoManager?.redo()
+            }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+            .disabled(undoManager?.canRedo != true)
+            .backstageHelp("Redo the latest standard text edit when the active field supports it.")
         }
     }
 }
@@ -185,23 +224,42 @@ private struct OverviewView: View {
                     )
                     if model.authentication.phase == .needsEnrollment
                         || model.authentication.phase == .signedOut {
-                        SecureField("One-time enrollment code", text: $model.enrollmentCode)
-                            .textFieldStyle(.roundedBorder)
                         HStack {
-                            Button("Enroll this Mac") {
-                                Task { await model.enroll() }
+                            Button("Set up this Mac") {
+                                model.setUpThisMac()
                             }
-                            .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
-                            .backstageHelp("Exchange the one-time Owner enrollment code and store this Mac's revocable device credential in Keychain.")
+                            .disabled(model.isAuthenticating || model.isSettingUpThisMac)
+                            .backstageHelp("Open the approved Owner identity check and return this Mac's short-lived enrollment result directly to Backstage. No credential is copied through the URL or clipboard.")
+                            if model.isSettingUpThisMac {
+                                Button("Cancel setup", role: .cancel) {
+                                    model.cancelMacSetup()
+                                }
+                                .backstageHelp("Cancel the active enrollment handoff. No device credential will be stored.")
+                            }
                             Button("Check Keychain again") {
                                 Task { await model.bootstrapAuthentication() }
                             }
-                            .disabled(model.isAuthenticating)
+                            .disabled(model.isAuthenticating || model.isSettingUpThisMac)
                             .backstageHelp("Recheck the saved Keychain credential and renew this Mac's Owner session if possible.")
                         }
-                        Text("Create the code from Owner in a currently authenticated browser. It is exchanged immediately and stored only in this Mac's Keychain.")
+                        Text("Backstage opens the Owner account picker, binds a five-minute single-use handoff to this Mac, and stores the resulting revocable credential only in Keychain. Photos permission remains separate.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        DisclosureGroup("Use one-time code fallback") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                SecureField("One-time enrollment code", text: $model.enrollmentCode)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Enroll with code") {
+                                    Task { await model.enroll() }
+                                }
+                                .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
+                                .backstageHelp("Use the restricted provisioning fallback and store the resulting device credential in Keychain.")
+                                Text("Fallback only while native setup, revocation, and clean-state recovery are being accepted.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.top, 4)
+                        }
                     } else if model.authentication.phase == .renewalFailed {
                         Button("Retry Owner session") {
                             Task { await model.bootstrapAuthentication() }
@@ -228,30 +286,74 @@ private struct OverviewView: View {
                     }
                     .padding(6)
                 }
-                GroupBox("Signed Photos helper") {
-                    VStack(alignment: .leading, spacing: 10) {
-                    LabeledContent("Installed", value: model.photosBridgeHealth.installed ? "Yes" : "No")
-                    LabeledContent("Background-only", value: model.photosBridgeHealth.headless ? "Yes" : "No")
-                    LabeledContent("Photos access", value: model.photosBridgeHealth.photoAccess)
-                    if !model.photosBridgeHealth.version.isEmpty {
-                        LabeledContent(
-                            "Photos Bridge helper version",
-                            value: model.photosBridgeHealth.build.isEmpty
-                                ? model.photosBridgeHealth.version
-                                : "\(model.photosBridgeHealth.version) (\(model.photosBridgeHealth.build))"
-                        )
+                if model.authentication.phase == .authenticated {
+                    GroupBox("Enrolled Macs") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(model.ownerDeviceManagementStatus)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Refresh") {
+                                    Task { await model.refreshOwnerDevices() }
+                                }
+                                .disabled(model.isRefreshingOwnerDevices)
+                                .backstageHelp("Reload the enrolled Mac list through this Mac's verified Backstage device session.")
+                            }
+                            ForEach(model.enrolledOwnerDevices) { device in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(device.name)
+                                        Text("\(device.platform) · enrolled \(device.createdAt.formatted())")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if model.authentication.deviceId == device.id {
+                                        Text("This Mac")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Button("Revoke", role: .destructive) {
+                                        model.requestOwnerDeviceRevocation(device)
+                                    }
+                                    .disabled(model.isRefreshingOwnerDevices)
+                                    .backstageHelp("Confirm revocation of \(device.name). That Mac will no longer be able to renew an Owner session.")
+                                }
+                            }
+                        }
+                        .padding(6)
                     }
-                    LabeledContent(
-                        "Compatibility",
-                        value: model.photosBridgeHealth.compatible ? "Compatible" : "Incompatible"
-                    )
-                    Text(model.photosBridgeHealth.message)
+                    .confirmationDialog(
+                        "Revoke \(model.pendingOwnerDeviceRevocation?.name ?? "this Mac")?",
+                        isPresented: Binding(
+                            get: { model.pendingOwnerDeviceRevocation != nil },
+                            set: { if !$0 { model.cancelOwnerDeviceRevocation() } }
+                        ),
+                        titleVisibility: .visible
+                    ) {
+                        Button("Revoke Mac", role: .destructive) {
+                            Task { await model.confirmOwnerDeviceRevocation() }
+                        }
+                        .backstageHelp("Revoke the selected Mac's Owner credential after this explicit confirmation.")
+                        Button("Cancel", role: .cancel) {
+                            model.cancelOwnerDeviceRevocation()
+                        }
+                        .backstageHelp("Close this confirmation without changing any enrolled Mac or credential.")
+                    } message: {
+                        Text("The selected Mac will lose Owner access. If it is this Mac, its local Keychain credential will also be removed; Set up this Mac can recover it independently.")
+                    }
+                }
+                GroupBox("Native Photos access") {
+                    VStack(alignment: .leading, spacing: 10) {
+                    LabeledContent("PhotoKit authority", value: "PhotosByElie Backstage")
+                    LabeledContent("Photos access", value: photoAccessLabel(model.photoAccess))
+                    Text(photoAccessMessage(model.photoAccess))
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Button("Check helper") {
-                        Task { await model.refreshPhotosBridgeHealth() }
+                    Button(model.photoAccess == .notDetermined ? "Allow Photos" : "Refresh Photos access") {
+                        Task { await model.authorizePhotosAccess() }
                     }
-                    .backstageHelp("Recheck the installed signed Photos helper, its version, background mode, and Photos permission.")
+                    .backstageHelp("Authorize or recheck PhotosByElie Backstage's native PhotoKit access without launching another app or helper.")
                     }
                     .padding(6)
                 }
@@ -265,10 +367,31 @@ private struct OverviewView: View {
         guard deviceID.count > 18 else { return deviceID }
         return "\(deviceID.prefix(18))…"
     }
+
+    private func photoAccessLabel(_ access: PhotoLibraryAccess) -> String {
+        switch access {
+        case .notDetermined: return "Not determined"
+        case .denied: return "Denied"
+        case .limited: return "Limited"
+        case .authorized: return "Authorized"
+        }
+    }
+
+    private func photoAccessMessage(_ access: PhotoLibraryAccess) -> String {
+        switch access {
+        case .authorized, .limited:
+            return "Backstage is authorized to use PhotoKit for its native Photos workflows."
+        case .notDetermined:
+            return "Choose Allow Photos to authorize Backstage's native PhotoKit access."
+        case .denied:
+            return "Grant PhotosByElie Backstage Photos access in System Settings, then check again."
+        }
+    }
 }
 
 private struct BackstageUpdatesView: View {
     @ObservedObject var model: BackstageViewModel
+    @State private var isConfirmingInstallation = false
 
     var body: some View {
         ScrollView {
@@ -303,6 +426,20 @@ private struct BackstageUpdatesView: View {
                 }
             }
             .padding(24)
+        }
+        .confirmationDialog(
+            "Install this verified Backstage update?",
+            isPresented: $isConfirmingInstallation,
+            titleVisibility: .visible
+        ) {
+            Button("Install and retain rollback") {
+                Task { await model.installVerifiedUpdate() }
+            }
+            .backstageHelp("Install only the already verified release, retain the incumbent signed app as a private rollback, and atomically exchange the canonical bundle.")
+            Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without installing or changing the canonical Backstage app.")
+        } message: {
+            Text("Backstage will stage and reverify the complete app, preserve the incumbent signed bundle, then atomically replace only /Applications/PhotosByElie Backstage.app.")
         }
     }
 
@@ -348,6 +485,38 @@ private struct BackstageUpdatesView: View {
                 NSWorkspace.shared.activateFileViewerSelecting([update.bundleURL])
             }
             .backstageHelp("Reveal the isolated verified app bundle for a separately confirmed manual installation or rollback decision.")
+            Button("Install verified update") {
+                isConfirmingInstallation = true
+            }
+            .buttonStyle(.borderedProminent)
+            .backstageHelp("Confirm a complete staged copy, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
+        case let .installing(manifest):
+            statusLabel("Installing verified update", systemImage: "arrow.triangle.2.circlepath", color: .orange)
+            releaseSummary(manifest)
+            ProgressView()
+            Text("Staging and reverifying the complete app before the canonical bundle is exchanged.")
+                .foregroundStyle(.secondary)
+        case let .installed(receipt):
+            statusLabel("Installed safely", systemImage: "checkmark.seal.fill", color: .green)
+            releaseSummary(receipt.manifest)
+            Text("The verified release is installed at /Applications/PhotosByElie Backstage.app.")
+                .foregroundStyle(.secondary)
+            if receipt.rollbackBundleURL != nil {
+                Text("The previous signed app is retained privately for rollback.")
+                    .foregroundStyle(.secondary)
+            }
+            Button("Quit and open installed Backstage") {
+                let configuration = NSWorkspace.OpenConfiguration()
+                NSWorkspace.shared.openApplication(
+                    at: receipt.installedBundleURL,
+                    configuration: configuration
+                ) { _, error in
+                    guard error == nil else { return }
+                    DispatchQueue.main.async { NSApp.terminate(nil) }
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .backstageHelp("Open the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
         case let .failed(message, recovery):
             statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
             Text(message)
@@ -359,6 +528,7 @@ private struct BackstageUpdatesView: View {
     private var isBusy: Bool {
         if case .checking = model.updateState { return true }
         if case .downloading = model.updateState { return true }
+        if case .installing = model.updateState { return true }
         return false
     }
 
@@ -372,6 +542,17 @@ private struct BackstageUpdatesView: View {
         VStack(alignment: .leading, spacing: 6) {
             LabeledContent("Available version", value: "\(manifest.version) (\(manifest.build))")
             LabeledContent("Minimum macOS", value: manifest.minimumOSVersion)
+            if let architectures = manifest.architectures {
+                let architectureSet = Set(architectures)
+                LabeledContent(
+                    "Architectures",
+                    value: architectures == ["arm64"]
+                        ? "Apple silicon (arm64)"
+                        : architectureSet == Set(["arm64", "x86_64"])
+                        ? "Universal (Apple silicon + Intel)"
+                        : architectures.joined(separator: ", ")
+                )
+            }
             LabeledContent("Archive size", value: "\(manifest.fileSize.formatted()) bytes")
             Text(manifest.releaseNotes)
                 .font(.callout)
@@ -525,48 +706,412 @@ private struct PublicationView: View {
     }
 }
 
-private struct LifecycleView: View {
+struct LifecycleView: View {
     @ObservedObject var model: BackstageViewModel
+    var isPreviewMode = false
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
+    @StateObject private var lifecycleScrollPosition = LifecycleTableScrollPosition()
     @State private var confirmingEmpty = false
+    @State private var confirmingDeleteSelected = false
+    @State private var lifecycleSortOrder = [
+        KeyPathComparator(\LifecycleItem.updatedAt, order: .reverse),
+    ]
+    @State private var lifecycleSortRevision = 0
+
+    private var sortedLifecycleItems: [LifecycleItem] {
+        model.lifecycleItems.sorted(using: lifecycleSortOrder)
+    }
+
+    private var lifecycleSortBinding: Binding<[KeyPathComparator<LifecycleItem>]> {
+        Binding(
+            get: { lifecycleSortOrder },
+            set: { nextSortOrder in
+                lifecycleScrollPosition.captureBeforeSort()
+                lifecycleSortOrder = nextSortOrder
+                lifecycleSortRevision += 1
+            }
+        )
+    }
+
+    private var pendingLifecycleOperationLabel: String {
+        guard let action = model.lifecyclePendingAction else {
+            return "Waste Basket action"
+        }
+        let selectedCount = action.payload?["photoIds"]?.arrayValue?.count ?? 0
+        return selectedCount == 0
+            ? "Empty Waste Basket"
+            : "Delete Selected (\(selectedCount.formatted()))"
+    }
+
+    @ViewBuilder
+    private var pendingLifecycleActionPanel: some View {
+        if model.lifecycleQueueing || model.lifecyclePendingActionID != nil {
+            HStack(alignment: .top, spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        model.lifecycleQueueing
+                            ? "Submitting Waste Basket action…"
+                            : "\(pendingLifecycleOperationLabel) is in progress"
+                    )
+                    .font(.headline)
+                    if let action = model.lifecyclePendingAction {
+                        Text(
+                            "Worker state: \(action.state.rawValue.capitalized) • Phase: \(action.diagnosticPhaseName)"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        Text("Action \(action.id)")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    Text("Browsing, Refresh, and Quick Look remain available. Only duplicate destructive submissions are disabled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("View Activity") {
+                    model.selection = .activity
+                    Task { await model.refreshActions() }
+                }
+                .backstageHelp("Open Activity to inspect the complete durable action state, progress, and receipt.")
+            }
+            .padding(10)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                model.lifecycleQueueing
+                    ? "Submitting Waste Basket action"
+                    : "\(pendingLifecycleOperationLabel) is in progress"
+            )
+            .accessibilityValue("Only duplicate destructive submissions are disabled. Browsing, Refresh, and Quick Look remain available.")
+        }
+    }
+
+    private func openQuickLook(for item: LifecycleItem) {
+        guard model.selectedLifecycleIDs.count <= 1 else {
+            model.lifecycleStatus = "Quick Look opens one selected Waste Basket item at a time."
+            return
+        }
+        model.selectedLifecycleIDs = [item.id]
+        presentQuickLook(for: item)
+    }
+
+    private func presentQuickLook(
+        for item: LifecycleItem,
+        direction: OwnerSelectionDirection = .next
+    ) {
+        let presentationID = quickLook.beginPresentation()
+        Task { @MainActor in
+            guard let url = await model.prepareLifecycleQuickLookURL(for: item) else {
+                return
+            }
+            guard quickLook.isCurrentPresentation(presentationID) else { return }
+            quickLook.present(
+                urls: [url],
+                metadata: [lifecycleQuickLookMetadata(for: item)],
+                presentation: presentationID,
+                onShortcut: { shortcut, assetID in
+                    if BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: assetID,
+                        model: model,
+                        coordinator: quickLook
+                    ) {
+                        return true
+                    }
+                    switch shortcut {
+                    case .previous, .previousRow:
+                        moveQuickLook(
+                            from: assetID,
+                            direction: .previous
+                        )
+                    case .next, .nextRow:
+                        moveQuickLook(
+                            from: assetID,
+                            direction: .next
+                        )
+                    case .pick:
+                        restoreQuickLookItem(
+                            assetID: assetID,
+                            direction: direction
+                        )
+                    case .wasteBasket:
+                        guard !model.isRunningLifecycle,
+                              !model.lifecycleQueueing,
+                              model.lifecyclePendingActionID == nil
+                        else { return false }
+                        model.selectedLifecycleIDs = [assetID]
+                        confirmingDeleteSelected = true
+                    case .hide, .approve, .returnToReview, .unpick, .undo, .rating, .color:
+                        return false
+                    }
+                    return true
+                }
+            )
+        }
+    }
+
+    private func lifecycleQuickLookMetadata(
+        for item: LifecycleItem
+    ) -> BackstageQuickLookMetadata {
+        BackstageQuickLookMetadata(
+            assetID: item.mediaID,
+            filename: item.filename.isEmpty ? item.mediaID : item.filename,
+            title: item.title.isEmpty ? "Untitled" : item.title,
+            keywords: [],
+            locationLabel: item.sourceSlug,
+            capturedAt: item.capturedAt,
+            rating: 0,
+            color: "",
+            state: item.state == "hidden"
+                ? "Recoverable"
+                : "Active global tombstone",
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P put back • X delete selected recoverable • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
+        )
+    }
+
+    private func moveQuickLook(
+        from assetID: String,
+        direction: OwnerSelectionDirection
+    ) {
+        let items = sortedLifecycleItems
+        guard let index = items.firstIndex(where: { $0.id == assetID }) else {
+            return
+        }
+        let nextIndex = index + (direction == .previous ? -1 : 1)
+        guard items.indices.contains(nextIndex) else { return }
+        let next = items[nextIndex]
+        model.selectedLifecycleIDs = [next.id]
+        presentQuickLook(for: next, direction: direction)
+    }
+
+    private func restoreQuickLookItem(
+        assetID: String,
+        direction: OwnerSelectionDirection
+    ) {
+        guard model.lifecycleItems.contains(where: {
+            $0.id == assetID && $0.state == "hidden"
+        }) else {
+            model.lifecycleStatus = "Put back is available only for a recoverable Waste Basket item."
+            return
+        }
+        guard !model.isRunningLifecycle,
+              !model.lifecycleQueueing,
+              !model.lifecycleRestoreQueueing,
+              model.lifecyclePendingActionID == nil
+        else { return }
+        let before = sortedLifecycleItems
+        model.selectedLifecycleIDs = [assetID]
+        Task { @MainActor in
+            await model.restoreLifecycleSelection()
+            guard quickLook.isVisible else { return }
+            let remaining = sortedLifecycleItems
+            guard !remaining.contains(where: { $0.id == assetID && $0.state == "hidden" }) else {
+                if let item = remaining.first(where: { $0.id == assetID }) {
+                    quickLook.updateMetadata(lifecycleQuickLookMetadata(for: item))
+                }
+                return
+            }
+            guard let next = lifecycleReplacement(
+                from: before,
+                removing: assetID,
+                remaining: remaining,
+                direction: direction
+            ) else {
+                quickLook.dismiss()
+                return
+            }
+            model.selectedLifecycleIDs = [next.id]
+            presentQuickLook(for: next, direction: direction)
+        }
+    }
+
+    private func lifecycleReplacement(
+        from items: [LifecycleItem],
+        removing assetID: String,
+        remaining: [LifecycleItem],
+        direction: OwnerSelectionDirection
+    ) -> LifecycleItem? {
+        guard let removedIndex = items.firstIndex(where: { $0.id == assetID }) else {
+            return remaining.first
+        }
+        let preferredIDs: [String]
+        switch direction {
+        case .next:
+            preferredIDs = Array(items.dropFirst(removedIndex + 1).map(\.id))
+                + Array(items[..<removedIndex].reversed().map(\.id))
+        case .previous:
+            preferredIDs = Array(items[..<removedIndex].reversed().map(\.id))
+                + Array(items.dropFirst(removedIndex + 1).map(\.id))
+        }
+        return preferredIDs.lazy.compactMap { preferredID in
+            remaining.first(where: { $0.id == preferredID })
+        }.first ?? remaining.first
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Waste Basket").font(.largeTitle.bold())
-                    Text("X is recoverable. Only a confirmed Empty Waste Basket action activates global tombstones.")
+                    Text("X is recoverable. Click Quick Look or select a row and press Space to inspect it; only a confirmed Empty Waste Basket action activates global tombstones.")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Refresh") { Task { await model.loadLifecycle() } }
-                    .disabled(model.isRunningLifecycle)
+                    .disabled(model.isRunningLifecycle || isPreviewMode)
                     .backstageHelp("Reload the private lifecycle ledger and current Waste Basket contents.")
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
-                    .disabled(model.isRunningLifecycle || model.selectedLifecycleIDs.isEmpty)
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecycleRestoreQueueing
+                            || model.selectedRecoverableLifecycleIDs.isEmpty
+                            || isPreviewMode
+                    )
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
+                Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecycleRestoreQueueing
+                            || model.lifecycleRestorePendingActionID != nil
+                            || model.lifecyclePendingActionID != nil
+                            || model.selectedRecoverableLifecycleIDs.isEmpty
+                            || isPreviewMode
+                    )
+                    .backstageHelp("Review the explicit confirmation for changing only the selected recoverable items into global tombstones; active tombstones and unselected items are untouched.")
                 Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
-                    .disabled(model.isRunningLifecycle || model.lifecycleItems.allSatisfy { $0.state != "hidden" })
+                    .disabled(
+                        model.isRunningLifecycle
+                            || model.lifecycleQueueing
+                            || model.lifecycleRestoreQueueing
+                            || model.lifecycleRestorePendingActionID != nil
+                            || model.lifecyclePendingActionID != nil
+                            || model.lifecycleItems.allSatisfy { $0.state != "hidden" }
+                            || isPreviewMode
+                    )
                     .backstageHelp("Explicitly confirm the one normal action that activates global tombstones. Source media and R2 objects remain retained.")
             }
+            Text(model.lifecycleCountSummary)
+                .font(.headline)
+                .monospacedDigit()
+                .accessibilityLabel("Waste Basket counts")
+            pendingLifecycleActionPanel
             BackstageFeedbackView(
                 message: model.lifecycleStatus,
                 isWorking: model.isRunningLifecycle
+                    || model.lifecycleQueueing
+                    || model.lifecycleRestoreQueueing
+                    || model.lifecycleRestorePendingActionID != nil
+                    || model.lifecyclePendingActionID != nil
             )
-            Table(model.lifecycleItems, selection: $model.selectedLifecycleIDs) {
-                TableColumn("Title") { item in
-                    Text(item.title.isEmpty ? item.mediaID : item.title)
+            Table(
+                sortedLifecycleItems,
+                selection: $model.selectedLifecycleIDs,
+                sortOrder: lifecycleSortBinding
+            ) {
+                TableColumn("Preview") { item in
+                    Group {
+                        if let thumbnail = model.lifecycleThumbnails[item.mediaID] {
+                            Image(nsImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else if let failure = model.lifecycleThumbnailFailures[item.mediaID] {
+                            VStack(spacing: 3) {
+                                Image(systemName: failure.systemImage)
+                                Text(failure.title)
+                                    .font(.caption2.weight(.semibold))
+                                    .lineLimit(1)
+                                Button(failure.actionTitle) {
+                                    if failure.offersPhotosAccess {
+                                        Task {
+                                            await model.authorizeAndLoadPhotos()
+                                            model.retryLifecycleThumbnail(
+                                                for: item.mediaID,
+                                                preferredIdentifier: item.photoLibraryIdentifier
+                                            )
+                                        }
+                                    } else {
+                                        model.retryLifecycleThumbnail(
+                                            for: item.mediaID,
+                                            preferredIdentifier: item.photoLibraryIdentifier
+                                        )
+                                    }
+                                }
+                                .controlSize(.small)
+                                .backstageHelp(
+                                    failure.offersPhotosAccess
+                                        ? "Request Photos permission for Backstage, then retry this Waste Basket thumbnail."
+                                        : "Retry this individual Waste Basket thumbnail without changing its lifecycle state."
+                                )
+                            }
+                            .foregroundStyle(.secondary)
+                        } else {
+                            VStack(spacing: 3) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Loading preview…")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: 64, height: 48)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .accessibilityLabel(item.filename.isEmpty ? "Preview" : "Preview of \(item.filename)")
+                    .task(id: item.mediaID) {
+                        guard !isPreviewMode else { return }
+                        model.requestLifecycleThumbnail(
+                            for: item.mediaID,
+                            preferredIdentifier: item.photoLibraryIdentifier
+                        )
+                    }
                 }
-                TableColumn("State") { item in
+                .width(76)
+                TableColumn("Filename", value: \.filename) { item in
+                    Text(item.filename.isEmpty ? item.mediaID : item.filename)
+                        .lineLimit(1)
+                        .help(item.filename.isEmpty ? item.mediaID : item.filename)
+                }
+                TableColumn("Title", value: \.title) { item in
+                    Text(item.title.isEmpty ? "Untitled" : item.title)
+                        .lineLimit(1)
+                        .help(item.title.isEmpty ? "Untitled" : item.title)
+                }
+                TableColumn("State", value: \.state) { item in
                     Text(item.state == "hidden" ? "Recoverable" : "Active global tombstone")
                         .foregroundStyle(item.state == "hidden" ? .primary : .secondary)
                 }
-                TableColumn("Collection", value: \.sourceSlug)
-                TableColumn("Kind", value: \.mediaType)
-                TableColumn("Updated", value: \.updatedAt)
-                TableColumn("") { item in
+                TableColumn("Captured", value: \.capturedAt)
+                TableColumn("Deleted", value: \.updatedAt) { item in
+                    if let deletedAt = try? Date(item.updatedAt, strategy: .iso8601) {
+                        Text(deletedAt, style: .relative)
+                            .help(deletedAt.formatted(date: .abbreviated, time: .standard))
+                    } else {
+                        Text(item.updatedAt.isEmpty ? "Unknown" : item.updatedAt)
+                    }
                 }
-                .width(90)
+                TableColumn("Actions") { item in
+                    Button("Quick Look") {
+                        openQuickLook(for: item)
+                    }
+                    .disabled(model.isRunningLifecycle || isPreviewMode)
+                    .backstageHelp("Open this Waste Basket item in private read-only Quick Look without changing lifecycle state.")
+                }
+                .width(100)
             }
+            .background(
+                LifecycleTableScrollProbe(
+                    position: lifecycleScrollPosition,
+                    sortRevision: lifecycleSortRevision
+                )
+            )
             .overlay {
                 if model.isRunningLifecycle && model.lifecycleItems.isEmpty {
                     ProgressView("Loading private lifecycle ledger…")
@@ -578,9 +1123,28 @@ private struct LifecycleView: View {
                     )
                 }
             }
+            .onKeyPress(.space) {
+                guard !isPreviewMode else { return .handled }
+                guard model.selectedLifecycleIDs.count == 1 else {
+                    model.lifecycleStatus = model.selectedLifecycleIDs.isEmpty
+                        ? "Select one Waste Basket item before opening Quick Look."
+                        : "Quick Look opens one selected Waste Basket item at a time."
+                    return .handled
+                }
+                guard let item = sortedLifecycleItems.first(where: {
+                    model.selectedLifecycleIDs.contains($0.id)
+                }) else {
+                    return .ignored
+                }
+                openQuickLook(for: item)
+                return .handled
+            }
         }
         .padding()
-        .task { await model.loadLifecycle() }
+        .task {
+            guard !isPreviewMode else { return }
+            await model.loadLifecycle()
+        }
         .confirmationDialog(
             "Empty Waste Basket?",
             isPresented: $confirmingEmpty
@@ -594,6 +1158,20 @@ private struct LifecycleView: View {
                 .backstageHelp("Close this confirmation and keep every recoverable item in the Waste Basket.")
         } message: {
             Text("This changes recoverable Waste Basket entries into active global tombstones. Explicit tombstone restore remains a separate audited path.")
+        }
+        .confirmationDialog(
+            "Delete selected recoverable items?",
+            isPresented: $confirmingDeleteSelected
+        ) {
+            Button("Delete Selected", role: .destructive) {
+                confirmingDeleteSelected = false
+                Task { await model.emptyWasteBasketSelection() }
+            }
+            .backstageHelp("Confirm changing only the selected recoverable items into active global tombstones. Source media, R2 objects, and history remain retained.")
+            Button("Cancel", role: .cancel) { confirmingDeleteSelected = false }
+                .backstageHelp("Close this confirmation without changing any selected lifecycle item.")
+        } message: {
+            Text("Only selected recoverable items are affected. Active tombstones and unselected items remain unchanged; the normal lifecycle safeguards and audit receipt still apply.")
         }
     }
 }
@@ -611,10 +1189,34 @@ private struct ActivityView: View {
                     .backstageHelp("Reload the latest audited Owner actions, progress, completion states, and failures.")
             }
             .padding()
+            BackstageFeedbackView(message: model.ownerWorkflowRecoveryStatus)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+            BackstageFeedbackView(
+                message: model.isRefreshing ? "Loading audited cloud activity…" : model.activityStatus,
+                isWorking: model.isRefreshing
+            )
+            .padding(.horizontal)
+            .padding(.bottom, 8)
             Table(model.actions) {
                 TableColumn("Kind", value: \.actionKind)
                 TableColumn("Target", value: \.target)
                 TableColumn("State") { Text($0.state.rawValue.capitalized) }
+                TableColumn("Phase") { action in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(action.diagnosticPhaseName)
+                        if let elapsed = action.diagnosticPhaseElapsedMs {
+                            Text(
+                                elapsed.formatted(.number.precision(.fractionLength(0...1)))
+                                    + " ms"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        }
+                    }
+                }
+                .width(min: 140, ideal: 220)
                 TableColumn("Updated") { action in
                     Text(
                         (action.updatedAt ?? action.createdAt)?
@@ -991,7 +1593,7 @@ private struct FixtureWorkflowView: View {
                                             }
                                             .disabled(model.isRunningFixtureSnapshotOperation)
                                             .backstageHelp("Reload the selected fixture's saved immutable Culling snapshots.")
-                                            Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Culling") {
+                                            Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Gallery") {
                                                 Task { await model.openSelectedFixturePool() }
                                             }
                                             .disabled(
@@ -1022,7 +1624,7 @@ private struct FixtureWorkflowView: View {
                                         LabeledContent("Snapshot", value: String(pool.snapshotHash.prefix(12)))
                                     }
                                     HStack {
-                                        Button(model.isOpeningFixturePool ? "Opening…" : "Open in Culling") {
+                                        Button(model.isOpeningFixturePool ? "Opening…" : "Open in Gallery") {
                                             Task { await model.openSelectedFixturePool() }
                                         }
                                         .disabled(model.isRunningFixtureSnapshotOperation)
@@ -1213,11 +1815,12 @@ struct FlowLayout: Layout {
 private struct MetadataGiveBackView: View {
     @ObservedObject var model: BackstageViewModel
     @State private var showingCommitConfirmation = false
+    @StateObject private var quickLook = BackstageQuickLookCoordinator()
 
     var body: some View {
         Form {
             Section("Incremental Apple Photos sync") {
-                Text("A bounded low-priority pass runs at launch, whenever Backstage becomes active, and every 15 minutes. Metadata-only changes preserve approval and return to Needs Upload; rendered-image changes create a new source version and return to Review.")
+                Text("Choose Sync now to run one bounded low-priority pass. Backstage does not start Photos synchronization merely because the app launches or becomes active. Metadata-only changes preserve approval and return to Needs Upload; rendered-image changes create a new source version and return to Review.")
                     .foregroundStyle(.secondary)
                 HStack {
                     Button("Sync now") {
@@ -1227,11 +1830,6 @@ private struct MetadataGiveBackView: View {
                     .backstageHelp("Run one bounded incremental Photos synchronization now and classify metadata, appearance, missing, and returned changes.")
                     if model.isSyncingPhotos {
                         ProgressView().controlSize(.small)
-                        Button(model.isCancellingPhotosSync ? "Stopping…" : "Stop safely") {
-                            Task { await model.cancelPhotosSync() }
-                        }
-                        .disabled(model.isCancellingPhotosSync)
-                        .backstageHelp("Stop after the current PhotoKit checkpoint. Completed asset classifications remain recorded and the rest retry on the next pass.")
                     }
                     BackstageFeedbackView(
                         message: model.photosSyncStatus,
@@ -1250,12 +1848,21 @@ private struct MetadataGiveBackView: View {
                     .font(.caption)
                 }
             }
-            Section("Title, keywords, and review queue") {
+            Section("Title, caption, and keywords") {
                 HStack {
                     TextField("Asset ID", text: $model.metadataAssetID)
                     Button("Use selected Photos item") { model.useSelectedPhotoForMetadata() }
                         .disabled(model.selectedPhotoIDs.isEmpty)
                         .backstageHelp("Copy the currently selected Photos asset ID into this Metadata editing form.")
+                    if !model.metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        metadataThumbnail(
+                            assetID: model.metadataAssetID,
+                            title: model.metadataTitle,
+                            keywords: model.metadataKeywords
+                                .split(separator: ",")
+                                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                        )
+                    }
                 }
                 TextField("Title", text: $model.metadataTitle)
                 TextField("Caption", text: $model.metadataCaption)
@@ -1265,10 +1872,6 @@ private struct MetadataGiveBackView: View {
                         Task { await model.updatePhotoMetadata() }
                     }
                     .backstageHelp("Save the entered title, caption, and keywords as an audited, reversible Owner metadata edit.")
-                    Button("Queue selected for review") {
-                        Task { await model.queueMetadataReview() }
-                    }
-                    .backstageHelp("Add the entered asset to the title and keyword Review queue without approving metadata.")
                     Button("Undo last change") {
                         Task { await model.undoLastMetadataChange() }
                     }
@@ -1339,6 +1942,7 @@ private struct MetadataGiveBackView: View {
                     BackstageFeedbackView(
                         message: model.metadataModelLadderStatus,
                         isWorking: model.isSavingMetadataModelLadder
+                            || model.isLoadingMetadataModelLadder
                     )
                 }
                 if let validation = model.metadataModelLadderValidation {
@@ -1347,71 +1951,6 @@ private struct MetadataGiveBackView: View {
                         .foregroundStyle(.red)
                 }
                 Text("Supported effort strings: none, minimal, low, medium, high, xhigh, max. Known GPT-5.4/5.6 combinations are checked before save; unfamiliar model strings are checked by Codex Desktop at execution. Approval remains a separate human decision.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section("AI proposal review") {
-                HStack {
-                    Button("Load ladder & proposals") {
-                        Task { await model.loadMetadataProposals() }
-                    }
-                    .backstageHelp("Load pending AI metadata proposals from the local read-only Owner helper for human review.")
-                    BackstageFeedbackView(message: model.metadataProposalStatus)
-                }
-                Table(model.metadataProposals) {
-                    TableColumn("Current") { proposal in
-                        VStack(alignment: .leading) {
-                            Text(proposal.current.title)
-                            Text(proposal.current.keywords.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    TableColumn("AI proposal") { proposal in
-                        VStack(alignment: .leading) {
-                            Text(proposal.proposed.title)
-                            Text(proposal.proposed.keywords.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            if let reason = proposal.proposed.reason, !reason.isEmpty {
-                                Text(reason).font(.caption2).foregroundStyle(.tertiary)
-                            }
-                            if let generator = proposal.proposed.generator {
-                                Text("\(generator.label ?? generator.model) · \(generator.resolvedModel ?? "model") · \(generator.reasoningEffort ?? "effort unknown") · \(generator.vision == true ? "vision" : "text")")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                if generator.modelMaxed {
-                                    Text("Strongest configured rung; another rejection exhausts this ladder.")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                            if let state = proposal.state, let attempt = state.proposalAttempt {
-                                Text("Attempt \(attempt) · model calls \(state.modelAttempts ?? 0)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    TableColumn("Decision") { proposal in
-                        HStack {
-                            Button("Approve") {
-                                Task { await model.decideProposal(proposal, disposition: .approve) }
-                            }
-                            .backstageHelp("Approve this AI proposal as the canonical title and keywords for the asset.")
-                            Button("Reject") {
-                                Task { await model.decideProposal(proposal, disposition: .reject) }
-                            }
-                            .backstageHelp("Reject this AI proposal while leaving the asset eligible for a future revised proposal.")
-                            Button("Block", role: .destructive) {
-                                Task { await model.decideProposal(proposal, disposition: .block) }
-                            }
-                            .backstageHelp("Block this AI proposal and prevent the same unsuitable proposal from being reused.")
-                        }
-                    }
-                }
-                .frame(minHeight: 180)
-                Text("Proposals are read from Owner.sqlite through the local read-only helper. Every approval, rejection, or block remains a Worker-authorized Max action.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1424,6 +1963,10 @@ private struct MetadataGiveBackView: View {
                 )
                 Text("Approved canonical title, keywords, rating, color, and PBE:Approved are global. Tombstones receive PBE:Tombstone. Fixture Pick/Hide state is never written to Photos. Preview is read-only; Commit is a separate Worker-authorized action through the signed connector.")
                     .foregroundStyle(.secondary)
+                LabeledContent("Write scope", value: model.metadataGiveBackScopeDescription)
+                Text("Enter an exact Asset ID in the Title, caption, and keywords section to limit both Preview and Commit to that one item. Leave it blank only when the entire current fixture is intended.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 HStack {
                     Button("Preview changes") {
                         Task { await model.planMetadataGiveBack() }
@@ -1433,7 +1976,7 @@ private struct MetadataGiveBackView: View {
                     Button("Commit & verify") {
                         showingCommitConfirmation = true
                     }
-                    .disabled(model.isRunningMetadata)
+                    .disabled(model.isRunningMetadata || !model.metadataGiveBackCommitReady)
                     .backstageHelp("Review the separate confirmation for writing the currently planned approved metadata to Apple Photos.")
                     Button("Retry failed only") {
                         Task { await model.retryMetadataFailures() }
@@ -1465,18 +2008,109 @@ private struct MetadataGiveBackView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Metadata")
+        .task { await model.loadMetadataModelLadderIfNeeded() }
+        .onAppear { quickLook.activate() }
+        .onDisappear { quickLook.deactivate() }
         .confirmationDialog(
-            "Write approved metadata to Apple Photos?",
+            "Write approved metadata to \(model.metadataReport?.readyCount ?? 0) Apple Photos item\((model.metadataReport?.readyCount ?? 0) == 1 ? "" : "s")?",
             isPresented: $showingCommitConfirmation
         ) {
-            Button("Commit and verify", role: .destructive) {
+            Button("Commit and verify \(model.metadataReport?.readyCount ?? 0) item\((model.metadataReport?.readyCount ?? 0) == 1 ? "" : "s")", role: .destructive) {
                 Task { await model.commitMetadataGiveBack() }
             }
             .backstageHelp("Confirm the signed metadata write, then re-read every eligible Photos item before recording verified receipts.")
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without writing any metadata to Apple Photos.")
         } message: {
-            Text("The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
+            Text("Scope: \(model.metadataGiveBackScopeDescription). The signed Max connector will preserve unrelated keywords, write only eligible same-version assets, then re-read every item before recording a verified receipt.")
+        }
+    }
+
+    private func metadataThumbnail(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) -> some View {
+        Button {
+            openMetadataQuickLook(assetID: assetID, title: title, keywords: keywords)
+        } label: {
+            Group {
+                if let thumbnail = model.cullingThumbnails[assetID] {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 64, height: 48)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "Open preview for \(title.isEmpty ? assetID : title)"
+        )
+        .backstageHelp("Open this exact Metadata asset in the canonical Quick Look presentation. Rating and color shortcuts remain audited.")
+        .task(id: assetID) {
+            let source = model.cullingAssets.first(where: { $0.id == assetID })
+            model.requestThumbnail(
+                for: assetID,
+                preferredIdentifier: source?.photoLibraryIdentifier
+            )
+        }
+    }
+
+    private func openMetadataQuickLook(
+        assetID: String,
+        title: String,
+        keywords: [String]
+    ) {
+        let presentationID = quickLook.beginPresentation()
+        Task {
+            let source = model.cullingAssets.first(where: { $0.id == assetID })
+            guard let url = await model.prepareMetadataQuickLookURL(
+                for: assetID,
+                preferredIdentifier: source?.photoLibraryIdentifier
+            ) else {
+                return
+            }
+            guard quickLook.isCurrentPresentation(presentationID) else { return }
+            let decision = model.cullingStates[assetID]
+            quickLook.present(
+                urls: [url],
+                metadata: [
+                    BackstageQuickLookMetadata(
+                        assetID: assetID,
+                        filename: source?.filename ?? assetID,
+                        title: title,
+                        keywords: keywords,
+                        locationLabel: source?.locationLabel ?? "",
+                        capturedAt: source?.capturedAt ?? "",
+                        sourceSize: BackstageQuickLookSourceSize(
+                            mediaType: source?.mediaType ?? "photo",
+                            pixelWidth: source?.pixelWidth ?? 0,
+                            pixelHeight: source?.pixelHeight ?? 0,
+                            byteCount: source?.originalByteCount ?? 0,
+                            currentImageByteCount: model.currentImageByteCount(for: assetID)
+                        ),
+                        rating: decision?.rating ?? source?.rating ?? 0,
+                        color: decision?.color ?? source?.color ?? "",
+                        state: decision?.pickState ?? source?.placementState.rawValue ?? "metadata",
+                        shortcutHint: "Metadata preview • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
+                    )
+                ],
+                presentation: presentationID,
+                onShortcut: { shortcut, currentAssetID in
+                    BackstageQuickLookDecisionRouter.handle(
+                        shortcut,
+                        assetID: currentAssetID,
+                        model: model,
+                        coordinator: quickLook
+                    )
+                }
+            )
         }
     }
 }

@@ -22,37 +22,45 @@ migration is rehearsed.
 - **Worker `/api/v1`** — authentication, authorization, D1/R2 access, audit,
   durable action ledger, delivery, and sharing.
 - **Max connector** — claims exact opaque actions, validates target and kind,
-  owns all private `Owner.sqlite` mutations, and reports terminal results.
-- **Photos Bridge** — the existing signed PhotoKit writer for title, keyword,
-  and receipt give-back. Backstage may read, select, preview, and export
-  through PhotoKit; it does not create a second metadata writer.
+  owns external private `Owner.sqlite` mutations, and reports terminal
+  results. Native OwnerCore also owns the named transactional Review/Culling
+  SQLite stores described by PBB-112.
+- **Backstage PhotoKit services** — `PhotoLibraryService` owns authorization,
+  indexing, still previews, and bounded original export. `PhotoMetadataService`
+  owns the approved title, caption, and managed-keyword read/write path. There
+  is no separately installed or permissioned Photos helper.
 
 ## Native media and Photos give-back
 
-`PhotoKitLibraryService` is read/export-only:
+`PhotoLibraryService` and `PhotoMetadataService` are the only normal-release
+PhotoKit authority:
 
 - it requests the app's Photos permission, indexes stable local identifiers,
   filename, capture date and media kind;
 - it prepares bounded JPEG previews without exporting originals;
-- it exports the preferred original resource only after an explicit folder
-  choice and returns byte count, UTI and a streamed SHA-256 receipt.
+- `PhotoLibraryService` exports the preferred original resource only after an
+  explicit folder choice and returns byte count, UTI and a streamed SHA-256
+  receipt;
+- `PhotoMetadataService` reads and applies only the approved title, caption,
+  and managed keyword fields, returning per-item before/after values and
+  verified failures.
 
 The Metadata screen never calls an Apple Photos mutation API. It creates a
 `sidecar-culling-review` action containing the existing
 `fixture-photos-writeback-plan` or `fixture-photos-writeback-commit` manifest.
 The Worker is the authorization, idempotency and audit gate. Backstage then
-posts only the opaque action ID to the allowlisted Max localhost wake endpoint;
-if the endpoint is unavailable, the durable connector poller picks up the same
-action.
+launches the sealed connector runtime with `--once` for that opaque action;
+the process has no local status server and exits after its bounded drain. If
+Backstage is closed or the child is unavailable, the durable Worker action
+remains queued for the next explicit Backstage launch.
 
-The connector invokes `PhotosByElie Photos Bridge.app` for both the batch
-read used by the dry run and the batch write. JavaScript for Automation runs
-inside that stable signed app identity. The bridge preserves unrelated
-keywords, returns per-item before/after values, and the connector records an
-Apple Photos receipt only after a re-read verifies title, caption and managed
-keywords. Failed item IDs remain independently retryable; retry submits only
-those IDs. No production give-back path invokes the legacy in-process JXA
-adapter.
+Python/browser/connector maintenance invokes the authenticated Backstage IPC
+surface for both batch reads and batch writes. The signed Backstage app owns
+the stable Photos permission identity, preserves unrelated keywords, returns
+per-item before/after values, and records an Apple Photos receipt only after a
+re-read verifies title, caption, and managed keywords. Failed item IDs remain
+independently retryable; retry submits only those IDs. No production path
+launches, installs, or compiles a standalone Photos helper.
 
 ## Native fixture, ACS, culling, and metadata workflows
 
@@ -83,21 +91,26 @@ placeholders:
   assigns inherited group membership, and disables people or archives groups
   without deleting audit history. Email addresses are normalized by the
   Worker; passwords remain case-sensitive and are never returned to the app.
-- **Culling** uses PhotoKit only to index and select local assets, then applies
-  the same pick, reject, clear-pick and 0–5 rating payloads as Sidecar through
-  the canonical `/sidecar/decisions/*` API with idempotency keys.
-- **Metadata** can save title, caption and keyword sets, queue one or many items
-  for the existing title/keyword review, replace the managed keyword
-  blacklist, review pending AI proposals, and run the separate verified Apple
-  Photos give-back workflow. Proposal rows are read from `Owner.sqlite` through
-  the connector's read-only localhost endpoint; approve, reject and block
-  remain Worker-authorized Max actions.
+- **Culling** uses PhotoKit only to index and select local assets, then reads
+  and applies fixture-local placement, rating, and color state through the
+  native OwnerCore SQLite stores. The store preserves the Owner tables,
+  audit events, conflict checks, and exact session undo without a connector
+  process.
+- **Metadata** saves title, caption and keyword sets, replaces the managed
+  keyword blacklist, configures the AI model ladder, and runs the separate
+  verified Apple Photos give-back workflow. Its saved model ladder uses the
+  read-only `MetadataModelLadderSQLiteStore`; historical proposal rows remain
+  retained in `Owner.sqlite` but are not a second user-facing review queue.
+  **Review** is the sole title/keyword proposal-review surface in native Backstage and provides
+  Approve and Needs AI. Native Review reads and local editorial mutations use
+  `OwnerReviewSQLiteStore`; Photos give-back, Worker actions, and other external
+  boundaries remain action-scoped Max work.
 
-Fixture and metadata mutations create `sidecar-culling-review` or
-`photo-moderation` actions targeted to Max. The native app posts only the
-resulting opaque action ID to the localhost wake endpoint. ACS writes remain
-Worker-authorized D1 mutations. None of these screens writes an Owner SQLite
-business row directly.
+External fixture, metadata, Photos, delivery, and publication operations
+create `sidecar-culling-review` or `photo-moderation` actions targeted to Max.
+The native app posts only the resulting opaque action ID for those operations.
+Native Review/Culling placement and editorial operations are the explicit
+OwnerCore SQLite exception; ACS writes remain Worker-authorized D1 mutations.
 
 The fixture-aware editorial state, queue, propagation, audit, and undo
 invariants are defined in
@@ -110,19 +123,24 @@ second state model.
 ```mermaid
 flowchart LR
   UI["BackstageApp"] --> Core["OwnerCore"]
+  Core -->|native Review/Culling transaction and Metadata ladder read| DB[("Owner.sqlite")]
   Core -->|short lived bearer| Worker["Worker API v1"]
   Worker -->|opaque action ID| Connector["Max connector"]
   Connector --> DB[("Owner.sqlite")]
-  Connector --> Bridge["Signed Photos Bridge"]
+  Connector --> BackstageIPC["Authenticated Backstage IPC"]
+  BackstageIPC --> PhotoKit["PhotoKit"]
   Worker --> D1[("D1 access and audit")]
   Worker --> R2[("R2 media and delivery")]
-  Core -. read, preview, export .-> PhotoKit["PhotoKit"]
+  Core -. read, preview, export, metadata .-> PhotoKit
 ```
 
-`Owner.sqlite` is the only local curation authority. Native code opens it
-read-only for inspection unless running a named, transactional schema
-migration after a verified backup. Normal mutations travel through the Worker
-ledger and Max connector; no native screen writes business rows directly.
+`Owner.sqlite` is the only local curation authority. OwnerCore opens it for
+named Review/Culling transactions and read paths, using the same tables,
+snapshots, audit rows, conflict checks, and undo records as the authoritative
+workflow. Other mutations travel through the Worker ledger and Max connector;
+they are not silently folded into the local stores. If the native database
+cannot be resolved, the interactive Review/Culling path fails closed rather
+than falling back to Python, HTTP, or an always-on daemon.
 Native migrations record portable identifiers in GRDB's
 `grdb_migrations(identifier)` convention while retaining `PRAGMA user_version`
 for compatibility with the existing connector. A migration starts only after
@@ -168,21 +186,16 @@ credential. Backstage freezes the fixture while the session is active; the
 Worker and host reject a missing, revoked, expired, closed, mismatched, or
 unready lease.
 
-Backstage and the Python host independently attest the launched checkout as
-`git:<commit>:pbe-host-sha256:<digest>`. The digest covers the tracked Python
-host and hosted gallery code declared in
-`scripts/pbe_owner_host_tracked_paths.txt`. Both sides require those tracked
-files to match `HEAD`, including direct blob checks that defeat
-`assume-unchanged`; dirty host code fails before a bearer is sent. Ignored
-root dependencies such as `node_modules` and unrelated untracked files outside
-the Python import scope do not alter the identity. Before it creates the
-bootstrap secret, Backstage separately rejects untracked or ignored import
-modules, symlinks, special files, and executables under `scripts/`, including a
-standard-library shadow such as `scripts/json.py`. The host starts with
-inherited Python configuration disabled and a clean per-launch bytecode-cache
-prefix; ordinary ignored `__pycache__` files therefore remain non-blocking.
-Python repeats the scope check as defense in depth, while native preflight is
-the required pre-import control.
+The native host serves only an immutable web bundle from the signed app's
+`OwnerRuntime`. `PBEOwnerWebBundle` validates the packaged runtime manifest,
+fixed entrypoints, safe regular-file paths, MIME types, byte bounds, sizes, and
+per-file SHA-256 values before the listener is accepted. Its identity is
+`pbe-web-runtime:sha256:<manifest-digest>`. A one-use in-process bootstrap
+secret exchanges that identity for a separate host-authorization secret before
+Backstage presents a Worker session bearer. Mutable checkout state, Python
+imports, and an arbitrary filesystem web root are not part of this production
+trust boundary. The retained Python host and its git-tree attestation are
+legacy rollback/test material only; they are not a normal launch fallback.
 
 The retired Open PBE Owner flow captured the exact fixture synchronously. Both chooser and
 fixture refresh remain disabled through the asynchronous readiness/mint/attach
@@ -200,7 +213,7 @@ contract.
 
 | Threat | Control |
 | --- | --- |
-| A compromised web view or browser sends a raw SQLite operation | Local wake accepts only an opaque action ID; connector claims and validates it through the Worker |
+| A compromised web view or browser sends a raw SQLite operation | The native host exposes only its reviewed route allowlist, requires the session cookie and exact origin where applicable, and derives fixture and actor authority from the frozen lease |
 | A stolen access token remains useful | 15-minute lifetime, per-request device revocation check, no refresh token, device credential in Keychain |
 | A connector acts for another Mac | Target and claim ownership are checked on every exact action |
 | A crash partially mutates private state | Connector and migration writes use transactions; action is completed only after receipts are durable |
@@ -214,11 +227,18 @@ contract.
 2. Read the Keychain device identity; re-present it for a fresh bearer or
    request enrollment.
 3. Check Worker health and Max connector status.
-4. Open `Owner.sqlite` read-only and show its schema/version.
+4. Resolve `Owner.sqlite`, inspect its schema/version, and enable the named
+   native Review/Culling stores only when the database is available.
 5. Resume non-terminal actions/jobs without resubmission.
 6. On backgrounding, cancel UI-only tasks but keep durable action IDs.
 7. On sign-out, clear bearer state and Keychain, close the database, and
    discard cached private previews.
+
+Import and Upload Bridge recovery follows the same durable boundary: new work
+records their worker identity and lease, while historical rows without that
+evidence remain explicitly `needs-review` until an operator decides their
+disposition. A missing process alone never turns an identity-free legacy row
+into a claimed success or failure.
 
 ## Reversible browser cutover
 

@@ -30,6 +30,10 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.match(gallery, /const extendOwnerKeyboardSelection =/);
   assert.match(gallery, /if \(extend\) \{\s*extendOwnerKeyboardSelection\(photos, nextIndex\);/);
   assert.match(gallery, /stepGallerySelection\(delta, !horizontal, \{ extend: event\.shiftKey \}\)/);
+  assert.match(gallery, /const focusedControlOwnsGalleryKey = \(target, key\) => \{/);
+  assert.match(gallery, /target\.tagName === "BUTTON" && \[" ", "Spacebar", "Enter"\]\.includes\(key\)/);
+  assert.doesNotMatch(gallery, /\["INPUT", "TEXTAREA", "SELECT", "BUTTON"\]\.includes\(target\.tagName\)/);
+  assert.match(gallery, /if \(focusedControlOwnsGalleryKey\(target, event\.key\)\) return;/);
   assert.match(gallery, /syncGallerySelectionToolbar\(\)/);
   assert.match(gallery, /await window\.photosByEliePageReady\(\)/);
   assert.match(detail, /await window\.photosByEliePageReady\(\)/);
@@ -40,6 +44,7 @@ test("hosted PBE culling waits for Backstage and uses only the local Waste Baske
   assert.doesNotMatch(gallery, /data-owner-cull-undo/);
   assert.match(gallery, /id: "waste-basket"[\s\S]*shortcut: "x"[\s\S]*moveOwnerSelectionToWasteBasket/);
   assert.match(gallery, /id: "unpick"[\s\S]*shortcut: "u"/);
+  assert.match(gallery, /hiddenOnly \? "Unhide" : pickedOnly \? "Unpick" : "Clear decisions"/);
   assert.match(gallery, /id: "undo"[\s\S]*shortcut: commandShortcut\("z", \{ primary: true \}\)[\s\S]*undoLastOwnerCommand/);
   assert.match(gallery, /moveOwnerSelectionToWasteBasket/);
   assert.doesNotMatch(gallery, /data-owner-cull-touch-hide|data-owner-cull-touch-undo/);

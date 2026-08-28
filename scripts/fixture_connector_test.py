@@ -2,6 +2,10 @@ import sys
 import tempfile
 import unittest
 import hashlib
+import os
+import sqlite3
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,6 +37,219 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_photos_sync_db_writes_retry_transient_locks(self):
+        attempts = 0
+
+        def operation():
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise sqlite3.OperationalError("database is locked")
+            return {"ok": True}
+
+        self.assertEqual(
+            local_server._retry_photos_sync_db_write(operation, delays=(0, 0)),
+            {"ok": True},
+        )
+        self.assertEqual(attempts, 3)
+
+    def test_photos_sync_recovery_does_not_terminalize_legacy_rows_by_age(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.executemany(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at
+                    ) VALUES (?, 'running', 'Reading Apple Photos metadata', ?, ?)
+                    """,
+                    [
+                        (
+                            "stale-run",
+                            "2026-08-19T10:00:00Z",
+                            "2026-08-19T10:00:00Z",
+                        ),
+                        (
+                            "fresh-run",
+                            "2026-08-19T11:45:00Z",
+                            "2026-08-19T11:45:00Z",
+                        ),
+                    ],
+                )
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at, completed_at
+                    ) VALUES (
+                      'completed-run', 'completed', 'Completed',
+                      '2026-08-19T08:00:00Z', '2026-08-19T08:05:00Z',
+                      '2026-08-19T08:05:00Z'
+                    )
+                    """
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 0)
+            self.assertEqual(result["reviewedCount"], 1)
+            self.assertEqual(result["reviewRunIds"], ["stale-run"])
+
+            with connect(root) as connection:
+                rows = {
+                    row["run_id"]: row
+                    for row in connection.execute(
+                        """
+                        SELECT run_id, status, stage, error_text, completed_at,
+                               recovery_state, recovery_reason
+                        FROM photos_sync_runs
+                        """
+                    )
+                }
+            self.assertEqual(rows["stale-run"]["status"], "running")
+            self.assertEqual(rows["stale-run"]["recovery_state"], "needs-review")
+            self.assertIn("no durable worker PID/token", rows["stale-run"]["recovery_reason"])
+            self.assertIsNone(rows["stale-run"]["completed_at"])
+            self.assertEqual(rows["fresh-run"]["status"], "running")
+            self.assertEqual(rows["completed-run"]["status"], "completed")
+
+    def test_photos_sync_recovery_terminalizes_only_a_verified_dead_worker(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, worker_pid, worker_token,
+                      created_at, updated_at
+                    ) VALUES (
+                      'dead-worker', 'running', 'Reading Apple Photos metadata',
+                      ?, 'worker-token-dead', '2026-08-19T10:00:00Z',
+                      '2026-08-19T10:00:00Z'
+                    )
+                    """,
+                    (os.getpid(),),
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 1)
+            self.assertEqual(result["recoveredRunIds"], ["dead-worker"])
+
+            with connect(root) as connection:
+                row = connection.execute(
+                    "SELECT status, recovery_state, recovery_reason FROM photos_sync_runs WHERE run_id = 'dead-worker'"
+                ).fetchone()
+            self.assertEqual(row["status"], "failed")
+            self.assertEqual(row["recovery_state"], "recovered")
+            self.assertIn("no longer active", row["recovery_reason"])
+
+    def test_photos_sync_recovery_observes_a_worker_that_died_in_another_process(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            worker = subprocess.Popen([sys.executable, "-c", "pass"])
+            worker_pid = worker.pid
+            worker.wait(timeout=5)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, worker_pid, worker_token,
+                      created_at, updated_at
+                    ) VALUES (
+                      'cross-process-dead-worker', 'running', 'Reading Apple Photos metadata',
+                      ?, 'worker-token-cross-process', '2026-08-19T10:00:00Z',
+                      '2026-08-19T10:00:00Z'
+                    )
+                    """,
+                    (worker_pid,),
+                )
+                connection.commit()
+
+            result = local_server._reconcile_stale_photos_sync_runs(
+                root,
+                now=datetime(2026, 8, 19, 12, 0, tzinfo=timezone.utc),
+                stale_after_seconds=60 * 60,
+            )
+            self.assertEqual(result["recoveredCount"], 1)
+            self.assertEqual(result["recoveredRunIds"], ["cross-process-dead-worker"])
+
+    def test_photos_sync_worker_persists_failure_receipt(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO photos_sync_runs (
+                      run_id, status, stage, created_at, updated_at
+                    ) VALUES (
+                      'failed-worker', 'running', 'Queued',
+                      '2026-08-19T10:00:00Z', '2026-08-19T10:00:00Z'
+                    )
+                    """
+                )
+                connection.commit()
+
+            with patch.object(
+                local_server,
+                "_incremental_photos_sync",
+                side_effect=RuntimeError("PhotoKit unavailable"),
+            ):
+                local_server._run_photos_sync_task(root, "failed-worker", 25)
+
+            status = local_server._photos_sync_run_status(root, "failed-worker")
+            self.assertEqual(status["status"], "failed")
+            self.assertEqual(status["stage"], "Failed")
+            self.assertEqual(status["error"], "PhotoKit unavailable")
+            self.assertTrue(status["completedAt"])
+
+    def test_photos_sync_start_finishes_inside_the_action_process(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with connect(root):
+                pass
+            result = {
+                "ok": True,
+                "requested": 2,
+                "scanned": 2,
+                "remaining": 0,
+                "changes": {
+                    "baseline": 1,
+                    "unchanged": 1,
+                    "metadataOnly": 0,
+                    "appearance": 0,
+                    "sourceMissing": 0,
+                    "sourceReturned": 0,
+                },
+                "failures": [],
+                "elapsedSeconds": 0.5,
+            }
+            with patch.object(local_server, "_incremental_photos_sync", return_value=result), patch.object(
+                local_server.threading,
+                "Thread",
+                side_effect=AssertionError("Photos sync must not outlive its action process"),
+            ):
+                status = local_server._start_photos_sync_run(root, limit=2)
+
+            self.assertEqual(status["status"], "completed")
+            self.assertEqual(status["scanned"], 2)
+            self.assertEqual(status["remaining"], 0)
+            self.assertTrue(status["completedAt"])
+            with connect(root) as connection:
+                row = connection.execute(
+                    "SELECT status, completed_at FROM photos_sync_runs WHERE run_id = ?",
+                    (status["runId"],),
+                ).fetchone()
+            self.assertEqual(row["status"], "completed")
+            self.assertTrue(row["completed_at"])
+
     def test_connector_exposes_fixture_state_and_effective_access(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -120,6 +337,13 @@ class FixtureConnectorTest(unittest.TestCase):
                 review["result"]["reviewWindow"]["items"][0]["assetId"],
                 "asset-1",
             )
+            self.assertFalse(
+                review["result"]["reviewWindow"]["countryWriteEnabled"]
+            )
+            self.assertEqual(
+                review["result"]["reviewWindow"]["summary"]["countryMissing"],
+                1,
+            )
             requested = local_server.new_owner_connector_result(
                 root,
                 action(
@@ -135,6 +359,10 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertEqual(
                 requested["result"]["reviewAction"]["items"][0]["after"]["editorialState"],
                 "requesting-ai",
+            )
+            self.assertGreaterEqual(
+                requested["result"]["reviewAction"]["timing"]["localTransaction"]["durationMs"],
+                0,
             )
             self.assertNotIn(
                 "previewCapture",
@@ -154,6 +382,10 @@ class FixtureConnectorTest(unittest.TestCase):
                 ],
                 "unreviewed",
             )
+            self.assertGreaterEqual(
+                undone["result"]["reviewUndo"]["timing"]["localTransaction"]["durationMs"],
+                0,
+            )
             access = local_server.new_owner_connector_result(
                 root,
                 action(
@@ -167,13 +399,20 @@ class FixtureConnectorTest(unittest.TestCase):
     def test_connector_lists_private_lifecycle_titles_without_mutation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(root, [{
+                "localIdentifier": "photos-hidden",
+                "filename": "Hidden Rendered.mp4",
+                "preferredResourceFilename": "Hidden Original.MOV",
+                "mediaType": "video",
+                "creationDate": "2026-07-24T10:00:00Z",
+            }])
             with owner_state_db.connect(root) as connection:
                 connection.execute(
                     """INSERT INTO media_lifecycle
                        (media_id, lifecycle_state, source_slug, title, media_type,
                         source_paths_json, public_preview_keys_json, private_keys_json,
                         updated_at)
-                       VALUES (?, 'hidden', 'france', 'Private saved title', 'photo',
+                       VALUES (?, 'hidden', 'france', 'Private saved title', 'video',
                                '[]', '[]', '[]', ?)""",
                     ("photo-hidden", "2026-07-25T00:00:00Z"),
                 )
@@ -185,6 +424,31 @@ class FixtureConnectorTest(unittest.TestCase):
                        VALUES (?, 'discarded', 'spain', 'Discarded audit title', 'photo',
                                '[]', '[]', '[]', ?)""",
                     ("photo-discarded", "2026-07-25T00:00:01Z"),
+                )
+                connection.commit()
+
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    """INSERT INTO sidecar_upload_bridge_runs
+                       (run_id, mode, status, execute_upload, limit_count, created_at, updated_at)
+                       VALUES (?, 'upload', 'completed', 1, 1, ?, ?)""",
+                    ("bridge-lifecycle", "2026-07-25T00:00:00Z", "2026-07-25T00:00:00Z"),
+                )
+                connection.execute(
+                    """INSERT INTO sidecar_upload_bridge_run_items
+                       (run_item_id, run_id, asset_id, photo_id, filename, media_type,
+                        status, upload_status, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 'uploaded', 'uploaded', ?, ?)""",
+                    (
+                        "bridge-item-lifecycle",
+                        "bridge-lifecycle",
+                        "photos-hidden",
+                        "photo-hidden",
+                        "Hidden Rendered.mp4",
+                        "video",
+                        "2026-07-25T00:00:00Z",
+                        "2026-07-25T00:00:00Z",
+                    ),
                 )
                 connection.commit()
 
@@ -205,6 +469,58 @@ class FixtureConnectorTest(unittest.TestCase):
             listed["result"]["lifecycle"]["items"][0]["title"],
             "Private saved title",
         )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["filename"],
+            "Hidden Original.MOV",
+        )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["capturedAt"],
+            "2026-07-24T10:00:00Z",
+        )
+        self.assertEqual(
+            listed["result"]["lifecycle"]["items"][0]["photoLibraryIdentifier"],
+            "photos-hidden",
+        )
+        self.assertNotIn("previewPath", listed["result"]["lifecycle"]["items"][0])
+        self.assertNotIn("quickLookPath", listed["result"]["lifecycle"]["items"][0])
+
+    def test_connector_lists_native_asset_lifecycle_filename_without_bridge_row(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sidecar_state_db.upsert_assets(root, [{
+                "localIdentifier": "photos-native-hidden",
+                "filename": "Native Hidden.jpg",
+                "preferredResourceFilename": "Native Hidden.heic",
+                "applePhotosTitle": "Paris, Opera Garnier",
+                "mediaType": "photo",
+                "creationDate": "2026-08-24T08:33:09Z",
+            }])
+            with owner_state_db.connect(root) as connection:
+                connection.execute(
+                    """INSERT INTO media_lifecycle
+                       (media_id, lifecycle_state, source_slug, title, media_type,
+                        hidden_at, source_paths_json, public_preview_keys_json,
+                        private_keys_json, updated_at)
+                       VALUES (?, 'hidden', 'expo', '', 'photo',
+                               ?, '[]', '[]', '[]', ?)""",
+                    (
+                        "photos-native-hidden",
+                        "2026-08-24T08:33:09Z",
+                        "2026-08-24T08:33:09Z",
+                    ),
+                )
+                connection.commit()
+
+            listed = local_server.new_owner_connector_result(
+                root,
+                action("fixture-lifecycle-list", states=["hidden"]),
+            )
+
+        item = listed["result"]["lifecycle"]["items"][0]
+        self.assertEqual(item["filename"], "Native Hidden.heic")
+        self.assertEqual(item["title"], "Paris, Opera Garnier")
+        self.assertEqual(item["capturedAt"], "2026-08-24T08:33:09Z")
+        self.assertEqual(item["updatedAt"], "2026-08-24T08:33:09Z")
 
     def test_connector_supports_tree_search_pool_and_delivery_plan(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -484,18 +800,9 @@ class FixtureConnectorTest(unittest.TestCase):
                         "keywords": ["Spain"],
                     }]
 
-            def fake_preview(_repo_root, args):
-                input_path = Path(args[args.index("--input") + 1])
-                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
-                items = []
-                for request in requests:
-                    Path(request["destination"]).write_bytes(b"rendered-current-jpeg")
-                    items.append({
-                        "assetId": request["assetId"],
-                        "ok": True,
-                        "destination": request["destination"],
-                    })
-                return {"ok": True, "items": items}
+            def fake_preview(_photo_id, destination, _max_pixel, _timeout):
+                Path(destination).write_bytes(b"rendered-current-jpeg")
+                return {"ok": True, "destination": str(destination)}
 
             synced = local_server._incremental_photos_sync(
                 root,
@@ -548,12 +855,9 @@ class FixtureConnectorTest(unittest.TestCase):
                         for request in requests
                     ]
 
-            def fake_preview(_repo_root, args):
-                input_path = Path(args[args.index("--input") + 1])
-                requests = local_server.json.loads(input_path.read_text(encoding="utf-8"))
-                for request in requests:
-                    Path(request["destination"]).write_bytes(request["assetId"].encode())
-                return {"ok": True, "items": requests}
+            def fake_preview(photo_id, destination, _max_pixel, _timeout):
+                Path(destination).write_bytes(photo_id.encode())
+                return {"ok": True, "destination": str(destination)}
 
             should_stop = {"value": False}
 
@@ -577,6 +881,16 @@ class FixtureConnectorTest(unittest.TestCase):
                     connection.execute("SELECT count(*) total FROM asset_sync_state").fetchone()["total"],
                     1,
                 )
+
+    def test_incremental_sync_preview_path_has_no_standalone_bridge_batch_fallback(self):
+        source = Path(local_server.__file__).read_text(encoding="utf-8")
+        start = source.index("def _request_backstage_preview_for_sync")
+        end = source.index("def _photos_sync_run_status", start)
+        sync_source = source[start:end]
+
+        self.assertIn("request_preview", sync_source)
+        self.assertNotIn("_run_apple_photos_bridge", sync_source)
+        self.assertNotIn("preview-many", sync_source)
 
 
 if __name__ == "__main__":

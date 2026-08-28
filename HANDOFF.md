@@ -1,5 +1,10 @@
 # PhotosByElie Handoff
 
+> Current PBB-92 boundary: the standalone Photos Bridge is retired. Backstage
+> is the sole signed PhotoKit/TCC process. Older dated entries below are
+> historical evidence and must not be used to reinstall, launch, repair, or
+> authorize a Bridge bundle.
+
 ## 2026-08-07 — PBB-74 Verified: supported no-CUA originals preflight release
 
 - PBB-74 now has a production-supported native command for private Real Estate

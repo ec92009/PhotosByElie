@@ -15,17 +15,32 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPO_ROOT / "scripts" / "install_new_owner_connector.zsh"
 MATERIALIZER = REPO_ROOT / "scripts" / "owner_connector_runtime.py"
 REQUIRED_FIXTURE_SCRIPTS = {
+    "backstage_photos_client.py",
     "fixture_pipeline.py",
     "local_server.py",
     "new_owner_connector.py",
     "new_owner_connector_launch_agent.plist.in",
     "owner_connector_runtime.py",
     "pbe_owner_host_tracked_paths.txt",
+    "pbe_owner_web_bundle_paths.txt",
     "pbe_owner_session.py",
     "requested_ai_proposal_pass.py",
     "sidecar_server.py",
     "sidecar_state_db.py",
     "waste_basket_gateway.py",
+}
+RETIRED_FIXTURE_SCRIPTS = {
+    "apple_photos_bridge.swift",
+    "install_sidecar_photos_bridge_app.zsh",
+}
+FIXTURE_WEB_FILES = {
+    "gallery-commands.js",
+    "gallery.html",
+    "pbe-owner-session.js",
+    "photo.html",
+    "photos.css",
+    "shared.css",
+    "styles.css",
 }
 
 
@@ -53,6 +68,11 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                     ":(glob)scripts/**/*.py\ngallery.html\ngallery-commands.js\n",
                     encoding="utf-8",
                 )
+            elif name == "pbe_owner_web_bundle_paths.txt":
+                destination.write_text(
+                    "\n".join(sorted(FIXTURE_WEB_FILES)) + "\n",
+                    encoding="utf-8",
+                )
             elif name in {
                 "new_owner_connector.py",
                 "new_owner_connector_launch_agent.plist.in",
@@ -61,17 +81,22 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.copy2(source, destination)
             else:
                 destination.write_text(f'"""Disposable fixture for {name}."""\n', encoding="utf-8")
-        (source_root / "gallery.html").write_text(
-            "<!doctype html><title>Runtime fixture</title>\n",
+        for name in sorted(RETIRED_FIXTURE_SCRIPTS):
+            (scripts_root / name).write_text("retired resurrection fixture\n", encoding="utf-8")
+        (scripts_root / "connector_runtime_test.py").write_text(
+            "raise AssertionError('tests must not ship')\n",
             encoding="utf-8",
         )
-        (source_root / "gallery-commands.js").write_text(
-            "window.photosByElieGalleryCommands = { fixture: true };\n",
-            encoding="utf-8",
-        )
+        for name in sorted(FIXTURE_WEB_FILES):
+            content = (
+                "<!doctype html><title>Runtime fixture</title>\n"
+                if name.endswith(".html")
+                else "/* PBE Owner web fixture. */\n"
+            )
+            (source_root / name).write_text(content, encoding="utf-8")
         subprocess.run(["git", "init", "-q", str(source_root)], check=True)
         subprocess.run(
-            ["git", "-C", str(source_root), "add", "--", "scripts", "gallery.html", "gallery-commands.js"],
+            ["git", "-C", str(source_root), "add", "--", "scripts", *sorted(FIXTURE_WEB_FILES)],
             check=True,
         )
         subprocess.run(
@@ -107,8 +132,8 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
             "PBE_CONNECTOR_RUNTIME_PARENT": str(fixture_root / "application-support"),
             "PBE_CONNECTOR_RUNTIME_REVISION": "HEAD",
             "PBE_CONNECTOR_SKIP_ACTIVATION": "1",
+            "PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT": "1",
             "PBE_CONNECTOR_TOKEN": "fixture-token-xxxxxxxxxxxxxxxxxxxxxxxx",
-            "PBE_SKIP_BRIDGE_BUILD": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
             "TMPDIR": str(temporary),
         }
@@ -207,6 +232,11 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 shutil.rmtree(source_root)
                 self.assertFalse(source_root.exists())
                 self.assertTrue((runtime_root / "scripts" / "new_owner_connector.py").is_file())
+                for name in RETIRED_FIXTURE_SCRIPTS:
+                    self.assertFalse((runtime_root / "scripts" / name).exists())
+                self.assertFalse(
+                    (runtime_root / "scripts" / "connector_runtime_test.py").exists()
+                )
                 self.assertTrue((runtime_root / "gallery.html").is_file())
                 runtime_manifest = json.loads(
                     (runtime_root / "connector-runtime-manifest.json").read_text(encoding="utf-8")
@@ -214,6 +244,12 @@ class OwnerConnectorRuntimeInstallationTest(unittest.TestCase):
                 self.assertEqual(runtime_manifest["schemaVersion"], 2)
                 self.assertIn("gallery.html", runtime_manifest["pbeOwnerHost"]["files"])
                 self.assertIn("gallery-commands.js", runtime_manifest["pbeOwnerHost"]["files"])
+                web_bundle = runtime_manifest["pbeOwnerWebBundle"]
+                self.assertEqual(web_bundle["entrypoints"], ["gallery.html", "photo.html"])
+                self.assertEqual(
+                    [entry["path"] for entry in web_bundle["files"]],
+                    sorted(FIXTURE_WEB_FILES),
+                )
                 gallery_commands = runtime_root / "gallery-commands.js"
                 gallery_commands_entry = next(
                     entry for entry in runtime_manifest["files"] if entry["path"] == "gallery-commands.js"
@@ -292,6 +328,33 @@ raise SystemExit(connector.main())
                 self.assertIn("runtime is invalid", rejected.stderr.lower())
             finally:
                 self._make_tree_writable(runtime_root)
+
+    def test_installer_is_retired_without_explicit_rollback_opt_in(self):
+        with TemporaryDirectory() as temporary_directory:
+            fixture_root = Path(temporary_directory)
+            source_root = self._make_source_fixture(fixture_root)
+            data_root = fixture_root / "stable-data"
+            data_root.mkdir()
+            env = self._installer_environment(fixture_root, data_root)
+            env.pop("PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT")
+
+            retired = self._run_installer(source_root, env)
+
+            self.assertEqual(retired.returncode, 64)
+            self.assertIn("installer is retired", retired.stderr.lower())
+            self.assertFalse((Path(env["PBE_CONNECTOR_CONFIG_DIR"]) / "connector.json").exists())
+            self.assertFalse(
+                (
+                    Path(env["PBE_CONNECTOR_RUNTIME_PARENT"])
+                    / env["PBE_CONNECTOR_RUNTIME_NAME"]
+                ).exists()
+            )
+            self.assertFalse(
+                (
+                    Path(env["PBE_CONNECTOR_LAUNCH_AGENTS_DIR"])
+                    / "com.photosbyelie.owner-connector.plist"
+                ).exists()
+            )
 
     def test_installer_renames_a_sealed_runtime_on_bsd_mv(self):
         with TemporaryDirectory() as temporary_directory:

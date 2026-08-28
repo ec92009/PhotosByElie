@@ -8,26 +8,47 @@ import SwiftUI
 struct BackstageFeedbackView: View {
     let message: String
     var isWorking = false
+    var autoDismissAfter: Duration? = nil
+    @State private var isVisible = true
 
     var body: some View {
-        HStack(spacing: 8) {
-            if isWorking {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(.white)
-                    .accessibilityHidden(true)
+        Group {
+            if isVisible || isWorking {
+                HStack(spacing: 8) {
+                    if isWorking {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                            .accessibilityHidden(true)
+                    }
+                    Text(message)
+                        .font(.caption)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .foregroundStyle(Color.white)
+                .background(Color.black, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(isWorking ? "Working. \(message)" : message)
+                .accessibilityValue(isWorking ? "In progress" : "Ready")
             }
-            Text(message)
-                .font(.callout)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .foregroundStyle(Color.white)
-        .background(Color.black, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(isWorking ? "Working. \(message)" : message)
-        .accessibilityValue(isWorking ? "In progress" : "Ready")
+        .task(id: FeedbackTaskID(message: message, isWorking: isWorking)) {
+            isVisible = true
+            guard !isWorking, let autoDismissAfter else { return }
+            do {
+                try await Task.sleep(for: autoDismissAfter)
+            } catch {
+                return
+            }
+            isVisible = false
+        }
     }
+}
+
+private struct FeedbackTaskID: Hashable {
+    let message: String
+    let isWorking: Bool
 }

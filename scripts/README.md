@@ -172,34 +172,32 @@ endpoints; the published site remains static and customer-only.
 
 Loopback origin alone is not Owner authorization. A normal browser or Google login cannot use the PBE Owner endpoints, and the generic photo-action endpoint rejects hosted-gallery authority claims. Backstage keeps its device credential in macOS Keychain and the Worker session token in memory. The browser receives only a single-use opaque handoff, removes it immediately, and exchanges it for an HttpOnly, session-only loopback cookie.
 
-To create the macOS Dock launcher for an Owner import workstation, install the local app bundle and add it to the Dock:
+The former macOS Owner Dock launcher is rollback archaeology, not an operator
+workflow. Its installer and launcher both refuse to run unless the deliberate
+`PBE_ENABLE_LEGACY_BROWSER_OWNER=1` rollback switch is present. Do not install
+or add it to the Dock during normal Backstage operation. A reviewed rollback
+rehearsal may reproduce the historical bundle with:
 
 ```bash
-zsh scripts/install_owner_dock_app.zsh --add-to-dock
+PBE_ENABLE_LEGACY_BROWSER_OWNER=1 \
+  zsh scripts/install_owner_dock_app.zsh --add-to-dock
 ```
 
-The Dock launcher starts from a clean Owner helper state: it stops stale localhost Owner helpers and any still-running Apple Photos bridge for this repo, starts `scripts/local_server.py`, opens Safari to canonical `owner.html`, and uses the bundled Swift/PhotoKit bridge only when the cloud Owner asks for Apple Photos albums, previews, or assignment. Album discovery includes both regular Photos albums and smart albums. Because the PhotoKit scan can take a few minutes on a large library, the helper and browser keep a short-lived album-list cache; refresh the Owner album list when you need a live rescan. The bridge exports eligible local bytes into the persistent Owner intake selected by the active workflow; publishing remains a separate guarded step.
+That historical bundle stops stale localhost Owner helpers, starts
+`scripts/local_server.py`, and opens Safari to canonical `owner.html`. Legacy
+browser-hosted Apple Photos album/import routes remain only as explicit `410
+Backstage required` compatibility responses; they do not touch PhotoKit or
+start a retired Photos helper. Enrollment and recovery remain separate from
+this rollback launcher.
 
-### Apple Photos Bridge Permissions
+### Apple Photos access
 
-macOS Photos access is granted to the process or app bundle that touches
-PhotoKit. Use the installed permission-bearing bundle:
-`~/Applications/PhotosByElie Photos Bridge.app`. Backstage and the trusted
-local connector launch it with `open -W -n ... --args` for index refreshes,
-previews, and local video resources. Do not replace that with
-`swift scripts/apple_photos_bridge.swift` from UI code, LaunchAgents, or Codex
-Scheduled prompts; direct Swift uses the caller identity and can show
-`Photos access needed` even when the app bundle already has Full Access.
-
-The installed bundle is an `LSUIElement` helper: it has no user-facing window,
-menu bar, or Dock icon. Its read-only `health` command reports the stable bundle
-identifier and current PhotoKit authorization. Native Backstage shows this
-health on Overview; operational workflows continue to invoke the signed bundle
-through LaunchServices.
-
-The local installer embeds a stable designated requirement for the bridge
-bundle identifier so an ad-hoc rebuild does not change its TCC identity. Set
-`PBE_CODESIGN_IDENTITY` when a Developer ID is available.
+macOS Photos access belongs to the signed `PhotosByElie Backstage.app` process.
+Backstage exposes authenticated loopback IPC for library indexing, previews,
+original materialization, and metadata read/write. Python, browser-hosted
+Owner, LaunchAgent, and scheduled maintenance code must call those bounded
+endpoints or fail closed; none of them may invoke PhotoKit directly or start a
+retired standalone helper.
 
 Correct scheduled entrypoint:
 
@@ -207,10 +205,20 @@ Correct scheduled entrypoint:
 python3 scripts/sidecar_maintenance.py photos-index-sync
 ```
 
-That command delegates PhotoKit work back through the app-bundled bridge. The
-picked-only AI planning task does not touch PhotoKit directly. When the AI
-review needs visual evidence, export the current picked/not-approved preview
-queue through the same app-bundled bridge:
+That command resumes recent-photo discovery from the durable Owner checkpoint,
+with a seven-day overlap around the newest indexed capture date. The checkpoint
+advances only after a successful scan and import. A complete maintenance audit
+must be requested explicitly:
+
+```bash
+python3 scripts/sidecar_maintenance.py photos-index-sync --full
+```
+
+Both commands ask the running signed Backstage app for bounded library-index
+pages. Only the explicit full audit can mark previously indexed assets missing.
+The picked-only AI planning task does not touch PhotoKit directly. When
+the AI review needs visual evidence, run Backstage and export the current
+picked/not-approved preview queue through authenticated IPC:
 
 ```bash
 python3 scripts/sidecar_maintenance.py picked-ai-plan
@@ -233,8 +241,8 @@ under `tmp/sidecar-tombstone-audit/`.
 The preview export writes
 `assets/owner-actions/sidecar-ai-metadata-previews.json` plus JPEG previews and,
 when Pillow is available, `tmp/sidecar-picked-ai-previews/contact-sheet.jpg`.
-Use those artifacts for vision-backed metadata review; do not launch raw Swift
-or the bare app executable to fetch previews.
+Use those artifacts for vision-backed metadata review; if Backstage is not
+running, the command fails closed without touching Photos.
 
 Reviewed preview observations can be written back as local Sidecar Review
 proposals with:

@@ -1,11 +1,506 @@
+import AppKit
 import CryptoKit
 import Foundation
 import SQLite3
 import Testing
+@testable import BackstageUI
 @testable import OwnerCore
+
+private actor RecordingLocalFixtureReviewService: LocalFixtureReviewServing {
+    private(set) var applyManifests: [[String: JSONValue]] = []
+    private(set) var undoOperationIDs: [String] = []
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        applyManifests.append(manifest)
+        return FixtureReviewResult(json: [
+            "operationId": "reviewop-local",
+            "fixtureId": manifest["fixtureId"] ?? "",
+            "action": manifest["reviewAction"] ?? "hide",
+            "anchorAssetId": manifest["anchorAssetId"] ?? "",
+            "propagated": manifest["propagate"] ?? false,
+            "items": [],
+        ])
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        undoOperationIDs.append(operationID)
+        return FixtureReviewUndoResult(json: [
+            "operationId": .string(operationID),
+            "fixtureId": "fixture-expo",
+            "action": "hide",
+            "alreadyUndone": false,
+            "items": [],
+        ])
+    }
+}
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
+    @Test("PhotoKit cloud identifiers fail closed before native lookup")
+    func photoKitCloudIdentifiersFailClosed() {
+        let valid = "59647679-9EB0-46ED-9C2B-C98F61B58733:001:AZ69uAIW4v3U2XVypE0h8yYVh8mQ"
+        #expect(PhotoLibraryIdentifier.cloudValue(from: valid) == valid)
+        #expect(
+            PhotoLibraryIdentifier.cloudValue(from: "apple-photos-cloud://\(valid)") == valid
+        )
+
+        for invalid in [
+            "",
+            "upload-1",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:1:AZ69uAIW4v3U2XVypE0h8yYVh8mQ",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:001:",
+            "59647679-9EB0-46ED-9C2B-C98F61B58733:001:not valid whitespace",
+            "apple-photos-cloud://",
+        ] {
+            #expect(PhotoLibraryIdentifier.cloudValue(from: invalid) == nil)
+        }
+    }
+
+    @Test("Quick Look close handling is scoped to the configured panel")
+    @MainActor
+    func quickLookCloseHandlingIsScoped() {
+        let configuredPanel = NSWindow(
+            contentRect: .zero,
+            styleMask: [],
+            backing: .buffered,
+            defer: true
+        )
+        let otherWindow = NSWindow(
+            contentRect: .zero,
+            styleMask: [],
+            backing: .buffered,
+            defer: true
+        )
+
+        #expect(
+            BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                configuredPanel,
+                configuredPanel: configuredPanel
+            )
+        )
+        #expect(
+            !BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                otherWindow,
+                configuredPanel: configuredPanel
+            )
+        )
+        #expect(
+            !BackstageQuickLookCoordinator.isConfiguredQuickLookPanel(
+                configuredPanel,
+                configuredPanel: nil
+            )
+        )
+    }
+
+    @Test("Only the newest asynchronous Quick Look presentation remains current")
+    @MainActor
+    func quickLookPresentationGenerationRejectsStaleWork() {
+        let coordinator = BackstageQuickLookCoordinator()
+        let first = coordinator.beginPresentation()
+        let second = coordinator.beginPresentation()
+
+        #expect(!coordinator.isCurrentPresentation(first))
+        #expect(coordinator.isCurrentPresentation(second))
+    }
+
+    @Test("Quick Look title uses the same filename as its metadata snapshot")
+    @MainActor
+    func quickLookTitleUsesMetadataFilename() {
+        let url = URL(fileURLWithPath: "/tmp/opaque-asset-id.jpg")
+        let metadata = BackstageQuickLookMetadata(
+            assetID: "asset-1",
+            filename: "IMG_4478.jpg",
+            title: "Photo title",
+            keywords: [],
+            locationLabel: "",
+            capturedAt: "",
+            rating: 0,
+            color: "",
+            state: "undecided",
+            shortcutHint: ""
+        )
+
+        #expect(BackstageQuickLookCoordinator.previewTitle(for: url, metadata: metadata) == "IMG_4478.jpg")
+        #expect(BackstageQuickLookCoordinator.previewTitle(for: url, metadata: nil) == "opaque-asset-id.jpg")
+    }
+
+    @Test("Quick Look remains managed by its originating desktop Space")
+    @MainActor
+    func quickLookUsesOriginSpaceCollectionBehavior() {
+        let behavior = BackstageQuickLookCoordinator.originSpaceCollectionBehavior(
+            from: [.canJoinAllSpaces, .moveToActiveSpace, .fullScreenAuxiliary]
+        )
+
+        #expect(behavior.contains(.managed))
+        #expect(behavior.contains(.fullScreenAuxiliary))
+        #expect(!behavior.contains(.canJoinAllSpaces))
+        #expect(!behavior.contains(.moveToActiveSpace))
+    }
+
+    @Test("Quick Look preserves arrow axes and uses the live grid row stride")
+    func quickLookNavigationUsesGridRowStride() {
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 123) == .previous)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 124) == .next)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 126) == .previousRow)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 125) == .nextRow)
+        #expect(BackstageQuickLookShortcut.navigationShortcut(forKeyCode: 0) == nil)
+
+        #expect(BackstageQuickLookShortcut.previous.selectionDelta(rowStride: 6) == -1)
+        #expect(BackstageQuickLookShortcut.next.selectionDelta(rowStride: 6) == 1)
+        #expect(BackstageQuickLookShortcut.previousRow.selectionDelta(rowStride: 6) == -6)
+        #expect(BackstageQuickLookShortcut.nextRow.selectionDelta(rowStride: 6) == 6)
+        #expect(BackstageQuickLookShortcut.previousRow.ownerSelectionDirection == .previous)
+        #expect(BackstageQuickLookShortcut.nextRow.ownerSelectionDirection == .next)
+    }
+
+    @Test("Every Quick Look maps 0–9 through the shared global decision vocabulary")
+    func quickLookDecisionShortcutsAreCanonical() {
+        let expected: [BackstageQuickLookShortcut] = [
+            .rating(0),
+            .rating(1),
+            .rating(2),
+            .rating(3),
+            .rating(4),
+            .rating(5),
+            .color(.red),
+            .color(.yellow),
+            .color(.green),
+            .color(.blue),
+        ]
+
+        for (value, shortcut) in zip(0...9, expected) {
+            let parsed = BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 0,
+                charactersIgnoringModifiers: String(value),
+                modifierFlags: []
+            )
+            #expect(parsed == shortcut)
+            #expect(parsed?.isGlobalDecisionMutation == true)
+        }
+        #expect(!BackstageQuickLookShortcut.hide.isGlobalDecisionMutation)
+        #expect(!BackstageQuickLookShortcut.next.isGlobalDecisionMutation)
+    }
+
+    @Test("Quick Look recognizes plain Command-Z as undo without stealing modified variants")
+    func quickLookRecognizesUndoShortcut() {
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: .command
+            ) == .undo
+        )
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: [.command, .shift]
+            ) == nil
+        )
+        #expect(
+            BackstageQuickLookShortcut.shortcut(
+                forKeyCode: 6,
+                charactersIgnoringModifiers: "z",
+                modifierFlags: [.command, .option]
+            ) == nil
+        )
+    }
+
+    @Test("Quick Look source size is truthful for photos, video, and partial metadata")
+    func quickLookSourceSizeFormatting() {
+        let photo = BackstageQuickLookSourceSize(
+            mediaType: "photo",
+            pixelWidth: 2_048,
+            pixelHeight: 4_096,
+            byteCount: 4_000_000,
+            currentImageByteCount: 3_000_000
+        )
+        #expect(photo.displayValue.contains("2048 × 4096"))
+        #expect(photo.displayValue.contains("8.4 MP"))
+        #expect(!photo.displayValue.contains("4 MB"))
+        #expect(photo.currentImageSizeDisplayValue == "3 MB")
+        #expect(photo.accessibilityValue.contains("2048 by 4096 pixels"))
+        #expect(!photo.accessibilityValue.localizedCaseInsensitiveContains("file size"))
+
+        let video = BackstageQuickLookSourceSize(
+            mediaType: "video",
+            pixelWidth: 3_840,
+            pixelHeight: 2_160,
+            byteCount: 120_000_000
+        )
+        #expect(video.displayValue.contains("3840 × 2160"))
+        #expect(video.displayValue.contains("120 MB"))
+        #expect(!video.displayValue.contains("MP"))
+        #expect(video.accessibilityValue.hasPrefix("Video source."))
+        #expect(video.currentImageSizeDisplayValue == nil)
+
+        #expect(BackstageQuickLookSourceSize.unavailable.displayValue ==
+            "Dimensions unavailable / Megapixels unavailable")
+        #expect(BackstageQuickLookSourceSize.unavailable.currentImageSizeDisplayValue == nil)
+        #expect(!BackstageQuickLookSourceSize.unavailable.accessibilityValue
+            .localizedCaseInsensitiveContains("file size"))
+    }
+
+    @Test("Complete Photos source bytes remain distinct from encoded preview bytes")
+    func completeSourceByteProvenance() throws {
+        let sourceData = try #require(Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        ))
+        let known = try PhotoKitLibraryService.previewFromImageData(
+            sourceData,
+            localIdentifier: "photo-known",
+            maxPixelSize: 180,
+            currentImageByteCount: Int64(sourceData.count)
+        )
+        #expect(known.currentImageByteCount == Int64(sourceData.count))
+        #expect(known.currentImageByteCount != Int64(known.jpegData.count))
+
+        let renderedRaster = try PhotoKitLibraryService.previewFromImageData(
+            sourceData,
+            localIdentifier: "photo-rendered-raster",
+            maxPixelSize: 180
+        )
+        #expect(renderedRaster.currentImageByteCount == nil)
+    }
+
+    @Test("Current-image size cache is compatible and never changes original provenance")
+    func currentImageSizeCachePreservesOriginalMetadata() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-current-image-size-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('photo-1', '{"originalByteCount":4000000}'),
+          ('photo-2', '{"originalByteCount":5000000}');
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let store = OwnerCurrentImageSizeSQLiteStore(databaseURL: databaseURL)
+        #expect(try store.values(assetIDs: ["photo-1"]) == [:])
+        try store.upsert(
+            ["photo-1": 3_000_000, "photo-2": 6_000_000],
+            updatedAt: Date(timeIntervalSince1970: 2_000_000_000)
+        )
+        #expect(try store.values(assetIDs: ["photo-2", "photo-1", "photo-1"]) == [
+            "photo-1": 3_000_000,
+            "photo-2": 6_000_000,
+        ])
+        try store.upsert(["photo-1": 3_500_000], updatedAt: Date())
+        #expect(try store.values(assetIDs: ["photo-1"]) == ["photo-1": 3_500_000])
+
+        #expect(sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK)
+        var statement: OpaquePointer?
+        #expect(sqlite3_prepare_v2(
+            database,
+            "SELECT raw_json FROM sidecar_assets WHERE asset_id = 'photo-1'",
+            -1,
+            &statement,
+            nil
+        ) == SQLITE_OK)
+        #expect(sqlite3_step(statement) == SQLITE_ROW)
+        let rawJSON = sqlite3_column_text(statement, 0).map(String.init(cString:))
+        #expect(rawJSON == #"{"originalByteCount":4000000}"#)
+        sqlite3_finalize(statement)
+        sqlite3_close(database)
+    }
+
+    @Test("Owner source metadata lookup is read-only and asset scoped")
+    func ownerSourceMetadataLookup() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-source-metadata-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        let sql = #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('photo-1', 'photo', 2048, 4096, '{"originalByteCount":4000000}'),
+          ('video-1', 'video', 3840, 2160, '{}'),
+          ('other', 'photo', 1, 1, '{}');
+        """#
+        #expect(sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let metadata = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+            .metadata(assetIDs: ["video-1", "photo-1", "photo-1"])
+
+        #expect(metadata.keys.sorted() == ["photo-1", "video-1"])
+        #expect(metadata["photo-1"] == OwnerAssetSourceMetadata(
+            mediaType: "photo",
+            pixelWidth: 2_048,
+            pixelHeight: 4_096,
+            originalByteCount: 4_000_000
+        ))
+        #expect(metadata["video-1"]?.mediaType == "video")
+        #expect(metadata["video-1"]?.originalByteCount == 0)
+    }
+
+    @Test("Upload plan enriches canonical previews from local source metadata")
+    func uploadPlanUsesLocalSourceMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("upload-source-metadata-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        let sql = #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('asset-1', 'photo', 2048, 4096, '{"originalByteCount":4000000}');
+        """#
+        #expect(sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let action = OwnerAction(
+            id: "owner-action-upload-source",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: ["uploadPlan": [
+                "fixtureId": "fixture-expo",
+                "fixtureName": "Expo",
+                "cloudAllowed": true,
+                "items": [[
+                    "assetId": "asset-1",
+                    "photoLibraryIdentifier": "photos-asset-1",
+                    "filename": "one.jpg",
+                ]],
+            ]]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [action])
+        let service = FixtureDeliveryService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            nativeDatabaseURL: databaseURL
+        )
+
+        let plan = try await service.nativeUploadPlan(fixtureID: "fixture-expo")
+
+        #expect(plan.items.first?.pixelWidth == 2_048)
+        #expect(plan.items.first?.pixelHeight == 4_096)
+        #expect(plan.items.first?.originalByteCount == 4_000_000)
+    }
+
+    @Test("Visual repair scope is limited to RE roots and descendants")
+    func visualRepairScopeGuards() {
+        let re = FixtureNode(
+            id: "fixture-re",
+            name: "RE",
+            templateKey: "real-estate",
+            children: [FixtureNode(id: "fixture-re-child", name: "La Concha")]
+        )
+        let expo = FixtureNode(id: "fixture-expo", name: "Expo", templateKey: "expo")
+        #expect(VisualRepairScope.isREReview(path: [re]))
+        #expect(VisualRepairScope.isREReview(path: [re, re.children[0]]))
+        #expect(!VisualRepairScope.isREReview(path: [expo]))
+        #expect(!VisualRepairScope.isREReview(path: []))
+    }
+
+    @Test("Visual comparison stays read-only and exposes missing proposal state")
+    func visualRepairComparisonState() {
+        let unavailable = VisualRepairComparisonState(
+            originalReference: "immutable-source-version://source-1"
+        )
+        #expect(unavailable.isReadOnly)
+        #expect(!unavailable.proposalAvailable)
+        #expect(unavailable.proposedReference.isEmpty)
+        #expect(unavailable.message.contains("not configured"))
+
+        let proposal = VisualRepairProposal(
+            id: "proposal-1",
+            fixtureID: "fixture-re",
+            assetID: "asset-1",
+            sourceVersionID: "source-1",
+            defectCategories: [.contrast],
+            ladderRung: 1,
+            modelLadder: [VisualRepairModelLadderRung(model: "gpt-5.4-mini", effort: "low")],
+            requestedGeneratorModel: "gpt-5.4-mini",
+            resolvedModel: "gpt-5.4-mini",
+            reasoningEffort: "low",
+            vision: true,
+            attempt: 1,
+            status: .draft,
+            originalReference: "immutable-source-version://source-1",
+            derivedReference: "synthetic://visual-repair/derived/one",
+            derivedAvailable: true,
+            generatorReference: "synthetic-generator://synthetic"
+        )
+        let comparison = VisualRepairComparisonState(
+            originalReference: proposal.originalReference,
+            proposal: proposal
+        )
+        #expect(comparison.isReadOnly)
+        #expect(!comparison.proposalAvailable)
+        #expect(comparison.proposedReference.isEmpty)
+        #expect(comparison.message.contains("not configured"))
+    }
+
+    @Test("Visual comparison accepts SHA-bound local synthetic artifacts")
+    func visualRepairRenderedArtifactState() throws {
+        let renderedURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-144-\(UUID().uuidString).png")
+        try Data("synthetic-rendered-artifact".utf8).write(to: renderedURL)
+        defer { try? FileManager.default.removeItem(at: renderedURL) }
+        let proposal = VisualRepairProposal(
+            id: "proposal-rendered",
+            fixtureID: "fixture-re",
+            assetID: "asset-synthetic",
+            sourceVersionID: "source-synthetic-v1",
+            defectCategories: VisualRepairDefectCategory.allCases,
+            ladderRung: 1,
+            modelLadder: [VisualRepairModelLadderRung(model: "gpt-5.6-luna", effort: "max")],
+            requestedGeneratorModel: "gpt-5.6-luna",
+            resolvedModel: "gpt-5.6-luna",
+            reasoningEffort: "max",
+            vision: true,
+            attempt: 1,
+            status: .draft,
+            originalReference: "immutable-source-version://source-synthetic-v1",
+            originalPreviewReference: renderedURL.absoluteString,
+            originalPreviewSHA256: "before-sha256",
+            derivedReference: renderedURL.absoluteString,
+            derivedAvailable: true,
+            derivedSHA256: "after-sha256",
+            generatorReference: "openai-synthetic://built-in-imagegen/pbe-144"
+        )
+        let comparison = VisualRepairComparisonState(
+            originalReference: proposal.originalReference,
+            proposal: proposal
+        )
+        #expect(VisualRepairComparisonState.isRenderableReference(proposal.originalPreviewReference))
+        #expect(comparison.proposalAvailable)
+        #expect(comparison.proposedReference == renderedURL.absoluteString)
+        #expect(comparison.isReadOnly)
+    }
+
     @Test("Decodes the published action page fixture")
     func decodesActionPage() throws {
         let url = try #require(Bundle.module.url(forResource: "action-page", withExtension: "json", subdirectory: "Fixtures"))
@@ -20,6 +515,10 @@ struct OwnerCoreTests {
     func backstageUpdateManifestAndVersionComparison() throws {
         let manifest = try backstageUpdateManifestFixture()
         try manifest.validate()
+        #expect(manifest.architectures == ["arm64"])
+        var legacyUniversal = manifest
+        legacyUniversal.architectures = ["arm64", "x86_64"]
+        try legacyUniversal.validate()
         let current = BackstageReleaseIdentity(
             bundleIdentifier: "com.photosbyelie.backstage",
             version: "219.1",
@@ -83,6 +582,10 @@ struct OwnerCoreTests {
         var oversizedArchive = manifest
         oversizedArchive.fileSize = BackstageUpdateResourceLimits.hardMaximumArchiveFileSize + 1
         invalidManifests.append(oversizedArchive)
+
+        var intelOnlyArchitecture = manifest
+        intelOnlyArchitecture.architectures = ["x86_64"]
+        invalidManifests.append(intelOnlyArchitecture)
 
         for invalidManifest in invalidManifests {
             #expect(throws: BackstageUpdateError.self) {
@@ -290,6 +793,480 @@ struct OwnerCoreTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
     }
 
+    @Test("Backstage installer atomically replaces only the canonical app and retains rollback")
+    func backstageInstallerReplacesCanonicalAppAndRetainsRollback() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-success-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        let readOnlyRuntime = incumbent
+            .appendingPathComponent("Contents/Resources/OwnerRuntime", isDirectory: true)
+        try FileManager.default.createDirectory(at: readOnlyRuntime, withIntermediateDirectories: true)
+        try Data("sealed runtime".utf8).write(
+            to: readOnlyRuntime.appendingPathComponent("runtime.txt")
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o555],
+            ofItemAtPath: readOnlyRuntime.path
+        )
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback
+        )
+        let receipt = try installer.install(BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: archive,
+            bundleURL: candidate
+        ))
+
+        #expect(
+            receipt.installedBundleURL.resolvingSymlinksInPath()
+                == incumbent.resolvingSymlinksInPath()
+        )
+        #expect(try syntheticBackstageBuild(at: incumbent) == manifest.build)
+        let rollbackURL = try #require(receipt.rollbackBundleURL)
+        #expect(try syntheticBackstageBuild(at: rollbackURL) == "77")
+        let visibleApps = try FileManager.default.contentsOfDirectory(
+            at: applications,
+            includingPropertiesForKeys: nil
+        ).filter { $0.pathExtension == "app" && !$0.lastPathComponent.hasPrefix(".") }
+        #expect(
+            visibleApps.map { $0.resolvingSymlinksInPath() }
+                == [incumbent.resolvingSymlinksInPath()]
+        )
+        #expect(receipt.reconciledStagingBundleURLs.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: applications.path).allSatisfy {
+            !$0.hasPrefix(BackstageUpdateInstaller.stagingBundlePrefix)
+        })
+        let rollbackRuntime = rollbackURL
+            .appendingPathComponent("Contents/Resources/OwnerRuntime", isDirectory: true)
+        #expect(FileManager.default.fileExists(atPath: rollbackRuntime.path))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: rollbackRuntime.path
+        )
+    }
+
+    @Test("Backstage installer reconciles only verified stale interrupted stages")
+    func backstageInstallerReconcilesVerifiedStaleStages() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-stale-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let stale = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        let unrelated = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)not-a-uuid.app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: stale, version: "218.4", build: "70")
+        try createSyntheticBackstageApp(at: unrelated, version: "1.0", build: "1")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: stale.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        let inventory = try installer.auditStagingBundles(trust: manifest.trust)
+        #expect(inventory.map(\.state) == [.staleVerified])
+        let receipt = try installer.install(BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: archive,
+            bundleURL: candidate
+        ))
+
+        #expect(
+            receipt.reconciledStagingBundleURLs.map(\.lastPathComponent)
+                == [stale.lastPathComponent]
+        )
+        #expect(!FileManager.default.fileExists(atPath: stale.path))
+        #expect(FileManager.default.fileExists(atPath: unrelated.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == manifest.build)
+        #expect(try syntheticBackstageBuild(at: #require(receipt.rollbackBundleURL)) == "77")
+    }
+
+    @Test("Backstage installer retains a recent stage as an active install")
+    func backstageInstallerRetainsRecentActiveStage() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-active-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let active = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: active, version: "219.1", build: "77")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-60)],
+            ofItemAtPath: active.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A concurrent installer stage unexpectedly allowed another install.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("active install"))
+        }
+        #expect(FileManager.default.fileExists(atPath: active.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+    }
+
+    @Test("Backstage installer retains an unsafe wrong-identity stage")
+    func backstageInstallerRetainsUnsafeWrongIdentityStage() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-unsafe-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let unsafe = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(
+            at: unsafe,
+            version: "1.0",
+            build: "1",
+            identifier: "com.example.not-backstage"
+        )
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: unsafe.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now }
+        )
+        let inventory = try installer.auditStagingBundles(trust: manifest.trust)
+        #expect(inventory.map(\.state) == [.unsafe])
+        #expect(throws: BackstageUpdateError.self) {
+            try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+        }
+        #expect(FileManager.default.fileExists(atPath: unsafe.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+    }
+
+    @Test("Backstage installer surfaces a stale-stage cleanup failure before replacement")
+    func backstageInstallerSurfacesStaleStageCleanupFailure() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-cleanup-failure-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        let stale = applications.appendingPathComponent(
+            "\(BackstageUpdateInstaller.stagingBundlePrefix)\(UUID().uuidString).app",
+            isDirectory: true
+        )
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try createSyntheticBackstageApp(at: stale, version: "218.4", build: "70")
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-3_600)],
+            ofItemAtPath: stale.path
+        )
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            staleStagingAge: 900,
+            now: { now },
+            removeStagingBundle: { _ in
+                throw CocoaError(.fileWriteNoPermission)
+            }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A stale-stage cleanup failure unexpectedly allowed replacement.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("canonical app and rollback were left untouched"))
+        }
+        #expect(FileManager.default.fileExists(atPath: stale.path))
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+    }
+
+    @Test("Backstage installer surfaces post-swap cleanup failure and preserves recovery")
+    func backstageInstallerSurfacesPostSwapCleanupFailure() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-post-swap-cleanup-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback,
+            removeStagingBundle: { _ in
+                throw CocoaError(.fileWriteNoPermission)
+            }
+        )
+        do {
+            _ = try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+            Issue.record("A post-swap cleanup failure was silently ignored.")
+        } catch let error as BackstageUpdateError {
+            #expect(error.localizedDescription.contains("canonical update is installed"))
+            #expect(error.localizedDescription.contains("audit"))
+        }
+
+        #expect(try syntheticBackstageBuild(at: incumbent) == manifest.build)
+        let rollbackApps = try FileManager.default.contentsOfDirectory(
+            at: rollback,
+            includingPropertiesForKeys: nil
+        ).filter { $0.pathExtension == "app" }
+        #expect(rollbackApps.count == 1)
+        #expect(try syntheticBackstageBuild(at: #require(rollbackApps.first)) == "77")
+        let installerStages = try FileManager.default.contentsOfDirectory(
+            at: applications,
+            includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix(BackstageUpdateInstaller.stagingBundlePrefix) }
+        #expect(installerStages.count == 1)
+        #expect(try syntheticBackstageBuild(at: #require(installerStages.first)) == "77")
+    }
+
+    @Test("Backstage installer restores the incumbent when post-swap verification fails")
+    func backstageInstallerRestoresIncumbentAfterFailedPostSwapVerification() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-restore-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: FailingInstalledCandidateSignatureVerifier(
+                canonicalPath: incumbent.path,
+                candidateBuild: manifest.build
+            ),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback
+        )
+        #expect(throws: BackstageUpdateError.self) {
+            try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+        }
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(try FileManager.default.contentsOfDirectory(atPath: applications.path).allSatisfy {
+            !$0.hasPrefix(".PhotosByElie Backstage.install-")
+        })
+    }
+
+    @Test("Backstage installer rejects changed archive bytes without touching the incumbent")
+    func backstageInstallerRejectsChangedArchiveBeforeStaging() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-checksum-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try createSyntheticBackstageApp(at: incumbent, version: "219.1", build: "77")
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+        try Data("changed archive!".utf8).write(to: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback
+        )
+        #expect(throws: BackstageUpdateError.self) {
+            try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+        }
+        #expect(try syntheticBackstageBuild(at: incumbent) == "77")
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+    }
+
+    @Test("Backstage installer leaves an incomplete canonical app untouched")
+    func backstageInstallerRejectsIncompleteIncumbentWithoutReplacement() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-installer-incomplete-incumbent-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let rollback = root.appendingPathComponent("Rollback", isDirectory: true)
+        let verifiedRoot = root.appendingPathComponent("Verified", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: verifiedRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        var manifest = try backstageUpdateManifestFixture()
+        let incumbent = applications.appendingPathComponent(BackstageUpdateInstaller.canonicalBundleName)
+        let incumbentMarker = incumbent.appendingPathComponent("incomplete-marker")
+        let candidate = verifiedRoot.appendingPathComponent("Candidate.app", isDirectory: true)
+        let archive = verifiedRoot.appendingPathComponent("Backstage-update.zip")
+        try FileManager.default.createDirectory(at: incumbent, withIntermediateDirectories: true)
+        try Data("keep me".utf8).write(to: incumbentMarker)
+        try createSyntheticBackstageApp(at: candidate, version: manifest.version, build: manifest.build)
+        try Data("verified archive".utf8).write(to: archive)
+        manifest.fileSize = Int64(try Data(contentsOf: archive).count)
+        manifest.sha256 = try BackstageUpdateService.sha256(of: archive)
+
+        let installer = BackstageUpdateInstaller(
+            signatureVerifier: StubBackstageSignatureVerifier(),
+            applicationsDirectory: applications,
+            rollbackDirectory: rollback
+        )
+        #expect(throws: BackstageUpdateError.self) {
+            try installer.install(BackstageVerifiedUpdate(
+                manifest: manifest,
+                archiveURL: archive,
+                bundleURL: candidate
+            ))
+        }
+        #expect(FileManager.default.fileExists(atPath: incumbentMarker.path))
+        #expect(!FileManager.default.fileExists(atPath: rollback.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: applications.path).allSatisfy {
+            !$0.hasPrefix(".PhotosByElie Backstage.install-")
+        })
+    }
+
     @Test("Backstage updater rejects excessive extracted bytes before signature verification and cleans up")
     func backstageUpdateRejectsExcessiveExtractedSize() async throws {
         let (manifest, artifactData) = try backstageUpdateManifestAndArtifactFixture()
@@ -491,12 +1468,36 @@ struct OwnerCoreTests {
         )
     }
 
+    @Test("Owner action enqueue returns before terminal polling")
+    func ownerActionEnqueueReturnsQueuedAction() async throws {
+        let wakeRecorder = OwnerActionWakeRecorder()
+        let runner = OwnerActionRunner(
+            api: PendingOwnerActionAPI(),
+            waker: RecordingWaker(recorder: wakeRecorder),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let action = try await runner.enqueue(
+            OwnerActionCreate(
+                actionKind: "photo-moderation",
+                target: "max",
+                payload: ["operation": .string("waste-basket-x")]
+            )
+        )
+
+        #expect(action.id == "owner-action-pending-fixture-tree")
+        #expect(action.state == .queued)
+        try await Task.sleep(for: .milliseconds(10))
+        #expect(await wakeRecorder.values() == [action.id])
+    }
+
     @Test("Generated endpoints and examples match the published contract")
     func generatedContractAndExamples() throws {
-        #expect(OwnerContract.openAPIVersion == "1.1.0")
+        #expect(OwnerContract.openAPIVersion == "1.2.0")
         #expect(OwnerContract.endpoints[.createAction]?.method == "POST")
         #expect(OwnerContract.endpoints[.listActions]?.path == "/actions")
         #expect(OwnerContract.endpoints[.createOwnerTokens]?.path == "/auth/tokens")
+        #expect(OwnerContract.endpoints[.beginOwnerEnrollmentHandoff]?.path == "/enrollment-handoffs")
         #expect(OwnerContract.schemaNames.contains("ErrorEnvelope"))
         #expect(Set(OwnerContract.exampleSections) == [
             "authentication", "pagination", "error", "idempotency", "progress",
@@ -546,6 +1547,19 @@ struct OwnerCoreTests {
         #expect(selection.anchorID == "asset-6")
     }
 
+    @Test("Explicit action targets preserve zero, one, and many display order")
+    func explicitSelectionActionTargets() {
+        var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d"])
+        #expect(selection.selectedInDisplayOrder.isEmpty)
+
+        selection.click("c", extending: false, toggling: false)
+        #expect(selection.selectedInDisplayOrder == ["c"])
+
+        selection.click("a", extending: false, toggling: true)
+        selection.click("d", extending: false, toggling: true)
+        #expect(selection.selectedInDisplayOrder == ["a", "c", "d"])
+    }
+
     @Test("Filtered decisions select the next surviving card")
     func filteredDecisionSelectsSuccessor() {
         var selection = OwnerSelectionModel(orderedIDs: ["a", "b", "c", "d"])
@@ -579,6 +1593,13 @@ struct OwnerCoreTests {
         #expect(CullingGridLayout.clampedColumnCount(3, width: 1_000) == 3)
         #expect(CullingGridLayout.columnWidth(width: 360, columns: 4) == 84)
         #expect(CullingGridLayout.columnWidth(width: 500, columns: 4) == 119)
+        for width in stride(from: 84.0, through: 1_200.0, by: 37.0) {
+            let columns = CullingGridLayout.clampedColumnCount(10, width: width)
+            let occupied = CullingGridLayout.columnWidth(width: width, columns: columns)
+                * Double(columns)
+                + CullingGridLayout.spacing * Double(columns - 1)
+            #expect(occupied <= width + 0.001)
+        }
     }
 
     @Test("Ten-item culling rehearsal preserves scope and composes filters")
@@ -615,6 +1636,33 @@ struct OwnerCoreTests {
         #expect(result.summary.picked == 2)
         #expect(result.summary.photos == 9)
         #expect(result.summary.videos == 1)
+    }
+
+    @Test("Culling search matches the exact asset identity used by workflow handoffs")
+    func cullingSearchMatchesAssetIdentity() {
+        let candidate = CullingCandidate(
+            id: "DD8DB4CF-EF10-4CFB-BA2D-D9B4FF58509C:001:AdEJR/GC0fQdeE9oehWYwvEQL5Hk",
+            title: "Untitled",
+            filename: "20141102 1602 26919.jpg",
+            mediaType: "photo",
+            decision: SidecarDecisionState(
+                assetId: "DD8DB4CF-EF10-4CFB-BA2D-D9B4FF58509C:001:AdEJR/GC0fQdeE9oehWYwvEQL5Hk",
+                pickState: "picked"
+            )
+        )
+
+        let result = CullingWorkspace.evaluate(
+            [candidate],
+            query: CullingQuery(
+                search: candidate.id,
+                media: [.photos],
+                pick: [.picked],
+                ratings: [0],
+                colors: [.none]
+            )
+        )
+
+        #expect(result.items.map(\.id) == [candidate.id])
     }
 
     @Test("Still-only Culling universes expose only the Photos control")
@@ -837,6 +1885,53 @@ struct OwnerCoreTests {
         #expect(CullingWorkspace.burstRejectCandidates(in: []).isEmpty)
     }
 
+    @Test("Review burst selection keeps the likely survivor and ignores singleton gaps")
+    func reviewBurstRejectCandidates() {
+        let items = [
+            FixtureReviewItem(
+                id: "review-first",
+                photoLibraryIdentifier: "photos-review-first",
+                title: "First",
+                keywords: [],
+                filename: "first.jpg",
+                capturedAt: "2026-08-17T10:00:00Z"
+            ),
+            FixtureReviewItem(
+                id: "review-keeper",
+                photoLibraryIdentifier: "photos-review-keeper",
+                title: "Keeper",
+                keywords: [],
+                filename: "keeper.jpg",
+                capturedAt: "2026-08-17T10:00:01Z"
+            ),
+            FixtureReviewItem(
+                id: "review-third",
+                photoLibraryIdentifier: "photos-review-third",
+                title: "Third",
+                keywords: [],
+                filename: "third.jpg",
+                capturedAt: "2026-08-17T10:00:02Z"
+            ),
+            FixtureReviewItem(
+                id: "review-singleton",
+                photoLibraryIdentifier: "photos-review-singleton",
+                title: "Singleton",
+                keywords: [],
+                filename: "singleton.jpg",
+                capturedAt: "2026-08-17T10:01:00Z"
+            ),
+        ]
+
+        #expect(
+            CullingWorkspace.reviewBurstRejectCandidates(in: items)
+                == ["review-first", "review-third"]
+        )
+        #expect(
+            CullingWorkspace.reviewBurstRejectCandidates(in: Array(items.suffix(1)))
+                .isEmpty
+        )
+    }
+
     @Test("Burst capture dates parse durable Owner timestamps")
     func burstCaptureDateParsing() throws {
         let standard = try #require(CullingWorkspace.captureDate("2022-12-16T16:44:38Z"))
@@ -914,6 +2009,49 @@ struct OwnerCoreTests {
         }
         #expect(try gate.inspect().schemaVersion == 1)
         #expect(try scalar(databaseURL, "SELECT COUNT(*) FROM sqlite_master WHERE name = 'grdb_migrations'") == "0")
+    }
+
+    @Test("Native Review database locator selects Owner-private SQLite")
+    func nativeReviewDatabaseLocator() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-review-locator-\(UUID().uuidString)", isDirectory: true)
+        let configuredRoot = root.appendingPathComponent("configured", isDirectory: true)
+        let environmentRoot = root.appendingPathComponent("environment", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        try FileManager.default.createDirectory(
+            at: configuredRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: environmentRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let configuredDatabase = configuredRoot.appendingPathComponent(
+            "assets/owner-actions/Owner.sqlite",
+            isDirectory: false
+        )
+        let environmentDatabase = environmentRoot.appendingPathComponent(
+            "assets/owner-actions/Owner.sqlite",
+            isDirectory: false
+        )
+        try Data("configured".utf8).write(to: configuredDatabase)
+        try Data("environment".utf8).write(to: environmentDatabase)
+        let config = try JSONSerialization.data(withJSONObject: ["repoRoot": configuredRoot.path])
+        try config.write(to: configURL)
+
+        let configured = OwnerReviewDatabaseLocator(
+            configURL: configURL,
+            environment: [:]
+        )
+        #expect(configured.resolve() == configuredDatabase.standardizedFileURL)
+
+        let environment = OwnerReviewDatabaseLocator(
+            configURL: configURL,
+            environment: ["PBE_REPO_ROOT": environmentRoot.path]
+        )
+        #expect(environment.resolve() == environmentDatabase.standardizedFileURL)
+        #expect(environment.resolve()?.path.contains("assets/owner-actions/Owner.sqlite") == true)
     }
 
     @Test("Credential session round trips and clears device-only state")
@@ -1006,7 +2144,7 @@ struct OwnerCoreTests {
               "tokenType":"Bearer",
               "accessToken":"access-one",
               "expiresIn":900,
-              "accessExpiresAt":"2026-07-25T10:15:00Z"
+              "accessExpiresAt":"2026-07-25T10:15:00.000Z"
             }
             """,
         ])
@@ -1034,6 +2172,148 @@ struct OwnerCoreTests {
         let request = try #require(await transport.requests().first)
         #expect(request.url?.path == "/api/v1/auth/tokens")
         #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test("Owner API dates accept production fractional seconds and explicit timezone variants")
+    func ownerAPIDateVariants() throws {
+        struct Envelope: Decodable { let accessExpiresAt: Date }
+
+        let values: [(String, TimeInterval)] = [
+            ("2026-07-25T10:15:00.000Z", 1_784_974_500),
+            ("2026-07-25T10:15:00Z", 1_784_974_500),
+            ("2026-07-25T12:15:00.125+02:00", 1_784_974_500.125),
+            ("2026-07-25T12:15:00+02:00", 1_784_974_500),
+        ]
+        for (value, expectedTimestamp) in values {
+            let data = Data(#"{"accessExpiresAt":"\#(value)"}"#.utf8)
+            let decoded = try JSONDecoder.ownerAPI.decode(Envelope.self, from: data)
+            #expect(abs(decoded.accessExpiresAt.timeIntervalSince1970 - expectedTimestamp) < 0.000_001)
+        }
+    }
+
+    @Test("Native enrollment keeps the claim secret off the browser URL and stores only a completed credential")
+    func nativeEnrollmentHandoff() async throws {
+        let vault = MemoryCredentialVault()
+        let session = OwnerCredentialSession(vault: vault)
+        let transport = SequencedRoutingTransport(responses: [
+            "/api/v1/enrollment-handoffs": [
+                .init(status: 201, body: """
+                {
+                  "ok":true,
+                  "handoff":{
+                    "id":"owner-enrollment-one",
+                    "state":"pending",
+                    "claimSecret":"native-claim-secret",
+                    "binding":"native-binding",
+                    "authorizationURL":"https://auth.example.test/api/owner/enrollment-handoffs/owner-enrollment-one/authorize",
+                    "expiresAt":"2030-03-17T17:46:40Z"
+                  }
+                }
+                """),
+            ],
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim": [
+                .init(status: 202, body: #"{"ok":true,"state":"pending"}"#),
+                .init(status: 201, body: """
+                {
+                  "ok":true,
+                  "state":"completed",
+                  "device":{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z"
+                  },
+                  "deviceCredential":"native-device-credential-0123456789012345678901234567890123456789"
+                }
+                """),
+            ],
+            "/api/v1/auth/tokens": [
+                .init(status: 201, body: """
+                {
+                  "tokenType":"Bearer",
+                  "accessToken":"native-access",
+                  "expiresIn":900,
+                  "accessExpiresAt":"2030-03-17T17:46:40Z"
+                }
+                """),
+            ],
+            "/api/v1/devices": [
+                .init(status: 200, body: """
+                {
+                  "ok":true,
+                  "devices":[{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z"
+                  }]
+                }
+                """),
+            ],
+            "/api/v1/devices/owner-device-native/revoke": [
+                .init(status: 200, body: """
+                {
+                  "ok":true,
+                  "device":{
+                    "id":"owner-device-native",
+                    "name":"Max",
+                    "platform":"macOS",
+                    "createdAt":"2026-08-28T08:00:00Z",
+                    "revokedAt":"2026-08-28T08:05:00Z"
+                  }
+                }
+                """),
+            ],
+        ])
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        let service = OwnerAuthenticationService(api: client, session: session)
+
+        let handoff = try await service.beginNativeEnrollment(
+            name: "Max",
+            binding: "native-binding"
+        )
+        #expect(handoff.authorizationURL.query == nil)
+        #expect(handoff.authorizationURL.absoluteString.contains(handoff.claimSecret) == false)
+        #expect(try await session.load() == nil)
+        #expect(try await service.claimNativeEnrollment(handoff) == nil)
+        #expect(try await session.load() == nil)
+
+        let snapshot = try #require(try await service.claimNativeEnrollment(handoff))
+        #expect(snapshot.phase == .authenticated)
+        #expect(snapshot.deviceId == "owner-device-native")
+        let saved = try #require(try await session.load())
+        #expect(saved.deviceCredential?.hasPrefix("native-device-credential-") == true)
+        #expect(saved.accessToken == "native-access")
+        #expect(try await client.listOwnerDevices().map(\.name) == ["Max"])
+        #expect(try await client.revokeOwnerDevice(id: "owner-device-native").revokedAt != nil)
+        let requests = await transport.requests()
+        #expect(requests.map(\.url?.path) == [
+            "/api/v1/enrollment-handoffs",
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim",
+            "/api/v1/enrollment-handoffs/owner-enrollment-one/claim",
+            "/api/v1/auth/tokens",
+            "/api/v1/devices",
+            "/api/v1/devices/owner-device-native/revoke",
+        ])
+        #expect(requests.prefix(4).allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+        #expect(requests.suffix(2).allSatisfy {
+            $0.value(forHTTPHeaderField: "Authorization") == "Bearer native-access"
+        })
+    }
+
+    @Test("Owner API dates reject malformed or timezone-free values")
+    func ownerAPIDateVariantsFailClosed() throws {
+        struct Envelope: Decodable { let accessExpiresAt: Date }
+
+        for value in ["2026-07-25 10:15:00Z", "2026-07-25T10:15:00", "not-a-date"] {
+            let data = Data(#"{"accessExpiresAt":"\#(value)"}"#.utf8)
+            #expect(throws: DecodingError.self) {
+                try JSONDecoder.ownerAPI.decode(Envelope.self, from: data)
+            }
+        }
     }
 
     @Test("Launch bootstrap re-authenticates the Keychain device credential")
@@ -1364,7 +2644,10 @@ struct OwnerCoreTests {
         )
         let service = MetadataGiveBackService(runner: runner)
 
-        let report = try await service.plan(fixtureID: "fixture-family")
+        let report = try await service.plan(
+            fixtureID: "fixture-family",
+            assetIDs: ["asset-b", " asset-a ", "asset-b"]
+        )
 
         #expect(report.isDryRun)
         #expect(report.fixtureID == "fixture-family")
@@ -1386,6 +2669,14 @@ struct OwnerCoreTests {
             request.payload["manifest"]?.objectValue?["fixtureId"]?.stringValue
                 == "fixture-family"
         )
+        #expect(
+            request.payload["manifest"]?.objectValue?["assetIds"]?.arrayValue?.compactMap(\.stringValue)
+                == ["asset-a", "asset-b"]
+        )
+        let idempotencyKey = try #require(await api.idempotencyKeys().first)
+        #expect(idempotencyKey.count >= 8)
+        #expect(idempotencyKey.count <= 160)
+        #expect(idempotencyKey.unicodeScalars.allSatisfy { (0x21...0x7e).contains($0.value) })
     }
 
     @Test("Metadata give-back retries only independently failed asset IDs")
@@ -1592,6 +2883,46 @@ struct OwnerCoreTests {
         #expect(request.target == "david")
         #expect(request.payload["requestedConnector"]?.stringValue == "david")
         #expect(request.payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-tree-list")
+    }
+
+    @Test("Fixture tree uses a bounded refresh timeout without changing shared action timeout")
+    func nativeFixtureTreeUsesBoundedRefreshTimeout() async throws {
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: PendingOwnerActionAPI(),
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            fixtureTreeTimeout: .milliseconds(20)
+        )
+
+        do {
+            _ = try await service.tree()
+            Issue.record("Expected the fixture tree refresh to time out")
+        } catch let error as OwnerActionRunError {
+            #expect(error == .timedOut)
+        }
+    }
+
+    @Test("Fixture tree timeout cancels a delayed local wake")
+    func nativeFixtureTreeCancelsDelayedWake() async throws {
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: PendingOwnerActionAPI(),
+                waker: DelayedWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            fixtureTreeTimeout: .milliseconds(20)
+        )
+
+        do {
+            _ = try await service.tree()
+            Issue.record("Expected the delayed fixture-tree wake to time out")
+        } catch let error as OwnerActionRunError {
+            #expect(error == .timedOut)
+        }
     }
 
     @Test("Native fixture state migration remains an explicit audited action")
@@ -1861,6 +3192,7 @@ struct OwnerCoreTests {
             state: .completed,
             result: [
                 "job": .object([
+                    "mode": "range",
                     "status": "done",
                     "stage": "Complete",
                     "indexedCount": 52_400,
@@ -1868,6 +3200,9 @@ struct OwnerCoreTests {
                     "totalCount": 52_400,
                     "missingMarkedCount": 17,
                     "completedAt": "2026-07-28T12:00:00Z",
+                    "discoveryCheckpoint": .object([
+                        "captureDate": "2026-07-28T11:59:00Z",
+                    ]),
                 ]),
             ]
         )
@@ -1888,6 +3223,8 @@ struct OwnerCoreTests {
         )
 
         #expect(report.status == "done")
+        #expect(report.mode == "range")
+        #expect(report.checkpointCaptureDate == "2026-07-28T11:59:00Z")
         #expect(report.indexedCount == 52_400)
         #expect(report.importedCount == 52_400)
         #expect(report.totalCount == 52_400)
@@ -1899,7 +3236,59 @@ struct OwnerCoreTests {
         #expect(request.payload["queuedAt"]?.stringValue?.isEmpty == false)
         #expect(request.payload["dateFrom"]?.stringValue == "2026-06-13T00:00:00Z")
         #expect(request.payload["dateTo"]?.stringValue == "2026-07-29T00:00:00Z")
+        #expect(request.payload["mode"]?.stringValue == "range")
         #expect(request.payload["manifest"] == nil)
+    }
+
+    @Test("Native Photos reconciliation defaults to incremental and full audit is explicit")
+    func nativePhotosIndexReconciliationModes() async throws {
+        let incrementalTerminal = OwnerAction(
+            id: "owner-action-photos-incremental",
+            actionKind: "sidecar-photos-index-sync",
+            target: "david",
+            state: .completed,
+            result: ["job": .object(["status": "done", "mode": "incremental"])]
+        )
+        let incrementalAPI = ScriptedOwnerActionAPI(completed: [incrementalTerminal])
+        let incrementalService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: incrementalAPI,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        _ = try await incrementalService.reconcilePhotosIndex()
+        let incrementalRequest = try #require(await incrementalAPI.requests().first)
+        #expect(incrementalRequest.payload["mode"]?.stringValue == "incremental")
+        #expect(incrementalRequest.payload["fullLibrary"] == nil)
+        #expect(incrementalRequest.payload["dateFrom"] == nil)
+
+        let fullTerminal = OwnerAction(
+            id: "owner-action-photos-full",
+            actionKind: "sidecar-photos-index-sync",
+            target: "david",
+            state: .completed,
+            result: ["job": .object(["status": "done", "mode": "full"])]
+        )
+        let fullAPI = ScriptedOwnerActionAPI(completed: [fullTerminal])
+        let fullService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: fullAPI,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            connectorIdentity: StaticOwnerConnectorIdentity("David")
+        )
+
+        _ = try await fullService.reconcilePhotosIndex(fullLibrary: true)
+        let fullRequest = try #require(await fullAPI.requests().first)
+        #expect(fullRequest.payload["mode"]?.stringValue == "full")
+        #expect(fullRequest.payload["fullLibrary"]?.boolValue == true)
+        #expect(fullRequest.payload["dateFrom"] == nil)
     }
 
     @Test("Fixture culling keeps H fixture-local and X globally scoped")
@@ -2014,6 +3403,9 @@ struct OwnerCoreTests {
                     "action": "request-ai",
                     "anchorAssetId": "asset-oldest",
                     "propagated": true,
+                    "timing": .object([
+                        "localTransaction": .object(["durationMs": 2.0]),
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-oldest",
                         "before": .object(["editorialState": "unreviewed"]),
@@ -2033,10 +3425,18 @@ struct OwnerCoreTests {
                     "fixtureId": "fixture-expo",
                     "action": "request-ai",
                     "alreadyUndone": false,
+                    "timing": .object([
+                        "localTransaction": .object(["durationMs": 3.0]),
+                    ]),
                     "items": .array([.object([
                         "assetId": "asset-oldest",
                         "before": .object(["editorialState": "requesting-ai"]),
                         "after": .object(["editorialState": "unreviewed"]),
+                        "review": .object([
+                            "placementState": "picked",
+                            "editorialState": "unreviewed",
+                            "proposalReady": false,
+                        ]),
                     ])]),
                 ]),
             ]
@@ -2092,10 +3492,13 @@ struct OwnerCoreTests {
         #expect(result.operationID == "reviewop-test")
         #expect(result.propagated)
         #expect(result.changes.map(\.assetID) == ["asset-oldest"])
+        #expect(result.timing["localTransaction"]?.objectValue?["durationMs"]?.intValue == 2)
         let undone = try await service.undoReview(operationID: result.operationID)
         #expect(undone.operationID == "reviewop-test")
         #expect(!undone.alreadyUndone)
         #expect(undone.changes.map(\.assetID) == ["asset-oldest"])
+        #expect(undone.timing["localTransaction"]?.objectValue?["durationMs"]?.intValue == 3)
+        #expect(undone.changes.first?.review["placementState"]?.stringValue == "picked")
         let requests = await api.requests()
         #expect(requests.count == 3)
         let reviewManifest = requests[0].payload["manifest"]?.objectValue
@@ -2123,6 +3526,39 @@ struct OwnerCoreTests {
         #expect(undoManifest?["operationId"]?.stringValue == "reviewop-test")
         #expect(undoManifest?["includePreviews"]?.boolValue == false)
         #expect(undoManifest?["launchWorkspace"]?.boolValue == false)
+    }
+
+    @Test("Native Review mutations use the local service without an Owner action")
+    func nativeReviewMutationsUseLocalService() async throws {
+        let api = ScriptedOwnerActionAPI(completed: [])
+        let local = RecordingLocalFixtureReviewService()
+        let service = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: api,
+                waker: UnavailableWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: local
+        )
+
+        let applied = try await service.applyReview(
+            .hide,
+            fixtureID: "fixture-expo",
+            assetIDs: ["asset-1", "asset-2"],
+            anchorAssetID: "asset-2"
+        )
+        let undone = try await service.undoReview(operationID: applied.operationID)
+
+        #expect(applied.operationID == "reviewop-local")
+        #expect(undone.operationID == "reviewop-local")
+        #expect(await api.requests().isEmpty)
+        let manifests = await local.applyManifests
+        #expect(manifests.count == 1)
+        #expect(manifests[0]["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(manifests[0]["assetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-1", "asset-2"])
+        #expect(manifests[0]["reviewAction"]?.stringValue == "hide")
+        #expect(await local.undoOperationIDs == ["reviewop-local"])
     }
 
     @Test("Native requested AI proposals remain draft-only and connector-audited")
@@ -2389,6 +3825,90 @@ struct OwnerCoreTests {
         #expect(decisions.last?["rating"] as? Int == 5)
     }
 
+    @Test("Color assignment clears only when every target already has that color")
+    func sidecarColorToggleTarget() {
+        #expect(SidecarColor.green.toggleTarget(for: ["green"]) == .none)
+        #expect(SidecarColor.green.toggleTarget(for: ["green", "green"]) == .none)
+        #expect(SidecarColor.green.toggleTarget(for: ["green", "blue"]) == .green)
+        #expect(SidecarColor.green.toggleTarget(for: [""]) == .green)
+        #expect(SidecarColor.green.toggleTarget(for: []) == .green)
+        #expect(SidecarColor.none.toggleTarget(for: [""]) == .none)
+    }
+
+    @Test("Color toggle queries authoritative state before clearing a repeated color")
+    func sidecarColorToggleUsesAuthoritativeState() async throws {
+        let transport = RoutingTransport(responses: [
+            "/api/v1/sidecar/decisions/query": """
+            {
+              "ok": true,
+              "decisions": {
+                "asset-1": {
+                  "assetId": "asset-1",
+                  "rating": 0,
+                  "color": "green",
+                  "pickState": "undecided",
+                  "metadataState": "unreviewed",
+                  "title": "",
+                  "keywords": [],
+                  "tombstoneState": "",
+                  "updatedAt": "2026-08-26T10:00:00Z"
+                }
+              }
+            }
+            """,
+            "/api/v1/sidecar/decisions/apply": """
+            {
+              "ok": true,
+              "assetId": "asset-1",
+              "state": {
+                "assetId": "asset-1",
+                "rating": 0,
+                "color": "",
+                "pickState": "undecided",
+                "metadataState": "unreviewed",
+                "title": "",
+                "keywords": [],
+                "tombstoneState": "",
+                "updatedAt": "2026-08-26T10:00:01Z"
+              },
+              "before": {
+                "assetId": "asset-1",
+                "rating": 0,
+                "color": "green",
+                "pickState": "undecided",
+                "metadataState": "unreviewed",
+                "title": "",
+                "keywords": [],
+                "tombstoneState": "",
+                "updatedAt": "2026-08-26T10:00:00Z"
+              },
+              "changedFamilies": ["color"]
+            }
+            """,
+        ])
+        let service = SidecarDecisionService(api: OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        ))
+
+        let changes = try await service.toggleColor(
+            .green,
+            assetIDs: ["asset-1"],
+            idempotencyKey: "toggle-green-off"
+        )
+
+        #expect(changes.first?.state.color == "")
+        let requests = await transport.requests()
+        #expect(requests.map { $0.url?.path } == [
+            "/api/v1/sidecar/decisions/query",
+            "/api/v1/sidecar/decisions/apply",
+        ])
+        let applyBody = try #require(requests.last?.httpBody)
+        let applyPayload = try JSONSerialization.jsonObject(with: applyBody) as? [String: Any]
+        #expect(applyPayload?["action"] as? String == "color")
+        #expect(applyPayload?["color"] as? String == "")
+    }
+
     @Test("Native culling reloads preserved decisions and captures reversible before state")
     func nativeCullingStateAndUndoEvidence() async throws {
         let applyTransport = RecordingTransport(response: """
@@ -2601,39 +4121,6 @@ struct OwnerCoreTests {
         #expect(manifest?["assetIds"]?.arrayValue?.compactMap(\.stringValue) == ["asset-1"])
     }
 
-    @Test("Native AI proposal decisions use the audited review action")
-    func nativeProposalDecision() async throws {
-        let terminal = OwnerAction(
-            id: "owner-action-proposal",
-            actionKind: "photo-moderation",
-            target: "max",
-            state: .completed,
-            result: ["ok": true]
-        )
-        let api = ScriptedOwnerActionAPI(completed: [terminal])
-        let service = MetadataReviewService(runner: OwnerActionRunner(
-            api: api,
-            waker: UnavailableWaker(),
-            pollInterval: .milliseconds(1),
-            timeout: .seconds(1)
-        ))
-        let proposal = MetadataProposal(
-            photoID: "asset-1",
-            batchID: "batch-1",
-            current: .init(title: "Old", keywords: ["Paris"]),
-            proposed: .init(title: "New", keywords: ["Paris", "Museum"])
-        )
-
-        _ = try await service.decide(proposal, disposition: .approve)
-
-        let request = try #require(await api.requests().first)
-        #expect(request.payload["operation"]?.stringValue == "save-title-keyword-review-approvals")
-        let approval = request.payload["approvals"]?.arrayValue?.first?.objectValue
-        #expect(approval?["photo_id"]?.stringValue == "asset-1")
-        #expect(approval?["approved"]?.boolValue == true)
-        #expect(approval?["title"]?.stringValue == "New")
-    }
-
     @Test("Native model ladder saves the selected OpenAI order through Max")
     func nativeModelLadderSave() async throws {
         let terminal = OwnerAction(
@@ -2696,6 +4183,9 @@ struct OwnerCoreTests {
                         "mediaId": "photo-hidden",
                         "state": "hidden",
                         "title": "Private saved title",
+                        "filename": "IMG_4228.HEIC",
+                        "capturedAt": "2026-07-24T18:45:00Z",
+                        "photoLibraryIdentifier": "photos-hidden",
                         "mediaType": "photo",
                         "sourceSlug": "france",
                         "updatedAt": "2026-07-25T00:00:00Z",
@@ -2724,7 +4214,14 @@ struct OwnerCoreTests {
             state: .completed,
             result: ["ok": true]
         )
-        let api = ScriptedOwnerActionAPI(completed: [ledger, restored, moved, emptied])
+        let selectedEmptied = OwnerAction(
+            id: "owner-action-lifecycle-empty-selected",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [ledger, restored, moved, selectedEmptied, emptied])
         let service = LifecycleService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -2734,6 +4231,9 @@ struct OwnerCoreTests {
 
         let state = try await service.ledger()
         #expect(state.items.map(\.title) == ["Private saved title"])
+        #expect(state.items.map(\.filename) == ["IMG_4228.HEIC"])
+        #expect(state.items.map(\.capturedAt) == ["2026-07-24T18:45:00Z"])
+        #expect(state.items.map(\.photoLibraryIdentifier) == ["photos-hidden"])
         _ = try await service.restore(mediaIDs: ["photo-hidden"])
 
         let requests = await api.requests()
@@ -2748,14 +4248,188 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["requestKey"]?.stringValue?.hasPrefix("native-lifecycle:waste-basket-restore:") == true)
 
         _ = try await service.moveToWasteBasket(mediaIDs: ["photo-x"], fixtureID: "fixture-expo")
+        _ = try await service.emptyWasteBasket(mediaIDs: ["photo-hidden"], confirmed: true)
         _ = try await service.emptyWasteBasket(confirmed: true)
         let finalRequests = await api.requests()
         #expect(finalRequests[2].payload["operation"]?.stringValue == "waste-basket-x")
         #expect(finalRequests[2].payload["source"]?.stringValue == "backstage-culling")
         #expect(finalRequests[2].payload["requestKey"]?.stringValue?.hasPrefix("native-lifecycle:waste-basket-x:") == true)
         #expect(finalRequests[3].payload["operation"]?.stringValue == "waste-basket-empty")
+        #expect(finalRequests[3].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-hidden"])
         #expect(finalRequests[3].payload["confirmed"]?.boolValue == true)
         #expect(finalRequests[3].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
+        #expect(finalRequests[4].payload["operation"]?.stringValue == "waste-basket-empty")
+        #expect(finalRequests[4].payload["photoIds"]?.arrayValue?.isEmpty == true)
+    }
+
+    @Test("Native lifecycle queues X and Empty before terminal reconciliation")
+    func nativeLifecycleQueuesDestructiveActions() async throws {
+        let queuedX = OwnerAction(
+            id: "owner-action-lifecycle-queued-x",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let queuedEmpty = OwnerAction(
+            id: "owner-action-lifecycle-queued-empty",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [queuedX, queuedEmpty])
+        let service = LifecycleService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let x = try await service.enqueueMoveToWasteBasket(
+            mediaIDs: [" photo-2 ", "photo-1", "photo-2"],
+            fixtureID: "fixture-expo"
+        )
+        let empty = try await service.enqueueEmptyWasteBasket(
+            mediaIDs: ["photo-2"],
+            confirmed: true
+        )
+
+        #expect(x.state == .queued)
+        #expect(empty.state == .queued)
+        #expect(try await service.awaitCompletion(of: x).state == .completed)
+        #expect(try await service.awaitCompletion(of: empty).state == .completed)
+
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        #expect(requests[0].payload["operation"]?.stringValue == "waste-basket-x")
+        #expect(requests[0].payload["photoIds"]?.arrayValue?.compactMap(\.stringValue) == ["photo-1", "photo-2"])
+        #expect(requests[0].payload["fixtureId"]?.stringValue == "fixture-expo")
+        #expect(requests[1].payload["operation"]?.stringValue == "waste-basket-empty")
+        #expect(requests[1].payload["confirmed"]?.boolValue == true)
+        #expect(requests[1].payload["confirmationToken"]?.stringValue == "EMPTY_WASTE_BASKET")
+    }
+
+    @Test("Lifecycle receipts report affected skipped and failed X items")
+    func lifecycleActionReceipts() {
+        let mixed = OwnerAction(
+            id: "owner-action-lifecycle-receipt",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: [
+                "result": [
+                    "items": [
+                        ["status": "applied"],
+                        ["status": "already-recoverable"],
+                        ["status": "conflict"],
+                    ],
+                ],
+            ]
+        )
+        #expect(
+            LifecycleActionReceipt.summarize(mixed, requestedCount: 3)
+                == LifecycleActionReceipt(affected: 1, skipped: 1, failed: 1)
+        )
+
+        let completedWithoutItems = OwnerAction(
+            id: "owner-action-lifecycle-fallback",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            result: ["ok": true]
+        )
+        #expect(
+            LifecycleActionReceipt.summarize(completedWithoutItems, requestedCount: 2)
+                == LifecycleActionReceipt(affected: 2, skipped: 0, failed: 0)
+        )
+    }
+
+    @Test("Owner action decoding preserves connector phase timing receipts")
+    func decodesConnectorPhaseTimingReceipts() throws {
+        let action = try JSONDecoder.ownerAPI.decode(
+            OwnerAction.self,
+            from: Data(
+                """
+                {
+                  "id": "owner-action-lifecycle-timing",
+                  "actionKind": "photo-moderation",
+                  "target": "max",
+                  "state": "completed",
+                  "timing": {
+                    "queuedAt": "2026-08-18T10:00:00.000Z",
+                    "completedAt": "2026-08-18T10:00:00.500Z",
+                    "connector": {
+                      "schema": "photosbyelie.ownerActionTiming.v1",
+                      "actionId": "owner-action-lifecycle-timing",
+                      "startedAt": "2026-08-18T10:00:00.100Z",
+                      "endedAt": "2026-08-18T10:00:00.500Z",
+                      "elapsedMs": 400.0,
+                      "outcome": "submitted",
+                      "phases": {
+                        "action.execute": {
+                          "startedAt": "2026-08-18T10:00:00.100Z",
+                          "endedAt": "2026-08-18T10:00:00.150Z",
+                          "elapsedMs": 50.0,
+                          "outcome": "ok"
+                        },
+                        "lifecycle.local-moderation": {
+                          "startedAt": "2026-08-18T10:00:00.200Z",
+                          "endedAt": "2026-08-18T10:00:00.500Z",
+                          "elapsedMs": 300.0,
+                          "outcome": "ok"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.utf8
+            )
+        )
+
+        #expect(action.connectorTiming?.schema == "photosbyelie.ownerActionTiming.v1")
+        #expect(action.connectorTiming?.latestPhaseName == "lifecycle.local-moderation")
+        #expect(action.connectorTiming?.slowestPhaseName == "lifecycle.local-moderation")
+        #expect(action.connectorTiming?.slowestPhaseElapsedMs == 300.0)
+        #expect(action.diagnosticPhaseName == "lifecycle.local-moderation")
+        #expect(action.diagnosticPhaseElapsedMs == 300.0)
+    }
+
+    @Test("Owner action completion reports queued and terminal updates")
+    func ownerActionCompletionReportsUpdates() async throws {
+        let terminal = OwnerAction(
+            id: "owner-action-update-receipt",
+            actionKind: "photo-moderation",
+            target: "max",
+            state: .completed,
+            progress: OwnerProgress(
+                phase: "projection-update",
+                completed: 1,
+                total: 1,
+                percent: 100
+            )
+        )
+        let api = ScriptedOwnerActionAPI(completed: [terminal])
+        let runner = OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        )
+        let recorder = OwnerActionUpdateRecorder()
+
+        _ = try await runner.awaitCompletion(
+            of: OwnerAction(
+                id: terminal.id,
+                actionKind: terminal.actionKind,
+                target: terminal.target,
+                state: .queued
+            ),
+            onUpdate: { action in recorder.append(action) }
+        )
+
+        #expect(recorder.states == [.queued, .completed])
+        #expect(recorder.phases == ["queued", "projection-update"])
     }
 
     @Test("Native delivery keeps fixture upload and publication as separate actions")
@@ -3193,141 +4867,22 @@ struct OwnerCoreTests {
         #expect(summary.requestingAI == 2)
     }
 
-    @Test("Backstage reports signed Photos helper identity and headless health")
-    func signedPhotosBridgeHealth() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-bridge-health-\(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "148.0",
-            "CFBundleVersion": "12",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let service = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "148.0",
-            expectedBuild: "12"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
-
-        let health = await service.probe()
-        #expect(health.installed)
-        #expect(health.headless)
-        #expect(health.bundleIdentifier == "com.photosbyelie.photos-bridge")
-        #expect(health.version == "148.0")
-        #expect(health.build == "12")
-        #expect(health.photoAccess == "authorized")
-        #expect(health.compatible)
-        #expect(health.message == "Signed helper is compatible and authorized.")
+    @Test("Connector identity is explicit and requires neither daemon nor credential config")
+    func connectorIdentityUsesExplicitAuthorityTarget() async {
+        #expect(await LocalOwnerConnectorIdentity().connectorID() == "max")
+        #expect(await LocalOwnerConnectorIdentity(target: "David_2").connectorID() == "david_2")
+        #expect(await LocalOwnerConnectorIdentity(target: "not valid!").connectorID() == "max")
     }
 
-    @Test("Backstage reports a stale Photos helper before mutation")
-    func stalePhotosBridgeHealthIsIncompatible() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-bridge-stale-(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "141.10",
-            "CFBundleVersion": "1",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let service = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "218.0",
-            expectedBuild: "75"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
-
-        let health = await service.probe()
-        #expect(!health.compatible)
-        #expect(health.photoAccess == "authorized")
-        #expect(health.message.contains("incompatible"))
-    }
-
-    @Test("Backstage control health stays structured and CUA-free")
+    @Test("Backstage control health is native, structured, and helper-free")
     func backstageControlHealthIsMachineReadable() async throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pbe-control-health-\(UUID().uuidString)")
-        let app = root.appendingPathComponent("PhotosByElie Photos Bridge.app")
-        let contents = app.appendingPathComponent("Contents")
-        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let plist: [String: Any] = [
-            "CFBundleIdentifier": "com.photosbyelie.photos-bridge",
-            "CFBundleShortVersionString": "218.0",
-            "CFBundleVersion": "75",
-            "LSUIElement": true,
-        ]
-        let plistData = try PropertyListSerialization.data(
-            fromPropertyList: plist,
-            format: .xml,
-            options: 0
-        )
-        try plistData.write(to: contents.appendingPathComponent("Info.plist"))
-        let bridge = PhotosBridgeHealthService(
-            appURL: app,
-            expectedBundleIdentifier: "com.photosbyelie.photos-bridge",
-            expectedVersion: "218.0",
-            expectedBuild: "75"
-        ) { _, resultURL in
-            let result: [String: Any] = [
-                "ok": true,
-                "headless": true,
-                "bundleIdentifier": "com.photosbyelie.photos-bridge",
-                "photoAccess": "authorized",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: result)
-            try data.write(to: resultURL)
-        }
         let release = BackstageReleaseIdentity(
             bundleIdentifier: "com.photosbyelie.backstage",
             version: "218.0",
-            build: "75",
-            helperBundleIdentifier: "com.photosbyelie.photos-bridge",
-            helperVersion: "218.0",
-            helperBuild: "75"
+            build: "75"
         )
         let service = BackstageControlService(
             release: release,
-            photosBridge: bridge,
             photoLibrary: StaticPhotoLibrary(access: .notDetermined),
             connectorIdentity: StaticOwnerConnectorIdentity("max"),
             authenticationSnapshot: {
@@ -3340,26 +4895,43 @@ struct OwnerCoreTests {
 
         let health = await service.health(command: "release verify")
         #expect(health.ok)
+        #expect(health.schemaVersion == 2)
         #expect(health.command == "release verify")
-        #expect(health.release.helperBuild == "75")
-        #expect(health.helper.compatible)
         #expect(health.photoLibraryAccess == "not_determined")
         #expect(health.ownerAuthenticated)
         #expect(health.connectorID == "max")
-        #expect(health.message == "Backstage release and Photos Bridge helper are compatible.")
+        #expect(health.message == "Backstage release metadata is complete; no standalone Photos helper is required.")
 
         let photosHealth = await service.health(command: "photos health")
         #expect(!photosHealth.ok)
         #expect(photosHealth.message.contains("not_determined"))
 
+        let authorizedService = BackstageControlService(
+            release: release,
+            photoLibrary: StaticPhotoLibrary(access: .authorized),
+            connectorIdentity: StaticOwnerConnectorIdentity("max"),
+            authenticationSnapshot: {
+                OwnerAuthenticationSnapshot(
+                    phase: .authenticated,
+                    deviceId: "owner-device-test"
+                )
+            }
+        )
+        let authorizedPhotosHealth = await authorizedService.health(command: "photos health")
+        #expect(authorizedPhotosHealth.ok)
+        #expect(authorizedPhotosHealth.photoLibraryAccess == "authorized")
+        #expect(authorizedPhotosHealth.message == "Backstage control health is ready.")
+
         let encoded = try JSONEncoder.ownerAPI.encode(health)
+        let encodedText = try #require(String(data: encoded, encoding: .utf8))
+        #expect(!encodedText.contains("\"helper\":"))
+        #expect(!encodedText.contains("Bridge"))
         let decoded = try JSONDecoder.ownerAPI.decode(BackstageControlHealth.self, from: encoded)
         #expect(decoded.schemaVersion == health.schemaVersion)
         #expect(decoded.command == health.command)
         #expect(abs(decoded.checkedAt.timeIntervalSince(health.checkedAt)) < 1)
         #expect(decoded.ok == health.ok)
         #expect(decoded.release == health.release)
-        #expect(decoded.helper == health.helper)
         #expect(decoded.photoLibraryAccess == health.photoLibraryAccess)
         #expect(decoded.ownerSession == health.ownerSession)
         #expect(decoded.ownerAuthenticated == health.ownerAuthenticated)
@@ -3481,6 +5053,68 @@ struct OwnerCoreTests {
         let payload = try #require(output.values().last)
         #expect(payload.contains("invalid_arguments"))
         #expect(payload.contains("--items-file"))
+    }
+}
+
+@Suite("Retired Photos Bridge lifecycle")
+struct RetiredPhotosBridgeLifecycleTests {
+    @Test("Launch retirement moves every legacy live root into one recoverable archive")
+    func retiresAllLegacyLiveRoots() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbb-92-retirement-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let retirementRoot = applications.appendingPathComponent("Retired", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        for name in RetiredPhotosBridgeService.liveArtifactNames {
+            let artifact = applications.appendingPathComponent(name, isDirectory: true)
+            try FileManager.default.createDirectory(at: artifact, withIntermediateDirectories: true)
+            try Data(name.utf8).write(to: artifact.appendingPathComponent("marker"))
+        }
+        let historical = applications.appendingPathComponent(
+            "PhotosByElie Retired Bridge Artifacts/older-audit",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: historical, withIntermediateDirectories: true)
+
+        let result = try RetiredPhotosBridgeService(
+            applicationsDirectory: applications,
+            retirementRoot: retirementRoot,
+            retirementFolderName: "candidate-229.4"
+        ).retireInstalledArtifacts()
+
+        #expect(result.retiredNames == RetiredPhotosBridgeService.liveArtifactNames)
+        let archive = try #require(result.archiveDirectory)
+        for name in RetiredPhotosBridgeService.liveArtifactNames {
+            #expect(!FileManager.default.fileExists(
+                atPath: applications.appendingPathComponent(name).path
+            ))
+            #expect(FileManager.default.fileExists(
+                atPath: archive.appendingPathComponent(name + "/marker").path
+            ))
+        }
+        #expect(FileManager.default.fileExists(atPath: historical.path))
+    }
+
+    @Test("Launch retirement is a no-op when no legacy live root exists")
+    func noLegacyRootIsNoOp() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbb-92-noop-\(UUID().uuidString)", isDirectory: true)
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let retirementRoot = applications.appendingPathComponent("Retired", isDirectory: true)
+        try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let result = try RetiredPhotosBridgeService(
+            applicationsDirectory: applications,
+            retirementRoot: retirementRoot,
+            retirementFolderName: "candidate-229.4"
+        ).retireInstalledArtifacts()
+
+        #expect(result.archiveDirectory == nil)
+        #expect(result.retiredNames.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: retirementRoot.path))
     }
 }
 
@@ -3770,6 +5404,48 @@ struct PBEOwnerHostContractTests {
         ))
     }
 
+    @Test("On-demand Owner connector plans require the sealed runtime and mutable Owner data")
+    func onDemandOwnerConnectorPlanIsBounded() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pbe-owner-on-demand-(UUID().uuidString)", isDirectory: true)
+        let runtimeRoot = root.appendingPathComponent("runtime", isDirectory: true)
+        let dataRoot = root.appendingPathComponent("data", isDirectory: true)
+        let configURL = root.appendingPathComponent("connector.json")
+        let pythonURL = root.appendingPathComponent("python3")
+        try FileManager.default.createDirectory(
+            at: runtimeRoot.appendingPathComponent("scripts", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: dataRoot.appendingPathComponent("assets/owner-actions", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("#!/usr/bin/env python3\n".utf8).write(
+            to: runtimeRoot.appendingPathComponent("scripts/new_owner_connector.py")
+        )
+        try Data().write(to: dataRoot.appendingPathComponent("assets/owner-actions/Owner.sqlite"))
+        try Data("{}\n".utf8).write(to: configURL)
+        try Data().write(to: pythonURL)
+
+        let plan = try OnDemandOwnerActionWaker.makeLaunchPlan(
+            runtimeRoot: runtimeRoot,
+            dataRoot: dataRoot,
+            configURL: configURL,
+            pythonExecutable: pythonURL
+        )
+        #expect(plan.scriptURL == runtimeRoot.appendingPathComponent("scripts/new_owner_connector.py"))
+        #expect(plan.dataRoot == dataRoot)
+        #expect(throws: APIErrorEnvelope.self) {
+            try OnDemandOwnerActionWaker.makeLaunchPlan(
+                runtimeRoot: runtimeRoot,
+                dataRoot: dataRoot,
+                configURL: root.appendingPathComponent("missing.json"),
+                pythonExecutable: pythonURL
+            )
+        }
+    }
+
     private func makeWritable(_ root: URL) {
         guard FileManager.default.fileExists(atPath: root.path) else { return }
         if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {
@@ -4036,6 +5712,22 @@ private struct FailingBackstageSignatureVerifier: BackstageCodeSignatureVerifyin
     }
 }
 
+private struct FailingInstalledCandidateSignatureVerifier: BackstageCodeSignatureVerifying {
+    let canonicalPath: String
+    let candidateBuild: String
+
+    func verify(
+        bundleURL: URL,
+        expectedBundleIdentifier: String,
+        trust: BackstageReleaseTrust
+    ) throws {
+        let build = try? syntheticBackstageBuild(at: bundleURL)
+        if bundleURL.path == canonicalPath, build == candidateBuild {
+            throw BackstageUpdateError.signatureMismatch("Synthetic post-swap signature failure.")
+        }
+    }
+}
+
 private struct ProgressSample: Sendable {
     let received: Int64
     let total: Int64
@@ -4106,7 +5798,10 @@ private final class LockedFlag: @unchecked Sendable {
 private func createZipArchive(sourceApp: URL, destination: URL) throws {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-    process.arguments = ["-c", "-k", "--keepParent", sourceApp.path, destination.path]
+    process.arguments = [
+        "-c", "-k", "--sequesterRsrc", "--keepParent",
+        sourceApp.path, destination.path,
+    ]
     let pipe = Pipe()
     process.standardError = pipe
     try process.run()
@@ -4118,6 +5813,40 @@ private func createZipArchive(sourceApp: URL, destination: URL) throws {
         ) ?? ""
         throw BackstageUpdateError.archiveInvalid("Synthetic ZIP creation failed: \(message)")
     }
+}
+
+private func createSyntheticBackstageApp(
+    at appURL: URL,
+    version: String,
+    build: String,
+    identifier: String = BackstageReleaseManifest.bundleIdentifier
+) throws {
+    let contents = appURL.appendingPathComponent("Contents", isDirectory: true)
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    let plist: [String: Any] = [
+        "CFBundleIdentifier": identifier,
+        "CFBundleShortVersionString": version,
+        "CFBundleVersion": build,
+        "CFBundlePackageType": "APPL",
+    ]
+    let data = try PropertyListSerialization.data(
+        fromPropertyList: plist,
+        format: .xml,
+        options: 0
+    )
+    try data.write(to: contents.appendingPathComponent("Info.plist"))
+    try Data("bundle payload \(version) \(build)".utf8).write(
+        to: contents.appendingPathComponent("payload.bin")
+    )
+}
+
+private func syntheticBackstageBuild(at appURL: URL) throws -> String {
+    let data = try Data(contentsOf: appURL.appendingPathComponent("Contents/Info.plist"))
+    let plist = try #require(
+        PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+            as? [String: Any]
+    )
+    return try #require(plist["CFBundleVersion"] as? String)
 }
 
 private func scalar(_ databaseURL: URL, _ sql: String) throws -> String {
@@ -4291,9 +6020,87 @@ private struct UnavailableWaker: OwnerActionWaking {
     }
 }
 
+private struct DelayedWaker: OwnerActionWaking {
+    func wake(actionID: String) async throws -> OwnerAction? {
+        try await Task.sleep(for: .seconds(10))
+        return nil
+    }
+}
+
+private actor OwnerActionWakeRecorder {
+    private var actionIDs: [String] = []
+
+    func append(_ actionID: String) {
+        actionIDs.append(actionID)
+    }
+
+    func values() -> [String] {
+        actionIDs
+    }
+}
+
+private struct RecordingWaker: OwnerActionWaking {
+    let recorder: OwnerActionWakeRecorder
+
+    func wake(actionID: String) async throws -> OwnerAction? {
+        await recorder.append(actionID)
+        return nil
+    }
+}
+
+private final class OwnerActionUpdateRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [OwnerAction] = []
+
+    func append(_ action: OwnerAction) {
+        lock.lock()
+        values.append(action)
+        lock.unlock()
+    }
+
+    var states: [OwnerActionState] {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.map(\.state)
+    }
+
+    var phases: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.map(\.diagnosticPhaseName)
+    }
+}
+
+private actor PendingOwnerActionAPI: OwnerActionServing {
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        OwnerActionEnvelope(
+            action: OwnerAction(
+                id: "owner-action-pending-fixture-tree",
+                actionKind: action.actionKind,
+                target: action.target,
+                state: .queued
+            ),
+            idempotencyReplayed: false
+        )
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        OwnerAction(
+            id: id,
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .queued
+        )
+    }
+}
+
 private actor ScriptedOwnerActionAPI: OwnerActionServing {
     private var completed: [OwnerAction]
     private var created: [OwnerActionCreate] = []
+    private var keys: [String] = []
 
     init(completed: [OwnerAction]) {
         self.completed = completed
@@ -4304,6 +6111,7 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
         idempotencyKey: String
     ) async throws -> OwnerActionEnvelope {
         created.append(action)
+        keys.append(idempotencyKey)
         let index = created.count - 1
         let terminal = completed[index]
         return OwnerActionEnvelope(
@@ -4325,4 +6133,65 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
     }
 
     func requests() -> [OwnerActionCreate] { created }
+    func idempotencyKeys() -> [String] { keys }
+}
+@Suite("PBE Owner native host route contract")
+struct PBEOwnerNativeHostContractTests {
+    @Test("Native host parser accepts one bounded HTTP request")
+    func parsesBoundedRequest() throws {
+        let request = try PBEOwnerHTTPRequestParser().parse(Data(
+            "POST /__photosbyelie/pbe-owner/action?x=1 HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}".utf8
+        ))
+        #expect(request.method == "POST")
+        #expect(request.path == "/__photosbyelie/pbe-owner/action")
+        #expect(request.body == Data("{}".utf8))
+    }
+
+    @Test("Native host parser rejects request smuggling boundaries")
+    func rejectsAmbiguousRequests() {
+        let duplicateLength = Data(
+            "POST / HTTP/1.1\r\nContent-Length: 0\r\nContent-Length: 0\r\n\r\n".utf8
+        )
+        #expect(throws: PBEOwnerHTTPRequestParserError.duplicateSensitiveHeader("content-length")) {
+            try PBEOwnerHTTPRequestParser().parse(duplicateLength)
+        }
+        let chunked = Data("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n".utf8)
+        #expect(throws: PBEOwnerHTTPRequestParserError.unsupportedTransferEncoding) {
+            try PBEOwnerHTTPRequestParser().parse(chunked)
+        }
+    }
+
+    @Test("Native host exposes only the actionable gallery session surface")
+    func exactRoutes() {
+        let routes = PBEOwnerNativeHostContract.routes
+        #expect(routes.count == 11)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "POST",
+            path: "/__photosbyelie/pbe-owner/browser/bootstrap"
+        )?.authority == .browserHandoff)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "GET",
+            path: "/__photosbyelie/source-preview/asset-123"
+        )?.authority == .browserSession)
+        #expect(PBEOwnerNativeHostContract.route(
+            method: "POST",
+            path: "/__photosbyelie/source-preview/asset-123"
+        ) == nil)
+    }
+
+    @Test("Legacy local Owner endpoints are not native host routes")
+    func legacyRoutesStayAbsent() {
+        for (method, path) in [
+            ("POST", "/__photosbyelie/photo-action"),
+            ("GET", "/__photosbyelie/title-keyword-review-queue"),
+            ("POST", "/__photosbyelie/r2-fix"),
+            ("POST", "/__photosbyelie/apple-photos/import"),
+            ("POST", "/__photosbyelie/source-edit"),
+            ("POST", "/__photosbyelie/publish-prices"),
+            ("POST", "/__photosbyelie/new-owner-connector"),
+            ("POST", "/__photosbyelie/pbe-owner/action/projection-retry"),
+        ] {
+            #expect(PBEOwnerNativeHostContract.route(method: method, path: path) == nil)
+        }
+    }
 }

@@ -18,12 +18,14 @@ from scripts.pbe_owner_session import (
     PBEOwnerSessionError,
     PBEOwnerHostAuthenticator,
     PBEOwnerSessionStore,
+    _connect_query_only,
     checkout_identity,
     repository_readiness,
 )
 from scripts.owner_connector_runtime import materialize_runtime
 from unittest.mock import patch
 
+import scripts.local_server as local_server
 from scripts.local_server import (
     PhotosByElieLocalHandler,
     assert_pbe_owner_restore_scope,
@@ -31,6 +33,8 @@ from scripts.local_server import (
     move_to_waste_basket_gateway,
     pbe_owner_action_payload,
     pbe_owner_fixture_gallery,
+    _start_on_demand_owner_connector,
+    _wake_on_demand_owner_connector_for_hosted_request,
 )
 
 
@@ -54,6 +58,76 @@ class PBEOwnerSessionTests(unittest.TestCase):
             "capabilities": ["gallery.read", "waste-basket.x", "waste-basket.restore"],
             "expiresAt": "2033-05-18T03:35:00Z",
         }
+
+    def test_on_demand_connector_launch_is_coalesced_and_short_lived(self) -> None:
+        class FakeProcess:
+            def __init__(self, pid: int) -> None:
+                self.pid = pid
+                self.running = True
+
+            def poll(self) -> int | None:
+                return None if self.running else 0
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "assets/owner-actions").mkdir(parents=True)
+            (root / "assets/owner-actions/Owner.sqlite").write_bytes(b"fixture")
+            runtime_script = root / "scripts/new_owner_connector.py"
+            runtime_script.parent.mkdir()
+            runtime_script.write_text("# fixture\n", encoding="utf-8")
+            home = root / "home"
+            config = home / ".config/photosbyelie/connector.json"
+            config.parent.mkdir(parents=True)
+            config.write_text("{}\n", encoding="utf-8")
+            first = FakeProcess(4242)
+            second = FakeProcess(4343)
+            local_server.ON_DEMAND_CONNECTOR_PROCESS = None
+            try:
+                with (
+                    patch.object(local_server.Path, "home", return_value=home),
+                    patch("scripts.local_server._connector_runtime_script", return_value=runtime_script),
+                    patch("scripts.local_server.subprocess.Popen", side_effect=[first, second]) as launch,
+                ):
+                    started = _start_on_demand_owner_connector(root)
+                    coalesced = _start_on_demand_owner_connector(root)
+                    first.running = False
+                    restarted = _start_on_demand_owner_connector(root)
+            finally:
+                local_server.ON_DEMAND_CONNECTOR_PROCESS = None
+
+        self.assertEqual(started, {"started": True, "active": True, "pid": 4242})
+        self.assertEqual(coalesced, {"started": False, "active": True, "pid": 4242})
+        self.assertEqual(restarted, {"started": True, "active": True, "pid": 4343})
+        self.assertEqual(launch.call_count, 2)
+        command = launch.call_args_list[0].args[0]
+        self.assertEqual(command[-1], "--once")
+        self.assertNotIn("token", " ".join(command).lower())
+        launch_kwargs = launch.call_args_list[0].kwargs
+        self.assertEqual(launch_kwargs["cwd"], str(root.resolve()))
+        self.assertTrue(launch_kwargs["start_new_session"])
+        self.assertEqual(launch_kwargs["env"]["PBE_REPO_ROOT"], str(root.resolve()))
+        self.assertEqual(launch_kwargs["env"]["PBE_ON_DEMAND_OWNER_CONNECTOR"], "1")
+
+    def test_terminal_hosted_replay_does_not_wake_connector(self) -> None:
+        with patch(
+            "scripts.local_server._start_on_demand_owner_connector",
+            return_value={"started": True, "active": True, "pid": 4242},
+        ) as wake:
+            self.assertEqual(
+                _wake_on_demand_owner_connector_for_hosted_request(
+                    Path("/synthetic"),
+                    {"state": "queued"},
+                )["active"],
+                True,
+            )
+            self.assertEqual(
+                _wake_on_demand_owner_connector_for_hosted_request(
+                    Path("/synthetic"),
+                    {"state": "completed"},
+                ),
+                {"started": False, "active": False, "reason": "no-drain-needed"},
+            )
+        wake.assert_called_once_with(Path("/synthetic"))
 
     def test_checkout_identity_rejects_dirty_hidden_or_stray_host_code(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -316,9 +390,20 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 patch("scripts.local_server.queue_hosted_lifecycle_request", return_value={
                     "requestId": "hlr-opaque-one", "state": "queued",
                 }) as queue_lifecycle,
+                patch("scripts.local_server._start_on_demand_owner_connector", return_value={
+                    "started": True, "active": True, "pid": 4242,
+                }) as connector_wake,
                 patch("scripts.local_server.hosted_lifecycle_request_status", return_value={
                     "requestId": "hlr-opaque-one", "state": "queued", "error": "",
-                }),
+                }) as hosted_status,
+                patch("scripts.local_server.latest_hosted_lifecycle_request", return_value=None) as latest_status,
+                patch("scripts.local_server.retry_hosted_lifecycle_projection", return_value={
+                    "requestId": "hlr-opaque-one",
+                    "state": "completed",
+                    "authoritative_committed": True,
+                    "projection": {"state": "applied", "retryable": False},
+                    "catalogPublication": {"state": "pending", "receipt": None},
+                }) as retry_projection,
             ):
                 host_bootstrap = Request(
                     f"{base}/host/bootstrap",
@@ -383,6 +468,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 with urlopen(status) as response:
                     active = json.loads(response.read())
                 self.assertEqual(active["session"]["id"], "pbe-owner-session-one")
+                self.assertIsNone(active["latestAction"])
 
                 heartbeat = Request(
                     f"{base}/session/heartbeat",
@@ -395,7 +481,9 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     },
                 )
                 with urlopen(heartbeat) as response:
-                    self.assertEqual(json.loads(response.read())["session"]["state"], "ready")
+                    heartbeat_payload = json.loads(response.read())
+                self.assertEqual(heartbeat_payload["session"]["state"], "ready")
+                self.assertIsNone(heartbeat_payload["latestAction"])
 
                 for headers, expected_status in (
                     ({
@@ -420,7 +508,7 @@ class PBEOwnerSessionTests(unittest.TestCase):
                     self.assertEqual(blocked.exception.code, expected_status)
                     blocked.exception.close()
 
-                for endpoint in ("action", "session/close"):
+                for endpoint in ("action", "action/projection-retry", "session/close"):
                     for headers, expected_status in (
                         ({
                             "Cookie": cookie.split(";", 1)[0],
@@ -467,9 +555,11 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 with urlopen(lifecycle_action) as response:
                     self.assertEqual(response.status, 202)
                     queued = json.loads(response.read())
-                self.assertEqual(queued, {
-                    "ok": True, "requestId": "hlr-opaque-one", "state": "queued",
-                })
+                self.assertEqual(queued["ok"], True)
+                self.assertEqual(queued["requestId"], "hlr-opaque-one")
+                self.assertEqual(queued["state"], "queued")
+                self.assertEqual(queued["connectorWake"]["active"], True)
+                connector_wake.assert_called_once_with(Path.cwd())
                 queue_lifecycle.assert_called_once_with(
                     Path.cwd(),
                     operation="waste-basket-x",
@@ -491,6 +581,83 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 with urlopen(queued_status) as response:
                     pending = json.loads(response.read())
                 self.assertEqual(pending["state"], "queued")
+                legacy_apply.assert_not_called()
+
+                latest_status.return_value = {
+                    "requestId": "hlr-opaque-one", "state": "running", "error": "",
+                }
+                recovered_status = Request(
+                    f"{base}/action/status",
+                    headers={"Cookie": cookie.split(";", 1)[0]},
+                )
+                with urlopen(recovered_status) as response:
+                    recovered = json.loads(response.read())
+                self.assertEqual(recovered["requestId"], "hlr-opaque-one")
+                self.assertEqual(recovered["state"], "running")
+                latest_status.assert_called_with(
+                    Path.cwd(),
+                    session_id="pbe-owner-session-one",
+                    fixture_id="fixture-la-concha",
+                )
+
+                hosted_status.return_value = {
+                    "requestId": "hlr-opaque-one",
+                    "state": "failed",
+                    "error": "trusted connector failed safely",
+                }
+                with urlopen(queued_status) as response:
+                    failed = json.loads(response.read())
+                self.assertEqual(response.status, 200)
+                self.assertTrue(failed["ok"])
+                self.assertEqual(failed["state"], "failed")
+                self.assertEqual(failed["error"], "trusted connector failed safely")
+
+                hosted_status.return_value = {
+                    "requestId": "hlr-opaque-one",
+                    "state": "blocked",
+                    "disposition": "blocked",
+                    "attemptCount": 3,
+                    "maxAttempts": 3,
+                    "nextAction": "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action.",
+                    "error": "canonical R2 mapping is missing for photo-one. Automatic retries stopped after 3 attempts.",
+                }
+                with urlopen(queued_status) as response:
+                    blocked = json.loads(response.read())
+                self.assertEqual(response.status, 200)
+                self.assertTrue(blocked["ok"])
+                self.assertEqual(blocked["state"], "blocked")
+                self.assertEqual(blocked["disposition"], "blocked")
+                self.assertEqual(blocked["attemptCount"], 3)
+                self.assertIn("Repair the canonical R2 mapping", blocked["nextAction"])
+
+                projection_retry_payload = {
+                    "requestId": "hlr-opaque-one",
+                    "projectionToken": "f" * 64,
+                    "operationRevision": 23,
+                }
+                projection_retry = Request(
+                    f"{base}/action/projection-retry",
+                    data=json.dumps(projection_retry_payload).encode(),
+                    method="POST",
+                    headers={
+                        "Cookie": cookie.split(";", 1)[0],
+                        "Content-Type": "application/json",
+                        "Origin": f"http://127.0.0.1:{server.server_port}",
+                    },
+                )
+                with urlopen(projection_retry) as response:
+                    self.assertEqual(response.status, 200)
+                    retried = json.loads(response.read())
+                self.assertTrue(retried["ok"])
+                self.assertEqual(retried["projection"]["state"], "applied")
+                retry_projection.assert_called_once()
+                retry_root, retry_session, retry_payload = retry_projection.call_args.args
+                self.assertEqual(retry_root, Path.cwd())
+                self.assertEqual(retry_session["id"], "pbe-owner-session-one")
+                self.assertEqual(retry_session["fixtureId"], "fixture-la-concha")
+                self.assertEqual(retry_payload, projection_retry_payload)
+                self.assertNotIn("action", retry_payload)
+                self.assertNotIn("assetIds", retry_payload)
                 legacy_apply.assert_not_called()
 
                 legacy = Request(
@@ -704,6 +871,37 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 repository_readiness(root, "fixture-la-concha")
             self.assertEqual(caught.exception.code, "pbe_owner_host_not_ready")
 
+    def test_query_only_connection_reads_open_wal_without_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            database = Path(temporary) / "Owner.sqlite"
+            writer = sqlite3.connect(database)
+            writer.execute(
+                "CREATE TABLE owner_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT)"
+            )
+            writer.execute("PRAGMA journal_mode = WAL")
+            writer.execute(
+                "INSERT INTO owner_settings VALUES ('fixture', 'expo')"
+            )
+            writer.commit()
+            try:
+                reader = _connect_query_only(database)
+                try:
+                    self.assertEqual(reader.execute("PRAGMA query_only").fetchone()[0], 1)
+                    self.assertEqual(
+                        reader.execute(
+                            "SELECT setting_value FROM owner_settings WHERE setting_key = 'fixture'"
+                        ).fetchone()[0],
+                        "expo",
+                    )
+                    with self.assertRaises(sqlite3.OperationalError):
+                        reader.execute(
+                            "INSERT INTO owner_settings VALUES ('blocked', 'write')"
+                        )
+                finally:
+                    reader.close()
+            finally:
+                writer.close()
+
     def test_hosted_x_and_restore_derive_guarded_writer_context(self) -> None:
         lease = {"id": "session-one", "fixtureId": "fixture-la-concha"}
         trusted = pbe_owner_action_payload({
@@ -744,6 +942,183 @@ class PBEOwnerSessionTests(unittest.TestCase):
                 "fixtureId": "fixture-expo",
             }, lease)
         self.assertEqual(mismatch.exception.code, "pbe_owner_session_mismatch")
+
+    def test_projection_retry_uses_durable_identity_and_never_replays_authority(self) -> None:
+        request_id = "hlr-projection-one"
+        operation_id = f"owner-action:hosted-lifecycle:{request_id}"
+        stored = {
+            "requestId": request_id,
+            "sessionId": "session-one",
+            "fixtureId": "fixture-one",
+            "operation": "waste-basket-restore",
+            "assetIds": ["asset-one"],
+            "state": "completed",
+            "result": {
+                "ok": True,
+                "operationId": operation_id,
+                "authoritative_committed": True,
+                "projection": {
+                    "state": "pending",
+                    "retryable": True,
+                    "error_code": "catalog_projection_failed",
+                },
+            },
+            "error": "",
+        }
+        lifecycle = {
+            "operationId": operation_id,
+            "operationDigest": "d" * 64,
+            "operation": "restore",
+            "revision": 17,
+            "state": "locally_acked",
+            "receipts": [{"canonicalAssetId": "asset-one"}],
+        }
+
+        def replace_result(_root, _request_id, **kwargs):
+            self.assertEqual(kwargs["expected_result"], stored["result"])
+            stored["result"] = kwargs["result"]
+            return dict(stored)
+
+        with (
+            patch.object(local_server, "hosted_lifecycle_request_status", side_effect=lambda *args, **kwargs: dict(stored)),
+            patch.object(local_server, "deployed_lifecycle_outbox", return_value=lifecycle),
+            patch.object(local_server, "replace_completed_hosted_lifecycle_result", side_effect=replace_result) as persist,
+            patch.object(local_server, "project_lifecycle_catalog_state", return_value={
+                "projected_ids": ["asset-one"],
+                "projection": {"state": "applied", "retryable": False},
+                "worker_catalog": {"ok": True},
+                "site": {},
+                "catalog_publish_pending": True,
+                "catalogPublication": {"state": "pending", "receipt": None},
+            }) as project,
+            patch.object(local_server, "restore_from_waste_basket_gateway") as restore_gateway,
+            patch.object(local_server, "move_to_waste_basket_gateway") as move_gateway,
+            patch.object(local_server, "empty_waste_basket_gateway") as empty_gateway,
+        ):
+            initial = local_server._normalized_hosted_lifecycle_result(Path("."), stored)
+            retry_payload = {
+                "requestId": request_id,
+                "projectionToken": initial["projectionRetry"]["token"],
+                "operationRevision": 17,
+            }
+            first = local_server.retry_hosted_lifecycle_projection(
+                Path("."),
+                {"id": "session-one", "fixtureId": "fixture-one"},
+                retry_payload,
+            )
+            duplicate = local_server.retry_hosted_lifecycle_projection(
+                Path("."),
+                {"id": "session-one", "fixtureId": "fixture-one"},
+                retry_payload,
+            )
+
+        self.assertEqual(first["authoritative"]["state"], "committed")
+        self.assertEqual(first["projection"]["state"], "applied")
+        self.assertEqual(first["catalogPublication"]["state"], "pending")
+        self.assertEqual(duplicate["projection"]["state"], "applied")
+        project.assert_called_once_with(Path("."), "restore", ["asset-one"])
+        persist.assert_called_once()
+        restore_gateway.assert_not_called()
+        move_gateway.assert_not_called()
+        empty_gateway.assert_not_called()
+
+    def test_projection_retry_rejects_stale_and_nonretryable_state(self) -> None:
+        request_id = "hlr-projection-two"
+        operation_id = f"owner-action:hosted-lifecycle:{request_id}"
+        lifecycle = {
+            "operationId": operation_id,
+            "operationDigest": "e" * 64,
+            "operation": "x",
+            "revision": 22,
+            "state": "locally_acked",
+            "receipts": [{"canonicalAssetId": "asset-two"}],
+        }
+        status = {
+            "requestId": request_id,
+            "sessionId": "session-two",
+            "fixtureId": "fixture-two",
+            "operation": "waste-basket-x",
+            "assetIds": ["asset-two"],
+            "state": "completed",
+            "result": {
+                "operationId": operation_id,
+                "authoritative_committed": True,
+                "projection": {"state": "partial", "retryable": True},
+            },
+        }
+        session = {"id": "session-two", "fixtureId": "fixture-two"}
+        with patch.object(local_server, "hosted_lifecycle_request_status") as status_lookup:
+            with self.assertRaises(PBEOwnerSessionError) as fractional:
+                local_server.retry_hosted_lifecycle_projection(Path("."), session, {
+                    "requestId": request_id,
+                    "projectionToken": "0" * 64,
+                    "operationRevision": 22.9,
+                })
+            self.assertEqual(fractional.exception.code, "pbe_owner_projection_revision_invalid")
+            status_lookup.assert_not_called()
+
+        with (
+            patch.object(local_server, "hosted_lifecycle_request_status", return_value=status),
+            patch.object(local_server, "deployed_lifecycle_outbox", return_value=lifecycle),
+        ):
+            with self.assertRaises(PBEOwnerSessionError) as stale:
+                local_server.retry_hosted_lifecycle_projection(Path("."), session, {
+                    "requestId": request_id,
+                    "projectionToken": "0" * 64,
+                    "operationRevision": 22,
+                })
+            self.assertEqual(stale.exception.code, "pbe_owner_projection_stale")
+
+            status["result"]["projection"] = {
+                "state": "skipped-no-static-catalog",
+                "retryable": False,
+            }
+            with self.assertRaises(PBEOwnerSessionError) as skipped:
+                local_server.retry_hosted_lifecycle_projection(Path("."), session, {
+                    "requestId": request_id,
+                    "projectionToken": "1" * 64,
+                    "operationRevision": 22,
+                })
+            self.assertEqual(skipped.exception.code, "pbe_owner_projection_not_retryable")
+
+        with patch.object(
+            local_server,
+            "hosted_lifecycle_request_status",
+            side_effect=local_server.WasteBasketError("wrong session"),
+        ):
+            with self.assertRaises(PBEOwnerSessionError) as unavailable:
+                local_server.retry_hosted_lifecycle_projection(Path("."), session, {
+                    "requestId": request_id,
+                    "projectionToken": "2" * 64,
+                    "operationRevision": 22,
+                })
+            self.assertEqual(unavailable.exception.code, "pbe_owner_projection_retry_unavailable")
+
+    def test_hosted_status_does_not_trust_unproven_authority_claim(self) -> None:
+        request_id = "hlr-unproven-authority"
+        status = {
+            "requestId": request_id,
+            "sessionId": "session-one",
+            "fixtureId": "fixture-one",
+            "operation": "waste-basket-x",
+            "assetIds": ["asset-one"],
+            "state": "completed",
+            "result": {
+                "operationId": f"owner-action:hosted-lifecycle:{request_id}",
+                "authoritative_committed": True,
+                "projection": {"state": "pending", "retryable": True},
+            },
+        }
+        with patch.object(
+            local_server,
+            "deployed_lifecycle_outbox",
+            side_effect=local_server.WasteBasketError("missing authoritative outbox"),
+        ):
+            normalized = local_server._normalized_hosted_lifecycle_result(Path("."), status)
+        self.assertFalse(normalized["authoritative_committed"])
+        self.assertEqual(normalized["authoritative"]["state"], "unconfirmed")
+        self.assertFalse(normalized["projectionRetry"]["available"])
+        self.assertNotIn("token", normalized["projectionRetry"])
 
     def test_hosted_restore_rejects_recoverable_entry_from_another_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

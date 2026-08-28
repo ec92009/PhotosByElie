@@ -10,6 +10,7 @@ const exactRoutes = new Map([
   ["/auth/tokens", "/api/owner/auth/tokens"],
   ["/auth/logout", "/api/owner/auth/logout"],
   ["/devices", "/api/owner/devices"],
+  ["/enrollment-handoffs", "/api/owner/enrollment-handoffs"],
   ["/pbe-owner/sessions", "/api/owner/pbe-sessions"],
   ["/pbe-owner/session", "/api/owner/pbe-session"],
   ["/owner/session", "/api/owner/session"],
@@ -27,6 +28,7 @@ const exactRoutes = new Map([
   ["/sidecar/decisions/upsert", "/api/owner/sidecar/decisions/upsert"],
   ["/lifecycle/seed", "/api/owner/lifecycle/seed"],
   ["/lifecycle/activate", "/api/owner/lifecycle/activate"],
+  ["/lifecycle/reconcile", "/api/owner/lifecycle/reconcile"],
   ["/lifecycle/arm", "/api/owner/lifecycle/arm"],
   ["/lifecycle/local-commit", "/api/owner/lifecycle/local-commit"],
   ["/lifecycle/apply", "/api/owner/lifecycle/apply"],
@@ -58,6 +60,10 @@ const dynamicRoutes = [
   {
     pattern: /^\/devices\/([^/]+)\/revoke$/,
     destination: (match) => `/api/owner/devices/${match[1]}/revoke`,
+  },
+  {
+    pattern: /^\/enrollment-handoffs\/([^/]+)\/(claim|cancel)$/,
+    destination: (match) => `/api/owner/enrollment-handoffs/${match[1]}/${match[2]}`,
   },
   {
     pattern: /^\/pbe-owner\/sessions\/([^/]+)\/close$/,

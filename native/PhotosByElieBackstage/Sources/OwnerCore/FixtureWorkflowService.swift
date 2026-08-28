@@ -6,6 +6,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
     public var parentID: String?
     public var state: String
     public var templateKey: String
+    public var tags: [String]
     public var children: [FixtureNode]
 
     public var isArchived: Bool { state == "archived" }
@@ -17,6 +18,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
         parentID: String? = nil,
         state: String = "active",
         templateKey: String = "",
+        tags: [String] = [],
         children: [FixtureNode] = []
     ) {
         self.id = id
@@ -24,6 +26,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
         self.parentID = parentID
         self.state = state
         self.templateKey = templateKey
+        self.tags = tags
         self.children = children
     }
 
@@ -35,6 +38,7 @@ public struct FixtureNode: Identifiable, Sendable, Equatable {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         state = json["state"]?.stringValue ?? (archivedAt.isEmpty ? "active" : "archived")
         templateKey = json["templateKey"]?.stringValue ?? ""
+        tags = json["tags"]?.arrayValue?.compactMap(\.stringValue) ?? []
         children = (json["children"]?.arrayValue ?? []).compactMap {
             guard let object = $0.objectValue else { return nil }
             return FixtureNode(json: object)
@@ -53,6 +57,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
+    public var locationLabel: String
     public var pixelWidth: Int
     public var pixelHeight: Int
     public var resourceFormat: String
@@ -62,6 +67,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var rating: Int
     public var color: String
     public var editorialState: String
+    public var proposalAvailable: Bool
+    public var deliveryState: String
+    public var sourceAvailable: Bool
     public var keywords: [String]
 
     public init(
@@ -71,6 +79,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename: String,
         mediaType: String,
         capturedAt: String = "",
+        locationLabel: String = "",
         pixelWidth: Int = 0,
         pixelHeight: Int = 0,
         resourceFormat: String = "",
@@ -80,6 +89,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         rating: Int = 0,
         color: String = "",
         editorialState: String = "unreviewed",
+        proposalAvailable: Bool = false,
+        deliveryState: String = "not-ready",
+        sourceAvailable: Bool = true,
         keywords: [String] = []
     ) {
         self.id = id
@@ -88,6 +100,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
+        self.locationLabel = locationLabel
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
         self.resourceFormat = resourceFormat
@@ -97,6 +110,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.rating = rating
         self.color = color
         self.editorialState = editorialState
+        self.proposalAvailable = proposalAvailable
+        self.deliveryState = deliveryState
+        self.sourceAvailable = sourceAvailable
         self.keywords = keywords
     }
 
@@ -107,6 +123,7 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? json["kind"]?.stringValue ?? ""
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        locationLabel = json["locationLabel"]?.stringValue ?? ""
         pixelWidth = json["pixelWidth"]?.intValue ?? 0
         pixelHeight = json["pixelHeight"]?.intValue ?? 0
         resourceFormat = json["resourceFormat"]?.stringValue ?? ""
@@ -118,6 +135,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         rating = json["rating"]?.intValue ?? 0
         color = json["color"]?.stringValue ?? ""
         editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
+        proposalAvailable = json["proposalAvailable"]?.boolValue ?? false
+        deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
+        sourceAvailable = json["sourceAvailable"]?.boolValue ?? true
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
     }
 }
@@ -404,6 +424,50 @@ public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
     public static var selectableCases: [Self] { [.undecided, .picked, .hidden] }
 }
 
+public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case needsReview = "needs-review"
+    case aiRequested = "ai-requested"
+    case proposalAvailable = "proposal-available"
+    case approved
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .needsReview: "Needs Review"
+        case .aiRequested: "AI Requested"
+        case .proposalAvailable: "Proposal Available"
+        case .approved: "Approved"
+        }
+    }
+}
+
+public enum GalleryDeliveryFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case needsUpload = "needs-upload"
+    case uploading
+    case live
+    case failed
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .needsUpload: "Needs Upload"
+        case .uploading: "Uploading"
+        case .live: "Uploaded / Live"
+        case .failed: "Failed / Stale"
+        }
+    }
+}
+
+public enum GallerySourceFilter: String, Codable, Sendable, CaseIterable, Identifiable {
+    case available
+    case unavailable
+
+    public var id: String { rawValue }
+    public var label: String { rawValue.capitalized }
+}
+
 public struct FixtureCullingSummary: Sendable, Equatable {
     public var filtered: Int
     public var universe: Int
@@ -482,6 +546,7 @@ public enum FixtureReviewAction: String, Codable, Sendable, CaseIterable {
     case hide
     case requestAI = "request-ai"
     case editMetadata = "edit-metadata"
+    case propagateCountry = "propagate-country"
     case propagateTitle = "propagate-title"
     case propagateKeywords = "propagate-keywords"
 }
@@ -518,13 +583,22 @@ public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, I
 
 public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var id: String
+    public var sourceVersionID: String
     public var photoLibraryIdentifier: String
     public var title: String
     public var caption: String
     public var keywords: [String]
+    public var country: String
+    public var suggestedCountry: String
+    public var countrySuggestionSource: String
+    public var locationLabel: String
+    public var locationKeywords: [String]
     public var filename: String
     public var mediaType: String
     public var capturedAt: String
+    public var pixelWidth: Int
+    public var pixelHeight: Int
+    public var originalByteCount: Int64
     public var rating: Int
     public var color: String
     public var placementState: String
@@ -538,6 +612,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var proposalID: String
     public var proposedTitle: String
     public var proposedKeywords: [String]
+    public var proposedCountry: String
+    public var countryProposalSource: String
     public var proposalReason: String
     public var proposalStatus: String
     public var requestedGeneratorModel: String
@@ -550,12 +626,19 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public init(
         id: String,
         photoLibraryIdentifier: String,
+        sourceVersionID: String = "",
         title: String,
         caption: String = "",
         keywords: [String],
+        country: String = "",
+        suggestedCountry: String = "",
+        countrySuggestionSource: String = "",
         filename: String,
         mediaType: String = "photo",
         capturedAt: String,
+        pixelWidth: Int = 0,
+        pixelHeight: Int = 0,
+        originalByteCount: Int64 = 0,
         rating: Int = 0,
         color: String = "",
         placementState: String = "picked",
@@ -569,6 +652,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposalID: String = "",
         proposedTitle: String = "",
         proposedKeywords: [String] = [],
+        proposedCountry: String = "",
+        countryProposalSource: String = "",
         proposalReason: String = "",
         proposalStatus: String = "",
         requestedGeneratorModel: String = "",
@@ -576,16 +661,27 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         reasoningEffort: String = "",
         vision: Bool = false,
         modelLadder: [String] = [],
-        deliveryState: String = "not-ready"
+        deliveryState: String = "not-ready",
+        locationLabel: String = "",
+        locationKeywords: [String] = []
     ) {
         self.id = id
+        self.sourceVersionID = sourceVersionID
         self.photoLibraryIdentifier = photoLibraryIdentifier
         self.title = title
         self.caption = caption
         self.keywords = keywords
+        self.country = country
+        self.suggestedCountry = suggestedCountry
+        self.countrySuggestionSource = countrySuggestionSource
+        self.locationLabel = locationLabel
+        self.locationKeywords = locationKeywords
         self.filename = filename
         self.mediaType = mediaType
         self.capturedAt = capturedAt
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.originalByteCount = originalByteCount
         self.rating = rating
         self.color = color
         self.placementState = placementState
@@ -599,6 +695,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.proposalID = proposalID
         self.proposedTitle = proposedTitle
         self.proposedKeywords = proposedKeywords
+        self.proposedCountry = proposedCountry
+        self.countryProposalSource = countryProposalSource
         self.proposalReason = proposalReason
         self.proposalStatus = proposalStatus
         self.requestedGeneratorModel = requestedGeneratorModel
@@ -611,13 +709,22 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
 
     init(json: [String: JSONValue]) {
         id = json["assetId"]?.stringValue ?? ""
+        sourceVersionID = json["sourceVersionId"]?.stringValue ?? ""
         photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue ?? id
         title = json["title"]?.stringValue ?? ""
         caption = json["caption"]?.stringValue ?? ""
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        country = json["country"]?.stringValue ?? ""
+        suggestedCountry = json["suggestedCountry"]?.stringValue ?? ""
+        countrySuggestionSource = json["countrySuggestionSource"]?.stringValue ?? ""
+        locationLabel = json["locationLabel"]?.stringValue ?? ""
+        locationKeywords = json["locationKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         filename = json["filename"]?.stringValue ?? ""
         mediaType = json["mediaType"]?.stringValue ?? "photo"
         capturedAt = json["capturedAt"]?.stringValue ?? ""
+        pixelWidth = json["pixelWidth"]?.intValue ?? 0
+        pixelHeight = json["pixelHeight"]?.intValue ?? 0
+        originalByteCount = Int64(json["originalByteCount"]?.intValue ?? 0)
         rating = json["rating"]?.intValue ?? 0
         color = json["color"]?.stringValue ?? ""
         placementState = json["placementState"]?.stringValue ?? "picked"
@@ -632,6 +739,8 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         proposalID = json["proposalId"]?.stringValue ?? ""
         proposedTitle = json["proposedTitle"]?.stringValue ?? ""
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposedCountry = json["proposedCountry"]?.stringValue ?? ""
+        countryProposalSource = json["countryProposalSource"]?.stringValue ?? ""
         proposalReason = json["proposalReason"]?.stringValue ?? ""
         proposalStatus = json["proposalStatus"]?.stringValue ?? ""
         requestedGeneratorModel = json["requestedGeneratorModel"]?.stringValue ?? ""
@@ -649,19 +758,22 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var requestingAI: Int
     public var proposed: Int
     public var approved: Int
+    public var countryMissing: Int
 
     public init(
         total: Int,
         unreviewed: Int,
         requestingAI: Int,
         proposed: Int,
-        approved: Int
+        approved: Int,
+        countryMissing: Int = 0
     ) {
         self.total = total
         self.unreviewed = unreviewed
         self.requestingAI = requestingAI
         self.proposed = proposed
         self.approved = approved
+        self.countryMissing = countryMissing
     }
 
     init(json: [String: JSONValue]) {
@@ -670,6 +782,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         requestingAI = json["requestingAI"]?.intValue ?? 0
         proposed = json["proposed"]?.intValue ?? 0
         approved = json["approved"]?.intValue ?? 0
+        countryMissing = json["countryMissing"]?.intValue ?? 0
     }
 
     /// Apply a durable editorial-state transition to the already-loaded
@@ -699,29 +812,44 @@ public struct FixtureReviewSummary: Sendable, Equatable {
 public struct FixtureReviewWindow: Sendable, Equatable {
     public var fixtureID: String
     public var mode: FixtureReviewMode
+    public var reviewStateFilters: [String]
+    public var proposalAvailableOnly: Bool
+    public var mediaFilters: [String]
     public var offset: Int
     public var limit: Int
     public var nextOffset: Int
     public var hasNext: Bool
+    public var countryWriteEnabled: Bool
+    public var countryWriteBlockReason: String
     public var summary: FixtureReviewSummary
     public var items: [FixtureReviewItem]
 
     public init(
         fixtureID: String,
         mode: FixtureReviewMode,
+        reviewStateFilters: [String] = [],
+        proposalAvailableOnly: Bool = false,
+        mediaFilters: [String] = ["photos", "videos"],
         offset: Int,
         limit: Int,
         nextOffset: Int,
         hasNext: Bool,
+        countryWriteEnabled: Bool = false,
+        countryWriteBlockReason: String = "",
         summary: FixtureReviewSummary,
         items: [FixtureReviewItem]
     ) {
         self.fixtureID = fixtureID
         self.mode = mode
+        self.reviewStateFilters = reviewStateFilters
+        self.proposalAvailableOnly = proposalAvailableOnly
+        self.mediaFilters = mediaFilters
         self.offset = offset
         self.limit = limit
         self.nextOffset = nextOffset
         self.hasNext = hasNext
+        self.countryWriteEnabled = countryWriteEnabled
+        self.countryWriteBlockReason = countryWriteBlockReason
         self.summary = summary
         self.items = items
     }
@@ -731,10 +859,16 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         mode = FixtureReviewMode(
             rawValue: json["mode"]?.stringValue ?? "backfill"
         ) ?? .backfill
+        reviewStateFilters = json["reviewStateFilters"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposalAvailableOnly = json["proposalAvailableOnly"]?.boolValue ?? false
+        mediaFilters = json["mediaFilters"]?.arrayValue?.compactMap(\.stringValue)
+            ?? ["photos", "videos"]
         offset = json["offset"]?.intValue ?? 0
         limit = json["limit"]?.intValue ?? 200
         nextOffset = json["nextOffset"]?.intValue ?? 0
         hasNext = json["hasNext"]?.boolValue ?? false
+        countryWriteEnabled = json["countryWriteEnabled"]?.boolValue ?? false
+        countryWriteBlockReason = json["countryWriteBlockReason"]?.stringValue ?? ""
         summary = FixtureReviewSummary(json: json["summary"]?.objectValue ?? [:])
         items = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
@@ -747,11 +881,13 @@ public struct FixtureReviewChange: Identifiable, Sendable, Equatable {
     public var assetID: String
     public var before: [String: JSONValue]
     public var after: [String: JSONValue]
+    public var review: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         assetID = json["assetId"]?.stringValue ?? ""
         before = json["before"]?.objectValue ?? [:]
         after = json["after"]?.objectValue ?? [:]
+        review = json["review"]?.objectValue ?? [:]
     }
 }
 
@@ -762,6 +898,7 @@ public struct FixtureReviewResult: Sendable, Equatable {
     public var anchorAssetID: String
     public var propagated: Bool
     public var changes: [FixtureReviewChange]
+    public var timing: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         operationID = json["operationId"]?.stringValue ?? ""
@@ -774,6 +911,7 @@ public struct FixtureReviewResult: Sendable, Equatable {
         changes = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureReviewChange.init(json:))
+        timing = json["timing"]?.objectValue ?? [:]
     }
 }
 
@@ -783,6 +921,7 @@ public struct FixtureReviewUndoResult: Sendable, Equatable {
     public var action: FixtureReviewAction
     public var alreadyUndone: Bool
     public var changes: [FixtureReviewChange]
+    public var timing: [String: JSONValue]
 
     init(json: [String: JSONValue]) {
         operationID = json["operationId"]?.stringValue ?? ""
@@ -794,6 +933,7 @@ public struct FixtureReviewUndoResult: Sendable, Equatable {
         changes = (json["items"]?.arrayValue ?? [])
             .compactMap(\.objectValue)
             .map(FixtureReviewChange.init(json:))
+        timing = json["timing"]?.objectValue ?? [:]
     }
 }
 
@@ -805,10 +945,13 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
     public var attempt: Int
     public var previousTitle: String
     public var previousKeywords: [String]
+    public var previousCountry: String
     public var canonicalTitle: String
     public var canonicalKeywords: [String]
     public var proposedTitle: String
     public var proposedKeywords: [String]
+    public var proposedCountry: String
+    public var countryProposalSource: String
     public var confidence: String
     public var reason: String
     public var needsOwnerContext: Bool
@@ -829,10 +972,13 @@ public struct FixtureAIProposal: Identifiable, Sendable, Equatable {
         attempt = json["attempt"]?.intValue ?? 0
         previousTitle = json["previousTitle"]?.stringValue ?? ""
         previousKeywords = json["previousKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        previousCountry = json["previousCountry"]?.stringValue ?? ""
         canonicalTitle = json["canonicalTitle"]?.stringValue ?? ""
         canonicalKeywords = json["canonicalKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
         proposedTitle = json["proposedTitle"]?.stringValue ?? ""
         proposedKeywords = json["proposedKeywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        proposedCountry = json["proposedCountry"]?.stringValue ?? ""
+        countryProposalSource = json["countryProposalSource"]?.stringValue ?? ""
         confidence = json["confidence"]?.stringValue ?? ""
         reason = json["reason"]?.stringValue ?? ""
         needsOwnerContext = json["needsOwnerContext"]?.boolValue ?? false
@@ -925,6 +1071,7 @@ public struct FixtureStateMigrationReport: Sendable, Equatable {
 }
 
 public struct PhotosIndexReconciliationReport: Sendable, Equatable {
+    public var mode: String
     public var status: String
     public var stage: String
     public var indexedCount: Int
@@ -932,8 +1079,10 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
     public var totalCount: Int
     public var missingMarkedCount: Int
     public var completedAt: String
+    public var checkpointCaptureDate: String
 
     init(json: [String: JSONValue]) {
+        mode = json["mode"]?.stringValue ?? ""
         status = json["status"]?.stringValue ?? ""
         stage = json["stage"]?.stringValue ?? ""
         indexedCount = json["indexedCount"]?.intValue ?? 0
@@ -941,6 +1090,7 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
         totalCount = json["totalCount"]?.intValue ?? 0
         missingMarkedCount = json["missingMarkedCount"]?.intValue ?? 0
         completedAt = json["completedAt"]?.stringValue ?? ""
+        checkpointCaptureDate = json["discoveryCheckpoint"]?.objectValue?["captureDate"]?.stringValue ?? ""
     }
 }
 
@@ -1003,21 +1153,36 @@ public struct EffectiveFixtureAccess: Identifiable, Sendable, Equatable {
 }
 
 public actor FixtureWorkflowService {
+    public static let defaultFixtureTreeTimeout: Duration = .seconds(10)
+
     private let runner: OwnerActionRunner
     private let connectorIdentity: any OwnerConnectorIdentifying
+    private let fixtureTreeTimeout: Duration
+    private let localReviewService: (any LocalFixtureReviewServing)?
 
     public init(
         runner: OwnerActionRunner,
-        connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max")
+        connectorIdentity: any OwnerConnectorIdentifying = StaticOwnerConnectorIdentity("max"),
+        fixtureTreeTimeout: Duration = FixtureWorkflowService.defaultFixtureTreeTimeout,
+        localReviewService: (any LocalFixtureReviewServing)? = nil
     ) {
         self.runner = runner
         self.connectorIdentity = connectorIdentity
+        self.fixtureTreeTimeout = fixtureTreeTimeout
+        self.localReviewService = localReviewService
     }
 
     public func tree(includeArchived: Bool = true) async throws -> [FixtureNode] {
+        if let localReviewService,
+           let localFixtureReader = localReviewService as? any LocalFixtureTreeReading,
+           let localTree = try await localFixtureReader.nativeFixtureTree(
+               includeArchived: includeArchived
+           ) {
+            return localTree
+        }
         let result = try await run("fixture-tree-list", extra: [
             "includeArchived": .bool(includeArchived),
-        ])
+        ], completionTimeout: fixtureTreeTimeout)
         return parseNodes(result["fixtures"])
     }
 
@@ -1048,8 +1213,31 @@ public actor FixtureWorkflowService {
         search: String = "",
         mediaTypes: [String] = [],
         ratings: [Int] = [],
-        colors: [String] = []
+        colors: [String] = [],
+        editorialFilters: [GalleryEditorialFilter] = [],
+        deliveryFilters: [GalleryDeliveryFilter] = [],
+        sourceFilters: [GallerySourceFilter] = [.available],
+        burstsOnly: Bool = false
     ) async throws -> FixtureCullingWindow {
+        if let localReviewService,
+           let localCullingReader = localReviewService as? any LocalFixtureCullingReading,
+           let localWindow = try await localCullingReader.nativeCullingWindow(
+               fixtureID: fixtureID,
+               view: view,
+               views: views,
+               offset: offset,
+               limit: limit,
+               search: search,
+               mediaTypes: mediaTypes,
+               ratings: ratings,
+               colors: colors,
+               editorialFilters: editorialFilters,
+               deliveryFilters: deliveryFilters,
+               sourceFilters: sourceFilters,
+               burstsOnly: burstsOnly
+           ) {
+            return localWindow
+        }
         let result = try await run("fixture-culling-window", extra: [
             "fixtureId": .string(fixtureID),
             "view": .string(view.rawValue),
@@ -1060,6 +1248,10 @@ public actor FixtureWorkflowService {
             "mediaTypes": .array(mediaTypes.map(JSONValue.string)),
             "ratings": .array(ratings.map { .number(Double($0)) }),
             "colors": .array(colors.map(JSONValue.string)),
+            "editorialFilters": .array(editorialFilters.map { .string($0.rawValue) }),
+            "deliveryFilters": .array(deliveryFilters.map { .string($0.rawValue) }),
+            "sourceFilters": .array(sourceFilters.map { .string($0.rawValue) }),
+            "burstsOnly": .bool(burstsOnly),
         ])
         return FixtureCullingWindow(
             json: result["cullingWindow"]?.objectValue ?? [:]
@@ -1068,7 +1260,8 @@ public actor FixtureWorkflowService {
 
     public func reconcilePhotosIndex(
         dateFrom: String = "",
-        dateTo: String = ""
+        dateTo: String = "",
+        fullLibrary: Bool = false
     ) async throws -> PhotosIndexReconciliationReport {
         let connectorID = await connectorIdentity.connectorID()
         var payload: [String: JSONValue] = [
@@ -1077,6 +1270,13 @@ public actor FixtureWorkflowService {
         ]
         let cleanDateFrom = dateFrom.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanDateTo = dateTo.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mode = fullLibrary
+            ? "full"
+            : (cleanDateFrom.isEmpty && cleanDateTo.isEmpty ? "incremental" : "range")
+        payload["mode"] = .string(mode)
+        if fullLibrary {
+            payload["fullLibrary"] = .bool(true)
+        }
         if !cleanDateFrom.isEmpty {
             payload["dateFrom"] = .string(cleanDateFrom)
         }
@@ -1094,6 +1294,7 @@ public actor FixtureWorkflowService {
                 connectorID,
                 cleanDateFrom,
                 cleanDateTo,
+                mode,
                 UUID().uuidString,
             ]
                 .joined(separator: ":")
@@ -1113,6 +1314,16 @@ public actor FixtureWorkflowService {
         fixtureID: String,
         reason: String = ""
     ) async throws -> [FixtureAssetState] {
+        if let localReviewService,
+           let localCullingWriter = localReviewService as? any LocalFixtureCullingServing,
+           let localChanges = try await localCullingWriter.nativeApplyCullingState(
+               state,
+               fixtureID: fixtureID,
+               assetIDs: assetIDs,
+               reason: reason
+           ) {
+            return localChanges
+        }
         let result = try await run("fixture-state-apply", extra: [
             "fixtureId": .string(fixtureID),
             "assetIds": .array(assetIDs.map(JSONValue.string)),
@@ -1122,6 +1333,36 @@ public actor FixtureWorkflowService {
         return result["fixtureState"]?.objectValue?["items"]?.arrayValue?
             .compactMap(\.objectValue)
             .map(FixtureAssetState.init(json:)) ?? []
+    }
+
+    public func undoState(
+        _ applied: [FixtureAssetState],
+        reason: String = "Undo Culling"
+    ) async throws -> [FixtureAssetState] {
+        guard !applied.isEmpty else { return [] }
+        if let localReviewService,
+           let localCullingWriter = localReviewService as? any LocalFixtureCullingServing,
+           let localChanges = try await localCullingWriter.nativeUndoCullingState(
+               applied,
+               reason: reason
+           ) {
+            return localChanges
+        }
+
+        let groups = Dictionary(grouping: applied) { item in
+            "\(item.fixtureID):\(item.beforePlacementState.rawValue)"
+        }
+        var restored: [FixtureAssetState] = []
+        for group in groups.values {
+            guard let first = group.first else { continue }
+            restored.append(contentsOf: try await applyState(
+                first.beforePlacementState,
+                assetIDs: group.map(\.assetID),
+                fixtureID: first.fixtureID,
+                reason: reason
+            ))
+        }
+        return restored
     }
 
     public func reviewWindow(
@@ -1134,6 +1375,20 @@ public actor FixtureWorkflowService {
         limit: Int = 200,
         search: String = ""
     ) async throws -> FixtureReviewWindow {
+        if let localReviewService,
+           let localReviewReader = localReviewService as? any LocalFixtureReviewReading,
+           let localWindow = try await localReviewReader.nativeReviewWindow(
+               fixtureID: fixtureID,
+               mode: mode,
+               stateFilters: stateFilters,
+               proposalAvailableOnly: proposalAvailableOnly,
+               mediaFilters: mediaFilters,
+               offset: offset,
+               limit: limit,
+               search: search
+           ) {
+            return localWindow
+        }
         let result = try await run("fixture-review-window", extra: [
             "fixtureId": .string(fixtureID),
             "reviewMode": .string(mode.rawValue),
@@ -1157,6 +1412,8 @@ public actor FixtureWorkflowService {
         propagate: Bool = false,
         title: String? = nil,
         keywords: [String]? = nil,
+        country: String? = nil,
+        proposalID: String? = nil,
         aiReasons: [String] = [],
         aiNote: String = ""
     ) async throws -> FixtureReviewResult {
@@ -1175,13 +1432,28 @@ public actor FixtureWorkflowService {
         if let keywords {
             extra["keywords"] = .array(keywords.map(JSONValue.string))
         }
-        let result = try await run("fixture-review-apply", extra: extra)
+        if let country {
+            extra["country"] = .string(country)
+        }
+        if let proposalID, !proposalID.isEmpty {
+            extra["proposalId"] = .string(proposalID)
+        }
+        let result: [String: JSONValue]
+        if let localReviewService {
+            let localResult = try await localReviewService.applyReview(manifest: extra)
+            return localResult
+        } else {
+            result = try await run("fixture-review-apply", extra: extra)
+        }
         return FixtureReviewResult(
             json: result["reviewAction"]?.objectValue ?? [:]
         )
     }
 
     public func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        if let localReviewService {
+            return try await localReviewService.undoReview(operationID: operationID)
+        }
         let result = try await run("fixture-review-undo", extra: [
             "operationId": .string(operationID),
         ])
@@ -1404,7 +1676,11 @@ public actor FixtureWorkflowService {
         return parseNodes(result["fixtures"])
     }
 
-    private func run(_ mode: String, extra: [String: JSONValue]) async throws -> [String: JSONValue] {
+    private func run(
+        _ mode: String,
+        extra: [String: JSONValue],
+        completionTimeout: Duration? = nil
+    ) async throws -> [String: JSONValue] {
         var manifest = extra
         manifest["mode"] = .string(mode)
         // Native Backstage resolves PhotoKit thumbnails itself. The connector
@@ -1426,7 +1702,8 @@ public actor FixtureWorkflowService {
         )
         let completed = try await runner.submit(
             action,
-            idempotencyKey: ["native-fixture", mode, UUID().uuidString].joined(separator: "-")
+            idempotencyKey: ["native-fixture", mode, UUID().uuidString].joined(separator: "-"),
+            completionTimeout: completionTimeout
         )
         guard let result = completed.result else {
             throw APIErrorEnvelope(error: .init(

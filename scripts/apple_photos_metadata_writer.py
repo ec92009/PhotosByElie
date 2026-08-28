@@ -13,7 +13,6 @@ import json
 from pathlib import Path
 import subprocess
 from typing import Any, Iterable, Protocol
-import uuid
 
 from fixture_pipeline import connect, editorial_version_hash, now_iso, record_delivery_receipt
 from native_publication_pipeline import metadata_fingerprint
@@ -206,39 +205,35 @@ function run(argv) {
         return [dict(item) for item in payload]
 
 
-class SignedPhotosBridgeAdapter:
-    """Read and write metadata through the stable signed Photos Bridge app."""
+class BackstagePhotosMetadataAdapter:
+    """Read and write metadata through Backstage-owned authenticated IPC."""
 
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root.resolve()
 
     def _run(self, command: str, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        from sidecar_server import _run_apple_photos_bridge_app_task
-
-        input_path = (
-            self.repo_root
-            / "tmp"
-            / "sidecar-bridge-input"
-            / f"metadata-{uuid.uuid4().hex}.json"
+        from backstage_photos_client import (
+            BackstagePhotosClientError,
+            request_metadata_apply_many,
+            request_metadata_read_many,
         )
-        input_path.parent.mkdir(parents=True, exist_ok=True)
-        input_path.write_text(json.dumps(requests, ensure_ascii=False), encoding="utf-8")
+
+        timeout = min(300.0, max(60.0, len(requests) * 6.0))
         try:
-            result = _run_apple_photos_bridge_app_task(
-                self.repo_root,
-                [command, "--input", str(input_path)],
-                timeout=max(60, len(requests) * 6),
-            )
-        finally:
-            input_path.unlink(missing_ok=True)
-        if not result.get("ok"):
+            if command == "metadata-read-many":
+                result_items = request_metadata_read_many(
+                    [str(item.get("assetId") or "") for item in requests],
+                    timeout=timeout,
+                )
+            elif command == "metadata-apply-many":
+                result_items = request_metadata_apply_many(requests, timeout=timeout)
+            else:
+                raise RuntimeError(f"Unsupported Photos metadata command: {command}")
+        except BackstagePhotosClientError as error:
             raise RuntimeError(
-                str(result.get("error") or result.get("code") or "Signed Photos Bridge failed.")
-            )
-        items = result.get("items")
-        if not isinstance(items, list):
-            raise RuntimeError("Signed Photos Bridge returned no metadata item receipts.")
-        return [dict(item) for item in items if isinstance(item, dict)]
+                f"Backstage Photos metadata IPC failed: {error.code}: {error}"
+            ) from error
+        return [dict(item) for item in result_items if isinstance(item, dict)]
 
     def read_many(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return self._run("metadata-read-many", requests)
@@ -246,7 +241,7 @@ class SignedPhotosBridgeAdapter:
     def read(self, asset_id: str) -> dict[str, Any]:
         rows = self.read_many([{"assetId": asset_id}])
         if not rows:
-            raise RuntimeError(f"Signed Photos Bridge returned no metadata for {asset_id}")
+            raise RuntimeError(f"Backstage metadata IPC returned no metadata for {asset_id}")
         row = rows[0]
         if row.get("error"):
             raise RuntimeError(str(row["error"]))
@@ -451,7 +446,7 @@ def commit_writeback(
     *,
     adapter: PhotosMetadataAccess | None = None,
 ) -> dict[str, Any]:
-    adapter = adapter or SignedPhotosBridgeAdapter(repo_root)
+    adapter = adapter or BackstagePhotosMetadataAdapter(repo_root)
     plan = writeback_plan(repo_root, fixture_id, asset_ids, adapter=adapter)
     written: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
@@ -586,7 +581,7 @@ def main() -> None:
         args.repo_root,
         args.fixture_id,
         args.asset_id,
-        adapter=SignedPhotosBridgeAdapter(args.repo_root),
+        adapter=BackstagePhotosMetadataAdapter(args.repo_root),
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

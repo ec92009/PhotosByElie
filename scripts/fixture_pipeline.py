@@ -11,10 +11,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
 import threading
+import time
 from typing import Any, Iterable
 import uuid
 
@@ -23,6 +25,7 @@ from sidecar_state_db import (
     DEFAULT_DB as OWNER_DB,
     connect as connect_owner,
     editorial_version_hash as sidecar_editorial_version_hash,
+    location_metadata_from_row,
 )
 
 
@@ -40,6 +43,7 @@ REVIEW_ACTIONS = {
     "hide",
     "request-ai",
     "edit-metadata",
+    "propagate-country",
     "propagate-title",
     "propagate-keywords",
 }
@@ -51,6 +55,15 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _local_transaction_timing(started_at: str, started_clock: float) -> dict[str, Any]:
+    completed_at = now_iso()
+    return {
+        "startedAt": started_at,
+        "completedAt": completed_at,
+        "durationMs": round(max(0.0, time.perf_counter() - started_clock) * 1000, 3),
+    }
+
+
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
@@ -60,6 +73,24 @@ def _read_json(value: Any, fallback: Any) -> Any:
         return json.loads(str(value or ""))
     except json.JSONDecodeError:
         return fallback
+
+
+def _location_label_specificity(value: Any) -> int:
+    return sum(1 for part in str(value or "").split(",") if part.strip())
+
+
+def _location_label_for_row(row: sqlite3.Row) -> str:
+    """Prefer a more precise GPS-derived label while retaining stored detail."""
+
+    stored = str(row["location_label"] or "").strip() if "location_label" in row.keys() else ""
+    raw = _read_json(row["raw_json"], {}) if "raw_json" in row.keys() else {}
+    derived = ""
+    if isinstance(raw, dict):
+        derived, _, _ = location_metadata_from_row(raw)
+        derived = str(derived or "").strip()
+    if derived and _location_label_specificity(derived) > _location_label_specificity(stored):
+        return derived
+    return stored or derived
 
 
 def _clean_name(value: Any) -> str:
@@ -539,8 +570,11 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             CHECK (status IN ('ready', 'loaded', 'accepted', 'rejected', 'superseded')),
           previous_title TEXT NOT NULL DEFAULT '',
           previous_keywords_json TEXT NOT NULL DEFAULT '[]',
+          previous_country TEXT NOT NULL DEFAULT '',
           proposed_title TEXT NOT NULL,
           proposed_keywords_json TEXT NOT NULL DEFAULT '[]',
+          proposed_country TEXT NOT NULL DEFAULT '',
+          country_source TEXT NOT NULL DEFAULT '',
           confidence TEXT NOT NULL DEFAULT '',
           reason TEXT NOT NULL DEFAULT '',
           needs_owner_context INTEGER NOT NULL DEFAULT 0,
@@ -700,6 +734,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_sha256 TEXT NOT NULL DEFAULT ''"
         )
+    photos_sync_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(photos_sync_runs)").fetchall()
+    }
+    for column, ddl in {
+        "worker_pid": "ALTER TABLE photos_sync_runs ADD COLUMN worker_pid INTEGER",
+        "worker_token": "ALTER TABLE photos_sync_runs ADD COLUMN worker_token TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "ALTER TABLE photos_sync_runs ADD COLUMN lease_expires_at TEXT",
+        "recovery_state": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_state TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_reason TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "ALTER TABLE photos_sync_runs ADD COLUMN recovery_checked_at TEXT",
+    }.items():
+        if column not in photos_sync_columns:
+            conn.execute(ddl)
     reconciliation_columns = {
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(r2_reconciliation_runs)").fetchall()
@@ -718,6 +766,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         for row in conn.execute("PRAGMA table_info(asset_ai_proposals)").fetchall()
     }
     for column, ddl in {
+        "previous_country": "ALTER TABLE asset_ai_proposals ADD COLUMN previous_country TEXT NOT NULL DEFAULT ''",
+        "proposed_country": "ALTER TABLE asset_ai_proposals ADD COLUMN proposed_country TEXT NOT NULL DEFAULT ''",
+        "country_source": "ALTER TABLE asset_ai_proposals ADD COLUMN country_source TEXT NOT NULL DEFAULT ''",
         "requested_generator_model": "ALTER TABLE asset_ai_proposals ADD COLUMN requested_generator_model TEXT NOT NULL DEFAULT ''",
         "resolved_model": "ALTER TABLE asset_ai_proposals ADD COLUMN resolved_model TEXT NOT NULL DEFAULT ''",
         "reasoning_effort": "ALTER TABLE asset_ai_proposals ADD COLUMN reasoning_effort TEXT NOT NULL DEFAULT ''",
@@ -1572,6 +1623,7 @@ def fixture_culling_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   a.location_label,
                    COALESCE(a.pixel_width, 0) pixel_width,
                    COALESCE(a.pixel_height, 0) pixel_height,
                    COALESCE(
@@ -1602,7 +1654,11 @@ def fixture_culling_window(
                    COALESCE(global_decision.rating, 0) rating,
                    COALESCE(global_decision.color, '') color,
                    COALESCE(global_decision.metadata_state, 'unreviewed') editorial_state,
-                   COALESCE(global_decision.keywords_json, '[]') keywords_json
+                   CASE
+                     WHEN COALESCE(global_decision.metadata_state, 'unreviewed') <> 'unreviewed'
+                       THEN COALESCE(global_decision.keywords_json, '[]')
+                     ELSE COALESCE(NULLIF(a.photos_keywords_json, ''), '[]')
+                   END keywords_json
             FROM {from_sql}
             WHERE {view_where_sql}
             ORDER BY a.captured_at DESC, a.asset_id
@@ -1619,6 +1675,7 @@ def fixture_culling_window(
             "filename": str(row["filename"] or ""),
             "mediaType": str(row["media_type"] or "photo"),
             "capturedAt": str(row["captured_at"] or ""),
+            "locationLabel": _location_label_for_row(row),
             "pixelWidth": int(row["pixel_width"] or 0),
             "pixelHeight": int(row["pixel_height"] or 0),
             "resourceFormat": str(row["resource_format"] or ""),
@@ -1804,6 +1861,7 @@ def _photo_library_identifier(row: sqlite3.Row) -> str:
 def _review_item(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "assetId": str(row["asset_id"]),
+        "sourceVersionId": str(row["source_version_id"] or ""),
         "photoLibraryIdentifier": _photo_library_identifier(row),
         "title": str(row["title"] or ""),
         "caption": str(row["caption"] or ""),
@@ -1811,6 +1869,7 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "filename": str(row["filename"] or ""),
         "mediaType": str(row["media_type"] or "photo"),
         "capturedAt": str(row["captured_at"] or ""),
+        "locationLabel": _location_label_for_row(row),
         "rating": int(row["rating"] or 0),
         "color": str(row["color"] or ""),
         "placementState": str(row["placement_state"] or "picked"),
@@ -1825,6 +1884,8 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "proposalId": str(row["proposal_id"] or ""),
         "proposedTitle": str(row["proposal_title"] or ""),
         "proposedKeywords": _read_json(row["proposal_keywords_json"], []),
+        "proposedCountry": str(row["proposal_country"] or ""),
+        "countryProposalSource": str(row["proposal_country_source"] or ""),
         "proposalReason": str(row["proposal_reason"] or ""),
         "proposalStatus": str(row["proposal_status"] or ""),
         "requestedGeneratorModel": str(row["proposal_requested_generator_model"] or ""),
@@ -1893,6 +1954,14 @@ def fixture_review_window(
               ON editorial.asset_id = a.asset_id
             JOIN asset_delivery_state AS delivery
               ON delivery.asset_id = a.asset_id
+            LEFT JOIN asset_source_versions AS latest_source_version
+              ON latest_source_version.version_id = (
+                SELECT source_version.version_id
+                FROM asset_source_versions AS source_version
+                WHERE source_version.asset_id = a.asset_id
+                ORDER BY source_version.created_at DESC, source_version.version_id DESC
+                LIMIT 1
+              )
         """
         proposal_join = """
             LEFT JOIN asset_ai_proposals AS available_proposal
@@ -1937,13 +2006,15 @@ def fixture_review_window(
         rows = conn.execute(
             f"""
             SELECT a.asset_id, a.source_anchor, a.raw_json, a.filename, a.media_type, a.captured_at,
+                   a.location_label,
+                   latest_source_version.version_id source_version_id,
                    current_decision.placement_state,
                    COALESCE(NULLIF(decision.title, ''), NULLIF(a.photos_title, ''), '') title,
                    COALESCE(decision.caption, '') caption,
                    CASE
-                     WHEN decision.keywords_json IS NOT NULL AND decision.keywords_json != '[]'
-                       THEN decision.keywords_json
-                     ELSE COALESCE(a.photos_keywords_json, '[]')
+                     WHEN COALESCE(decision.metadata_state, 'unreviewed') <> 'unreviewed'
+                       THEN COALESCE(decision.keywords_json, '[]')
+                     ELSE COALESCE(NULLIF(a.photos_keywords_json, ''), '[]')
                    END keywords_json,
                    COALESCE(decision.rating, 0) rating,
                    COALESCE(decision.color, '') color,
@@ -1953,6 +2024,8 @@ def fixture_review_window(
                    available_proposal.proposal_id,
                    available_proposal.proposed_title proposal_title,
                    available_proposal.proposed_keywords_json proposal_keywords_json,
+                   available_proposal.proposed_country proposal_country,
+                   available_proposal.country_source proposal_country_source,
                    available_proposal.reason proposal_reason,
                    available_proposal.status proposal_status,
                    available_proposal.requested_generator_model proposal_requested_generator_model,
@@ -1970,6 +2043,35 @@ def fixture_review_window(
             """,
             [*params, safe_limit, safe_offset],
         ).fetchall()
+        country_capability = owner_state_db.country_review_write_capability(conn)
+        country_columns = {
+            str(column["name"])
+            for column in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+        }
+        if "asset_id" in country_columns:
+            country_missing = int(conn.execute(
+                f"""
+                SELECT sum(CASE WHEN country.asset_id IS NULL THEN 1 ELSE 0 END)
+                FROM {from_sql}
+                {joins}
+                LEFT JOIN country_assignments AS country
+                  ON country.asset_id = a.asset_id
+                 AND country.identity_status = 'mapped'
+                WHERE {where_sql}
+                """,
+                params,
+            ).fetchone()[0] or 0)
+        else:
+            country_missing = int(summary["total"] or 0)
+        review_items = []
+        for row in rows:
+            item = _review_item(row)
+            item.update(owner_state_db.country_review_context(
+                conn,
+                str(row["asset_id"]),
+                capability=country_capability,
+            ))
+            review_items.append(item)
     total = int(summary["total"] or 0)
     return {
         "ok": True,
@@ -1994,14 +2096,17 @@ def fixture_review_window(
         "count": len(rows),
         "nextOffset": safe_offset + len(rows),
         "hasNext": safe_offset + len(rows) < total,
+        "countryWriteEnabled": bool(country_capability["enabled"]),
+        "countryWriteBlockReason": str(country_capability["reason"]),
         "summary": {
             "total": total,
             "unreviewed": int(summary["unreviewed"] or 0),
             "requestingAI": int(summary["requesting_ai"] or 0),
             "proposed": int(summary["proposed"] or 0),
             "approved": int(summary["approved"] or 0),
+            "countryMissing": country_missing,
         },
-        "items": [_review_item(row) for row in rows],
+        "items": review_items,
     }
 
 
@@ -2203,6 +2308,104 @@ def _review_asset_snapshot(
                 (asset_id,),
             ).fetchall()
         ],
+        "countryAssignment": _row_dict(
+            conn.execute(
+                "SELECT * FROM country_assignments WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+        ) if "asset_id" in {
+            str(row["name"])
+            for row in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+        } else None,
+    }
+
+
+def _review_item_update_from_snapshot(
+    conn: sqlite3.Connection,
+    fixture_id: str,
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the small Review projection needed to apply an undo locally."""
+    asset_id = str(snapshot.get("assetId") or "")
+    asset = conn.execute(
+        "SELECT photos_title, photos_keywords_json FROM sidecar_assets WHERE asset_id = ?",
+        (asset_id,),
+    ).fetchone()
+    decision = snapshot.get("decision") or {}
+    editorial = snapshot.get("editorial") or {}
+    delivery = snapshot.get("delivery") or {}
+    country_assignment = snapshot.get("countryAssignment")
+    fixture_decision = next(
+        (
+            item
+            for item in snapshot.get("fixtureDecisions") or []
+            if isinstance(item, dict) and str(item.get("fixture_id") or "") == fixture_id
+        ),
+        None,
+    ) or {}
+    proposals = [
+        item
+        for item in snapshot.get("proposals") or []
+        if isinstance(item, dict)
+    ]
+    available = [
+        item
+        for item in proposals
+        if str(item.get("status") or "") in {"ready", "loaded"}
+    ]
+    if not available and str(editorial.get("editorial_state") or "") == "requesting-ai":
+        requested_at = str(editorial.get("requested_at") or "")
+        available = [
+            item
+            for item in proposals
+            if str(item.get("status") or "") == "superseded"
+            and str(item.get("decided_at") or "") == requested_at
+        ]
+    proposal = max(
+        available,
+        key=lambda item: (
+            int(item.get("attempt") or 0),
+            str(item.get("created_at") or ""),
+            str(item.get("proposal_id") or ""),
+        ),
+        default=None,
+    )
+    decision_title = str(decision.get("title") or "").strip()
+    decision_keywords = _read_json(decision.get("keywords_json"), [])
+    if not decision_title and asset:
+        decision_title = str(asset["photos_title"] or "")
+    if not decision_keywords and asset:
+        decision_keywords = _read_json(asset["photos_keywords_json"], [])
+    proposal_status = str(proposal.get("status") or "") if proposal else ""
+    return {
+        "title": decision_title,
+        "caption": str(decision.get("caption") or ""),
+        "keywords": decision_keywords if isinstance(decision_keywords, list) else [],
+        "rating": int(decision.get("rating") or 0),
+        "color": str(decision.get("color") or ""),
+        "placementState": str(fixture_decision.get("placement_state") or "picked"),
+        "editorialState": str(editorial.get("editorial_state") or "unreviewed"),
+        "aiReasons": _read_json(editorial.get("ai_reasons_json"), []),
+        "aiNote": str(editorial.get("ai_note") or ""),
+        "aiAttemptCount": int(editorial.get("ai_attempt_count") or 0),
+        "aiLastError": str(editorial.get("ai_last_error") or ""),
+        "proposalReady": proposal_status in {"ready", "loaded"},
+        "proposalContextAvailable": proposal is not None,
+        "proposalId": str(proposal.get("proposal_id") or "") if proposal else "",
+        "proposedTitle": str(proposal.get("proposed_title") or "") if proposal else "",
+        "proposedKeywords": _read_json(proposal.get("proposed_keywords_json"), []) if proposal else [],
+        "proposedCountry": str(proposal.get("proposed_country") or "") if proposal else "",
+        "countryProposalSource": str(proposal.get("country_source") or "") if proposal else "",
+        "proposalReason": str(proposal.get("reason") or "") if proposal else "",
+        "proposalStatus": proposal_status,
+        "requestedGeneratorModel": str(proposal.get("requested_generator_model") or "") if proposal else "",
+        "resolvedModel": str(proposal.get("resolved_model") or proposal.get("generator_model") or "") if proposal else "",
+        "reasoningEffort": str(proposal.get("reasoning_effort") or "") if proposal else "",
+        "vision": bool(proposal.get("vision")) if proposal else False,
+        "modelLadder": _read_json(proposal.get("model_ladder"), []) if proposal else [],
+        "deliveryState": str(delivery.get("delivery_state") or "not-ready"),
+        "country": str(country_assignment.get("country_slug") or "")
+        if isinstance(country_assignment, dict) else "",
     }
 
 
@@ -2218,6 +2421,7 @@ def _upsert_snapshot_row(
         "asset_delivery_state",
         "fixture_asset_decisions",
         "asset_ai_proposals",
+        "country_assignments",
     }
     if table not in allowed_tables:
         raise ValueError("review snapshot table is invalid")
@@ -2305,6 +2509,19 @@ def _restore_review_asset_snapshot(
             proposal,
             ("proposal_id",),
         )
+    if "asset_id" in {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+    }:
+        conn.execute("DELETE FROM country_assignments WHERE asset_id = ?", (asset_id,))
+        country_assignment = snapshot.get("countryAssignment")
+        if isinstance(country_assignment, dict):
+            _upsert_snapshot_row(
+                conn,
+                "country_assignments",
+                country_assignment,
+                ("assignment_id",),
+            )
 
 
 def apply_fixture_review_action(
@@ -2317,6 +2534,8 @@ def apply_fixture_review_action(
     propagate: bool = False,
     title: str | None = None,
     keywords: Iterable[Any] | None = None,
+    country: str | None = None,
+    proposal_id: str | None = None,
     ai_reasons: Iterable[Any] | None = None,
     ai_note: str = "",
     actor: str = "owner",
@@ -2327,11 +2546,15 @@ def apply_fixture_review_action(
         raise ValueError("unsupported fixture review action")
     clean_ids = _unique(asset_ids)
     clean_anchor = str(anchor_asset_id or "").strip() or (clean_ids[-1] if clean_ids else "")
+    expected_proposal_id = str(proposal_id or "").strip()
     if not clean_anchor:
         raise ValueError("at least one review asset is required")
     timestamp = now_iso()
     operation_id = f"reviewop-{uuid.uuid4().hex[:20]}"
+    local_transaction_timing: dict[str, Any] | None = None
     with connect(repo_root) as conn:
+        local_transaction_started_at = now_iso()
+        local_transaction_started_clock = time.perf_counter()
         fixture = conn.execute(
             """
             SELECT fixture_id, parent_fixture_id
@@ -2342,12 +2565,12 @@ def apply_fixture_review_action(
         ).fetchone()
         if not fixture:
             raise ValueError("fixture does not exist or is archived")
-        if propagate or clean_action in {"propagate-title", "propagate-keywords"}:
+        if propagate or clean_action in {"propagate-country", "propagate-title", "propagate-keywords"}:
             propagated = _review_target_ids(
                 conn,
                 fixture,
                 clean_anchor,
-                include_anchor=clean_action not in {"propagate-title", "propagate-keywords"},
+                include_anchor=clean_action not in {"propagate-country", "propagate-title", "propagate-keywords"},
             )
             clean_ids = _unique([*clean_ids, *propagated])
         if not clean_ids:
@@ -2376,7 +2599,7 @@ def apply_fixture_review_action(
             decisions[asset_id] = _ensure_global_decision(conn, asset_id, timestamp)
             active_proposals[asset_id] = conn.execute(
                 """
-                SELECT proposal_id, proposed_title, proposed_keywords_json
+                SELECT proposal_id, proposed_title, proposed_keywords_json, proposed_country
                 FROM asset_ai_proposals
                 WHERE asset_id = ? AND status IN ('ready', 'loaded')
                 ORDER BY attempt DESC, created_at DESC, proposal_id DESC
@@ -2384,6 +2607,16 @@ def apply_fixture_review_action(
                 """,
                 (asset_id,),
             ).fetchone()
+
+        if clean_action == "approve" and expected_proposal_id:
+            active_anchor_proposal = active_proposals[clean_anchor]
+            if (
+                not active_anchor_proposal
+                or str(active_anchor_proposal["proposal_id"]) != expected_proposal_id
+            ):
+                raise ValueError(
+                    "the visible AI proposal was superseded or is no longer active; refresh Review before approving"
+                )
 
         def effective_metadata(
             decision: sqlite3.Row,
@@ -2399,6 +2632,7 @@ def apply_fixture_review_action(
 
         explicit_title = str(title).strip() if title is not None else None
         explicit_keywords = _unique(keywords or []) if keywords is not None else None
+        explicit_country = str(country or "").strip().casefold() if country is not None else None
         source_decision = decisions[clean_anchor]
         source_effective_title, source_effective_keywords = effective_metadata(
             source_decision,
@@ -2413,6 +2647,11 @@ def apply_fixture_review_action(
             explicit_keywords
             if explicit_keywords is not None
             else source_effective_keywords
+        )
+        source_country = (
+            explicit_country
+            if explicit_country is not None
+            else str(owner_state_db.country_review_context(conn, clean_anchor)["country"])
         )
         reasons = _unique(ai_reasons or [])
         note = str(ai_note or "").strip()
@@ -2437,6 +2676,7 @@ def apply_fixture_review_action(
                 "aiNote": str(before_editorial["ai_note"] or ""),
                 "title": before_title,
                 "keywords": before_keywords,
+                "country": str(owner_state_db.country_review_context(conn, asset_id)["country"]),
             }
             after_state = before["editorialState"]
             after_reasons = before["aiReasons"]
@@ -2475,6 +2715,13 @@ def apply_fixture_review_action(
                     if active_proposal
                     else _read_json(decision["keywords_json"], [])
                 )
+                approved_country = (
+                    explicit_country
+                    if use_explicit_anchor_metadata and explicit_country is not None
+                    else str(active_proposal["proposed_country"] or "").strip().casefold()
+                    if active_proposal and str(active_proposal["proposed_country"] or "").strip()
+                    else None
+                )
                 conn.execute(
                     """
                     UPDATE sidecar_decisions
@@ -2491,6 +2738,14 @@ def apply_fixture_review_action(
                     ),
                 )
                 _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+                if approved_country is not None:
+                    owner_state_db.set_review_country_assignment(
+                        conn,
+                        asset_id,
+                        approved_country,
+                        actor=actor,
+                        updated_at=timestamp,
+                    )
             elif clean_action == "return-to-review":
                 delivery = conn.execute(
                     """
@@ -2551,6 +2806,14 @@ def apply_fixture_review_action(
                         "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
                         (_json(_unique(keywords)), timestamp, asset_id),
                     )
+                if explicit_country is not None:
+                    owner_state_db.set_review_country_assignment(
+                        conn,
+                        asset_id,
+                        explicit_country,
+                        actor=actor,
+                        updated_at=timestamp,
+                    )
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
                 elif after_state == "proposed":
@@ -2574,6 +2837,16 @@ def apply_fixture_review_action(
                 conn.execute(
                     "UPDATE sidecar_decisions SET keywords_json = ?, last_action = 'metadata', updated_at = ? WHERE asset_id = ?",
                     (_json(source_keywords), timestamp, asset_id),
+                )
+                if after_state == "approved":
+                    _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
+            elif clean_action == "propagate-country":
+                owner_state_db.set_review_country_assignment(
+                    conn,
+                    asset_id,
+                    source_country,
+                    actor=actor,
+                    updated_at=timestamp,
                 )
                 if after_state == "approved":
                     _set_delivery_state(conn, asset_id, "needs-upload", timestamp)
@@ -2645,6 +2918,7 @@ def apply_fixture_review_action(
                 "aiNote": after_note,
                 "title": after_title,
                 "keywords": after_keywords,
+                "country": str(owner_state_db.country_review_context(conn, asset_id)["country"]),
             }
             conn.execute(
                 """
@@ -2692,15 +2966,21 @@ def apply_fixture_review_action(
             ),
         )
         conn.commit()
+        local_transaction_timing = _local_transaction_timing(
+            local_transaction_started_at,
+            local_transaction_started_clock,
+        )
     return {
         "ok": True,
         "operationId": operation_id,
         "fixtureId": fixture_id,
         "action": clean_action,
         "anchorAssetId": clean_anchor,
+        "proposalId": expected_proposal_id,
         "propagated": bool(propagate or clean_action.startswith("propagate-")),
         "count": len(items),
         "items": items,
+        "timing": {"localTransaction": local_transaction_timing or {}},
     }
 
 
@@ -2715,7 +2995,10 @@ def undo_fixture_review_action(
     if not clean_operation_id:
         raise ValueError("review operation ID is required")
     timestamp = now_iso()
+    local_transaction_timing: dict[str, Any] | None = None
     with connect(repo_root) as conn:
+        local_transaction_started_at = now_iso()
+        local_transaction_started_clock = time.perf_counter()
         operation = conn.execute(
             """
             SELECT *
@@ -2831,6 +3114,11 @@ def undo_fixture_review_action(
                     "assetId": asset_id,
                     "before": current_snapshot,
                     "after": restored_snapshot,
+                    "review": _review_item_update_from_snapshot(
+                        conn,
+                        str(operation["fixture_id"]),
+                        restored_snapshot,
+                    ),
                 }
             )
         conn.execute(
@@ -2842,6 +3130,10 @@ def undo_fixture_review_action(
             (timestamp, clean_operation_id),
         )
         conn.commit()
+        local_transaction_timing = _local_transaction_timing(
+            local_transaction_started_at,
+            local_transaction_started_clock,
+        )
     return {
         "ok": True,
         "operationId": clean_operation_id,
@@ -2850,6 +3142,7 @@ def undo_fixture_review_action(
         "count": len(items),
         "alreadyUndone": False,
         "items": items,
+        "timing": {"localTransaction": local_transaction_timing or {}},
     }
 
 
@@ -2962,10 +3255,13 @@ def ready_ai_proposals(
         "attempt": int(row["attempt"]),
         "previousTitle": str(row["previous_title"] or ""),
         "previousKeywords": _read_json(row["previous_keywords_json"], []),
+        "previousCountry": str(row["previous_country"] or ""),
         "canonicalTitle": str(row["canonical_title"] or ""),
         "canonicalKeywords": _read_json(row["canonical_keywords_json"], []),
         "proposedTitle": str(row["proposed_title"] or ""),
         "proposedKeywords": _read_json(row["proposed_keywords_json"], []),
+        "proposedCountry": str(row["proposed_country"] or ""),
+        "countryProposalSource": str(row["country_source"] or ""),
         "confidence": str(row["confidence"] or ""),
         "reason": str(row["reason"] or ""),
         "needsOwnerContext": bool(row["needs_owner_context"]),
@@ -3005,8 +3301,158 @@ def mark_ai_proposals_loaded(
     return {"ok": True, "count": changed, "proposalIds": selected}
 
 
+def _ai_worker_process_alive(pid: object) -> bool | None:
+    """Return a conservative liveness verdict for one recorded AI worker PID.
+
+    ``None`` means the row lacks enough evidence to reconcile safely. A PID
+    that belongs to another live process is deliberately treated as alive;
+    automatic recovery must never guess that a live PID is stale.
+    """
+
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return None
+    if process_id <= 0:
+        return None
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
+    return True
+
+
+def _refresh_ai_run_counts(conn: sqlite3.Connection, run_id: str, timestamp: str) -> None:
+    counts = {
+        str(row["status"]): int(row["count"])
+        for row in conn.execute(
+            """
+            SELECT status, count(*) count
+            FROM asset_ai_run_items
+            WHERE run_id = ?
+            GROUP BY status
+            """,
+            (run_id,),
+        ).fetchall()
+    }
+    conn.execute(
+        """
+        UPDATE asset_ai_runs
+        SET processed_count = ?, proposed_count = ?, skipped_count = ?,
+            failed_count = ?, remaining_count = ?, updated_at = ?
+        WHERE run_id = ?
+        """,
+        (
+            sum(counts.get(key, 0) for key in ("proposed", "skipped", "failed")),
+            counts.get("proposed", 0),
+            counts.get("skipped", 0),
+            counts.get("failed", 0),
+            counts.get("queued", 0) + counts.get("running", 0),
+            timestamp,
+            run_id,
+        ),
+    )
+
+
+def _terminalize_orphaned_ai_run(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    cancellation_requested: bool,
+    timestamp: str,
+) -> str:
+    """Close a verifiably orphaned pass while preserving completed proposals."""
+
+    run_id = str(row["run_id"])
+    if cancellation_requested:
+        terminal_status = "cancelled"
+        item_message = "AI pass was cancelled after its worker process exited."
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'skipped', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status IN ('queued', 'running')
+            """,
+            (item_message, timestamp, run_id),
+        )
+        last_error = ""
+    else:
+        terminal_status = "failed"
+        item_message = "AI proposal worker process ended before a terminal receipt was persisted."
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'failed', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status = 'running'
+            """,
+            (item_message, timestamp, run_id),
+        )
+        conn.execute(
+            """
+            UPDATE asset_ai_run_items
+            SET status = 'skipped', error_text = ?, completed_at = ?
+            WHERE run_id = ? AND status = 'queued'
+            """,
+            ("AI proposal worker exited before this queued item started.", timestamp, run_id),
+        )
+        last_error = item_message
+    _refresh_ai_run_counts(conn, run_id, timestamp)
+    conn.execute(
+        """
+        UPDATE asset_ai_runs
+        SET status = ?, cancel_requested = ?, last_error = ?,
+            completed_at = COALESCE(completed_at, ?), updated_at = ?
+        WHERE run_id = ? AND status IN ('queued', 'running')
+        """,
+        (
+            terminal_status,
+            int(cancellation_requested),
+            last_error,
+            timestamp,
+            timestamp,
+            run_id,
+        ),
+    )
+    return terminal_status
+
+
+def reconcile_orphaned_ai_runs(repo_root: Path) -> dict[str, Any]:
+    """Terminalize active AI runs only when their recorded worker is gone."""
+
+    timestamp = now_iso()
+    reconciled: list[dict[str, str]] = []
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM asset_ai_runs
+            WHERE status IN ('queued', 'running')
+            ORDER BY created_at
+            """
+        ).fetchall()
+        for row in rows:
+            if _ai_worker_process_alive(row["owner_pid"]) is not False:
+                continue
+            terminal_status = _terminalize_orphaned_ai_run(
+                conn,
+                row,
+                cancellation_requested=bool(row["cancel_requested"]),
+                timestamp=timestamp,
+            )
+            reconciled.append({
+                "runId": str(row["run_id"]),
+                "status": terminal_status,
+            })
+        conn.commit()
+    return {"ok": True, "count": len(reconciled), "runs": reconciled}
+
+
 def ai_run_status(repo_root: Path) -> dict[str, Any]:
     """Return the active/latest AI pass and the durable ready-proposal count."""
+    reconcile_orphaned_ai_runs(repo_root)
     conn = connect_read_only(repo_root)
     try:
         active = conn.execute(
@@ -3076,7 +3522,7 @@ def request_ai_run_cancel(repo_root: Path) -> dict[str, Any]:
     with connect(repo_root) as conn:
         row = conn.execute(
             """
-            SELECT run_id FROM asset_ai_runs
+            SELECT * FROM asset_ai_runs
             WHERE status IN ('queued', 'running')
             ORDER BY created_at DESC LIMIT 1
             """
@@ -3087,8 +3533,24 @@ def request_ai_run_cancel(repo_root: Path) -> dict[str, Any]:
             "UPDATE asset_ai_runs SET cancel_requested = 1, updated_at = ? WHERE run_id = ?",
             (timestamp, row["run_id"]),
         )
+        worker_alive = _ai_worker_process_alive(row["owner_pid"])
+        terminal_status = str(row["status"])
+        orphaned = worker_alive is False
+        if orphaned:
+            terminal_status = _terminalize_orphaned_ai_run(
+                conn,
+                row,
+                cancellation_requested=True,
+                timestamp=timestamp,
+            )
         conn.commit()
-    return {"ok": True, "active": True, "runId": str(row["run_id"])}
+    return {
+        "ok": True,
+        "active": terminal_status in {"queued", "running"},
+        "runId": str(row["run_id"]),
+        "status": terminal_status,
+        "orphaned": orphaned,
+    }
 
 
 def effective_fixture_access_grants(repo_root: Path, fixture_id: str) -> list[dict[str, Any]]:
@@ -3488,7 +3950,7 @@ def search_assets(repo_root: Path, filters: dict[str, Any] | None = None, *, lim
         "pixelWidth": int(row["pixel_width"] or 0), "pixelHeight": int(row["pixel_height"] or 0),
         "title": row["decision_title"] or row["photos_title"] or "", "keywords": _read_json(row["decision_keywords"], []) or _read_json(row["photos_keywords_json"], []),
         "caption": row["decision_caption"] or "", "camera": camera, "lens": lens,
-        "locationLabel": row["location_label"] or "", "rating": int(row["rating"] or 0), "color": row["color"] or "",
+        "locationLabel": _location_label_for_row(row), "rating": int(row["rating"] or 0), "color": row["color"] or "",
         "pickState": row["pick_state"], "metadataState": row["metadata_state"],
         "missingFields": [field for field, value in (("camera", camera), ("lens", lens)) if not value],
         "exactIdentity": raw.get("localIdentifier") or source_anchor,

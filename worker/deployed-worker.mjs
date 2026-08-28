@@ -10,6 +10,7 @@ import { isNonRevocablePublicAsset } from "./non-revocable-public-assets.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
+import { createD1OwnerEnrollmentHandoffStore } from "./owner-enrollment-handoff-store.mjs";
 import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
 import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
@@ -214,6 +215,81 @@ const mediaHeaders = (object = null, extraHeaders = {}) => ({
   ...extraHeaders,
 });
 
+const BACKSTAGE_ROOT_PREFIX = "/backstage/";
+const BACKSTAGE_RELEASE_PREFIX = `${BACKSTAGE_ROOT_PREFIX}releases/`;
+const BACKSTAGE_IMMUTABLE_ARCHIVE = /^PhotosByElie-Backstage-v[0-9]+(?:\.[0-9]+)*-build-[0-9]+\.zip$/;
+
+const backstageReleaseName = (pathname) => {
+  if (!pathname.startsWith(BACKSTAGE_RELEASE_PREFIX)) return null;
+  const name = pathname.slice(BACKSTAGE_RELEASE_PREFIX.length);
+  if (name === "latest.json" || BACKSTAGE_IMMUTABLE_ARCHIVE.test(name)) return name;
+  return null;
+};
+
+export const backstageReleaseResponse = async (request, env = {}) => {
+  const headers = {
+    "access-control-allow-origin": "*",
+    "x-content-type-options": "nosniff",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { ...headers, allow: "GET, HEAD", "cache-control": "no-store" },
+    });
+  }
+
+  const name = backstageReleaseName(new URL(request.url).pathname);
+  if (!name) {
+    return new Response("Release not found", {
+      status: 404,
+      headers: { ...headers, "cache-control": "no-store" },
+    });
+  }
+
+  const bucket = env.PUBLIC_MEDIA;
+  if (!bucket || (typeof bucket.get !== "function" && typeof bucket.head !== "function")) {
+    return new Response("Release service unavailable", {
+      status: 503,
+      headers: { ...headers, "cache-control": "no-store" },
+    });
+  }
+
+  const key = `backstage/releases/${name}`;
+  let object = null;
+  try {
+    object = request.method === "HEAD" && typeof bucket.head === "function"
+      ? await bucket.head(key)
+      : await bucket.get(key);
+  } catch {
+    return new Response("Release service unavailable", {
+      status: 503,
+      headers: { ...headers, "cache-control": "no-store" },
+    });
+  }
+  if (!object) {
+    return new Response("Release not found", {
+      status: 404,
+      headers: { ...headers, "cache-control": "no-store" },
+    });
+  }
+
+  const isManifest = name === "latest.json";
+  const size = Number(object.size);
+  const responseHeaders = {
+    ...headers,
+    "content-type": isManifest ? "application/json; charset=utf-8" : "application/zip",
+    "cache-control": isManifest
+      ? "public, max-age=60, must-revalidate"
+      : "public, max-age=31536000, immutable",
+  };
+  if (Number.isSafeInteger(size) && size >= 0) responseHeaders["content-length"] = String(size);
+  if (!isManifest) {
+    responseHeaders["content-disposition"] = `attachment; filename="${name}"`;
+  }
+
+  return new Response(request.method === "HEAD" ? null : object.body, { headers: responseHeaders });
+};
+
 const parseSingleByteRange = (rangeHeader, size) => {
   const match = /^bytes=(\d*)-(\d*)$/.exec(String(rangeHeader || "").trim());
   if (!match || !Number.isFinite(size) || size < 1) return null;
@@ -371,6 +447,9 @@ const publicMediaResponse = async (request, env) => {
 export default {
   fetch(request, env = {}) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith(BACKSTAGE_ROOT_PREFIX)) {
+      return backstageReleaseResponse(request, env);
+    }
     if (url.pathname.startsWith("/media/")) {
       return publicMediaResponse(request, env);
     }
@@ -479,6 +558,9 @@ export default {
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),
+      ownerEnrollmentHandoffStore: env.ACCESS_DB
+        ? createD1OwnerEnrollmentHandoffStore({ database: env.ACCESS_DB })
+        : null,
       sidecarStateStore: env.ACCESS_DB ? createD1SidecarStateStore({
         database: env.ACCESS_DB,
       }) : undefined,

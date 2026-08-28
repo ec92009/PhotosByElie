@@ -18,14 +18,17 @@ MANIFEST_NAME = "connector-runtime-manifest.json"
 MANIFEST_KIND = "photosbyelie-owner-connector-runtime"
 MANIFEST_SCHEMA_VERSION = 2
 PBE_OWNER_HOST_SCOPE_MANIFEST = "scripts/pbe_owner_host_tracked_paths.txt"
+PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST = "scripts/pbe_owner_web_bundle_paths.txt"
 REQUIRED_RUNTIME_FILES = frozenset(
     {
         "scripts/fixture_pipeline.py",
+        "scripts/backstage_photos_client.py",
         "scripts/local_server.py",
         "scripts/new_owner_connector.py",
         "scripts/new_owner_connector_launch_agent.plist.in",
         "scripts/owner_connector_runtime.py",
         PBE_OWNER_HOST_SCOPE_MANIFEST,
+        PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST,
         "scripts/pbe_owner_session.py",
         "scripts/requested_ai_proposal_pass.py",
         "scripts/sidecar_server.py",
@@ -41,10 +44,44 @@ PBE_OWNER_HOST_REQUIRED_FILES = frozenset(
         "scripts/waste_basket_gateway.py",
     }
 )
+PBE_OWNER_WEB_BUNDLE_REQUIRED_FILES = frozenset(
+    {
+        "gallery.html",
+        "photo.html",
+        "pbe-owner-session.js",
+        "shared.css",
+        "styles.css",
+        "photos.css",
+    }
+)
+PBE_OWNER_WEB_MIME_TYPES = {
+    ".css": "text/css; charset=utf-8",
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".jpg": "image/jpeg",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".png": "image/png",
+    ".webmanifest": "application/manifest+json; charset=utf-8",
+}
+RETIRED_RUNTIME_FILES = frozenset(
+    {
+        "scripts/apple_photos_bridge.swift",
+        "scripts/install_sidecar_photos_bridge_app.zsh",
+    }
+)
 
 
 class ConnectorRuntimeError(RuntimeError):
     """Raised when a connector runtime cannot be safely created or trusted."""
+
+
+def _runtime_path_allowed(path: PurePosixPath) -> bool:
+    rendered = str(path)
+    return (
+        rendered not in RETIRED_RUNTIME_FILES
+        and not path.name.endswith("_test.py")
+        and not path.name.startswith("test_")
+    )
 
 
 @dataclass(frozen=True)
@@ -231,15 +268,44 @@ def _pbe_owner_host_pathspecs(source_root: Path, commit_sha: str) -> list[str]:
     return pathspecs
 
 
+def _scope_pathspecs(source_root: Path, commit_sha: str, manifest_path: str) -> list[str]:
+    try:
+        raw_scope = _run_git(
+            source_root,
+            "show",
+            f"{commit_sha}:{manifest_path}",
+        ).decode("utf-8", errors="strict")
+    except (ConnectorRuntimeError, UnicodeError) as error:
+        raise ConnectorRuntimeError(
+            f"The source commit does not contain a readable scope manifest: {manifest_path}"
+        ) from error
+    pathspecs: list[str] = []
+    for line in raw_scope.splitlines():
+        value = line.strip()
+        if value and not value.startswith("#"):
+            pathspec = _safe_host_pathspec(value)
+            if pathspec not in pathspecs:
+                pathspecs.append(pathspec)
+    if not pathspecs:
+        raise ConnectorRuntimeError(f"The source scope manifest is empty: {manifest_path}")
+    return pathspecs
+
+
 def _commit_runtime_entries(
     source_root: Path,
     commit_sha: str,
-) -> tuple[list[CommitRuntimeEntry], list[str]]:
+) -> tuple[list[CommitRuntimeEntry], list[str], list[str]]:
     host_pathspecs = _pbe_owner_host_pathspecs(source_root, commit_sha)
+    web_pathspecs = _scope_pathspecs(
+        source_root,
+        commit_sha,
+        PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST,
+    )
     all_entries = _tree_entries(source_root, commit_sha)
     host_entries = [
         entry
         for entry in all_entries
+        if _runtime_path_allowed(entry.path)
         if any(
             _host_pathspec_matches(pathspec, str(entry.path))
             for pathspec in host_pathspecs
@@ -251,10 +317,41 @@ def _commit_runtime_entries(
             raise ConnectorRuntimeError(
                 f"The source commit PBE Owner host scope did not match any file: {pathspec}"
             )
+    web_entries = [
+        entry
+        for entry in all_entries
+        if any(
+            _host_pathspec_matches(pathspec, str(entry.path))
+            for pathspec in web_pathspecs
+        )
+    ]
+    web_paths = [str(entry.path) for entry in web_entries]
+    for pathspec in web_pathspecs:
+        if not any(_host_pathspec_matches(pathspec, path) for path in web_paths):
+            raise ConnectorRuntimeError(
+                f"The source commit PBE Owner web scope did not match any file: {pathspec}"
+            )
+    missing_web = sorted(PBE_OWNER_WEB_BUNDLE_REQUIRED_FILES - set(web_paths))
+    if missing_web:
+        raise ConnectorRuntimeError(
+            "The source commit is missing required PBE Owner web files: " + ", ".join(missing_web)
+        )
+    unsupported_web = sorted(
+        path for path in web_paths if PurePosixPath(path).suffix.lower() not in PBE_OWNER_WEB_MIME_TYPES
+    )
+    if unsupported_web:
+        raise ConnectorRuntimeError(
+            "The PBE Owner web scope contains unsupported file types: " + ", ".join(unsupported_web)
+        )
     runtime_entries = [
         entry
         for entry in all_entries
-        if str(entry.path).startswith("scripts/") or str(entry.path) in set(host_paths)
+        if (
+            str(entry.path).startswith("scripts/")
+            or str(entry.path) in set(host_paths)
+            or str(entry.path) in set(web_paths)
+        )
+        and _runtime_path_allowed(entry.path)
     ]
     entries_by_path = {str(entry.path): entry for entry in runtime_entries}
     entries = [entries_by_path[path] for path in sorted(entries_by_path)]
@@ -270,7 +367,13 @@ def _commit_runtime_entries(
         raise ConnectorRuntimeError(
             "The source commit is missing required PBE Owner host files: " + ", ".join(missing_host)
         )
-    return entries, host_paths
+    outside_runtime = sorted(set(web_paths) - set(entries_by_path))
+    if outside_runtime:
+        raise ConnectorRuntimeError(
+            "The PBE Owner web scope names files outside the sealed runtime: "
+            + ", ".join(outside_runtime)
+        )
+    return entries, host_paths, web_paths
 
 
 def materialize_runtime(source_root: Path, destination: Path, revision: str) -> ConnectorRuntimeVerification:
@@ -281,7 +384,10 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
     source_root = expanded_source.resolve(strict=True)
     destination = destination.expanduser()
     commit_sha = resolve_commit(source_root, revision)
-    commit_entries, owner_host_paths = _commit_runtime_entries(source_root, commit_sha)
+    commit_entries, owner_host_paths, owner_web_paths = _commit_runtime_entries(
+        source_root,
+        commit_sha,
+    )
     if destination.is_symlink():
         raise ConnectorRuntimeError(f"The connector runtime destination must not be a symlink: {destination}")
     destination.mkdir(parents=True, exist_ok=True)
@@ -304,6 +410,19 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
             }
         )
 
+    file_entries_by_path = {str(entry["path"]): entry for entry in file_entries}
+    owner_web_entries = []
+    for path in owner_web_paths:
+        file_entry = file_entries_by_path[path]
+        owner_web_entries.append(
+            {
+                "path": path,
+                "sha256": file_entry["sha256"],
+                "size": file_entry["size"],
+                "mimeType": PBE_OWNER_WEB_MIME_TYPES[PurePosixPath(path).suffix.lower()],
+            }
+        )
+
     manifest_path = destination / MANIFEST_NAME
     manifest = {
         "schemaVersion": MANIFEST_SCHEMA_VERSION,
@@ -313,6 +432,11 @@ def materialize_runtime(source_root: Path, destination: Path, revision: str) -> 
         "pbeOwnerHost": {
             "scopeManifest": PBE_OWNER_HOST_SCOPE_MANIFEST,
             "files": owner_host_paths,
+        },
+        "pbeOwnerWebBundle": {
+            "scopeManifest": PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST,
+            "entrypoints": ["gallery.html", "photo.html"],
+            "files": owner_web_entries,
         },
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -416,6 +540,42 @@ def validate_runtime(runtime_root: Path) -> ConnectorRuntimeVerification:
         raise ConnectorRuntimeError(
             "The connector runtime PBE Owner host scope names unmanifested files: "
             + ", ".join(outside_runtime)
+        )
+    raw_web_bundle = manifest.get("pbeOwnerWebBundle")
+    if not isinstance(raw_web_bundle, dict):
+        raise ConnectorRuntimeError("The connector runtime omits its PBE Owner web bundle.")
+    if raw_web_bundle.get("scopeManifest") != PBE_OWNER_WEB_BUNDLE_SCOPE_MANIFEST:
+        raise ConnectorRuntimeError("The connector runtime names an unexpected PBE Owner web scope.")
+    if raw_web_bundle.get("entrypoints") != ["gallery.html", "photo.html"]:
+        raise ConnectorRuntimeError("The connector runtime PBE Owner web entrypoints are invalid.")
+    raw_web_entries = raw_web_bundle.get("files")
+    if not isinstance(raw_web_entries, list) or not raw_web_entries:
+        raise ConnectorRuntimeError("The connector runtime PBE Owner web bundle is empty.")
+    web_paths: set[str] = set()
+    file_entries_by_path = {str(entry["path"]): entry for entry in raw_entries}
+    for raw_web_entry in raw_web_entries:
+        if not isinstance(raw_web_entry, dict):
+            raise ConnectorRuntimeError("The connector runtime contains an invalid web file entry.")
+        relative = _safe_runtime_path(raw_web_entry.get("path"))
+        relative_text = str(relative)
+        if relative_text in web_paths:
+            raise ConnectorRuntimeError(f"Duplicate PBE Owner web bundle path: {relative_text}")
+        web_paths.add(relative_text)
+        runtime_entry = file_entries_by_path.get(relative_text)
+        expected_mime = PBE_OWNER_WEB_MIME_TYPES.get(relative.suffix.lower())
+        if (
+            runtime_entry is None
+            or raw_web_entry.get("sha256") != runtime_entry.get("sha256")
+            or raw_web_entry.get("size") != runtime_entry.get("size")
+            or raw_web_entry.get("mimeType") != expected_mime
+        ):
+            raise ConnectorRuntimeError(
+                f"The PBE Owner web bundle attestation is invalid: {relative_text}"
+            )
+    missing_web = sorted(PBE_OWNER_WEB_BUNDLE_REQUIRED_FILES - web_paths)
+    if missing_web:
+        raise ConnectorRuntimeError(
+            "The connector runtime omits required PBE Owner web files: " + ", ".join(missing_web)
         )
     actual_paths: set[str] = set()
     for item in runtime_root.rglob("*"):

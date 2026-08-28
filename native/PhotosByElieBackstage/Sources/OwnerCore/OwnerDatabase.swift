@@ -157,3 +157,57 @@ public final class OwnerDatabaseGate: OwnerDatabaseReading, @unchecked Sendable 
         return read(statement)
     }
 }
+
+/// Resolves the authoritative Owner-private database used by native Review.
+///
+/// The repository root follows the same precedence as the on-demand connector:
+/// an explicit PBE_REPO_ROOT takes precedence over connector.json. The path is
+/// intentionally the Owner-private SQLite under assets/owner-actions; a loose
+/// Owner.sqlite at the repository root is not authoritative and must never be
+/// selected by the native Review runtime.
+public struct OwnerReviewDatabaseLocator: Sendable {
+    private let configURL: URL
+    private let environment: [String: String]
+
+    public init(
+        configURL: URL? = nil,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        self.configURL = configURL ?? URL(
+            fileURLWithPath: NSHomeDirectory(),
+            isDirectory: true
+        ).appendingPathComponent(
+            ".config/photosbyelie/connector.json",
+            isDirectory: false
+        )
+        self.environment = environment
+    }
+
+    public func resolve() -> URL? {
+        guard let root = environment["PBE_REPO_ROOT"]
+            .map(Self.rootURL)
+            ?? configuredRepoRoot() else {
+            return nil
+        }
+        return root.appendingPathComponent(
+            "assets/owner-actions/Owner.sqlite",
+            isDirectory: false
+        ).standardizedFileURL
+    }
+
+    private func configuredRepoRoot() -> URL? {
+        guard let data = try? Data(contentsOf: configURL),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let payload = object as? [String: Any],
+              let value = payload["repoRoot"] as? String else {
+            return nil
+        }
+        return Self.rootURL(value)
+    }
+
+    private static func rootURL(_ value: String) -> URL? {
+        let cleanValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanValue.isEmpty else { return nil }
+        return URL(fileURLWithPath: cleanValue, isDirectory: true).standardizedFileURL
+    }
+}

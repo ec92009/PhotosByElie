@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 import sys
+import subprocess
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -67,7 +70,7 @@ class ImportOperationTests(unittest.TestCase):
             repo_root = Path(temp_dir)
             source_root = repo_root / "legacy-source"
             source_root.mkdir()
-            task = {"id": "task-legacy", "operation": "repair", "state": "queued"}
+            task = {"id": "task-legacy", "operation": "repair", "state": "running", "external_pid": 4242}
 
             operation = local_server._record_legacy_folder_import_operation(
                 repo_root,
@@ -80,6 +83,127 @@ class ImportOperationTests(unittest.TestCase):
             self.assertEqual(operation["destinationKind"], "expo")
             self.assertEqual(operation["source"]["canonicalSource"], "apple_photos")
             self.assertEqual(operation["task"]["id"], "task-legacy")
+            self.assertEqual(operation["state"], "running")
+            self.assertEqual(operation["workerPid"], 4242)
+            self.assertTrue(operation["workerToken"])
+            self.assertTrue(operation["leaseExpiresAt"])
+
+    def test_stale_legacy_import_is_reviewed_without_terminalizing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            db_path = Path("Owner.sqlite")
+            operation = owner_state_db.record_import_operation(
+                repo_root,
+                {
+                    "state": "running",
+                    "sourceKind": "apple_photos",
+                    "destinationKind": "expo",
+                    "source": {},
+                    "destination": {},
+                    "filters": {},
+                    "outputs": {},
+                },
+                db_path=db_path,
+            )
+            now = datetime(2026, 8, 19, 18, 0, tzinfo=timezone.utc)
+            old = (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+            with owner_state_db.connect(repo_root, db_path) as conn:
+                conn.execute(
+                    "UPDATE import_operations SET updated_at = ?, worker_pid = NULL, worker_token = '' WHERE operation_id = ?",
+                    (old, operation["operationId"]),
+                )
+                conn.commit()
+
+            result = owner_state_db.reconcile_stale_import_operations(repo_root, now=now, db_path=db_path)
+            self.assertEqual(result["reviewedCount"], 1)
+            self.assertEqual(result["recoveredCount"], 0)
+            with owner_state_db.connect(repo_root, db_path) as conn:
+                reviewed = owner_state_db._import_operation_row(
+                    conn.execute(
+                        "SELECT * FROM import_operations WHERE operation_id = ?",
+                        (operation["operationId"],),
+                    ).fetchone()
+                )
+            self.assertEqual(reviewed["state"], "running")
+            self.assertEqual(reviewed["recoveryState"], "needs-review")
+            self.assertIn("no durable worker PID/token", reviewed["recoveryReason"])
+
+    def test_stale_import_with_dead_recorded_worker_is_failed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            db_path = Path("Owner.sqlite")
+            operation = owner_state_db.record_import_operation(
+                repo_root,
+                {
+                    "state": "running",
+                    "sourceKind": "apple_photos",
+                    "destinationKind": "expo",
+                    "source": {},
+                    "destination": {},
+                    "filters": {},
+                    "outputs": {},
+                    "workerPid": 4242,
+                    "workerToken": "import-worker-test",
+                    "leaseExpiresAt": "2026-08-19T18:15:00Z",
+                },
+                db_path=db_path,
+            )
+            now = datetime(2026, 8, 19, 18, 0, tzinfo=timezone.utc)
+            old = (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+            with owner_state_db.connect(repo_root, db_path) as conn:
+                conn.execute(
+                    "UPDATE import_operations SET updated_at = ? WHERE operation_id = ?",
+                    (old, operation["operationId"]),
+                )
+                conn.commit()
+
+            with mock.patch.object(owner_state_db, "_workflow_process_alive", return_value=False):
+                result = owner_state_db.reconcile_stale_import_operations(repo_root, now=now, db_path=db_path)
+            self.assertEqual(result["recoveredCount"], 1)
+            with owner_state_db.connect(repo_root, db_path) as conn:
+                recovered = owner_state_db._import_operation_row(
+                    conn.execute(
+                        "SELECT * FROM import_operations WHERE operation_id = ?",
+                        (operation["operationId"],),
+                    ).fetchone()
+                )
+            self.assertEqual(recovered["state"], "failed")
+            self.assertEqual(recovered["recoveryState"], "recovered")
+            self.assertFalse(recovered["leaseExpiresAt"])
+
+    def test_stale_import_recovery_observes_a_worker_that_died_in_another_process(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            db_path = Path("Owner.sqlite")
+            worker = subprocess.Popen([sys.executable, "-c", "pass"])
+            worker_pid = worker.pid
+            worker.wait(timeout=5)
+            operation = owner_state_db.record_import_operation(
+                repo_root,
+                {
+                    "state": "running",
+                    "sourceKind": "apple_photos",
+                    "destinationKind": "expo",
+                    "source": {},
+                    "destination": {},
+                    "filters": {},
+                    "outputs": {},
+                    "workerPid": worker_pid,
+                    "workerToken": "import-worker-cross-process",
+                },
+                db_path=db_path,
+            )
+            now = datetime(2026, 8, 19, 18, 0, tzinfo=timezone.utc)
+            old = (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+            with owner_state_db.connect(repo_root, db_path) as conn:
+                conn.execute(
+                    "UPDATE import_operations SET updated_at = ? WHERE operation_id = ?",
+                    (old, operation["operationId"]),
+                )
+                conn.commit()
+
+            result = owner_state_db.reconcile_stale_import_operations(repo_root, now=now, db_path=db_path)
+            self.assertEqual(result["recoveredCount"], 1)
 
 
 class AccessUserTests(unittest.TestCase):

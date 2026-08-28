@@ -123,6 +123,10 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var keywords: [String]
     public var filename: String
     public var capturedAt: String
+    public var mediaType: String
+    public var pixelWidth: Int
+    public var pixelHeight: Int
+    public var originalByteCount: Int64
     public var deliveryState: String
     public var errorText: String
 
@@ -133,6 +137,10 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
         keywords: [String],
         filename: String,
         capturedAt: String,
+        mediaType: String = "photo",
+        pixelWidth: Int = 0,
+        pixelHeight: Int = 0,
+        originalByteCount: Int64 = 0,
         deliveryState: String,
         errorText: String
     ) {
@@ -142,6 +150,10 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
         self.keywords = keywords
         self.filename = filename
         self.capturedAt = capturedAt
+        self.mediaType = mediaType
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.originalByteCount = originalByteCount
         self.deliveryState = deliveryState
         self.errorText = errorText
     }
@@ -295,10 +307,16 @@ public enum FixtureDeliveryError: Error, Sendable, Equatable {
 public actor FixtureDeliveryService {
     private let runner: OwnerActionRunner
     private let connectorID: String
+    private let sourceStore: OwnerAssetSourceSQLiteStore?
 
-    public init(runner: OwnerActionRunner, connectorID: String = "max") {
+    public init(
+        runner: OwnerActionRunner,
+        connectorID: String = "max",
+        nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve()
+    ) {
         self.runner = runner
         self.connectorID = connectorID
+        self.sourceStore = nativeDatabaseURL.map(OwnerAssetSourceSQLiteStore.init(databaseURL:))
     }
 
     public func plan(fixtureID: String) async throws -> FixtureDeliveryPlan {
@@ -375,10 +393,14 @@ public actor FixtureDeliveryService {
         guard let plan = action.result?["uploadPlan"]?.objectValue else {
             throw FixtureDeliveryError.missingResult("uploadPlan")
         }
-        let items = (plan["items"]?.arrayValue ?? []).compactMap { value -> NativeUploadPlanItem? in
+        let rawItems = plan["items"]?.arrayValue ?? []
+        let assetIDs = rawItems.compactMap { $0.objectValue?["assetId"]?.stringValue }
+        let sourceMetadata = (try? sourceStore?.metadata(assetIDs: assetIDs)) ?? [:]
+        let items = rawItems.compactMap { value -> NativeUploadPlanItem? in
             guard let object = value.objectValue else { return nil }
             let assetID = object["assetId"]?.stringValue ?? ""
             guard !assetID.isEmpty else { return nil }
+            let source = sourceMetadata[assetID]
             return NativeUploadPlanItem(
                 assetID: assetID,
                 photoLibraryIdentifier: object["photoLibraryIdentifier"]?.stringValue ?? assetID,
@@ -386,6 +408,11 @@ public actor FixtureDeliveryService {
                 keywords: object["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? [],
                 filename: object["filename"]?.stringValue ?? "",
                 capturedAt: object["capturedAt"]?.stringValue ?? "",
+                mediaType: source?.mediaType ?? object["mediaType"]?.stringValue ?? "photo",
+                pixelWidth: source?.pixelWidth ?? object["pixelWidth"]?.intValue ?? 0,
+                pixelHeight: source?.pixelHeight ?? object["pixelHeight"]?.intValue ?? 0,
+                originalByteCount: source?.originalByteCount
+                    ?? Int64(object["originalByteCount"]?.intValue ?? 0),
                 deliveryState: object["deliveryState"]?.stringValue ?? "needs-upload",
                 errorText: object["errorText"]?.stringValue ?? ""
             )

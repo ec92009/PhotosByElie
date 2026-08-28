@@ -2,15 +2,17 @@
 
 Date: 2026-07-04
 
-Status: obsolete historical snapshot. Sidecar is not a supported product,
+Status: obsolete historical snapshot. Sidecar and the standalone Photos Bridge
+were retired by PBB-92. Sidecar is not a supported product,
 authority, client, or launch path. Backstage is the supported Owner client;
 OwnerCore/`Owner.sqlite` and the PBB-79 gateway are the active state and
 lifecycle boundaries. Retained Sidecar-named schemas, services, routes, and
 action kinds are compatibility identifiers pending separately audited removal.
 
 The remainder of this document records the former design for migration and
-rollback archaeology only. Its present-tense statements must not be read as
-current architecture.
+rollback archaeology only. Its present-tense statements and runnable commands
+must not be read or executed as current architecture. Backstage itself is now
+the sole signed PhotoKit/TCC process.
 
 ## Version
 
@@ -47,36 +49,14 @@ Sidecar v0 uses the existing repo shape:
 This keeps the UI fast to prototype, Python responsible for local orchestration
 and SQLite, and Swift responsible only for Apple Photos/PhotoKit boundaries.
 
-## Apple Photos Permissions
+## Apple Photos Permissions (retired design)
 
-macOS Photos access is granted to the identity that actually touches PhotoKit.
-For Sidecar, that identity must be `PhotosByElie Photos Bridge.app`, not an
-incidental `swift`, `python3`, Terminal, Codex, or `launchd` process. Sidecar
-therefore installs and launches the Swift bridge through the app bundle:
-
-```bash
-open -W -n "$HOME/Applications/PhotosByElie Photos Bridge.app" --args <bridge-command>
-```
-
-Do not invoke `swift scripts/apple_photos_bridge.swift ...` directly from
-Sidecar UI code, scheduled tasks, or Codex automations. Direct Swift invocation
-uses the caller's TCC identity and can report `Photos access needed` even when
-`PhotosByElie Photos Bridge.app` already has Full Access in System Settings >
-Privacy & Security > Photos.
-
-The canonical Sidecar paths are:
-
-- `scripts/sidecar_server.py` preview/video/index helpers, which call the app
-  bundle before touching PhotoKit.
-- `python3 scripts/sidecar_maintenance.py photos-index-sync`, which delegates
-  to the same app-bundled index helper.
-- `scripts/install_sidecar_scheduled_tasks.zsh`, only as a local LaunchAgent
-  fallback for those maintenance entrypoints.
-
-If Photos access fails, first confirm the failing path launched the app bundle.
-Only after that should the operator revisit macOS Photos permissions. Granting
-Full Access to `PhotosByElie Photos Bridge.app` does not automatically authorize
-a raw Swift or Python process that bypasses the bundle.
+This section formerly described a separately installed permission-bearing
+Bridge app. That launch path is retired and deliberately unavailable. Current
+Backstage builds perform PhotoKit work through authenticated in-process IPC and
+hold the stable Photos/TCC identity themselves. Do not install, launch, repair,
+or grant permissions to `PhotosByElie Photos Bridge.app`; Backstage retires any
+live copy recoverably at cold launch.
 
 ## Product Boundary
 
@@ -319,21 +299,24 @@ Sidecar has two primary pages backed by the same current window:
   the SQLite table first and falls back to the JSON compatibility export when
   the table is missing or empty.
 
-Videos are first-class Sidecar review items. The UI marks video previews with a
-standard play icon and duration chip, filters photos/videos separately, asks
-PhotoKit for local poster frames without iCloud downloads, then derives a JPEG
-frame from the same local video resource used by Quick Look when PhotoKit has no
-usable poster. It plays local videos in place when Photos can expose the video
-resource locally, starts video playback immediately in Quick Look with a muted
-fallback when browser autoplay policy requires it, and supports Space-bar Quick
-Look previews for the active item.
+Historical-only video behavior (retained for migration archaeology): the
+obsolete Sidecar treated videos as first-class review items. The UI marked
+video previews with a standard play icon and duration chip, filtered
+photos/videos separately, asked PhotoKit for local poster frames without iCloud
+downloads, then derived a JPEG frame from the same local video resource used by
+Quick Look when PhotoKit had no usable poster. It played local videos in place
+when Photos could expose the video resource locally, started video playback
+immediately in Quick Look with a muted fallback when browser autoplay policy
+required it, and supported Space-bar Quick Look previews for the active item.
+Current Backstage source and review workflows are stills-only; generated Real
+Estate videos belong to downstream Delivery.
 
 Source controls should include:
 
 - preview count
 - load/refill plus previous/next working-window movement
 - album/smart album later
-- horizontal rating, color, decision-state, and media-type filters
+- horizontal rating, color, decision-state, and historical media-type filters
 - search terms later
 
 ## Current V0 Slice

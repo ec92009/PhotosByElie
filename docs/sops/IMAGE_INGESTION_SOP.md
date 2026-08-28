@@ -8,24 +8,30 @@ Use this SOP when adding or refreshing real media galleries from developed Light
 
 Do not use this SOP for repo-only documentation edits, CSS-only page polish, or manual one-off fixes to existing gallery data.
 
+> Retired Apple Photos path: browser-hosted direct import, Sidecar PhotoKit
+> work, and the standalone Photos Bridge are no longer supported production
+> workflows. The legacy local-server import endpoints fail closed with `410
+> Backstage required`. Use PhotosByElie Backstage for native Photos access,
+> culling, metadata, and export; use this SOP only after media is available as
+> a normal developed source folder.
+
 ## Source Convention
 
 - Canonical Lightroom camera archive: `/Volumes/Saturn/Pictures/LR/Camera`
 - Apple Photos album exports for small source-agnostic import tests: `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`
 - Source files must be developed exports: `.jpg`, `.jpeg`, `.tif`, `.tiff`, `.mov`, `.mp4`, or `.m4v`.
-- Do not import DNG, NEF, or other raw camera files as public media masters. Develop/export them first, or use the direct Apple Photos path so Owner produces temporary JPGs.
+- Do not import DNG, NEF, or other raw camera files as public media masters. Develop/export them first. The retired direct Apple Photos path is not a fallback.
 - Lightroom sidecars may sit next to source media files as `.xmp` files when metadata is not embedded. The Photos By Elie Owner flow does not rewrite source files or sidecars automatically after upload; future XMP saves should be explicit Owner maintenance actions.
 - The default importer selects developed files with Lightroom green label and rating 4 or higher. Use `--select all` only for explicitly selected folders such as Leonardo/AI.
 - Apple Photos album exports are treated as explicitly selected by folder membership, so use `--select all` and let country inference assign them to a gallery or Unknown.
-- The importer can use Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia album can infer Spain. Direct Apple Photos imports also preserve PhotoKit latitude/longitude and creation date in the sidecar so rendered JPGs can recover date/GPS context even when Photos does not write EXIF.
-- Direct Apple Photos imports export still images at full pixel size as Photos' current rendered JPEG, including HEIC and RAW-backed assets; do not switch to RAW/NEF as public pipeline outputs.
-- Direct Apple Photos dry runs record PhotoKit resource formats before export, including RAW, HEIC, JPEG, and video resources. If Photos' current rendered JPEG stalls, the bridge may fall back to a local JPEG/HEIC/RAW image resource such as an alternate JPEG, HEIC, or DNG and convert it to a temporary JPG; this fallback is reported in Owner progress and sidecar metadata.
-- Keep Apple Photos video exports as original MOV/MP4/M4V files. The importer generates a watermarked `still_900` poster at 10% into the source video for gallery cards and a watermarked 5-second `short_5s_720p` MP4 preview for detail pages. Buyer delivery for videos is the original/full video only.
-- Direct Apple Photos imports are Owner-only and must run through `python3 scripts/local_server.py` on localhost. The Owner card invokes the Apple Photos bridge, which uses PhotoKit/Photos automation and does not inspect `.photoslibrary` package contents or private SQLite files.
-- Sidecar uses the same Swift bridge source through the installed app bundle at `~/Applications/PhotosByElie Photos Bridge.app`. Sidecar UI, Sidecar maintenance, LaunchAgent fallback, and Codex Scheduled prompts must not call `swift scripts/apple_photos_bridge.swift ...` directly; doing so changes the macOS Photos permission identity and can fail even when the bridge app already has Full Access.
-- Apple Photos/iCloud is the intended universal source and R2 is the intended cloud destination. Any authorized Owner machine can become an import workstation once it is signed into the same iCloud Photos library and Google-backed Owner auth is configured; PhotoKit exports still happen on that local Mac, while durable media/state promotion targets R2 and the cloud Owner access registry.
-- Direct Apple Photos imports may export selected album assets under ignored `tmp/apple-photos-import/` before the standard PBE import/cache/R2 pipeline runs. This is still considered direct import in the Owner workflow because Elie does not manually export Finder folders.
-- Direct Apple Photos imports write `.pbe-apple-photos-assets.json` next to the temporary bytes. The importer uses its `apple-photos://<asset-localIdentifier>` source anchors for IDs/dedupe, uses sidecar album/date/GPS values as metadata fallbacks, and keeps the temporary cache path only as a local byte source.
+- The importer can use exported Apple Photos album/folder names as country hints when embedded country/GPS metadata is missing, for example a Malaga or Valencia folder can infer Spain. PhotoKit metadata is available only through the signed Backstage workflow and is not supplied by this folder importer.
+- Legacy direct Apple Photos imports exported still images as Photos' rendered JPEG, including HEIC and RAW-backed assets; that path is retired and this note is historical only.
+- Direct Apple Photos dry runs and Bridge fallback exports are retired. Use Backstage's native Photos workflow when PhotoKit access is required.
+- Legacy Apple Photos video imports used the original MOV/MP4/M4V file plus generated poster and short-preview derivatives; direct PhotoKit import is retired.
+- Direct Apple Photos imports are retired. The legacy local-server routes return `410 Backstage required`; use PhotosByElie Backstage for native Photos access instead.
+- Sidecar and the standalone Photos Bridge are retired. Scheduled and connector maintenance uses authenticated IPC to the signed Backstage app and fails closed when it is unavailable.
+- Apple Photos/iCloud remains a supported source through PhotosByElie Backstage. Backstage owns the Photos permission and routes maintenance through authenticated IPC; Python, browser, scheduled, and connector code must not inspect `.photoslibrary` contents or acquire a second PhotoKit identity.
+- The old temporary Apple Photos import cache and `.pbe-apple-photos-assets.json` sidecars are legacy artifacts; they are not part of the supported production intake path.
 - The builder groups derivatives by inferred gallery country using Lightroom country fields, country keywords, and known location hints.
 
 ## Prerequisites
@@ -39,8 +45,8 @@ cd /Users/ecohen/Dev/PhotosByElie
 Required command-line tools:
 
 - `python3`
-- `swift` from Xcode Command Line Tools when using direct Apple Photos import or
-  installing the Sidecar Photos Bridge app bundle
+- `swift` from Xcode Command Line Tools only when building the signed Backstage
+  app during development
 - `exiftool`
 - `ffmpeg`
 - `ffprobe`
@@ -52,7 +58,10 @@ Check availability before a long run:
 command -v python3 exiftool ffmpeg ffprobe
 ```
 
-For direct Apple Photos imports, macOS must grant Photos access to the process identity that PhotoKit sees. When `~/Applications/PhotosByElie Photos Bridge.app` exists, automation and helpers should launch that app bundle through LaunchServices rather than running `swift scripts/apple_photos_bridge.swift` directly. Raw Swift has a different TCC identity from the installed bridge app and can report `permission_missing` even when the app bundle has Photos access. If permission is missing or denied, the Owner card reports the privacy setting to fix. The Owner card enables iCloud downloads by default so Photos can fetch missing originals or renders during the import; if that switch is disabled, iCloud-only originals are reported as unavailable until Photos has downloaded them locally.
+For Apple Photos work, open PhotosByElie Backstage and grant that signed app
+Full Photos access. There is no supported raw-Swift, browser-hosted, Sidecar, or
+standalone-Bridge fallback; those callers either use authenticated Backstage
+IPC or fail closed.
 
 ## Build Derivatives
 
@@ -88,18 +97,18 @@ python3 scripts/build_lightroom_thumbnails.py \
 
 Use only `/Volumes/Saturn/Pictures/LR/Apple Photo Albums`. Do not use `/Volumes/Saturn/Pictures/LR/Apple Photo Albums With Faces` unless the Owner explicitly authorizes that source in the current run.
 
-Owner direct Apple Photos import:
+Legacy Owner direct Apple Photos import (retired):
 
 ```bash
 python3 scripts/local_server.py 8000
 open http://localhost:8000/owner.html
 ```
 
-In the legacy direct-import workflow only:
-
-1. Use **Import from Photos** to load albums through the local helper.
-2. Choose an album and run **Dry run**. Review import candidates, unsupported assets, iCloud-original-not-local reports, and already-known/skipped behavior before any write/upload step.
-3. Click **Import to Expo** only after the dry run looks right. The helper records the run in `Owner.sqlite:import_operations`, exports eligible local bytes to `tmp/apple-photos-import/`, writes stable `apple-photos://...` source anchors, and immediately starts the normal selected-folder Expo import sweep from that temporary folder.
+The old **Import from Photos**, album dry-run, and **Import to Expo** controls
+are retired. Their local-server routes return `410 Backstage required`. Use
+Backstage **Fixtures**, **Culling**, **Metadata**, and **Uploads** instead; if a
+normal folder import is needed, place developed media in a source folder and
+run the ordinary pipeline above.
 
 ## Resume Behavior
 

@@ -16,7 +16,16 @@ const DEFAULT_DOWNLOAD_TOKEN_MAX_DOWNLOADS = 100;
 const OWNER_ACCESS_TOKEN_SECONDS = 15 * 60;
 const PBE_OWNER_SESSION_SECONDS = 5 * 60;
 const PBE_OWNER_PROVISIONER_EMAIL = "ec92009@gmail.com";
-const PBE_OWNER_CAPABILITIES = Object.freeze(["gallery.read", "waste-basket.x", "waste-basket.restore"]);
+const PBE_OWNER_CAPABILITIES = Object.freeze([
+  "gallery.read",
+  "waste-basket.x",
+  "waste-basket.restore",
+  "fixture.hide",
+  "fixture.review",
+  "fixture.clear",
+  "asset.rating",
+  "asset.color",
+]);
 const PURCHASE_ALLOWANCE_SOURCE = "photosbyelie-worker-order-ledger";
 const PURCHASE_ALLOWANCE_SOURCE_DETAIL = "PhotosByElie checkout Worker order records in ORDERS_KV";
 const SECONDS_PER_DAY = 60 * 60 * 24;
@@ -2815,12 +2824,12 @@ export const createPhotosByElieWorker = ({
   };
 
   const lifecycleOwnerCommand = async (request, command) => {
-    await requireOwnerConnector(request);
+    const connector = await requireOwnerConnector(request);
     if (!lifecycleDenyStore?.[command]) {
       return credentialedErrorJson(request, 503, "lifecycle_authority_unavailable", "Lifecycle authority is unavailable.");
     }
     const payload = await parseJson(request);
-    const result = await lifecycleDenyStore[command](payload);
+    const result = await lifecycleDenyStore[command]({ ...payload, actorId: connector.connectorId });
     return credentialedJson(request, { ok: true, ...result }, 200, { "cache-control": "no-store" });
   };
 
@@ -3245,6 +3254,9 @@ export const createPhotosByElieWorker = ({
       const executedAt = Number.isFinite(Date.parse(String(suppliedTiming.executedAt || "")))
         ? new Date(String(suppliedTiming.executedAt)).toISOString()
         : "";
+      const suppliedConnectorTiming = suppliedTiming.connector && typeof suppliedTiming.connector === "object"
+        ? suppliedTiming.connector
+        : null;
       next = {
         ...action,
         state: "completed",
@@ -3253,6 +3265,7 @@ export const createPhotosByElieWorker = ({
         completedAt: timestamp,
         timing: {
           ...(action.timing && typeof action.timing === "object" ? action.timing : {}),
+          ...(suppliedConnectorTiming ? { connector: suppliedConnectorTiming } : {}),
           ...(executedAt ? { executedAt } : {}),
           completedAt: timestamp,
         },
@@ -3297,6 +3310,10 @@ export const createPhotosByElieWorker = ({
         return json({ ok: false, error: { code: "owner_action_connector_mismatch", message: "This action is claimed by another connector." } }, 409);
       }
       const message = String(payload.message || payload.error?.message || payload.error || "Owner action failed.").trim().slice(0, 500);
+      const suppliedTiming = payload.timing && typeof payload.timing === "object" ? payload.timing : {};
+      const suppliedConnectorTiming = suppliedTiming.connector && typeof suppliedTiming.connector === "object"
+        ? suppliedTiming.connector
+        : null;
       next = {
         ...action,
         state: "failed",
@@ -3305,6 +3322,11 @@ export const createPhotosByElieWorker = ({
         },
         failedBy: connectorSession ? `connector:${connectorSession.connectorId}` : session.email,
         failedAt: timestamp,
+        timing: {
+          ...(action.timing && typeof action.timing === "object" ? action.timing : {}),
+          ...(suppliedConnectorTiming ? { connector: suppliedConnectorTiming } : {}),
+          failedAt: timestamp,
+        },
         updatedAt: timestamp,
       };
       next.history = ownerActionHistory(action, {
@@ -4006,6 +4028,7 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/sidecar/decisions/upsert") return await upsertSidecarDecisions(request);
       if (request.method === "POST" && path === "/owner/lifecycle/seed") return await lifecycleOwnerCommand(request, "seedVisibleBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/activate") return await lifecycleOwnerCommand(request, "activate");
+      if (request.method === "POST" && path === "/owner/lifecycle/reconcile") return await lifecycleOwnerCommand(request, "reconcileManifest");
       if (request.method === "POST" && path === "/owner/lifecycle/arm") return await lifecycleOwnerCommand(request, "armBatch");
       if (request.method === "POST" && path === "/owner/lifecycle/local-commit") return await lifecycleOwnerCommand(request, "markLocallyCommitted");
       if (request.method === "POST" && path === "/owner/lifecycle/apply") return await lifecycleOwnerCommand(request, "applyBatch");

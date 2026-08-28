@@ -1,6 +1,10 @@
 import unittest
 import hashlib
+import importlib
 import json
+import os
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 import sqlite3
 import socket
@@ -12,22 +16,30 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+import scripts.new_owner_connector as new_owner_connector
 from scripts.new_owner_connector import (
     ConnectorConfig,
     InteractivePollingLease,
+    WorkerRequestError,
     WorkerClient,
     _allowed_local_status_origin,
+    _launch_waste_basket_for_browser,
     _launch_sidecar_workspace,
+    _load_local_modules,
     _local_status_payload,
     _local_sidecar_open_action,
     _action_is_read_only,
+    _connector_process_lock,
+    _new_action_timing,
     _owner_waste_basket_url,
     _sidecar_job_public_payload,
     _upload_and_register,
     drain_deployed_lifecycle_outbox,
     drain_hosted_lifecycle_requests,
     execute_action,
+    LOCAL_REVIEW_ACTION_PATH,
     next_poll_interval,
+    process_direct_action,
     process_exact_action,
     process_once,
     start_local_status_server,
@@ -41,12 +53,279 @@ class UploadRegistrationScopeTest(unittest.TestCase):
     def setUp(self):
         self.config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
 
-    def test_launch_agent_does_not_throttle_interactive_owner_reads(self):
+    def test_unbounded_daemon_requires_explicit_legacy_opt_in_before_config_load(self):
+        output = StringIO()
+        with patch(
+            "scripts.new_owner_connector.LEGACY_CONNECTOR_DAEMON_ENABLED",
+            False,
+        ), patch(
+            "scripts.new_owner_connector.load_config"
+        ) as load_config, patch(
+            "sys.argv",
+            ["new_owner_connector.py"],
+        ), redirect_stderr(output):
+            self.assertEqual(new_owner_connector.main(), 64)
+        load_config.assert_not_called()
+        self.assertIn("always-on Owner connector daemon is retired", output.getvalue())
+
+    def test_successful_exact_action_uses_success_process_exit(self):
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector.process_direct_action",
+            return_value=1,
+        ) as process:
+            self.assertEqual(
+                new_owner_connector._run_connector(
+                    self.config,
+                    once=True,
+                    action_id="owner-action-one",
+                ),
+                0,
+            )
+
+        worker_client.return_value.heartbeat.assert_called_once_with()
+        process.assert_called_once_with(
+            self.config,
+            worker_client.return_value,
+            "owner-action-one",
+        )
+
+    def test_runtime_modules_replace_mutable_checkout_shadows(self):
+        with TemporaryDirectory() as runtime_temp, TemporaryDirectory() as checkout_temp:
+            runtime_scripts = Path(runtime_temp) / "scripts"
+            checkout_scripts = Path(checkout_temp) / "scripts"
+            runtime_scripts.mkdir()
+            checkout_scripts.mkdir()
+            (runtime_scripts / "local_server.py").write_text(
+                "from import_source_anchor import source_identity_from_row\n"
+                "new_owner_connector_result = 'runtime-connector'\n"
+                "new_owner_sidecar_decision_result = 'runtime-decision'\n"
+                "apply_public_photo_moderation = source_identity_from_row\n",
+                encoding="utf-8",
+            )
+            (runtime_scripts / "import_source_anchor.py").write_text(
+                "source_identity_from_row = 'runtime-moderation'\n",
+                encoding="utf-8",
+            )
+            (runtime_scripts / "sidecar_server.py").write_text(
+                "_preview_cache_path = 'runtime-cache'\n"
+                "_run_backstage_photos_preview_task = 'runtime-preview'\n",
+                encoding="utf-8",
+            )
+            (checkout_scripts / "local_server.py").write_text(
+                "new_owner_connector_result = 'checkout-connector'\n"
+                "new_owner_sidecar_decision_result = 'checkout-decision'\n"
+                "apply_public_photo_moderation = 'checkout-moderation'\n",
+                encoding="utf-8",
+            )
+            (checkout_scripts / "sidecar_server.py").write_text(
+                "_preview_cache_path = 'checkout-cache'\n",
+                encoding="utf-8",
+            )
+            (checkout_scripts / "import_source_anchor.py").write_text(
+                "checkout_only = True\n",
+                encoding="utf-8",
+            )
+            original_path = list(sys.path)
+            original_modules = {
+                name: sys.modules.get(name)
+                for name in ("local_server", "sidecar_server", "import_source_anchor")
+            }
+            try:
+                sys.path.insert(0, str(checkout_scripts))
+                importlib.import_module("local_server")
+                importlib.import_module("sidecar_server")
+                importlib.import_module("import_source_anchor")
+
+                loaded = _load_local_modules(Path(runtime_temp))
+
+                self.assertEqual(
+                    loaded,
+                    (
+                        "runtime-connector",
+                        "runtime-decision",
+                        "runtime-cache",
+                        "runtime-preview",
+                        "runtime-moderation",
+                    ),
+                )
+                self.assertTrue(
+                    Path(sys.modules["sidecar_server"].__file__).resolve().is_relative_to(
+                        runtime_scripts.resolve()
+                    )
+                )
+                self.assertTrue(
+                    Path(sys.modules["import_source_anchor"].__file__).resolve().is_relative_to(
+                        runtime_scripts.resolve()
+                    )
+                )
+            finally:
+                sys.path[:] = original_path
+                for name, module in original_modules.items():
+                    sys.modules.pop(name, None)
+                    if module is not None:
+                        sys.modules[name] = module
+
+    def test_launch_agent_is_explicit_legacy_daemon_rollback(self):
         template = (
             Path(__file__).with_name("new_owner_connector_launch_agent.plist.in")
         ).read_text(encoding="utf-8")
         self.assertIn("<key>ProcessType</key>\n  <string>Standard</string>", template)
         self.assertNotIn("<string>Background</string>", template)
+        self.assertIn("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", template)
+
+    def test_on_demand_mode_rejects_a_long_running_invocation(self):
+        with (
+            patch.dict(os.environ, {"PBE_ON_DEMAND_OWNER_CONNECTOR": "1"}),
+            patch.object(sys, "argv", ["new_owner_connector.py"]),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                new_owner_connector.main()
+        self.assertIn("must use --once", str(raised.exception))
+
+    def test_signed_runtime_environment_overrides_stale_config_runtime(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            repo_root = root / "repo"
+            stale_runtime = root / "stale-runtime"
+            signed_runtime = root / "signed-runtime"
+            repo_root.mkdir()
+            stale_runtime.mkdir()
+            signed_runtime.mkdir()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(repo_root),
+                    "runtimeRoot": str(stale_runtime),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {"PBE_CONNECTOR_RUNTIME_ROOT": str(signed_runtime)},
+            ), patch(
+                "scripts.new_owner_connector.validate_runtime"
+            ) as validate_runtime:
+                validate_runtime.return_value.revision = "a" * 40
+                validate_runtime.return_value.file_count = 12
+                validate_runtime.return_value.manifest_sha256 = "b" * 64
+                config = new_owner_connector.load_config(config_path)
+
+            validate_runtime.assert_called_once_with(signed_runtime)
+            self.assertEqual(config.runtime_root, signed_runtime.resolve())
+
+    def test_on_demand_environment_overrides_stale_config_data_root(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            configured_root = root / "configured-data"
+            bounded_root = root / "bounded-data"
+            signed_runtime = root / "signed-runtime"
+            configured_root.mkdir()
+            (bounded_root / "assets" / "owner-actions").mkdir(parents=True)
+            (bounded_root / "assets" / "owner-actions" / "Owner.sqlite").touch()
+            signed_runtime.mkdir()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(configured_root),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {
+                    "PBE_CONNECTOR_RUNTIME_ROOT": str(signed_runtime),
+                    "PBE_ON_DEMAND_OWNER_CONNECTOR": "1",
+                    "PBE_REPO_ROOT": str(bounded_root),
+                },
+            ), patch(
+                "scripts.new_owner_connector.validate_runtime"
+            ) as validate_runtime:
+                validate_runtime.return_value.revision = "a" * 40
+                validate_runtime.return_value.file_count = 12
+                validate_runtime.return_value.manifest_sha256 = "b" * 64
+                config = new_owner_connector.load_config(config_path)
+
+            self.assertEqual(config.repo_root, bounded_root.resolve())
+
+    def test_non_bounded_environment_cannot_override_config_data_root(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            configured_root = root / "configured-data"
+            ignored_root = root / "ignored-data"
+            configured_root.mkdir()
+            ignored_root.mkdir()
+            (configured_root / "scripts").mkdir()
+            (configured_root / "scripts" / "sidecar_state_db.py").touch()
+            config_path = root / "connector.json"
+            config_path.write_text(
+                json.dumps({
+                    "workerBase": "https://worker.test",
+                    "connectorId": "max",
+                    "token": "x" * 32,
+                    "repoRoot": str(configured_root),
+                }),
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {"PBE_REPO_ROOT": str(ignored_root)},
+                clear=False,
+            ):
+                os.environ.pop("PBE_ON_DEMAND_OWNER_CONNECTOR", None)
+                config = new_owner_connector.load_config(config_path)
+
+            self.assertEqual(config.repo_root, configured_root.resolve())
+
+    def test_bounded_connector_drain_uses_a_shared_nonblocking_process_lock(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            with _connector_process_lock(config) as first:
+                self.assertTrue(first)
+                with _connector_process_lock(config) as second:
+                    self.assertFalse(second)
+
+            with _connector_process_lock(config) as reacquired:
+                self.assertTrue(reacquired)
+
+            lock_path = root / "assets" / "owner-actions" / ".owner-connector-on-demand.lock"
+            self.assertEqual(lock_path.stat().st_mode & 0o777, 0o600)
+
+    def test_exact_action_waits_for_the_active_connector_lock(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+            started = threading.Event()
+            acquired_after_release = []
+
+            def wait_for_lock():
+                started.set()
+                with _connector_process_lock(config, wait_seconds=0.5) as acquired:
+                    acquired_after_release.append(acquired)
+
+            with _connector_process_lock(config) as first:
+                self.assertTrue(first)
+                waiter = threading.Thread(target=wait_for_lock)
+                waiter.start()
+                self.assertTrue(started.wait(1))
+                time.sleep(0.05)
+                self.assertEqual(acquired_after_release, [])
+
+            waiter.join(1)
+            self.assertFalse(waiter.is_alive())
+            self.assertEqual(acquired_after_release, [True])
 
     def test_registration_is_limited_to_uploaded_action_assets(self):
         calls = []
@@ -138,6 +417,74 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         self.assertEqual([item[1] for item in client.transitions], ["claim", "complete"])
         self.assertTrue(client.transitions[0][2]["locallyAwakenedAt"])
         self.assertTrue(client.transitions[1][2]["timing"]["executedAt"])
+        connector_timing = client.transitions[1][2]["timing"]["connector"]
+        self.assertEqual(connector_timing["schema"], "photosbyelie.ownerActionTiming.v1")
+        self.assertGreaterEqual(connector_timing["elapsedMs"], 0)
+        self.assertEqual(
+            set(("action.fetch", "action.claim", "action.execute", "action.complete"))
+            - set(connector_timing["phases"]),
+            set(),
+        )
+
+    def test_review_action_receipt_carries_owner_and_local_phase_timings(self):
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+        class FakeClient:
+            def __init__(self):
+                self.action_record = {
+                    "id": "owner-action-review-timing",
+                    "type": "sidecar-culling-review",
+                    "state": "queued",
+                    "payload": {
+                        "requestedConnector": "david",
+                        "manifest": {"mode": "fixture-review-apply"},
+                    },
+                    "timing": {"queuedAt": "2026-08-20T14:00:00Z"},
+                }
+                self.transitions = []
+
+            def action(self, action_id):
+                return dict(self.action_record)
+
+            def transition(self, action_id, transition, payload=None):
+                self.transitions.append((action_id, transition, payload or {}))
+                if transition == "claim":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "claimed",
+                        "claim": {"connectorId": "david"},
+                        "timing": {
+                            **self.action_record["timing"],
+                            "locallyAwakenedAt": "2026-08-20T14:00:01Z",
+                            "claimedAt": "2026-08-20T14:00:02Z",
+                        },
+                    }
+                elif transition == "complete":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                return {"action": dict(self.action_record)}
+
+        client = FakeClient()
+        with patch(
+            "scripts.new_owner_connector.execute_action",
+            return_value={"timing": {"localTransaction": {"durationMs": 12.5}}},
+        ):
+            action, processed = process_exact_action(
+                config,
+                client,
+                "owner-action-review-timing",
+                local_wake=True,
+            )
+
+        self.assertTrue(processed)
+        self.assertEqual(action["state"], "completed")
+        receipt = client.transitions[-1][2]["result"]["timing"]
+        self.assertEqual(receipt["localTransaction"]["durationMs"], 12.5)
+        self.assertEqual(receipt["ownerAction"]["queuedAt"], "2026-08-20T14:00:00Z")
+        self.assertTrue(receipt["ownerAction"]["executedAt"])
 
     def test_fixture_tree_is_a_read_only_connector_action(self):
         self.assertTrue(_action_is_read_only({
@@ -192,7 +539,7 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                         }
                     return {"action": dict(self.records[action_id])}
 
-        def fake_execute(_config, action):
+        def fake_execute(_config, action, **_kwargs):
             if action["id"] == "owner-action-write":
                 mutation_started.set()
                 self.assertTrue(release_mutation.wait(2))
@@ -212,6 +559,102 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             release_mutation.set()
             write_thread.join(2)
             self.assertFalse(write_thread.is_alive())
+
+    def test_process_once_prioritizes_fixture_tree_over_maintenance(self):
+        config = ConnectorConfig("https://worker.test", "max", "x" * 32, Path("/tmp/repo"))
+        order = []
+
+        class FakeClient:
+            def __init__(self):
+                self.records = {
+                    "owner-action-maintenance": {
+                        "id": "owner-action-maintenance",
+                        "type": "sidecar-photos-index-sync",
+                        "state": "queued",
+                        "createdAt": "2026-08-19T19:01:00Z",
+                    },
+                    "owner-action-tree": {
+                        "id": "owner-action-tree",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "createdAt": "2026-08-19T19:00:00Z",
+                        "payload": {"manifest": {"mode": "fixture-tree-list"}},
+                    },
+                }
+
+            def heartbeat(self):
+                return {"ok": True}
+
+            def actions(self):
+                return [dict(self.records["owner-action-maintenance"]), dict(self.records["owner-action-tree"])]
+
+            def action(self, action_id):
+                return dict(self.records[action_id])
+
+            def transition(self, action_id, transition, payload=None):
+                record = self.records[action_id]
+                if transition == "claim":
+                    record = {**record, "state": "claimed", "claim": {"connectorId": "max"}}
+                elif transition == "complete":
+                    record = {
+                        **record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                self.records[action_id] = record
+                return {"action": dict(record)}
+
+        def fake_execute(_config, action, **_kwargs):
+            order.append(action["id"])
+            return {"id": action["id"]}
+
+        with patch("scripts.new_owner_connector.drain_deployed_lifecycle_outbox", return_value=[]), \
+             patch("scripts.new_owner_connector.drain_hosted_lifecycle_requests", return_value=[]), \
+             patch("scripts.new_owner_connector.execute_action", side_effect=fake_execute):
+            self.assertEqual(process_once(config, FakeClient()), 2)
+
+        self.assertEqual(order, ["owner-action-tree", "owner-action-maintenance"])
+
+    def test_direct_read_only_wake_runs_while_maintenance_process_lock_is_held(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "assets" / "owner-actions").mkdir(parents=True)
+            config = ConnectorConfig("https://worker.test", "max", "x" * 32, root)
+
+            class FakeClient:
+                def __init__(self):
+                    self.record = {
+                        "id": "owner-action-tree",
+                        "type": "sidecar-culling-review",
+                        "state": "queued",
+                        "payload": {"manifest": {"mode": "fixture-tree-list"}},
+                    }
+
+                def action(self, _action_id):
+                    return dict(self.record)
+
+                def transition(self, _action_id, transition, payload=None):
+                    if transition == "claim":
+                        self.record = {
+                            **self.record,
+                            "state": "claimed",
+                            "claim": {"connectorId": "max"},
+                        }
+                    elif transition == "complete":
+                        self.record = {
+                            **self.record,
+                            "state": "completed",
+                            "result": (payload or {}).get("result", {}),
+                        }
+                    return {"action": dict(self.record)}
+
+            with _connector_process_lock(config) as acquired:
+                self.assertTrue(acquired)
+                with patch(
+                    "scripts.new_owner_connector.execute_action",
+                    return_value={"fixtures": []},
+                ):
+                    self.assertEqual(process_direct_action(config, FakeClient(), "owner-action-tree"), 1)
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:
@@ -263,6 +706,22 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         )
         self.assertEqual(result["job"]["status"], "done")
         self.assertEqual(result["job"]["indexedCount"], 57_500)
+
+    def test_photos_index_sync_defaults_to_incremental_and_full_is_explicit(self):
+        payload = {"job": {"status": "done"}, "sync": {"pendingCount": 0}}
+        with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
+            execute_action(self.config, {
+                "type": "sidecar-photos-index-sync",
+                "payload": {"mode": "incremental"},
+            })
+        self.assertEqual(run.call_args.args[1][-1], "--incremental")
+
+        with patch("scripts.new_owner_connector._run_repo_json", return_value=payload) as run:
+            execute_action(self.config, {
+                "type": "sidecar-photos-index-sync",
+                "payload": {"mode": "full", "fullLibrary": True},
+            })
+        self.assertEqual(run.call_args.args[1][-1], "--full")
 
     def test_owner_hidden_metadata_resolves_private_title_without_public_catalog(self):
         with TemporaryDirectory() as temp_dir:
@@ -348,10 +807,18 @@ class UploadRegistrationScopeTest(unittest.TestCase):
         config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"), local_status_port=port)
         client = object()
         lease = InteractivePollingLease()
-        with patch("scripts.new_owner_connector.process_exact_action", return_value=({
-            "id": "owner-action-test",
-            "state": "completed",
-        }, True)) as process:
+        started = threading.Event()
+        release = threading.Event()
+
+        def fake_process(*args, **kwargs):
+            started.set()
+            release.wait(2)
+            return ({
+                "id": "owner-action-test",
+                "state": "completed",
+            }, True)
+
+        with patch("scripts.new_owner_connector.process_exact_action", side_effect=fake_process) as process:
             start_local_status_server(config, lease, client)
             deadline = time.time() + 2
             while True:
@@ -370,8 +837,13 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                 headers={"Content-Type": "application/json", "Origin": "https://photos-by-elie.com"},
             )
             with urlopen(request, timeout=1) as response:
+                self.assertEqual(response.status, 202)
                 body = json.loads(response.read())
             self.assertTrue(body["ok"])
+            self.assertTrue(body["diagnostics"]["accepted"])
+            self.assertIsNone(body["action"])
+            self.assertTrue(started.wait(1))
+            release.set()
             process.assert_called_once_with(config, client, "owner-action-test", local_wake=True)
 
             bad_request = Request(
@@ -396,6 +868,81 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             self.assertEqual(rejected_origin.exception.code, 403)
             rejected_origin.exception.close()
 
+    def test_local_review_endpoint_uses_backstage_path_without_worker_action(self):
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        config = ConnectorConfig(
+            "https://worker.test",
+            "david",
+            "x" * 32,
+            Path("/tmp/repo"),
+            local_status_port=port,
+        )
+        lease = InteractivePollingLease()
+        expected = {
+            "ok": True,
+            "source": "backstage-local",
+            "reviewAction": {"operationId": "reviewop-local"},
+        }
+        with patch(
+            "scripts.new_owner_connector._local_review_action_result",
+            return_value=expected,
+        ) as apply:
+            start_local_status_server(config, lease, object())
+            deadline = time.time() + 2
+            while True:
+                try:
+                    with urlopen(
+                        f"http://127.0.0.1:{port}/photosbyelie/connector-status",
+                        timeout=0.2,
+                    ):
+                        break
+                except OSError:
+                    if time.time() >= deadline:
+                        self.fail("local connector test server did not start")
+                    time.sleep(0.02)
+
+            request = Request(
+                f"http://127.0.0.1:{port}{LOCAL_REVIEW_ACTION_PATH}",
+                data=json.dumps({
+                    "operation": "apply",
+                    "fixtureId": "fixture-expo",
+                    "assetIds": ["asset-1"],
+                    "reviewAction": "hide",
+                    "anchorAssetId": "asset-1",
+                }).encode("utf-8"),
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": "https://photos-by-elie.com",
+                },
+            )
+            with urlopen(request, timeout=1) as response:
+                body = json.loads(response.read())
+            self.assertEqual(body, expected)
+            apply.assert_called_once_with(config.repo_root, {
+                "operation": "apply",
+                "fixtureId": "fixture-expo",
+                "assetIds": ["asset-1"],
+                "reviewAction": "hide",
+                "anchorAssetId": "asset-1",
+            })
+
+            untrusted_request = Request(
+                f"http://127.0.0.1:{port}{LOCAL_REVIEW_ACTION_PATH}",
+                data=json.dumps({"operation": "undo", "operationId": "reviewop-local"}).encode("utf-8"),
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": "https://example.com",
+                },
+            )
+            with self.assertRaises(HTTPError) as rejected:
+                urlopen(untrusted_request, timeout=1)
+            self.assertEqual(rejected.exception.code, 403)
+            rejected.exception.close()
+
     def test_local_sidecar_open_action_is_claimed_for_this_connector(self):
         action = _local_sidecar_open_action(self.config, "local-sidecar-test")
 
@@ -410,6 +957,11 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             _owner_waste_basket_url(8007),
             "http://127.0.0.1:8007/owner-review.html?view=blocked",
         )
+
+    def test_waste_basket_browser_helper_requires_explicit_rollback(self):
+        with patch("scripts.new_owner_connector.LEGACY_BROWSER_OWNER_ENABLED", False):
+            with self.assertRaisesRegex(RuntimeError, "Browser Waste Basket is retired"):
+                _launch_waste_basket_for_browser(self.config)
 
     def test_sidecar_job_payload_surfaces_redirect_url(self):
         payload = _sidecar_job_public_payload(self.config, "local-sidecar-test", {
@@ -746,6 +1298,7 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             "scripts.new_owner_connector._load_local_modules",
             return_value=(None, None, None, None, apply),
         ):
+            timing = _new_action_timing("owner-action:action-1")
             result = execute_action(self.config, {
                 "id": "action-1",
                 "type": "photo-moderation",
@@ -756,7 +1309,7 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                     "requestKey": "attacker-request-key",
                     "source": "backstage-culling",
                 },
-            })
+            }, action_timing=timing)
 
         arm_call = worker.calls[0]
         self.assertEqual(arm_call[0], "arm")
@@ -769,6 +1322,10 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         self.assertEqual(calls[0][0]["request_key"], "owner-action:action-1")
         self.assertNotIn("requestKey", calls[0][0])
         self.assertEqual(calls[0][1]["operationId"], "owner-action:action-1")
+        self.assertEqual(result["timing"]["connector"], timing)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.remote.arm.owner-action:action-1"]["elapsedMs"], 0)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.local-moderation"]["elapsedMs"], 0)
+        self.assertGreaterEqual(timing["phases"]["lifecycle.outbox.replay"]["elapsedMs"], 0)
         self.assertEqual(result["lifecycle"]["replay"][-1]["state"], "locally_acked")
         self.assertEqual(
             [item[2] for item in worker.calls],
@@ -779,6 +1336,151 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                 "connector-lifecycle:owner-action:action-1:ack",
             ],
         )
+
+    def test_connector_moves_proven_local_only_asset_without_remote_arm(self):
+        calls = []
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.move_to_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "local-only-action",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-x",
+                    "photoIds": ["asset-2"],
+                    "source": "backstage-review",
+                },
+            })
+
+        worker_client.assert_not_called()
+        self.assertEqual(calls[0][0]["request_key"], "owner-action:local-only-action")
+        self.assertIsNone(calls[0][1])
+        self.assertEqual(result["lifecycle"], {
+            "scope": "local-only",
+            "remoteArmRequired": False,
+            "reason": "no-cloud-media-evidence",
+        })
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT state FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                "recoverable",
+            )
+
+    def test_connector_rejects_local_only_global_tombstone_without_remote_arm(self):
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, None),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "global tombstone operations require deployed lifecycle eligibility",
+            ):
+                execute_action(self.config, {
+                    "id": "local-only-empty",
+                    "type": "photo-moderation",
+                    "payload": {
+                        "operation": "waste-basket-empty",
+                        "photoIds": ["asset-2"],
+                        "source": "backstage-review",
+                        "confirmed": True,
+                        "confirmationToken": "EMPTY",
+                    },
+                })
+
+        worker_client.assert_not_called()
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_connector_partitions_mixed_empty_and_retains_local_only_asset(self):
+        worker = self.FakeWorker(self)
+        calls = []
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-2"],
+            source="backstage-culling",
+            request_key="seed-local-only",
+            db_path=self.db,
+        )
+        deployed_arm = self._arm({
+            "operationId": "seed-deployed",
+            "operation": "x",
+            "denied": True,
+            "items": lifecycle_gateway.derive_deployed_lifecycle_members(
+                self.root, ["asset-1"], self.db
+            ),
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(
+            self.root, "x", ["asset-1"], deployed_arm, self.db
+        )
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key="seed-deployed",
+            deployed_lifecycle=deployed_arm,
+            db_path=self.db,
+        )
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.empty_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                confirmed=payload["confirmed"],
+                confirmation_token=payload["confirmationToken"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient", return_value=worker), patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "mixed-empty",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-empty",
+                    "photoIds": [],
+                    "source": "backstage-waste-basket",
+                    "confirmed": True,
+                    "confirmationToken": "EMPTY_WASTE_BASKET",
+                },
+            }, lifecycle_client=worker)
+
+        self.assertEqual(calls[0][0]["photo_ids"], ["asset-1"])
+        self.assertEqual(result["result"]["assetIds"], ["asset-1"])
+        self.assertEqual(result["lifecycle"]["scope"], "mixed")
+        self.assertTrue(result["lifecycle"]["partial"])
+        self.assertEqual(result["lifecycle"]["deployedAssetIds"], ["asset-1"])
+        self.assertEqual(result["lifecycle"]["retainedLocalOnlyAssetIds"], ["asset-2"])
+        with sqlite3.connect(self.db) as connection:
+            states = dict(connection.execute(
+                "SELECT asset_id, state FROM owner_waste_basket_entries ORDER BY asset_id"
+            ).fetchall())
+        self.assertEqual(states, {"asset-1": "tombstoned", "asset-2": "recoverable"})
 
     def test_commit_then_arm_response_loss_replays_stable_intent_and_aborts(self):
         worker = self.FakeWorker(self, lose_response_once_at="arm")
@@ -831,6 +1533,44 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             ),
             "aborted",
         )
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM owner_connector_lifecycle_arm_intents"
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_deterministic_remote_identity_rejection_retires_pre_mutation_intent(self):
+        members = lifecycle_gateway.derive_deployed_lifecycle_members(self.root, ["asset-1"], self.db)
+        request = {
+            "operationId": "owner-action:identity-rejected",
+            "operation": "empty",
+            "denied": True,
+            "items": members,
+        }
+        intent = new_owner_connector._persist_lifecycle_arm_intent(
+            self.config,
+            "empty",
+            ["asset-1"],
+            request,
+        )
+
+        class RejectingWorker:
+            def request(self, *_args, **_kwargs):
+                raise WorkerRequestError(
+                    "Lifecycle arm membership must exactly match the activated canonical manifest.",
+                    status=409,
+                    code="lifecycle_identity_conflict",
+                )
+
+        with self.assertRaisesRegex(WorkerRequestError, "activated canonical manifest"):
+            new_owner_connector._reconcile_lifecycle_arm_intent(
+                self.config,
+                RejectingWorker(),
+                lifecycle_gateway,
+                intent,
+            )
         with sqlite3.connect(self.db) as connection:
             self.assertEqual(
                 connection.execute(
@@ -1077,6 +1817,40 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         self.assertEqual(second[0]["state"], "completed")
         self.assertEqual(third, [])
         self.assertEqual(execute.call_count, 1)
+
+    def test_hosted_missing_r2_retries_are_bounded_and_blocked(self):
+        queued = lifecycle_gateway.queue_hosted_lifecycle_request(
+            self.root, operation="waste-basket-x", asset_ids=["asset-1"],
+            session_id="session-one", fixture_id="fixture-1", request_key="connector-missing-r2",
+            db_path=self.db,
+        )
+        with patch(
+            "scripts.new_owner_connector.execute_action",
+            side_effect=RuntimeError("canonical R2 mapping is missing for asset-1"),
+        ) as execute:
+            drained = [
+                drain_hosted_lifecycle_requests(self.config, self.FakeWorker(self))
+                for _ in range(lifecycle_gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+            ]
+            after_block = drain_hosted_lifecycle_requests(
+                self.config, self.FakeWorker(self)
+            )
+
+        self.assertEqual(execute.call_count, lifecycle_gateway.MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        self.assertEqual([item[0]["state"] for item in drained], [
+            "queued", "queued", "blocked",
+        ])
+        self.assertEqual(after_block, [])
+        status = lifecycle_gateway.hosted_lifecycle_request_status(
+            self.root,
+            queued["requestId"],
+            session_id="session-one",
+            fixture_id="fixture-1",
+            db_path=self.db,
+        )
+        self.assertEqual(status["state"], "blocked")
+        self.assertEqual(status["disposition"], "blocked")
+        self.assertIn("Repair the canonical R2 mapping", status["nextAction"])
 
     def test_hosted_queue_restart_finishes_committed_outbox_without_remutating(self):
         queued = lifecycle_gateway.queue_hosted_lifecycle_request(

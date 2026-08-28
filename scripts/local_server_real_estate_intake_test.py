@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import local_server
@@ -131,91 +130,22 @@ class ApplePhotosRealEstateIntakeTests(unittest.TestCase):
         self.assertFalse(blueprint["outputs"]["publicPreview"])
         self.assertFalse(blueprint["outputs"]["watermarkPublicPreviews"])
 
-    def test_new_owner_album_mode_uses_the_existing_connector_action(self):
-        payload = self._new_owner_action("apple-photos-re-albums")
-        with tempfile.TemporaryDirectory() as temp_dir, patch.object(
-            local_server,
-            "_run_apple_photos_bridge",
-            return_value={
-                "ok": True,
-                "albums": [{"localIdentifier": "album-1", "title": "La Concha", "assetCount": 36}],
-            },
-        ):
-            response = local_server.new_owner_connector_result(Path(temp_dir), payload)
+    def test_new_owner_apple_photos_modes_fail_closed_without_backstage(self):
+        for mode in ("apple-photos-re-albums", "apple-photos-re-preflight", "apple-photos-re-assign"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp_dir:
+                response = local_server.new_owner_connector_result(
+                    Path(temp_dir),
+                    self._new_owner_action(
+                        mode,
+                        albums=[{"albumLocalIdentifier": "album-1", "albumName": "La Concha"}],
+                        selectedAssetIds=["asset-1"],
+                    ),
+                )
 
-        self.assertTrue(response["ok"])
-        self.assertEqual(response["result"]["workflow"], "apple-photos-real-estate-intake")
-        self.assertEqual(response["result"]["albums"][0]["localIdentifier"], "album-1")
-        self.assertFalse(response["result"]["published"])
-
-    def test_new_owner_preflight_exposes_private_candidates_for_selection(self):
-        payload = self._new_owner_action(
-            "apple-photos-re-preflight",
-            albums=[{"albumLocalIdentifier": "album-1", "albumName": "La Concha"}],
-            limit=60,
-        )
-        with tempfile.TemporaryDirectory() as temp_dir, patch.object(
-            local_server,
-            "_apple_photos_preflight",
-            return_value={
-                "ok": True,
-                "album": {"localIdentifier": "album-1", "title": "La Concha"},
-                "count": 2,
-                "candidateCount": 1,
-                "burstFilter": {"skippedCount": 1},
-                "items": [
-                    {
-                        "localIdentifier": "asset-1",
-                        "filename": "pool.jpg",
-                        "eligible": True,
-                        "status": "candidate",
-                    },
-                    {
-                        "localIdentifier": "asset-2",
-                        "filename": "pool-burst.jpg",
-                        "eligible": False,
-                        "status": "blocked_by_policy",
-                        "burstFilterOutcome": "waste-basket",
-                    },
-                ],
-            },
-        ):
-            response = local_server.new_owner_connector_result(Path(temp_dir), payload)
-
-        self.assertEqual(len(response["preview"]["items"]), 1)
-        item = response["preview"]["items"][0]
-        self.assertEqual(item["assetId"], "asset-1")
-        self.assertEqual(item["albumName"], "La Concha")
-        self.assertEqual(response["result"]["inspectedCount"], 2)
-        self.assertEqual(response["result"]["burstFilteredCount"], 1)
-        self.assertIn("1 burst frame(s) filtered", response["result"]["message"])
-        self.assertEqual(response["result"]["intakeAssignment"]["project"], "Apartment 1")
-        self.assertFalse(response["result"]["published"])
-
-    def test_new_owner_assign_mode_stays_private_and_uses_persistent_re_import(self):
-        payload = self._new_owner_action(
-            "apple-photos-re-assign",
-            albums=[{"albumLocalIdentifier": "album-1", "albumName": "La Concha"}],
-            selectedAssetIds=["asset-1"],
-        )
-        imported = {
-            "ok": True,
-            "message": "Assigned locally. Nothing was published.",
-            "destinationKind": "real_estate",
-            "intakeAssignment": {"track": "RE", "fixture": "La Concha", "project": "Apartment 1"},
-        }
-        with tempfile.TemporaryDirectory() as temp_dir, patch.object(
-            local_server,
-            "_start_apple_photos_import",
-            return_value=imported,
-        ) as start_import:
-            response = local_server.new_owner_connector_result(Path(temp_dir), payload)
-
-        start_payload = start_import.call_args.args[1]
-        self.assertEqual(start_payload["selectedAssetIds"], ["asset-1"])
-        self.assertEqual(start_payload["destinationKind"], "real_estate")
-        self.assertFalse(response["result"]["published"])
-        self.assertEqual(response["result"]["destinationKind"], "real_estate")
+            self.assertFalse(response["ok"])
+            self.assertEqual(response["result"]["code"], "backstage_required")
+            self.assertIn("signed PhotosByElie Backstage", response["result"]["error"])
+            self.assertEqual(response["preview"], {"items": [], "stateCounts": []})
 
 
 if __name__ == "__main__":

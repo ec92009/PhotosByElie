@@ -19,7 +19,7 @@ REPO_ROOT = Path(
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from apple_photos_metadata_writer import SignedPhotosBridgeAdapter, commit_writeback  # noqa: E402
+from apple_photos_metadata_writer import BackstagePhotosMetadataAdapter, commit_writeback  # noqa: E402
 from native_catalog_promotion import refresh_public_catalog_artifacts  # noqa: E402
 from native_publication_pipeline import run_upload_batch, upload_run_status  # noqa: E402
 from sidecar_state_db import (  # noqa: E402
@@ -288,7 +288,7 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
             repo_root,
             "",
             giveback_ids,
-            adapter=SignedPhotosBridgeAdapter(repo_root),
+            adapter=BackstagePhotosMetadataAdapter(repo_root),
         )
         if giveback_ids
         else {

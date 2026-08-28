@@ -93,7 +93,8 @@ struct FixtureHierarchyMenu: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .accessibilityLabel("\(title): \(selectedLabel)")
+        .accessibilityLabel(title)
+        .accessibilityValue(selectedLabel)
         .backstageHelp("Choose the exact fixture target. The full fixture hierarchy is shown as an indented list.")
     }
 
@@ -142,11 +143,19 @@ struct FixturePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Label("Current fixture", systemImage: "scope")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 4)
+            HStack(alignment: .center, spacing: 6) {
+                FixtureHierarchyMenu(
+                    "Current fixture",
+                    roots: model.fixtures.selectionHierarchy(),
+                    selection: Binding(
+                        get: { model.selectedFixtureID },
+                        set: { _ = model.selectFixture($0) }
+                    ),
+                    allowsSelection: { !$0.isArchived }
+                )
+                .disabled(model.isFixtureChooserDisabled || isPreviewMode)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
                 Button {
                     Task { await model.loadFixtures() }
                 } label: {
@@ -159,18 +168,6 @@ struct FixturePicker: View {
             }
 
             currentFixtureSummary
-
-            FixtureHierarchyMenu(
-                "Current fixture",
-                roots: model.fixtures.selectionHierarchy(),
-                selection: Binding(
-                    get: { model.selectedFixtureID },
-                    set: { _ = model.selectFixture($0) }
-                ),
-                allowsSelection: { !$0.isArchived }
-            )
-            .disabled(model.isFixtureChooserDisabled || isPreviewMode)
-            .frame(maxWidth: .infinity)
 
             if let explanation = model.fixtureChooserExplanation,
                model.fixtureSelectionAvailability != .ready {
@@ -200,11 +197,7 @@ struct FixturePicker: View {
             }
             .foregroundStyle(.secondary)
         case .ready:
-            Text(model.selectedFixtureBreadcrumb)
-                .font(.callout.weight(.semibold))
-                .lineLimit(1)
-                .truncationMode(.head)
-                .accessibilityLabel("Current fixture: \(model.selectedFixtureBreadcrumb)")
+            EmptyView()
         case .unavailable:
             Label("Fixture unavailable", systemImage: "exclamationmark.triangle")
                 .font(.callout.weight(.semibold))

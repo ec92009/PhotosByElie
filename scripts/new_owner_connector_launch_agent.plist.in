@@ -19,6 +19,8 @@
   <string>__REPO_ROOT__</string>
   <key>EnvironmentVariables</key>
   <dict>
+    <key>PBE_ENABLE_LEGACY_CONNECTOR_DAEMON</key>
+    <string>1</string>
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>PBE_CONNECTOR_DATA_ROOT</key>

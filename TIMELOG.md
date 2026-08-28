@@ -766,8 +766,30 @@ Clock state: running
 | 2026-08-11 | 17:55 CEST | 17:56 CEST | 0:01 | Re-evaluated the live PBE/PBB queue and selected PBB-79 as the highest-value safe next ticket, with PBE-147 as its paired UI acceptance surface; API runtime excluded. |
 | 2026-08-11 | 18:13 CEST | 18:28 CEST | 0:05 | Completed the authenticated PBE-92 buyer/wrong-account handoff, confirmed the live cross-account download-control failure, and stopped before any download; background probes, tests, Cloudflare inspection, and ticket API runtime excluded. |
 | 2026-08-11 | 18:28 CEST | 18:29 CEST | 0:01 | Authorized the PBE-92 wrong-account isolation repair and release path; background diagnosis, implementation, tests, deployment, live verification, and ticket API runtime excluded. |
+| 2026-08-21 | 18:18 CEST | 18:19 CEST | 0:01 | Resumed the PBB ticket loop and completed the PBB-105 source verification checkpoint; background implementation, tests, build, and ticket API runtime excluded. |
+| 2026-08-21 | 18:37 CEST | 18:38 CEST | 0:01 | Corrected the Tick/Tock human-gate alert cadence and paused for a pending download; background ticket investigation excluded. |
+| 2026-08-21 | 18:41 CEST | 18:42 CEST | 0:01 | Resumed the current PBB Tick goal after the download gate cleared; background ticket implementation and verification excluded. |
+| 2026-08-24 | 20:10 CEST | 20:16 CEST | 0:01 | Reported the build-180 Waste Basket Deleted-sort scroll regression and requested the updated GSA instructions be applied; background diagnosis, implementation, tests, and release work excluded. |
+| 2026-08-24 | 20:41 CEST | 20:42 CEST | 0:01 | Accepted the PBB-116 cross-desktop Quick Look behavior and continued PBB-103 row-wise Quick Look navigation; background implementation, tests, build, and installation excluded. |
+| 2026-08-25 | 00:11 CEST | 00:12 CEST | 0:01 | Reported that Empty Waste Basket remained enabled after the long operation and confirmed the missing terminal-feedback symptom; background PBE-134 release implementation, tests, deployment, signing, and installation excluded. |
+| 2026-08-25 | 08:21 CEST | 08:21 CEST | 0:00 | Paused at a safe checkpoint before expected network loss; GSA had already ended and no destructive action or worker was running. |
+| 2026-08-25 | 09:26 CEST | 09:26 CEST | 0:00 | Resumed from the network-loss checkpoint; no destructive action restarted automatically. |
+| 2026-08-25 | 11:31 CEST | 11:36 CEST | 0:02 | Approved PBB-120 universal-release work and confirmed Intel macOS 15 support; background implementation and build verification excluded. |
+| 2026-08-25 | 12:35 CEST | 12:36 CEST | 0:01 | Approved PBB-121 as the next bounded repair after Curie's enrollment-date failure; background diagnosis, implementation, and tests excluded. |
+| 2026-08-25 | 12:45 CEST | 12:46 CEST | 0:01 | Approved publication of the signed universal PBB-121 candidate and a retained-enrollment retry on Curie; background build, verification, upload, and ticket-update runtime excluded. |
+| 2026-08-25 | 13:10 CEST | 13:14 CEST | 0:02 | Installed build 193 on Curie, confirmed retained-device authentication on Intel macOS 15, and accepted PBB-121 after an error-free session refresh; waiting and background inspection excluded. |
+| 2026-08-25 | 13:16 CEST | 13:27 CEST | 0:03 | Diagnosed Curie's Photos denial through the Sequoia permission surface and confirmed PBB-94 is blocked by the missing signed Photos Library entitlement; waiting and background inspection excluded. |
+| 2026-08-25 | 18:24 CEST | 18:25 CEST | 0:01 | Approved the bounded PBB-123 canonical release-source guardrail implementation; background implementation, tests, and ticket API runtime excluded. |
+| 2026-08-25 | 17:54 CEST | 17:55 CEST | 0:01 | Approved PBB-79's source-only mixed Empty Waste Basket repair; background implementation, tests, and ticket API runtime excluded. |
+| 2026-08-25 | 21:47 CEST | 21:48 CEST | 0:01 | Approved the rehearsed PBB-107 canonical ghost-run dispositions; backup, database transaction, verification, commit, and ticket-update runtime excluded. |
+| 2026-08-25 | 22:02 CEST | 22:03 CEST | 0:01 | Reported that installed Backstage build 200 took roughly 40 seconds to settle Activity after the PBB-107 reconciliation; background diagnosis, implementation, tests, and build verification excluded. |
+| 2026-08-26 | 09:21 CEST | 09:22 CEST | 0:01 | Authorized PBB-105 color-toggle implementation across the grid and shared Quick Look surfaces; background implementation, tests, build, and installation excluded. |
+| 2026-08-26 | 19:14 CEST | 19:15 CEST | 0:01 | Clarified that IMG_4362 is the known fail-closed preview Retry because its legacy Photos identity is ambiguous; background PBE-143 contract work excluded. |
+| 2026-08-26 | 19:33 CEST | 19:40 CEST | 0:02 | Confirmed that healthy and unavailable cards can share IMG_4388/IMG_4387 filenames, and preserved the fail-closed rule that filenames never resolve or merge Photos identities; background test execution and ticket API runtime excluded. |
+| 2026-08-26 | 19:48 CEST | 19:51 CEST | 0:01 | Defined PBE-143's dry-run alias lookup, transactional insertion, and immutable-history retention contract without enabling live apply; background implementation and test execution excluded. |
+| 2026-08-27 | 10:11 CEST | 10:12 CEST | 0:01 | Directed the PBE-164 Gallery thumbnail lifecycle correction for bounded visible upgrades and scroll-cancelable APL backfill; background implementation, tests, build, commit, and ticket API runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:07
+Active collaboration time used: 38:32
 Remaining budget: not set

@@ -8,9 +8,13 @@ enum CullingPreviewFixtures {
     static func model(
         previewPanelVisible: Bool = true,
         loading: Bool = false,
-        missingThumbnail: Bool = false
+        missingThumbnail: Bool = false,
+        failedThumbnail: Bool = false
     ) -> BackstageViewModel {
-        let model = BackstageViewModel()
+        // Canvas previews must never reach the user's Photos library. The
+        // fixture still exercises the real BackstageViewModel retry path, but
+        // the injected service keeps every preview request synthetic.
+        let model = BackstageViewModel(photoLibrary: PreviewPhotoLibrary())
         let assets = sampleAssets
 
         model.installFixtureTree([
@@ -63,6 +67,10 @@ enum CullingPreviewFixtures {
         )
         if missingThumbnail {
             model.cullingThumbnails["expo-1"] = nil
+        }
+        if failedThumbnail {
+            model.cullingThumbnails["expo-1"] = nil
+            model.cullingThumbnailFailures["expo-1"] = .previewUnavailable
         }
         model.cullingSelection = OwnerSelectionModel(
             orderedIDs: assets.map(\.id),
@@ -196,7 +204,30 @@ enum CullingPreviewFixtures {
     }
 }
 
-#Preview("Culling — Compact") {
+private struct PreviewPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        PhotoPreview(
+            assetID: localIdentifier,
+            jpegData: Self.previewData,
+            pixelWidth: 1,
+            pixelHeight: 1
+        )
+    }
+
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.exportFailed("Canvas previews do not export Photos originals.")
+    }
+}
+
+#Preview("Gallery — Compact") {
     CullingView(
         model: CullingPreviewFixtures.model(previewPanelVisible: false),
         isPreviewMode: true
@@ -204,7 +235,15 @@ enum CullingPreviewFixtures {
     .frame(width: 900, height: 680)
 }
 
-#Preview("Culling — Applying Filters") {
+#Preview("Gallery — Narrow") {
+    CullingView(
+        model: CullingPreviewFixtures.model(previewPanelVisible: false),
+        isPreviewMode: true
+    )
+    .frame(width: 640, height: 680)
+}
+
+#Preview("Gallery — Applying Filters") {
     CullingView(
         model: CullingPreviewFixtures.model(loading: true),
         isPreviewMode: true
@@ -212,9 +251,17 @@ enum CullingPreviewFixtures {
     .frame(width: 1_200, height: 760)
 }
 
-#Preview("Culling — Thumbnail Pending") {
+#Preview("Gallery — Thumbnail Pending") {
     CullingView(
         model: CullingPreviewFixtures.model(missingThumbnail: true),
+        isPreviewMode: true
+    )
+    .frame(width: 1_200, height: 760)
+}
+
+#Preview("Gallery — Thumbnail Failure") {
+    CullingView(
+        model: CullingPreviewFixtures.model(failedThumbnail: true),
         isPreviewMode: true
     )
     .frame(width: 1_200, height: 760)

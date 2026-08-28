@@ -24,55 +24,17 @@ public struct StaticOwnerConnectorIdentity: OwnerConnectorIdentifying {
     }
 }
 
-public actor LocalOwnerConnectorIdentity: OwnerConnectorIdentifying {
-    private struct Status: Decodable {
-        var ok: Bool
-        var connectorId: String
-    }
+/// Identifies the explicitly selected connector authority without contacting a
+/// daemon or reading its credential-bearing config. Max remains the production
+/// writer until a separate authority migration injects another target.
+public struct LocalOwnerConnectorIdentity: OwnerConnectorIdentifying {
+    private let value: String
 
-    private let endpoints: [URL]
-    private let session: URLSession
-    private let fallback: String
-    private var cachedConnectorID: String?
-
-    public init(
-        endpoints: [URL] = [
-            URL(string: "http://127.0.0.1:8766/photosbyelie/connector-status")!,
-            URL(string: "http://localhost:8766/photosbyelie/connector-status")!,
-        ],
-        fallback: String = "max",
-        timeout: TimeInterval = 2
-    ) {
-        self.endpoints = endpoints
-        self.fallback = StaticOwnerConnectorIdentity.clean(fallback) ?? "max"
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = timeout
-        configuration.timeoutIntervalForResource = timeout
-        configuration.waitsForConnectivity = false
-        self.session = URLSession(configuration: configuration)
+    public init(target: String = "max") {
+        value = StaticOwnerConnectorIdentity.clean(target) ?? "max"
     }
 
     public func connectorID() async -> String {
-        if let cachedConnectorID {
-            return cachedConnectorID
-        }
-        for endpoint in endpoints {
-            do {
-                var request = URLRequest(url: endpoint)
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                let (data, response) = try await session.data(for: request)
-                guard let response = response as? HTTPURLResponse,
-                      (200..<300).contains(response.statusCode) else { continue }
-                let status = try JSONDecoder().decode(Status.self, from: data)
-                guard status.ok,
-                      let connectorID = StaticOwnerConnectorIdentity.clean(status.connectorId)
-                else { continue }
-                cachedConnectorID = connectorID
-                return connectorID
-            } catch {
-                continue
-            }
-        }
-        return fallback
+        value
     }
 }

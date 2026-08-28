@@ -32,6 +32,7 @@ import sidecar_state_db
 DEFAULT_DB = sidecar_state_db.DEFAULT_DB
 EMPTY_CONFIRMATION_TOKEN = "EMPTY_WASTE_BASKET"
 MAX_ASSET_IDS = 500
+MAX_HOSTED_LIFECYCLE_ATTEMPTS = 3
 
 NORMAL_SOURCES = {
     "backstage-culling",
@@ -113,14 +114,74 @@ def _db_path(repo_root: Path, db_path: Path | None) -> Path:
     return selected if selected.is_absolute() else repo_root / selected
 
 
+_HOT_PATH_REQUIRED_TABLES = frozenset({
+    "sidecar_assets",
+    "sidecar_decisions",
+    "sidecar_tombstones",
+    "sidecar_pending_sync",
+    "sidecar_upload_bridge_run_items",
+    "fixture_pool_assets",
+    "fixture_asset_placements",
+    "fixture_asset_decisions",
+    "asset_editorial_state",
+    "asset_delivery_state",
+    "r2_objects",
+    "asset_publications",
+    "public_catalog_publications",
+    "asset_sale_references",
+    "r2_quarantine",
+    "fixture_delivery_receipts",
+    "asset_upload_run_items",
+    "media_lifecycle",
+    "owner_waste_basket_entries",
+    "owner_waste_basket_provenance",
+    "owner_waste_basket_operations",
+    "owner_waste_basket_receipts",
+    "owner_lifecycle_operations",
+    "owner_lifecycle_outbox",
+    "owner_hosted_lifecycle_requests",
+})
+
+
+def _hot_path_schema_is_ready(connection: sqlite3.Connection) -> bool:
+    """Recognize the complete lifecycle schema without running migrations.
+
+    Action-scoped connectors are short-lived processes, so module-level schema
+    caches cannot protect their hot path.  This bounded catalog check keeps
+    normal X/Restore work local-fast while incomplete or older databases still
+    take the full idempotent migration path below.
+    """
+    tables = {
+        str(row["name"])
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    if not _HOT_PATH_REQUIRED_TABLES.issubset(tables):
+        return False
+    hosted_columns = {
+        str(row["name"])
+        for row in connection.execute(
+            "PRAGMA table_info(owner_hosted_lifecycle_requests)"
+        ).fetchall()
+    }
+    return {"disposition", "blocked_at"}.issubset(hosted_columns)
+
+
 def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection:
     """Open the Owner DB and ensure every related schema is present."""
     path = _db_path(repo_root, db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sidecar_state_db.connect(repo_root, path)
+    connection = sqlite3.connect(path, timeout=15)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA busy_timeout = 15000")
+    connection.execute("PRAGMA foreign_keys = ON")
+    if _hot_path_schema_is_ready(connection):
+        return connection
     # These are the same SQLite file, but each historical module owns its
     # schema helper.  Calling them here makes the gateway safe for synthetic
     # fixtures and for a partially initialized local checkout.
+    sidecar_state_db.ensure_schema(connection)
     owner_state_db.ensure_schema(connection)
     fixture_pipeline.ensure_schema(connection)
     connection.executescript(
@@ -264,12 +325,16 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
           result_json          TEXT NOT NULL DEFAULT '{}',
           error_text           TEXT NOT NULL DEFAULT '',
           attempt_count        INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+          disposition          TEXT NOT NULL DEFAULT '',
           created_at           TEXT NOT NULL,
           updated_at           TEXT NOT NULL,
-          completed_at         TEXT
+          completed_at         TEXT,
+          blocked_at           TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_state
           ON owner_hosted_lifecycle_requests(state, created_at, request_id);
+        CREATE INDEX IF NOT EXISTS idx_owner_hosted_lifecycle_requests_session
+          ON owner_hosted_lifecycle_requests(session_id, fixture_id, created_at, request_id);
         CREATE TRIGGER IF NOT EXISTS owner_hosted_lifecycle_request_identity_immutable
           BEFORE UPDATE ON owner_hosted_lifecycle_requests
           WHEN OLD.request_id <> NEW.request_id
@@ -283,6 +348,15 @@ def _connect(repo_root: Path, db_path: Path | None = None) -> sqlite3.Connection
           END;
         """
     )
+    hosted_columns = _columns(connection, "owner_hosted_lifecycle_requests")
+    if "disposition" not in hosted_columns:
+        connection.execute(
+            "ALTER TABLE owner_hosted_lifecycle_requests ADD COLUMN disposition TEXT NOT NULL DEFAULT ''"
+        )
+    if "blocked_at" not in hosted_columns:
+        connection.execute(
+            "ALTER TABLE owner_hosted_lifecycle_requests ADD COLUMN blocked_at TEXT"
+        )
     connection.commit()
     return connection
 
@@ -293,20 +367,57 @@ def ensure_schema(repo_root: Path, db_path: Path | None = None) -> None:
 
 
 def _hosted_request_payload(row: sqlite3.Row) -> dict[str, Any]:
+    storage_state = str(row["state"])
+    disposition = str(row["disposition"] or "")
+    state = "blocked" if storage_state == "failed" and disposition == "blocked" else storage_state
+    error = str(row["error_text"] or "")
+    next_action = ""
+    if state == "blocked":
+        next_action = (
+            "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action."
+            if _is_missing_canonical_r2_error(error)
+            else "Inspect the recorded error, repair the cause, then submit a new Owner action."
+        )
     return {
         "requestId": str(row["request_id"]),
         "sessionId": str(row["session_id"]),
         "fixtureId": str(row["fixture_id"]),
         "operation": str(row["operation"]),
         "assetIds": json.loads(str(row["asset_ids_json"])),
-        "state": str(row["state"]),
+        "state": state,
+        "storageState": storage_state,
+        "disposition": disposition,
         "result": json.loads(str(row["result_json"] or "{}")),
-        "error": str(row["error_text"] or ""),
+        "error": error,
         "attemptCount": int(row["attempt_count"] or 0),
+        "maxAttempts": MAX_HOSTED_LIFECYCLE_ATTEMPTS,
+        "nextAction": next_action,
         "createdAt": str(row["created_at"]),
         "updatedAt": str(row["updated_at"]),
         "completedAt": str(row["completed_at"] or ""),
+        "blockedAt": str(row["blocked_at"] or ""),
     }
+
+
+def _is_missing_canonical_r2_error(error: str) -> bool:
+    normalized = str(error or "").casefold()
+    return (
+        "canonical r2 mapping is missing" in normalized
+        or "unsupported or incomplete r2 mapping" in normalized
+        or "ambiguous canonical r2 mapping" in normalized
+    )
+
+
+def _blocked_hosted_lifecycle_error(error: str, attempt_count: int) -> str:
+    base = str(error or "Hosted lifecycle request retry budget exhausted.").strip()
+    if _is_missing_canonical_r2_error(base):
+        action = "Repair the canonical R2 mapping in Owner.sqlite, then submit a new Owner action."
+    else:
+        action = "Inspect this error, repair the cause, then submit a new Owner action."
+    return (
+        f"{base} Automatic retries stopped after {attempt_count} attempts. "
+        f"{action}"
+    )[:1000]
 
 
 def queue_hosted_lifecycle_request(
@@ -357,6 +468,21 @@ def queue_hosted_lifecycle_request(
                 raise WasteBasketError("hosted lifecycle idempotency key conflicts with its durable intent")
             connection.rollback()
             return _hosted_request_payload(existing)
+        active = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE session_id = ? AND fixture_id = ?
+                 AND state IN ('queued', 'running')
+               ORDER BY rowid DESC LIMIT 1""",
+            (clean_session, clean_fixture),
+        ).fetchone()
+        if active is not None:
+            # A browser can lose its same-tab cache or reload after its polling
+            # window expires. Return the already-durable request instead of
+            # accepting a second lifecycle intent for the frozen session.
+            connection.rollback()
+            payload = _hosted_request_payload(active)
+            payload["resumedActive"] = True
+            return payload
         now = _now()
         request_id = f"hlr-{uuid.uuid4().hex}"
         connection.execute(
@@ -396,6 +522,95 @@ def hosted_lifecycle_request_status(
         if row is None:
             raise WasteBasketError("hosted lifecycle request is unavailable for this Owner session")
         return _hosted_request_payload(row)
+    finally:
+        connection.close()
+
+
+def latest_hosted_lifecycle_request(
+    repo_root: Path,
+    *,
+    session_id: str,
+    fixture_id: str,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return the newest durable request for one frozen Owner session.
+
+    This is a read-only recovery seam for browser reload/storage-denial cases.
+    Session and fixture identity remain mandatory so an opaque request can
+    never be discovered across Owner leases.
+    """
+    normalized_session_id = str(session_id or "").strip()
+    normalized_fixture_id = str(fixture_id or "").strip()
+    if not normalized_session_id or not normalized_fixture_id:
+        raise WasteBasketError("hosted lifecycle request identity is incomplete")
+    connection = _connect(repo_root, db_path)
+    try:
+        row = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE session_id = ? AND fixture_id = ?
+               ORDER BY rowid DESC LIMIT 1""",
+            (normalized_session_id, normalized_fixture_id),
+        ).fetchone()
+        return _hosted_request_payload(row) if row is not None else None
+    finally:
+        connection.close()
+
+
+def replace_completed_hosted_lifecycle_result(
+    repo_root: Path,
+    request_id: str,
+    *,
+    session_id: str,
+    fixture_id: str,
+    expected_result: dict[str, Any],
+    result: dict[str, Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Replace one completed hosted result with optimistic concurrency.
+
+    Projection retry is deliberately allowed to update only ``result_json``.
+    The hosted request identity, authoritative lifecycle operation, and queue
+    state remain immutable, and a concurrent or stale caller cannot overwrite
+    a newer projection receipt.
+    """
+
+    normalized_request_id = str(request_id or "").strip()
+    normalized_session_id = str(session_id or "").strip()
+    normalized_fixture_id = str(fixture_id or "").strip()
+    if not normalized_request_id or not normalized_session_id or not normalized_fixture_id:
+        raise WasteBasketError("hosted lifecycle result identity is incomplete")
+    if not isinstance(expected_result, dict) or not isinstance(result, dict):
+        raise WasteBasketError("hosted lifecycle result replacement requires JSON objects")
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            """SELECT * FROM owner_hosted_lifecycle_requests
+               WHERE request_id = ? AND session_id = ? AND fixture_id = ?""",
+            (normalized_request_id, normalized_session_id, normalized_fixture_id),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request is unavailable for this Owner session")
+        if str(row["state"]) != "completed":
+            raise WasteBasketError("hosted lifecycle projection requires a completed authoritative request")
+        current_result = json.loads(str(row["result_json"] or "{}"))
+        if current_result != expected_result:
+            raise WasteBasketError("hosted lifecycle projection result changed before retry")
+        connection.execute(
+            """UPDATE owner_hosted_lifecycle_requests
+               SET result_json = ?, updated_at = ?
+               WHERE request_id = ?""",
+            (_json(result), _now(), normalized_request_id),
+        )
+        updated = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
+        ).fetchone()
+        connection.commit()
+        return _hosted_request_payload(updated)
+    except Exception:
+        connection.rollback()
+        raise
     finally:
         connection.close()
 
@@ -448,24 +663,58 @@ def claim_hosted_lifecycle_request(
     request_id: str,
     db_path: Path | None = None,
 ) -> dict[str, Any]:
+    normalized_request_id = str(request_id or "").strip()
     connection = _connect(repo_root, db_path)
     try:
         connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
+        ).fetchone()
+        if row is None:
+            raise WasteBasketError("hosted lifecycle request is not claimable")
+        if str(row["state"]) not in {"queued", "running"}:
+            raise WasteBasketError("hosted lifecycle request is not claimable")
+        attempt_count = int(row["attempt_count"] or 0)
+        if attempt_count >= MAX_HOSTED_LIFECYCLE_ATTEMPTS:
+            now = _now()
+            connection.execute(
+                """UPDATE owner_hosted_lifecycle_requests
+                   SET state = 'failed', disposition = 'blocked',
+                       error_text = ?, updated_at = ?, completed_at = ?, blocked_at = ?
+                   WHERE request_id = ? AND state IN ('queued', 'running')""",
+                (
+                    _blocked_hosted_lifecycle_error(
+                        str(row["error_text"] or ""), attempt_count
+                    ),
+                    now,
+                    now,
+                    now,
+                    normalized_request_id,
+                ),
+            )
+            blocked = connection.execute(
+                "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+                (normalized_request_id,),
+            ).fetchone()
+            connection.commit()
+            return _hosted_request_payload(blocked)
         connection.execute(
             """UPDATE owner_hosted_lifecycle_requests
                SET state = 'running', attempt_count = attempt_count + 1,
-                   error_text = '', updated_at = ?
+                   disposition = '', error_text = '', updated_at = ?,
+                   completed_at = NULL, blocked_at = NULL
                WHERE request_id = ? AND state IN ('queued', 'running')""",
-            (_now(), str(request_id or "").strip()),
+            (_now(), normalized_request_id),
         )
-        row = connection.execute(
+        claimed = connection.execute(
             "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
-            (str(request_id or "").strip(),),
+            (normalized_request_id,),
         ).fetchone()
-        if row is None or str(row["state"]) not in {"running", "completed"}:
+        if claimed is None or str(claimed["state"]) != "running":
             raise WasteBasketError("hosted lifecycle request is not claimable")
         connection.commit()
-        return _hosted_request_payload(row)
+        return _hosted_request_payload(claimed)
     except Exception:
         connection.rollback()
         raise
@@ -482,32 +731,48 @@ def finish_hosted_lifecycle_request(
     retryable: bool = False,
     db_path: Path | None = None,
 ) -> dict[str, Any]:
+    normalized_request_id = str(request_id or "").strip()
     connection = _connect(repo_root, db_path)
     try:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
-            "SELECT state FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
-            (str(request_id or "").strip(),),
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
         ).fetchone()
         if row is None:
             raise WasteBasketError("hosted lifecycle request does not exist")
         if str(row["state"]) == "completed":
-            completed = connection.execute(
-                "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
-            ).fetchone()
             connection.rollback()
-            return _hosted_request_payload(completed)
+            return _hosted_request_payload(row)
+        if str(row["state"]) == "failed" and str(row["disposition"] or "") == "blocked":
+            connection.rollback()
+            return _hosted_request_payload(row)
         now = _now()
-        state = "queued" if error and retryable else "failed" if error else "completed"
+        attempt_count = int(row["attempt_count"] or 0)
+        error_text = str(error or "").strip()
+        blocked = bool(error_text and retryable and attempt_count >= MAX_HOSTED_LIFECYCLE_ATTEMPTS)
+        state = "failed" if error_text and not retryable else "failed" if blocked else "queued" if error_text else "completed"
+        disposition = "blocked" if blocked else ""
+        stored_error = _blocked_hosted_lifecycle_error(error_text, attempt_count) if blocked else error_text[:1000]
         connection.execute(
             """UPDATE owner_hosted_lifecycle_requests
-               SET state = ?, result_json = ?, error_text = ?, updated_at = ?, completed_at = ?
+               SET state = ?, disposition = ?, result_json = ?, error_text = ?,
+                   updated_at = ?, completed_at = ?, blocked_at = ?
                WHERE request_id = ?""",
-            (state, _json(result or {}), str(error or "")[:1000], now,
-             now if state in {"completed", "failed"} else None, str(request_id or "").strip()),
+            (
+                state,
+                disposition,
+                _json(result or {}),
+                stored_error,
+                now,
+                now if state in {"completed", "failed"} else None,
+                now if blocked else None,
+                normalized_request_id,
+            ),
         )
         completed = connection.execute(
-            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?", (request_id,)
+            "SELECT * FROM owner_hosted_lifecycle_requests WHERE request_id = ?",
+            (normalized_request_id,),
         ).fetchone()
         connection.commit()
         return _hosted_request_payload(completed)
@@ -584,8 +849,22 @@ def _snapshot(
     asset_id: str,
     captured_at: str,
 ) -> str:
+    return _snapshot_payloads(
+        connection,
+        entry_id,
+        captured_at,
+        _provenance_rows(connection, asset_id),
+    )
+
+
+def _snapshot_payloads(
+    connection: sqlite3.Connection,
+    entry_id: str,
+    captured_at: str,
+    provenance_rows: list[tuple[str, str, dict[str, Any]]],
+) -> str:
     digest_items: list[dict[str, Any]] = []
-    for table, relation_key, payload in _provenance_rows(connection, asset_id):
+    for table, relation_key, payload in provenance_rows:
         row_json = _json(payload)
         row_hash = hashlib.sha256(row_json.encode("utf-8")).hexdigest()
         connection.execute(
@@ -598,6 +877,122 @@ def _snapshot(
         )
         digest_items.append({"relation": table, "key": relation_key, "sha256": row_hash})
     return _hash(digest_items)
+
+
+def _adopt_legacy_lifecycle_entries(
+    connection: sqlite3.Connection,
+    requested_ids: Iterable[Any],
+    *,
+    lifecycle_states: set[str],
+) -> list[str]:
+    """Adopt pre-gateway lifecycle rows at an explicit mutation boundary.
+
+    Older Backstage/Sidecar paths wrote ``media_lifecycle`` directly. They
+    remain visible in the private ledger, but have no immutable PBB-79 entry,
+    which used to make an explicit Empty action fail before it reached the
+    gateway. Adoption captures the exact existing rows as provenance; it does
+    not change their lifecycle state or touch source/R2/catalog data.
+    """
+    states = sorted({state for state in lifecycle_states if state in {"hidden", "discarded"}})
+    if not states or not _table_exists(connection, "media_lifecycle"):
+        return []
+    ids = _unique_ids(requested_ids)
+    placeholders = ",".join("?" for _ in states)
+    if ids:
+        id_placeholders = ",".join("?" for _ in ids)
+        rows = connection.execute(
+            f"""SELECT * FROM media_lifecycle
+                WHERE media_id IN ({id_placeholders})
+                  AND lifecycle_state IN ({placeholders})
+                ORDER BY media_id""",
+            [*ids, *states],
+        ).fetchall()
+    else:
+        rows = connection.execute(
+            f"""SELECT * FROM media_lifecycle
+                WHERE lifecycle_state IN ({placeholders})
+                ORDER BY media_id""",
+            states,
+        ).fetchall()
+
+    adopted: list[str] = []
+    now = _now()
+    for lifecycle_row in rows:
+        asset_id = str(lifecycle_row["media_id"] or "").strip()
+        if not asset_id:
+            continue
+        existing = connection.execute(
+            "SELECT entry_id FROM owner_waste_basket_entries WHERE asset_id = ? ORDER BY created_at DESC LIMIT 1",
+            (asset_id,),
+        ).fetchone()
+        if existing is not None:
+            continue
+        provenance_rows = _provenance_rows(connection, asset_id)
+        captured_at = next(
+            (
+                str(lifecycle_row[name] or "").strip()
+                for name in ("hidden_at", "discarded_at", "updated_at")
+                if name in lifecycle_row.keys() and str(lifecycle_row[name] or "").strip()
+            ),
+            now,
+        )
+        entry_id = f"wbe-legacy-{hashlib.sha256(asset_id.encode('utf-8')).hexdigest()[:32]}"
+        connection.execute(
+            """INSERT INTO owner_waste_basket_entries
+              (entry_id, asset_id, state, source, actor, fixture_id, gallery_id, reason,
+               provenance_sha256, captured_at, created_at, updated_at)
+              VALUES (?, ?, 'recoverable', 'legacy-media-lifecycle',
+                      'legacy-lifecycle-adoption', ?, '', ?, ?, ?, ?, ?)""",
+            (
+                entry_id,
+                asset_id,
+                str(lifecycle_row["source_slug"] or lifecycle_row["previous_slug"] or "").strip(),
+                "Adopted legacy media_lifecycle row before explicit Waste Basket mutation.",
+                _hash([{"relation": table, "key": key, "row": row} for table, key, row in provenance_rows]),
+                captured_at,
+                now,
+                now,
+            ),
+        )
+        provenance_sha256 = _snapshot_payloads(
+            connection,
+            entry_id,
+            captured_at,
+            provenance_rows,
+        )
+        connection.execute(
+            "UPDATE owner_waste_basket_entries SET provenance_sha256 = ? WHERE entry_id = ?",
+            (provenance_sha256, entry_id),
+        )
+        adopted.append(asset_id)
+    return adopted
+
+
+def _adopt_legacy_lifecycle_for_operation(
+    repo_root: Path,
+    operation: str,
+    requested_ids: Iterable[Any],
+    db_path: Path | None = None,
+) -> list[str]:
+    states = {"discarded"} if operation == "tombstone-restore" else {"hidden"}
+    connection = _connect(repo_root, db_path)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        adopted = _adopt_legacy_lifecycle_entries(
+            connection,
+            requested_ids,
+            lifecycle_states=states,
+        )
+        if adopted:
+            connection.commit()
+        else:
+            connection.rollback()
+        return adopted
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _validate_source(
@@ -815,7 +1210,9 @@ def derive_deployed_lifecycle_members(
     }
     try:
         members = []
+        canonical_media_ids: set[str] = set()
         for asset_id in ids:
+            canonical_media_id = asset_id
             rows = connection.execute(
                 """SELECT bucket, object_key FROM r2_objects
                    WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
@@ -846,15 +1243,210 @@ def derive_deployed_lifecycle_members(
                     if bucket and object_key:
                         bindings.add((bucket, object_key))
             if not bindings:
+                legacy_media = connection.execute(
+                    """SELECT public_preview_keys_json, private_keys_json
+                       FROM media_lifecycle WHERE media_id = ?""",
+                    (asset_id,),
+                ).fetchone()
+                if legacy_media is not None:
+                    for bucket, column in (("public", "public_preview_keys_json"), ("private", "private_keys_json")):
+                        try:
+                            keys = json.loads(str(legacy_media[column] or "[]"))
+                        except (TypeError, ValueError, json.JSONDecodeError):
+                            keys = []
+                        if isinstance(keys, list):
+                            bindings.update(
+                                (bucket, str(key).strip())
+                                for key in keys
+                                if str(key or "").strip()
+                            )
+            if not bindings:
+                # A reindexed Photos row can retain its old local identifier in
+                # raw_json. Trust that bridge only when a successful upload row
+                # and current R2 ledger entries agree on one photo identity.
+                upload_photo_ids = [
+                    str(row["photo_id"])
+                    for row in connection.execute(
+                        """WITH requested_asset AS (
+                             SELECT asset_id,
+                                    NULLIF(
+                                      json_extract(
+                                        CASE WHEN json_valid(raw_json) THEN raw_json ELSE '{}' END,
+                                        '$.localIdentifier'
+                                      ),
+                                      ''
+                                    ) AS local_identifier
+                               FROM sidecar_assets
+                              WHERE asset_id = ?
+                           )
+                           SELECT DISTINCT bridge.photo_id
+                             FROM requested_asset AS asset
+                             JOIN sidecar_upload_bridge_run_items AS bridge
+                               ON bridge.asset_id = asset.asset_id
+                               OR bridge.asset_id = asset.local_identifier
+                            WHERE bridge.status = 'uploaded'
+                              AND bridge.upload_status IN ('uploaded', 'uploaded_with_skips')
+                              AND COALESCE(bridge.photo_id, '') <> ''
+                              AND EXISTS (
+                                SELECT 1
+                                  FROM r2_objects AS object
+                                 WHERE object.photo_id = bridge.photo_id
+                                   AND object.lifecycle_state <> 'deleted_confirmed'
+                              )
+                            ORDER BY bridge.photo_id""",
+                        (asset_id,),
+                    ).fetchall()
+                ]
+                if len(upload_photo_ids) > 1:
+                    raise WasteBasketError(f"ambiguous canonical R2 mapping for {asset_id}")
+                if upload_photo_ids:
+                    canonical_media_id = upload_photo_ids[0]
+                    rows = connection.execute(
+                        """SELECT bucket, object_key FROM r2_objects
+                           WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
+                           ORDER BY bucket, object_key""",
+                        (canonical_media_id,),
+                    ).fetchall()
+                    for row in rows:
+                        bucket = bucket_names.get(str(row["bucket"] or "").strip())
+                        object_key = str(row["object_key"] or "").strip()
+                        if not bucket or not object_key:
+                            raise WasteBasketError(f"unsupported or incomplete R2 mapping for {asset_id}")
+                        bindings.add((bucket, object_key))
+            if not bindings:
                 raise WasteBasketError(f"canonical R2 mapping is missing for {asset_id}")
+            if canonical_media_id in canonical_media_ids:
+                raise WasteBasketError(f"ambiguous canonical R2 mapping for {asset_id}")
+            canonical_media_ids.add(canonical_media_id)
             members.append({
                 "canonicalAssetId": asset_id,
-                "canonicalMediaId": asset_id,
+                "canonicalMediaId": canonical_media_id,
                 "bindings": [{"bucket": bucket, "objectKey": key} for bucket, key in sorted(bindings)],
             })
         return sorted(members, key=lambda item: item["canonicalMediaId"])
     finally:
         connection.close()
+
+
+def classify_deployed_lifecycle_scope(
+    repo_root: Path,
+    asset_ids: Iterable[Any],
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Separate manifest-backed media from Photos assets with no cloud exposure."""
+    ids = _unique_ids(asset_ids)
+    if not ids:
+        raise WasteBasketError("lifecycle scope requires at least one asset")
+    try:
+        return {
+            "scope": "deployed",
+            "assetIds": ids,
+            "members": derive_deployed_lifecycle_members(repo_root, ids, db_path),
+        }
+    except WasteBasketError as error:
+        if not _is_missing_canonical_r2_error(str(error)):
+            raise
+        original_error = error
+
+    connection = _connect(repo_root, db_path)
+    try:
+        local_only_ids = []
+        for asset_id in ids:
+            asset_exists = connection.execute(
+                "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+                (asset_id,),
+            ).fetchone()
+            cloud_evidence = connection.execute(
+                """SELECT 1
+                     FROM (
+                       SELECT 1 AS found FROM r2_objects
+                        WHERE photo_id = ? AND lifecycle_state <> 'deleted_confirmed'
+                       UNION ALL
+                       SELECT 1 FROM public_catalog_publications WHERE asset_id = ?
+                       UNION ALL
+                       SELECT 1 FROM asset_publications
+                        WHERE asset_id = ? AND state <> 'withdrawn'
+                       UNION ALL
+                       SELECT 1 FROM asset_delivery_state
+                        WHERE asset_id = ? AND delivery_state IN ('uploading', 'live', 'failed')
+                       UNION ALL
+                       SELECT 1 FROM fixture_delivery_receipts
+                        WHERE asset_id = ? AND destination = 'r2' AND status IN ('running', 'verified', 'failed')
+                       UNION ALL
+                       SELECT 1 FROM asset_sale_references WHERE asset_id = ?
+                       UNION ALL
+                       SELECT 1 FROM r2_quarantine
+                        WHERE asset_id = ? AND state <> 'deleted'
+                       UNION ALL
+                       SELECT 1 FROM sidecar_upload_bridge_run_items
+                        WHERE asset_id = ?
+                          AND (
+                            upload_status IN ('uploaded', 'uploaded_with_skips')
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(upload_keys_json) THEN upload_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1 FROM asset_upload_run_items
+                        WHERE asset_id = ?
+                          AND (
+                            status IN ('uploading', 'verified', 'live', 'failed')
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(object_keys_json) THEN object_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1 FROM media_lifecycle
+                        WHERE media_id = ?
+                          AND (
+                            EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(public_preview_keys_json) THEN public_preview_keys_json ELSE '[]' END
+                              )
+                            )
+                            OR EXISTS (
+                              SELECT 1 FROM json_each(
+                                CASE WHEN json_valid(private_keys_json) THEN private_keys_json ELSE '[]' END
+                              )
+                            )
+                          )
+                       UNION ALL
+                       SELECT 1
+                         FROM owner_waste_basket_provenance AS provenance
+                         JOIN owner_waste_basket_entries AS entry
+                           ON entry.entry_id = provenance.entry_id
+                        WHERE entry.asset_id = ? AND provenance.relation_name = 'r2_objects'
+                     )
+                    LIMIT 1""",
+                (asset_id,) * 11,
+            ).fetchone()
+            if asset_exists is not None and cloud_evidence is None:
+                local_only_ids.append(asset_id)
+    finally:
+        connection.close()
+
+    if len(local_only_ids) == len(ids):
+        return {
+            "scope": "local-only",
+            "assetIds": ids,
+            "members": [],
+            "reason": "no-cloud-media-evidence",
+        }
+    if local_only_ids:
+        deployed_ids = [asset_id for asset_id in ids if asset_id not in local_only_ids]
+        return {
+            "scope": "mixed",
+            "assetIds": ids,
+            "deployedAssetIds": deployed_ids,
+            "localOnlyAssetIds": local_only_ids,
+            "members": derive_deployed_lifecycle_members(repo_root, deployed_ids, db_path),
+            "reason": "local-only-assets-have-no-cloud-media-evidence",
+        }
+    raise original_error
 
 
 def resolve_deployed_lifecycle_asset_ids(
@@ -866,6 +1458,13 @@ def resolve_deployed_lifecycle_asset_ids(
     """Resolve lifecycle targets to canonical local asset IDs from Owner.sqlite."""
     normalized_operation = str(operation or "").strip().lower()
     requested = _unique_ids(requested_ids)
+    if normalized_operation in {"empty", "restore", "tombstone-restore"}:
+        _adopt_legacy_lifecycle_for_operation(
+            repo_root,
+            normalized_operation,
+            requested,
+            db_path,
+        )
     if normalized_operation == "empty" and not requested:
         connection = _connect(repo_root, db_path)
         try:
@@ -1082,13 +1681,38 @@ def deployed_lifecycle_abort_proof(
         mutation_status = str(mutation["status"]) if mutation else "absent"
         if mutation_status not in {"absent", "failed"}:
             return None
+        # The Worker validates the canonical arm receipt, not the full HTTP
+        # response persisted by the connector. The response also contains
+        # transport fields such as ``ok`` and therefore cannot be hashed
+        # directly into an abort proof.
+        stored_arm = json.loads(str(operation["arm_receipt_json"]))
+        members = sorted(
+            stored_arm.get("members") or [],
+            key=lambda item: str(item.get("canonicalMediaId") or ""),
+        )
+        arm_receipt = {
+            "operationId": str(operation["operation_id"]),
+            "operationDigest": str(operation["operation_digest"]),
+            "operation": str(operation["operation"]),
+            "denied": bool(stored_arm.get("denied")),
+            "revision": int(stored_arm.get("revision") or 0),
+            "state": "armed",
+            "members": [
+                {
+                    "canonicalMediaId": str(member.get("canonicalMediaId") or "").strip(),
+                    "canonicalAssetId": str(member.get("canonicalAssetId") or "").strip(),
+                    "revision": int(member.get("revision") or 0),
+                }
+                for member in members
+            ],
+        }
         proof_body = {
             "operationId": operation_id,
             "operationDigest": operation_digest,
             "operation": str(operation["operation"]),
             "localLifecycleState": "armed",
             "localMutationStatus": mutation_status,
-            "armReceiptDigest": _hash(json.loads(str(operation["arm_receipt_json"]))),
+            "armReceiptDigest": _hash(arm_receipt),
             "localMutationCommitted": False,
         }
         return {
@@ -1120,6 +1744,7 @@ def deployed_lifecycle_outbox(repo_root: Path, operation_id: str, db_path: Path 
         return {
             "operationId": str(operation["operation_id"]),
             "operationDigest": str(operation["operation_digest"]),
+            "operation": str(operation["operation"]),
             "revision": int(operation["revision"]),
             "state": str(operation["state"]),
             "receipts": receipts,
@@ -1673,6 +2298,8 @@ def _restore_operation(
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
     context = {"operation": operation, "fixtureId": str(fixture_id or "")}
     key = _normalize_request_key(operation, ids, normalized_source, request_key, context)
+    if operation in {"restore", "tombstone-restore"}:
+        _adopt_legacy_lifecycle_for_operation(repo_root, operation, ids, db_path)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
         entries = _resolve_entries(
@@ -1806,6 +2433,10 @@ def _empty_one(
         item = _entry_payload(entry, "already-tombstoned")
         _receipt(connection, operation_id=operation_id, entry=entry, before=item, after=item, state="already-applied", now=now)
         return item
+    # Legacy lifecycle adoption can produce a recoverable entry without the
+    # newer sidecar asset/decision rows. Materialize those parent rows before
+    # writing the FK-dependent decision and tombstone records.
+    _ensure_asset_rows(connection, asset_id, now)
     connection.execute(
         """
         UPDATE sidecar_decisions
@@ -1884,6 +2515,7 @@ def empty_waste_basket(
     normalized_source = _validate_source(source, owner_mode=owner_mode, owner_authorized=owner_authorized)
     context = {"reason": reason, "confirmation": EMPTY_CONFIRMATION_TOKEN}
     key = _normalize_request_key("empty", ids, normalized_source, request_key, context)
+    _adopt_legacy_lifecycle_for_operation(repo_root, "empty", ids, db_path)
 
     def mutate(connection: sqlite3.Connection, operation_id: str, now: str) -> dict[str, Any]:
         entries = _resolve_entries(connection, ids)

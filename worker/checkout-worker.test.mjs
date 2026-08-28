@@ -1230,7 +1230,16 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   assert.equal(minted.session.fixtureId, "fixture-la-concha");
   assert.equal(minted.session.lifecycleWriter, "pbb-79-waste-basket");
   assert.equal(minted.session.fixtureRevision, "fixture-revision:one");
-  assert.deepEqual(minted.session.capabilities, ["gallery.read", "waste-basket.x", "waste-basket.restore"]);
+  assert.deepEqual(minted.session.capabilities, [
+    "gallery.read",
+    "waste-basket.x",
+    "waste-basket.restore",
+    "fixture.hide",
+    "fixture.review",
+    "fixture.clear",
+    "asset.rating",
+    "asset.color",
+  ]);
 
   const statusResponse = await worker.fetch(new Request("https://worker.test/api/v1/pbe-owner/session", {
     headers: bearer(minted.sessionToken),
@@ -1373,7 +1382,24 @@ test("background Owner connectors use scoped credentials and report health", asy
 
   const completeResponse = await worker.fetch(jsonRequest(
     `https://worker.test/owner/connector/actions/${queued.id}/complete`,
-    { result: { recordsPrepared: 24 }, timing: { executedAt: "2026-07-22T10:00:01.000Z" } },
+    {
+      result: { recordsPrepared: 24 },
+      timing: {
+        executedAt: "2026-07-22T10:00:01.000Z",
+        connector: {
+          schema: "photosbyelie.ownerActionTiming.v1",
+          actionId: queued.id,
+          phases: {
+            "action.execute": {
+              startedAt: "2026-07-22T10:00:00.100Z",
+              endedAt: "2026-07-22T10:00:00.900Z",
+              elapsedMs: 800,
+              outcome: "ok",
+            },
+          },
+        },
+      },
+    },
     connectorHeaders
   ));
   const completed = (await completeResponse.json()).action;
@@ -1381,6 +1407,8 @@ test("background Owner connectors use scoped credentials and report health", asy
   assert.equal(completed.completedBy, "connector:david");
   assert.equal(completed.result.recordsPrepared, 24);
   assert.equal(completed.timing.executedAt, "2026-07-22T10:00:01.000Z");
+  assert.equal(completed.timing.connector.schema, "photosbyelie.ownerActionTiming.v1");
+  assert.equal(completed.timing.connector.phases["action.execute"].elapsedMs, 800);
   assert.ok(completed.timing.completedAt);
 
   const ownerConnectorResponse = await worker.fetch(new Request("https://worker.test/owner/connectors", {
@@ -5136,6 +5164,75 @@ test("deployed Worker serves public R2 previews through the media route", async 
   assert.equal(missing.status, 404);
   assert.equal(missing.headers.get("cache-control"), "private, no-store, max-age=0");
   assert.equal(missing.headers.get("cdn-cache-control"), "no-store");
+});
+
+test("deployed Worker serves only the approved Backstage release manifest and immutable archives", async () => {
+  const manifest = new TextEncoder().encode('{"schemaVersion":1}\n');
+  const archive = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+  const bucket = createFakeR2({
+    "backstage/releases/latest.json": {
+      body: manifest,
+      httpMetadata: { contentType: "text/plain" },
+    },
+    "backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip": {
+      body: archive,
+      httpMetadata: { contentType: "application/octet-stream" },
+    },
+    "backstage/releases/private.txt": {
+      body: new TextEncoder().encode("not public"),
+    },
+  });
+
+  const manifestResponse = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(manifestResponse.status, 200);
+  assert.equal(manifestResponse.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(manifestResponse.headers.get("cache-control"), "public, max-age=60, must-revalidate");
+  assert.equal(manifestResponse.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(await manifestResponse.text(), '{"schemaVersion":1}\n');
+
+  const archiveUrl = "https://download.photos-by-elie.com/backstage/releases/PhotosByElie-Backstage-v237.1-build-188.zip";
+  const archiveResponse = await deployedWorker.fetch(new Request(archiveUrl), { PUBLIC_MEDIA: bucket });
+  assert.equal(archiveResponse.status, 200);
+  assert.equal(archiveResponse.headers.get("content-type"), "application/zip");
+  assert.equal(archiveResponse.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(
+    archiveResponse.headers.get("content-disposition"),
+    'attachment; filename="PhotosByElie-Backstage-v237.1-build-188.zip"',
+  );
+  assert.equal(Buffer.from(await archiveResponse.arrayBuffer()).toString("hex"), "504b0304");
+
+  const headResponse = await deployedWorker.fetch(new Request(archiveUrl, { method: "HEAD" }), { PUBLIC_MEDIA: bucket });
+  assert.equal(headResponse.status, 200);
+  assert.equal(headResponse.headers.get("content-length"), "4");
+  assert.equal((await headResponse.arrayBuffer()).byteLength, 0);
+
+  for (const path of [
+    "/backstage/releases/private.txt",
+    "/backstage/releases/../private.txt",
+    "/backstage/releases/PhotosByElie-Backstage-latest.zip",
+  ]) {
+    const denied = await deployedWorker.fetch(
+      new Request(`https://download.photos-by-elie.com${path}`),
+      { PUBLIC_MEDIA: bucket },
+    );
+    assert.equal(denied.status, 404, path);
+  }
+
+  const post = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json", { method: "POST" }),
+    { PUBLIC_MEDIA: bucket },
+  );
+  assert.equal(post.status, 405);
+  assert.equal(post.headers.get("allow"), "GET, HEAD");
+
+  const unavailable = await deployedWorker.fetch(
+    new Request("https://download.photos-by-elie.com/backstage/releases/latest.json"),
+    {},
+  );
+  assert.equal(unavailable.status, 503);
 });
 
 test("deployed Worker root redirects direct auth-domain visits to Account", async () => {

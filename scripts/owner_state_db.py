@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -19,6 +20,38 @@ OWNER_ACTION_ROOT = Path("assets/owner-actions")
 KEYWORD_BLACKLIST_PATH = OWNER_ACTION_ROOT / "keyword-blacklist.json"
 COUNTRY_ASSIGNMENT_LOG = OWNER_ACTION_ROOT / "country-assignments.jsonl"
 COUNTRY_ASSIGNMENT_INDEX = OWNER_ACTION_ROOT / "country-assignments.json"
+COUNTRY_ASSIGNMENT_TARGETS = {
+    "france": "France",
+    "italy": "Italy",
+    "mexico": "Mexico",
+    "portugal": "Portugal",
+    "slovakia": "Slovakia",
+    "spain": "Spain",
+    "usa": "USA",
+}
+COUNTRY_LOCATION_ALIASES = {
+    "fr": "france",
+    "france": "france",
+    "it": "italy",
+    "italia": "italy",
+    "italy": "italy",
+    "mexico": "mexico",
+    "méxico": "mexico",
+    "mx": "mexico",
+    "portugal": "portugal",
+    "pt": "portugal",
+    "eslovaquia": "slovakia",
+    "sk": "slovakia",
+    "slovakia": "slovakia",
+    "es": "spain",
+    "españa": "spain",
+    "spain": "spain",
+    "estados unidos": "usa",
+    "us": "usa",
+    "usa": "usa",
+    "united states": "usa",
+    "united states of america": "usa",
+}
 TITLE_KEYWORD_REVIEW_ROOT = OWNER_ACTION_ROOT / "title-keyword-review-queue"
 HIDDEN_DATA_PATH = Path("assets/hidden/hidden-data.json")
 HIDDEN_BLACKLIST_PATH = Path("assets/hidden/hidden-blacklist.json")
@@ -82,6 +115,8 @@ DEFAULT_TITLE_KEYWORD_MODEL_LADDER = [
 ]
 CODEX_REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"})
 MODEL_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
+IMPORT_OPERATION_STALE_AFTER_SECONDS = 60 * 60
+IMPORT_OPERATION_LEASE_SECONDS = 15 * 60
 
 
 def now_iso() -> str:
@@ -465,7 +500,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           queued_at        TEXT,
           started_at       TEXT,
           completed_at     TEXT,
-          updated_at       TEXT
+          updated_at       TEXT,
+          worker_pid       INTEGER,
+          worker_token     TEXT NOT NULL DEFAULT '',
+          lease_expires_at TEXT,
+          recovery_state   TEXT NOT NULL DEFAULT '',
+          recovery_reason  TEXT NOT NULL DEFAULT '',
+          recovery_checked_at TEXT
         ) WITHOUT ROWID;
 
         CREATE TABLE IF NOT EXISTS access_users (
@@ -508,6 +549,20 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_access_users_tier ON access_users(tier, updated_at);
         """
     )
+    import_operation_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(import_operations)").fetchall()
+    }
+    for column, definition in {
+        "worker_pid": "INTEGER",
+        "worker_token": "TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "TEXT",
+        "recovery_state": "TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "TEXT",
+    }.items():
+        if column not in import_operation_columns:
+            conn.execute(f"ALTER TABLE import_operations ADD COLUMN {column} {definition}")
     for column, ddl in {
         "generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN generator_model TEXT",
         "requested_generator_model": "ALTER TABLE title_keyword_proposals ADD COLUMN requested_generator_model TEXT",
@@ -833,6 +888,12 @@ def _import_operation_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
         "startedAt": row["started_at"] or "",
         "completedAt": row["completed_at"] or "",
         "updatedAt": row["updated_at"] or "",
+        "workerPid": int(row["worker_pid"] or 0),
+        "workerToken": row["worker_token"] or "",
+        "leaseExpiresAt": row["lease_expires_at"] or "",
+        "recoveryState": row["recovery_state"] or "",
+        "recoveryReason": row["recovery_reason"] or "",
+        "recoveryCheckedAt": row["recovery_checked_at"] or "",
     }
 
 
@@ -856,9 +917,10 @@ def record_import_operation(
               operation_id, operation_label, state, source_kind, source_json,
               destination_kind, destination_json, filters_json, outputs_json,
               preflight_json, task_json, error_text, created_at, queued_at,
-              started_at, completed_at, updated_at
+              started_at, completed_at, updated_at, worker_pid, worker_token,
+              lease_expires_at, recovery_state, recovery_reason, recovery_checked_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(operation_id) DO UPDATE SET
               operation_label = excluded.operation_label,
               state = excluded.state,
@@ -874,6 +936,21 @@ def record_import_operation(
               queued_at = COALESCE(excluded.queued_at, import_operations.queued_at),
               started_at = COALESCE(excluded.started_at, import_operations.started_at),
               completed_at = COALESCE(excluded.completed_at, import_operations.completed_at),
+              worker_pid = COALESCE(excluded.worker_pid, import_operations.worker_pid),
+              worker_token = CASE
+                WHEN excluded.worker_token <> '' THEN excluded.worker_token
+                ELSE import_operations.worker_token
+              END,
+              lease_expires_at = COALESCE(excluded.lease_expires_at, import_operations.lease_expires_at),
+              recovery_state = CASE
+                WHEN excluded.recovery_state <> '' THEN excluded.recovery_state
+                ELSE import_operations.recovery_state
+              END,
+              recovery_reason = CASE
+                WHEN excluded.recovery_reason <> '' THEN excluded.recovery_reason
+                ELSE import_operations.recovery_reason
+              END,
+              recovery_checked_at = COALESCE(excluded.recovery_checked_at, import_operations.recovery_checked_at),
               updated_at = excluded.updated_at
             """,
             (
@@ -894,6 +971,12 @@ def record_import_operation(
                 str(operation.get("startedAt") or operation.get("started_at") or "") or None,
                 str(operation.get("completedAt") or operation.get("completed_at") or "") or None,
                 timestamp,
+                int(operation.get("workerPid") or operation.get("worker_pid") or 0) or None,
+                str(operation.get("workerToken") or operation.get("worker_token") or "").strip(),
+                str(operation.get("leaseExpiresAt") or operation.get("lease_expires_at") or "").strip() or None,
+                str(operation.get("recoveryState") or operation.get("recovery_state") or "").strip(),
+                str(operation.get("recoveryReason") or operation.get("recovery_reason") or "").strip(),
+                str(operation.get("recoveryCheckedAt") or operation.get("recovery_checked_at") or "").strip() or None,
             ),
         )
         if owns_conn:
@@ -937,6 +1020,140 @@ def update_import_operation(
         if owns_conn:
             conn.commit()
             conn.close()
+
+
+def _workflow_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _workflow_process_alive(pid: object) -> bool:
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return False
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _import_operation_lease_expiry(timestamp: datetime) -> str:
+    return (
+        timestamp + timedelta(seconds=IMPORT_OPERATION_LEASE_SECONDS)
+    ).isoformat().replace("+00:00", "Z")
+
+
+def reconcile_stale_import_operations(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = IMPORT_OPERATION_STALE_AFTER_SECONDS,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Classify interrupted import rows without guessing about legacy workers.
+
+    New operations carry a worker PID and token. A stale row with a recorded
+    worker whose process is verifiably gone is terminalized as failed. Older
+    rows lack that evidence and remain queued/running with an explicit
+    ``needs-review`` recovery state instead of being rewritten by age alone.
+    """
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    recovered: list[str] = []
+    reviewed: list[str] = []
+    skipped = 0
+    with connect(repo_root, db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT operation_id, state, updated_at, worker_pid, worker_token,
+                   recovery_state
+            FROM import_operations
+            WHERE state IN ('queued', 'running')
+            ORDER BY updated_at, operation_id
+            """
+        ).fetchall()
+        for row in rows:
+            updated = _workflow_timestamp(row["updated_at"])
+            if updated is None or (current - updated).total_seconds() < max(0, stale_after_seconds):
+                continue
+            operation_id = str(row["operation_id"] or "")
+            worker_pid = int(row["worker_pid"] or 0)
+            worker_token = str(row["worker_token"] or "").strip()
+            if worker_pid <= 0 or not worker_token:
+                if str(row["recovery_state"] or ""):
+                    continue
+                update = conn.execute(
+                    """
+                    UPDATE import_operations
+                    SET recovery_state = 'needs-review',
+                        recovery_reason = ?, recovery_checked_at = ?
+                    WHERE operation_id = ? AND state IN ('queued', 'running')
+                      AND COALESCE(recovery_state, '') = ''
+                    """,
+                    (
+                        "Legacy import row has no durable worker PID/token; "
+                        f"last update was {int((current - updated).total_seconds())} seconds ago and needs explicit review.",
+                        timestamp,
+                        operation_id,
+                    ),
+                )
+                if update.rowcount:
+                    reviewed.append(operation_id)
+                continue
+            if _workflow_process_alive(worker_pid):
+                skipped += 1
+                continue
+            update = conn.execute(
+                """
+                UPDATE import_operations
+                SET state = 'failed',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?),
+                    updated_at = ?,
+                    lease_expires_at = NULL,
+                    recovery_state = 'recovered',
+                    recovery_reason = ?,
+                    recovery_checked_at = ?
+                WHERE operation_id = ? AND state IN ('queued', 'running')
+                  AND worker_pid = ? AND worker_token = ?
+                """,
+                (
+                    "Import worker process ended before a terminal receipt was persisted.",
+                    timestamp,
+                    timestamp,
+                    "Recorded import worker process is no longer alive; "
+                    f"last update was {int((current - updated).total_seconds())} seconds ago.",
+                    timestamp,
+                    operation_id,
+                    worker_pid,
+                    worker_token,
+                ),
+            )
+            if update.rowcount:
+                recovered.append(operation_id)
+        conn.commit()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredOperationIds": recovered,
+        "reviewedCount": len(reviewed),
+        "reviewOperationIds": reviewed,
+        "skippedCount": skipped,
+    }
 
 
 ACCESS_USER_TIERS = {"user", "re_client", "owner"}
@@ -1781,11 +1998,305 @@ def _assignment_row(photo_id: str, record: dict[str, Any], fallback_batch_id: st
     )
 
 
+def _country_assignment_columns(conn: sqlite3.Connection) -> set[str]:
+    return {str(row[1]) for row in conn.execute("PRAGMA table_info(country_assignments)")}
+
+
+def country_review_write_capability(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Prove that PBE-154's reviewed identity migration was durably applied."""
+
+    columns = _country_assignment_columns(conn)
+    required_columns = {
+        "assignment_id", "asset_id", "media_id", "country_slug",
+        "identity_status", "migration_id",
+    }
+    if not required_columns.issubset(columns):
+        return {
+            "enabled": False,
+            "reason": "Country writes await the reviewed PBE-154 identity migration.",
+            "migrationId": "",
+        }
+    required_tables = {
+        "country_assignment_identity_migrations",
+        "country_assignment_identity_migration_rows",
+    }
+    tables = {
+        str(row[0])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    if not required_tables.issubset(tables):
+        return {
+            "enabled": False,
+            "reason": "Country writes await a complete PBE-154 migration receipt.",
+            "migrationId": "",
+        }
+    receipt = conn.execute(
+        """
+        SELECT migration_id, source_count, mapped_count, unmapped_count
+        FROM country_assignment_identity_migrations
+        ORDER BY applied_at DESC, migration_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if not receipt:
+        return {
+            "enabled": False,
+            "reason": "Country writes await a reviewed PBE-154 apply receipt.",
+            "migrationId": "",
+        }
+    migration_id = str(receipt["migration_id"])
+    source_count = int(receipt["source_count"] or 0)
+    mapped_count = int(receipt["mapped_count"] or 0)
+    unmapped_count = int(receipt["unmapped_count"] or 0)
+    migrated = conn.execute(
+        """
+        SELECT count(*) AS total,
+               sum(CASE WHEN identity_status = 'mapped' THEN 1 ELSE 0 END) AS mapped,
+               sum(CASE WHEN identity_status = 'unmapped' THEN 1 ELSE 0 END) AS unmapped
+        FROM country_assignments
+        WHERE migration_id = ?
+        """,
+        (migration_id,),
+    ).fetchone()
+    audit_count = int(conn.execute(
+        """
+        SELECT count(*)
+        FROM country_assignment_identity_migration_rows
+        WHERE migration_id = ?
+        """,
+        (migration_id,),
+    ).fetchone()[0])
+    actual = (
+        int(migrated["total"] or 0),
+        int(migrated["mapped"] or 0),
+        int(migrated["unmapped"] or 0),
+    )
+    expected = (source_count, mapped_count, unmapped_count)
+    if source_count != mapped_count + unmapped_count or actual != expected or audit_count != source_count:
+        return {
+            "enabled": False,
+            "reason": "Country writes are locked because the PBE-154 receipt does not match its audit rows.",
+            "migrationId": migration_id,
+        }
+    return {
+        "enabled": True,
+        "reason": "",
+        "migrationId": migration_id,
+    }
+
+
+def country_review_context(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    *,
+    capability: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return accepted Country and deterministic, non-authoritative evidence."""
+
+    capability = capability or country_review_write_capability(conn)
+    current = ""
+    if "asset_id" in _country_assignment_columns(conn):
+        assignment = conn.execute(
+            """
+            SELECT country_slug
+            FROM country_assignments
+            WHERE asset_id = ? AND identity_status = 'mapped'
+            LIMIT 1
+            """,
+            (asset_id,),
+        ).fetchone()
+        current = str(assignment["country_slug"] or "") if assignment else ""
+    suggestion = conn.execute(
+        """
+        SELECT collection_slug
+        FROM catalog_collection_resolutions
+        WHERE asset_id = ? AND collection_slug != 'unknown'
+        ORDER BY resolved_at DESC, source_version_hash DESC
+        LIMIT 1
+        """,
+        (asset_id,),
+    ).fetchone()
+    suggested = str(suggestion["collection_slug"] or "") if suggestion else ""
+    if suggested not in COUNTRY_ASSIGNMENT_TARGETS:
+        suggested = ""
+    location = conn.execute(
+        """
+        SELECT location_label, location_keywords_json, raw_json
+        FROM sidecar_assets
+        WHERE asset_id = ?
+        LIMIT 1
+        """,
+        (asset_id,),
+    ).fetchone()
+    location_suggested, location_source = _country_from_photos_location(location)
+    if current:
+        suggested = ""
+        suggestion_source = "accepted assignment"
+    elif suggested and location_suggested and suggested != location_suggested:
+        suggested = ""
+        suggestion_source = "conflicting catalog and Apple Photos location"
+    elif suggested and location_suggested:
+        suggestion_source = "catalog resolver + Apple Photos location"
+    elif suggested:
+        suggestion_source = "catalog resolver"
+    elif location_suggested:
+        suggested = location_suggested
+        suggestion_source = location_source
+    else:
+        suggestion_source = location_source
+    return {
+        "country": current,
+        "suggestedCountry": suggested,
+        "countrySuggestionSource": suggestion_source,
+        "countryWriteEnabled": bool(capability["enabled"]),
+        "countryWriteBlockReason": str(capability["reason"]),
+        "countryMigrationId": str(capability["migrationId"]),
+    }
+
+
+def _normalized_country_evidence(value: Any) -> str:
+    return re.sub(r"[^\w]+", " ", str(value or "").casefold(), flags=re.UNICODE).strip()
+
+
+def _country_from_photos_location(row: sqlite3.Row | None) -> tuple[str, str]:
+    """Map only exact structured Apple Photos country tokens to Review slugs."""
+
+    if row is None:
+        return "", ""
+    values: list[str] = [str(row["location_label"] or "")]
+    try:
+        keywords = json.loads(str(row["location_keywords_json"] or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        keywords = []
+    if isinstance(keywords, list):
+        values.extend(str(value) for value in keywords)
+    try:
+        raw = json.loads(str(row["raw_json"] or "{}"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        raw = {}
+    if isinstance(raw, dict):
+        values.extend(str(raw.get(key) or "") for key in ("locationCountry", "country"))
+        raw_location = raw.get("location")
+        if isinstance(raw_location, dict):
+            values.extend(str(raw_location.get(key) or "") for key in ("country", "countryCode"))
+    matches = {
+        COUNTRY_LOCATION_ALIASES[normalized]
+        for value in values
+        if (normalized := _normalized_country_evidence(value)) in COUNTRY_LOCATION_ALIASES
+    }
+    if len(matches) == 1:
+        return next(iter(matches)), "Apple Photos location"
+    if len(matches) > 1:
+        return "", "conflicting Apple Photos location"
+    return "", ""
+
+
+def set_review_country_assignment(
+    conn: sqlite3.Connection,
+    asset_id: str,
+    country_slug: str,
+    *,
+    actor: str,
+    updated_at: str,
+) -> None:
+    """Set, correct, or explicitly clear native Country after the migration gate."""
+
+    capability = country_review_write_capability(conn)
+    if not capability["enabled"]:
+        raise RuntimeError(str(capability["reason"]))
+    clean_asset_id = str(asset_id or "").strip()
+    clean_country = str(country_slug or "").strip().casefold()
+    if clean_country and clean_country not in COUNTRY_ASSIGNMENT_TARGETS:
+        raise ValueError("Country must be Unknown or a supported gallery country.")
+    if not conn.execute(
+        "SELECT 1 FROM sidecar_assets WHERE asset_id = ?",
+        (clean_asset_id,),
+    ).fetchone():
+        raise ValueError(f"asset is not indexed: {clean_asset_id}")
+    conn.execute("DELETE FROM country_assignments WHERE asset_id = ?", (clean_asset_id,))
+    if not clean_country:
+        return
+    conn.execute(
+        """
+        INSERT INTO country_assignments
+          (assignment_id, asset_id, media_id, country_slug, source_slug, batch_id,
+           assigned_at, updated_at, identity_status, identity_source,
+           identity_evidence_json, migration_id, migrated_at)
+        VALUES (?, ?, NULL, ?, '', '', ?, ?, 'mapped', ?, '[]', ?, ?)
+        """,
+        (
+            f"asset:{clean_asset_id}",
+            clean_asset_id,
+            clean_country,
+            updated_at,
+            updated_at,
+            f"native-review:{actor}",
+            f"native-review:{capability['migrationId']}",
+            updated_at,
+        ),
+    )
+
+
+def _write_country_assignment_row(conn: sqlite3.Connection, row: tuple[Any, ...]) -> None:
+    media_id, country_slug, source_slug, batch_id, assigned_at, updated_at = row
+    if "assignment_id" not in _country_assignment_columns(conn):
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO country_assignments
+              (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            row,
+        )
+        return
+
+    existing = conn.execute(
+        "SELECT assignment_id FROM country_assignments WHERE media_id = ?",
+        (media_id,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            """
+            UPDATE country_assignments
+            SET country_slug = ?, source_slug = ?, batch_id = ?, assigned_at = ?, updated_at = ?
+            WHERE media_id = ?
+            """,
+            (country_slug, source_slug, batch_id, assigned_at, updated_at, media_id),
+        )
+        return
+
+    timestamp = str(updated_at or now_iso())
+    conn.execute(
+        """
+        INSERT INTO country_assignments
+          (assignment_id, asset_id, media_id, country_slug, source_slug, batch_id,
+           assigned_at, updated_at, identity_status, identity_source,
+           identity_evidence_json, migration_id, migrated_at)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, 'unmapped', 'legacy-owner-action',
+                '[]', 'post-migration-legacy-write', ?)
+        """,
+        (
+            f"legacy:{media_id}",
+            media_id,
+            country_slug,
+            source_slug,
+            batch_id,
+            assigned_at,
+            timestamp,
+            timestamp,
+        ),
+    )
+
+
 def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None = None, *, force: bool = False) -> None:
     owns_conn = conn is None
     conn = conn or connect(repo_root)
     try:
         if force:
+            if "assignment_id" in _country_assignment_columns(conn):
+                raise RuntimeError("Force-importing Country JSON is retired after identity schema v2 migration.")
             conn.execute("DELETE FROM country_assignments")
         elif conn.execute("SELECT count(*) FROM country_assignments").fetchone()[0]:
             return
@@ -1798,14 +2309,7 @@ def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                     continue
                 row = _assignment_row(photo_id, record)
                 if row:
-                    conn.execute(
-                        """
-                        INSERT OR REPLACE INTO country_assignments
-                          (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        row,
-                    )
+                    _write_country_assignment_row(conn, row)
 
         log_path = repo_root / COUNTRY_ASSIGNMENT_LOG
         if log_path.exists():
@@ -1824,14 +2328,7 @@ def import_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                             continue
                         row = _assignment_row(str(item.get("id") or ""), item, batch_id, created_at)
                         if row:
-                            conn.execute(
-                                """
-                                INSERT OR REPLACE INTO country_assignments
-                                  (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                                """,
-                                row,
-                            )
+                            _write_country_assignment_row(conn, row)
         _set_setting(conn, "country_assignments_json", COUNTRY_ASSIGNMENT_INDEX.as_posix())
         conn.commit()
     finally:
@@ -1850,13 +2347,16 @@ def export_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
             ORDER BY assigned_at, media_id
             """
         ).fetchall()
+        columns = _country_assignment_columns(conn)
+        migrated = "assignment_id" in columns
         photos: dict[str, Any] = {}
+        native_assets: dict[str, Any] = {}
         latest_batch_id = ""
         updated_at = ""
         for row in rows:
             latest_batch_id = row["batch_id"] or latest_batch_id
             updated_at = row["assigned_at"] or updated_at
-            photos[row["media_id"]] = {
+            record = {
                 "gallery_key": row["country_slug"],
                 "state": "reserve",
                 "from_state": "reserve",
@@ -1865,12 +2365,25 @@ def export_country_assignments(repo_root: Path, conn: sqlite3.Connection | None 
                 "batch_id": row["batch_id"],
                 "assets": {},
             }
-        _write_json(repo_root / COUNTRY_ASSIGNMENT_INDEX, {
+            media_id = str(row["media_id"] or "").strip()
+            asset_id = str(row["asset_id"] or "").strip() if migrated else ""
+            if migrated:
+                record["identity_status"] = row["identity_status"]
+                record["asset_id"] = asset_id
+            if media_id:
+                photos[media_id] = record
+            if asset_id:
+                native_assets[asset_id] = {**record, "legacy_media_id": media_id}
+        payload = {
             "format": "photosbyelie-country-assignments",
             "updated_at": updated_at,
             "latest_batch_id": latest_batch_id,
             "photos": photos,
-        })
+        }
+        if migrated:
+            payload["schema_version"] = 2
+            payload["native_assets"] = native_assets
+        _write_json(repo_root / COUNTRY_ASSIGNMENT_INDEX, payload)
     finally:
         if owns_conn:
             conn.close()
@@ -1904,14 +2417,7 @@ def record_country_assignments(
                 continue
             row = _assignment_row(str(item.get("id") or ""), {**item, "gallery_key": item.get("to_slug") or target_slug}, batch_id, created_at)
             if row:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO country_assignments
-                      (media_id, country_slug, source_slug, batch_id, assigned_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    row,
-                )
+                _write_country_assignment_row(conn, row)
         _set_setting(conn, "country_assignments_json", COUNTRY_ASSIGNMENT_INDEX.as_posix())
         conn.commit()
         export_country_assignments(repo_root, conn)

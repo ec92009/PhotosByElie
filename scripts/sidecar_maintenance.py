@@ -12,11 +12,13 @@ import uuid
 from pathlib import Path
 
 try:
-    from sidecar_server import APPLE_PHOTOS_BRIDGE_APP, _ensure_apple_photos_bridge_app, _index_job_snapshot, _run_index_job
-    from sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, sidecar_sync_status
+    from backstage_photos_client import BackstagePhotosClientError, request_preview
+    from sidecar_server import _index_job_snapshot, _run_index_job
+    from sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, photos_discovery_window, sidecar_sync_status
 except ModuleNotFoundError:  # pragma: no cover - supports package-style imports.
-    from scripts.sidecar_server import APPLE_PHOTOS_BRIDGE_APP, _ensure_apple_photos_bridge_app, _index_job_snapshot, _run_index_job
-    from scripts.sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, sidecar_sync_status
+    from scripts.backstage_photos_client import BackstagePhotosClientError, request_preview
+    from scripts.sidecar_server import _index_job_snapshot, _run_index_job
+    from scripts.sidecar_state_db import ai_metadata_plan, apply_ai_metadata_proposals, apply_ai_metadata_vision_proposals, now_iso, photos_discovery_window, sidecar_sync_status
 
 
 DEFAULT_AI_PLAN_PATH = Path("assets/owner-actions/sidecar-ai-metadata-plan.json")
@@ -546,16 +548,39 @@ def _register_uploaded_catalog_rows(
 def photos_index_sync(args: argparse.Namespace) -> int:
     repo_root = args.repo_root.resolve()
     job_id = f"scheduled-{uuid.uuid4().hex[:12]}"
+    date_from = str(args.date_from or "").strip()
+    date_to = str(args.date_to or "").strip()
+    full = bool(getattr(args, "full", False))
+    incremental = bool(getattr(args, "incremental", False))
+    if full and (incremental or date_from or date_to):
+        raise ValueError("--full cannot be combined with incremental or date bounds")
+    if incremental and (date_from or date_to):
+        raise ValueError("--incremental cannot be combined with explicit date bounds")
+
+    if full:
+        mode = "full"
+        policy = {"mode": mode, "dateFrom": "", "dateTo": ""}
+    elif date_from or date_to:
+        mode = "range"
+        policy = {"mode": mode, "dateFrom": date_from, "dateTo": date_to}
+    else:
+        # Ordinary and scheduled refreshes are incremental by default. A full
+        # Photos audit must now be requested explicitly with --full.
+        policy = photos_discovery_window(repo_root)
+        mode = "incremental"
+        date_from = str(policy["dateFrom"])
     _run_index_job(
         repo_root,
         job_id,
-        date_from=str(args.date_from or "").strip(),
-        date_to=str(args.date_to or "").strip(),
+        date_from=date_from,
+        date_to=date_to,
+        mode=mode,
     )
     payload = {
         "ok": True,
         "task": "sidecar-photos-index-sync",
         "generatedAt": now_iso(),
+        "policy": policy,
         "job": _index_job_snapshot(repo_root),
         "sync": sidecar_sync_status(repo_root, limit=args.limit),
     }
@@ -628,7 +653,6 @@ def picked_ai_preview_export(args: argparse.Namespace) -> int:
     plan = ai_metadata_plan(repo_root, limit=args.limit, rework_only=True)
     preview_root = args.preview_root if args.preview_root.is_absolute() else repo_root / args.preview_root
     preview_root.mkdir(parents=True, exist_ok=True)
-    _ensure_apple_photos_bridge_app(repo_root)
 
     previews: list[dict] = []
     for index, item in enumerate(plan.get("items") or [], start=1):
@@ -636,44 +660,20 @@ def picked_ai_preview_export(args: argparse.Namespace) -> int:
         if not asset_id:
             continue
         destination = preview_root / _preview_filename(index, item, args.max_pixel)
-        command = [
-            "open",
-            "-W",
-            "-n",
-            str(APPLE_PHOTOS_BRIDGE_APP),
-            "--args",
-            "preview",
-            "--asset-id",
-            asset_id,
-            "--destination",
-            str(destination),
-            "--max-pixel",
-            str(args.max_pixel),
-        ]
         try:
-            result = subprocess.run(
-                command,
-                cwd=repo_root,
-                text=True,
-                capture_output=True,
-                timeout=args.timeout,
-                check=False,
+            result = request_preview(
+                asset_id,
+                destination,
+                args.max_pixel,
+                timeout=min(60.0, max(1.0, float(args.timeout))),
             )
-            return_code = result.returncode
-            stdout = (result.stdout or "").strip()
-            stderr = (result.stderr or "").strip()
-            error = ""
-        except FileNotFoundError:
-            return_code = 127
-            stdout = ""
-            stderr = ""
-            error = "macOS open is required to launch the Photos Bridge app bundle."
-        except subprocess.TimeoutExpired:
-            return_code = 124
-            stdout = ""
-            stderr = ""
-            error = "Photos Bridge app timed out while exporting the preview."
-        ok = return_code == 0 and destination.exists() and destination.stat().st_size > 0
+            ok = bool(result.get("ok")) and destination.exists() and destination.stat().st_size > 0
+            error = "" if ok else "Backstage did not create a preview image."
+            code = ""
+        except BackstagePhotosClientError as client_error:
+            ok = False
+            error = str(client_error)
+            code = client_error.code
         previews.append({
             "ok": ok,
             "queueIndex": index,
@@ -684,10 +684,8 @@ def picked_ai_preview_export(args: argparse.Namespace) -> int:
             "recommendedAiRung": str(item.get("recommendedAiRung") or ""),
             "locationLabel": str(item.get("locationLabel") or ""),
             "previewPath": str(destination) if destination.exists() else "",
-            "returnCode": return_code,
-            "stdout": stdout,
-            "stderr": stderr,
-            **({} if ok else {"error": error or "Photos Bridge app did not create a preview image."}),
+            "code": code,
+            **({} if ok else {"error": error}),
         })
 
     contact_sheet_path = preview_root / "contact-sheet.jpg"
@@ -698,14 +696,13 @@ def picked_ai_preview_export(args: argparse.Namespace) -> int:
         "task": "sidecar-picked-ai-metadata-preview-export",
         "generatedAt": now_iso(),
         "mode": "picked-only-ai-preview-export",
-        "bridgeApp": str(APPLE_PHOTOS_BRIDGE_APP),
         "previewRoot": str(preview_root),
         "contactSheet": contact_sheet,
         "plannedCount": int(plan.get("count") or 0),
         "exportedCount": len(previews) - failed_count,
         "failedCount": failed_count,
         "items": previews,
-        "message": "Preview export uses PhotosByElie Photos Bridge.app through LaunchServices; do not replace this with raw Swift.",
+        "message": "Preview export uses the authenticated Backstage IPC endpoint; Backstage must be running on this Mac.",
     }
     if args.output:
         _write_json(repo_root, args.output, payload)
@@ -810,6 +807,9 @@ def build_parser() -> argparse.ArgumentParser:
     photos.add_argument("--limit", type=int, default=80, help="Number of rows to include in the written sync status artifact.")
     photos.add_argument("--date-from", default="", help="Optional inclusive PhotoKit capture-date lower bound.")
     photos.add_argument("--date-to", default="", help="Optional exclusive PhotoKit capture-date upper bound.")
+    mode = photos.add_mutually_exclusive_group()
+    mode.add_argument("--incremental", action="store_true", help="Resume recent-photo discovery from the durable Owner checkpoint (default).")
+    mode.add_argument("--full", action="store_true", help="Explicitly audit the complete Photos library and reconcile missing assets.")
     photos.add_argument("--output", type=Path, default=DEFAULT_SYNC_STATUS_PATH, help="JSON artifact path for the scheduler result.")
     photos.set_defaults(func=photos_index_sync)
 
@@ -818,7 +818,7 @@ def build_parser() -> argparse.ArgumentParser:
     ai.add_argument("--output", type=Path, default=DEFAULT_AI_PLAN_PATH, help="JSON artifact path for the scheduler result.")
     ai.set_defaults(func=picked_ai_plan)
 
-    preview = subparsers.add_parser("picked-ai-preview-export", help="Export explicitly picked AI-rework previews through the Photos Bridge app.")
+    preview = subparsers.add_parser("picked-ai-preview-export", help="Export explicitly picked AI-rework previews through Backstage IPC.")
     preview.add_argument("--limit", type=int, default=80, help="Maximum picked rows to include from the planning queue.")
     preview.add_argument("--max-pixel", type=int, default=900, help="Maximum preview pixel size passed to PhotoKit.")
     preview.add_argument("--timeout", type=int, default=90, help="Per-preview app launch timeout in seconds.")

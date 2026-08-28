@@ -18,7 +18,6 @@ import threading
 import time
 from typing import Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 try:
@@ -328,6 +327,24 @@ def _clean(value: object) -> str:
     return str(value or "").strip()
 
 
+def _connect_query_only(path: Path) -> sqlite3.Connection:
+    """Open a current SQLite snapshot without allowing writes.
+
+    ``mode=ro`` URI connections can fail against a database in WAL mode while
+    the connector owns the shared-memory handle.  Opening the existing file
+    normally and enabling SQLite's query-only guard keeps the read current
+    while preventing this host from becoming a writer.
+    """
+
+    connection = sqlite3.connect(str(path.resolve(strict=True)))
+    try:
+        connection.execute("PRAGMA query_only = ON")
+    except sqlite3.Error:
+        connection.close()
+        raise
+    return connection
+
+
 def _sqlite_identity(
     path: Path,
     *,
@@ -339,10 +356,7 @@ def _sqlite_identity(
     resolved = path.resolve(strict=True)
     stat = resolved.stat()
     try:
-        connection = sqlite3.connect(
-            f"file:{quote(str(resolved), safe='/')}?mode=ro",
-            uri=True,
-        )
+        connection = _connect_query_only(resolved)
         try:
             rows = connection.execute(
                 """
@@ -391,7 +405,7 @@ def _fixture_revision(owner_path: Path, fixture_id: str) -> str:
             status=400,
         )
     try:
-        connection = sqlite3.connect(f"file:{quote(str(owner_path.resolve()), safe='/')}?mode=ro", uri=True)
+        connection = _connect_query_only(owner_path)
         connection.row_factory = sqlite3.Row
         try:
             fixture = connection.execute(

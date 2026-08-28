@@ -5,14 +5,44 @@ public struct LifecycleItem: Identifiable, Sendable, Equatable {
     public var mediaID: String
     public var state: String
     public var title: String
+    public var filename: String
+    public var capturedAt: String
+    public var photoLibraryIdentifier: String
     public var mediaType: String
     public var sourceSlug: String
     public var updatedAt: String
+
+    public init(
+        mediaID: String,
+        state: String,
+        title: String,
+        filename: String,
+        capturedAt: String,
+        photoLibraryIdentifier: String,
+        mediaType: String,
+        sourceSlug: String,
+        updatedAt: String
+    ) {
+        self.mediaID = mediaID
+        self.state = state
+        self.title = title
+        self.filename = filename
+        self.capturedAt = capturedAt
+        self.photoLibraryIdentifier = photoLibraryIdentifier
+        self.mediaType = mediaType
+        self.sourceSlug = sourceSlug
+        self.updatedAt = updatedAt
+    }
 
     init(json: [String: JSONValue]) {
         mediaID = json["mediaId"]?.stringValue ?? ""
         state = json["state"]?.stringValue ?? ""
         title = json["title"]?.stringValue ?? ""
+        filename = json["filename"]?.stringValue ?? ""
+        capturedAt = json["capturedAt"]?.stringValue ?? ""
+        photoLibraryIdentifier = json["photoLibraryIdentifier"]?.stringValue
+            ?? json["photo_library_identifier"]?.stringValue
+            ?? ""
         mediaType = json["mediaType"]?.stringValue ?? ""
         sourceSlug = json["sourceSlug"]?.stringValue ?? ""
         updatedAt = json["updatedAt"]?.stringValue ?? ""
@@ -29,6 +59,53 @@ public enum LifecycleServiceError: Error, Sendable, Equatable {
     case missingResult
     case emptySelection
     case emptyRequiresConfirmation
+}
+
+public struct LifecycleActionReceipt: Sendable, Equatable {
+    public var affected: Int
+    public var skipped: Int
+    public var failed: Int
+
+    public init(affected: Int, skipped: Int, failed: Int) {
+        self.affected = max(0, affected)
+        self.skipped = max(0, skipped)
+        self.failed = max(0, failed)
+    }
+
+    public static func summarize(_ action: OwnerAction, requestedCount: Int) -> Self {
+        let requested = max(0, requestedCount)
+        let topLevel = action.result ?? [:]
+        let payload = topLevel["result"]?.objectValue ?? topLevel
+        let items = payload["items"]?.arrayValue?.compactMap(\.objectValue) ?? []
+        guard !items.isEmpty else {
+            return action.state == .completed
+                ? Self(affected: requested, skipped: 0, failed: 0)
+                : Self(affected: 0, skipped: 0, failed: requested)
+        }
+
+        var affected = 0
+        var skipped = 0
+        var failed = 0
+        for item in items {
+            switch item["status"]?.stringValue?.lowercased() ?? "" {
+            case "already-applied", "already-recoverable", "skipped":
+                skipped += 1
+            case "failed", "error", "conflict":
+                failed += 1
+            default:
+                affected += 1
+            }
+        }
+        let accounted = affected + skipped + failed
+        if accounted < requested {
+            failed += requested - accounted
+        }
+        return Self(affected: affected, skipped: skipped, failed: failed)
+    }
+
+    public var statusSummary: String {
+        "Affected \(affected.formatted()) • skipped \(skipped.formatted()) • failed \(failed.formatted())"
+    }
 }
 
 public actor LifecycleService {
@@ -66,6 +143,19 @@ public actor LifecycleService {
         )
     }
 
+    /// Queue a recoverable restore and return as soon as the Worker has
+    /// durably accepted it. The caller owns terminal-state monitoring and may
+    /// update its local presentation optimistically after this boundary.
+    public func enqueueRestore(mediaIDs: [String]) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await enqueueModeration(
+            operation: "waste-basket-restore",
+            mediaIDs: ids,
+            source: "backstage-waste-basket"
+        )
+    }
+
     public func moveToWasteBasket(
         mediaIDs: [String],
         fixtureID: String = "",
@@ -83,7 +173,27 @@ public actor LifecycleService {
         )
     }
 
+    /// Queue an X transition and return before the connector drains the
+    /// lifecycle outbox. The caller owns terminal-state monitoring.
+    public func enqueueMoveToWasteBasket(
+        mediaIDs: [String],
+        fixtureID: String = "",
+        galleryID: String = "",
+        source: String = "backstage-culling"
+    ) async throws -> OwnerAction {
+        let ids = clean(mediaIDs)
+        guard !ids.isEmpty else { throw LifecycleServiceError.emptySelection }
+        return try await enqueueModeration(
+            operation: "waste-basket-x",
+            mediaIDs: ids,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID
+        )
+    }
+
     public func emptyWasteBasket(
+        mediaIDs: [String] = [],
         confirmed: Bool,
         confirmationToken: String = "EMPTY_WASTE_BASKET"
     ) async throws -> OwnerAction {
@@ -92,10 +202,41 @@ public actor LifecycleService {
         }
         return try await submitModeration(
             operation: "waste-basket-empty",
-            mediaIDs: [],
+            mediaIDs: clean(mediaIDs),
             source: "backstage-waste-basket",
             confirmed: true,
             confirmationToken: confirmationToken
+        )
+    }
+
+    /// Queue a scoped or global Empty Waste Basket transition and return
+    /// before local reconciliation and remote acknowledgement finish.
+    public func enqueueEmptyWasteBasket(
+        mediaIDs: [String] = [],
+        confirmed: Bool,
+        confirmationToken: String = "EMPTY_WASTE_BASKET"
+    ) async throws -> OwnerAction {
+        guard confirmed, confirmationToken == "EMPTY_WASTE_BASKET" else {
+            throw LifecycleServiceError.emptyRequiresConfirmation
+        }
+        return try await enqueueModeration(
+            operation: "waste-basket-empty",
+            mediaIDs: clean(mediaIDs),
+            source: "backstage-waste-basket",
+            confirmed: true,
+            confirmationToken: confirmationToken
+        )
+    }
+
+    public func awaitCompletion(
+        of action: OwnerAction,
+        completionTimeout: Duration? = nil,
+        onUpdate: (@Sendable (OwnerAction) -> Void)? = nil
+    ) async throws -> OwnerAction {
+        try await runner.awaitCompletion(
+            of: action,
+            completionTimeout: completionTimeout,
+            onUpdate: onUpdate
         )
     }
 
@@ -146,6 +287,58 @@ public actor LifecycleService {
         confirmationToken: String = "",
         explicitTombstoneRestore: Bool = false
     ) async throws -> OwnerAction {
+        let (request, requestKey) = moderationRequest(
+            operation: operation,
+            mediaIDs: mediaIDs,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID,
+            confirmed: confirmed,
+            confirmationToken: confirmationToken,
+            explicitTombstoneRestore: explicitTombstoneRestore
+        )
+        return try await runner.submit(
+            request,
+            idempotencyKey: requestKey
+        )
+    }
+
+    private func enqueueModeration(
+        operation: String,
+        mediaIDs: [String],
+        source: String,
+        fixtureID: String = "",
+        galleryID: String = "",
+        confirmed: Bool = false,
+        confirmationToken: String = "",
+        explicitTombstoneRestore: Bool = false
+    ) async throws -> OwnerAction {
+        let (request, requestKey) = moderationRequest(
+            operation: operation,
+            mediaIDs: mediaIDs,
+            source: source,
+            fixtureID: fixtureID,
+            galleryID: galleryID,
+            confirmed: confirmed,
+            confirmationToken: confirmationToken,
+            explicitTombstoneRestore: explicitTombstoneRestore
+        )
+        return try await runner.enqueue(
+            request,
+            idempotencyKey: requestKey
+        )
+    }
+
+    private func moderationRequest(
+        operation: String,
+        mediaIDs: [String],
+        source: String,
+        fixtureID: String = "",
+        galleryID: String = "",
+        confirmed: Bool = false,
+        confirmationToken: String = "",
+        explicitTombstoneRestore: Bool = false
+    ) -> (OwnerActionCreate, String) {
         let requestKey = "native-lifecycle:\(operation):\(UUID().uuidString)"
         var payload: [String: JSONValue] = [
             "operation": .string(operation),
@@ -165,9 +358,6 @@ public actor LifecycleService {
             target: connectorID,
             payload: payload
         )
-        return try await runner.submit(
-            request,
-            idempotencyKey: requestKey
-        )
+        return (request, requestKey)
     }
 }

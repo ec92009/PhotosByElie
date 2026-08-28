@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Background Mac connector for cloud Owner actions.
+"""Mac connector for cloud Owner actions.
 
-The connector does not serve a local web UI. It polls the authenticated Worker
-queue, performs the small set of hardware/local-file tasks this Mac supports,
-and posts results back to the cloud Owner action ledger.
+The supported Backstage path launches this process with ``--once`` for a
+bounded drain. The legacy long-running mode remains only for rollback and
+must not be used by the on-demand launch contract.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import fcntl
 import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -49,12 +50,15 @@ INTERACTIVE_POLL_INTERVAL_SECONDS = 5
 INTERACTIVE_POLL_LEASE_SECONDS = 15
 MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
+ON_DEMAND_CONNECTOR_LOCK_NAME = ".owner-connector-on-demand.lock"
+ON_DEMAND_CONNECTOR_LOCK_WAIT_SECONDS = 15 * 60
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
 LOCAL_WASTE_BASKET_OPEN_PATH = "/photosbyelie/open-wastebasket"
 LOCAL_ACTION_WAKE_PATH = "/photosbyelie/wake-owner-action"
 LOCAL_TITLE_KEYWORD_REVIEW_PATH = "/photosbyelie/title-keyword-review-queue"
+LOCAL_REVIEW_ACTION_PATH = "/photosbyelie/review-action"
 OWNER_HELPER_PORT_START = 8000
 OWNER_HELPER_PORT_LIMIT = 8100
 SIDECAR_HELPER_PORT_START = 8011
@@ -75,6 +79,8 @@ ALLOWED_LOCAL_STATUS_ORIGINS = {
 ACTION_MUTATION_LOCK = threading.Lock()
 ACTION_LOCKS_GUARD = threading.Lock()
 ACTION_LOCKS: dict[str, tuple[threading.Lock, int]] = {}
+ACTION_WAKE_GUARD = threading.Lock()
+ACTION_WAKE_ACTIVE: set[str] = set()
 READ_ONLY_FIXTURE_MODES = {
     "asset-upload-plan",
     "fixture-access-effective",
@@ -100,10 +106,65 @@ READ_ONLY_FIXTURE_MODES = {
     "r2-reconciliation-plan",
 }
 LEGACY_SIDECAR_ENABLED = os.environ.get("PBE_ENABLE_LEGACY_SIDECAR", "").strip() == "1"
+LEGACY_BROWSER_OWNER_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_BROWSER_OWNER", "").strip() == "1"
+)
+LEGACY_CONNECTOR_DAEMON_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_CONNECTOR_DAEMON", "").strip() == "1"
+)
 
 
 def _utc_iso_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+ACTION_TIMING_SCHEMA = "photosbyelie.ownerActionTiming.v1"
+
+
+def _new_action_timing(action_id: str = "") -> dict[str, Any]:
+    return {
+        "schema": ACTION_TIMING_SCHEMA,
+        "actionId": str(action_id or ""),
+        "startedAt": _utc_iso_now(),
+        "phases": {},
+    }
+
+
+@contextmanager
+def _timed_phase(timing: dict[str, Any] | None, name: str):
+    """Record one wall-clock and monotonic duration without changing control flow."""
+    if timing is None:
+        yield
+        return
+    phase: dict[str, Any] = {"startedAt": _utc_iso_now()}
+    timing.setdefault("phases", {})[name] = phase
+    started = time.perf_counter()
+    try:
+        yield
+    except BaseException as error:
+        phase["outcome"] = "error"
+        phase["errorType"] = type(error).__name__
+        raise
+    else:
+        phase["outcome"] = "ok"
+    finally:
+        phase["endedAt"] = _utc_iso_now()
+        phase["elapsedMs"] = round((time.perf_counter() - started) * 1000, 1)
+
+
+def _finish_action_timing(
+    timing: dict[str, Any],
+    started: float,
+    *,
+    outcome: str,
+    error: BaseException | None = None,
+) -> dict[str, Any]:
+    timing["endedAt"] = _utc_iso_now()
+    timing["elapsedMs"] = round((time.perf_counter() - started) * 1000, 1)
+    timing["outcome"] = outcome
+    if error is not None:
+        timing["errorType"] = type(error).__name__
+    return timing
 
 
 @dataclass(frozen=True)
@@ -173,6 +234,29 @@ def _action_lock(action_id: str):
                 ACTION_LOCKS[action_id] = (lock, current_users - 1)
 
 
+def _run_local_action_wake(
+    config: ConnectorConfig,
+    client: "WorkerClient",
+    action_id: str,
+) -> None:
+    """Run a direct wake off the HTTP handler so the UI never waits on X work."""
+    with ACTION_WAKE_GUARD:
+        if action_id in ACTION_WAKE_ACTIVE:
+            return
+        ACTION_WAKE_ACTIVE.add(action_id)
+    try:
+        process_exact_action(config, client, action_id, local_wake=True)
+    except Exception as error:  # noqa: BLE001 - the durable action records failure.
+        print(
+            f"{action_id}: async local wake failed: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
+    finally:
+        with ACTION_WAKE_GUARD:
+            ACTION_WAKE_ACTIVE.discard(action_id)
+
+
 def _action_is_read_only(action: dict) -> bool:
     action_type = str(action.get("type") or "").strip()
     if action_type in {"owner-connector-check", "owner-hidden-metadata"}:
@@ -182,6 +266,17 @@ def _action_is_read_only(action: dict) -> bool:
     payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
     manifest = payload.get("manifest") if isinstance(payload.get("manifest"), dict) else {}
     return str(manifest.get("mode") or "").strip() in READ_ONLY_FIXTURE_MODES
+
+
+def _action_queue_sort_key(action: dict) -> tuple[int, float]:
+    """Put interactive read-only work ahead of maintenance in a drain."""
+    priority = 0 if _action_is_read_only(action) else 1
+    raw_created_at = str(action.get("createdAt") or action.get("updatedAt") or "").strip()
+    try:
+        created_at = datetime.fromisoformat(raw_created_at.replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError, OverflowError):
+        created_at = 0.0
+    return priority, -created_at
 
 
 def load_config(path: Path) -> ConnectorConfig:
@@ -194,8 +289,26 @@ def load_config(path: Path) -> ConnectorConfig:
     worker_base = str(payload.get("workerBase") or "").strip().rstrip("/")
     connector_id = _clean_connector_id(payload.get("connectorId"))
     token = str(payload.get("token") or "").strip()
-    repo_root = Path(str(payload.get("repoRoot") or "")).expanduser().resolve()
-    runtime_value = str(payload.get("runtimeRoot") or "").strip()
+    # A bounded Backstage launch validates its mutable Owner data root before
+    # starting this connector.  Keep ordinary/legacy launches pinned to the
+    # persisted config, but let that explicit bounded root win so actions and
+    # native Review reads operate on the same Owner.sqlite.
+    bounded_data_root = (
+        os.environ.get("PBE_REPO_ROOT", "").strip()
+        if os.environ.get("PBE_ON_DEMAND_OWNER_CONNECTOR", "").strip() == "1"
+        else ""
+    )
+    repo_root = Path(
+        bounded_data_root or str(payload.get("repoRoot") or "")
+    ).expanduser().resolve()
+    # A bounded Backstage launch pins the connector to the signed runtime that
+    # shipped inside the app.  The persisted config can legitimately point at
+    # an older rollback runtime, so the explicit launch environment must win.
+    runtime_value = str(
+        os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT")
+        or payload.get("runtimeRoot")
+        or ""
+    ).strip()
     interval = max(2, min(300, int(payload.get("intervalSeconds") or DEFAULT_INTERVAL_SECONDS)))
     local_status_port = max(0, min(65535, int(payload.get("localStatusPort") or DEFAULT_LOCAL_STATUS_PORT)))
     if not worker_base.startswith("https://"):
@@ -206,6 +319,12 @@ def load_config(path: Path) -> ConnectorConfig:
         raise RuntimeError("Connector token is missing or too short.")
     if not repo_root.is_dir():
         raise RuntimeError(f"PhotosByElie repoRoot is invalid: {repo_root}")
+    if bounded_data_root and not (
+        repo_root / "assets" / "owner-actions" / "Owner.sqlite"
+    ).is_file():
+        raise RuntimeError(
+            f"PhotosByElie bounded data root is missing Owner.sqlite: {repo_root}"
+        )
 
     runtime_root: Path | None = None
     runtime_revision = ""
@@ -395,7 +514,12 @@ def _launch_sidecar_for_browser(config: ConnectorConfig) -> dict:
 
 
 def _launch_waste_basket_for_browser(config: ConnectorConfig) -> dict:
-    """Start the local Owner helper and return its Waste Basket URL."""
+    """Start the retired browser Owner helper only for an explicit rollback."""
+    if not LEGACY_BROWSER_OWNER_ENABLED:
+        raise RuntimeError(
+            "Browser Waste Basket is retired. Use native PhotosByElie Backstage, "
+            "or set PBE_ENABLE_LEGACY_BROWSER_OWNER=1 for a deliberate rollback."
+        )
     existing = _running_owner_helper()
     if existing:
         return existing
@@ -605,6 +729,45 @@ def _allowed_local_status_origin(origin: str) -> str:
     return ""
 
 
+def _local_review_action_result(repo_root: Path, payload: dict) -> dict:
+    """Apply one Backstage Review mutation without creating a cloud action."""
+    operation = str(payload.get("operation") or "").strip().casefold()
+    scripts_path = str(repo_root / "scripts")
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    from fixture_pipeline import apply_fixture_review_action, undo_fixture_review_action
+
+    with ACTION_MUTATION_LOCK:
+        if operation == "apply":
+            asset_ids = payload.get("assetIds")
+            if not isinstance(asset_ids, list) or not asset_ids or len(asset_ids) > 500:
+                raise ValueError("Review apply requires 1 to 500 asset IDs")
+            result = apply_fixture_review_action(
+                repo_root,
+                str(payload.get("fixtureId") or ""),
+                asset_ids,
+                str(payload.get("reviewAction") or ""),
+                anchor_asset_id=str(payload.get("anchorAssetId") or ""),
+                propagate=bool(payload.get("propagate")),
+                title=payload.get("title") if "title" in payload else None,
+                keywords=payload.get("keywords") if "keywords" in payload else None,
+                country=payload.get("country") if "country" in payload else None,
+                proposal_id=str(payload.get("proposalId") or ""),
+                ai_reasons=payload.get("aiReasons") or [],
+                ai_note=str(payload.get("aiNote") or ""),
+                actor="owner-backstage",
+            )
+            return {"ok": True, "source": "backstage-local", "reviewAction": result}
+        if operation == "undo":
+            result = undo_fixture_review_action(
+                repo_root,
+                str(payload.get("operationId") or ""),
+                actor="owner-backstage",
+            )
+            return {"ok": True, "source": "backstage-local", "reviewUndo": result}
+    raise ValueError("unsupported local Review operation")
+
+
 def start_local_status_server(
     config: ConnectorConfig,
     polling_lease: InteractivePollingLease,
@@ -645,6 +808,7 @@ def start_local_status_server(
                 LOCAL_WASTE_BASKET_OPEN_PATH,
                 LOCAL_ACTION_WAKE_PATH,
                 LOCAL_TITLE_KEYWORD_REVIEW_PATH,
+                LOCAL_REVIEW_ACTION_PATH,
             }:
                 self.send_response(404)
                 self.end_headers()
@@ -655,6 +819,41 @@ def start_local_status_server(
 
         def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
+            if parsed.path == LOCAL_REVIEW_ACTION_PATH:
+                if not self._allowed_origin():
+                    self.send_response(403)
+                    self._send_cors_headers()
+                    self.end_headers()
+                    return
+                try:
+                    content_length = int(self.headers.get("Content-Length") or 0)
+                except ValueError:
+                    content_length = 0
+                if content_length <= 0 or content_length > 512 * 1024:
+                    self.send_response(400)
+                    self._send_cors_headers()
+                    self.end_headers()
+                    return
+                try:
+                    payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    if not isinstance(payload, dict):
+                        raise ValueError("Local Review request must be a JSON object.")
+                    response_payload = _local_review_action_result(config.repo_root, payload)
+                    body = json.dumps(response_payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                    status = 200
+                except ValueError as error:
+                    body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                    status = 400
+                except Exception as error:  # noqa: BLE001 - return the local transaction failure to Backstage.
+                    body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
+                    status = 500
+                self.send_response(status)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path != LOCAL_ACTION_WAKE_PATH:
                 self.send_response(404)
                 self.end_headers()
@@ -681,16 +880,23 @@ def start_local_status_server(
                 action_id = str(payload.get("actionId") or "").strip()
                 if not action_id.startswith("owner-action-") or len(action_id) > 96:
                     raise ValueError("A valid opaque actionId is required.")
-                action, _processed = process_exact_action(config, client, action_id, local_wake=True)
+                thread = threading.Thread(
+                    target=_run_local_action_wake,
+                    args=(config, client, action_id),
+                    name=f"pbe-owner-action-wake-{action_id[-12:]}",
+                    daemon=True,
+                )
+                thread.start()
                 body = json.dumps({
                     "ok": True,
-                    "action": action,
+                    "action": None,
                     "diagnostics": {
                         "fastPath": True,
+                        "accepted": True,
                         "localWakeMs": round((time.perf_counter() - wake_started) * 1000, 1),
                     },
                 }, separators=(",", ":")).encode("utf-8")
-                status = 200
+                status = 202
             except ValueError as error:
                 body = json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")).encode("utf-8")
                 status = 400
@@ -713,6 +919,19 @@ def start_local_status_server(
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
             parsed = urlparse(self.path)
             if parsed.path == LOCAL_WASTE_BASKET_OPEN_PATH:
+                if not LEGACY_BROWSER_OWNER_ENABLED:
+                    body = (
+                        "Browser Waste Basket is retired. Use native PhotosByElie Backstage. "
+                        "For a deliberate rollback, restart the connector with "
+                        "PBE_ENABLE_LEGACY_BROWSER_OWNER=1."
+                    ).encode("utf-8")
+                    self.send_response(410)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 try:
                     workspace = _launch_waste_basket_for_browser(config)
                     self.send_response(302)
@@ -852,6 +1071,15 @@ def start_local_status_server(
     thread.start()
 
 
+class WorkerRequestError(RuntimeError):
+    """A Worker response that includes an HTTP status and stable error code."""
+
+    def __init__(self, message: str, *, status: int = 0, code: str = "") -> None:
+        super().__init__(message)
+        self.status = int(status)
+        self.code = str(code or "").strip()
+
+
 class WorkerClient:
     def __init__(self, config: ConnectorConfig):
         self.config = config
@@ -890,14 +1118,21 @@ class WorkerClient:
                 detail = json.loads(error.read().decode("utf-8") or "{}")
             except (json.JSONDecodeError, UnicodeDecodeError):
                 detail = {}
-            message = detail.get("error", {}).get("message") if isinstance(detail.get("error"), dict) else detail.get("error")
-            raise RuntimeError(message or f"Worker returned HTTP {error.code} for {path}.") from error
+            remote_error = detail.get("error")
+            message = remote_error.get("message") if isinstance(remote_error, dict) else remote_error
+            code = remote_error.get("code") if isinstance(remote_error, dict) else ""
+            raise WorkerRequestError(
+                message or f"Worker returned HTTP {error.code} for {path}.",
+                status=error.code,
+                code=code,
+            ) from error
         except (URLError, OSError, json.JSONDecodeError) as error:
             raise RuntimeError(f"Worker request failed for {path}: {error}") from error
         if body.get("ok") is False or body.get("error"):
-            error = body.get("error")
-            message = error.get("message") if isinstance(error, dict) else str(error)
-            raise RuntimeError(message or "Worker request failed.")
+            remote_error = body.get("error")
+            message = remote_error.get("message") if isinstance(remote_error, dict) else str(remote_error)
+            code = remote_error.get("code") if isinstance(remote_error, dict) else ""
+            raise WorkerRequestError(message or "Worker request failed.", code=code)
         return body
 
     def heartbeat(self) -> dict:
@@ -932,13 +1167,70 @@ class WorkerClient:
 
 
 def _load_local_modules(runtime_root: Path):
-    scripts_path = str(runtime_root / "scripts")
-    if scripts_path not in sys.path:
-        sys.path.insert(0, scripts_path)
-    from local_server import apply_public_photo_moderation, new_owner_connector_result, new_owner_sidecar_decision_result
-    from sidecar_server import _preview_cache_path, _run_apple_photos_bridge_app_task
+    scripts_root = (runtime_root / "scripts").resolve(strict=True)
+    scripts_path = str(scripts_root)
+    # The data checkout is deliberately the mutable Owner.sqlite root, not an
+    # executable-code source.  A long-lived connector can nevertheless have
+    # that checkout's scripts directory earlier in sys.path (or retain one of
+    # its modules from an older action).  Make the installed runtime an
+    # invariant instead of a best-effort path hint.
+    sys.path[:] = [entry for entry in sys.path if str(Path(entry or ".").resolve()) != scripts_path]
+    sys.path.insert(0, scripts_path)
+    # Purge every runtime-owned module name, not just the two connector entry
+    # points. Those entry points import a sizeable sibling graph (for example
+    # import_source_anchor). Keeping one transitive sibling cached from the
+    # mutable data checkout can make an otherwise attested runtime execute an
+    # incompatible mix of revisions.
+    runtime_module_names: set[str] = set()
+    for source_path in scripts_root.rglob("*.py"):
+        relative_path = source_path.relative_to(scripts_root)
+        if relative_path.name == "__init__.py":
+            if relative_path.parent.parts:
+                runtime_module_names.add(".".join(relative_path.parent.parts))
+        else:
+            runtime_module_names.add(".".join(relative_path.with_suffix("").parts))
+            runtime_module_names.add(source_path.stem)
 
-    return new_owner_connector_result, new_owner_sidecar_decision_result, _preview_cache_path, _run_apple_photos_bridge_app_task, apply_public_photo_moderation
+    for module_name in sorted(runtime_module_names):
+        loaded = sys.modules.get(module_name)
+        loaded_file = getattr(loaded, "__file__", "") if loaded is not None else ""
+        if loaded_file:
+            try:
+                Path(loaded_file).resolve().relative_to(scripts_root)
+            except ValueError:
+                sys.modules.pop(module_name, None)
+
+    import local_server
+    import sidecar_server
+
+    for module_name, module in (("local_server", local_server), ("sidecar_server", sidecar_server)):
+        loaded_file = Path(str(getattr(module, "__file__", ""))).resolve()
+        try:
+            loaded_file.relative_to(scripts_root)
+        except ValueError as error:
+            raise RuntimeError(
+                f"Installed connector runtime did not supply {module_name}: {loaded_file}"
+            ) from error
+
+    for module_name in sorted(runtime_module_names):
+        loaded = sys.modules.get(module_name)
+        loaded_file = getattr(loaded, "__file__", "") if loaded is not None else ""
+        if not loaded_file:
+            continue
+        try:
+            Path(loaded_file).resolve().relative_to(scripts_root)
+        except ValueError as error:
+            raise RuntimeError(
+                f"Installed connector runtime retained mutable sibling {module_name}: {loaded_file}"
+            ) from error
+
+    return (
+        local_server.new_owner_connector_result,
+        local_server.new_owner_sidecar_decision_result,
+        sidecar_server._preview_cache_path,
+        sidecar_server._run_backstage_photos_preview_task,
+        local_server.apply_public_photo_moderation,
+    )
 
 
 def _load_lifecycle_gateway(repo_root: Path):
@@ -959,14 +1251,20 @@ def _lifecycle_request(
     phase: str,
     operation_id: str,
     payload: dict[str, Any],
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict:
     """Send one replay-safe lifecycle phase under a stable idempotency key."""
-    return client.request(
-        "POST",
-        f"/api/v1/lifecycle/{phase}",
-        payload,
-        idempotency_key=_lifecycle_phase_key(operation_id, phase),
-    )
+    with _timed_phase(
+        action_timing,
+        f"lifecycle.remote.{phase}.{operation_id}",
+    ):
+        return client.request(
+            "POST",
+            f"/api/v1/lifecycle/{phase}",
+            payload,
+            idempotency_key=_lifecycle_phase_key(operation_id, phase),
+        )
 
 
 def _lifecycle_arm_intent_database(config: ConnectorConfig) -> Path:
@@ -1087,10 +1385,30 @@ def _reconcile_lifecycle_arm_intent(
     client: WorkerClient,
     gateway: Any,
     intent: dict[str, Any],
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Replay an uncertain arm and clear intent only after its receipt is durable."""
     operation_id = intent["operationId"]
-    arm = _lifecycle_request(client, "arm", operation_id, intent["request"])
+    try:
+        arm = _lifecycle_request(
+            client,
+            "arm",
+            operation_id,
+            intent["request"],
+            action_timing=action_timing,
+        )
+    except WorkerRequestError as error:
+        # A deterministic identity rejection means the remote authority
+        # explicitly refused to create a barrier. Nothing can be committed
+        # locally, and retaining this initiating intent would make every
+        # background poll replay the same permanent failure forever. Keep the
+        # Owner action failure as the audit record, but retire only this
+        # pre-mutation retry intent. Transport errors and 5xx/partial errors
+        # remain durable for replay.
+        if error.status == 409 and error.code == "lifecycle_identity_conflict":
+            _clear_lifecycle_arm_intent(config, intent)
+        raise
     gateway.record_deployed_lifecycle_arm(
         config.repo_root,
         intent["operation"],
@@ -1104,12 +1422,20 @@ def _reconcile_lifecycle_arm_intent(
 def drain_deployed_lifecycle_outbox(
     config: ConnectorConfig,
     client: WorkerClient,
+    *,
+    action_timing: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Replay durable lifecycle phases independently of cloud action state."""
     gateway = _load_lifecycle_gateway(config.repo_root)
     drained: list[dict[str, Any]] = []
     for intent in _pending_lifecycle_arm_intents(config):
-        arm = _reconcile_lifecycle_arm_intent(config, client, gateway, intent)
+        arm = _reconcile_lifecycle_arm_intent(
+            config,
+            client,
+            gateway,
+            intent,
+            action_timing=action_timing,
+        )
         drained.append({"operationId": intent["operationId"], "state": "armed", "remote": arm})
     for pending in gateway.pending_deployed_lifecycle_operations(config.repo_root):
         operation_id = pending["operationId"]
@@ -1131,11 +1457,17 @@ def drain_deployed_lifecycle_outbox(
             )
             if proof is None:
                 continue
-            remote = _lifecycle_request(client, "abort", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-                "proof": proof,
-            })
+            remote = _lifecycle_request(
+                client,
+                "abort",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                    "proof": proof,
+                },
+                action_timing=action_timing,
+            )
             gateway.abort_deployed_lifecycle_arm_locally(
                 config.repo_root, operation_id, digest
             )
@@ -1143,11 +1475,23 @@ def drain_deployed_lifecycle_outbox(
             continue
         durable = gateway.deployed_lifecycle_outbox(config.repo_root, operation_id)
         if state == "locally_committed":
-            _lifecycle_request(client, "local-commit", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-            })
-            remote = _lifecycle_request(client, "apply", operation_id, durable)
+            _lifecycle_request(
+                client,
+                "local-commit",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                },
+                action_timing=action_timing,
+            )
+            remote = _lifecycle_request(
+                client,
+                "apply",
+                operation_id,
+                durable,
+                action_timing=action_timing,
+            )
             gateway.acknowledge_deployed_lifecycle(
                 config.repo_root,
                 operation_id,
@@ -1157,10 +1501,16 @@ def drain_deployed_lifecycle_outbox(
             state = "deployed_applied"
             drained.append({"operationId": operation_id, "state": state, "remote": remote})
         if state == "deployed_applied":
-            remote = _lifecycle_request(client, "ack", operation_id, {
-                "operationId": operation_id,
-                "operationDigest": digest,
-            })
+            remote = _lifecycle_request(
+                client,
+                "ack",
+                operation_id,
+                {
+                    "operationId": operation_id,
+                    "operationDigest": digest,
+                },
+                action_timing=action_timing,
+            )
             gateway.acknowledge_deployed_lifecycle(
                 config.repo_root,
                 operation_id,
@@ -1186,6 +1536,13 @@ def drain_hosted_lifecycle_requests(
     for pending in gateway.pending_hosted_lifecycle_requests(config.repo_root):
         request_id = str(pending["requestId"])
         claimed = gateway.claim_hosted_lifecycle_request(config.repo_root, request_id)
+        if claimed.get("state") != "running":
+            drained.append({
+                "requestId": request_id,
+                "state": claimed.get("state") or "failed",
+                **({"error": claimed["error"]} if claimed.get("error") else {}),
+            })
+            continue
         operation_id = f"owner-action:hosted-lifecycle:{request_id}"
         prior_result = gateway.deployed_lifecycle_local_result(
             config.repo_root, operation_id
@@ -1324,13 +1681,13 @@ def _owner_hidden_metadata(repo_root: Path, photo_ids: list[str]) -> dict[str, d
         connection.close()
 
 
-def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridge_task) -> tuple[str, str]:
+def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_preview_task) -> tuple[str, str]:
     asset_id = str(item.get("assetId") or "").strip()
     if not asset_id:
         return "", "missing asset id"
     destination = preview_cache_path(repo_root, asset_id, 480)
     if not destination.exists():
-        payload = run_bridge_task(
+        payload = run_preview_task(
             repo_root,
             ["preview", "--asset-id", asset_id, "--destination", str(destination), "--max-pixel", "480"],
             timeout=90,
@@ -1348,15 +1705,15 @@ def _preview_data_url(repo_root: Path, item: dict, preview_cache_path, run_bridg
     return f"data:image/jpeg;base64,{base64.b64encode(data).decode('ascii')}", ""
 
 
-def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run_bridge_task) -> tuple[list[dict], list[dict]]:
+def _attach_previews(repo_root: Path, items: list[dict], preview_cache_path, run_preview_task) -> tuple[list[dict], list[dict]]:
     enriched = [dict(item) for item in items]
     errors: list[dict] = []
-    # PhotoKit is permission-identity sensitive and the bridge app serializes
-    # resource callbacks more reliably than several simultaneous app launches.
+    # Keep requests serialized so one signed Backstage PhotoKit process owns
+    # the local resource callbacks and connector errors stay per-item.
     worker_count = 1
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_preview_data_url, repo_root, item, preview_cache_path, run_bridge_task): index
+            executor.submit(_preview_data_url, repo_root, item, preview_cache_path, run_preview_task): index
             for index, item in enumerate(enriched)
         }
         for future in as_completed(futures):
@@ -1521,6 +1878,7 @@ def execute_action(
     action: dict,
     *,
     lifecycle_client: WorkerClient | None = None,
+    action_timing: dict[str, Any] | None = None,
 ) -> dict:
     action_type = str(action.get("type") or "").strip()
     if action_type == "owner-connector-check":
@@ -1534,6 +1892,8 @@ def execute_action(
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         date_from = str(payload.get("dateFrom") or "").strip()
         date_to = str(payload.get("dateTo") or "").strip()
+        mode = str(payload.get("mode") or "").strip().casefold()
+        full_library = bool(payload.get("fullLibrary")) or mode == "full"
         for label, value in (("dateFrom", date_from), ("dateTo", date_to)):
             if not value:
                 continue
@@ -1548,10 +1908,16 @@ def execute_action(
             "--limit",
             "24",
         ]
-        if date_from:
+        if full_library:
+            if date_from or date_to:
+                raise RuntimeError("full Photos reconciliation cannot include date bounds")
+            arguments.append("--full")
+        elif date_from:
             arguments.extend(["--date-from", date_from])
         if date_to:
             arguments.extend(["--date-to", date_to])
+        if not full_library and not date_from and not date_to:
+            arguments.append("--incremental")
         indexed = _run_repo_json(config, [
             *arguments,
         ])
@@ -1573,7 +1939,7 @@ def execute_action(
             "hiddenMetadata": _owner_hidden_metadata(config.repo_root, photo_ids),
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
-    connector_result, decision_result, preview_cache_path, run_bridge_task, apply_public_photo_moderation = _load_local_modules(config.code_root)
+    connector_result, decision_result, preview_cache_path, run_preview_task, apply_public_photo_moderation = _load_local_modules(config.code_root)
     if action_type == "photo-moderation":
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         operation = str(payload.get("operation") or "").strip().lower()
@@ -1607,37 +1973,88 @@ def execute_action(
             "waste-basket-tombstone-restore": ("tombstone-restore", False),
         }
         lifecycle_arm = None
+        lifecycle_result = None
+        retained_local_only_ids: list[str] = []
         active_lifecycle_client = lifecycle_client
         if operation in lifecycle_operations:
             lifecycle_operation, denied = lifecycle_operations[operation]
             gateway = _load_lifecycle_gateway(config.repo_root)
-            authoritative_ids = gateway.resolve_deployed_lifecycle_asset_ids(
-                config.repo_root, lifecycle_operation, photo_ids
-            )
+            with _timed_phase(action_timing, "lifecycle.resolve.authoritative-ids"):
+                authoritative_ids = gateway.resolve_deployed_lifecycle_asset_ids(
+                    config.repo_root, lifecycle_operation, photo_ids
+                )
             if len(authoritative_ids) > 100:
                 raise RuntimeError("Lifecycle moderation accepts at most 100 authoritative assets per Owner action")
-            authoritative_members = gateway.derive_deployed_lifecycle_members(
-                config.repo_root, authoritative_ids
-            )
+            with _timed_phase(action_timing, "lifecycle.resolve.members"):
+                lifecycle_scope = gateway.classify_deployed_lifecycle_scope(
+                    config.repo_root, authoritative_ids
+                )
             operation_id = f"owner-action:{str(action.get('id') or '').strip()}"
             if operation_id == "owner-action:":
                 raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
-            active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
-            arm_request = {
-                "operationId": operation_id,
-                "operation": lifecycle_operation,
-                "denied": denied,
-                "items": authoritative_members,
-            }
-            arm_intent = _persist_lifecycle_arm_intent(
-                config,
-                lifecycle_operation,
-                authoritative_ids,
-                arm_request,
-            )
-            lifecycle_arm = _reconcile_lifecycle_arm_intent(
-                config, active_lifecycle_client, gateway, arm_intent
-            )
+            if lifecycle_scope["scope"] == "local-only":
+                if lifecycle_operation not in {"x", "restore"}:
+                    raise RuntimeError(
+                        "Local-only assets support recoverable Waste Basket X and Restore; "
+                        "global tombstone operations require deployed lifecycle eligibility"
+                    )
+                lifecycle_result = {
+                    "scope": "local-only",
+                    "remoteArmRequired": False,
+                    "reason": lifecycle_scope["reason"],
+                }
+            elif lifecycle_scope["scope"] == "mixed":
+                if lifecycle_operation != "empty":
+                    raise RuntimeError(
+                        "lifecycle batch mixes deployed and local-only assets; submit separate actions"
+                    )
+                retained_local_only_ids = list(lifecycle_scope["localOnlyAssetIds"])
+                authoritative_ids = list(lifecycle_scope["deployedAssetIds"])
+                arm_request = {
+                    "operationId": operation_id,
+                    "operation": lifecycle_operation,
+                    "denied": denied,
+                    "items": lifecycle_scope["members"],
+                }
+                active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
+                with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
+                    arm_intent = _persist_lifecycle_arm_intent(
+                        config,
+                        lifecycle_operation,
+                        authoritative_ids,
+                        arm_request,
+                    )
+                with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
+                    lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                        config,
+                        active_lifecycle_client,
+                        gateway,
+                        arm_intent,
+                        action_timing=action_timing,
+                    )
+            else:
+                active_lifecycle_client = active_lifecycle_client or WorkerClient(config)
+                arm_request = {
+                    "operationId": operation_id,
+                    "operation": lifecycle_operation,
+                    "denied": denied,
+                    "items": lifecycle_scope["members"],
+                }
+                with _timed_phase(action_timing, "lifecycle.arm.intent-persist"):
+                    arm_intent = _persist_lifecycle_arm_intent(
+                        config,
+                        lifecycle_operation,
+                        authoritative_ids,
+                        arm_request,
+                    )
+                with _timed_phase(action_timing, "lifecycle.arm.reconcile"):
+                    lifecycle_arm = _reconcile_lifecycle_arm_intent(
+                        config,
+                        active_lifecycle_client,
+                        gateway,
+                        arm_intent,
+                        action_timing=action_timing,
+                    )
             photo_ids = authoritative_ids
             moderation_payload["photo_ids"] = authoritative_ids
             moderation_payload["request_key"] = operation_id
@@ -1677,18 +2094,32 @@ def execute_action(
             moderation_payload.pop("requestKey", None)
             moderation_payload["request_key"] = lifecycle_arm["operationId"]
         if lifecycle_arm:
-            result = apply_public_photo_moderation(
-                config.repo_root,
-                moderation_payload,
-                trusted_deployed_lifecycle=lifecycle_arm,
-            )
+            with _timed_phase(action_timing, "lifecycle.local-moderation"):
+                result = apply_public_photo_moderation(
+                    config.repo_root,
+                    moderation_payload,
+                    trusted_deployed_lifecycle=lifecycle_arm,
+                )
         else:
-            result = apply_public_photo_moderation(config.repo_root, moderation_payload)
-        lifecycle_result = None
+            with _timed_phase(action_timing, "lifecycle.local-moderation"):
+                result = apply_public_photo_moderation(config.repo_root, moderation_payload)
         if lifecycle_arm and active_lifecycle_client:
-            replay = drain_deployed_lifecycle_outbox(config, active_lifecycle_client)
+            with _timed_phase(action_timing, "lifecycle.outbox.replay"):
+                replay = drain_deployed_lifecycle_outbox(
+                    config,
+                    active_lifecycle_client,
+                    action_timing=action_timing,
+                )
             lifecycle_result = {"arm": lifecycle_arm, "replay": replay}
-        return {
+            if retained_local_only_ids:
+                lifecycle_result.update({
+                    "scope": "mixed",
+                    "partial": True,
+                    "deployedAssetIds": photo_ids,
+                    "retainedLocalOnlyAssetIds": retained_local_only_ids,
+                    "reason": "local-only-assets-have-no-cloud-media-evidence",
+                })
+        result_payload = {
             "connectorId": config.connector_id,
             "type": action_type,
             "operation": operation,
@@ -1697,6 +2128,9 @@ def execute_action(
             "lifecycle": lifecycle_result,
             "completedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
+        if action_timing is not None:
+            result_payload["timing"] = {"connector": action_timing}
+        return result_payload
     if action_type == "sidecar-culling-review":
         local = connector_result(config.repo_root, {"action": action, "connectorId": config.connector_id})
         manifest = action.get("payload", {}).get("manifest", {}) if isinstance(action.get("payload"), dict) else {}
@@ -1707,7 +2141,7 @@ def execute_action(
                 config.repo_root,
                 items,
                 preview_cache_path,
-                run_bridge_task,
+                run_preview_task,
             )
         result = dict(local.get("result") or {})
         result["previewItems"] = items
@@ -1750,33 +2184,73 @@ def process_exact_action(
 ) -> tuple[dict, bool]:
     """Claim and execute one Worker-authorized action exactly once on this Mac."""
     with _action_lock(action_id):
-        action = client.action(action_id)
+        timing = _new_action_timing(action_id)
+        timing_started = time.perf_counter()
+        try:
+            with _timed_phase(timing, "action.fetch"):
+                action = client.action(action_id)
+        except Exception as error:
+            _finish_action_timing(timing, timing_started, outcome="error", error=error)
+            raise
         if action.get("state") in {"completed", "failed", "cancelled"}:
             return action, False
         locally_awakened_at = _utc_iso_now() if local_wake else ""
         try:
-            if action.get("state") == "queued":
-                claim_payload = {"locallyAwakenedAt": locally_awakened_at} if locally_awakened_at else {}
-                action = client.transition(action_id, "claim", claim_payload).get("action") or action
+            with _timed_phase(timing, "action.claim"):
+                if action.get("state") == "queued":
+                    claim_payload = {"locallyAwakenedAt": locally_awakened_at} if locally_awakened_at else {}
+                    action = client.transition(action_id, "claim", claim_payload).get("action") or action
             if action.get("state") != "claimed":
+                _finish_action_timing(timing, timing_started, outcome="not-claimed")
                 return action, False
             if action.get("claim", {}).get("connectorId") != config.connector_id:
                 raise RuntimeError("Worker action is not claimed by this connector.")
-            if _action_is_read_only(action):
-                result = execute_action(config, action)
-            else:
-                with ACTION_MUTATION_LOCK:
-                    result = execute_action(config, action)
+            with _timed_phase(timing, "action.execute"):
+                if _action_is_read_only(action):
+                    result = execute_action(config, action, action_timing=timing)
+                else:
+                    with ACTION_MUTATION_LOCK:
+                        result = execute_action(config, action, action_timing=timing)
+            if isinstance(result, dict):
+                result.setdefault("timing", {})["connector"] = timing
             executed_at = _utc_iso_now()
+            if action.get("type") == "sidecar-culling-review" and isinstance(result, dict):
+                phase_timing = dict(result.get("timing") or {})
+                owner_timing = dict(action.get("timing") or {})
+                owner_timing["executedAt"] = executed_at
+                phase_timing["ownerAction"] = owner_timing
+                result = {**result, "timing": phase_timing}
+            complete_started_at = _utc_iso_now()
+            timing.setdefault("phases", {})["action.complete"] = {
+                "startedAt": complete_started_at,
+                "endedAt": complete_started_at,
+                "elapsedMs": 0.0,
+                "outcome": "submitted",
+            }
+            _finish_action_timing(timing, timing_started, outcome="submitted")
             completed = client.transition(
                 action_id,
                 "complete",
-                {"result": result, "timing": {"executedAt": executed_at}},
+                {
+                    "result": result,
+                    "timing": {
+                        "executedAt": executed_at,
+                        "connector": timing,
+                    },
+                },
             ).get("action") or action
             return completed, True
         except Exception as error:  # noqa: BLE001 - failure must be recorded in the cloud ledger.
+            _finish_action_timing(timing, timing_started, outcome="error", error=error)
             try:
-                client.transition(action_id, "fail", {"message": str(error)[:500]})
+                client.transition(
+                    action_id,
+                    "fail",
+                    {
+                        "message": str(error)[:500],
+                        "timing": {"connector": timing},
+                    },
+                )
             except Exception:
                 pass
             print(f"{action_id}: {error}", file=sys.stderr, flush=True)
@@ -1789,7 +2263,7 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
         hosted_before = drain_hosted_lifecycle_requests(config, client)
     client.heartbeat()
     processed = 0
-    for action in client.actions():
+    for action in sorted(client.actions(), key=_action_queue_sort_key):
         action_id = str(action.get("id") or "").strip()
         if not action_id:
             continue
@@ -1806,6 +2280,68 @@ def process_once(config: ConnectorConfig, client: WorkerClient) -> int:
     ])
 
 
+@contextmanager
+def _connector_process_lock(config: ConnectorConfig, *, wait_seconds: float = 0.0):
+    """Allow only one local connector process to drain Owner work at a time.
+
+    Native Backstage and its hosted loopback Owner UI are separate launchers.
+    The in-process locks above cannot serialize their child processes, so use a
+    short-lived advisory lock in the mutable Owner data root. A second bounded
+    wake exits without touching Worker or SQLite; the process holding the lock
+    remains the sole drain owner.
+    """
+    lock_path = config.repo_root / "assets" / "owner-actions" / ON_DEMAND_CONNECTOR_LOCK_NAME
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = lock_path.open("a+", encoding="utf-8")
+    except OSError as error:
+        raise RuntimeError(f"Could not prepare the local Owner connector lock: {error}") from error
+
+    acquired = False
+    deadline = time.monotonic() + max(0.0, float(wait_seconds))
+    try:
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except BlockingIOError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    yield False
+                    return
+                time.sleep(min(0.05, remaining))
+        try:
+            os.fchmod(handle.fileno(), 0o600)
+        except OSError:
+            pass
+        yield True
+    finally:
+        if acquired:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+        handle.close()
+
+
+def process_direct_action(config: ConnectorConfig, client: WorkerClient, action_id: str) -> int:
+    """Execute one woken action, allowing read-only work beside maintenance."""
+    action = client.action(action_id)
+    if _action_is_read_only(action):
+        _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
+        return int(did_process)
+
+    with _connector_process_lock(
+        config,
+        wait_seconds=ON_DEMAND_CONNECTOR_LOCK_WAIT_SECONDS,
+    ) as acquired:
+        if not acquired:
+            raise RuntimeError("Timed out waiting to run the exact Owner action.")
+        _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
+        return int(did_process)
+
+
 def next_poll_interval(base_interval: int, current_interval: int, processed: int, *, interactive: bool = False) -> int:
     """Back off while idle, but stay responsive during an interactive Owner lease."""
     base = max(2, min(300, int(base_interval)))
@@ -1816,51 +2352,27 @@ def next_poll_interval(base_interval: int, current_interval: int, processed: int
     return min(DEFAULT_IDLE_MAX_INTERVAL_SECONDS, max(base, int(current_interval) * 2))
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the PhotosByElie background Mac connector.")
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--once", action="store_true", help="Poll once and exit.")
-    mode.add_argument(
-        "--status",
-        action="store_true",
-        help="Verify config and installed runtime locally, print redacted JSON, and exit without network access.",
-    )
-    args = parser.parse_args()
-    # launchd starts with a deliberately small PATH. Keep the normal local
-    # toolchain discoverable to child Sidecar and maintenance processes.
-    os.environ["PATH"] = _sidecar_helper_env()["PATH"]
-    config = load_config(args.config.expanduser())
-    if args.status:
-        print(
-            json.dumps(
-                {
-                    "ok": True,
-                    "schema": "photosbyelie.localOwnerConnectorStatus.v1",
-                    "connector": _local_status_payload(config),
-                    "dataRootAvailable": config.repo_root.is_dir(),
-                    "networkAttempted": False,
-                },
-                sort_keys=True,
-            )
-        )
-        return 0
+def _run_connector(config: ConnectorConfig, *, once: bool, action_id: str = "") -> int:
     client = WorkerClient(config)
+    if action_id:
+        client.heartbeat()
+        process_direct_action(config, client, action_id)
+        return 0
     polling_lease = InteractivePollingLease()
-    if not args.once:
+    if not once:
         start_local_status_server(config, polling_lease, client)
     poll_interval = config.interval_seconds
     next_full_poll_at = 0.0
     while True:
         interactive = polling_lease.active()
-        if not args.once and not interactive:
+        if not once and not interactive:
             try:
                 if client.interactive():
                     polling_lease.touch()
                     interactive = True
             except Exception:
                 pass
-        if args.once or interactive or time.monotonic() >= next_full_poll_at:
+        if once or interactive or time.monotonic() >= next_full_poll_at:
             try:
                 processed = process_once(config, client)
                 if processed:
@@ -1879,16 +2391,80 @@ def main() -> int:
                     0,
                     interactive=interactive,
                 )
-                if args.once:
+                if once:
                     return 1
             next_full_poll_at = time.monotonic() + poll_interval
-        if args.once:
+        if once:
             return 0
         wait_seconds = min(
             INTERACTIVE_POLL_INTERVAL_SECONDS,
             max(0.1, next_full_poll_at - time.monotonic()),
         )
         polling_lease.wait(wait_seconds)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run the PhotosByElie background Mac connector.")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--once", action="store_true", help="Poll once and exit.")
+    mode.add_argument(
+        "--status",
+        action="store_true",
+        help="Verify config and installed runtime locally, print redacted JSON, and exit without network access.",
+    )
+    parser.add_argument(
+        "--action-id",
+        default="",
+        help="Wake and execute one durable action instead of draining the queue.",
+    )
+    args = parser.parse_args()
+    if (
+        os.environ.get("PBE_ON_DEMAND_OWNER_CONNECTOR") == "1"
+        and not args.once
+        and not args.status
+    ):
+        raise SystemExit("On-demand Owner connector launches must use --once.")
+    if args.action_id and not args.once:
+        raise SystemExit("--action-id requires --once.")
+    if (
+        not args.once
+        and not args.status
+        and not args.action_id
+        and not LEGACY_CONNECTOR_DAEMON_ENABLED
+    ):
+        print(
+            "The always-on Owner connector daemon is retired. Use signed "
+            "PhotosByElie Backstage for on-demand work, or set "
+            "PBE_ENABLE_LEGACY_CONNECTOR_DAEMON=1 for a deliberate rollback rehearsal.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 64
+    # launchd starts with a deliberately small PATH. Keep the normal local
+    # toolchain discoverable to child Sidecar and maintenance processes.
+    os.environ["PATH"] = _sidecar_helper_env()["PATH"]
+    config = load_config(args.config.expanduser())
+    if args.status:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "schema": "photosbyelie.localOwnerConnectorStatus.v1",
+                    "connector": _local_status_payload(config),
+                    "dataRootAvailable": config.repo_root.is_dir(),
+                    "networkAttempted": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.action_id:
+        return _run_connector(config, once=True, action_id=args.action_id)
+    with _connector_process_lock(config) as acquired:
+        if not acquired:
+            return 0
+        return _run_connector(config, once=args.once)
 
 
 if __name__ == "__main__":

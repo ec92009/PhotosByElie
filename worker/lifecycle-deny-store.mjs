@@ -263,8 +263,8 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     return { seedId: id, seedDigest, memberCount: members.length };
   };
 
-  const durableManifestSummary = async () => {
-    const accumulator = await createManifestAccumulator();
+  const durableManifestRows = async () => {
+    const rows = [];
     // "binding" sorts before "identity" in the canonical JSON-row order.
     for (let offset = 0; ; offset += MANIFEST_PAGE_SIZE) {
       const page = await rowsFrom(database.prepare(`SELECT 'binding' AS row_kind,
@@ -272,7 +272,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         FROM pbe_lifecycle_media_bindings
         ORDER BY canonical_media_id, bucket, object_key
         LIMIT ? OFFSET ?`).bind(MANIFEST_PAGE_SIZE, offset));
-      await accumulateManifestRows(accumulator, page.map((row) => [
+      rows.push(...page.map((row) => [
         "binding", clean(row.canonical_media_id), "", clean(row.bucket), clean(row.object_key),
       ]));
       if (page.length < MANIFEST_PAGE_SIZE) break;
@@ -283,13 +283,15 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
         FROM pbe_lifecycle_media_identity
         ORDER BY canonical_media_id
         LIMIT ? OFFSET ?`).bind(MANIFEST_PAGE_SIZE, offset));
-      await accumulateManifestRows(accumulator, page.map((row) => [
+      rows.push(...page.map((row) => [
         "identity", clean(row.canonical_media_id), clean(row.canonical_asset_id), "", "",
       ]));
       if (page.length < MANIFEST_PAGE_SIZE) break;
     }
-    return manifestSummaryForAccumulator(accumulator);
+    return rows;
   };
+
+  const durableManifestSummary = async () => manifestSummaryForRows(await durableManifestRows());
 
   const activate = async ({ activationId, activationDigest, expectedMediaCount, expectedBindingCount }) => {
     const control = await controlRow();
@@ -359,6 +361,242 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
       throw lifecycleError("lifecycle_activation_coverage_mismatch", "Lifecycle seed coverage does not match the explicit activation manifest.", 409);
     }
     return { activationId: id, activationDigest: expectedDigest, state: "ready", mediaCount: expectedMedia, bindingCount: expectedBindings };
+  };
+
+  const reconcileManifest = async ({
+    repairId,
+    actorId,
+    previousActivationId,
+    previousActivationDigest,
+    previousMediaCount,
+    previousBindingCount,
+    activationId,
+    activationDigest,
+    expectedMediaCount,
+    expectedBindingCount,
+    seedId,
+    seedDigest,
+    items,
+  }) => {
+    const control = await database.prepare(
+      "SELECT control_id, schema_version, state, fencing_epoch FROM pbe_lifecycle_control WHERE control_id = ?"
+    ).bind(CONTROL_ID).first();
+    if (!control || Number(control.schema_version) !== SCHEMA_VERSION) {
+      throw lifecycleError("lifecycle_authority_unavailable", "Lifecycle authority is not ready; access is denied.");
+    }
+    if (control.state !== "ready") {
+      throw lifecycleError("lifecycle_reconciliation_unavailable", "Lifecycle manifest reconciliation requires a ready authority.", 409);
+    }
+    const id = clean(repairId);
+    const actor = clean(actorId);
+    const previousId = clean(previousActivationId);
+    const previousDigest = clean(previousActivationDigest).toLowerCase();
+    const nextId = clean(activationId);
+    const nextDigest = clean(activationDigest).toLowerCase();
+    const newSeedId = clean(seedId);
+    const providedSeedDigest = clean(seedDigest).toLowerCase();
+    const previousMedia = Number(previousMediaCount);
+    const previousBindings = Number(previousBindingCount);
+    const nextMedia = Number(expectedMediaCount);
+    const nextBindings = Number(expectedBindingCount);
+    const members = normalizeMembers(items, { maxMembers: MAX_BATCH, maxBindings: MAX_BINDINGS_PER_BATCH });
+    const memberPayload = members.map((member) => ({
+      canonicalAssetId: member.canonicalAssetId,
+      canonicalMediaId: member.canonicalMediaId,
+      bindings: member.bindings,
+    }));
+    if (!id || !actor || !previousId || !/^[a-f0-9]{64}$/.test(previousDigest)
+        || !nextId || !/^[a-f0-9]{64}$/.test(nextDigest) || !newSeedId
+        || !/^[a-f0-9]{64}$/.test(providedSeedDigest)
+        || !Number.isSafeInteger(previousMedia) || previousMedia < 1
+        || !Number.isSafeInteger(previousBindings) || previousBindings < previousMedia
+        || !Number.isSafeInteger(nextMedia) || nextMedia < 1
+        || !Number.isSafeInteger(nextBindings) || nextBindings < nextMedia
+        || nextId === previousId) {
+      throw lifecycleError("lifecycle_reconciliation_invalid", "Lifecycle reconciliation requires exact previous and resulting manifest identities and counts.", 400);
+    }
+    const expectedSeedDigest = await canonicalDigestFor({ seedId: newSeedId, members: memberPayload });
+    if (providedSeedDigest !== expectedSeedDigest) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "Lifecycle reconciliation seed digest does not match its canonical member batch.", 409);
+    }
+    if (nextMedia !== previousMedia + members.length
+        || nextBindings !== previousBindings + members.reduce((sum, member) => sum + member.bindings.length, 0)) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "Lifecycle reconciliation must be an exact extend-only manifest change.", 409);
+    }
+
+    const repairEnvelope = {
+      repairId: id,
+      previousActivationId: previousId,
+      previousActivationDigest: previousDigest,
+      previousMediaCount: previousMedia,
+      previousBindingCount: previousBindings,
+      activationId: nextId,
+      activationDigest: nextDigest,
+      expectedMediaCount: nextMedia,
+      expectedBindingCount: nextBindings,
+      seedId: newSeedId,
+      seedDigest: providedSeedDigest,
+      members: memberPayload,
+    };
+    const repairDigest = await canonicalDigestFor(repairEnvelope);
+    const existingRepair = await database.prepare(`SELECT repair_id, repair_digest, actor_id,
+        previous_fencing_epoch, new_fencing_epoch, activation_id, activation_digest,
+        media_count, binding_count, added_media_count, added_binding_count, seed_id,
+        seed_digest, state FROM pbe_lifecycle_manifest_reconciliations WHERE repair_id = ?`).bind(id).first();
+    if (existingRepair) {
+      if (clean(existingRepair.repair_digest) !== repairDigest
+          || clean(existingRepair.activation_id) !== nextId
+          || clean(existingRepair.activation_digest) !== nextDigest
+          || clean(existingRepair.seed_id) !== newSeedId
+          || clean(existingRepair.seed_digest) !== providedSeedDigest) {
+        throw lifecycleError("lifecycle_reconciliation_conflict", "Lifecycle repair ID conflicts with a different durable manifest extension.", 409);
+      }
+      return {
+        repairId: clean(existingRepair.repair_id),
+        repairDigest,
+        activationId: clean(existingRepair.activation_id),
+        activationDigest: clean(existingRepair.activation_digest),
+        state: clean(existingRepair.state),
+        mediaCount: Number(existingRepair.media_count),
+        bindingCount: Number(existingRepair.binding_count),
+        addedMediaCount: Number(existingRepair.added_media_count),
+        addedBindingCount: Number(existingRepair.added_binding_count),
+        seedId: clean(existingRepair.seed_id),
+        seedDigest: clean(existingRepair.seed_digest),
+        fencingEpoch: Number(existingRepair.new_fencing_epoch),
+      };
+    }
+
+    const existingActivation = await database.prepare(`SELECT activation_id, activation_digest,
+        expected_media_count, expected_binding_count FROM pbe_lifecycle_activations WHERE activation_id = ?`).bind(previousId).first();
+    if (!existingActivation
+        || clean(existingActivation.activation_digest) !== previousDigest
+        || Number(existingActivation.expected_media_count) !== previousMedia
+        || Number(existingActivation.expected_binding_count) !== previousBindings) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "The previous lifecycle activation no longer matches the requested repair baseline.", 409);
+    }
+    if (await database.prepare("SELECT 1 FROM pbe_lifecycle_activations WHERE activation_id = ? OR activation_digest = ? LIMIT 1")
+      .bind(nextId, nextDigest).first()) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "The resulting lifecycle activation identity is already in use.", 409);
+    }
+    const currentRows = await durableManifestRows();
+    const currentSummary = await manifestSummaryForRows(currentRows);
+    if (currentSummary.activationDigest !== previousDigest
+        || currentSummary.mediaCount !== previousMedia
+        || currentSummary.bindingCount !== previousBindings) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "The durable lifecycle rows no longer match the requested repair baseline.", 409);
+    }
+    const existingSeed = await database.prepare("SELECT seed_digest, member_count FROM pbe_lifecycle_seed_batches WHERE seed_id = ?")
+      .bind(newSeedId).first();
+    if (existingSeed && (clean(existingSeed.seed_digest) !== providedSeedDigest || Number(existingSeed.member_count) !== members.length)) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "The lifecycle repair seed ID is already used by a different member batch.", 409);
+    }
+
+    const placeholders = members.map(() => "?").join(",");
+    const existingIdentities = await rowsFrom(database.prepare(
+      `SELECT canonical_media_id, canonical_asset_id FROM pbe_lifecycle_media_identity WHERE canonical_media_id IN (${placeholders})`
+    ).bind(...members.map((member) => member.canonicalMediaId)));
+    if (existingIdentities.length) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "Lifecycle repair members must be absent from the existing canonical identity manifest.", 409);
+    }
+    for (const member of members) {
+      for (const binding of member.bindings) {
+        const existingBinding = await database.prepare(
+          "SELECT canonical_media_id FROM pbe_lifecycle_media_bindings WHERE bucket = ? AND object_key = ?"
+        ).bind(binding.bucket, binding.objectKey).first();
+        if (existingBinding) {
+          throw lifecycleError("lifecycle_reconciliation_conflict", "Lifecycle repair contains an object binding already owned by another canonical media ID.", 409);
+        }
+      }
+    }
+
+    const addedRows = manifestRowsForMembers(members);
+    const expectedRows = [
+      ...currentRows.filter((row) => row[0] === "binding"),
+      ...addedRows.filter((row) => row[0] === "binding"),
+    ].sort((left, right) => compareText(JSON.stringify(left), JSON.stringify(right)));
+    expectedRows.push(
+      ...[
+        ...currentRows.filter((row) => row[0] === "identity"),
+        ...addedRows.filter((row) => row[0] === "identity"),
+      ].sort((left, right) => compareText(JSON.stringify(left), JSON.stringify(right))),
+    );
+    const expectedSummary = await manifestSummaryForRows(expectedRows);
+    if (expectedSummary.activationDigest !== nextDigest
+        || expectedSummary.mediaCount !== nextMedia
+        || expectedSummary.bindingCount !== nextBindings) {
+      throw lifecycleError("lifecycle_reconciliation_conflict", "The resulting lifecycle manifest digest or coverage does not match the requested repair.", 409);
+    }
+
+    const timestamp = now().toISOString();
+    const previousEpoch = Number(control.fencing_epoch);
+    const newEpoch = previousEpoch + 1;
+    const statements = [
+      database.prepare(`UPDATE pbe_lifecycle_control SET state = 'blocked', fencing_epoch = ?, updated_at = ?
+        WHERE control_id = ? AND state = 'ready' AND fencing_epoch = ?`).bind(newEpoch, timestamp, CONTROL_ID, previousEpoch),
+    ];
+    if (!existingSeed) {
+      statements.push(database.prepare(`INSERT INTO pbe_lifecycle_seed_batches
+        (seed_id, seed_digest, member_count, created_at) VALUES (?, ?, ?, ?)`).bind(
+        newSeedId, providedSeedDigest, members.length, timestamp,
+      ));
+    }
+    for (const member of members) {
+      statements.push(database.prepare(`INSERT INTO pbe_lifecycle_media_identity
+        (canonical_media_id, canonical_asset_id, created_at, updated_at) VALUES (?, ?, ?, ?)`)
+        .bind(member.canonicalMediaId, member.canonicalAssetId, timestamp, timestamp));
+      for (const binding of member.bindings) {
+        statements.push(database.prepare(`INSERT INTO pbe_lifecycle_media_bindings
+          (bucket, object_key, canonical_media_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
+          .bind(binding.bucket, binding.objectKey, member.canonicalMediaId, timestamp, timestamp));
+      }
+      statements.push(database.prepare(`INSERT INTO pbe_lifecycle_projection
+        (canonical_media_id, canonical_asset_id, revision, denied, lifecycle_state, operation_id, operation_digest, receipt_id, updated_at)
+        VALUES (?, ?, 0, 0, 'visible', ?, ?, ?, ?)`)
+        .bind(member.canonicalMediaId, member.canonicalAssetId, `repair:${id}`, repairDigest, `repair:${id}:${member.canonicalMediaId}`, timestamp));
+    }
+    statements.push(database.prepare(`UPDATE pbe_lifecycle_activations SET activation_id = ?, activation_digest = ?,
+        expected_media_count = ?, expected_binding_count = ?, expected_row_count = ?, activated_at = ?
+      WHERE activation_id = ? AND activation_digest = ? AND expected_media_count = ? AND expected_binding_count = ?`)
+      .bind(nextId, nextDigest, nextMedia, nextBindings, nextMedia + nextBindings, timestamp,
+        previousId, previousDigest, previousMedia, previousBindings));
+    statements.push(database.prepare(`INSERT INTO pbe_lifecycle_manifest_reconciliations
+      (repair_id, repair_digest, actor_id, previous_fencing_epoch, new_fencing_epoch,
+       previous_activation_id, previous_activation_digest, previous_media_count, previous_binding_count,
+       activation_id, activation_digest, media_count, binding_count, added_media_count,
+       added_binding_count, seed_id, seed_digest, state, created_at, applied_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'applied', ?, ?)`)
+      .bind(id, repairDigest, actor, previousEpoch, newEpoch, previousId, previousDigest, previousMedia,
+        previousBindings, nextId, nextDigest, nextMedia, nextBindings, members.length,
+        members.reduce((sum, member) => sum + member.bindings.length, 0), newSeedId, providedSeedDigest, timestamp, timestamp));
+    statements.push(database.prepare(`UPDATE pbe_lifecycle_control SET state = 'ready', updated_at = ?
+      WHERE control_id = ? AND state = 'blocked' AND fencing_epoch = ?`).bind(timestamp, CONTROL_ID, newEpoch));
+    await database.batch(statements);
+
+    const durableControl = await database.prepare("SELECT state, fencing_epoch FROM pbe_lifecycle_control WHERE control_id = ?")
+      .bind(CONTROL_ID).first();
+    const durableActivation = await database.prepare(`SELECT activation_id, activation_digest, expected_media_count, expected_binding_count
+      FROM pbe_lifecycle_activations WHERE activation_id = ?`).bind(nextId).first();
+    if (durableControl?.state !== "ready" || Number(durableControl.fencing_epoch) !== newEpoch
+        || clean(durableActivation?.activation_digest) !== nextDigest
+        || Number(durableActivation?.expected_media_count) !== nextMedia
+        || Number(durableActivation?.expected_binding_count) !== nextBindings) {
+      throw lifecycleError("lifecycle_reconciliation_partial", "Lifecycle manifest reconciliation did not commit its complete ready authority.", 503);
+    }
+    return {
+      repairId: id,
+      repairDigest,
+      activationId: nextId,
+      activationDigest: nextDigest,
+      state: "applied",
+      mediaCount: nextMedia,
+      bindingCount: nextBindings,
+      addedMediaCount: members.length,
+      addedBindingCount: members.reduce((sum, member) => sum + member.bindings.length, 0),
+      seedId: newSeedId,
+      seedDigest: providedSeedDigest,
+      fencingEpoch: newEpoch,
+    };
   };
 
   const fulfillmentFor = async (orderId) => {
@@ -1050,6 +1288,7 @@ export const createD1LifecycleDenyStore = ({ database, now = () => new Date() } 
     ensureSchema: assertReady,
     seedVisibleBatch,
     activate,
+    reconcileManifest,
     commitFulfillmentReady,
     fulfillmentFor,
     authorizeDownloadCapability,

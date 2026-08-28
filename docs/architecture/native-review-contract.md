@@ -11,8 +11,9 @@ with global editorial state, losing their place in a large queue, or bypassing
 the Worker and Max connector audit boundary.
 
 This document defines the state and behavior that PBB-45 through PBB-48 must
-preserve. `Owner.sqlite` remains the source of truth. Backstage is a native
-action submitter and private-media reader, not a second writer.
+preserve. `Owner.sqlite` remains the source of truth. Backstage uses the
+transactional OwnerCore SQLite stores for the native Review/Culling slice;
+external Worker/Photos/delivery operations remain action-submitted work.
 
 ## Queue universe
 
@@ -81,11 +82,14 @@ Precedence and invariants:
 
 ## Actions
 
-All mutating Review actions create a durable Worker action targeted to Max.
-Backstage may wake the connector with only the opaque action ID. Max claims and
-validates the exact action, performs one transaction, records audit evidence,
-and completes the Worker action. Backstage never writes `Owner.sqlite`
-business rows directly.
+Native Review actions handled by OwnerCore execute one audited SQLite
+transaction directly against `Owner.sqlite`; they return the same opaque
+`operationId` and exact-undo snapshots as the connector contract. The native
+path fails closed if the database is unavailable and never falls back to a
+Python process or local JSON/HTTP IPC. External actions that cross the Worker,
+Photos, delivery, or publication boundary still create a durable Worker action
+targeted to Max; Backstage may wake the connector with only the opaque action
+ID.
 
 Supported actions are:
 
@@ -122,8 +126,8 @@ returns without opening Photos Bridge or rendering pixels.
 
 The scheduled pass or the explicit **Run AI pass now** action prepares missing
 bounded JPEGs at the start of that separate pass. Missing previews are sent
-through one signed `preview-many` bridge request, recorded in Owner state, and
-then consumed by proposal generation. Proposal generation remains draft-only;
+through one signed Backstage `preview-many` IPC request, recorded in Owner
+state, and then consumed by proposal generation. Proposal generation remains draft-only;
 it cannot approve, hide, publish, or change canonical metadata.
 
 ## Audit and undo

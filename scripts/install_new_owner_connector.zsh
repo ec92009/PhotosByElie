@@ -1,6 +1,12 @@
 #!/bin/zsh
 set -euo pipefail
 
+if [[ "${PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT:-0}" != "1" ]]; then
+  print -u2 "The always-on Owner connector installer is retired. Use signed PhotosByElie Backstage for on-demand work."
+  print -u2 "For a deliberate rollback rehearsal only, set PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT=1."
+  exit 64
+fi
+
 repo_root="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 connector_id="${2:-$(scutil --get ComputerName 2>/dev/null || hostname)}"
 connector_id="$(printf '%s' "$connector_id" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9._-')"
@@ -42,10 +48,6 @@ if [[ "$materializer_path" != "scripts/owner_connector_runtime.py" \
       || ! "$materializer_object" =~ '^([0-9a-f]{40}|[0-9a-f]{64})$' ]]; then
   print -u2 "The connector runtime commit does not contain a safe materializer."
   exit 1
-fi
-
-if [[ "${PBE_SKIP_BRIDGE_BUILD:-0}" != "1" ]]; then
-  "$repo_root/scripts/install_sidecar_photos_bridge_app.zsh"
 fi
 
 mkdir -p "$runtime_parent" "$config_dir" "$launch_agents" "$log_dir"

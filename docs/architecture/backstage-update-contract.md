@@ -2,7 +2,12 @@
 
 PBE-134 defines the safe local update boundary for the private macOS Backstage
 operator app. The update path is deliberately separate from the public Owner
-gallery, Photos Bridge write-back, fixture state, and `Owner.sqlite`.
+gallery, Backstage's PhotoKit write-back, fixture state, and `Owner.sqlite`.
+
+PBB-92 makes Backstage and its embedded PhotoKit capability one release unit.
+The updater must never install, restore, or launch a standalone Photos Bridge
+artifact. A cold launch recoverably retires any legacy live Bridge bundle,
+including `.previous` and `.rollback` siblings.
 
 ## Manifest
 
@@ -19,6 +24,7 @@ these fields:
 | `minimumOSVersion` | Dotted numeric macOS minimum, checked before download. |
 | `releaseNotes` | Human-readable notes shown before download. |
 | `artifactFormat` | Exactly `zip`; the archive must contain exactly one Backstage `.app` bundle. |
+| `architectures` | New official releases are exactly `arm64` (Apple silicon only). Legacy universal `arm64` + `x86_64` manifests remain readable for rollback compatibility. |
 | `downloadURL` | The approved HTTPS artifact URL. The app does not infer or invent this URL. |
 | `fileSize` | Exact archive byte count, from 1 byte through the hard 1 GiB archive ceiling. |
 | `sha256` | Exact 64-character SHA-256 digest of the downloaded archive. |
@@ -29,33 +35,62 @@ these fields:
 The `version`, `build`, bundle identifier, trust metadata, size, and digest must
 be generated from the same real signed artifact. A release tool must refuse to
 write a manifest when the artifact is missing, ad-hoc signed, unsigned, has a
-different bundle identity, or cannot be verified by `codesign --verify
+different bundle identity, is not the current arm64 Apple-silicon release
+slice, or cannot be verified by `codesign --verify
 --deep --strict`.
 
-The repository currently has no approved cloud manifest endpoint, published
-Backstage archive, or production rollback/install mechanism. Therefore the
-signed app must not contain a guessed production URL, and local tests use only
-injected HTTPS fixture URLs. Configuring `PBEBackstageUpdateManifestURL` in a
-future signed build is a release-owner decision, not a local default.
+The approved production manifest is
+`https://download.photos-by-elie.com/backstage/releases/latest.json`. Signed
+release builds embed that exact URL as `PBEBackstageUpdateManifestURL`.
+Cloudflare serves only `latest.json` and immutable archives named
+`PhotosByElie-Backstage-v<version>-build-<build>.zip` below that release path;
+other release object names are not public routes.
+
+`scripts/publish_backstage_release.zsh` verifies the signed app, creates the
+archive and manifest from the same bytes, uploads and re-reads the immutable
+archive first, preserves the previous manifest as immutable rollback history,
+and writes `latest.json` last. A failure before that final write leaves clients
+on the previous verified release. Installation remains a separate, confirmed
+operator action after verification. It stages a complete copy beside the
+canonical app, repeats archive, Info.plist, version/build, signature, and
+designated-requirement checks, preserves the incumbent signed app below the
+private Backstage rollback directory, and atomically exchanges the staged app
+into `/Applications/PhotosByElie Backstage.app`.
+
+Before replacement, the installer inventories only exact hidden
+`.PhotosByElie Backstage.install-<UUID>.app` siblings. It retains recent
+signature-verified stages as potentially active, retains wrong-identity or
+invalid-signature paths as unsafe, and removes only old stages whose Backstage
+identity and release trust both verify. A failed reconciliation leaves the
+canonical app and rollback untouched. After a successful exchange, failure to
+remove the displaced incumbent is surfaced with its exact audit path instead
+of being silently ignored. Cleanup restores owner-write permission only on
+directories inside that exact verified installer-owned stage so the sealed,
+read-only Owner runtime cannot strand a partially removed app bundle.
 
 ## State and safety
 
 The native state model distinguishes `checking`, `current`, `updateAvailable`,
-`downloading` with received/total bytes, `verified`, and `failed`. A failed
-state includes recovery guidance. A downgrade, incompatible minimum OS, wrong
-bundle identity, invalid manifest, size mismatch, SHA-256 mismatch, archive
-shape mismatch, or signature/trust mismatch fails closed.
+`downloading` with received/total bytes, `verified`, `installing`, `installed`,
+and `failed`. A failed state includes recovery guidance. A downgrade,
+incompatible minimum OS, wrong bundle identity, invalid manifest, size
+mismatch, SHA-256 mismatch, archive shape mismatch, signature/trust mismatch,
+or staging/install verification failure fails closed.
 
 Downloads stream through a fixed 64 KiB buffer directly into a file below the
 app's user cache directory in a unique, isolated review directory. The transport
 rejects a declared HTTP length or streamed byte that exceeds either the manifest
 size or the hard 1 GiB archive ceiling; it never accumulates the complete archive
 in `Data`. A rejected partial or temporary download is removed; after
-verification, the archive and extracted app remain there for review. The updater
-has no install, overwrite, launch, Keychain,
-Photos, connector, Owner database, fixture, catalog, upload, or publication
-operation. Installation and rollback remain separate, explicit mechanisms that
-must be designed and accepted before production use.
+verification, the archive and extracted app remain there for review. The
+read-only updater has no install, overwrite, launch, Keychain, Photos,
+connector, Owner database, fixture, catalog, upload, or publication operation.
+After verification, the separate installer requires explicit confirmation. It
+may copy and atomically exchange only the canonical Backstage app, retain one
+verified rollback bundle, and offer a separate quit-and-open action. It never
+touches Photos, Keychain, connector, Owner database, fixture, catalog, upload,
+or publication state. Any staging or verification failure leaves the incumbent
+app untouched; any failed post-swap verification atomically restores it.
 
 Verification checks, in order:
 
@@ -79,8 +114,9 @@ Verification checks, in order:
 
 Any download, inspection, extraction, tree-validation, checksum, or signature
 failure removes the unique temporary directory. Only after all six checks does
-Backstage show `verified` and offer to reveal
-the isolated artifact for a separately reviewed manual action.
+Backstage show `verified`. The operator may reveal the isolated artifact or
+explicitly confirm the separate canonical installer. Finder replacement is not
+the supported installation path.
 
 ## Connector runtime installation
 

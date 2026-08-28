@@ -315,11 +315,6 @@ let jpegFileExtensions: Set<String> = [".jpg", ".jpeg", ".jpe"]
 let pngFileExtensions: Set<String> = [".png"]
 let tiffFileExtensions: Set<String> = [".tif", ".tiff"]
 let videoFileExtensions: Set<String> = [".mov", ".mp4", ".m4v"]
-let localJPEGConvertibleImageExtensions: Set<String> = heicFileExtensions
-    .union(jpegFileExtensions)
-    .union(pngFileExtensions)
-    .union(tiffFileExtensions)
-    .union(rawFileExtensions)
 
 func fileExtension(_ filename: String) -> String {
     return URL(fileURLWithPath: filename).pathExtension.lowercased()
@@ -377,18 +372,7 @@ func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
     if format == "MOV" {
         return false
     }
-    if hasExtension(resource.originalFilename, in: localJPEGConvertibleImageExtensions) {
-        return true
-    }
-    let uti = resourceUTI(resource)
-    return uti.contains("heic")
-        || uti.contains("heif")
-        || uti.contains("jpeg")
-        || uti.contains("jpg")
-        || uti.contains("png")
-        || uti.contains("tiff")
-        || uti.contains("raw")
-        || uti.contains("digital-camera-raw")
+    return format == "JPEG" || format == "HEIC"
 }
 
 func imageFallbackResourceTypePriority(_ resource: PHAssetResource) -> Int {
@@ -642,7 +626,7 @@ func preferredResource(_ asset: PHAsset) -> PHAssetResource? {
 }
 
 func exportStrategy(_ asset: PHAsset) -> String {
-    if asset.mediaType == .image {
+    if asset.mediaType == .image && !imageFallbackResourceCandidates(asset).isEmpty {
         return "rendered_jpeg"
     }
     if preferredResource(asset) != nil && asset.mediaType == .video {

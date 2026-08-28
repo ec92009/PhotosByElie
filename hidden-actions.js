@@ -302,6 +302,7 @@
     if (blocksPage) setOwnerBusy(true, ownerActionBusyMessages[action] || "Owner action is running...");
     try {
       const payload = await pbeOwnerSession.action(action, requestPayload);
+      pbeOwnerSession.recordLifecycleResult?.(payload);
       if (action === "update-photo-metadata" && !payload.metadata) {
         payload.metadata = {
           photo_id: requestPayload.photo_id,
@@ -681,6 +682,9 @@
     if (cullingEnabled()) return syncFromPublishedBlacklist().catch(() => read());
     return read();
   })();
+  window.addEventListener("photosbyelie:pbeowneractionresult", (event) => {
+    if (event.detail && typeof event.detail === "object") applyServerState(event.detail);
+  });
   window.addEventListener("photosbyelie:pbeownerchange", (event) => {
     const enabled = Boolean(event.detail?.ready);
     window.dispatchEvent(new CustomEvent("photosbyelie:moderationchange", { detail: { enabled } }));

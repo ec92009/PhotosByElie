@@ -14,26 +14,70 @@ iconset="${output_root}/Backstage.iconset"
 icon_file="${contents}/Resources/Backstage.icns"
 owner_runtime="${contents}/Resources/OwnerRuntime"
 release_metadata="${package_root}/release-metadata.zsh"
+entitlements="${package_root}/Backstage.entitlements"
 
 if [[ ! -r "$release_metadata" ]]; then
   print -u2 "Missing native release metadata: $release_metadata"
   exit 1
 fi
 source "$release_metadata"
-if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" || \
-      "$PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.photos-bridge" ]]; then
+if [[ "$PBE_BACKSTAGE_BUNDLE_IDENTIFIER" != "com.photosbyelie.backstage" ]]; then
   print -u2 "Native release metadata contains an unexpected bundle identity."
   exit 1
 fi
-if [[ "$PBE_BACKSTAGE_VERSION" != "$PBE_PHOTOS_BRIDGE_VERSION" || \
-      "$PBE_BACKSTAGE_BUILD" != "$PBE_PHOTOS_BRIDGE_BUILD" ]]; then
-  print -u2 "Backstage and Photos Bridge release metadata must match."
+if [[ "$PBE_BACKSTAGE_RELEASE_SOURCE_REF" != refs/heads/* ]] \
+  || ! git -C "$repo_root" check-ref-format "$PBE_BACKSTAGE_RELEASE_SOURCE_REF"; then
+  print -u2 "Native release metadata contains an invalid canonical source ref."
+  exit 1
+fi
+if ! python3 - "$PBE_BACKSTAGE_UPDATE_MANIFEST_URL" <<'PY'
+import sys
+from urllib.parse import urlsplit
+
+url = urlsplit(sys.argv[1])
+valid = (
+    url.scheme.lower() == "https"
+    and url.hostname == "download.photos-by-elie.com"
+    and url.path == "/backstage/releases/latest.json"
+    and not url.query
+    and not url.fragment
+    and url.username is None
+    and url.password is None
+)
+raise SystemExit(0 if valid else 1)
+PY
+then
+  print -u2 "Native release metadata contains an unapproved Backstage manifest URL."
   exit 1
 fi
 
 cd "$package_root"
-swift build -c "$configuration"
-binary_path="$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage"
+
+binary_paths=()
+if [[ "$configuration" == "release" ]]; then
+  # Official Backstage releases currently target Apple silicon only. Build the
+  # arm64 slice explicitly in its own SwiftPM scratch tree so the host
+  # architecture cannot leak into the signed artifact. The deployment target
+  # remains macOS 14; Intel support can be restored as a deliberate release
+  # policy change later.
+  release_architectures=(arm64)
+  for architecture in "${release_architectures[@]}"; do
+    scratch_path="${package_root}/.build/pbe-${configuration}-${architecture}"
+    target_triple="${architecture}-apple-macosx14.0"
+    build_arguments=(
+      -c "$configuration"
+      --triple "$target_triple"
+      --scratch-path "$scratch_path"
+    )
+    swift build "${build_arguments[@]}"
+    binary_paths+=(
+      "$(swift build "${build_arguments[@]}" --show-bin-path)/PhotosByElieBackstage"
+    )
+  done
+else
+  swift build -c "$configuration"
+  binary_paths+=("$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage")
+fi
 
 if [[ -e "$app" || -L "$app" ]]; then
   if [[ -L "$app" || ! -d "$app" ]]; then
@@ -46,7 +90,19 @@ if [[ -e "$app" || -L "$app" ]]; then
   rm -rf "$app"
 fi
 mkdir -p "${contents}/MacOS" "${contents}/Resources"
-cp "$binary_path" "$executable"
+if (( ${#binary_paths[@]} != 1 )); then
+  print -u2 "Apple-silicon-only releases must contain exactly one arm64 build output."
+  exit 1
+fi
+cp "${binary_paths[1]}" "$executable"
+
+if [[ "$configuration" == "release" ]]; then
+  executable_architectures="$(/usr/bin/lipo -archs "$executable")"
+  if [[ "$executable_architectures" != "arm64" ]]; then
+    print -u2 "Release executable is not the required arm64 Apple-silicon slice: $executable_architectures"
+    exit 1
+  fi
+fi
 
 runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options 'HEAD^{commit}')"
 materializer_entry="$(git -C "$repo_root" ls-tree "$runtime_revision" -- scripts/owner_connector_runtime.py)"
@@ -127,15 +183,15 @@ cat > "${contents}/Info.plist" <<PLIST
   <key>NSPhotoLibraryUsageDescription</key>
   <string>Backstage reads Photos for private culling, preview, and export workflows.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
-  <string>Verified metadata give-back is performed through the signed PhotosByElie bridge.</string>
-  <key>PBEPhotosBridgeBundleIdentifier</key>
-  <string>${PBE_PHOTOS_BRIDGE_BUNDLE_IDENTIFIER}</string>
-  <key>PBEPhotosBridgeVersion</key>
-  <string>${PBE_PHOTOS_BRIDGE_VERSION}</string>
-  <key>PBEPhotosBridgeBuild</key>
-  <string>${PBE_PHOTOS_BRIDGE_BUILD}</string>
+  <string>Backstage applies approved metadata updates to selected photos.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Backstage reads and applies approved title, caption, and keyword metadata in Apple Photos.</string>
   <key>PBEOwnerRuntimeRevision</key>
   <string>${runtime_revision}</string>
+  <key>PBEBackstageReleaseSourceRef</key>
+  <string>${PBE_BACKSTAGE_RELEASE_SOURCE_REF}</string>
+  <key>PBEBackstageUpdateManifestURL</key>
+  <string>${PBE_BACKSTAGE_UPDATE_MANIFEST_URL}</string>
 </dict>
 </plist>
 PLIST
@@ -175,12 +231,18 @@ if [[ "$identity" == "-" ]]; then
     --force \
     --deep \
     --sign "$identity" \
+    --entitlements "$entitlements" \
     --requirements '=designated => identifier "com.photosbyelie.backstage"' \
     "$app"
 else
-  codesign --force --deep --options runtime --sign "$identity" "$app"
+  codesign --force --deep --options runtime --sign "$identity" --entitlements "$entitlements" "$app"
 fi
 codesign --verify --deep --strict "$app"
+if ! codesign -d --entitlements :- "$app" 2>/dev/null \
+  | python3 -c 'import plistlib, sys; entitlements = plistlib.loads(sys.stdin.buffer.read()); raise SystemExit(0 if entitlements.get("com.apple.security.personal-information.photos-library") is True else 1)'; then
+  print -u2 "Backstage is missing the signed Photos Library entitlement."
+  exit 1
+fi
 signature_details="$(codesign -dvv "$app" 2>&1)"
 if [[ "$identity" != "-" && "$signature_details" == *"Signature=adhoc"* ]]; then
   print -u2 "Backstage unexpectedly received an ad-hoc signature."

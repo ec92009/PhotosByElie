@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the local Photos By Elie Owner helper and open Owner in Safari."""
+"""Launch the retired local Owner helper for an explicit rollback rehearsal."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HELPER = REPO_ROOT / "scripts" / "local_server.py"
-APPLE_PHOTOS_BRIDGE = REPO_ROOT / "scripts" / "apple_photos_bridge.swift"
 LOG_DIR = Path.home() / "Library" / "Logs" / "PhotosByElie"
 LOG_PATH = LOG_DIR / "owner-helper.log"
 PORT_START = 8000
@@ -25,6 +24,9 @@ PORT_LIMIT = 8100
 OWNER_PATH = os.environ.get("PBE_OWNER_PATH", "owner.html")
 PREFER_OWN_HELPER = os.environ.get("PBE_OWNER_PREFER_OWN_HELPER", "").lower() in {"1", "true", "yes"}
 CLEAN_START = os.environ.get("PBE_OWNER_CLEAN_START", "1").lower() not in {"0", "false", "no", "off"}
+LEGACY_BROWSER_OWNER_ENABLED = (
+    os.environ.get("PBE_ENABLE_LEGACY_BROWSER_OWNER", "").strip() == "1"
+)
 PATH_PREFIXES = (
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -117,31 +119,6 @@ def owner_helper_command_pids() -> set[int]:
     return pids
 
 
-def apple_photos_bridge_pids() -> set[int]:
-    pids: set[int] = set()
-    bridge_path = str(APPLE_PHOTOS_BRIDGE)
-    result = subprocess.run(
-        ["ps", "-axo", "pid=,command="],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    for line in result.stdout.splitlines():
-        row = line.strip()
-        if not row:
-            continue
-        try:
-            pid_text, command = row.split(maxsplit=1)
-            pid = int(pid_text)
-        except ValueError:
-            continue
-        if pid == os.getpid():
-            continue
-        if bridge_path in command:
-            pids.add(pid)
-    return pids
-
-
 def terminate_pids(pids: set[int], log, reason: str) -> None:
     pids.discard(os.getpid())
     if not pids:
@@ -177,8 +154,6 @@ def terminate_pids(pids: set[int], log, reason: str) -> None:
 
 def clean_start(log) -> None:
     helper_pids = owner_helper_listener_pids() | owner_helper_command_pids()
-    bridge_pids = apple_photos_bridge_pids()
-    terminate_pids(bridge_pids, log, "Apple Photos bridge process")
     terminate_pids(helper_pids, log, "stale Owner helper")
 
 
@@ -215,6 +190,18 @@ def terminate_server(*_args) -> None:
 
 def main() -> int:
     global server
+
+    if not LEGACY_BROWSER_OWNER_ENABLED:
+        print(
+            "Legacy browser Owner launch is disabled. Use PhotosByElie Backstage.",
+            file=sys.stderr,
+        )
+        print(
+            "For a deliberate rollback rehearsal only, set "
+            "PBE_ENABLE_LEGACY_BROWSER_OWNER=1.",
+            file=sys.stderr,
+        )
+        return 64
 
     if not HELPER.exists():
         notify("Photos By Elie Owner", f"Missing helper script: {HELPER}")

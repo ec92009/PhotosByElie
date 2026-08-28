@@ -1,16 +1,15 @@
 #!/bin/zsh
 set -euo pipefail
 
-bundle_root="$(cd "$(dirname "$0")" && pwd)"
-repo_root="$HOME/Dev/PhotosByElie"
-app_source="$bundle_root/PhotosByElie Photos Bridge.app"
-app_target="$HOME/Applications/PhotosByElie Photos Bridge.app"
-
-mkdir -p "$HOME/Applications" "$HOME/Dev"
-if [[ -e "$app_target" ]]; then
-  mv "$app_target" "$HOME/Applications/PhotosByElie Photos Bridge-before-$(date -u +%Y%m%dT%H%M%SZ).app"
+if [[ "${PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT:-0}" != "1" ]]; then
+  print -u2 "This legacy Owner connector package is retired. Use signed PhotosByElie Backstage for on-demand work."
+  print -u2 "For a deliberate rollback rehearsal only, set PBE_ENABLE_LEGACY_CONNECTOR_LAUNCHAGENT=1 before running this command."
+  exit 64
 fi
-cp -R "$app_source" "$app_target"
+
+repo_root="$HOME/Dev/PhotosByElie"
+
+mkdir -p "$HOME/Dev"
 
 if [[ ! -d "$repo_root/.git" ]]; then
   git clone https://github.com/ec92009/PhotosByElie.git "$repo_root"
@@ -19,4 +18,4 @@ else
   git -C "$repo_root" pull --ff-only origin main
 fi
 
-PBE_SKIP_BRIDGE_BUILD=1 "$repo_root/scripts/install_new_owner_connector.zsh" "$repo_root"
+"$repo_root/scripts/install_new_owner_connector.zsh" "$repo_root"

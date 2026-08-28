@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "ticket": "PBE-144",
+  "syntheticOnly": true,
+  "provider": "OpenAI built-in image generation",
+  "providerModel": "not disclosed by built-in tool",
+  "generatedAt": "2026-08-27T16:39:00Z",
+  "original": {
+    "path": "original.png",
+    "sha256": "be529d7c40d5263c33a160a9c73f1c0fc7b728b2eee1cbeea1c47714c99c7568"
+  },
+  "proposed": {
+    "path": "proposed.png",
+    "sha256": "71f07653e07760d89713e7d75b5997897b9ac365b9e27f9e17296969f6f72e89"
+  },
+  "defectCategories": [
+    "lighting-exposure",
+    "contrast",
+    "white-balance-color",
+    "perspective-geometry",
+    "distracting-items"
+  ],
+  "originalPrompt": "Create an intentionally flawed but believable synthetic real-estate listing photograph of a compact Mediterranean apartment living room: underexposed interior, blown balcony highlights, strong warm cast, flat contrast, skewed verticals, and loose distracting items. No people, logos, text, watermark, or specific real property.",
+  "editPrompt": "Repair only the approved defect categories while preserving the synthetic room identity, architecture, balcony and sea view, furniture, framing, and camera viewpoint. Keep the result natural; do not redesign, restage, or replace the original.",
+  "privacyBoundary": "No Photos asset, client image, real property image, credential, or canonical Owner state was provided to the image generator."
+}

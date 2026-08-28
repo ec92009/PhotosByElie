@@ -13,7 +13,6 @@ import mimetypes
 import os
 import re
 import sqlite3
-import subprocess
 import threading
 import time
 import uuid
@@ -21,20 +20,26 @@ from pathlib import Path
 from typing import Any, Iterable
 
 try:
+    from backstage_photos_client import BackstagePhotosClientError, request_export_original
     from import_source_anchor import photo_id_for_source_path
     from media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
 except ModuleNotFoundError:  # pragma: no cover - supports package-style test imports.
+    from scripts.backstage_photos_client import BackstagePhotosClientError, request_export_original
     from scripts.import_source_anchor import photo_id_for_source_path
     from scripts.media_keys import DEFAULT_PUBLIC_PREFIX, private_master_key, private_render_key, public_preview_key
 
 
 DEFAULT_DB = Path("assets/owner-actions/Owner.sqlite")
+PHOTOS_DISCOVERY_CHECKPOINT_SETTING = "photos.discovery.high-water.v1"
+DEFAULT_PHOTOS_DISCOVERY_INITIAL_DAYS = 45
+DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS = 7
 KEYWORD_BLACKLIST_JSON = Path("assets/owner-actions/keyword-blacklist.json")
 DEFAULT_PUBLIC_BUCKET = "photosbyelie-public"
 DEFAULT_PRIVATE_BUCKET = "photosbyelie-private"
 DEFAULT_PRIVATE_PREFIX = "masters"
 DEFAULT_UPLOAD_BRIDGE_RUN_ROOT = Path("assets/owner-actions/sidecar-upload-runs")
-APPLE_PHOTOS_BRIDGE_APP = Path.home() / "Applications" / "PhotosByElie Photos Bridge.app"
+UPLOAD_BRIDGE_STALE_AFTER_SECONDS = 60 * 60
+UPLOAD_BRIDGE_LEASE_SECONDS = 15 * 60
 PRIVATE_RENDER_PRODUCTS = ("jpg-6mp", "jpg-3mp", "jpg-1mp")
 RATING_VALUES = {0, 1, 2, 3, 4, 5}
 COLOR_VALUES = {"", "red", "yellow", "green", "blue", "purple"}
@@ -158,6 +163,7 @@ CITY_GPS_HINTS: tuple[dict[str, Any], ...] = (
     {"city": "Solana Beach", "region": "California", "country": "United States", "lat": (32.98, 33.02), "lon": (-117.29, -117.24)},
     {"city": "Del Mar", "region": "California", "country": "United States", "lat": (32.93, 33.00), "lon": (-117.30, -117.22)},
     {"city": "San Diego", "region": "California", "country": "United States", "lat": (32.65, 32.90), "lon": (-117.30, -117.00)},
+    {"city": "Fuengirola", "region": "Costa del Sol", "country": "Spain", "lat": (36.50, 36.62), "lon": (-4.70, -4.52)},
     {"city": "Malaga", "region": "Andalusia", "country": "Spain", "lat": (36.62, 36.82), "lon": (-4.58, -4.25)},
     {"city": "Nerja", "region": "Andalusia", "country": "Spain", "lat": (36.70, 36.80), "lon": (-3.95, -3.80)},
     {"city": "Ronda", "region": "Andalusia", "country": "Spain", "lat": (36.68, 36.78), "lon": (-5.22, -5.10)},
@@ -197,6 +203,298 @@ COUNTRY_GPS_HINTS: tuple[dict[str, Any], ...] = (
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _photos_discovery_datetime(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _photos_discovery_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _photos_discovery_latest_identity(conn: sqlite3.Connection) -> dict[str, str]:
+    row = conn.execute(
+        """
+        SELECT captured_at, asset_id
+        FROM sidecar_assets
+        WHERE (missing_at IS NULL OR missing_at = '')
+          AND trim(COALESCE(captured_at, '')) <> ''
+        ORDER BY captured_at DESC, asset_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if not row:
+        return {}
+    capture_date = _photos_discovery_datetime(row["captured_at"])
+    if capture_date is None:
+        return {}
+    return {
+        "captureDate": _photos_discovery_iso(capture_date),
+        "assetId": str(row["asset_id"] or ""),
+    }
+
+
+def photos_discovery_window(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    initial_days: int = DEFAULT_PHOTOS_DISCOVERY_INITIAL_DAYS,
+    overlap_days: int = DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS,
+) -> dict[str, Any]:
+    """Return the bounded ordinary-refresh window from durable Owner state."""
+
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    safe_initial_days = max(1, int(initial_days))
+    safe_overlap_days = max(1, int(overlap_days))
+    checkpoint: dict[str, Any] = {}
+    source = "fallback"
+    with connect(repo_root) as conn:
+        row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (PHOTOS_DISCOVERY_CHECKPOINT_SETTING,),
+        ).fetchone()
+        if row:
+            parsed = _read_json_text(str(row["setting_value"] or ""), {})
+            if isinstance(parsed, dict) and _photos_discovery_datetime(parsed.get("captureDate")):
+                checkpoint = dict(parsed)
+                source = "stored"
+        if not checkpoint:
+            checkpoint = _photos_discovery_latest_identity(conn)
+            if checkpoint:
+                source = "indexed"
+
+    capture_date = _photos_discovery_datetime(checkpoint.get("captureDate"))
+    if capture_date is None:
+        date_from = current - timedelta(days=safe_initial_days)
+        checkpoint = {
+            "captureDate": _photos_discovery_iso(date_from),
+            "assetId": "",
+        }
+    else:
+        # A future camera timestamp must not move the discovery floor beyond now.
+        capture_date = min(capture_date, current)
+        date_from = capture_date - timedelta(days=safe_overlap_days)
+        checkpoint["captureDate"] = _photos_discovery_iso(capture_date)
+
+    return {
+        "mode": "incremental",
+        "dateFrom": _photos_discovery_iso(date_from),
+        "overlapDays": safe_overlap_days,
+        "initialDays": safe_initial_days,
+        "source": source,
+        "checkpoint": checkpoint,
+    }
+
+
+def record_photos_discovery_checkpoint(
+    repo_root: Path,
+    *,
+    mode: str,
+    date_from: str,
+    date_to: str,
+    imported_count: int,
+    completed_at: str,
+    overlap_days: int = DEFAULT_PHOTOS_DISCOVERY_OVERLAP_DAYS,
+) -> dict[str, Any]:
+    """Advance the discovery high-water mark only after a successful scan/import."""
+
+    with connect(repo_root) as conn:
+        latest = _photos_discovery_latest_identity(conn)
+        previous_row = conn.execute(
+            "SELECT setting_value FROM owner_settings WHERE setting_key = ?",
+            (PHOTOS_DISCOVERY_CHECKPOINT_SETTING,),
+        ).fetchone()
+        previous = (
+            _read_json_text(str(previous_row["setting_value"] or ""), {})
+            if previous_row else {}
+        )
+        if not isinstance(previous, dict):
+            previous = {}
+
+        latest_date = _photos_discovery_datetime(latest.get("captureDate"))
+        previous_date = _photos_discovery_datetime(previous.get("captureDate"))
+        if previous_date is not None and (
+            latest_date is None
+            or (previous_date, str(previous.get("assetId") or ""))
+            > (latest_date, str(latest.get("assetId") or ""))
+        ):
+            identity = {
+                "captureDate": _photos_discovery_iso(previous_date),
+                "assetId": str(previous.get("assetId") or ""),
+            }
+        else:
+            identity = latest
+
+        if not identity:
+            return previous
+
+        checkpoint = {
+            "schemaVersion": 1,
+            **identity,
+            "mode": str(mode or "incremental"),
+            "lastDateFrom": str(date_from or ""),
+            "lastDateTo": str(date_to or ""),
+            "overlapDays": max(1, int(overlap_days)),
+            "importedCount": max(0, int(imported_count)),
+            "completedAt": str(completed_at or now_iso()),
+        }
+        conn.execute(
+            """
+            INSERT INTO owner_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(setting_key) DO UPDATE SET
+              setting_value = excluded.setting_value,
+              updated_at = excluded.updated_at
+            """,
+            (
+                PHOTOS_DISCOVERY_CHECKPOINT_SETTING,
+                json.dumps(checkpoint, ensure_ascii=False, separators=(",", ":")),
+                checkpoint["completedAt"],
+            ),
+        )
+    return checkpoint
+
+
+def _sidecar_workflow_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _sidecar_workflow_process_alive(pid: object) -> bool:
+    try:
+        process_id = int(pid or 0)
+    except (TypeError, ValueError):
+        return False
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _upload_bridge_lease_expiry(timestamp: datetime) -> str:
+    return (timestamp + timedelta(seconds=UPLOAD_BRIDGE_LEASE_SECONDS)).isoformat().replace("+00:00", "Z")
+
+
+def reconcile_stale_upload_bridge_runs(
+    repo_root: Path,
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = UPLOAD_BRIDGE_STALE_AFTER_SECONDS,
+    db_path: Path | None = None,
+) -> dict[str, Any]:
+    """Classify interrupted Upload Bridge runs without guessing about legacy workers.
+
+    New runs carry a worker PID and token. A stale run with a recorded worker
+    whose process is verifiably gone is terminalized as interrupted. Older
+    rows lack that evidence and remain running with an explicit needs-review
+    recovery state instead of being rewritten by age alone.
+    """
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    timestamp = current.isoformat().replace("+00:00", "Z")
+    recovered: list[str] = []
+    reviewed: list[str] = []
+    skipped = 0
+    with connect(repo_root, db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT run_id, status, updated_at, worker_pid, worker_token,
+                   recovery_state
+            FROM sidecar_upload_bridge_runs
+            WHERE status = 'running'
+            ORDER BY updated_at, run_id
+            """
+        ).fetchall()
+        for row in rows:
+            updated = _sidecar_workflow_timestamp(row["updated_at"])
+            if updated is None or (current - updated).total_seconds() < max(0, stale_after_seconds):
+                continue
+            run_id = str(row["run_id"] or "")
+            worker_pid = int(row["worker_pid"] or 0)
+            worker_token = str(row["worker_token"] or "").strip()
+            if worker_pid <= 0 or not worker_token:
+                if str(row["recovery_state"] or ""):
+                    continue
+                update = conn.execute(
+                    """
+                    UPDATE sidecar_upload_bridge_runs
+                    SET recovery_state = 'needs-review',
+                        recovery_reason = ?, recovery_checked_at = ?
+                    WHERE run_id = ? AND status = 'running'
+                      AND COALESCE(recovery_state, '') = ''
+                    """,
+                    (
+                        "Legacy Upload Bridge run has no durable worker PID/token; "
+                        f"last update was {int((current - updated).total_seconds())} seconds ago and needs explicit review.",
+                        timestamp,
+                        run_id,
+                    ),
+                )
+                if update.rowcount:
+                    reviewed.append(run_id)
+                continue
+            if _sidecar_workflow_process_alive(worker_pid):
+                skipped += 1
+                continue
+            update = conn.execute(
+                """
+                UPDATE sidecar_upload_bridge_runs
+                SET status = 'interrupted',
+                    error_text = COALESCE(NULLIF(error_text, ''), ?),
+                    completed_at = COALESCE(completed_at, ?),
+                    updated_at = ?,
+                    lease_expires_at = NULL,
+                    recovery_state = 'recovered',
+                    recovery_reason = ?,
+                    recovery_checked_at = ?
+                WHERE run_id = ? AND status = 'running'
+                  AND worker_pid = ? AND worker_token = ?
+                """,
+                (
+                    "Upload Bridge worker process ended before a terminal receipt was persisted.",
+                    timestamp,
+                    timestamp,
+                    "Recorded Upload Bridge worker process is no longer alive; "
+                    f"last update was {int((current - updated).total_seconds())} seconds ago.",
+                    timestamp,
+                    run_id,
+                    worker_pid,
+                    worker_token,
+                ),
+            )
+            if update.rowcount:
+                recovered.append(run_id)
+        conn.commit()
+    return {
+        "ok": True,
+        "recoveredCount": len(recovered),
+        "recoveredRunIds": recovered,
+        "reviewedCount": len(reviewed),
+        "reviewRunIds": reviewed,
+        "skippedCount": skipped,
+    }
 
 
 def _json_text(value: Any) -> str:
@@ -269,6 +567,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         """
         PRAGMA journal_mode = WAL;
         PRAGMA foreign_keys = ON;
+
+        CREATE TABLE IF NOT EXISTS owner_settings (
+          setting_key   TEXT PRIMARY KEY,
+          setting_value TEXT NOT NULL,
+          updated_at    TEXT
+        ) WITHOUT ROWID;
 
         CREATE TABLE IF NOT EXISTS sidecar_assets (
           asset_id       TEXT PRIMARY KEY CHECK (trim(asset_id) <> ''),
@@ -375,7 +679,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           spool_root     TEXT,
           summary_json   TEXT NOT NULL DEFAULT '{}',
           created_at     TEXT,
-          updated_at     TEXT
+          updated_at     TEXT,
+          worker_pid     INTEGER,
+          worker_token   TEXT NOT NULL DEFAULT '',
+          lease_expires_at TEXT,
+          recovery_state TEXT NOT NULL DEFAULT '',
+          recovery_reason TEXT NOT NULL DEFAULT '',
+          recovery_checked_at TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_sidecar_upload_bridge_runs_status
@@ -536,10 +846,182 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     for column, definition in upload_item_column_defaults.items():
         if column not in upload_item_columns:
             conn.execute(f"ALTER TABLE sidecar_upload_bridge_run_items ADD COLUMN {column} {definition}")
+    upload_run_columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(sidecar_upload_bridge_runs)").fetchall()
+    }
+    upload_run_column_defaults = {
+        "worker_pid": "INTEGER",
+        "worker_token": "TEXT NOT NULL DEFAULT ''",
+        "lease_expires_at": "TEXT",
+        "recovery_state": "TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "TEXT",
+    }
+    for column, definition in upload_run_column_defaults.items():
+        if column not in upload_run_columns:
+            conn.execute(f"ALTER TABLE sidecar_upload_bridge_runs ADD COLUMN {column} {definition}")
 
 
 def _asset_id(row: dict[str, Any]) -> str:
     return str(row.get("assetId") or row.get("cloudIdentifier") or row.get("asset_id") or row.get("localIdentifier") or "").strip()
+
+
+def _format_values(value: Any) -> list[str]:
+    """Return normalized format tokens from a source metadata value."""
+    if isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = [value]
+    tokens: list[str] = []
+    for item in values:
+        text = str(item or "").strip()
+        if text:
+            tokens.extend(part.strip() for part in re.split(r"[+,/|]+", text) if part.strip())
+    return tokens
+
+
+def _source_format_tokens(row: dict[str, Any]) -> tuple[bool, list[str]]:
+    """Return whether source metadata is explicit and its normalized tokens."""
+    explicit_metadata = False
+    format_tokens: list[str] = []
+    for key in (
+        "resourceFormats",
+        "resourceFormat",
+        "preferredResourceFormat",
+        "fallbackResourceFormat",
+    ):
+        if key not in row:
+            continue
+        explicit_metadata = True
+        format_tokens.extend(_format_values(row.get(key)))
+
+    resources = row.get("resources")
+    if isinstance(resources, list):
+        explicit_metadata = True
+        for resource in resources:
+            if not isinstance(resource, dict):
+                continue
+            typed_values: list[Any] = []
+            for key in (
+                "format",
+                "resourceFormat",
+                "uniformTypeIdentifier",
+                "uti",
+                "fileExtension",
+            ):
+                if key in resource:
+                    typed_values.append(resource.get(key))
+            if typed_values:
+                format_tokens.extend(_format_values(typed_values))
+            elif resource.get("originalFilename"):
+                # Use a resource filename only when the resource supplied no
+                # stronger type/UTI field. Never inspect the row's synthetic
+                # display filename here.
+                format_tokens.extend(_format_values(resource.get("originalFilename")))
+    return explicit_metadata, format_tokens
+
+
+def _source_token_matches(token: str, accepted_formats: set[str]) -> bool:
+    normalized = token.casefold().strip()
+    if "JPEG" in accepted_formats and (
+        normalized in {"jpeg", "jpg", "jpe"}
+        or "jpeg" in normalized
+        or normalized.endswith((".jpg", ".jpeg", ".jpe"))
+    ):
+        return True
+    if "HEIC" in accepted_formats and (
+        normalized in {"heic", "heif", "hif"}
+        or "heic" in normalized
+        or "heif" in normalized
+        or normalized.endswith((".heic", ".heif", ".hif"))
+    ):
+        return True
+    return False
+
+
+def _row_has_source_format(row: dict[str, Any], source_format: str) -> bool:
+    _explicit_metadata, format_tokens = _source_format_tokens(row)
+    return any(_source_token_matches(token, {source_format}) for token in format_tokens)
+
+
+def is_jpeg_source_row(row: dict[str, Any]) -> bool:
+    """Accept source rows backed by a JPEG or HEIC Photos resource.
+
+    Native Backstage rows carry resource metadata. A top-level ``.jpg``
+    filename is deliberately not evidence: RAW-only PhotoKit assets can have
+    a synthetic JPG display name. HEIC is intentionally accepted because
+    Photos can safely render it as the JPG consumed by PBB/PBE. Minimal
+    legacy/test rows without any resource metadata remain accepted for
+    compatibility with non-Photos callers; once resource metadata is present,
+    JPEG or HEIC must be explicit.
+    """
+    explicit_metadata, format_tokens = _source_format_tokens(row)
+    if any(_source_token_matches(token, {"JPEG", "HEIC"}) for token in format_tokens):
+        return True
+    return not explicit_metadata
+
+
+def mark_invalid_source_assets_missing(repo_root: Path) -> int:
+    """Hide previously indexed rows that are not JPEG/HEIC-backed stills.
+
+    This repairs databases populated before the source boundary existed. The
+    The row and its decisions remain recoverable: a later valid JPEG/HEIC
+    index row can clear ``missing_at`` through the normal upsert path.
+    """
+    now = now_iso()
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            "SELECT asset_id, raw_json FROM sidecar_assets WHERE missing_at IS NULL OR missing_at = ''"
+        ).fetchall()
+        invalid = [
+            str(row["asset_id"])
+            for row in rows
+            if not is_jpeg_source_row(_read_json_text(row["raw_json"], {}))
+        ]
+        for start in range(0, len(invalid), 500):
+            batch = invalid[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            conn.execute(
+                f"UPDATE sidecar_assets SET missing_at = ?, updated_at = ? WHERE asset_id IN ({placeholders})",
+                [now, now, *batch],
+            )
+    return len(invalid)
+
+
+def restore_heic_source_assets_missing_at(repo_root: Path, missing_at: str) -> int:
+    """Restore HEIC photo rows marked by one bounded source-repair pass.
+
+    This is deliberately scoped to the repair timestamp supplied by the
+    caller. It reverses the earlier over-broad JPEG-only quarantine for HEIC
+    stills without reviving videos or RAW/NEF/DNG-only rows.
+    """
+    now = now_iso()
+    restored: list[str] = []
+    with connect(repo_root) as conn:
+        rows = conn.execute(
+            """
+            SELECT asset_id, media_type, raw_json
+            FROM sidecar_assets
+            WHERE missing_at = ?
+            """,
+            (missing_at,),
+        ).fetchall()
+        for row in rows:
+            media_type = str(row["media_type"] or "").casefold()
+            if "video" in media_type:
+                continue
+            raw = _read_json_text(row["raw_json"], {})
+            if _row_has_source_format(raw, "HEIC"):
+                restored.append(str(row["asset_id"]))
+        for start in range(0, len(restored), 500):
+            batch = restored[start:start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            conn.execute(
+                f"UPDATE sidecar_assets SET missing_at = NULL, updated_at = ? WHERE asset_id IN ({placeholders}) AND missing_at = ?",
+                [now, *batch, missing_at],
+            )
+    return len(restored)
 
 
 def _number(value: Any) -> float | None:
@@ -632,6 +1114,17 @@ def _location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], st
         label = ", ".join(_dedupe_text([poi.get("name"), place.get("city"), place.get("region"), place.get("country")]))
     title_place = str(poi.get("name") or place.get("city") or place.get("country") or (keywords[0] if keywords else "")).strip()
     return label, keywords, title_place
+
+
+def location_metadata_from_row(row: dict[str, Any]) -> tuple[str, list[str], str]:
+    """Return the canonical location projection for a stored Photos row.
+
+    Fixture reads use this public wrapper to repair labels that were derived
+    before a GPS hint was added, without mutating the Owner database merely to
+    render a more precise location.
+    """
+
+    return _location_metadata_from_row(row)
 
 
 def _seedable_title(value: Any) -> str:
@@ -728,6 +1221,8 @@ def upsert_assets(repo_root: Path, rows: Iterable[dict[str, Any]]) -> int:
     with connect(repo_root) as conn:
         keyword_blacklist = _keyword_blacklist_set(conn, repo_root)
         for row in rows:
+            if not is_jpeg_source_row(row):
+                continue
             asset_id = _asset_id(row)
             if not asset_id:
                 continue
@@ -2218,7 +2713,7 @@ def _upload_bridge_run_id() -> str:
     return f"ub-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
-def _run_apple_photos_materialize_one(
+def _run_backstage_photos_materialize_one(
     repo_root: Path,
     *,
     asset_id: str,
@@ -2226,66 +2721,15 @@ def _run_apple_photos_materialize_one(
     allow_icloud_downloads: bool,
     timeout: int = 1800,
 ) -> dict[str, Any]:
-    destination.mkdir(parents=True, exist_ok=True)
-    result_destination = destination / "photos-bridge-result.json"
-    launched_app_bundle = APPLE_PHOTOS_BRIDGE_APP.exists()
-    if launched_app_bundle:
-        command = [
-            "open",
-            "-W",
-            "-n",
-            str(APPLE_PHOTOS_BRIDGE_APP),
-            "--args",
-            "materialize-one",
-        ]
-    else:
-        runtime_root = Path(
-            os.environ.get("PBE_CONNECTOR_RUNTIME_ROOT", str(repo_root))
-        ).expanduser().resolve()
-        bridge = runtime_root / "scripts" / "apple_photos_bridge.swift"
-        if not bridge.exists():
-            raise RuntimeError(f"Apple Photos bridge is missing: {bridge}")
-        command = ["swift", str(bridge), "materialize-one"]
-    command.extend([
-        "--asset-id",
-        asset_id,
-        "--destination",
-        str(destination),
-        "--result-destination",
-        str(result_destination),
-    ])
-    if allow_icloud_downloads:
-        command.append("--allow-icloud-downloads")
     try:
-        result = subprocess.run(
-            command,
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
+        return request_export_original(
+            asset_id,
+            destination,
+            allow_icloud_downloads=allow_icloud_downloads,
+            timeout=float(timeout),
         )
-    except FileNotFoundError as error:
-        if launched_app_bundle:
-            raise RuntimeError("macOS open is required to launch the Photos Bridge app bundle.") from error
-        raise RuntimeError("Swift is required for the Apple Photos PhotoKit bridge development fallback. Install Xcode Command Line Tools.") from error
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError("Apple Photos bridge timed out while materializing the queued asset.") from error
-    stdout = (result.stdout or "").strip()
-    stderr = (result.stderr or "").strip()
-    if result_destination.exists() and result_destination.stat().st_size > 0:
-        stdout = result_destination.read_text(encoding="utf-8").strip()
-    try:
-        payload = json.loads(stdout or "{}")
-    except json.JSONDecodeError as error:
-        message = stderr or stdout or "Apple Photos bridge returned invalid JSON or did not write its result file."
-        raise RuntimeError(message.strip()) from error
-    if result.returncode != 0 or payload.get("ok") is False:
-        message = str(payload.get("error") or stderr or f"Apple Photos bridge exited {result.returncode}").strip()
-        raise RuntimeError(message)
-    if stderr:
-        payload["stderr"] = stderr
-    return payload
+    except BackstagePhotosClientError as error:
+        raise RuntimeError(f"Backstage original export failed ({error.code}): {error}") from error
 
 
 def _first_env(*names: str) -> str:
@@ -2551,12 +2995,16 @@ def prepare_upload_bridge_execute_batch(
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Plan a multi-item Upload Bridge execute run with one queue/R2 coverage pass."""
+    recovery = reconcile_stale_upload_bridge_runs(repo_root)
     requested_limit = max(1, min(int(limit or 1), 5000))
     scan_limit = 5000 if not allow_r2_overwrite else requested_limit
     scan_limit = max(scan_limit, requested_limit)
     run_id = _upload_bridge_run_id()
     run_mode = "execute-batch"
     now = now_iso()
+    worker_pid = os.getpid()
+    worker_token = f"upload-worker-{uuid.uuid4().hex}"
+    lease_expires_at = _upload_bridge_lease_expiry(datetime.now(timezone.utc))
     planning_started = time.perf_counter()
     base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
     if not base_root.is_absolute():
@@ -2707,8 +3155,8 @@ def prepare_upload_bridge_execute_batch(
             """
             INSERT INTO sidecar_upload_bridge_runs
               (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
-               summary_json, created_at, updated_at)
-            VALUES (?, ?, 'running', 1, ?, ?, ?, ?, ?, ?)
+               summary_json, created_at, updated_at, worker_pid, worker_token, lease_expires_at)
+            VALUES (?, ?, 'running', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
@@ -2719,6 +3167,9 @@ def prepare_upload_bridge_execute_batch(
                 _json_text(summary_payload),
                 now,
                 now,
+                worker_pid,
+                worker_token,
+                lease_expires_at,
             ),
         )
 
@@ -2782,6 +3233,7 @@ def prepare_upload_bridge_execute_batch(
         "count": len(ledger_items),
         "items": ledger_items,
         "summary": summary_payload,
+        "recovery": recovery,
         "message": f"Planned {len(ledger_items):,} Upload Bridge item(s) with one R2 coverage pass.",
     }
 
@@ -2830,7 +3282,7 @@ def execute_upload_bridge_batch_item(
 
     try:
         export_started = time.perf_counter()
-        export_payload = _run_apple_photos_materialize_one(
+        export_payload = _run_backstage_photos_materialize_one(
             repo_root,
             asset_id=item["assetId"],
             destination=export_root / str(item["runItemId"]),
@@ -2880,7 +3332,7 @@ def execute_upload_bridge_batch_item(
                 item_status = "uploaded"
         else:
             item_status = "export_failed"
-            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+            export_error = export_error or "Backstage did not materialize an export file."
     except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
         message = str(error)
         if item_status == "exported":
@@ -3005,7 +3457,8 @@ def finish_upload_bridge_execute_batch(
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_runs
-            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?,
+                updated_at = ?, lease_expires_at = NULL
             WHERE run_id = ?
             """,
             (status, completed_at, error_text, _json_text(summary), completed_at, run_id),
@@ -3036,6 +3489,7 @@ def run_upload_bridge_export_dry_run(
     exported master and generated watermarked public previews are uploaded to
     their planned R2 keys, while Owner catalog registration remains out of scope.
     """
+    recovery = reconcile_stale_upload_bridge_runs(repo_root)
     requested_limit = max(1, min(int(limit or 1), 5000))
     safe_limit = 1
     scan_limit = 5000 if execute_upload and not allow_r2_overwrite else safe_limit
@@ -3044,6 +3498,9 @@ def run_upload_bridge_export_dry_run(
     run_mode = "execute" if execute_upload else "export-dry-run"
     execute_int = 1 if execute_upload else 0
     now = now_iso()
+    worker_pid = os.getpid()
+    worker_token = f"upload-worker-{uuid.uuid4().hex}"
+    lease_expires_at = _upload_bridge_lease_expiry(datetime.now(timezone.utc))
     base_root = spool_root or DEFAULT_UPLOAD_BRIDGE_RUN_ROOT
     if not base_root.is_absolute():
         base_root = repo_root / base_root
@@ -3178,8 +3635,8 @@ def run_upload_bridge_export_dry_run(
             """
             INSERT INTO sidecar_upload_bridge_runs
               (run_id, mode, status, execute_upload, limit_count, started_at, spool_root,
-               summary_json, created_at, updated_at)
-            VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?)
+               summary_json, created_at, updated_at, worker_pid, worker_token, lease_expires_at)
+            VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
@@ -3191,6 +3648,9 @@ def run_upload_bridge_export_dry_run(
                 _json_text({"bridgeQueuedCount": len(selected_rows), "r2UploadPerformed": False, "executeUpload": execute_upload}),
                 now,
                 now,
+                worker_pid,
+                worker_token,
+                lease_expires_at,
             ),
         )
         ledger_items: list[dict[str, Any]] = []
@@ -3254,7 +3714,7 @@ def run_upload_bridge_export_dry_run(
     upload_results: list[dict[str, Any]] = []
     upload_error = ""
     try:
-        export_payload = _run_apple_photos_materialize_one(
+        export_payload = _run_backstage_photos_materialize_one(
             repo_root,
             asset_id=item["assetId"],
             destination=export_root,
@@ -3305,7 +3765,7 @@ def run_upload_bridge_export_dry_run(
         else:
             item_status = "export_failed"
             run_status = "export_failed"
-            export_error = export_error or "Apple Photos bridge did not materialize an export file."
+            export_error = export_error or "Backstage did not materialize an export file."
     except Exception as error:  # noqa: BLE001 - ledger must capture bridge failures.
         message = str(error)
         if item_status == "exported" and execute_upload:
@@ -3372,7 +3832,8 @@ def run_upload_bridge_export_dry_run(
         conn.execute(
             """
             UPDATE sidecar_upload_bridge_runs
-            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?, updated_at = ?
+            SET status = ?, completed_at = ?, error_text = ?, summary_json = ?,
+                updated_at = ?, lease_expires_at = NULL
             WHERE run_id = ?
             """,
             (
@@ -3417,6 +3878,7 @@ def run_upload_bridge_export_dry_run(
         "count": len(ledger_items),
         "items": [item],
         "summary": run_summary,
+        "recovery": recovery,
         "message": (
             "Apple Photos export and guarded R2 upload completed; Owner catalog registration was not performed."
             if execute_upload

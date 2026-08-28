@@ -4,8 +4,76 @@ import SwiftUI
 struct ReviewTitleKeywordEditor: View {
     @ObservedObject var model: BackstageViewModel
 
+    private let countries = [
+        ("", "Unknown"),
+        ("france", "France"),
+        ("italy", "Italy"),
+        ("mexico", "Mexico"),
+        ("portugal", "Portugal"),
+        ("slovakia", "Slovakia"),
+        ("spain", "Spain"),
+        ("usa", "USA"),
+    ]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 8) {
+                    Picker(
+                        "Country",
+                        selection: Binding(
+                            get: { model.reviewCountry },
+                            set: { model.updateReviewCountry($0) }
+                        )
+                    ) {
+                        ForEach(countries, id: \.0) { country in
+                            Text(country.1).tag(country.0)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .disabled(
+                        model.isRunningReview
+                            || model.fixtureReviewWindow?.countryWriteEnabled != true
+                    )
+                    Button {
+                        Task { await model.propagateReviewCountry() }
+                    } label: {
+                        Image(systemName: "arrow.down")
+                    }
+                    .disabled(
+                        model.isRunningReview
+                            || model.fixtureReviewWindow?.countryWriteEnabled != true
+                    )
+                    .accessibilityLabel("Propagate country through the active two-hour shoot scope")
+                    .backstageHelp("Propagate country through the active two-hour shoot scope.")
+                }
+                if let item = model.focusedReviewItem {
+                    let accepted = item.country.isEmpty ? "Unknown" : item.country.capitalized
+                    let suggestion = item.suggestedCountry.isEmpty
+                        ? ""
+                        : " · Suggested: \(countryDisplayName(item.suggestedCountry)) via \(item.countrySuggestionSource)"
+                    let proposal = item.proposedCountry.isEmpty
+                        ? ""
+                        : " · AI proposal: \(item.proposedCountry.capitalized)"
+                    Text("Accepted: \(accepted)\(suggestion)\(proposal)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if item.suggestedCountry.isEmpty,
+                       !item.countrySuggestionSource.isEmpty,
+                       item.country.isEmpty {
+                        Text("Country evidence: \(item.countrySuggestionSource).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if model.fixtureReviewWindow?.countryWriteEnabled != true,
+                   let reason = model.fixtureReviewWindow?.countryWriteBlockReason,
+                   !reason.isEmpty {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             HStack(alignment: .top, spacing: 8) {
                 TextField(
                     "Title",
@@ -44,6 +112,10 @@ struct ReviewTitleKeywordEditor: View {
                 .backstageHelp("Copy the current keywords to the other selected Review items using the active propagation scope.")
             }
         }
+    }
+
+    private func countryDisplayName(_ country: String) -> String {
+        country == "usa" ? "USA" : country.capitalized
     }
 }
 

@@ -256,7 +256,7 @@ public enum CullingWorkspace {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .split(whereSeparator: \.isWhitespace)
         let haystack = (
-            [candidate.title, candidate.filename, candidate.decision.title]
+            [candidate.id, candidate.title, candidate.filename, candidate.decision.title]
                 + candidate.decision.keywords
         )
         .joined(separator: " ")
@@ -390,6 +390,23 @@ public enum CullingWorkspace {
         }
         appendCandidates()
         return candidates
+    }
+
+    /// Applies the same burst grouping and likely-survivor rule to the
+    /// chronological picked-only Review queue.
+    public static func reviewBurstRejectCandidates(
+        in reviewItems: [FixtureReviewItem],
+        maximumGap: TimeInterval = 2
+    ) -> [String] {
+        burstRejectCandidates(
+            in: reviewItems.map {
+                CullingTimedItem(
+                    id: $0.id,
+                    capturedAt: captureDate($0.capturedAt)
+                )
+            },
+            maximumGap: maximumGap
+        )
     }
 }
 

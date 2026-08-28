@@ -450,7 +450,9 @@ final class BackstageViewModel: ObservableObject {
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var nativeEnrollmentTask: Task<Void, Never>?
     private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
+    private(set) var hasPendingReviewMetadataAutosave = false
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
+    private var reviewMetadataAutosaveTaskToken: UUID?
     private var reviewAIStatusRefreshTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
@@ -1123,7 +1125,7 @@ final class BackstageViewModel: ObservableObject {
             : "Loading \(selectedFixtureBreadcrumb) for Culling…"
 
         preserveCurrentReviewDraft()
-        reviewMetadataAutosaveTask?.cancel()
+        cancelReviewMetadataAutosave()
         reviewWindowRequestSerial += 1
         fixtureReviewWindow = nil
         reviewWindowOffset = 0
@@ -1383,8 +1385,11 @@ final class BackstageViewModel: ObservableObject {
                 if let snapshot = try await authenticationService.claimNativeEnrollment(handoff) {
                     authentication = snapshot
                     authenticationStatus = "This Mac is enrolled. Its revocable credential is stored in Keychain."
+                    enrolledOwnerDevices = []
+                    ownerDeviceManagementStatus = "Refreshing enrolled Macs…"
                     await refreshActions()
                     await loadFixtures()
+                    await refreshOwnerDevices()
                     return
                 }
                 try await Task.sleep(for: .seconds(1))
@@ -4206,8 +4211,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Finish the current Review action first."
             return
         }
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         let ids = selectedReviewAssetIDs
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             reviewStatus = "Choose a fixture and select one or more Review items."
@@ -4419,8 +4423,7 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         if action != .editMetadata {
-            reviewMetadataAutosaveTask?.cancel()
-            reviewMetadataAutosaveTask = nil
+            cancelReviewMetadataAutosave()
         }
         let ids = selectedReviewAssetIDs
         guard !ids.isEmpty, let anchor = reviewSelection.focusedID ?? ids.first else {
@@ -5210,28 +5213,24 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func saveReviewMetadata() async {
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         await saveReviewMetadataIfNeeded()
     }
 
     func propagateReviewTitle() async {
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         await saveReviewMetadataIfNeeded()
         await applyReviewAction(.propagateTitle, propagate: true)
     }
 
     func propagateReviewKeywords() async {
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         await saveReviewMetadataIfNeeded()
         await applyReviewAction(.propagateKeywords, propagate: true)
     }
 
     func propagateReviewCountry() async {
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         await saveReviewMetadataIfNeeded()
         await applyReviewAction(.propagateCountry, propagate: true)
     }
@@ -5675,7 +5674,7 @@ final class BackstageViewModel: ObservableObject {
 
     private func scheduleReviewMetadataAutosave() {
         preserveCurrentReviewDraft()
-        reviewMetadataAutosaveTask?.cancel()
+        cancelReviewMetadataAutosave()
         guard let assetID = focusedReviewItem?.id else { return }
         if let draft = reviewProposalDrafts[assetID], draft.isProposal {
             reviewStatus = draft.hasManualEdits
@@ -5683,6 +5682,10 @@ final class BackstageViewModel: ObservableObject {
                 : "AI proposal remains a draft until you press Approve."
             return
         }
+        guard reviewMetadataAutosaveIsNeeded else { return }
+        hasPendingReviewMetadataAutosave = true
+        let taskToken = UUID()
+        reviewMetadataAutosaveTaskToken = taskToken
         reviewMetadataAutosaveTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
@@ -5692,7 +5695,18 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             await self.saveReviewMetadataIfNeeded()
+            guard self.reviewMetadataAutosaveTaskToken == taskToken else { return }
+            self.reviewMetadataAutosaveTask = nil
+            self.reviewMetadataAutosaveTaskToken = nil
+            self.hasPendingReviewMetadataAutosave = false
         }
+    }
+
+    private func cancelReviewMetadataAutosave() {
+        reviewMetadataAutosaveTask?.cancel()
+        reviewMetadataAutosaveTask = nil
+        reviewMetadataAutosaveTaskToken = nil
+        hasPendingReviewMetadataAutosave = false
     }
 
     private func saveReviewMetadataIfNeeded() async {
@@ -5713,6 +5727,23 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         await applyReviewAction(.editMetadata)
+    }
+
+    /// SwiftUI may commit an unchanged binding while the window is closing, so
+    /// only a real field difference starts the explicit pending-save lifecycle.
+    private var reviewMetadataAutosaveIsNeeded: Bool {
+        guard let item = focusedReviewItem else { return false }
+        guard reviewProposalDrafts[item.id]?.isProposal != true else { return false }
+        let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keywords = parsedReviewKeywords()
+        let country = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard title != item.title || keywords != item.keywords || country != item.country else {
+            return false
+        }
+        if country != item.country, fixtureReviewWindow?.countryWriteEnabled != true {
+            return false
+        }
+        return true
     }
 
     private func parsedReviewKeywords() -> [String] {
@@ -7307,8 +7338,7 @@ final class BackstageViewModel: ObservableObject {
         // A delayed Review text edit is durable work even though its network
         // action has not started yet. Flush it synchronously before draining
         // the other active operation flags.
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
+        cancelReviewMetadataAutosave()
         await saveReviewMetadataIfNeeded()
     }
 

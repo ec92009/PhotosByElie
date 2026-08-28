@@ -833,6 +833,8 @@ struct BackstageFixtureSelectionTests {
         #expect(model.reviewCountry == "usa")
         model.updateReviewTitle("Edited title")
         #expect(model.reviewProposalDrafts[item.id]?.country == "")
+        #expect(model.hasPendingReviewMetadataAutosave)
+        #expect(model.shutdownWorkState.activeReasons.contains("Review metadata save"))
         for _ in 0..<30 {
             if await reviewService.recordedManifests().last?["reviewAction"]?.stringValue == "edit-metadata" {
                 break
@@ -843,6 +845,7 @@ struct BackstageFixtureSelectionTests {
         let autosaves = await reviewService.recordedManifests()
         #expect(autosaves.last?["reviewAction"]?.stringValue == "edit-metadata")
         #expect(autosaves.last?["country"] == nil)
+        #expect(!model.hasPendingReviewMetadataAutosave)
 
         await model.applyReviewAction(.approve)
         let approvals = await reviewService.recordedManifests()

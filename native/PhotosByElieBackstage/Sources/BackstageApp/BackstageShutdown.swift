@@ -26,6 +26,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isApplyingCullingDecision = false
     var isDeferringCullingWasteBasketUndo = false
     var isRunningReview = false
+    var isSavingReviewMetadata = false
     var isRunningAIPass = false
     var isAIPassDetachable = false
     var isRunningAccess = false
@@ -55,6 +56,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
         if isApplyingCullingDecision { reasons.append("culling decision write") }
         if isDeferringCullingWasteBasketUndo { reasons.append("Waste Basket undo") }
         if isRunningReview { reasons.append("Review update") }
+        if isSavingReviewMetadata { reasons.append("Review metadata save") }
         if isRunningAIPass { reasons.append("AI proposal pass") }
         if isRunningAccess { reasons.append("access update") }
         if isRunningLifecycle { reasons.append("Waste Basket update") }
@@ -100,6 +102,7 @@ extension BackstageViewModel {
             isApplyingCullingDecision: isApplyingCullingDecision,
             isDeferringCullingWasteBasketUndo: !cullingWasteBasketDeferredUndoActionIDs.isEmpty,
             isRunningReview: isRunningReview,
+            isSavingReviewMetadata: hasPendingReviewMetadataAutosave,
             isRunningAIPass: isRunningAIPass,
             isAIPassDetachable: isRunningAIPass && fixtureAIStatus?.active == true,
             isRunningAccess: isRunningAccess,

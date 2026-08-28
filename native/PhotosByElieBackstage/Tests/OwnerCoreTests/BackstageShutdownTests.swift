@@ -15,6 +15,7 @@ struct BackstageShutdownTests {
         var state = BackstageShutdownWorkState()
         let checks: [(inout BackstageShutdownWorkState) -> Void] = [
             { $0.isRunningReview = true },
+            { $0.isSavingReviewMetadata = true },
             { $0.isApplyingCullingDecision = true },
             { $0.isRunningDelivery = true },
             { $0.isRunningNativePublication = true },
@@ -141,7 +142,7 @@ struct BackstageShutdownTests {
         #expect(!forceCoordinator.terminationReplyPending)
     }
 
-    @Test("Idle quit still performs the graceful autosave drain without a prompt")
+    @Test("Idle quit terminates immediately without a prompt")
     func idleQuitSkipsPrompt() {
         var promptCount = 0
         var coordinator = BackstageTerminationCoordinator()
@@ -150,8 +151,20 @@ struct BackstageShutdownTests {
             return .cancelQuit
         }
 
-        #expect(disposition == .terminateLater(detachAIPass: false))
+        #expect(disposition == .terminateNow)
+        #expect(!coordinator.terminationReplyPending)
         #expect(promptCount == 0)
+    }
+
+    @Test("Pending Review metadata is named and drained before quit")
+    func reviewMetadataSaveBlocksTermination() {
+        var coordinator = BackstageTerminationCoordinator()
+        let state = BackstageShutdownWorkState(isSavingReviewMetadata: true)
+
+        #expect(state.activeReasons == ["Review metadata save"])
+        #expect(coordinator.decide(workState: state) { .waitAndQuit }
+            == .terminateLater(detachAIPass: false))
+        #expect(coordinator.terminationReplyPending)
     }
 
     @Test("Last-window termination is enabled")

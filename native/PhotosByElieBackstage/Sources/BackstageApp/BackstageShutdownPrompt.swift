@@ -98,8 +98,7 @@ struct BackstageTerminationCoordinator: Sendable {
     ) -> BackstageTerminationDisposition {
         guard !terminationReplyPending else { return .alreadyPending }
         guard workState.hasActiveWork else {
-            terminationReplyPending = true
-            return .terminateLater(detachAIPass: false)
+            return .terminateNow
         }
         switch choose() {
         case .waitAndQuit:

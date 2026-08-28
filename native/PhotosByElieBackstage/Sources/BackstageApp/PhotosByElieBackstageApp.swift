@@ -518,6 +518,7 @@ private struct BackstageUpdatesView: View {
             }
             Button("Quit and open installed Backstage") {
                 let configuration = NSWorkspace.OpenConfiguration()
+                configuration.createsNewApplicationInstance = true
                 NSWorkspace.shared.openApplication(
                     at: receipt.installedBundleURL,
                     configuration: configuration
@@ -527,7 +528,7 @@ private struct BackstageUpdatesView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .backstageHelp("Open the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
+            .backstageHelp("Launch a new instance of the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
         case let .failed(message, recovery):
             statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
             Text(message)

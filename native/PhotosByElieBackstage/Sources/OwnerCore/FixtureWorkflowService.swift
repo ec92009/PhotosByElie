@@ -71,6 +71,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
     public var deliveryState: String
     public var sourceAvailable: Bool
     public var keywords: [String]
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
 
     public init(
         id: String,
@@ -92,7 +95,10 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         proposalAvailable: Bool = false,
         deliveryState: String = "not-ready",
         sourceAvailable: Bool = true,
-        keywords: [String] = []
+        keywords: [String] = [],
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
     ) {
         self.id = id
         self.photoLibraryIdentifier = photoLibraryIdentifier.isEmpty ? id : photoLibraryIdentifier
@@ -114,6 +120,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         self.deliveryState = deliveryState
         self.sourceAvailable = sourceAvailable
         self.keywords = keywords
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 
     init(json: [String: JSONValue]) {
@@ -139,6 +148,9 @@ public struct FixtureAsset: Identifiable, Sendable, Equatable {
         deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
         sourceAvailable = json["sourceAvailable"]?.boolValue ?? true
         keywords = json["keywords"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        cameraBody = json["cameraBody"]?.stringValue ?? ""
+        lens = json["lens"]?.stringValue ?? ""
+        focalLength = json["focalLength"]?.stringValue ?? ""
     }
 }
 
@@ -622,6 +634,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var vision: Bool
     public var modelLadder: [String]
     public var deliveryState: String
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
 
     public init(
         id: String,
@@ -663,7 +678,10 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         modelLadder: [String] = [],
         deliveryState: String = "not-ready",
         locationLabel: String = "",
-        locationKeywords: [String] = []
+        locationKeywords: [String] = [],
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
     ) {
         self.id = id
         self.sourceVersionID = sourceVersionID
@@ -705,6 +723,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.vision = vision
         self.modelLadder = modelLadder
         self.deliveryState = deliveryState
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 
     init(json: [String: JSONValue]) {
@@ -749,6 +770,9 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         vision = json["vision"]?.boolValue ?? false
         modelLadder = json["modelLadder"]?.arrayValue?.compactMap(\.stringValue) ?? []
         deliveryState = json["deliveryState"]?.stringValue ?? "not-ready"
+        cameraBody = json["cameraBody"]?.stringValue ?? ""
+        lens = json["lens"]?.stringValue ?? ""
+        focalLength = json["focalLength"]?.stringValue ?? ""
     }
 }
 

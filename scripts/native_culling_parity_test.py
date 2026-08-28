@@ -2364,6 +2364,33 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn("BackstageQuickLookDecisionRouter.handle(", surface)
             self.assertIn("BackstageQuickLookDecisionRouter.shortcutHint", surface)
 
+    def test_quick_look_equipment_uses_one_shared_accessory_across_photo_surfaces(self):
+        appkit = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageAppKitAdapters.swift"
+        ).read_text(encoding="utf-8")
+        culling = (
+            NATIVE / "Sources" / "BackstageApp" / "CullingView.swift"
+        ).read_text(encoding="utf-8")
+        review = (
+            NATIVE / "Sources" / "BackstageApp" / "ReviewView.swift"
+        ).read_text(encoding="utf-8")
+        upload = (
+            NATIVE / "Sources" / "BackstageApp" / "UploadView.swift"
+        ).read_text(encoding="utf-8")
+        metadata = backstage_ui_source().split(
+            "private struct MetadataGiveBackView", 1
+        )[1]
+
+        self.assertIn("struct BackstageQuickLookEquipment", appkit)
+        self.assertIn('addMetadataRow("Equipment", value: equipment)', appkit)
+        for surface in (culling, review, upload, metadata):
+            self.assertIn("cameraBody:", surface)
+            self.assertIn("lens:", surface)
+            self.assertIn("focalLength:", surface)
+
     def test_getting_started_describes_the_native_large_pool_path(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
             encoding="utf-8"

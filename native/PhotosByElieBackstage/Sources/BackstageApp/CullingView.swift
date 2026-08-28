@@ -339,6 +339,9 @@ private enum CullingQuickLookPresenter {
             keywords: asset.keywords,
             locationLabel: asset.locationLabel,
             capturedAt: asset.capturedAt,
+            cameraBody: asset.cameraBody,
+            lens: asset.lens,
+            focalLength: asset.focalLength,
             sourceSize: BackstageQuickLookSourceSize(
                 mediaType: asset.mediaType,
                 pixelWidth: asset.pixelWidth,

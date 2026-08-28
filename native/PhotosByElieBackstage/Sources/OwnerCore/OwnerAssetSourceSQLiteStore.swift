@@ -6,28 +6,51 @@ public struct OwnerAssetSourceMetadata: Sendable, Equatable {
     public var pixelWidth: Int
     public var pixelHeight: Int
     public var originalByteCount: Int64
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
 
     public init(
         mediaType: String = "photo",
         pixelWidth: Int = 0,
         pixelHeight: Int = 0,
-        originalByteCount: Int64 = 0
+        originalByteCount: Int64 = 0,
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
     ) {
         self.mediaType = mediaType
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
         self.originalByteCount = originalByteCount
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 }
 
-/// Reads immutable source characteristics directly from authoritative
-/// Owner.sqlite. It deliberately owns no write path and never inspects a
-/// temporary Quick Look export.
+/// Reads immutable source characteristics from authoritative Owner.sqlite and
+/// joins read-only equipment fields from its projected public catalog. Exact
+/// publication identity wins; legacy filename fallback is accepted only when
+/// that filename is unique in both databases. This store owns no write path
+/// and never inspects a temporary Quick Look export.
 public struct OwnerAssetSourceSQLiteStore: Sendable {
     private let databaseURL: URL
+    private let catalogURL: URL?
 
-    public init(databaseURL: URL) {
+    public init(databaseURL: URL, catalogURL: URL? = nil) {
         self.databaseURL = databaseURL.standardizedFileURL
+        if let catalogURL {
+            self.catalogURL = catalogURL.standardizedFileURL
+        } else if databaseURL.deletingLastPathComponent().lastPathComponent == "owner-actions" {
+            self.catalogURL = databaseURL
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("catalog/photosbyelie.sqlite")
+                .standardizedFileURL
+        } else {
+            self.catalogURL = nil
+        }
     }
 
     public func metadata(assetIDs: [String]) throws -> [String: OwnerAssetSourceMetadata] {
@@ -92,10 +115,231 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
                     originalByteCount: sqlite3_column_int64(statement, 4)
                 )
             case SQLITE_DONE:
-                return result
+                let mediaIDs = publicationMediaIDs(database: database, assetIDs: ids)
+                let filenames = uniqueSourceFilenames(database: database, assetIDs: ids)
+                return catalogEquipment(
+                    assetIDs: ids,
+                    publicationMediaIDs: mediaIDs,
+                    uniqueFilenames: filenames,
+                    mergingInto: result
+                )
             default:
                 throw OwnerDatabaseError.unavailable(String(cString: sqlite3_errmsg(database)))
             }
         }
+    }
+
+    private func catalogEquipment(
+        assetIDs: [String],
+        publicationMediaIDs: [String: String],
+        uniqueFilenames: [String: String],
+        mergingInto source: [String: OwnerAssetSourceMetadata]
+    ) -> [String: OwnerAssetSourceMetadata] {
+        guard let catalogURL,
+              FileManager.default.fileExists(atPath: catalogURL.path)
+        else { return source }
+
+        var catalog: OpaquePointer?
+        guard sqlite3_open_v2(
+            catalogURL.path,
+            &catalog,
+            SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX,
+            nil
+        ) == SQLITE_OK, let catalog else {
+            if let catalog { sqlite3_close_v2(catalog) }
+            return source
+        }
+        defer { sqlite3_close_v2(catalog) }
+        sqlite3_busy_timeout(catalog, 1_000)
+
+        let mediaIDByAssetID = Dictionary(uniqueKeysWithValues: assetIDs.map {
+            ($0, publicationMediaIDs[$0] ?? $0)
+        })
+        var assetIDByMediaID: [String: String] = [:]
+        for (assetID, mediaID) in mediaIDByAssetID
+        where assetIDByMediaID[mediaID] == nil {
+            assetIDByMediaID[mediaID] = assetID
+        }
+        let mediaIDs = assetIDByMediaID.keys.sorted()
+        let placeholders = Array(repeating: "?", count: mediaIDs.count).joined(separator: ",")
+        let sql = """
+        SELECT media.media_id,
+               COALESCE(camera.name, ''),
+               COALESCE(lens.name, ''),
+               COALESCE(media.focal_length, '')
+        FROM media_items AS media
+        LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
+        LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
+        WHERE media.media_id IN (
+        """ + placeholders + ")"
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(catalog, sql, -1, &statement, nil) == SQLITE_OK,
+              let statement else {
+            return source
+        }
+        defer { sqlite3_finalize(statement) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (index, id) in mediaIDs.enumerated() {
+            _ = id.withCString { pointer in
+                sqlite3_bind_text(statement, Int32(index + 1), pointer, -1, transient)
+            }
+        }
+
+        var result = source
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let mediaID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+            guard let assetID = assetIDByMediaID[mediaID] else { continue }
+            guard var metadata = result[assetID] else { continue }
+            metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+            metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
+            metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
+            result[assetID] = metadata
+        }
+        mergeUniqueFilenameEquipment(
+            catalog: catalog,
+            filenamesByAssetID: uniqueFilenames,
+            result: &result
+        )
+        return result
+    }
+
+    private func publicationMediaIDs(
+        database: OpaquePointer,
+        assetIDs: [String]
+    ) -> [String: String] {
+        let placeholders = Array(repeating: "?", count: assetIDs.count).joined(separator: ",")
+        let sql = """
+        SELECT publication.asset_id, publication.media_id
+        FROM public_catalog_publications AS publication
+        WHERE publication.asset_id IN (
+        """ + placeholders + """
+        )
+          AND trim(COALESCE(publication.media_id, '')) <> ''
+          AND publication.updated_at = (
+            SELECT MAX(candidate.updated_at)
+            FROM public_catalog_publications AS candidate
+            WHERE candidate.asset_id = publication.asset_id
+          )
+        """
+        guard let statement = prepared(database: database, sql: sql, values: assetIDs) else {
+            return [:]
+        }
+        defer { sqlite3_finalize(statement) }
+        var result: [String: String] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+            let mediaID = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+            if !assetID.isEmpty, !mediaID.isEmpty {
+                result[assetID] = mediaID
+            }
+        }
+        return result
+    }
+
+    private func uniqueSourceFilenames(
+        database: OpaquePointer,
+        assetIDs: [String]
+    ) -> [String: String] {
+        let placeholders = Array(repeating: "?", count: assetIDs.count).joined(separator: ",")
+        let sql = """
+        SELECT requested.asset_id, requested.filename
+        FROM sidecar_assets AS requested
+        WHERE requested.asset_id IN (
+        """ + placeholders + """
+        )
+          AND trim(COALESCE(requested.filename, '')) <> ''
+          AND (
+            SELECT COUNT(*)
+            FROM sidecar_assets AS candidate
+            WHERE candidate.filename = requested.filename
+          ) = 1
+        """
+        guard let statement = prepared(database: database, sql: sql, values: assetIDs) else {
+            return [:]
+        }
+        defer { sqlite3_finalize(statement) }
+        var result: [String: String] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+            let filename = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+            if !assetID.isEmpty, !filename.isEmpty {
+                result[assetID] = filename
+            }
+        }
+        return result
+    }
+
+    private func mergeUniqueFilenameEquipment(
+        catalog: OpaquePointer,
+        filenamesByAssetID: [String: String],
+        result: inout [String: OwnerAssetSourceMetadata]
+    ) {
+        let unresolved = filenamesByAssetID.filter {
+            guard let metadata = result[$0.key] else { return false }
+            return metadata.cameraBody.isEmpty
+                && metadata.lens.isEmpty
+                && metadata.focalLength.isEmpty
+        }
+        guard !unresolved.isEmpty else { return }
+        var assetIDByFilename: [String: String] = [:]
+        for (assetID, filename) in unresolved
+        where assetIDByFilename[filename] == nil {
+            assetIDByFilename[filename] = assetID
+        }
+        let filenames = assetIDByFilename.keys.sorted()
+        let placeholders = Array(repeating: "?", count: filenames.count).joined(separator: ",")
+        let sql = """
+        SELECT source.filename,
+               COALESCE(camera.name, ''),
+               COALESCE(lens.name, ''),
+               COALESCE(media.focal_length, '')
+        FROM source_files AS source
+        JOIN media_items AS media ON media.source_file_id = source.source_file_id
+        LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
+        LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
+        WHERE source.filename IN (
+        """ + placeholders + """
+        )
+          AND (
+            SELECT COUNT(*)
+            FROM source_files AS candidate_source
+            JOIN media_items AS candidate_media
+              ON candidate_media.source_file_id = candidate_source.source_file_id
+            WHERE candidate_source.filename = source.filename
+          ) = 1
+        """
+        guard let statement = prepared(database: catalog, sql: sql, values: filenames) else {
+            return
+        }
+        defer { sqlite3_finalize(statement) }
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let filename = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+            guard let assetID = assetIDByFilename[filename],
+                  var metadata = result[assetID]
+            else { continue }
+            metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+            metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
+            metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
+            result[assetID] = metadata
+        }
+    }
+
+    private func prepared(
+        database: OpaquePointer,
+        sql: String,
+        values: [String]
+    ) -> OpaquePointer? {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+              let statement else {
+            return nil
+        }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (index, value) in values.enumerated() {
+            _ = value.withCString { pointer in
+                sqlite3_bind_text(statement, Int32(index + 1), pointer, -1, transient)
+            }
+        }
+        return statement
     }
 }

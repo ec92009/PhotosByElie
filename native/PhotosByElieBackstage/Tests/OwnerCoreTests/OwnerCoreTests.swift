@@ -352,6 +352,101 @@ struct OwnerCoreTests {
         #expect(metadata["video-1"]?.originalByteCount == 0)
     }
 
+    @Test("Owner source metadata joins immutable catalog equipment by exact asset ID")
+    func ownerSourceMetadataIncludesCatalogEquipment() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-equipment-metadata-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let ownerURL = root.appendingPathComponent("Owner.sqlite")
+        let catalogURL = root.appendingPathComponent("photosbyelie.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(ownerURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          filename TEXT,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('asset-1', 'direct.jpg', 'photo', 5568, 3712, '{}'),
+          ('asset-legacy', 'legacy.jpg', 'photo', 5568, 3712, '{}'),
+          ('private-only', 'private.jpg', 'photo', 100, 100, '{}');
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        database = nil
+        #expect(sqlite3_open(catalogURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE cameras(camera_id INTEGER PRIMARY KEY, name TEXT);
+        CREATE TABLE lenses(lens_id INTEGER PRIMARY KEY, name TEXT);
+        CREATE TABLE media_items(
+          media_id TEXT PRIMARY KEY,
+          camera_id INTEGER,
+          lens_id INTEGER,
+          focal_length TEXT,
+          source_file_id INTEGER
+        );
+        CREATE TABLE source_files(source_file_id INTEGER PRIMARY KEY, filename TEXT);
+        INSERT INTO cameras VALUES (1, 'NIKON CORPORATION NIKON D500');
+        INSERT INTO lenses VALUES (1, 'Tokina atx-i 11-20mm F2.8 CF');
+        INSERT INTO source_files VALUES (1, 'direct.jpg'), (2, 'legacy.jpg');
+        INSERT INTO media_items VALUES
+          ('asset-1', 1, 1, '12.0 mm / 18 mm equivalent', 1),
+          ('catalog-legacy', 1, 1, '12.0 mm / 18 mm equivalent', 2),
+          ('catalog-only', 1, 1, '12.0 mm', NULL);
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let metadata = try OwnerAssetSourceSQLiteStore(
+            databaseURL: ownerURL,
+            catalogURL: catalogURL
+        ).metadata(assetIDs: ["asset-1", "asset-legacy", "private-only", "catalog-only"])
+
+        #expect(metadata.keys.sorted() == ["asset-1", "asset-legacy", "private-only"])
+        #expect(metadata["asset-1"]?.cameraBody == "NIKON CORPORATION NIKON D500")
+        #expect(metadata["asset-1"]?.lens == "Tokina atx-i 11-20mm F2.8 CF")
+        #expect(metadata["asset-1"]?.focalLength == "12.0 mm / 18 mm equivalent")
+        #expect(metadata["asset-legacy"]?.cameraBody == "NIKON CORPORATION NIKON D500")
+        #expect(metadata["asset-legacy"]?.lens == "Tokina atx-i 11-20mm F2.8 CF")
+        #expect(metadata["private-only"]?.cameraBody == "")
+    }
+
+    @Test("Quick Look equipment normalizes full, partial, and absent metadata")
+    func quickLookEquipmentFormatting() {
+        #expect(
+            BackstageQuickLookEquipment(
+                cameraBody: "NIKON CORPORATION NIKON D500",
+                lens: "Tokina atx-i 11-20mm F2.8 CF",
+                focalLength: "12.0 mm / 18 mm equivalent"
+            ).displayValue == "NIKON D500 with TOKINA ZOOM 11-20 at 12mm"
+        )
+        #expect(
+            BackstageQuickLookEquipment(
+                cameraBody: "",
+                lens: "Tokina atx-i 11-20mm F2.8 CF",
+                focalLength: "12 mm"
+            ).displayValue == "TOKINA ZOOM 11-20 at 12mm"
+        )
+        #expect(
+            BackstageQuickLookEquipment(
+                cameraBody: "NIKON D500",
+                lens: "",
+                focalLength: ""
+            ).displayValue == "NIKON D500"
+        )
+        #expect(
+            BackstageQuickLookEquipment(
+                cameraBody: "",
+                lens: "",
+                focalLength: ""
+            ).displayValue == nil
+        )
+    }
+
     @Test("Upload plan enriches canonical previews from local source metadata")
     func uploadPlanUsesLocalSourceMetadata() async throws {
         let root = FileManager.default.temporaryDirectory

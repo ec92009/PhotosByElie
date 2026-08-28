@@ -129,6 +129,9 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var originalByteCount: Int64
     public var deliveryState: String
     public var errorText: String
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
 
     public init(
         assetID: String,
@@ -142,7 +145,10 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
         pixelHeight: Int = 0,
         originalByteCount: Int64 = 0,
         deliveryState: String,
-        errorText: String
+        errorText: String,
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
     ) {
         self.assetID = assetID
         self.photoLibraryIdentifier = photoLibraryIdentifier
@@ -156,6 +162,9 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
         self.originalByteCount = originalByteCount
         self.deliveryState = deliveryState
         self.errorText = errorText
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 }
 
@@ -334,7 +343,9 @@ public actor FixtureDeliveryService {
     ) {
         self.runner = runner
         self.connectorID = connectorID
-        self.sourceStore = nativeDatabaseURL.map(OwnerAssetSourceSQLiteStore.init(databaseURL:))
+        self.sourceStore = nativeDatabaseURL.map {
+            OwnerAssetSourceSQLiteStore(databaseURL: $0)
+        }
     }
 
     public func plan(fixtureID: String) async throws -> FixtureDeliveryPlan {
@@ -432,7 +443,10 @@ public actor FixtureDeliveryService {
                 originalByteCount: source?.originalByteCount
                     ?? Int64(object["originalByteCount"]?.intValue ?? 0),
                 deliveryState: object["deliveryState"]?.stringValue ?? "needs-upload",
-                errorText: object["errorText"]?.stringValue ?? ""
+                errorText: object["errorText"]?.stringValue ?? "",
+                cameraBody: source?.cameraBody ?? object["cameraBody"]?.stringValue ?? "",
+                lens: source?.lens ?? object["lens"]?.stringValue ?? "",
+                focalLength: source?.focalLength ?? object["focalLength"]?.stringValue ?? ""
             )
         }
         return NativeUploadPlan(

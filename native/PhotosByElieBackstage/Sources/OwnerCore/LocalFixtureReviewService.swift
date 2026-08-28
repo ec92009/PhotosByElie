@@ -103,7 +103,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         limit: Int,
         search: String
     ) throws -> FixtureReviewWindow? {
-        return try nativeStore().reviewWindow(
+        var window = try nativeStore().reviewWindow(
             fixtureID: fixtureID,
             mode: mode,
             stateFilters: stateFilters,
@@ -113,6 +113,14 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             limit: limit,
             search: search
         )
+        let metadata = sourceMetadata(assetIDs: window.items.map(\.id))
+        for index in window.items.indices {
+            guard let source = metadata[window.items[index].id] else { continue }
+            window.items[index].cameraBody = source.cameraBody
+            window.items[index].lens = source.lens
+            window.items[index].focalLength = source.focalLength
+        }
+        return window
     }
 
     public func nativeCullingWindow(
@@ -130,7 +138,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         sourceFilters: [GallerySourceFilter],
         burstsOnly: Bool
     ) throws -> FixtureCullingWindow? {
-        return try nativeCullingStore().cullingWindow(
+        var window = try nativeCullingStore().cullingWindow(
             fixtureID: fixtureID,
             view: view,
             views: views,
@@ -145,6 +153,14 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             sourceFilters: sourceFilters,
             burstsOnly: burstsOnly
         )
+        let metadata = sourceMetadata(assetIDs: window.items.map(\.id))
+        for index in window.items.indices {
+            guard let source = metadata[window.items[index].id] else { continue }
+            window.items[index].cameraBody = source.cameraBody
+            window.items[index].lens = source.lens
+            window.items[index].focalLength = source.focalLength
+        }
+        return window
     }
 
     public func nativeApplyCullingState(
@@ -240,6 +256,14 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             ))
         }
         return OwnerCullingSQLiteStore(databaseURL: nativeDatabaseURL)
+    }
+
+    private func sourceMetadata(
+        assetIDs: [String]
+    ) -> [String: OwnerAssetSourceMetadata] {
+        guard let nativeDatabaseURL else { return [:] }
+        return (try? OwnerAssetSourceSQLiteStore(databaseURL: nativeDatabaseURL)
+            .metadata(assetIDs: assetIDs)) ?? [:]
     }
 
     private func nativeFixtureStore() throws -> OwnerFixtureSQLiteStore {

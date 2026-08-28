@@ -2100,6 +2100,9 @@ private struct MetadataGiveBackView: View {
                         keywords: keywords,
                         locationLabel: source?.locationLabel ?? "",
                         capturedAt: source?.capturedAt ?? "",
+                        cameraBody: source?.cameraBody ?? "",
+                        lens: source?.lens ?? "",
+                        focalLength: source?.focalLength ?? "",
                         sourceSize: BackstageQuickLookSourceSize(
                             mediaType: source?.mediaType ?? "photo",
                             pixelWidth: source?.pixelWidth ?? 0,

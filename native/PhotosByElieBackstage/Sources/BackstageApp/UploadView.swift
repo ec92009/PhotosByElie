@@ -363,6 +363,9 @@ struct UploadView: View {
                 keywords: item.keywords,
                 locationLabel: source?.locationLabel ?? "",
                 capturedAt: item.capturedAt,
+                cameraBody: item.cameraBody,
+                lens: item.lens,
+                focalLength: item.focalLength,
                 sourceSize: BackstageQuickLookSourceSize(
                     mediaType: item.mediaType,
                     pixelWidth: item.pixelWidth,

@@ -9,11 +9,91 @@ struct BackstageQuickLookMetadata: Equatable {
     var keywords: [String]
     var locationLabel: String
     var capturedAt: String
+    var cameraBody: String = ""
+    var lens: String = ""
+    var focalLength: String = ""
     var sourceSize: BackstageQuickLookSourceSize = .unavailable
     var rating: Int
     var color: String
     var state: String
     var shortcutHint: String
+}
+
+struct BackstageQuickLookEquipment: Equatable {
+    var cameraBody: String
+    var lens: String
+    var focalLength: String
+
+    var displayValue: String? {
+        let camera = Self.normalizedCamera(cameraBody)
+        let lens = Self.normalizedLens(lens)
+        let focal = Self.normalizedFocalLength(focalLength)
+        var value = camera
+        if !lens.isEmpty {
+            value = value.isEmpty ? lens : value + " with " + lens
+        }
+        if !focal.isEmpty {
+            value = value.isEmpty ? focal : value + " at " + focal
+        }
+        return value.isEmpty ? nil : value
+    }
+
+    private static func normalizedCamera(_ raw: String) -> String {
+        var value = collapsed(raw).uppercased()
+        value = value.replacingOccurrences(of: "NIKON CORPORATION", with: "NIKON")
+        value = collapsed(value)
+        for brand in ["NIKON", "CANON", "SONY", "FUJIFILM", "PANASONIC", "LEICA", "OLYMPUS"] {
+            let duplicate = brand + " " + brand + " "
+            if value.hasPrefix(duplicate) {
+                value = brand + " " + value.dropFirst(duplicate.count)
+            }
+        }
+        return value
+    }
+
+    private static func normalizedLens(_ raw: String) -> String {
+        let value = collapsed(raw).uppercased()
+        guard !value.isEmpty else { return "" }
+        if let range = captures(#"(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*MM"#, in: value),
+           range.count == 2 {
+            let brand = value.split(separator: " ").first.map(String.init) ?? ""
+            return [brand, "ZOOM", compactNumber(range[0]) + "-" + compactNumber(range[1])]
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+        }
+        return value
+    }
+
+    private static func normalizedFocalLength(_ raw: String) -> String {
+        let value = collapsed(raw)
+        guard !value.isEmpty else { return "" }
+        if let focal = captures(#"^(\d+(?:\.\d+)?)\s*(?:MM)?"#, in: value.uppercased())?.first {
+            return compactNumber(focal) + "mm"
+        }
+        return value
+    }
+
+    private static func compactNumber(_ raw: String) -> String {
+        guard let value = Double(raw) else { return raw }
+        return value.rounded() == value ? String(Int(value)) : String(value)
+    }
+
+    private static func collapsed(_ value: String) -> String {
+        value.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    private static func captures(_ pattern: String, in value: String) -> [String]? {
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+              let match = expression.firstMatch(
+                in: value,
+                range: NSRange(value.startIndex..., in: value)
+              )
+        else { return nil }
+        return (1..<match.numberOfRanges).compactMap { index in
+            guard let range = Range(match.range(at: index), in: value) else { return nil }
+            return String(value[range])
+        }
+    }
 }
 
 struct BackstageQuickLookSourceSize: Equatable {
@@ -547,6 +627,13 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
             value: item.keywords.isEmpty ? "None" : item.keywords.joined(separator: ", ")
         )
         addMetadataRow("Captured", value: item.capturedAt.isEmpty ? "Unknown" : item.capturedAt)
+        if let equipment = BackstageQuickLookEquipment(
+            cameraBody: item.cameraBody,
+            lens: item.lens,
+            focalLength: item.focalLength
+        ).displayValue {
+            addMetadataRow("Equipment", value: equipment)
+        }
         addMetadataRow(
             "Dimensions",
             value: item.sourceSize.displayValue,
@@ -576,7 +663,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
         let placement = currentMetadataPlacement
         let gap: CGFloat = 8
-        let metadataHeight: CGFloat = 310
+        let metadataHeight: CGFloat = 335
         let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
         var panelFrame = panel.frame
 

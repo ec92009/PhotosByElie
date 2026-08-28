@@ -1637,6 +1637,33 @@ struct OwnerCoreTests {
         #expect(result.summary.videos == 1)
     }
 
+    @Test("Culling search matches the exact asset identity used by workflow handoffs")
+    func cullingSearchMatchesAssetIdentity() {
+        let candidate = CullingCandidate(
+            id: "DD8DB4CF-EF10-4CFB-BA2D-D9B4FF58509C:001:AdEJR/GC0fQdeE9oehWYwvEQL5Hk",
+            title: "Untitled",
+            filename: "20141102 1602 26919.jpg",
+            mediaType: "photo",
+            decision: SidecarDecisionState(
+                assetId: "DD8DB4CF-EF10-4CFB-BA2D-D9B4FF58509C:001:AdEJR/GC0fQdeE9oehWYwvEQL5Hk",
+                pickState: "picked"
+            )
+        )
+
+        let result = CullingWorkspace.evaluate(
+            [candidate],
+            query: CullingQuery(
+                search: candidate.id,
+                media: [.photos],
+                pick: [.picked],
+                ratings: [0],
+                colors: [.none]
+            )
+        )
+
+        #expect(result.items.map(\.id) == [candidate.id])
+    }
+
     @Test("Still-only Culling universes expose only the Photos control")
     func stillOnlyCullingMediaAvailability() {
         #expect(

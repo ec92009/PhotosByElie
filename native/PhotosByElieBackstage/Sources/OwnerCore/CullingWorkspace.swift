@@ -256,7 +256,7 @@ public enum CullingWorkspace {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .split(whereSeparator: \.isWhitespace)
         let haystack = (
-            [candidate.title, candidate.filename, candidate.decision.title]
+            [candidate.id, candidate.title, candidate.filename, candidate.decision.title]
                 + candidate.decision.keywords
         )
         .joined(separator: " ")

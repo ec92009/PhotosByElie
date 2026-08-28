@@ -102,8 +102,11 @@ an explicit source-availability gap, not a second catalog authority.
 - Checkpoint before projection adoption:
   `assets/owner-actions/Owner.sqlite-backup-20260828T1501Z-pbe-173-projection`
 
-The deployed website remains a separate, failed gate at the time of this
-  record: it still serves the old 2,650-row checksum
-`efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579`
-and retains the retired unused `ai` source-origin row. PBE-173 must remain
-Active until revision 2 is deployed and exact remote parity is recorded.
+Revision 2 was deployed from `main` commit `9502ba7d` and exact public parity
+was recorded at `2026-08-28T15:12:24.804584Z` as deployment
+`catalog-deploy-af1644062e6fd0fe6b70090e`. The deployed database contains
+3,414 media rows, has zero retired `ai` collection/source-origin rows, passes
+integrity checks, and matches Owner checksum
+`3cd7f3d1d2547811d3b4e4ebef03a9858e45f676379ff9a655a694a350099b19`.
+The receipt advanced matching publication rows to verified website-live state;
+nonmatching historical rows were not counted as live.

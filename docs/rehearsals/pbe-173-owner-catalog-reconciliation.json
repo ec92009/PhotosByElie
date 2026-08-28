@@ -1,0 +1,108 @@
+{
+  "schema": "photosbyelie.owner-catalog-reconciliation.v1",
+  "ticket": "PBE-173",
+  "capturedAt": "2026-08-28T11:47:00+02:00",
+  "readOnly": true,
+  "privacy": "aggregate-only; no media identifiers emitted",
+  "verdict": "local-owner-migrated-production-unchanged",
+  "sources": {
+    "productionCatalog": "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite",
+    "candidateCatalog": "Max current local catalog",
+    "ownerAuthority": "checkpointed Max Owner.sqlite snapshot"
+  },
+  "production": {
+    "rows": 2650,
+    "bytes": 1445888,
+    "sha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579",
+    "integrity": "ok"
+  },
+  "candidate": {
+    "rows": 3217,
+    "bytes": 2043904,
+    "sha256": "03ebba78988d12b5e28ea6b2cfdbfd0016f2754ba8c37e32dff0a40e552babd6",
+    "integrity": "ok"
+  },
+  "ownerAuthority": {
+    "publicationRows": 842,
+    "distinctMediaIds": 842,
+    "uploadBridgeMediaIds": 7490,
+    "mappedCountryMediaIds": 0,
+    "assetIdentityAliases": 47953,
+    "exactDurableAssetMappings": 7489,
+    "conflictingDurableAssetMappings": 1,
+    "historicalReceiptDisagreements": 102,
+    "latestStateCounts": {
+      "failed": 41,
+      "local": 801
+    },
+    "integrity": "ok",
+    "mode": "read-only-checkpointed-snapshot"
+  },
+  "reconciliation": {
+    "commonRows": 2650,
+    "productionOnlyRows": 0,
+    "candidateOnlyRows": 567,
+    "productionMappedInOwnerLedger": 233,
+    "productionUnmappedLegacyRows": 2417,
+    "productionMappedByLatestState": {
+      "local": 233
+    },
+    "productionWithExactDurableOwnerAsset": 1145,
+    "productionWithConflictingDurableOwnerAssets": 0,
+    "productionWithoutDurableOwnerAsset": 1505,
+    "productionHistoricalReceiptDisagreements": 102,
+    "unmappedLegacyWithExactDurableOwnerAsset": 912,
+    "unmappedLegacyWithConflictingDurableOwnerAssets": 0,
+    "unmappedLegacyWithoutDurableOwnerAsset": 1505,
+    "candidateOnlyMappedInOwnerLedger": 567,
+    "candidateOnlyUnmappedRows": 0,
+    "candidateOnlyMappedByLatestState": {
+      "local": 567
+    },
+    "candidateWithExactDurableOwnerAsset": 1712,
+    "candidateWithConflictingDurableOwnerAssets": 0,
+    "candidateWithoutDurableOwnerAsset": 1505,
+    "candidateHistoricalReceiptDisagreements": 102,
+    "ownerLedgerMediaAbsentFromBothCatalogs": 42,
+    "ownerLedgerAbsentByLatestState": {
+      "failed": 41,
+      "local": 1
+    }
+  },
+  "approvedPolicy": {
+    "ticket": "PBE-173",
+    "backfillExactMappings": 912,
+    "keepUnresolvedPublic": 1505,
+    "preserveAuthoritativePublications": 233,
+    "retainHistoricalReceiptDisagreements": 102
+  },
+  "migration": {
+    "migrationId": "owner-catalog-805268d70781dc9011fc0970",
+    "planHash": "805268d70781dc9011fc09703b3c45555ebd6c9115c04cff7134c1d7dde3ed6f",
+    "appliedAt": "2026-08-28T10:29:43.161363Z",
+    "ownerScope": "Max local Owner.sqlite only",
+    "productionMutation": false,
+    "publicationRowsBefore": 842,
+    "publicationRowsAfter": 1754,
+    "originalPublicationRowsChangedOrMissing": 0,
+    "migrationRows": 2650,
+    "authoritativeReceipts": 233,
+    "backfillReceipts": 912,
+    "unresolvedReceipts": 1505,
+    "disagreementReceipts": 102,
+    "productionRowsWithoutPublication": 1505,
+    "ownerIntegrity": "ok",
+    "backupIntegrity": "ok",
+    "secondRunNoOp": true,
+    "backup": "assets/owner-actions/Owner.sqlite-backup-20260828T1031Z-pbe-173"
+  },
+  "postMigrationAudit": {
+    "verdict": "ready-with-approved-exceptions",
+    "publicationRows": 1754,
+    "productionMappedInOwnerLedger": 1145,
+    "productionApprovedUnresolvedRows": 1505,
+    "productionUnapprovedUnresolvedRows": 0,
+    "nextGate": "No legacy import policy gate remains; approved unresolved rows stay public and non-editable."
+  },
+  "nextGate": "Merge the reviewed PBE-173 branch into the canonical release train; production catalog and deployment remain unchanged."
+}

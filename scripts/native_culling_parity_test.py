@@ -984,7 +984,10 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("rowStride: model.cullingGridDensity", culling)
         self.assertIn("model.moveCullingSelection(by: delta", culling)
         self.assertIn("guard wasVisible && !remainsVisible else", culling)
-        self.assertIn("present(model: model, coordinator: coordinator, direction: direction)", culling)
+        self.assertIn("onReturnToReview: onReturnToReview", culling)
+        self.assertIn("case .returnToReview:", culling)
+        self.assertIn("model.canReturnCullingSelectionToReview", culling)
+        self.assertIn("onReturnToReview()", culling)
 
         review_presenter = app.split("private enum ReviewQuickLookPresenter", 1)[1].split(
             "struct ReviewView", 1
@@ -1417,8 +1420,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "240.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "239")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "240.2")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "240")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

@@ -31,10 +31,12 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
     ).fetchone())
 
 
-def _first_column(conn: sqlite3.Connection, sql: str) -> set[str]:
+def _first_column(
+    conn: sqlite3.Connection, sql: str, parameters: tuple[Any, ...] = ()
+) -> set[str]:
     return {
         str(row[0] or "").strip()
-        for row in conn.execute(sql).fetchall()
+        for row in conn.execute(sql, parameters).fetchall()
         if str(row[0] or "").strip()
     }
 
@@ -79,12 +81,12 @@ def public_catalog_policy_snapshot(
     owner_db_path: Path | None = None,
     expo_manifest_path: Path = DEFAULT_EXPO_MANIFEST,
 ) -> dict[str, Any]:
-    """Return public eligibility from Owner SQLite plus the tracked legacy baseline.
+    """Return public eligibility from Owner SQLite.
 
-    The Expo manifest is a compatibility baseline for media published before Owner
-    SQLite had complete audit coverage. Current Owner approvals may come from the
-    title/keyword workflow, Sidecar Upload Bridge, or native publication audit.
-    Lifecycle blocks always win over every approval source.
+    PBE-173's durable reconciliation ledger is the normal legacy authority.
+    The Expo manifest is consulted only by databases that predate that migration.
+    Current approvals may come from title/keyword review, Sidecar Upload Bridge,
+    or native publication audit. Lifecycle blocks always win.
     """
     if conn is not None and owner_db_path is not None:
         raise ValueError("Pass conn or owner_db_path, not both")
@@ -135,13 +137,38 @@ def public_catalog_policy_snapshot(
               )
         """) if _table_exists(conn, "public_catalog_publications") else set()
 
-        manifest_path = expo_manifest_path if expo_manifest_path.is_absolute() else repo_root / expo_manifest_path
-        manifest = _read_json(manifest_path, {})
-        legacy_ids = {
-            str(photo.get("id") or "").strip()
-            for photo in manifest.get("photos", [])
-            if isinstance(photo, dict) and str(photo.get("id") or "").strip()
-        }
+        legacy_authority = "owner-catalog-reconciliation"
+        legacy_ids: set[str] = set()
+        if _table_exists(conn, "owner_catalog_reconciliation_migrations") and _table_exists(
+            conn, "owner_catalog_reconciliation_rows"
+        ):
+            latest = conn.execute(
+                """
+                SELECT migration_id FROM owner_catalog_reconciliation_migrations
+                ORDER BY applied_at DESC, migration_id DESC LIMIT 1
+                """
+            ).fetchone()
+            if latest:
+                legacy_ids = _first_column(
+                    conn,
+                    """
+                    SELECT media_id FROM owner_catalog_reconciliation_rows
+                    WHERE migration_id = ?
+                      AND migration_state IN ('authoritative', 'backfill', 'unresolved')
+                    """,
+                    (str(latest[0]),),
+                )
+        if not legacy_ids:
+            # Pre-PBE-173 compatibility only. Normal production projection uses
+            # the durable Owner reconciliation ledger above, never the manifest.
+            legacy_authority = "pre-migration-expo-fallback"
+            manifest_path = expo_manifest_path if expo_manifest_path.is_absolute() else repo_root / expo_manifest_path
+            manifest = _read_json(manifest_path, {})
+            legacy_ids = {
+                str(photo.get("id") or "").strip()
+                for photo in manifest.get("photos", [])
+                if isinstance(photo, dict) and str(photo.get("id") or "").strip()
+            }
 
         lifecycle = media_lifecycle_snapshot(repo_root, conn=conn, sync_compat=False)
         blocked_ids = {
@@ -171,6 +198,7 @@ def public_catalog_policy_snapshot(
                 "eligibleUnion": len(eligible_ids),
                 "blocked": len(blocked_ids),
             },
+            "legacyAuthority": legacy_authority,
         }
         if authority_path is not None:
             snapshot["ownerAuthority"] = {

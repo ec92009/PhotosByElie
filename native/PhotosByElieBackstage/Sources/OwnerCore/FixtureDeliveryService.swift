@@ -186,6 +186,12 @@ public struct NativeUploadPlan: Sendable, Equatable {
     public var approvedCount: Int
     public var needsReviewCount: Int
     public var needsUploadCount: Int
+    public var mediaUploadedCount: Int
+    public var projectionPendingCount: Int
+    public var projectionFailedCount: Int
+    public var deploymentPendingCount: Int
+    public var deploymentFailedCount: Int
+    public var liveOnWebsiteCount: Int
     public var liveCount: Int
     public var order: NativeUploadPlanOrder
     public var offset: Int
@@ -202,6 +208,12 @@ public struct NativeUploadPlan: Sendable, Equatable {
         needsReviewCount: Int,
         needsUploadCount: Int,
         liveCount: Int,
+        mediaUploadedCount: Int = 0,
+        projectionPendingCount: Int = 0,
+        projectionFailedCount: Int = 0,
+        deploymentPendingCount: Int = 0,
+        deploymentFailedCount: Int = 0,
+        liveOnWebsiteCount: Int? = nil,
         order: NativeUploadPlanOrder = .oldest,
         offset: Int,
         limit: Int,
@@ -215,7 +227,13 @@ public struct NativeUploadPlan: Sendable, Equatable {
         self.approvedCount = approvedCount
         self.needsReviewCount = needsReviewCount
         self.needsUploadCount = needsUploadCount
-        self.liveCount = liveCount
+        self.mediaUploadedCount = mediaUploadedCount
+        self.projectionPendingCount = projectionPendingCount
+        self.projectionFailedCount = projectionFailedCount
+        self.deploymentPendingCount = deploymentPendingCount
+        self.deploymentFailedCount = deploymentFailedCount
+        self.liveOnWebsiteCount = liveOnWebsiteCount ?? liveCount
+        self.liveCount = liveOnWebsiteCount ?? liveCount
         self.order = order
         self.offset = offset
         self.limit = limit
@@ -426,6 +444,12 @@ public actor FixtureDeliveryService {
             needsReviewCount: plan["needsReviewCount"]?.intValue ?? 0,
             needsUploadCount: plan["needsUploadCount"]?.intValue ?? 0,
             liveCount: plan["liveCount"]?.intValue ?? 0,
+            mediaUploadedCount: plan["mediaUploadedCount"]?.intValue ?? 0,
+            projectionPendingCount: plan["projectionPendingCount"]?.intValue ?? 0,
+            projectionFailedCount: plan["projectionFailedCount"]?.intValue ?? 0,
+            deploymentPendingCount: plan["deploymentPendingCount"]?.intValue ?? 0,
+            deploymentFailedCount: plan["deploymentFailedCount"]?.intValue ?? 0,
+            liveOnWebsiteCount: plan["liveOnWebsiteCount"]?.intValue,
             order: NativeUploadPlanOrder(
                 rawValue: plan["order"]?.stringValue ?? NativeUploadPlanOrder.oldest.rawValue
             ) ?? .oldest,

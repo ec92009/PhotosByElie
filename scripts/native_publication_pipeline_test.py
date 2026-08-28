@@ -28,6 +28,7 @@ from native_publication_pipeline import (
     upload_eligibility_plan,
 )
 from native_catalog_promotion import verify_public_catalog, verify_upload_run_catalog
+from owner_catalog_projection import import_projection
 from sidecar_state_db import upsert_assets
 
 
@@ -81,6 +82,11 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 {"localIdentifier": "asset-1", "filename": "one.jpg", "mediaType": "photo"},
                 {"localIdentifier": "asset-2", "filename": "two.jpg", "mediaType": "photo"},
             ],
+        )
+        import_projection(
+            (self.root / "assets/owner-actions/Owner.sqlite").resolve(),
+            catalog_path.resolve(),
+            approved_policy="PBE-173",
         )
         self.fixture = create_fixture(self.root, "Expo")
         set_fixture_asset_state(self.root, self.fixture["fixtureId"], ["asset-1", "asset-2"], "picked")
@@ -227,6 +233,39 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 "provider": "static-alias",
                 "query_text": "barcelona",
             })
+
+    def test_stained_glass_is_not_an_ai_collection_alias(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Church Interior, Bilbao",
+                "keywords": ["Bilbao", "church interior", "stained glass"],
+                "renderedFingerprint": "render-bilbao-glass",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, location_label = 'Bilbao, Spain' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = ?, keywords_json = ? WHERE asset_id = ?",
+                ("Church Interior, Bilbao", '["Bilbao", "church interior", "stained glass"]', "asset-1"),
+            )
+            conn.commit()
+
+        result = publish_verified_asset(
+            self.root,
+            "asset-1",
+            verified_public_set("bilbao-church"),
+        )
+
+        self.assertEqual(result["publicCatalog"]["collection"], "spain")
+        self.assertNotEqual(result["publicCatalog"]["collection"], "ai")
+        self.assertEqual(
+            result["publicCatalog"]["collectionResolution"]["provider"],
+            "static-alias",
+        )
 
     def test_unknown_collection_uses_approved_metadata_resolver_and_caches_evidence(self):
         record_photos_sync_snapshot(
@@ -427,6 +466,60 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 conn.execute("SELECT count(*) total FROM asset_upload_runs").fetchone()["total"],
                 0,
             )
+
+    def test_upload_counts_distinguish_media_projection_deployment_and_website(self):
+        digest = "d" * 64
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE asset_delivery_state SET delivery_state = 'live', source_version_hash = 'version-1' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE asset_delivery_state SET delivery_state = 'live', source_version_hash = 'version-2' WHERE asset_id = 'asset-2'"
+            )
+            conn.execute(
+                """
+                INSERT INTO public_catalog_publications (
+                  asset_id, source_version_hash, media_id, state, public_url,
+                  catalog_sha256, error_text, created_at, verified_at, updated_at
+                ) VALUES ('asset-1', 'version-1', 'media-1', 'local', 'https://example.test/catalog', ?, '', '2026-08-28T10:00:00Z', '2026-08-28T10:00:00Z', '2026-08-28T10:00:00Z')
+                """,
+                (digest,),
+            )
+            conn.execute(
+                """
+                INSERT INTO public_catalog_publications (
+                  asset_id, source_version_hash, media_id, state, public_url,
+                  catalog_sha256, error_text, created_at, verified_at, updated_at
+                ) VALUES ('asset-2', 'version-2', 'media-2', 'failed', 'https://example.test/catalog', '', 'projection failed', '2026-08-28T10:00:00Z', NULL, '2026-08-28T10:00:00Z')
+                """
+            )
+            conn.commit()
+
+        pending = upload_eligibility_plan(self.root, fixture_id=self.fixture["fixtureId"])
+        self.assertEqual(pending["mediaUploadedCount"], 2)
+        self.assertEqual(pending["projectionPendingCount"], 0)
+        self.assertEqual(pending["projectionFailedCount"], 1)
+        self.assertEqual(pending["deploymentPendingCount"], 1)
+        self.assertEqual(pending["deploymentFailedCount"], 0)
+        self.assertEqual(pending["liveOnWebsiteCount"], 0)
+        self.assertEqual(pending["liveCount"], 0)
+
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE public_catalog_publications SET state = 'live', verified_at = '2026-08-28T10:05:00Z' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE public_catalog_publications SET catalog_sha256 = ? WHERE asset_id = 'asset-2'",
+                (digest,),
+            )
+            conn.commit()
+
+        deployed = upload_eligibility_plan(self.root, fixture_id=self.fixture["fixtureId"])
+        self.assertEqual(deployed["projectionFailedCount"], 0)
+        self.assertEqual(deployed["deploymentFailedCount"], 1)
+        self.assertEqual(deployed["deploymentPendingCount"], 0)
+        self.assertEqual(deployed["liveOnWebsiteCount"], 1)
+        self.assertEqual(deployed["liveCount"], 1)
 
     def test_source_missing_withdraws_but_preserves_r2(self):
         record_photos_sync_snapshot(

@@ -36,7 +36,7 @@ COLLECTION_DEFAULTS = {
     "unknown": ("Unknown", "Saturn Lightroom selections that still need a final gallery assignment."),
 }
 MEDIA_TYPES = [(1, "photo"), (2, "video")]
-SOURCE_ORIGINS = [(1, "camera"), (2, "ai")]
+SOURCE_ORIGINS = [(1, "camera")]
 FORMATS = [(1, "jpg"), (2, "tif"), (3, "png"), (4, "heic"), (5, "mp4"), (6, "mov")]
 ASSET_TYPES = [
     (1, "still_900"),
@@ -1139,9 +1139,9 @@ def write_db(
                 continue
             camera_name = metadata_value(photo, "Camera")
             lens_name = metadata_value(photo, "Lens")
-            source_origin = str(photo.get("sourceOrigin") or "").strip() or None
+            source_origin = str(photo.get("sourceOrigin") or "").strip() or "camera"
             location = metadata_value(photo, "Location")
-            if not location and slug != "ai":
+            if not location:
                 location = collection.get("title") or None
             source = source_file(photo)
             source_path = str(source.get("path") or "").strip()

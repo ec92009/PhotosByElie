@@ -157,6 +157,7 @@ def _gallery_slug(row: sqlite3.Row) -> str:
             "ronda",
             "mijas",
             "marbella",
+            "bilbao",
             "cordoba",
             "córdoba",
             "granada",
@@ -168,7 +169,6 @@ def _gallery_slug(row: sqlite3.Row) -> str:
         "usa": ["usa", "united states"],
         "mexico": ["mexico"],
         "slovakia": ["slovakia"],
-        "ai": ["ai generated", "generative ai", "stained glass"],
     }.items():
         if any(term in text for term in terms):
             return slug

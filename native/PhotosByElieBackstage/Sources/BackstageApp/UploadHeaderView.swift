@@ -45,7 +45,7 @@ struct UploadHeaderView: View {
                     .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
                     .backstageHelp("Review the confirmation for publishing only the selected eligible assets.")
             }
-            Text("Upload equals publication. Each verified source version becomes live immediately in every effective picked fixture; ACS alone determines who can see it. A failed asset remains Needs Upload without blocking the rest.")
+            Text("Media upload, catalog projection, catalog deployment, and verified website visibility are separate receipts. A failed asset remains independently retryable without blocking the rest.")
                 .foregroundStyle(.secondary)
             if model.isRunningDelivery, model.nativeUploadPlan == nil {
                 ProgressView("Loading approved publication eligibility…")

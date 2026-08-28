@@ -43,6 +43,7 @@ from native_publication_pipeline import (  # noqa: E402
     reconcile_r2_objects,
     run_upload_batch,
 )
+from owner_catalog_projection import APPROVED_POLICY, import_projection  # noqa: E402
 from sidecar_state_db import upsert_assets  # noqa: E402
 
 
@@ -318,6 +319,11 @@ def run_rehearsal(
     with tempfile.TemporaryDirectory(prefix="pbe-pbb63-rehearsal-") as temp_dir:
         root = Path(temp_dir)
         _expo_id, fixture_id = seed_rehearsal(root, repo_root)
+        import_projection(
+            (root / "assets/owner-actions/Owner.sqlite").resolve(),
+            (root / "assets/catalog/photosbyelie.sqlite").resolve(),
+            approved_policy=APPROVED_POLICY,
+        )
 
         baseline = run_connector(root, "photos-sync-snapshot", items=snapshots())
         repeated = run_connector(root, "photos-sync-snapshot", items=snapshots())

@@ -66,6 +66,7 @@ UPLOAD_BRIDGE_GALLERY_TERMS = {
         "ronda",
         "mijas",
         "marbella",
+        "bilbao",
         "cordoba",
         "córdoba",
         "granada",
@@ -77,7 +78,6 @@ UPLOAD_BRIDGE_GALLERY_TERMS = {
     "usa": ("usa", "united states"),
     "mexico": ("mexico",),
     "slovakia": ("slovakia",),
-    "ai": ("ai generated", "generative ai", "stained glass"),
 }
 AI_METADATA_LADDER: tuple[dict[str, str], ...] = (
     {

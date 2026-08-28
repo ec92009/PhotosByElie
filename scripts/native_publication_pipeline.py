@@ -204,11 +204,48 @@ def upload_eligibility_plan(
                         AND delivery.delivery_state = 'live'
                         {retired_media_filter}
                        THEN 1 ELSE 0 END)
-                AS live_count
+                AS media_uploaded_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                        AND (catalog.state IS NULL OR catalog.state = 'pending')
+                        {retired_media_filter}
+                       THEN 1 ELSE 0 END)
+                AS projection_pending_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                        AND catalog.state = 'failed'
+                        AND trim(COALESCE(catalog.catalog_sha256, '')) = ''
+                        {retired_media_filter}
+                       THEN 1 ELSE 0 END)
+                AS projection_failed_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                        AND catalog.state = 'local'
+                        {retired_media_filter}
+                       THEN 1 ELSE 0 END)
+                AS deployment_pending_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                        AND catalog.state = 'failed'
+                        AND length(trim(COALESCE(catalog.catalog_sha256, ''))) = 64
+                        {retired_media_filter}
+                       THEN 1 ELSE 0 END)
+                AS deployment_failed_count,
+              sum(CASE WHEN editorial.editorial_state = 'approved'
+                        AND delivery.delivery_state = 'live'
+                        AND catalog.state = 'live'
+                        AND length(trim(COALESCE(catalog.catalog_sha256, ''))) = 64
+                        AND trim(COALESCE(catalog.verified_at, '')) <> ''
+                        {retired_media_filter}
+                       THEN 1 ELSE 0 END)
+                AS live_on_website_count
             FROM fixture_asset_decisions AS decision
             JOIN sidecar_assets AS asset ON asset.asset_id = decision.asset_id
             JOIN asset_editorial_state AS editorial ON editorial.asset_id = decision.asset_id
             JOIN asset_delivery_state AS delivery ON delivery.asset_id = decision.asset_id
+            LEFT JOIN public_catalog_publications AS catalog
+              ON catalog.asset_id = decision.asset_id
+             AND catalog.source_version_hash = delivery.source_version_hash
             WHERE decision.fixture_id = :fixture_id
               AND decision.eligibility_state = 'active'
               AND decision.placement_state = 'picked'
@@ -309,7 +346,15 @@ def upload_eligibility_plan(
         "approvedCount": int(summary["approved_count"] or 0),
         "needsReviewCount": int(summary["needs_review_count"] or 0),
         "needsUploadCount": needs_upload_count,
-        "liveCount": int(summary["live_count"] or 0),
+        "mediaUploadedCount": int(summary["media_uploaded_count"] or 0),
+        "projectionPendingCount": int(summary["projection_pending_count"] or 0),
+        "projectionFailedCount": int(summary["projection_failed_count"] or 0),
+        "deploymentPendingCount": int(summary["deployment_pending_count"] or 0),
+        "deploymentFailedCount": int(summary["deployment_failed_count"] or 0),
+        "liveOnWebsiteCount": int(summary["live_on_website_count"] or 0),
+        # Compatibility alias. It is deliberately verified website visibility,
+        # never the local media-upload state that the old counter exposed.
+        "liveCount": int(summary["live_on_website_count"] or 0),
         "offset": safe_offset,
         "limit": safe_limit,
         "order": clean_order,

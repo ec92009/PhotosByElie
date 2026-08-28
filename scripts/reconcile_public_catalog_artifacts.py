@@ -13,7 +13,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from build_public_catalog_db import write_db
+from owner_catalog_projection import project_catalog, projection_snapshot
+from owner_state_db import DEFAULT_DB as DEFAULT_OWNER_DB
 from public_catalog_policy import public_catalog_policy_snapshot
 
 
@@ -25,6 +26,32 @@ PROJECTION_PATHS = (
     Path("assets/media-sidecar.json"),
     Path("worker/photos-catalog.generated.mjs"),
 )
+
+
+def _owner_projection_status(owner_db_path: Path, catalog_path: Path) -> dict[str, Any]:
+    conn = sqlite3.connect(f"{owner_db_path.as_uri()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'owner_public_catalog_projections'"
+        ).fetchone()
+        snapshot = projection_snapshot(conn, ensure_schema=False) if exists else None
+    finally:
+        conn.close()
+    if snapshot is None:
+        raise RuntimeError("Owner public catalog projection has not been initialized")
+    local_sha = ""
+    if catalog_path.exists():
+        import hashlib
+
+        local_sha = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+    return {
+        "revision": snapshot["revision"],
+        "approvedSha256": snapshot["sha256"],
+        "approvedMediaCount": snapshot["mediaCount"],
+        "localSha256": local_sha,
+        "localMatchesOwner": local_sha == snapshot["sha256"],
+    }
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -142,6 +169,8 @@ def reconcile(
     repo_root = repo_root.resolve()
     catalog_path = repo_root / CATALOG_PATH
     manifest_path = repo_root / EXPO_MANIFEST_PATH
+    authority_path = (owner_db_path or (repo_root / DEFAULT_OWNER_DB)).resolve()
+    projection_status = _owner_projection_status(authority_path, catalog_path)
     policy = public_catalog_policy_snapshot(repo_root, owner_db_path=owner_db_path)
     catalog_summary = _catalog_counts(catalog_path, policy)
     manifest = _read_json(manifest_path, {})
@@ -155,6 +184,7 @@ def reconcile(
         "applied": apply,
         "policy": policy["sourceCounts"],
         "catalog": catalog_summary,
+        "ownerProjection": projection_status,
         "expoManifest": expo_summary,
         "projectionSteps": [],
     }
@@ -172,10 +202,14 @@ def reconcile(
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
                 existing.add(relative)
-        staged_catalog = temp_root / "photosbyelie.reconciled.sqlite"
         try:
-            write_db(repo_root, staged_catalog, owner_db_path=owner_db_path)
-            os.replace(staged_catalog, catalog_path)
+            projection_result = project_catalog(authority_path, catalog_path)
+            result["ownerProjection"] = {
+                **projection_status,
+                **projection_result,
+                "localSha256": projection_result["sha256"],
+                "localMatchesOwner": True,
+            }
             _write_json_atomic(manifest_path, filtered_manifest)
             result["projectionSteps"] = _refresh_projections(repo_root)
         except Exception:
@@ -198,8 +232,11 @@ def reconcile(
         conn.close()
     if integrity != "ok" or foreign_keys:
         raise RuntimeError(f"reconciled catalog failed integrity checks: integrity={integrity}, foreign_keys={foreign_keys[:5]}")
-    if final_count != catalog_summary["after"]:
-        raise RuntimeError(f"reconciled catalog row count {final_count} does not match planned {catalog_summary['after']}")
+    if final_count != projection_status["approvedMediaCount"]:
+        raise RuntimeError(
+            f"projected catalog row count {final_count} does not match Owner authority "
+            f"{projection_status['approvedMediaCount']}"
+        )
     result["catalogIntegrity"] = integrity
     result["catalogFinalCount"] = final_count
     return result

@@ -35,7 +35,14 @@ struct UploadView: View {
                     LabeledContent("Awaiting Review", value: "\(plan.needsReviewCount)")
                     LabeledContent("Approved", value: "\(plan.approvedCount)")
                     LabeledContent("Needs Upload", value: "\(plan.needsUploadCount)")
-                    LabeledContent("Live", value: "\(plan.liveCount)")
+                    LabeledContent("Media Uploaded", value: "\(plan.mediaUploadedCount)")
+                }
+                HStack {
+                    LabeledContent("Projection Pending", value: "\(plan.projectionPendingCount)")
+                    LabeledContent("Projection Failed", value: "\(plan.projectionFailedCount)")
+                    LabeledContent("Deployment Pending", value: "\(plan.deploymentPendingCount)")
+                    LabeledContent("Deployment Failed", value: "\(plan.deploymentFailedCount)")
+                    LabeledContent("Live on Website", value: "\(plan.liveOnWebsiteCount)")
                 }
                 if plan.needsUploadCount > 0 {
                     HStack {

@@ -83,6 +83,30 @@ class PublicCatalogPolicyTest(unittest.TestCase):
         self.assertEqual(summary["removedBlocked"], 1)
         self.assertEqual(summary["removedRetiredMediaType"], 1)
 
+    def test_owner_reconciliation_replaces_manifest_as_legacy_authority(self):
+        with sqlite3.connect(self.db) as conn:
+            conn.executescript("""
+                CREATE TABLE owner_catalog_reconciliation_migrations (
+                  migration_id TEXT PRIMARY KEY, applied_at TEXT
+                );
+                CREATE TABLE owner_catalog_reconciliation_rows (
+                  migration_id TEXT, media_id TEXT, migration_state TEXT
+                );
+                INSERT INTO owner_catalog_reconciliation_migrations
+                  VALUES ('migration-1', '2026-08-28T10:00:00Z');
+                INSERT INTO owner_catalog_reconciliation_rows
+                  VALUES ('migration-1', 'owner-legacy', 'unresolved');
+            """)
+        conn = sqlite3.connect(self.db)
+        conn.row_factory = sqlite3.Row
+        try:
+            snapshot = public_catalog_policy_snapshot(self.root, conn=conn)
+        finally:
+            conn.close()
+        self.assertEqual(snapshot["legacyAuthority"], "owner-catalog-reconciliation")
+        self.assertIn("owner-legacy", snapshot["eligibleMediaIds"])
+        self.assertNotIn("legacy-video", snapshot["eligibleMediaIds"])
+
     def test_explicit_owner_authority_is_read_only_and_fingerprinted(self):
         before = hashlib.sha256(self.db.read_bytes()).hexdigest()
         before_stat = self.db.stat()

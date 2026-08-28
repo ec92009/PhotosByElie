@@ -26,6 +26,12 @@ from urllib.request import Request, urlopen
 from fixture_pipeline import connect, now_iso
 from fixture_policy import effective_fixture_policy, policy_allows_catalog
 from import_source_anchor import photo_id_for_source_path
+from owner_catalog_projection import (
+    APPROVED_POLICY as OWNER_PROJECTION_POLICY,
+    ensure_projection_schema,
+    projection_snapshot,
+    store_projection,
+)
 
 
 PUBLIC_CATALOG_PATH = Path("assets/catalog/photosbyelie.sqlite")
@@ -161,6 +167,21 @@ def _metadata_search_text(row: sqlite3.Row) -> str:
 
 def _static_collection_resolution(row: sqlite3.Row) -> dict[str, Any]:
     """Resolve well-known collection aliases from the approved asset metadata."""
+    explicit_country = str(
+        row["approved_country_slug"] if "approved_country_slug" in row.keys() else ""
+    ).strip().casefold()
+    if explicit_country in set(COLLECTION_COUNTRY_CODES.values()):
+        return {
+            "collection": explicit_country,
+            "city": "",
+            "countryCode": next(
+                code for code, slug in COLLECTION_COUNTRY_CODES.items() if slug == explicit_country
+            ),
+            "provider": "owner-country-assignment",
+            "query": explicit_country,
+            "confidence": 1.0,
+            "response": {},
+        }
     text = _metadata_search_text(row)
     terms = {
         "italy": ("italy", "florence", "tuscany"),
@@ -168,20 +189,19 @@ def _static_collection_resolution(row: sqlite3.Row) -> dict[str, Any]:
         "spain": (
             "spain", "barcelona", "malaga", "málaga", "andalusia", "andalucía",
             "benalmadena", "fuengirola", "nerja", "ronda", "mijas", "marbella",
-            "cordoba", "córdoba", "granada", "valencia", "valència", "seville", "sevilla",
+            "bilbao", "cordoba", "córdoba", "granada", "valencia", "valència", "seville", "sevilla",
         ),
         "portugal": ("portugal", "lisbon", "lisboa"),
         "usa": ("usa", "united states", "san diego"),
         "mexico": ("mexico",),
         "slovakia": ("slovakia",),
-        "ai": ("ai generated", "generative ai", "stained glass"),
     }
     for slug, values in terms.items():
         match = next((value for value in values if value in text), "")
         if match:
             return {
                 "collection": slug,
-                "city": match if slug != "ai" else "",
+                "city": match,
                 "countryCode": next(
                     (code for code, candidate in COLLECTION_COUNTRY_CODES.items() if candidate == slug),
                     "",
@@ -462,7 +482,7 @@ def _resolve_collection(
                 "response": {"reason": "resolver raised", "error": str(error)[:320]},
             }
         collection = str(resolution.get("collection") or "unknown").casefold()
-        if collection not in set(COLLECTION_COUNTRY_CODES.values()) | {"ai", "unknown"}:
+        if collection not in set(COLLECTION_COUNTRY_CODES.values()) | {"unknown"}:
             collection = "unknown"
         resolution["collection"] = collection
         resolution["query"] = str(resolution.get("query") or query)
@@ -548,9 +568,19 @@ def _object_set(results: Iterable[dict[str, Any]], media_type: str) -> dict[str,
 
 
 def _asset_row(conn: sqlite3.Connection, asset_id: str) -> sqlite3.Row | None:
+    country_columns = {
+        str(row[1]) for row in conn.execute("PRAGMA table_info(country_assignments)").fetchall()
+    }
+    country_select = (
+        "(SELECT country_slug FROM country_assignments WHERE asset_id = a.asset_id "
+        "ORDER BY updated_at DESC, media_id LIMIT 1)"
+        if "asset_id" in country_columns
+        else "NULL"
+    )
     return conn.execute(
-        """
-        SELECT a.*, d.title, d.caption, d.keywords_json, e.editorial_state
+        f"""
+        SELECT a.*, d.title, d.caption, d.keywords_json, e.editorial_state,
+               {country_select} AS approved_country_slug
         FROM sidecar_assets AS a
         LEFT JOIN sidecar_decisions AS d ON d.asset_id = a.asset_id
         LEFT JOIN asset_editorial_state AS e ON e.asset_id = a.asset_id
@@ -670,7 +700,11 @@ def _update_catalog_audit(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(asset_id, source_version_hash) DO UPDATE SET
               media_id = excluded.media_id, state = excluded.state,
-              public_url = excluded.public_url, catalog_sha256 = excluded.catalog_sha256,
+              public_url = excluded.public_url,
+              catalog_sha256 = CASE
+                WHEN excluded.catalog_sha256 <> '' THEN excluded.catalog_sha256
+                ELSE public_catalog_publications.catalog_sha256
+              END,
               error_text = excluded.error_text, verified_at = excluded.verified_at,
               updated_at = excluded.updated_at
             """,
@@ -778,8 +812,6 @@ def refresh_public_catalog_artifacts(repo_root: Path) -> dict[str, Any]:
 
 def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]:
     path = repo_root / PUBLIC_CATALOG_PATH
-    if not path.exists():
-        raise CatalogPromotionError(f"missing public catalog database: {path}")
     row = candidate["asset"]
     objects = candidate["objects"]
     media_id = candidate["mediaId"]
@@ -790,7 +822,23 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
         raise CatalogPromotionError("asset is missing catalog dimensions or video duration")
     now = now_iso()
     with _CATALOG_LOCK:
-        catalog = sqlite3.connect(path, timeout=30)
+        owner = connect(repo_root)
+        ensure_projection_schema(owner)
+        owner.commit()
+        authoritative = projection_snapshot(owner, ensure_schema=False)
+        if authoritative is None:
+            owner.close()
+            raise CatalogPromotionError(
+                "Owner public catalog projection is not initialized; import the reviewed projection under PBE-173"
+            )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+        staged_path = Path(staged_name)
+        with os.fdopen(descriptor, "wb") as staged:
+            staged.write(authoritative["payload"])
+            staged.flush()
+            os.fsync(staged.fileno())
+        catalog = sqlite3.connect(staged_path, timeout=30)
         catalog.row_factory = sqlite3.Row
         catalog.execute("PRAGMA foreign_keys = ON")
         try:
@@ -876,12 +924,49 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
             if foreign_keys:
                 raise CatalogPromotionError(f"catalog foreign_key_check failed: {foreign_keys[:5]}")
             catalog.commit()
-            return {"mediaId": media_id, "registered": existing is None, "catalogPath": str(path)}
+            catalog.close()
+            payload = staged_path.read_bytes()
+            owner.execute("BEGIN IMMEDIATE")
+            projection = store_projection(
+                owner,
+                payload,
+                source_kind="native-approved-publication",
+                approved_policy=OWNER_PROJECTION_POLICY,
+                expected_sha256=authoritative["sha256"],
+                ensure_schema=False,
+            )
+            owner.commit()
+            descriptor, projected_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+            projected_path = Path(projected_name)
+            try:
+                with os.fdopen(descriptor, "wb") as projected:
+                    projected.write(payload)
+                    projected.flush()
+                    os.fsync(projected.fileno())
+                os.replace(projected_path, path)
+            except Exception:
+                projected_path.unlink(missing_ok=True)
+                raise
+            return {
+                "mediaId": media_id,
+                "registered": existing is None,
+                "catalogPath": str(path),
+                "projectionRevision": projection["revision"],
+                "projectionSha256": projection["sha256"],
+            }
         except Exception:
-            catalog.rollback()
+            if catalog.in_transaction:
+                catalog.rollback()
+            if owner.in_transaction:
+                owner.rollback()
             raise
         finally:
-            catalog.close()
+            try:
+                catalog.close()
+            except sqlite3.Error:
+                pass
+            owner.close()
+            staged_path.unlink(missing_ok=True)
 
 
 def promote_verified_asset(

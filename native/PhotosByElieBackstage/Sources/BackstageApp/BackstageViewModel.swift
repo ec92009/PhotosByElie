@@ -7041,9 +7041,9 @@ final class BackstageViewModel: ObservableObject {
             if !plan.cloudAllowed {
                 nativeUploadStatus = "\(plan.fixtureName) policy does not permit cloud publication."
             } else if plan.needsUploadCount == 0 {
-                nativeUploadStatus = "\(plan.approvedCount) approved • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review • nothing needs upload."
+                nativeUploadStatus = "\(plan.approvedCount) approved • \(plan.mediaUploadedCount) media uploaded • \(plan.liveOnWebsiteCount) live on website • \(plan.needsReviewCount) picked awaiting Review • nothing needs upload."
             } else {
-                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.liveCount) live • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) \(plan.order.label)."
+                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.mediaUploadedCount) media uploaded • \(plan.liveOnWebsiteCount) live on website • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) \(plan.order.label)."
             }
         } catch {
             nativeUploadPlan = nil
@@ -7170,6 +7170,12 @@ final class BackstageViewModel: ObservableObject {
                     needsReviewCount: current.needsReviewCount + returnedIDs.count,
                     needsUploadCount: max(0, current.needsUploadCount - returnedIDs.count),
                     liveCount: current.liveCount,
+                    mediaUploadedCount: current.mediaUploadedCount,
+                    projectionPendingCount: current.projectionPendingCount,
+                    projectionFailedCount: current.projectionFailedCount,
+                    deploymentPendingCount: current.deploymentPendingCount,
+                    deploymentFailedCount: current.deploymentFailedCount,
+                    liveOnWebsiteCount: current.liveOnWebsiteCount,
                     order: current.order,
                     offset: current.offset,
                     limit: current.limit,
@@ -7215,6 +7221,12 @@ final class BackstageViewModel: ObservableObject {
                     needsReviewCount: current.needsReviewCount,
                     needsUploadCount: max(0, current.needsUploadCount - hiddenIDs.count),
                     liveCount: current.liveCount,
+                    mediaUploadedCount: current.mediaUploadedCount,
+                    projectionPendingCount: current.projectionPendingCount,
+                    projectionFailedCount: current.projectionFailedCount,
+                    deploymentPendingCount: current.deploymentPendingCount,
+                    deploymentFailedCount: current.deploymentFailedCount,
+                    liveOnWebsiteCount: current.liveOnWebsiteCount,
                     order: current.order,
                     offset: current.offset,
                     limit: current.limit,
@@ -7507,6 +7519,12 @@ final class BackstageViewModel: ObservableObject {
                 needsReviewCount: summary.needsReviewCount,
                 needsUploadCount: summary.needsUploadCount,
                 liveCount: summary.liveCount,
+                mediaUploadedCount: summary.mediaUploadedCount,
+                projectionPendingCount: summary.projectionPendingCount,
+                projectionFailedCount: summary.projectionFailedCount,
+                deploymentPendingCount: summary.deploymentPendingCount,
+                deploymentFailedCount: summary.deploymentFailedCount,
+                liveOnWebsiteCount: summary.liveOnWebsiteCount,
                 order: summary.order,
                 offset: current.offset,
                 limit: current.limit,
@@ -7523,7 +7541,13 @@ final class BackstageViewModel: ObservableObject {
                 approvedCount: current.approvedCount,
                 needsReviewCount: current.needsReviewCount,
                 needsUploadCount: max(0, current.needsUploadCount - removedCount),
-                liveCount: current.liveCount + successfulIDs.count,
+                liveCount: current.liveCount,
+                mediaUploadedCount: current.mediaUploadedCount + successfulIDs.count,
+                projectionPendingCount: current.projectionPendingCount + successfulIDs.count,
+                projectionFailedCount: current.projectionFailedCount,
+                deploymentPendingCount: current.deploymentPendingCount,
+                deploymentFailedCount: current.deploymentFailedCount,
+                liveOnWebsiteCount: current.liveOnWebsiteCount,
                 order: current.order,
                 offset: current.offset,
                 limit: current.limit,

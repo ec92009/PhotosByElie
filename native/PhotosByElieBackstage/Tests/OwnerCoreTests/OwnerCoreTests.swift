@@ -1869,6 +1869,37 @@ struct OwnerCoreTests {
         #expect(partialIdentity.items.isEmpty)
     }
 
+    @Test("Culling grid preserves server equipment matches without opaque ID substrings")
+    func cullingGridSearchesEquipmentButNotPartialIdentity() {
+        let equipment = CullingCandidate(
+            id: "asset-camera",
+            title: "Untitled",
+            filename: "camera-photo.jpg",
+            mediaType: "photo",
+            cameraBody: "Canon PowerShot ELPH 300 HS",
+            lens: "4.3 - 21.5 mm",
+            focalLength: "4.3 mm"
+        )
+        let opaqueIdentity = CullingCandidate(
+            id: "opaque-elf-token",
+            title: "Untitled",
+            filename: "flower-photo.jpg",
+            mediaType: "photo"
+        )
+
+        let commonSpelling = CullingWorkspace.evaluate(
+            [equipment, opaqueIdentity],
+            query: CullingQuery(search: "elf")
+        )
+        #expect(commonSpelling.items.map(\.id) == [equipment.id])
+
+        let canonicalSpelling = CullingWorkspace.evaluate(
+            [equipment, opaqueIdentity],
+            query: CullingQuery(search: "elph")
+        )
+        #expect(canonicalSpelling.items.map(\.id) == [equipment.id])
+    }
+
     @Test("Still-only Culling universes expose only the Photos control")
     func stillOnlyCullingMediaAvailability() {
         #expect(

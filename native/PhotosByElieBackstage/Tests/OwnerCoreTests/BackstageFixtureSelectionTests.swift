@@ -216,6 +216,43 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySavedViewLabel == "Custom")
     }
 
+    @Test("Native Gallery equipment matches remain visible in the grid")
+    @MainActor
+    func nativeGalleryEquipmentMatchesRemainVisible() {
+        let equipment = FixtureAsset(
+            id: "gallery-elph-camera",
+            title: "Untitled",
+            filename: "camera-photo.jpg",
+            mediaType: "photo",
+            placementState: .picked,
+            cameraBody: "Canon PowerShot ELPH 300 HS"
+        )
+        let opaqueIdentity = FixtureAsset(
+            id: "gallery-opaque-elf-token",
+            title: "Untitled",
+            filename: "flower-photo.jpg",
+            mediaType: "photo",
+            placementState: .picked
+        )
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 2, videos: 0)
+        window.items = [equipment, opaqueIdentity]
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.picked]
+        model.cullingSearch = "elf"
+        model.cullingStates = [
+            equipment.id: SidecarDecisionState(assetId: equipment.id, pickState: "picked"),
+            opaqueIdentity.id: SidecarDecisionState(assetId: opaqueIdentity.id, pickState: "picked"),
+        ]
+
+        #expect(model.visibleCullingAssets.map(\.id) == [equipment.id])
+    }
+
     @Test("Gallery returns only approved selections to Review and exact Undo restores delivery")
     @MainActor
     func galleryReturnToReviewPreservesLiveAndUndo() async throws {

@@ -2559,6 +2559,9 @@ final class BackstageViewModel: ObservableObject {
                         title: asset.title,
                         filename: asset.filename,
                         mediaType: asset.mediaType,
+                        cameraBody: asset.cameraBody,
+                        lens: asset.lens,
+                        focalLength: asset.focalLength,
                         decision: cullingStates[asset.id]
                     )
                 },
@@ -2598,6 +2601,9 @@ final class BackstageViewModel: ObservableObject {
                     title: asset.title,
                     filename: asset.filename,
                     mediaType: asset.mediaType,
+                    cameraBody: asset.cameraBody,
+                    lens: asset.lens,
+                    focalLength: asset.focalLength,
                     decision: cullingStates[asset.id]
                 )
             },
@@ -2618,6 +2624,9 @@ final class BackstageViewModel: ObservableObject {
                         title: asset.title,
                         filename: asset.filename,
                         mediaType: asset.mediaType,
+                        cameraBody: asset.cameraBody,
+                        lens: asset.lens,
+                        focalLength: asset.focalLength,
                         decision: cullingStates[asset.id]
                     )
                 },

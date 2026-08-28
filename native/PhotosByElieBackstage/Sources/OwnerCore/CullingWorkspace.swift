@@ -126,6 +126,9 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
     public var title: String
     public var filename: String
     public var mediaType: String
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
     public var decision: SidecarDecisionState
 
     public init(
@@ -133,12 +136,18 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
         title: String = "",
         filename: String,
         mediaType: String,
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = "",
         decision: SidecarDecisionState? = nil
     ) {
         self.id = id
         self.title = title
         self.filename = filename
         self.mediaType = mediaType
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
         self.decision = decision ?? SidecarDecisionState(assetId: id)
     }
 }
@@ -264,7 +273,14 @@ public enum CullingWorkspace {
         )
         .joined(separator: " ")
         .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        guard isExactAssetIdentitySearch || terms.allSatisfy({ haystack.contains($0) }) else {
+        let equipment = [candidate.cameraBody, candidate.lens, candidate.focalLength]
+            .joined(separator: " ")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        guard isExactAssetIdentitySearch || terms.allSatisfy({ term in
+            haystack.contains(term)
+                || equipment.contains(term)
+                || (term == "elf" && equipment.contains("elph"))
+        }) else {
             return false
         }
 

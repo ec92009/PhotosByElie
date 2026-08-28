@@ -232,6 +232,16 @@ public struct OwnerCullingSQLiteStore: Sendable {
         )
 
         let searchTerms = cullingSearchTerms(search)
+        let searchableEquipment: [String: OwnerAssetSourceMetadata]
+        let exactAssetIDSearch = searchTerms.count == 1 && rows.contains {
+            cullingFold($0["asset_id"]?.stringValue ?? "") == searchTerms[0]
+        }
+        if searchTerms.isEmpty || exactAssetIDSearch {
+            searchableEquipment = [:]
+        } else {
+            searchableEquipment = (try? OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+                .metadata(assetIDs: rows.compactMap { $0["asset_id"]?.stringValue })) ?? [:]
+        }
         let burstAssetIDs = burstsOnly
             ? Set(cullingBurstRows(rows).compactMap { $0["asset_id"]?.stringValue })
             : []
@@ -267,7 +277,11 @@ public struct OwnerCullingSQLiteStore: Sendable {
             guard selectedSources.isEmpty || selectedSources.contains(source) else {
                 return false
             }
-            return cullingSearchMatches(row, terms: searchTerms)
+            return cullingSearchMatches(
+                row,
+                equipment: row["asset_id"]?.stringValue.flatMap { searchableEquipment[$0] },
+                terms: searchTerms
+            )
         }
         let viewRows = filteredRows.filter {
             effectiveViews.contains($0["placement_state"]?.stringValue ?? "undecided")
@@ -669,11 +683,15 @@ private func cullingSearchTerms(_ search: String) -> [String] {
 
 private func cullingSearchMatches(
     _ row: [String: JSONValue],
+    equipment: OwnerAssetSourceMetadata?,
     terms: [String]
 ) -> Bool {
     guard !terms.isEmpty else { return true }
+    let exactAssetID = cullingFold(row["asset_id"]?.stringValue ?? "")
+    if terms.count == 1, terms[0] == exactAssetID {
+        return true
+    }
     let searchable = [
-        row["asset_id"]?.stringValue ?? "",
         row["filename"]?.stringValue ?? "",
         row["photos_title"]?.stringValue ?? "",
         row["photos_keywords_json"]?.stringValue ?? "",
@@ -682,7 +700,16 @@ private func cullingSearchMatches(
         row["decision_title"]?.stringValue ?? "",
         row["decision_keywords_json"]?.stringValue ?? "",
     ].map(cullingFold).joined(separator: "\n")
-    return terms.allSatisfy(searchable.contains)
+    let searchableEquipment = [
+        equipment?.cameraBody ?? "",
+        equipment?.lens ?? "",
+        equipment?.focalLength ?? "",
+    ].map(cullingFold).joined(separator: "\n")
+    return terms.allSatisfy { term in
+        searchable.contains(term)
+            || searchableEquipment.contains(term)
+            || (term == "elf" && searchableEquipment.contains("elph"))
+    }
 }
 
 private func cullingFold(_ value: String) -> String {

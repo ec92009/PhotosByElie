@@ -255,13 +255,18 @@ public enum CullingWorkspace {
         let terms = query.search
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .split(whereSeparator: \.isWhitespace)
+        let exactAssetID = candidate.id
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let isExactAssetIdentitySearch = terms.count == 1 && terms[0] == Substring(exactAssetID)
         let haystack = (
-            [candidate.id, candidate.title, candidate.filename, candidate.decision.title]
+            [candidate.title, candidate.filename, candidate.decision.title]
                 + candidate.decision.keywords
         )
         .joined(separator: " ")
         .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        guard terms.allSatisfy({ haystack.contains($0) }) else { return false }
+        guard isExactAssetIdentitySearch || terms.allSatisfy({ haystack.contains($0) }) else {
+            return false
+        }
 
         let media = normalizedMedia(candidate.mediaType)
         let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos

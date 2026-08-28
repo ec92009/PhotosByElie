@@ -251,6 +251,63 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(redBurstFrame.items.map(\.id) == ["asset-2"])
     }
 
+    @Test("Gallery search ignores opaque IDs and includes camera and lens equipment")
+    func cullingSearchUsesPublicFieldsAndEquipment() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-equipment-search-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+               SET filename = 'Canon-photo.jpg',
+                   raw_json = '{"cameraMetadata":{"model":"Canon PowerShot ELPH 300 HS"},"lensMetadata":{"model":"4.3 - 21.5 mm"}}'
+             WHERE asset_id = 'asset-1';
+            INSERT INTO sidecar_assets(asset_id, source_anchor, filename, raw_json, captured_at)
+              VALUES ('opaque-elf-token', 'apple-photos://opaque-token', 'Ordinary-photo.jpg', '{}', '2026-01-01T03:00:00Z');
+            INSERT INTO sidecar_decisions(asset_id) VALUES ('opaque-elf-token');
+            INSERT INTO fixture_asset_decisions(
+              fixture_id, asset_id, placement_state, eligibility_state, created_at, updated_at
+            ) VALUES (
+              'fixture-expo', 'opaque-elf-token', 'undecided', 'active',
+              '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+            );
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let commonSpelling = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "elf"
+        )
+        #expect(commonSpelling.items.map(\.id) == ["asset-1"])
+
+        let exactIdentity = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "opaque-elf-token"
+        )
+        #expect(exactIdentity.items.map(\.id) == ["opaque-elf-token"])
+
+        let camera = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "Canon ELPH"
+        )
+        #expect(camera.items.map(\.id) == ["asset-1"])
+
+        let lens = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "21.5 mm"
+        )
+        #expect(lens.items.map(\.id) == ["asset-1"])
+    }
+
     @Test("Unavailable legacy cards retry only through one exact canonical identity sibling")
     func exactIdentityFallbackIsUniqueAndNeverUsesFilename() throws {
         let root = FileManager.default.temporaryDirectory

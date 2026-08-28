@@ -7,10 +7,11 @@ struct CullingSearchControls: View {
 
     var body: some View {
         FlowLayout(spacing: 8) {
-            TextField("Search title, file, or keyword", text: $model.cullingSearch)
+            TextField("Search title, file, keyword, or equipment", text: $model.cullingSearch)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 240)
+                .frame(width: 300)
                 .onSubmit { model.applyCullingFilters() }
+                .backstageHelp("Search titles, filenames, keywords, locations, camera bodies, lenses, or focal lengths. Elf also finds Canon ELPH cameras.")
             Menu("View: \(model.gallerySavedViewLabel)") {
                 ForEach(GallerySavedView.allCases) { savedView in
                     Button(savedView.rawValue) {

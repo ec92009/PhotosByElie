@@ -183,7 +183,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "OutlineGroup(model.fixtures",
             "Review picked",
             "Select burst",
-            "Search title, file, or keyword",
+            "Search title, file, keyword, or equipment",
             'Button("P Pick")',
             'Button("H Hide")',
             'Button("U \\(model.cullingClearDecisionLabel)")',
@@ -1420,8 +1420,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "240.12")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "250")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "240.13")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "251")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

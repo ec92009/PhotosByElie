@@ -410,6 +410,45 @@ struct OwnerCoreTests {
         #expect(metadata["video-1"]?.originalByteCount == 0)
     }
 
+    @Test("Owner source metadata lookup safely spans SQLite variable batches")
+    func ownerSourceMetadataLookupBatchesLargeScopes() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-source-metadata-batches-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          filename TEXT,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        WITH RECURSIVE sequence(value) AS (
+          SELECT 1
+          UNION ALL
+          SELECT value + 1 FROM sequence WHERE value < 450
+        )
+        INSERT INTO sidecar_assets
+          SELECT printf('asset-%03d', value), printf('photo-%03d.jpg', value),
+                 'photo', 100, 100,
+                 '{"cameraMetadata":{"model":"Canon PowerShot ELPH 300 HS"}}'
+          FROM sequence;
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let assetIDs = (1...450).map { String(format: "asset-%03d", $0) }
+        let metadata = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+            .metadata(assetIDs: assetIDs)
+
+        #expect(metadata.count == 450)
+        #expect(metadata["asset-450"]?.cameraBody == "Canon PowerShot ELPH 300 HS")
+    }
+
     @Test("Owner source metadata joins immutable catalog equipment by exact asset ID")
     func ownerSourceMetadataIncludesCatalogEquipment() throws {
         let root = FileManager.default.temporaryDirectory
@@ -1816,6 +1855,18 @@ struct OwnerCoreTests {
         )
 
         #expect(result.items.map(\.id) == [candidate.id])
+
+        let partialIdentity = CullingWorkspace.evaluate(
+            [candidate],
+            query: CullingQuery(
+                search: "EJR",
+                media: [.photos],
+                pick: [.picked],
+                ratings: [0],
+                colors: [.none]
+            )
+        )
+        #expect(partialIdentity.items.isEmpty)
     }
 
     @Test("Still-only Culling universes expose only the Photos control")

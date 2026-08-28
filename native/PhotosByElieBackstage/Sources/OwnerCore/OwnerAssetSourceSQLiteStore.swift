@@ -75,58 +75,78 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         defer { sqlite3_close_v2(database) }
         sqlite3_busy_timeout(database, 1_000)
 
-        let placeholders = Array(repeating: "?", count: ids.count).joined(separator: ",")
-        let sql = """
-        SELECT asset_id,
-               COALESCE(media_type, 'photo'),
-               COALESCE(pixel_width, 0),
-               COALESCE(pixel_height, 0),
-               CAST(COALESCE(
-                 json_extract(raw_json, '$.originalByteCount'),
-                 json_extract(raw_json, '$.original_byte_count'),
-                 0
-        ) AS INTEGER)
-        FROM sidecar_assets
-        WHERE asset_id IN (
-        """ + placeholders + ")"
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
-              let statement else {
-            throw OwnerDatabaseError.unavailable(String(cString: sqlite3_errmsg(database)))
-        }
-        defer { sqlite3_finalize(statement) }
-        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        for (index, id) in ids.enumerated() {
-            _ = id.withCString { pointer in
-                sqlite3_bind_text(statement, Int32(index + 1), pointer, -1, transient)
-            }
-        }
-
         var result: [String: OwnerAssetSourceMetadata] = [:]
-        while true {
-            switch sqlite3_step(statement) {
-            case SQLITE_ROW:
-                let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
-                let mediaType = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? "photo"
-                result[assetID] = OwnerAssetSourceMetadata(
-                    mediaType: mediaType,
-                    pixelWidth: Int(sqlite3_column_int64(statement, 2)),
-                    pixelHeight: Int(sqlite3_column_int64(statement, 3)),
-                    originalByteCount: sqlite3_column_int64(statement, 4)
-                )
-            case SQLITE_DONE:
-                let mediaIDs = publicationMediaIDs(database: database, assetIDs: ids)
-                let filenames = uniqueSourceFilenames(database: database, assetIDs: ids)
-                return catalogEquipment(
-                    assetIDs: ids,
-                    publicationMediaIDs: mediaIDs,
-                    uniqueFilenames: filenames,
-                    mergingInto: result
-                )
-            default:
+        for batch in metadataBatches(ids) {
+            let placeholders = Array(repeating: "?", count: batch.count).joined(separator: ",")
+            let sql = """
+            SELECT asset_id,
+                   COALESCE(media_type, 'photo'),
+                   COALESCE(pixel_width, 0),
+                   COALESCE(pixel_height, 0),
+                   CAST(COALESCE(
+                     json_extract(raw_json, '$.originalByteCount'),
+                     json_extract(raw_json, '$.original_byte_count'),
+                     0
+                   ) AS INTEGER),
+                   COALESCE(
+                     json_extract(raw_json, '$.cameraMetadata.model'),
+                     json_extract(raw_json, '$.cameraMetadata.name'),
+                     json_extract(raw_json, '$.camera.model'),
+                     json_extract(raw_json, '$.camera.name'),
+                     json_extract(raw_json, '$.cameraBody'),
+                     ''
+                   ),
+                   COALESCE(
+                     json_extract(raw_json, '$.lensMetadata.model'),
+                     json_extract(raw_json, '$.lensMetadata.name'),
+                     json_extract(raw_json, '$.lens.model'),
+                     json_extract(raw_json, '$.lens.name'),
+                     json_extract(raw_json, '$.cameraMetadata.lensModel'),
+                     json_extract(raw_json, '$.camera.lensModel'),
+                     ''
+                   ),
+                   COALESCE(
+                     json_extract(raw_json, '$.focalLength'),
+                     json_extract(raw_json, '$.cameraMetadata.focalLength'),
+                     json_extract(raw_json, '$.camera.focalLength'),
+                     ''
+                   )
+            FROM sidecar_assets
+            WHERE asset_id IN (
+            """ + placeholders + ")"
+            guard let statement = prepared(database: database, sql: sql, values: batch) else {
                 throw OwnerDatabaseError.unavailable(String(cString: sqlite3_errmsg(database)))
             }
+            defer { sqlite3_finalize(statement) }
+            readRows: while true {
+                switch sqlite3_step(statement) {
+                case SQLITE_ROW:
+                    let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+                    let mediaType = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? "photo"
+                    result[assetID] = OwnerAssetSourceMetadata(
+                        mediaType: mediaType,
+                        pixelWidth: Int(sqlite3_column_int64(statement, 2)),
+                        pixelHeight: Int(sqlite3_column_int64(statement, 3)),
+                        originalByteCount: sqlite3_column_int64(statement, 4),
+                        cameraBody: sqlite3_column_text(statement, 5).map(String.init(cString:)) ?? "",
+                        lens: sqlite3_column_text(statement, 6).map(String.init(cString:)) ?? "",
+                        focalLength: sqlite3_column_text(statement, 7).map(String.init(cString:)) ?? ""
+                    )
+                case SQLITE_DONE:
+                    break readRows
+                default:
+                    throw OwnerDatabaseError.unavailable(String(cString: sqlite3_errmsg(database)))
+                }
+            }
         }
+        let mediaIDs = publicationMediaIDs(database: database, assetIDs: ids)
+        let filenames = uniqueSourceFilenames(database: database, assetIDs: ids)
+        return catalogEquipment(
+            assetIDs: ids,
+            publicationMediaIDs: mediaIDs,
+            uniqueFilenames: filenames,
+            mergingInto: result
+        )
     }
 
     private func catalogEquipment(
@@ -160,40 +180,33 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         where assetIDByMediaID[mediaID] == nil {
             assetIDByMediaID[mediaID] = assetID
         }
-        let mediaIDs = assetIDByMediaID.keys.sorted()
-        let placeholders = Array(repeating: "?", count: mediaIDs.count).joined(separator: ",")
-        let sql = """
-        SELECT media.media_id,
-               COALESCE(camera.name, ''),
-               COALESCE(lens.name, ''),
-               COALESCE(media.focal_length, '')
-        FROM media_items AS media
-        LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
-        LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
-        WHERE media.media_id IN (
-        """ + placeholders + ")"
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(catalog, sql, -1, &statement, nil) == SQLITE_OK,
-              let statement else {
-            return source
-        }
-        defer { sqlite3_finalize(statement) }
-        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        for (index, id) in mediaIDs.enumerated() {
-            _ = id.withCString { pointer in
-                sqlite3_bind_text(statement, Int32(index + 1), pointer, -1, transient)
-            }
-        }
-
         var result = source
-        while sqlite3_step(statement) == SQLITE_ROW {
-            let mediaID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
-            guard let assetID = assetIDByMediaID[mediaID] else { continue }
-            guard var metadata = result[assetID] else { continue }
-            metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
-            metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
-            metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
-            result[assetID] = metadata
+        for batch in metadataBatches(assetIDByMediaID.keys.sorted()) {
+            let placeholders = Array(repeating: "?", count: batch.count).joined(separator: ",")
+            let sql = """
+            SELECT media.media_id,
+                   COALESCE(camera.name, ''),
+                   COALESCE(lens.name, ''),
+                   COALESCE(media.focal_length, '')
+            FROM media_items AS media
+            LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
+            LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
+            WHERE media.media_id IN (
+            """ + placeholders + ")"
+            guard let statement = prepared(database: catalog, sql: sql, values: batch) else {
+                continue
+            }
+            defer { sqlite3_finalize(statement) }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                let mediaID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+                guard let assetID = assetIDByMediaID[mediaID],
+                      var metadata = result[assetID]
+                else { continue }
+                metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+                metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
+                metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
+                result[assetID] = metadata
+            }
         }
         mergeUniqueFilenameEquipment(
             catalog: catalog,
@@ -207,30 +220,32 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         database: OpaquePointer,
         assetIDs: [String]
     ) -> [String: String] {
-        let placeholders = Array(repeating: "?", count: assetIDs.count).joined(separator: ",")
-        let sql = """
-        SELECT publication.asset_id, publication.media_id
-        FROM public_catalog_publications AS publication
-        WHERE publication.asset_id IN (
-        """ + placeholders + """
-        )
-          AND trim(COALESCE(publication.media_id, '')) <> ''
-          AND publication.updated_at = (
-            SELECT MAX(candidate.updated_at)
-            FROM public_catalog_publications AS candidate
-            WHERE candidate.asset_id = publication.asset_id
-          )
-        """
-        guard let statement = prepared(database: database, sql: sql, values: assetIDs) else {
-            return [:]
-        }
-        defer { sqlite3_finalize(statement) }
         var result: [String: String] = [:]
-        while sqlite3_step(statement) == SQLITE_ROW {
-            let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
-            let mediaID = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
-            if !assetID.isEmpty, !mediaID.isEmpty {
-                result[assetID] = mediaID
+        for batch in metadataBatches(assetIDs) {
+            let placeholders = Array(repeating: "?", count: batch.count).joined(separator: ",")
+            let sql = """
+            SELECT publication.asset_id, publication.media_id
+            FROM public_catalog_publications AS publication
+            WHERE publication.asset_id IN (
+            """ + placeholders + """
+            )
+              AND trim(COALESCE(publication.media_id, '')) <> ''
+              AND publication.updated_at = (
+                SELECT MAX(candidate.updated_at)
+                FROM public_catalog_publications AS candidate
+                WHERE candidate.asset_id = publication.asset_id
+              )
+            """
+            guard let statement = prepared(database: database, sql: sql, values: batch) else {
+                continue
+            }
+            defer { sqlite3_finalize(statement) }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+                let mediaID = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+                if !assetID.isEmpty, !mediaID.isEmpty {
+                    result[assetID] = mediaID
+                }
             }
         }
         return result
@@ -240,30 +255,31 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         database: OpaquePointer,
         assetIDs: [String]
     ) -> [String: String] {
-        let placeholders = Array(repeating: "?", count: assetIDs.count).joined(separator: ",")
-        let sql = """
-        SELECT requested.asset_id, requested.filename
-        FROM sidecar_assets AS requested
-        WHERE requested.asset_id IN (
-        """ + placeholders + """
-        )
-          AND trim(COALESCE(requested.filename, '')) <> ''
-          AND (
-            SELECT COUNT(*)
-            FROM sidecar_assets AS candidate
-            WHERE candidate.filename = requested.filename
-          ) = 1
-        """
-        guard let statement = prepared(database: database, sql: sql, values: assetIDs) else {
-            return [:]
-        }
-        defer { sqlite3_finalize(statement) }
         var result: [String: String] = [:]
-        while sqlite3_step(statement) == SQLITE_ROW {
-            let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
-            let filename = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
-            if !assetID.isEmpty, !filename.isEmpty {
-                result[assetID] = filename
+        for batch in metadataBatches(assetIDs) {
+            let placeholders = Array(repeating: "?", count: batch.count).joined(separator: ",")
+            let sql = """
+            SELECT requested.asset_id, requested.filename
+            FROM sidecar_assets AS requested
+            JOIN (
+              SELECT filename
+              FROM sidecar_assets
+              WHERE trim(COALESCE(filename, '')) <> ''
+              GROUP BY filename
+              HAVING COUNT(*) = 1
+            ) AS unique_filename ON unique_filename.filename = requested.filename
+            WHERE requested.asset_id IN (
+            """ + placeholders + ")"
+            guard let statement = prepared(database: database, sql: sql, values: batch) else {
+                continue
+            }
+            defer { sqlite3_finalize(statement) }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                let assetID = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+                let filename = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+                if !assetID.isEmpty, !filename.isEmpty {
+                    result[assetID] = filename
+                }
             }
         }
         return result
@@ -286,41 +302,41 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         where assetIDByFilename[filename] == nil {
             assetIDByFilename[filename] = assetID
         }
-        let filenames = assetIDByFilename.keys.sorted()
-        let placeholders = Array(repeating: "?", count: filenames.count).joined(separator: ",")
-        let sql = """
-        SELECT source.filename,
-               COALESCE(camera.name, ''),
-               COALESCE(lens.name, ''),
-               COALESCE(media.focal_length, '')
-        FROM source_files AS source
-        JOIN media_items AS media ON media.source_file_id = source.source_file_id
-        LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
-        LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
-        WHERE source.filename IN (
-        """ + placeholders + """
-        )
-          AND (
-            SELECT COUNT(*)
-            FROM source_files AS candidate_source
-            JOIN media_items AS candidate_media
-              ON candidate_media.source_file_id = candidate_source.source_file_id
-            WHERE candidate_source.filename = source.filename
-          ) = 1
-        """
-        guard let statement = prepared(database: catalog, sql: sql, values: filenames) else {
-            return
-        }
-        defer { sqlite3_finalize(statement) }
-        while sqlite3_step(statement) == SQLITE_ROW {
-            let filename = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
-            guard let assetID = assetIDByFilename[filename],
-                  var metadata = result[assetID]
-            else { continue }
-            metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
-            metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
-            metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
-            result[assetID] = metadata
+        for batch in metadataBatches(assetIDByFilename.keys.sorted()) {
+            let placeholders = Array(repeating: "?", count: batch.count).joined(separator: ",")
+            let sql = """
+            SELECT source.filename,
+                   COALESCE(camera.name, ''),
+                   COALESCE(lens.name, ''),
+                   COALESCE(media.focal_length, '')
+            FROM source_files AS source
+            JOIN media_items AS media ON media.source_file_id = source.source_file_id
+            LEFT JOIN cameras AS camera ON camera.camera_id = media.camera_id
+            LEFT JOIN lenses AS lens ON lens.lens_id = media.lens_id
+            JOIN (
+              SELECT candidate_source.filename
+              FROM source_files AS candidate_source
+              JOIN media_items AS candidate_media
+                ON candidate_media.source_file_id = candidate_source.source_file_id
+              GROUP BY candidate_source.filename
+              HAVING COUNT(*) = 1
+            ) AS unique_filename ON unique_filename.filename = source.filename
+            WHERE source.filename IN (
+            """ + placeholders + ")"
+            guard let statement = prepared(database: catalog, sql: sql, values: batch) else {
+                continue
+            }
+            defer { sqlite3_finalize(statement) }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                let filename = sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? ""
+                guard let assetID = assetIDByFilename[filename],
+                      var metadata = result[assetID]
+                else { continue }
+                metadata.cameraBody = sqlite3_column_text(statement, 1).map(String.init(cString:)) ?? ""
+                metadata.lens = sqlite3_column_text(statement, 2).map(String.init(cString:)) ?? ""
+                metadata.focalLength = sqlite3_column_text(statement, 3).map(String.init(cString:)) ?? ""
+                result[assetID] = metadata
+            }
         }
     }
 
@@ -341,5 +357,11 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
             }
         }
         return statement
+    }
+}
+
+private func metadataBatches(_ values: [String], size: Int = 400) -> [[String]] {
+    stride(from: 0, to: values.count, by: size).map { start in
+        Array(values[start..<min(values.count, start + size)])
     }
 }

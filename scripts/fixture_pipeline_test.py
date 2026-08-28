@@ -2272,6 +2272,58 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertIn('"country_proposal_enabled": false', prompt)
 
+    def test_requested_ai_prompt_requires_reliable_place_in_title_and_fails_closed(self):
+        base = {
+            "assetId": "asset-location-title",
+            "filename": "LOCATION.JPG",
+            "capturedAt": "2026-08-29T00:00:00Z",
+            "locationLabel": "Paris, France",
+            "currentTitle": "Grand interior",
+            "currentKeywords": ["interior"],
+            "currentCountry": "france",
+            "suggestedCountry": "france",
+            "countrySuggestionSource": "Apple Photos location",
+            "countryProposalEnabled": True,
+            "priorProposalTitle": "",
+            "priorProposalKeywords": [],
+            "priorProposalCountry": "",
+            "priorProposalReason": "",
+            "requestReasons": ["add details"],
+            "requestNote": "",
+        }
+
+        present = _prompt(base)
+        self.assertIn("Make sure the location/place appears in the title.", present)
+        self.assertIn('"location": "Paris, France"', present)
+        self.assertIn('"country_suggestion_source": "Apple Photos location"', present)
+
+        absent = _prompt({
+            **base,
+            "locationLabel": "",
+            "currentCountry": "",
+            "suggestedCountry": "",
+            "countrySuggestionSource": "",
+        })
+        self.assertIn('"location": ""', absent)
+        self.assertIn(
+            "When location evidence is absent or conflicting, do not invent a place",
+            absent,
+        )
+
+        conflicting = _prompt({
+            **base,
+            "suggestedCountry": "",
+            "countrySuggestionSource": "conflicting catalog and Apple Photos location",
+        })
+        self.assertIn(
+            '"country_suggestion_source": "conflicting catalog and Apple Photos location"',
+            conflicting,
+        )
+        self.assertIn(
+            "reliable, non-conflicting location or place evidence",
+            conflicting,
+        )
+
     def test_request_ai_preserves_photos_only_current_metadata(self):
         upsert_assets(self.root, [
             {

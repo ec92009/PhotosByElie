@@ -334,9 +334,11 @@ private struct OverviewView: View {
                         Button("Revoke Mac", role: .destructive) {
                             Task { await model.confirmOwnerDeviceRevocation() }
                         }
+                        .backstageHelp("Revoke the selected Mac's Owner credential after this explicit confirmation.")
                         Button("Cancel", role: .cancel) {
                             model.cancelOwnerDeviceRevocation()
                         }
+                        .backstageHelp("Close this confirmation without changing any enrolled Mac or credential.")
                     } message: {
                         Text("The selected Mac will lose Owner access. If it is this Mac, its local Keychain credential will also be removed; Set up this Mac can recover it independently.")
                     }

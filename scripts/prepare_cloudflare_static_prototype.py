@@ -32,6 +32,7 @@ ROOT_FILES = (
     "catalog-sqlite.js",
     "photos-data.js",
     "shared-gallery-store.js",
+    "shared-gallery-visibility.mjs",
     "reserve-store.js",
     "liked-store.js",
     "basket-store.js",
@@ -112,9 +113,9 @@ def prepare(source_root: Path, output: Path, *, replace: bool = False) -> dict[s
             _copy(source_root, output, source.relative_to(source_root))
 
     (output / "_headers").write_text(
-        "/*\n  X-Robots-Tag: noindex\n\n"
-        "/assets/catalog/photosbyelie.sqlite\n"
-        "  Cache-Control: public, max-age=0, must-revalidate\n",
+        "/*\n"
+        "  X-Robots-Tag: noindex\n"
+        "  Cache-Control: public, max-age=600\n",
         encoding="utf-8",
     )
     (output / ".assetsignore").write_text(

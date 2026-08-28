@@ -41,7 +41,9 @@ class PrepareCloudflareStaticPrototypeTest(unittest.TestCase):
                 (output / "assets/catalog/photosbyelie.sqlite").read_bytes(),
                 b"SQLite format 3\0",
             )
-            self.assertIn("X-Robots-Tag: noindex", (output / "_headers").read_text())
+            headers = (output / "_headers").read_text()
+            self.assertIn("X-Robots-Tag: noindex", headers)
+            self.assertIn("Cache-Control: public, max-age=600", headers)
             self.assertIn(MARKER, (output / ".assetsignore").read_text())
 
     def test_replace_requires_generated_marker(self) -> None:

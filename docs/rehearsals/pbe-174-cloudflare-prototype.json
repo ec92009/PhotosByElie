@@ -1,37 +1,61 @@
 {
   "schema": "photosbyelie.cloudflare-static-prototype.v1",
   "ticket": "PBE-174",
-  "capturedAt": "2026-08-28T12:17:00+02:00",
-  "state": "active-research",
+  "capturedAt": "2026-08-28T12:58:00+02:00",
+  "state": "evaluation-complete-prototype-deleted",
   "productionMutation": false,
   "productionRoutes": [],
   "customDomains": [],
   "prototype": {
-    "url": "https://pbe-174-static-assets-prototype.ec92009.workers.dev",
+    "url": "https://pbe-174-pbe-174-static-assets-prototype.ec92009.workers.dev",
     "worker": "pbe-174-static-assets-prototype",
-    "versionId": "8ea0c1e7-942f-4c4a-aaa8-1cf53c7713f7",
+    "versionId": "5e5d84fb-48d5-41e7-a182-6b2b5750596e",
     "robots": "noindex",
-    "stagedFiles": 67,
-    "stagedBytes": 17278863,
+    "cacheControl": "public, max-age=600",
+    "stagedFiles": 68,
+    "stagedBytes": 17309518,
     "forbiddenPathCount": 0,
     "catalogBytes": 1445888,
     "catalogSha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579",
     "remoteCatalogSha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579"
   },
   "transportMedianMs": {
+    "sampleCountPerMode": 7,
     "githubPages": {
-      "galleryCold": 60.524,
-      "galleryWarm": 58.909,
-      "catalogCold": 181.032,
-      "catalogWarm": 166.087
+      "galleryCold": 62.15,
+      "galleryWarm": 63.12,
+      "catalogCold": 186.842,
+      "catalogWarm": 200.146
     },
     "cloudflareWorkersStaticAssets": {
-      "galleryCold": 143.322,
-      "galleryWarm": 119.832,
-      "catalogCold": 236.112,
-      "catalogWarm": 243.471
+      "galleryCold": 162.136,
+      "galleryWarm": 123.308,
+      "catalogCold": 237.259,
+      "catalogWarm": 260.44
     }
   },
-  "preliminaryRecommendation": "Retain GitHub Pages. This Madrid sample shows no host-level gain from the equivalent Workers Static Assets prototype; the fixed catalog payload and client-side processing remain higher-value targets.",
-  "remainingEvidence": "Browser-visible Gallery startup comparison and repeat sampling before closing the research ticket."
+  "browserVisibleGalleryMs": {
+    "sampleCountPerHost": 5,
+    "githubPages": {
+      "coldReady": 4891,
+      "warmReadyMedian": 3524,
+      "coldCatalogTransferBytes": 314053,
+      "consoleErrors": 0
+    },
+    "cloudflareWorkersStaticAssets": {
+      "coldReady": 4999,
+      "warmReadyMedian": 3726,
+      "coldCatalogTransferBytes": 1446188,
+      "consoleErrors": 6,
+      "consoleErrorScope": "expected analytics and authentication CORS denials for the unapproved prototype origin"
+    }
+  },
+  "recommendation": "Retain GitHub Pages. Equivalent ten-minute caching did not produce a host-level or browser-visible gain; the prototype transferred the SQLite catalog uncompressed and requires coordinated analytics/authentication origin changes.",
+  "higherValueFollowUp": "Reduce or partition the public catalog payload and its client parse/render work before reconsidering hosting.",
+  "productionCutoverTicketRequired": false,
+  "teardown": {
+    "workerDeleted": true,
+    "previewHttpAfterDelete": 404,
+    "productionMutation": false
+  }
 }

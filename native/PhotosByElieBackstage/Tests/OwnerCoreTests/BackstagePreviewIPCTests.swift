@@ -277,17 +277,18 @@ struct BackstagePreviewIPCTests {
             outcome: .failure(.previewUnavailable("slow"))
         )
         let limits = BackstagePreviewIPCLimits(operationTimeout: .milliseconds(20))
-        let clock = ContinuousClock()
-        let started = clock.now
         let response = try await process(
             library: library,
             request: request(assetID: "asset-1"),
-            limits: limits
+            limits: limits,
+            previewTimeoutSleeper: { _ in
+                while library.previewCount == 0 {
+                    await Task.yield()
+                }
+            }
         )
-        let elapsed = started.duration(to: clock.now)
 
         #expect(errorCode(response) == "preview_timeout")
-        #expect(elapsed < .milliseconds(200))
         #expect(library.previewCount == 1)
     }
 
@@ -359,14 +360,18 @@ struct BackstagePreviewIPCTests {
         library: PreviewIPCTestLibrary,
         request: [String: Any],
         limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits(),
-        exportDirectory: URL? = nil
+        exportDirectory: URL? = nil,
+        previewTimeoutSleeper: @escaping @Sendable (Duration) async throws -> Void = {
+            try await Task.sleep(for: $0)
+        }
     ) async throws -> [String: Any] {
         let requestData = try JSONSerialization.data(withJSONObject: request)
         let processor = BackstagePreviewIPCProcessor(
             photoLibrary: library,
             bearerToken: "test-token",
             limits: limits,
-            exportDirectory: exportDirectory ?? BackstagePreviewIPCConstants.defaultExportDirectory()
+            exportDirectory: exportDirectory ?? BackstagePreviewIPCConstants.defaultExportDirectory(),
+            previewTimeoutSleeper: previewTimeoutSleeper
         )
         let responseData = await processor.process(requestData)
         guard let response = try JSONSerialization.jsonObject(with: responseData) as? [String: Any] else {

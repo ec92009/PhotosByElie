@@ -1679,8 +1679,7 @@ struct OwnerCoreTests {
 
         #expect(action.id == "owner-action-pending-fixture-tree")
         #expect(action.state == .queued)
-        try await Task.sleep(for: .milliseconds(10))
-        #expect(await wakeRecorder.values() == [action.id])
+        #expect(await wakeRecorder.waitForValues(count: 1) == [action.id])
     }
 
     @Test("Generated endpoints and examples match the published contract")
@@ -6280,6 +6279,18 @@ private actor OwnerActionWakeRecorder {
 
     func values() -> [String] {
         actionIDs
+    }
+
+    func waitForValues(
+        count: Int,
+        timeout: Duration = .seconds(1)
+    ) async -> [String] {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while actionIDs.count < count, clock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return actionIDs
     }
 }
 

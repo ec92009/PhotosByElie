@@ -92,17 +92,22 @@ public struct BackstagePreviewIPCProcessor: Sendable {
     private let bearerToken: String
     private let limits: BackstagePreviewIPCLimits
     private let exportDirectory: URL
+    private let previewTimeoutSleeper: @Sendable (Duration) async throws -> Void
 
     public init(
         photoLibrary: any PhotoLibraryServing,
         bearerToken: String,
         limits: BackstagePreviewIPCLimits = BackstagePreviewIPCLimits(),
-        exportDirectory: URL = BackstagePreviewIPCConstants.defaultExportDirectory()
+        exportDirectory: URL = BackstagePreviewIPCConstants.defaultExportDirectory(),
+        previewTimeoutSleeper: @escaping @Sendable (Duration) async throws -> Void = {
+            try await Task.sleep(for: $0)
+        }
     ) {
         self.photoLibrary = photoLibrary
         self.bearerToken = bearerToken
         self.limits = limits
         self.exportDirectory = exportDirectory
+        self.previewTimeoutSleeper = previewTimeoutSleeper
     }
 
     public func process(_ requestData: Data) async -> Data {
@@ -527,6 +532,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
     private func previewWithTimeout(assetID: String, maxPixel: Int) async throws -> PhotoPreview {
         let photoLibrary = photoLibrary
         let operationTimeout = limits.operationTimeout
+        let timeoutSleeper = previewTimeoutSleeper
         return try await withCheckedThrowingContinuation { continuation in
             let gate = PreviewResultGate(continuation)
             Task {
@@ -542,7 +548,7 @@ public struct BackstagePreviewIPCProcessor: Sendable {
             }
             let timeoutTask = Task {
                 do {
-                    try await Task.sleep(for: operationTimeout)
+                    try await timeoutSleeper(operationTimeout)
                 } catch {
                     return
                 }

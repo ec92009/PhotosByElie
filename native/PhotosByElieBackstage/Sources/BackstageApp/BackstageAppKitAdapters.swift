@@ -318,6 +318,7 @@ final class BackstageSelectionController: ObservableObject {
 
 @MainActor
 final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowDelegate, @preconcurrency QLPreviewPanelDataSource {
+    private static weak var activeCoordinator: BackstageQuickLookCoordinator?
     private final class PreviewItem: NSObject, QLPreviewItem {
         let previewItemURL: URL?
         let previewItemTitle: String?
@@ -369,7 +370,11 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     var isVisible: Bool {
-        QLPreviewPanel.shared()?.isVisible == true
+        ownsSharedPreviewPanel && QLPreviewPanel.shared()?.isVisible == true
+    }
+
+    var ownsSharedPreviewPanel: Bool {
+        Self.activeCoordinator === self
     }
 
     static func isConfiguredQuickLookPanel(
@@ -427,6 +432,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         guard isOwnerActive else { return }
         guard isCurrentPresentation(candidate) else { return }
         guard !urls.isEmpty else { return }
+        claimSharedPreviewPanelOwnership()
         items = urls.enumerated().map { offset, url in
             PreviewItem(
                 url: url,
@@ -449,12 +455,33 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     func dismiss() {
+        let closesSharedPanel = ownsSharedPreviewPanel
+        relinquishSharedPreviewPanel(closePanel: closesSharedPanel)
+        if closesSharedPanel {
+            Self.activeCoordinator = nil
+        }
+    }
+
+    /// Quick Look is a process-wide AppKit panel. SwiftUI keeps each workflow
+    /// alive long enough that an outgoing view can otherwise retain its own
+    /// accessory window beside the incoming workflow's preview.
+    func claimSharedPreviewPanelOwnership() {
+        guard !ownsSharedPreviewPanel else { return }
+        Self.activeCoordinator?.relinquishSharedPreviewPanel(closePanel: false)
+        Self.activeCoordinator = self
+    }
+
+    private func relinquishSharedPreviewPanel(closePanel: Bool) {
         presentationID &+= 1
-        let panel = configuredPreviewPanel ?? QLPreviewPanel.shared()
+        let panel = configuredPreviewPanel
         metadataWindow.parent?.removeChildWindow(metadataWindow)
         metadataWindow.orderOut(nil)
-        panel?.orderOut(nil)
-        panel?.delegate = nil
+        if panel?.delegate === self {
+            panel?.delegate = nil
+        }
+        if closePanel {
+            (panel ?? QLPreviewPanel.shared())?.orderOut(nil)
+        }
         configuredPreviewPanel = nil
         items = []
         previewIndexObservation = nil
@@ -487,6 +514,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     func updateMetadata(_ item: BackstageQuickLookMetadata) {
+        guard ownsSharedPreviewPanel else { return }
         guard let previewItem = items.first(where: { $0.metadata?.assetID == item.assetID }) else {
             return
         }
@@ -499,6 +527,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         rating: Int? = nil,
         color: SidecarColor? = nil
     ) {
+        guard ownsSharedPreviewPanel else { return }
         guard let previewItem = items.first(where: { $0.metadata?.assetID == assetID }),
               var metadata = previewItem.metadata
         else {
@@ -515,7 +544,8 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     func decisionColorValue(for assetID: String) -> String {
-        items.first(where: { $0.metadata?.assetID == assetID })?.metadata?.color ?? ""
+        guard ownsSharedPreviewPanel else { return "" }
+        return items.first(where: { $0.metadata?.assetID == assetID })?.metadata?.color ?? ""
     }
 
     private func installShortcutMonitor(
@@ -524,7 +554,8 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         removeShortcutMonitor()
         guard let onShortcut else { return }
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard QLPreviewPanel.shared()?.isVisible == true,
+            guard self.ownsSharedPreviewPanel,
+                  QLPreviewPanel.shared()?.isVisible == true,
                   let shortcut = BackstageQuickLookShortcut.shortcut(
                       forKeyCode: event.keyCode,
                       charactersIgnoringModifiers: event.charactersIgnoringModifiers,
@@ -540,6 +571,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     }
 
     private var currentMetadata: BackstageQuickLookMetadata? {
+        guard ownsSharedPreviewPanel else { return nil }
         guard let panel = QLPreviewPanel.shared() else { return nil }
         let index = panel.currentPreviewItemIndex
         guard items.indices.contains(index) else { return nil }
@@ -745,7 +777,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
                     queue: .main
                 ) { [weak self, weak panel] _ in
                     Task { @MainActor [weak self, weak panel] in
-                        guard let self, let panel else { return }
+                        guard let self, self.ownsSharedPreviewPanel, let panel else { return }
                         self.positionMetadataWindow(relativeTo: panel)
                     }
                 }

@@ -185,6 +185,12 @@ private enum ReviewQuickLookPresenter {
         }
         let draft = model.reviewProposalDrafts[assetID]
         let state = item.placementState == "hidden" ? item.placementState : item.editorialState
+        let equipment = model.quickLookEquipment(
+            for: assetID,
+            cameraBody: item.cameraBody,
+            lens: item.lens,
+            focalLength: item.focalLength
+        )
         return BackstageQuickLookMetadata(
             assetID: assetID,
             filename: item.filename,
@@ -192,9 +198,9 @@ private enum ReviewQuickLookPresenter {
             keywords: draft?.keywords ?? item.keywords,
             locationLabel: item.locationLabel,
             capturedAt: item.capturedAt,
-            cameraBody: item.cameraBody,
-            lens: item.lens,
-            focalLength: item.focalLength,
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength,
             sourceSize: BackstageQuickLookSourceSize(
                 mediaType: item.mediaType,
                 pixelWidth: item.pixelWidth,

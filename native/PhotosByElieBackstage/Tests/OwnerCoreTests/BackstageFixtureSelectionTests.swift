@@ -2328,6 +2328,51 @@ struct BackstageFixtureSelectionTests {
         #expect(photoLibrary.requestedPixelSizes().filter { $0 == 4_000 }.count == 1)
     }
 
+    @Test("Focused Quick Look fills missing equipment from the complete Photos source")
+    @MainActor
+    func focusedQuickLookLearnsEquipmentFromPhotos() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary(
+            cameraBody: "Canon EOS R5",
+            lens: "RF24-70mm F2.8 L IS USM",
+            focalLength: "35 mm"
+        )
+        let model = BackstageViewModel(photoLibrary: photoLibrary)
+        let asset = FixturePoolAsset(
+            id: "asset-equipment-preview",
+            position: 0,
+            title: "Equipment preview",
+            filename: "equipment-preview.jpg",
+            mediaType: "photo"
+        )
+        model.cullingPool = FixturePool(
+            id: "pool-equipment-preview",
+            name: "Equipment preview",
+            fixtureID: "fixture-equipment-preview",
+            assetCount: 1,
+            snapshotHash: "synthetic",
+            assets: [asset]
+        )
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: [asset.id],
+            selectedIDs: [asset.id],
+            anchorID: asset.id,
+            focusedID: asset.id
+        )
+
+        #expect(await model.prepareQuickLookURLs().count == 1)
+        let learned = model.quickLookEquipment(for: asset.id)
+        #expect(learned.cameraBody == "Canon EOS R5")
+        #expect(learned.lens == "RF24-70mm F2.8 L IS USM")
+        #expect(learned.focalLength == "35 mm")
+
+        let merged = model.quickLookEquipment(
+            for: asset.id,
+            cameraBody: "Owner Camera"
+        )
+        #expect(merged.cameraBody == "Owner Camera")
+        #expect(merged.lens == learned.lens)
+    }
+
     @Test("Missing media availability still keeps Culling on photos")
     @MainActor
     func missingMediaAvailabilityFallsBackSafely() throws {
@@ -3006,10 +3051,21 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     private var thumbnailDelay: Duration = .zero
     private var cancelled = 0
     private var transientUpgradeFailures: [String: Int]
+    private let cameraBody: String
+    private let lens: String
+    private let focalLength: String
     private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
 
-    init(transientUpgradeFailures: [String: Int] = [:]) {
+    init(
+        transientUpgradeFailures: [String: Int] = [:],
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
+    ) {
         self.transientUpgradeFailures = transientUpgradeFailures
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 
     func authorization() -> PhotoLibraryAccess { .authorized }
@@ -3046,7 +3102,10 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
             jpegData: Self.previewData,
             pixelWidth: maxPixelSize,
             pixelHeight: maxPixelSize,
-            currentImageByteCount: maxPixelSize >= 900 ? Int64(maxPixelSize * 1_000) : nil
+            currentImageByteCount: maxPixelSize >= 900 ? Int64(maxPixelSize * 1_000) : nil,
+            cameraBody: cameraBody,
+            lens: lens,
+            focalLength: focalLength
         )
     }
 

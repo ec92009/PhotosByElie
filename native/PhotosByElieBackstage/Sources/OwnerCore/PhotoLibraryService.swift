@@ -26,19 +26,31 @@ public struct PhotoPreview: Sendable, Equatable {
     /// the preview came from a rendered `requestImage` raster or another
     /// partial path.
     public var currentImageByteCount: Int64?
+    /// Equipment recovered from the complete current Photos resource. These
+    /// fields intentionally remain empty for rendered rasters and sources that
+    /// do not carry EXIF/TIFF equipment metadata.
+    public var cameraBody: String
+    public var lens: String
+    public var focalLength: String
 
     public init(
         assetID: String,
         jpegData: Data,
         pixelWidth: Int,
         pixelHeight: Int,
-        currentImageByteCount: Int64? = nil
+        currentImageByteCount: Int64? = nil,
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
     ) {
         self.assetID = assetID
         self.jpegData = jpegData
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
         self.currentImageByteCount = currentImageByteCount
+        self.cameraBody = cameraBody
+        self.lens = lens
+        self.focalLength = focalLength
     }
 }
 
@@ -637,6 +649,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             ] as CFDictionary) else {
             throw PhotoLibraryError.previewUnavailable(localIdentifier)
         }
+        let equipment = equipmentMetadata(from: source)
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
             output,
@@ -657,8 +670,63 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             jpegData: output as Data,
             pixelWidth: thumbnail.width,
             pixelHeight: thumbnail.height,
-            currentImageByteCount: currentImageByteCount
+            currentImageByteCount: currentImageByteCount,
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength
         )
+    }
+
+    private static func equipmentMetadata(
+        from source: CGImageSource
+    ) -> (cameraBody: String, lens: String, focalLength: String) {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+            as? [CFString: Any]
+        else { return ("", "", "") }
+        let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+        let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any]
+        let exifAux = properties[kCGImagePropertyExifAuxDictionary] as? [CFString: Any]
+
+        let cameraBody = metadataString(tiff?[kCGImagePropertyTIFFModel])
+        let lens = metadataString(
+            exif?[kCGImagePropertyExifLensModel]
+                ?? exifAux?[kCGImagePropertyExifAuxLensModel]
+        )
+        let focal = metadataNumber(exif?[kCGImagePropertyExifFocalLength])
+        let equivalent = metadataNumber(exif?[kCGImagePropertyExifFocalLenIn35mmFilm])
+        let focalLength: String
+        if let focal, let equivalent, focal != equivalent {
+            focalLength = "\(compactMetadataNumber(focal)) mm / \(compactMetadataNumber(equivalent)) mm equivalent"
+        } else if let focal {
+            focalLength = "\(compactMetadataNumber(focal)) mm"
+        } else if let equivalent {
+            focalLength = "\(compactMetadataNumber(equivalent)) mm equivalent"
+        } else {
+            focalLength = ""
+        }
+        return (cameraBody, lens, focalLength)
+    }
+
+    private static func metadataString(_ value: Any?) -> String {
+        (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private static func metadataNumber(_ value: Any?) -> Double? {
+        if let number = value as? NSNumber {
+            let result = number.doubleValue
+            return result.isFinite && result > 0 ? result : nil
+        }
+        if let string = value as? String,
+           let result = Double(string),
+           result.isFinite,
+           result > 0 {
+            return result
+        }
+        return nil
+    }
+
+    private static func compactMetadataNumber(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
     }
 
     public func exportOriginal(

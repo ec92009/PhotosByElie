@@ -332,6 +332,12 @@ private enum CullingQuickLookPresenter {
             return nil
         }
         let decision = model.cullingStates[assetID]
+        let equipment = model.quickLookEquipment(
+            for: assetID,
+            cameraBody: asset.cameraBody,
+            lens: asset.lens,
+            focalLength: asset.focalLength
+        )
         return BackstageQuickLookMetadata(
             assetID: assetID,
             filename: asset.filename,
@@ -339,9 +345,9 @@ private enum CullingQuickLookPresenter {
             keywords: asset.keywords,
             locationLabel: asset.locationLabel,
             capturedAt: asset.capturedAt,
-            cameraBody: asset.cameraBody,
-            lens: asset.lens,
-            focalLength: asset.focalLength,
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength,
             sourceSize: BackstageQuickLookSourceSize(
                 mediaType: asset.mediaType,
                 pixelWidth: asset.pixelWidth,

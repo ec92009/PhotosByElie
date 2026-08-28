@@ -356,6 +356,12 @@ struct UploadView: View {
             guard quickLook.isCurrentPresentation(presentationID) else { return }
             let source = model.cullingAssets.first(where: { $0.id == item.id })
             let decision = model.cullingStates[item.id]
+            let equipment = model.quickLookEquipment(
+                for: item.id,
+                cameraBody: item.cameraBody,
+                lens: item.lens,
+                focalLength: item.focalLength
+            )
             let metadata = BackstageQuickLookMetadata(
                 assetID: item.id,
                 filename: item.filename,
@@ -363,9 +369,9 @@ struct UploadView: View {
                 keywords: item.keywords,
                 locationLabel: source?.locationLabel ?? "",
                 capturedAt: item.capturedAt,
-                cameraBody: item.cameraBody,
-                lens: item.lens,
-                focalLength: item.focalLength,
+                cameraBody: equipment.cameraBody,
+                lens: equipment.lens,
+                focalLength: equipment.focalLength,
                 sourceSize: BackstageQuickLookSourceSize(
                     mediaType: item.mediaType,
                     pixelWidth: item.pixelWidth,

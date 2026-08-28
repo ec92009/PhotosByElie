@@ -1,8 +1,10 @@
 import AppKit
 import CryptoKit
 import Foundation
+import ImageIO
 import SQLite3
 import Testing
+import UniformTypeIdentifiers
 @testable import BackstageUI
 @testable import OwnerCore
 
@@ -102,6 +104,25 @@ struct OwnerCoreTests {
 
         #expect(!coordinator.isCurrentPresentation(first))
         #expect(coordinator.isCurrentPresentation(second))
+    }
+
+    @Test("Quick Look workflow handoff removes the outgoing process-wide owner")
+    @MainActor
+    func quickLookWorkflowHandoffHasOneOwner() {
+        let outgoing = BackstageQuickLookCoordinator()
+        let incoming = BackstageQuickLookCoordinator()
+
+        outgoing.claimSharedPreviewPanelOwnership()
+        #expect(outgoing.ownsSharedPreviewPanel)
+
+        incoming.claimSharedPreviewPanelOwnership()
+        #expect(!outgoing.ownsSharedPreviewPanel)
+        #expect(incoming.ownsSharedPreviewPanel)
+
+        // A delayed onDisappear from the old workflow must not dismiss or
+        // steal the panel now owned by the incoming workflow.
+        outgoing.dismiss()
+        #expect(incoming.ownsSharedPreviewPanel)
     }
 
     @Test("Quick Look title uses the same filename as its metadata snapshot")
@@ -262,6 +283,43 @@ struct OwnerCoreTests {
             maxPixelSize: 180
         )
         #expect(renderedRaster.currentImageByteCount == nil)
+    }
+
+    @Test("Complete Photos source previews recover EXIF equipment metadata")
+    func completeSourcePreviewRecoversEquipmentMetadata() throws {
+        let pixel = try #require(Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        ))
+        let source = try #require(CGImageSourceCreateWithData(pixel as CFData, nil))
+        let encoded = NSMutableData()
+        let destination = try #require(CGImageDestinationCreateWithData(
+            encoded,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ))
+        CGImageDestinationAddImageFromSource(destination, source, 0, [
+            kCGImagePropertyTIFFDictionary: [
+                kCGImagePropertyTIFFModel: "Canon EOS R5",
+            ],
+            kCGImagePropertyExifDictionary: [
+                kCGImagePropertyExifLensModel: "RF24-70mm F2.8 L IS USM",
+                kCGImagePropertyExifFocalLength: 35.0,
+                kCGImagePropertyExifFocalLenIn35mmFilm: 35,
+            ],
+        ] as CFDictionary)
+        #expect(CGImageDestinationFinalize(destination))
+
+        let preview = try PhotoKitLibraryService.previewFromImageData(
+            encoded as Data,
+            localIdentifier: "photo-with-equipment",
+            maxPixelSize: 180,
+            currentImageByteCount: Int64(encoded.length)
+        )
+
+        #expect(preview.cameraBody == "Canon EOS R5")
+        #expect(preview.lens == "RF24-70mm F2.8 L IS USM")
+        #expect(preview.focalLength == "35 mm")
     }
 
     @Test("Current-image size cache is compatible and never changes original provenance")

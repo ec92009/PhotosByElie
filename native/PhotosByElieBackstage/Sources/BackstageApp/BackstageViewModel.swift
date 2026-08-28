@@ -469,6 +469,7 @@ final class BackstageViewModel: ObservableObject {
     private var cullingThumbnailBackfillTask: Task<Void, Never>?
     private var cullingThumbnailBackfillTaskToken: UUID?
     private var pendingCurrentImageByteCounts: [String: Int64] = [:]
+    private var quickLookEquipmentByAssetID: [String: BackstageQuickLookEquipment] = [:]
     private var currentImageSizeFlushTask: Task<Void, Never>?
     private var thumbnailPreferredIdentifiers: [String: String] = [:]
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -5529,6 +5530,7 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: item.photoLibraryIdentifier,
                         maxPixelSize: 4_000
                     )
+                    learnQuickLookEquipment(from: preview, for: item.id)
                     await learnCurrentImageByteCount(
                         from: preview,
                         for: item.id,
@@ -6295,6 +6297,7 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 4_000
             )
+            learnQuickLookEquipment(from: preview, for: item.mediaID)
             await learnCurrentImageByteCount(
                 from: preview,
                 for: item.mediaID,
@@ -6351,6 +6354,7 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
                     )
+                    learnQuickLookEquipment(from: preview, for: id)
                     if let image = NSImage(data: preview.jpegData) {
                         recoverCullingThumbnail(image, for: id)
                     }
@@ -7119,6 +7123,7 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: localIdentifier,
                 maxPixelSize: 4_000
             )
+            learnQuickLookEquipment(from: preview, for: assetID)
             await learnCurrentImageByteCount(
                 from: preview,
                 for: assetID,
@@ -7136,6 +7141,39 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    func quickLookEquipment(
+        for assetID: String,
+        cameraBody: String = "",
+        lens: String = "",
+        focalLength: String = ""
+    ) -> BackstageQuickLookEquipment {
+        let learned = quickLookEquipmentByAssetID[assetID]
+        return BackstageQuickLookEquipment(
+            cameraBody: preferredQuickLookEquipmentValue(cameraBody, learned?.cameraBody),
+            lens: preferredQuickLookEquipmentValue(lens, learned?.lens),
+            focalLength: preferredQuickLookEquipmentValue(focalLength, learned?.focalLength)
+        )
+    }
+
+    private func learnQuickLookEquipment(from preview: PhotoPreview, for assetID: String) {
+        let equipment = BackstageQuickLookEquipment(
+            cameraBody: preview.cameraBody,
+            lens: preview.lens,
+            focalLength: preview.focalLength
+        )
+        guard equipment.displayValue != nil else { return }
+        quickLookEquipmentByAssetID[assetID] = equipment
+    }
+
+    private func preferredQuickLookEquipmentValue(
+        _ authoritative: String,
+        _ learned: String?
+    ) -> String {
+        authoritative.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? learned ?? ""
+            : authoritative
     }
 
     func returnSelectedUploadsToReview() async {

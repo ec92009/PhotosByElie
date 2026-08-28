@@ -870,13 +870,17 @@ struct LifecycleView: View {
     private func lifecycleQuickLookMetadata(
         for item: LifecycleItem
     ) -> BackstageQuickLookMetadata {
-        BackstageQuickLookMetadata(
+        let equipment = model.quickLookEquipment(for: item.mediaID)
+        return BackstageQuickLookMetadata(
             assetID: item.mediaID,
             filename: item.filename.isEmpty ? item.mediaID : item.filename,
             title: item.title.isEmpty ? "Untitled" : item.title,
             keywords: [],
             locationLabel: item.sourceSlug,
             capturedAt: item.capturedAt,
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength,
             rating: 0,
             color: "",
             state: item.state == "hidden"
@@ -2090,6 +2094,12 @@ private struct MetadataGiveBackView: View {
             }
             guard quickLook.isCurrentPresentation(presentationID) else { return }
             let decision = model.cullingStates[assetID]
+            let equipment = model.quickLookEquipment(
+                for: assetID,
+                cameraBody: source?.cameraBody ?? "",
+                lens: source?.lens ?? "",
+                focalLength: source?.focalLength ?? ""
+            )
             quickLook.present(
                 urls: [url],
                 metadata: [
@@ -2100,9 +2110,9 @@ private struct MetadataGiveBackView: View {
                         keywords: keywords,
                         locationLabel: source?.locationLabel ?? "",
                         capturedAt: source?.capturedAt ?? "",
-                        cameraBody: source?.cameraBody ?? "",
-                        lens: source?.lens ?? "",
-                        focalLength: source?.focalLength ?? "",
+                        cameraBody: equipment.cameraBody,
+                        lens: equipment.lens,
+                        focalLength: equipment.focalLength,
                         sourceSize: BackstageQuickLookSourceSize(
                             mediaType: source?.mediaType ?? "photo",
                             pixelWidth: source?.pixelWidth ?? 0,

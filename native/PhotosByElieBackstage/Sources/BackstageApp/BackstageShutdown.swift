@@ -27,6 +27,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isDeferringCullingWasteBasketUndo = false
     var isRunningReview = false
     var isRunningAIPass = false
+    var isAIPassDetachable = false
     var isRunningAccess = false
     var isRunningLifecycle = false
     var isRunningDelivery = false
@@ -35,34 +36,46 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isRunningR2Reconciliation = false
     var isSavingMetadataModelLadder = false
 
+    var activeReasons: [String] {
+        var reasons: [String] = []
+        if isAuthenticating { reasons.append("Owner sign-in") }
+        if isRefreshing { reasons.append("Owner refresh") }
+        if isLoadingPhotos { reasons.append("Apple Photos loading") }
+        if isReconcilingPhotosIndex { reasons.append("Photos index reconciliation") }
+        if isRunningMetadata { reasons.append("metadata write-back") }
+        if isRunningFixture { reasons.append("fixture update") }
+        if isLoadingFixtureTree { reasons.append("fixture list loading") }
+        if isSearchingFixtureAssets { reasons.append("fixture search") }
+        if isReloadingFixturePools { reasons.append("fixture pool refresh") }
+        if isOpeningFixturePool { reasons.append("fixture opening") }
+        if isLoadingFixturePolicy { reasons.append("fixture policy loading") }
+        if isLoadingFixtureCulling { reasons.append("Gallery loading") }
+        if isLoadingPreview { reasons.append("preview loading") }
+        if isLoadingCullingDecisions { reasons.append("culling decisions loading") }
+        if isApplyingCullingDecision { reasons.append("culling decision write") }
+        if isDeferringCullingWasteBasketUndo { reasons.append("Waste Basket undo") }
+        if isRunningReview { reasons.append("Review update") }
+        if isRunningAIPass { reasons.append("AI proposal pass") }
+        if isRunningAccess { reasons.append("access update") }
+        if isRunningLifecycle { reasons.append("Waste Basket update") }
+        if isRunningDelivery { reasons.append("delivery work") }
+        if isRunningNativePublication { reasons.append("publication upload") }
+        if isSyncingPhotos { reasons.append("Apple Photos sync") }
+        if isRunningR2Reconciliation { reasons.append("R2 reconciliation") }
+        if isSavingMetadataModelLadder { reasons.append("AI model settings save") }
+        return reasons
+    }
+
     var hasActiveWork: Bool {
-        [
-            isAuthenticating,
-            isRefreshing,
-            isLoadingPhotos,
-            isReconcilingPhotosIndex,
-            isRunningMetadata,
-            isRunningFixture,
-            isLoadingFixtureTree,
-            isSearchingFixtureAssets,
-            isReloadingFixturePools,
-            isOpeningFixturePool,
-            isLoadingFixturePolicy,
-            isLoadingFixtureCulling,
-            isLoadingPreview,
-            isLoadingCullingDecisions,
-            isApplyingCullingDecision,
-            isDeferringCullingWasteBasketUndo,
-            isRunningReview,
-            isRunningAIPass,
-            isRunningAccess,
-            isRunningLifecycle,
-            isRunningDelivery,
-            isRunningNativePublication,
-            isSyncingPhotos,
-            isRunningR2Reconciliation,
-            isSavingMetadataModelLadder,
-        ].contains(true)
+        !activeReasons.isEmpty
+    }
+
+    var hasNonAIPassActiveWork: Bool {
+        activeReasons.count > (isRunningAIPass ? 1 : 0)
+    }
+
+    var canDetachAIPass: Bool {
+        isRunningAIPass && isAIPassDetachable
     }
 }
 
@@ -88,6 +101,7 @@ extension BackstageViewModel {
             isDeferringCullingWasteBasketUndo: !cullingWasteBasketDeferredUndoActionIDs.isEmpty,
             isRunningReview: isRunningReview,
             isRunningAIPass: isRunningAIPass,
+            isAIPassDetachable: isRunningAIPass && fixtureAIStatus?.active == true,
             isRunningAccess: isRunningAccess,
             isRunningLifecycle: isRunningLifecycle,
             isRunningDelivery: isRunningDelivery,
@@ -112,7 +126,7 @@ extension BackstageViewModel {
 @MainActor
 final class BackstageApplicationDelegate: NSObject, NSApplicationDelegate {
     private var model: BackstageViewModel?
-    private var terminationReplyPending = false
+    private var terminationCoordinator = BackstageTerminationCoordinator()
     private var drainTask: Task<Void, Never>?
 
     func attach(model: BackstageViewModel) {
@@ -124,20 +138,38 @@ final class BackstageApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !terminationReplyPending else {
+        let workState = model?.shutdownWorkState ?? BackstageShutdownWorkState()
+        let disposition = terminationCoordinator.decide(workState: workState) {
+            BackstageShutdownAlert.present(for: workState)
+        }
+        switch disposition {
+        case .cancel:
+            return .terminateCancel
+        case .terminateNow:
+            return .terminateNow
+        case .alreadyPending:
+            return .terminateLater
+        case let .terminateLater(detachAIPass):
+            beginGracefulTermination(sender, detachAIPass: detachAIPass)
             return .terminateLater
         }
+    }
 
-        terminationReplyPending = true
+    private func beginGracefulTermination(
+        _ sender: NSApplication,
+        detachAIPass: Bool
+    ) {
         let model = model
         drainTask = Task { @MainActor [weak self, model] in
+            if detachAIPass {
+                _ = model?.detachAIProposalPassForTermination()
+            }
             await model?.prepareForTermination()
             await model?.waitForActiveWorkToFinish()
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             self.drainTask = nil
             sender.reply(toApplicationShouldTerminate: true)
         }
-        return .terminateLater
     }
 
     func applicationWillTerminate(_ notification: Notification) {

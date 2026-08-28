@@ -134,6 +134,23 @@ component is removed; PBB-111 owns the detailed acceptance evidence.
    implicitly. The legacy Sidecar and local Owner launchers remain explicit
    rollback tools only.
 
+## Quit contract
+
+Normal Backstage Quit still drains active Owner, Photos, fixture, delivery,
+publication, and settings work before replying to macOS termination. When that
+drain would keep the app open, Backstage presents one modal that names every
+active operation. The safe default waits and quits; Cancel leaves the app and
+its work untouched; Force Quit explicitly bypasses the drain and warns that
+in-flight work may require recovery. Repeated Quit requests share the same
+pending termination request instead of opening additional prompts.
+
+A confirmed requested-AI proposal pass has an additional safe boundary. Its
+worker is already launched in an independent process group and persists its
+own proposals and terminal receipt, so **Detach AI Pass and Quit** stops only
+Backstage's progress monitor and lets the durable worker continue. Backstage
+does not offer detach during the start handshake or for work that has no
+independent durable worker.
+
 ## Non-negotiable invariants
 
 - `assets/owner-actions/Owner.sqlite` remains the single authoritative local

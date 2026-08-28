@@ -416,6 +416,7 @@ final class BackstageViewModel: ObservableObject {
     private var didStartAutomaticRecentPhotosDiscovery = false
     private var r2ReconciliationCancellationRequested = false
     private var terminationRequested = false
+    private var aiPassMonitoringDetached = false
 
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
@@ -4970,12 +4971,14 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isRunningAIPass = true
+        aiPassMonitoringDetached = false
         aiProposalStatus = "Starting or attaching to the requested AI pass…"
         defer { isRunningAIPass = false }
         do {
             fixtureAIStatus = try await fixtureService.startAIPass()
             repeat {
                 try await Task.sleep(for: .seconds(2))
+                guard !aiPassMonitoringDetached else { return }
                 fixtureAIStatus = try await fixtureService.aiStatus()
                 await refreshAIStatus()
             } while fixtureAIStatus?.active == true
@@ -4983,6 +4986,18 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             aiProposalStatus = "AI pass failed to start: \(error)"
         }
+    }
+
+    /// Stop only Backstage's progress monitor after the durable AI worker has
+    /// been confirmed. The worker is already in its own process group and
+    /// continues to persist proposals and its terminal receipt independently.
+    @discardableResult
+    func detachAIProposalPassForTermination() -> Bool {
+        guard isRunningAIPass, fixtureAIStatus?.active == true else { return false }
+        aiPassMonitoringDetached = true
+        isRunningAIPass = false
+        aiProposalStatus = "AI pass detached. It will continue in the background."
+        return true
     }
 
     func cancelAIProposalPass() async {

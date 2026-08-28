@@ -1,4 +1,5 @@
 import AppKit
+@testable import OwnerCore
 import Testing
 @testable import BackstageUI
 
@@ -25,6 +26,132 @@ struct BackstageShutdownTests {
             check(&state)
             #expect(state.hasActiveWork)
         }
+    }
+
+    @Test("Quit prompt names every active blocker")
+    func promptNamesActiveBlockers() {
+        let state = BackstageShutdownWorkState(
+            isApplyingCullingDecision: true,
+            isRunningDelivery: true,
+            isSyncingPhotos: true
+        )
+        let prompt = BackstageShutdownPromptModel(workState: state)
+
+        #expect(state.activeReasons == [
+            "culling decision write",
+            "delivery work",
+            "Apple Photos sync",
+        ])
+        #expect(prompt.informativeText.contains("culling decision write, delivery work, and Apple Photos sync"))
+        #expect(prompt.actions.map(\.title) == ["Wait and Quit", "Cancel Quit", "Force Quit"])
+        #expect(prompt.actions.last?.isDestructive == true)
+    }
+
+    @Test("Confirmed AI worker offers detach without hiding other blockers")
+    func promptOffersAIDetach() {
+        let aiOnly = BackstageShutdownPromptModel(workState: BackstageShutdownWorkState(
+            isRunningAIPass: true,
+            isAIPassDetachable: true
+        ))
+        #expect(aiOnly.actions.map(\.title) == [
+            "Wait and Quit",
+            "Detach AI Pass and Quit",
+            "Cancel Quit",
+            "Force Quit",
+        ])
+        #expect(aiOnly.informativeText.contains("independent durable worker"))
+
+        let mixed = BackstageShutdownPromptModel(workState: BackstageShutdownWorkState(
+            isRunningAIPass: true,
+            isAIPassDetachable: true,
+            isSyncingPhotos: true
+        ))
+        #expect(mixed.actions[1].title == "Detach AI Pass and Wait")
+
+        let inconsistent = BackstageShutdownPromptModel(workState: BackstageShutdownWorkState(
+            isAIPassDetachable: true,
+            isSyncingPhotos: true
+        ))
+        #expect(!inconsistent.actions.map(\.title).contains("Detach AI Pass and Wait"))
+    }
+
+    @Test("Modal responses map to the visible action order")
+    func modalResponsesMapToActions() {
+        let prompt = BackstageShutdownPromptModel(workState: BackstageShutdownWorkState(
+            isRunningAIPass: true,
+            isAIPassDetachable: true
+        ))
+        let first = NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+
+        #expect(prompt.choice(for: .init(rawValue: first)) == .waitAndQuit)
+        #expect(prompt.choice(for: .init(rawValue: first + 1)) == .detachAIPassAndQuit)
+        #expect(prompt.choice(for: .init(rawValue: first + 2)) == .cancelQuit)
+        #expect(prompt.choice(for: .init(rawValue: first + 3)) == .forceQuit)
+        #expect(prompt.choice(for: .init(rawValue: first + 99)) == .cancelQuit)
+    }
+
+    @Test("AI detach stops only the confirmed Backstage monitor")
+    @MainActor
+    func detachStopsOnlyConfirmedMonitor() {
+        let model = BackstageViewModel()
+        model.isRunningAIPass = true
+
+        #expect(!model.detachAIProposalPassForTermination())
+        #expect(model.isRunningAIPass)
+
+        model.fixtureAIStatus = FixtureAIStatus(json: [
+            "active": .bool(true),
+            "requested": .number(1),
+        ])
+        #expect(model.detachAIProposalPassForTermination())
+        #expect(!model.isRunningAIPass)
+        #expect(model.fixtureAIStatus?.active == true)
+        #expect(model.aiProposalStatus.contains("continue in the background"))
+    }
+
+    @Test("Termination decisions coalesce repeated quit requests")
+    func terminationDecisionsCoalesce() {
+        var promptCount = 0
+        var coordinator = BackstageTerminationCoordinator()
+        let state = BackstageShutdownWorkState(isRunningAIPass: true)
+
+        let first = coordinator.decide(workState: state) {
+            promptCount += 1
+            return .waitAndQuit
+        }
+        let repeated = coordinator.decide(workState: state) {
+            promptCount += 1
+            return .forceQuit
+        }
+
+        #expect(first == .terminateLater(detachAIPass: false))
+        #expect(repeated == .alreadyPending)
+        #expect(promptCount == 1)
+    }
+
+    @Test("Cancel and force quit remain immediate explicit choices")
+    func terminationImmediateChoices() {
+        let state = BackstageShutdownWorkState(isRunningReview: true)
+        var cancelCoordinator = BackstageTerminationCoordinator()
+        var forceCoordinator = BackstageTerminationCoordinator()
+
+        #expect(cancelCoordinator.decide(workState: state) { .cancelQuit } == .cancel)
+        #expect(!cancelCoordinator.terminationReplyPending)
+        #expect(forceCoordinator.decide(workState: state) { .forceQuit } == .terminateNow)
+        #expect(!forceCoordinator.terminationReplyPending)
+    }
+
+    @Test("Idle quit still performs the graceful autosave drain without a prompt")
+    func idleQuitSkipsPrompt() {
+        var promptCount = 0
+        var coordinator = BackstageTerminationCoordinator()
+        let disposition = coordinator.decide(workState: BackstageShutdownWorkState()) {
+            promptCount += 1
+            return .cancelQuit
+        }
+
+        #expect(disposition == .terminateLater(detachAIPass: false))
+        #expect(promptCount == 0)
     }
 
     @Test("Last-window termination is enabled")

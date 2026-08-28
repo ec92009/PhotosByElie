@@ -1441,9 +1441,13 @@ final class BackstageViewModel: ObservableObject {
         pendingOwnerDeviceRevocation = nil
     }
 
-    func confirmOwnerDeviceRevocation() async {
+    func confirmOwnerDeviceRevocation() {
         guard let device = pendingOwnerDeviceRevocation else { return }
         pendingOwnerDeviceRevocation = nil
+        Task { await revokeOwnerDevice(device) }
+    }
+
+    private func revokeOwnerDevice(_ device: OwnerDevice) async {
         isRefreshingOwnerDevices = true
         defer { isRefreshingOwnerDevices = false }
         do {

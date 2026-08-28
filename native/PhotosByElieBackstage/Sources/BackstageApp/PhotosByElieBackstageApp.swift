@@ -332,7 +332,7 @@ private struct OverviewView: View {
                         titleVisibility: .visible
                     ) {
                         Button("Revoke Mac", role: .destructive) {
-                            Task { await model.confirmOwnerDeviceRevocation() }
+                            model.confirmOwnerDeviceRevocation()
                         }
                         .backstageHelp("Revoke the selected Mac's Owner credential after this explicit confirmation.")
                         Button("Cancel", role: .cancel) {

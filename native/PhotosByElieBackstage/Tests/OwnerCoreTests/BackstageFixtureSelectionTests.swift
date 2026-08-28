@@ -419,6 +419,49 @@ struct BackstageFixtureSelectionTests {
         #expect(model.activityStatus.contains("Local workflow recovery remains available"))
     }
 
+    @Test("Device revocation captures the selected Mac before confirmation dismissal")
+    @MainActor
+    func deviceRevocationSurvivesConfirmationDismissal() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let transport = DeviceRevocationTransport()
+        let api = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        await api.setAccessToken("device-manager-token")
+        let model = BackstageViewModel(
+            api: api,
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        model.authentication = OwnerAuthenticationSnapshot(
+            phase: .authenticated,
+            deviceId: "owner-device-current",
+            accessExpiresAt: Date().addingTimeInterval(900)
+        )
+
+        await model.refreshOwnerDevices()
+        let historicalDevice = try #require(
+            model.enrolledOwnerDevices.first { $0.id == "owner-device-historical" }
+        )
+        model.requestOwnerDeviceRevocation(historicalDevice)
+        model.confirmOwnerDeviceRevocation()
+        model.cancelOwnerDeviceRevocation()
+        for _ in 0..<100 where !model.ownerDeviceManagementStatus.hasPrefix("Revoked ") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(await transport.revokedDeviceIDs() == ["owner-device-historical"])
+        #expect(model.pendingOwnerDeviceRevocation == nil)
+        #expect(model.enrolledOwnerDevices.map(\.id) == ["owner-device-current"])
+        #expect(model.ownerDeviceManagementStatus == "Revoked Max Backstage. It can no longer renew an Owner session.")
+    }
+
     @Test("One selection persists across launch without changing the current section or workflow history")
     @MainActor
     func authoritativeSelectionPersistsAndKeepsContext() throws {
@@ -2542,6 +2585,64 @@ private actor StalledActivityTransport: OwnerAPITransport {
     }
 
     func activityRequestCount() -> Int { activityRequests }
+}
+
+private actor DeviceRevocationTransport: OwnerAPITransport {
+    private var revokedIDs: [String] = []
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let path = request.url?.path ?? ""
+        let body: String
+        if request.httpMethod == "GET", path == "/api/v1/devices" {
+            body = """
+            {
+              "ok":true,
+              "devices":[
+                {
+                  "id":"owner-device-historical",
+                  "name":"Max Backstage",
+                  "platform":"MacIntel",
+                  "createdAt":"2026-07-25T07:06:25Z",
+                  "lastUsedAt":null,
+                  "revokedAt":null
+                },
+                {
+                  "id":"owner-device-current",
+                  "name":"Max Backstage",
+                  "platform":"MacIntel",
+                  "createdAt":"2026-07-25T08:29:04Z",
+                  "lastUsedAt":null,
+                  "revokedAt":null
+                }
+              ]
+            }
+            """
+        } else if request.httpMethod == "POST",
+                  path == "/api/v1/devices/owner-device-historical/revoke" {
+            revokedIDs.append("owner-device-historical")
+            body = """
+            {
+              "ok":true,
+              "device":{
+                "id":"owner-device-historical",
+                "name":"Max Backstage",
+                "platform":"MacIntel",
+                "createdAt":"2026-07-25T07:06:25Z",
+                "lastUsedAt":null,
+                "revokedAt":"2026-08-28T12:08:00Z"
+              }
+            }
+            """
+        } else {
+            throw URLError(.resourceUnavailable)
+        }
+        return (
+            Data(body.utf8),
+            HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        )
+    }
+
+    func revokedDeviceIDs() -> [String] { revokedIDs }
 }
 
 private struct RejectingFixtureSelectionWaker: OwnerActionWaking {

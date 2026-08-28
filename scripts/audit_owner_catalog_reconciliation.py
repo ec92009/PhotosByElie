@@ -91,7 +91,14 @@ def _catalog_snapshot(path: Path, *, label: str) -> tuple[dict[str, Any], set[st
 
 def _owner_publication_snapshot(
     path: Path,
-) -> tuple[dict[str, Any], dict[str, dict[str, str]], dict[str, str], set[str], set[str]]:
+) -> tuple[
+    dict[str, Any],
+    dict[str, dict[str, str]],
+    dict[str, str],
+    set[str],
+    set[str],
+    set[str],
+]:
     conn = _connect_read_only(path)
     try:
         _require_table(conn, "public_catalog_publications", label="Owner authority")
@@ -137,6 +144,36 @@ def _owner_publication_snapshot(
         alias_rows = conn.execute(
             "SELECT legacy_asset_id, canonical_asset_id FROM owner_asset_identity_aliases"
         ).fetchall()
+        reconciliation_run = None
+        approved_unresolved_ids: set[str] = set()
+        if conn.execute(
+            """
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table' AND name = 'owner_catalog_reconciliation_migrations'
+            """
+        ).fetchone():
+            reconciliation_run = conn.execute(
+                """
+                SELECT migration_id, plan_hash, approved_policy, production_count,
+                       authoritative_count, backfilled_count, unresolved_count,
+                       disagreement_count, applied_at
+                FROM owner_catalog_reconciliation_migrations
+                ORDER BY applied_at DESC, plan_hash DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if reconciliation_run is not None:
+                approved_unresolved_ids = {
+                    str(row[0]).strip()
+                    for row in conn.execute(
+                        """
+                        SELECT media_id FROM owner_catalog_reconciliation_rows
+                        WHERE migration_id = ? AND migration_state = 'unresolved'
+                        """,
+                        (reconciliation_run["migration_id"],),
+                    )
+                    if str(row[0] or "").strip()
+                }
     finally:
         conn.close()
     latest = {
@@ -183,6 +220,16 @@ def _owner_publication_snapshot(
         for media_id, asset_ids in secondary_candidates.items()
         if media_id not in latest and len(asset_ids) > 1
     }
+    receipt_summary = {
+        "present": reconciliation_run is not None,
+        "approvedPolicy": str(reconciliation_run["approved_policy"]),
+        "productionCount": int(reconciliation_run["production_count"]),
+        "authoritativeCount": int(reconciliation_run["authoritative_count"]),
+        "backfilledCount": int(reconciliation_run["backfilled_count"]),
+        "unresolvedCount": int(reconciliation_run["unresolved_count"]),
+        "disagreementCount": int(reconciliation_run["disagreement_count"]),
+        "appliedAt": str(reconciliation_run["applied_at"]),
+    } if reconciliation_run is not None else {"present": False}
     return {
         "publicationRows": total_rows,
         "distinctMediaIds": len(latest),
@@ -193,11 +240,12 @@ def _owner_publication_snapshot(
         "exactDurableAssetMappings": len(exact_assets),
         "conflictingDurableAssetMappings": len(conflicting_ids),
         "historicalReceiptDisagreements": len(receipt_disagreements),
+        "catalogReconciliationReceipt": receipt_summary,
         "bytes": path.stat().st_size,
         "sha256": _sha256(path),
         "integrity": integrity,
         "mode": "read-only-checkpointed-snapshot",
-    }, latest, exact_assets, conflicting_ids, receipt_disagreements
+    }, latest, exact_assets, conflicting_ids, receipt_disagreements, approved_unresolved_ids
 
 
 def _state_counts(media_ids: set[str], latest: dict[str, dict[str, str]]) -> dict[str, int]:
@@ -216,7 +264,14 @@ def reconcile_catalogs(
 
     production, production_ids = _catalog_snapshot(production_path, label="Production catalog")
     candidate, candidate_ids = _catalog_snapshot(candidate_path, label="Candidate catalog")
-    owner, latest_publications, exact_assets, conflicting_asset_ids, receipt_disagreement_ids = _owner_publication_snapshot(owner_path)
+    (
+        owner,
+        latest_publications,
+        exact_assets,
+        conflicting_asset_ids,
+        receipt_disagreement_ids,
+        approved_unresolved_ids,
+    ) = _owner_publication_snapshot(owner_path)
     owner_ids = set(latest_publications)
     exact_asset_ids = set(exact_assets)
 
@@ -225,6 +280,8 @@ def reconcile_catalogs(
     candidate_only = candidate_ids - production_ids
     production_mapped = production_ids & owner_ids
     production_unmapped = production_ids - owner_ids
+    production_approved_unresolved = production_unmapped & approved_unresolved_ids
+    production_unapproved_unresolved = production_unmapped - approved_unresolved_ids
     candidate_only_mapped = candidate_only & owner_ids
     candidate_only_unmapped = candidate_only - owner_ids
     ledger_absent_both = owner_ids - (production_ids | candidate_ids)
@@ -240,7 +297,13 @@ def reconcile_catalogs(
     candidate_asset_unresolved = candidate_ids - exact_asset_ids - conflicting_asset_ids
     candidate_receipt_disagreements = candidate_ids & receipt_disagreement_ids
 
-    verdict = "review-required" if production_unmapped or production_only or candidate_only_unmapped else "ready"
+    verdict = (
+        "review-required"
+        if production_unapproved_unresolved or production_only or candidate_only_unmapped
+        else "ready-with-approved-exceptions"
+        if production_approved_unresolved
+        else "ready"
+    )
     return {
         "schema": SCHEMA,
         "readOnly": True,
@@ -255,6 +318,8 @@ def reconcile_catalogs(
             "candidateOnlyRows": len(candidate_only),
             "productionMappedInOwnerLedger": len(production_mapped),
             "productionUnmappedLegacyRows": len(production_unmapped),
+            "productionApprovedUnresolvedRows": len(production_approved_unresolved),
+            "productionUnapprovedUnresolvedRows": len(production_unapproved_unresolved),
             "productionMappedByLatestState": _state_counts(production_mapped, latest_publications),
             "productionWithExactDurableOwnerAsset": len(production_exact_assets),
             "productionWithConflictingDurableOwnerAssets": len(production_asset_conflicts),
@@ -276,8 +341,12 @@ def reconcile_catalogs(
         "nextGate": (
             "Review and approve the one-time Owner import policy for legacy production rows; "
             "do not mutate Owner or production until that policy is accepted."
-            if production_unmapped
-            else "No legacy import policy gate remains."
+            if production_unapproved_unresolved
+            else (
+                "No legacy import policy gate remains; approved unresolved rows stay public and non-editable."
+                if production_approved_unresolved
+                else "No legacy import policy gate remains."
+            )
         ),
     }
 

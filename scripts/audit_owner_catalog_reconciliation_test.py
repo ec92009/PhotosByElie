@@ -104,6 +104,8 @@ class OwnerCatalogReconciliationTest(unittest.TestCase):
                 "candidateOnlyRows": 1,
                 "productionMappedInOwnerLedger": 1,
                 "productionUnmappedLegacyRows": 2,
+                "productionApprovedUnresolvedRows": 0,
+                "productionUnapprovedUnresolvedRows": 2,
                 "productionMappedByLatestState": {"local": 1},
                 "productionWithExactDurableOwnerAsset": 2,
                 "productionWithConflictingDurableOwnerAssets": 0,
@@ -126,6 +128,54 @@ class OwnerCatalogReconciliationTest(unittest.TestCase):
         self.assertNotIn("legacy-mapped", str(report))
         self.assertNotIn("candidate-new", str(report))
         self.assertEqual(before, {path: digest(path) for path in before})
+
+    def test_approved_unresolved_receipts_clear_the_policy_gate(self) -> None:
+        with closing(sqlite3.connect(self.owner)) as conn:
+            conn.executescript(
+                """
+                CREATE TABLE owner_catalog_reconciliation_migrations (
+                  migration_id TEXT PRIMARY KEY,
+                  plan_hash TEXT,
+                  approved_policy TEXT,
+                  production_count INTEGER,
+                  authoritative_count INTEGER,
+                  backfilled_count INTEGER,
+                  unresolved_count INTEGER,
+                  disagreement_count INTEGER,
+                  applied_at TEXT
+                );
+                CREATE TABLE owner_catalog_reconciliation_rows (
+                  migration_id TEXT,
+                  media_id TEXT,
+                  migration_state TEXT
+                );
+                INSERT INTO owner_catalog_reconciliation_migrations VALUES (
+                  'migration-1', 'plan-1', 'PBE-173', 3, 1, 1, 1, 1,
+                  '2026-08-28T10:00:00Z'
+                );
+                INSERT INTO owner_catalog_reconciliation_rows VALUES (
+                  'migration-1', 'legacy-unresolved', 'unresolved'
+                );
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO public_catalog_publications VALUES (
+                  'asset-b', 'v1', 'legacy-bridge', 'live', '2026-01-05'
+                )
+                """
+            )
+            conn.commit()
+
+        report = reconcile_catalogs(
+            owner_db=self.owner.resolve(),
+            production_catalog=self.production.resolve(),
+            candidate_catalog=self.candidate.resolve(),
+        )
+        self.assertEqual(report["verdict"], "ready-with-approved-exceptions")
+        self.assertEqual(report["reconciliation"]["productionApprovedUnresolvedRows"], 1)
+        self.assertEqual(report["reconciliation"]["productionUnapprovedUnresolvedRows"], 0)
+        self.assertIn("approved unresolved", report["nextGate"])
 
     def test_rejects_relative_owner_path(self) -> None:
         with self.assertRaisesRegex(ValueError, "Owner authority path must be absolute"):

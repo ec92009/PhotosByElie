@@ -4,7 +4,7 @@
   "capturedAt": "2026-08-28T11:47:00+02:00",
   "readOnly": true,
   "privacy": "aggregate-only; no media identifiers emitted",
-  "verdict": "review-required",
+  "verdict": "local-owner-migrated-production-unchanged",
   "sources": {
     "productionCatalog": "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite",
     "candidateCatalog": "Max current local catalog",
@@ -69,5 +69,40 @@
       "local": 1
     }
   },
-  "nextGate": "Review and approve the one-time Owner import policy for the 2,417 legacy production rows; do not mutate Owner or production until that policy is accepted."
+  "approvedPolicy": {
+    "ticket": "PBE-173",
+    "backfillExactMappings": 912,
+    "keepUnresolvedPublic": 1505,
+    "preserveAuthoritativePublications": 233,
+    "retainHistoricalReceiptDisagreements": 102
+  },
+  "migration": {
+    "migrationId": "owner-catalog-805268d70781dc9011fc0970",
+    "planHash": "805268d70781dc9011fc09703b3c45555ebd6c9115c04cff7134c1d7dde3ed6f",
+    "appliedAt": "2026-08-28T10:29:43.161363Z",
+    "ownerScope": "Max local Owner.sqlite only",
+    "productionMutation": false,
+    "publicationRowsBefore": 842,
+    "publicationRowsAfter": 1754,
+    "originalPublicationRowsChangedOrMissing": 0,
+    "migrationRows": 2650,
+    "authoritativeReceipts": 233,
+    "backfillReceipts": 912,
+    "unresolvedReceipts": 1505,
+    "disagreementReceipts": 102,
+    "productionRowsWithoutPublication": 1505,
+    "ownerIntegrity": "ok",
+    "backupIntegrity": "ok",
+    "secondRunNoOp": true,
+    "backup": "assets/owner-actions/Owner.sqlite-backup-20260828T1031Z-pbe-173"
+  },
+  "postMigrationAudit": {
+    "verdict": "ready-with-approved-exceptions",
+    "publicationRows": 1754,
+    "productionMappedInOwnerLedger": 1145,
+    "productionApprovedUnresolvedRows": 1505,
+    "productionUnapprovedUnresolvedRows": 0,
+    "nextGate": "No legacy import policy gate remains; approved unresolved rows stay public and non-editable."
+  },
+  "nextGate": "Merge the reviewed PBE-173 branch into the canonical release train; production catalog and deployment remain unchanged."
 }

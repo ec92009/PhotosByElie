@@ -1,0 +1,105 @@
+{
+  "schema": "photosbyelie.public-host-benchmark.v1",
+  "ticket": "PBE-174",
+  "capturedAt": "2026-08-28T12:07:00+02:00",
+  "scope": "host transport only; excludes SQLite parse, query, image fetch, and render time",
+  "privacy": "aggregate response timings and public cache headers only",
+  "coldDefinition": "unique query URL per measured request",
+  "warmDefinition": "one unmeasured prime followed by repeated requests to the exact same URL",
+  "targets": [
+    {
+      "url": "https://photos-by-elie.com/gallery.html",
+      "cold": {
+        "requests": 5,
+        "statuses": {"200": 5},
+        "httpVersions": ["2"],
+        "bytes": [6313],
+        "responseHeaders": {
+          "age": "0",
+          "cache-control": "max-age=600",
+          "etag": "\"6a9038a7-18a9\"",
+          "last-modified": "Thu, 27 Aug 2026 13:16:23 GMT",
+          "server": "GitHub.com",
+          "via": "1.1 varnish"
+        },
+        "timingMs": {
+          "dnsMs": {"min": 2.546, "median": 3.273, "p95": 37.787, "max": 37.787},
+          "connectMs": {"min": 14.89, "median": 16.818, "p95": 19.121, "max": 19.121},
+          "tlsMs": {"min": 18.745, "median": 21.202, "p95": 24.403, "max": 24.403},
+          "ttfbMs": {"min": 58.801, "median": 60.22, "p95": 233.35, "max": 233.35},
+          "downloadMs": {"min": 0.28, "median": 1.133, "p95": 1.243, "max": 1.243},
+          "totalMs": {"min": 59.994, "median": 60.524, "p95": 234.593, "max": 234.593}
+        }
+      },
+      "warm": {
+        "requests": 5,
+        "statuses": {"200": 5},
+        "httpVersions": ["2"],
+        "bytes": [6313],
+        "responseHeaders": {
+          "age": "0",
+          "cache-control": "max-age=600",
+          "etag": "\"6a9038a7-18a9\"",
+          "last-modified": "Thu, 27 Aug 2026 13:16:23 GMT",
+          "server": "GitHub.com",
+          "via": "1.1 varnish"
+        },
+        "timingMs": {
+          "dnsMs": {"min": 2.658, "median": 2.938, "p95": 3.879, "max": 3.879},
+          "connectMs": {"min": 15.37, "median": 15.703, "p95": 16.85, "max": 16.85},
+          "tlsMs": {"min": 17.992, "median": 21.139, "p95": 21.828, "max": 21.828},
+          "ttfbMs": {"min": 55.196, "median": 57.692, "p95": 63.635, "max": 63.635},
+          "downloadMs": {"min": 0.243, "median": 0.285, "p95": 1.648, "max": 1.648},
+          "totalMs": {"min": 56.844, "median": 58.909, "p95": 63.919, "max": 63.919}
+        }
+      }
+    },
+    {
+      "url": "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite",
+      "cold": {
+        "requests": 5,
+        "statuses": {"200": 5},
+        "httpVersions": ["2"],
+        "bytes": [1445888],
+        "responseHeaders": {
+          "age": "1",
+          "cache-control": "max-age=600",
+          "etag": "\"6a9038a8-161000\"",
+          "last-modified": "Thu, 27 Aug 2026 13:16:24 GMT",
+          "server": "GitHub.com",
+          "via": "1.1 varnish"
+        },
+        "timingMs": {
+          "dnsMs": {"min": 2.66, "median": 2.715, "p95": 6.529, "max": 6.529},
+          "connectMs": {"min": 14.615, "median": 15.908, "p95": 18.444, "max": 18.444},
+          "tlsMs": {"min": 18.511, "median": 18.792, "p95": 20.73, "max": 20.73},
+          "ttfbMs": {"min": 56.213, "median": 60.787, "p95": 262.039, "max": 262.039},
+          "downloadMs": {"min": 105.938, "median": 120.245, "p95": 125.96, "max": 125.96},
+          "totalMs": {"min": 162.151, "median": 181.032, "p95": 387.778, "max": 387.778}
+        }
+      },
+      "warm": {
+        "requests": 5,
+        "statuses": {"200": 5},
+        "httpVersions": ["2"],
+        "bytes": [1445888],
+        "responseHeaders": {
+          "age": "2",
+          "cache-control": "max-age=600",
+          "etag": "\"6a9038a8-161000\"",
+          "last-modified": "Thu, 27 Aug 2026 13:16:24 GMT",
+          "server": "GitHub.com",
+          "via": "1.1 varnish"
+        },
+        "timingMs": {
+          "dnsMs": {"min": 2.953, "median": 3.357, "p95": 6.442, "max": 6.442},
+          "connectMs": {"min": 15.558, "median": 16.494, "p95": 17.078, "max": 17.078},
+          "tlsMs": {"min": 18.365, "median": 20.255, "p95": 21.595, "max": 21.595},
+          "ttfbMs": {"min": 55.298, "median": 60.083, "p95": 60.868, "max": 60.868},
+          "downloadMs": {"min": 104.34, "median": 109.334, "p95": 111.534, "max": 111.534},
+          "totalMs": {"min": 163.561, "median": 166.087, "p95": 171.617, "max": 171.617}
+        }
+      }
+    }
+  ]
+}

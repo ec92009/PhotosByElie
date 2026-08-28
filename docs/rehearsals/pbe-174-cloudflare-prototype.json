@@ -1,0 +1,37 @@
+{
+  "schema": "photosbyelie.cloudflare-static-prototype.v1",
+  "ticket": "PBE-174",
+  "capturedAt": "2026-08-28T12:17:00+02:00",
+  "state": "active-research",
+  "productionMutation": false,
+  "productionRoutes": [],
+  "customDomains": [],
+  "prototype": {
+    "url": "https://pbe-174-static-assets-prototype.ec92009.workers.dev",
+    "worker": "pbe-174-static-assets-prototype",
+    "versionId": "8ea0c1e7-942f-4c4a-aaa8-1cf53c7713f7",
+    "robots": "noindex",
+    "stagedFiles": 67,
+    "stagedBytes": 17278863,
+    "forbiddenPathCount": 0,
+    "catalogBytes": 1445888,
+    "catalogSha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579",
+    "remoteCatalogSha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579"
+  },
+  "transportMedianMs": {
+    "githubPages": {
+      "galleryCold": 60.524,
+      "galleryWarm": 58.909,
+      "catalogCold": 181.032,
+      "catalogWarm": 166.087
+    },
+    "cloudflareWorkersStaticAssets": {
+      "galleryCold": 143.322,
+      "galleryWarm": 119.832,
+      "catalogCold": 236.112,
+      "catalogWarm": 243.471
+    }
+  },
+  "preliminaryRecommendation": "Retain GitHub Pages. This Madrid sample shows no host-level gain from the equivalent Workers Static Assets prototype; the fixed catalog payload and client-side processing remain higher-value targets.",
+  "remainingEvidence": "Browser-visible Gallery startup comparison and repeat sampling before closing the research ticket."
+}

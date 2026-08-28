@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Produce an aggregate-only Owner/public-catalog reconciliation report.
+
+The audit is deliberately read-only. It compares a deployed production catalog,
+a candidate/local catalog, and the Owner publication ledger without emitting any
+media identifiers or modifying any of the three databases.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sqlite3
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+
+SCHEMA = "photosbyelie.owner-catalog-reconciliation.v1"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _resolve_database(path: Path, *, label: str, reject_wal: bool = False) -> Path:
+    if not path.is_absolute():
+        raise ValueError(f"{label} path must be absolute")
+    try:
+        resolved = path.resolve(strict=True)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(f"{label} does not exist: {path}") from error
+    if not resolved.is_file():
+        raise ValueError(f"{label} is not a file: {resolved}")
+    if reject_wal:
+        wal_path = Path(f"{resolved}-wal")
+        if wal_path.exists() and wal_path.stat().st_size:
+            raise ValueError(
+                f"{label} has an uncheckpointed WAL; provide a checkpointed reviewed snapshot"
+            )
+    return resolved
+
+
+def _connect_read_only(path: Path) -> sqlite3.Connection:
+    conn = sqlite3.connect(f"{path.as_uri()}?mode=ro&immutable=1", uri=True)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA query_only = ON")
+    return conn
+
+
+def _require_table(conn: sqlite3.Connection, table: str, *, label: str) -> None:
+    found = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table,),
+    ).fetchone()
+    if not found:
+        raise ValueError(f"{label} is missing required table {table}")
+
+
+def _integrity(conn: sqlite3.Connection, *, label: str) -> str:
+    value = str(conn.execute("PRAGMA integrity_check").fetchone()[0])
+    if value != "ok":
+        raise ValueError(f"{label} failed integrity_check: {value}")
+    return value
+
+
+def _catalog_snapshot(path: Path, *, label: str) -> tuple[dict[str, Any], set[str]]:
+    conn = _connect_read_only(path)
+    try:
+        _require_table(conn, "media_items", label=label)
+        integrity = _integrity(conn, label=label)
+        media_ids = {
+            str(row[0]).strip()
+            for row in conn.execute("SELECT media_id FROM media_items")
+            if str(row[0] or "").strip()
+        }
+    finally:
+        conn.close()
+    return {
+        "rows": len(media_ids),
+        "bytes": path.stat().st_size,
+        "sha256": _sha256(path),
+        "integrity": integrity,
+    }, media_ids
+
+
+def _owner_publication_snapshot(
+    path: Path,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    conn = _connect_read_only(path)
+    try:
+        _require_table(conn, "public_catalog_publications", label="Owner authority")
+        integrity = _integrity(conn, label="Owner authority")
+        rows = conn.execute(
+            """
+            SELECT media_id, state
+            FROM (
+              SELECT media_id, state,
+                     row_number() OVER (
+                       PARTITION BY media_id
+                       ORDER BY updated_at DESC, source_version_hash DESC
+                     ) AS rank
+              FROM public_catalog_publications
+              WHERE trim(media_id) <> ''
+            )
+            WHERE rank = 1
+            """
+        ).fetchall()
+        total_rows = int(
+            conn.execute("SELECT count(*) FROM public_catalog_publications").fetchone()[0]
+        )
+    finally:
+        conn.close()
+    latest = {str(row["media_id"]).strip(): str(row["state"]).strip() for row in rows}
+    return {
+        "publicationRows": total_rows,
+        "distinctMediaIds": len(latest),
+        "latestStateCounts": dict(sorted(Counter(latest.values()).items())),
+        "bytes": path.stat().st_size,
+        "sha256": _sha256(path),
+        "integrity": integrity,
+        "mode": "read-only-checkpointed-snapshot",
+    }, latest
+
+
+def _state_counts(media_ids: set[str], latest_states: dict[str, str]) -> dict[str, int]:
+    return dict(sorted(Counter(latest_states[value] for value in media_ids if value in latest_states).items()))
+
+
+def reconcile_catalogs(
+    *,
+    owner_db: Path,
+    production_catalog: Path,
+    candidate_catalog: Path,
+) -> dict[str, Any]:
+    owner_path = _resolve_database(owner_db, label="Owner authority", reject_wal=True)
+    production_path = _resolve_database(production_catalog, label="Production catalog")
+    candidate_path = _resolve_database(candidate_catalog, label="Candidate catalog")
+
+    production, production_ids = _catalog_snapshot(production_path, label="Production catalog")
+    candidate, candidate_ids = _catalog_snapshot(candidate_path, label="Candidate catalog")
+    owner, latest_states = _owner_publication_snapshot(owner_path)
+    owner_ids = set(latest_states)
+
+    common = production_ids & candidate_ids
+    production_only = production_ids - candidate_ids
+    candidate_only = candidate_ids - production_ids
+    production_mapped = production_ids & owner_ids
+    production_unmapped = production_ids - owner_ids
+    candidate_only_mapped = candidate_only & owner_ids
+    candidate_only_unmapped = candidate_only - owner_ids
+    ledger_absent_both = owner_ids - (production_ids | candidate_ids)
+
+    verdict = "review-required" if production_unmapped or production_only or candidate_only_unmapped else "ready"
+    return {
+        "schema": SCHEMA,
+        "readOnly": True,
+        "privacy": "aggregate-only; no media identifiers emitted",
+        "verdict": verdict,
+        "production": production,
+        "candidate": candidate,
+        "ownerAuthority": owner,
+        "reconciliation": {
+            "commonRows": len(common),
+            "productionOnlyRows": len(production_only),
+            "candidateOnlyRows": len(candidate_only),
+            "productionMappedInOwnerLedger": len(production_mapped),
+            "productionUnmappedLegacyRows": len(production_unmapped),
+            "productionMappedByLatestState": _state_counts(production_mapped, latest_states),
+            "candidateOnlyMappedInOwnerLedger": len(candidate_only_mapped),
+            "candidateOnlyUnmappedRows": len(candidate_only_unmapped),
+            "candidateOnlyMappedByLatestState": _state_counts(candidate_only_mapped, latest_states),
+            "ownerLedgerMediaAbsentFromBothCatalogs": len(ledger_absent_both),
+            "ownerLedgerAbsentByLatestState": _state_counts(ledger_absent_both, latest_states),
+        },
+        "nextGate": (
+            "Review and approve the one-time Owner import policy for legacy production rows; "
+            "do not mutate Owner or production until that policy is accepted."
+            if production_unmapped
+            else "No legacy import policy gate remains."
+        ),
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--owner-db", type=Path, required=True)
+    parser.add_argument("--production-catalog", type=Path, required=True)
+    parser.add_argument("--candidate-catalog", type=Path, required=True)
+    parser.add_argument("--pretty", action="store_true")
+    args = parser.parse_args()
+    report = reconcile_catalogs(
+        owner_db=args.owner_db,
+        production_catalog=args.production_catalog,
+        candidate_catalog=args.candidate_catalog,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2 if args.pretty else None, sort_keys=args.pretty))
+
+
+if __name__ == "__main__":
+    main()

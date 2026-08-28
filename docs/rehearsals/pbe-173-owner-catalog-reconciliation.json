@@ -1,0 +1,56 @@
+{
+  "schema": "photosbyelie.owner-catalog-reconciliation.v1",
+  "ticket": "PBE-173",
+  "capturedAt": "2026-08-28T11:47:00+02:00",
+  "readOnly": true,
+  "privacy": "aggregate-only; no media identifiers emitted",
+  "verdict": "review-required",
+  "sources": {
+    "productionCatalog": "https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite",
+    "candidateCatalog": "Max current local catalog",
+    "ownerAuthority": "checkpointed Max Owner.sqlite snapshot"
+  },
+  "production": {
+    "rows": 2650,
+    "bytes": 1445888,
+    "sha256": "efecb290b7b5990ca8791fd81fafcaf549625aa924686775c66b922b6f612579",
+    "integrity": "ok"
+  },
+  "candidate": {
+    "rows": 3217,
+    "bytes": 2043904,
+    "sha256": "03ebba78988d12b5e28ea6b2cfdbfd0016f2754ba8c37e32dff0a40e552babd6",
+    "integrity": "ok"
+  },
+  "ownerAuthority": {
+    "publicationRows": 842,
+    "distinctMediaIds": 842,
+    "latestStateCounts": {
+      "failed": 41,
+      "local": 801
+    },
+    "integrity": "ok",
+    "mode": "read-only-checkpointed-snapshot"
+  },
+  "reconciliation": {
+    "commonRows": 2650,
+    "productionOnlyRows": 0,
+    "candidateOnlyRows": 567,
+    "productionMappedInOwnerLedger": 233,
+    "productionUnmappedLegacyRows": 2417,
+    "productionMappedByLatestState": {
+      "local": 233
+    },
+    "candidateOnlyMappedInOwnerLedger": 567,
+    "candidateOnlyUnmappedRows": 0,
+    "candidateOnlyMappedByLatestState": {
+      "local": 567
+    },
+    "ownerLedgerMediaAbsentFromBothCatalogs": 42,
+    "ownerLedgerAbsentByLatestState": {
+      "failed": 41,
+      "local": 1
+    }
+  },
+  "nextGate": "Review and approve the one-time Owner import policy for the 2,417 legacy production rows; do not mutate Owner or production until that policy is accepted."
+}

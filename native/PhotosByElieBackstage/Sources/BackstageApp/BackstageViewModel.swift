@@ -209,6 +209,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var enrollmentCode = ""
     @Published var authenticationStatus = "Checking this Mac's Keychain session…"
     @Published var isAuthenticating = false
+    @Published private(set) var isSettingUpThisMac = false
+    @Published private(set) var enrolledOwnerDevices: [OwnerDevice] = []
+    @Published private(set) var ownerDeviceManagementStatus = "Enrolled Macs have not been refreshed."
+    @Published private(set) var isRefreshingOwnerDevices = false
+    @Published private(set) var pendingOwnerDeviceRevocation: OwnerDevice?
     @Published var photoAccess: PhotoLibraryAccess
     @Published var libraryItems: [PhotoLibraryItem] = []
     @Published var selectedPhotoIDs: Set<String> = []
@@ -443,6 +448,8 @@ final class BackstageViewModel: ObservableObject {
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
+    private var nativeEnrollmentTask: Task<Void, Never>?
+    private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var reviewAIStatusRefreshTask: Task<Void, Never>?
     private var cullingFilterTask: Task<Void, Never>?
@@ -1344,7 +1351,121 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func setUpThisMac() {
+        guard nativeEnrollmentTask == nil else { return }
+        nativeEnrollmentTask = Task { [weak self] in
+            await self?.runNativeEnrollment()
+        }
+    }
+
+    private func runNativeEnrollment() async {
+        isSettingUpThisMac = true
+        isAuthenticating = true
+        authenticationStatus = "Preparing a private, five-minute enrollment handoff…"
+        defer {
+            isSettingUpThisMac = false
+            isAuthenticating = false
+            nativeEnrollmentTask = nil
+            nativeEnrollmentHandoff = nil
+        }
+        do {
+            let handoff = try await authenticationService.beginNativeEnrollment(
+                name: Host.current().localizedName ?? "This Mac"
+            )
+            nativeEnrollmentHandoff = handoff
+            guard openExternalURL(handoff.authorizationURL) else {
+                await authenticationService.cancelNativeEnrollment(handoff)
+                authenticationStatus = "The Owner sign-in page could not be opened. No enrollment was created."
+                return
+            }
+            authenticationStatus = "Finish the Owner identity check in your browser. Backstage will receive the credential directly."
+            while !Task.isCancelled, Date() < handoff.expiresAt {
+                if let snapshot = try await authenticationService.claimNativeEnrollment(handoff) {
+                    authentication = snapshot
+                    authenticationStatus = "This Mac is enrolled. Its revocable credential is stored in Keychain."
+                    await refreshActions()
+                    await loadFixtures()
+                    return
+                }
+                try await Task.sleep(for: .seconds(1))
+            }
+            await authenticationService.cancelNativeEnrollment(handoff)
+            authenticationStatus = Task.isCancelled
+                ? "Mac setup was cancelled. No credential was stored."
+                : "Mac setup expired. Choose Set up this Mac to try again."
+        } catch is CancellationError {
+            if let nativeEnrollmentHandoff {
+                await authenticationService.cancelNativeEnrollment(nativeEnrollmentHandoff)
+            }
+            authenticationStatus = "Mac setup was cancelled. No credential was stored."
+        } catch {
+            authenticationStatus = "Mac setup failed: \(userFacingMessage(for: error))"
+            status = "Enrollment failed"
+        }
+    }
+
+    func cancelMacSetup() {
+        nativeEnrollmentTask?.cancel()
+        if let nativeEnrollmentHandoff {
+            Task { [authenticationService] in
+                await authenticationService.cancelNativeEnrollment(nativeEnrollmentHandoff)
+            }
+        }
+    }
+
+    func refreshOwnerDevices() async {
+        guard authentication.phase == .authenticated else {
+            enrolledOwnerDevices = []
+            ownerDeviceManagementStatus = "Enroll this Mac before managing device credentials."
+            return
+        }
+        isRefreshingOwnerDevices = true
+        defer { isRefreshingOwnerDevices = false }
+        do {
+            enrolledOwnerDevices = try await api.listOwnerDevices()
+                .sorted { $0.createdAt > $1.createdAt }
+            ownerDeviceManagementStatus = enrolledOwnerDevices.isEmpty
+                ? "No enrolled Macs were returned."
+                : "\(enrolledOwnerDevices.count) enrolled Mac\(enrolledOwnerDevices.count == 1 ? "" : "s")."
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            ownerDeviceManagementStatus = "Enrolled Macs unavailable: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func requestOwnerDeviceRevocation(_ device: OwnerDevice) {
+        pendingOwnerDeviceRevocation = device
+    }
+
+    func cancelOwnerDeviceRevocation() {
+        pendingOwnerDeviceRevocation = nil
+    }
+
+    func confirmOwnerDeviceRevocation() async {
+        guard let device = pendingOwnerDeviceRevocation else { return }
+        pendingOwnerDeviceRevocation = nil
+        isRefreshingOwnerDevices = true
+        defer { isRefreshingOwnerDevices = false }
+        do {
+            _ = try await api.revokeOwnerDevice(id: device.id)
+            if authentication.deviceId == device.id {
+                authentication = try await authenticationService.signOut()
+                enrolledOwnerDevices = []
+                ownerDeviceManagementStatus = "This Mac was revoked and its local Keychain credential was removed."
+                authenticationStatus = "This Mac was revoked. Choose Set up this Mac to enroll it again."
+                status = "Enrollment required"
+            } else {
+                enrolledOwnerDevices.removeAll { $0.id == device.id }
+                ownerDeviceManagementStatus = "Revoked \(device.name). It can no longer renew an Owner session."
+            }
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            ownerDeviceManagementStatus = "Revocation failed: \(userFacingMessage(for: error))"
+        }
+    }
+
     func signOut() async {
+        cancelMacSetup()
         if pbeOwnerFixtureSession != nil {
             await endPBEOwnerSession(reason: "PBE Owner closed before sign-out.")
         }
@@ -1354,6 +1475,7 @@ final class BackstageViewModel: ObservableObject {
             authentication = try await authenticationService.signOut()
             actions = []
             fixtures = []
+            enrolledOwnerDevices = []
             markFixtureSelectionUnavailable(
                 "Fixtures are unavailable while Backstage is signed out. Fixture-scoped actions are disabled."
             )

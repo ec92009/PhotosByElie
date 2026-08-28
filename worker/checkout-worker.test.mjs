@@ -22,6 +22,10 @@ import {
   createMemoryOwnerDeviceAuthStore,
 } from "./owner-device-auth-store.mjs";
 import {
+  createD1OwnerEnrollmentHandoffStore,
+  createMemoryOwnerEnrollmentHandoffStore,
+} from "./owner-enrollment-handoff-store.mjs";
+import {
   REAL_ESTATE_PASSWORD_ITERATIONS,
   createRealEstateAuth,
   realEstatePasswordHash,
@@ -1126,6 +1130,165 @@ test("Owner API v1 re-authenticates Keychain device credentials and independentl
   assert.equal(revokedDeviceTokens.status, 401);
 });
 
+test("native Mac enrollment handoff is short-lived, browser-authorized, bound and single-use", async () => {
+  let currentNow = new Date("2026-08-28T08:00:00.000Z");
+  const now = () => currentNow;
+  const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
+  const ownerEnrollmentHandoffStore = createMemoryOwnerEnrollmentHandoffStore({ now });
+  const ownerIdentity = {
+    email: "ec92009@gmail.com",
+    provider: "google-oauth",
+    purpose: "browser",
+    expiresAt: "2026-08-28T09:00:00.000Z",
+    sessionSeconds: 3600,
+  };
+  let activeIdentity = ownerIdentity;
+  const googleOAuthAuth = {
+    optionalSession: async () => activeIdentity,
+    requireSession: async () => activeIdentity,
+    loginUrlFor: async (_request, { returnTo }) => `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`,
+    issueSessionToken: async (identity) => `access-${identity.deviceId}`,
+  };
+  const worker = createPhotosByElieWorker({
+    catalog: loadCatalog(),
+    googleOAuthAuth,
+    accessUserRegistry: createMemoryAccessUserRegistry([
+      { email: "ec92009@gmail.com", tier: "owner" },
+      { email: "another-owner@example.test", tier: "owner" },
+    ]),
+    accessAdminEmail: "ec92009@gmail.com",
+    ownerDeviceAuthStore,
+    ownerEnrollmentHandoffStore,
+    randomUUID: deterministicIds(),
+    now,
+  });
+
+  const startResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Max Backstage",
+    platform: "macOS",
+    binding: "native-binding-one",
+  }));
+  assert.equal(startResponse.status, 201);
+  const started = await startResponse.json();
+  assert.equal(started.handoff.state, "pending");
+  assert.equal(started.handoff.binding, "native-binding-one");
+  assert.equal(new URL(started.handoff.authorizationURL).search, "");
+  assert.equal(started.handoff.authorizationURL.includes(started.handoff.claimSecret), false);
+
+  const wrongClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: "native-binding-one", claimSecret: "wrong-secret" }
+  ));
+  assert.equal(wrongClaim.status, 401);
+
+  const pendingClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(pendingClaim.status, 202);
+  assert.deepEqual(await pendingClaim.json(), { ok: true, state: "pending" });
+
+  const confirmation = await worker.fetch(new Request(started.handoff.authorizationURL));
+  assert.equal(confirmation.status, 200);
+  const confirmationHTML = await confirmation.text();
+  assert.match(confirmationHTML, /Set up this Mac/);
+  assert.equal(confirmationHTML.includes(started.handoff.claimSecret), false);
+
+  const authorize = await worker.fetch(new Request(started.handoff.authorizationURL, {
+    method: "POST",
+    headers: { origin: "https://worker.test" },
+  }));
+  assert.equal(authorize.status, 200);
+  assert.match(await authorize.text(), /This Mac is approved/);
+
+  const claimResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(claimResponse.status, 201);
+  const claimed = await claimResponse.json();
+  assert.equal(claimed.state, "completed");
+  assert.match(claimed.device.id, /^owner-device-/);
+  assert.match(claimed.deviceCredential, /^[A-Za-z0-9_-]{40,}$/);
+
+  const replay = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${started.handoff.id}/claim`,
+    { binding: started.handoff.binding, claimSecret: started.handoff.claimSecret }
+  ));
+  assert.equal(replay.status, 409);
+
+  const cancellable = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Cancelled Mac",
+    platform: "macOS",
+    binding: "native-binding-cancelled",
+  }));
+  const cancellableBody = await cancellable.json();
+  activeIdentity = { ...ownerIdentity, email: "another-owner@example.test" };
+  const wrongIdentity = await worker.fetch(new Request(cancellableBody.handoff.authorizationURL));
+  assert.equal(wrongIdentity.status, 403);
+  activeIdentity = ownerIdentity;
+  const cancelResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${cancellableBody.handoff.id}/cancel`,
+    { binding: cancellableBody.handoff.binding, claimSecret: cancellableBody.handoff.claimSecret }
+  ));
+  assert.equal(cancelResponse.status, 200);
+  const cancelledClaim = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${cancellableBody.handoff.id}/claim`,
+    { binding: cancellableBody.handoff.binding, claimSecret: cancellableBody.handoff.claimSecret }
+  ));
+  assert.equal(cancelledClaim.status, 409);
+
+  const expiring = await worker.fetch(jsonRequest("https://worker.test/api/v1/enrollment-handoffs", {
+    name: "Recovery Mac",
+    platform: "macOS",
+    binding: "native-binding-two",
+  }));
+  const expiringBody = await expiring.json();
+  currentNow = new Date("2026-08-28T08:06:00.000Z");
+  const expired = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/enrollment-handoffs/${expiringBody.handoff.id}/claim`,
+    { binding: expiringBody.handoff.binding, claimSecret: expiringBody.handoff.claimSecret }
+  ));
+  assert.equal(expired.status, 410);
+});
+
+test("D1 native enrollment claim atomically consumes one authorized handoff", async () => {
+  const database = new TestD1();
+  const now = () => new Date("2026-08-28T08:00:00.000Z");
+  const store = createD1OwnerEnrollmentHandoffStore({ database, now });
+  await store.create({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    name: "Max",
+    platform: "macOS",
+    createdAt: "2026-08-28T08:00:00.000Z",
+    expiresAt: "2026-08-28T08:05:00.000Z",
+  }, "claim-d1");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:01:00.000Z",
+  })).outcome, "pending");
+  assert.equal((await store.authorize({
+    id: "owner-enrollment-d1",
+    email: "ec92009@gmail.com",
+    authorizedAt: "2026-08-28T08:01:00.000Z",
+  })).state, "authorized");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:02:00.000Z",
+  })).outcome, "accepted");
+  assert.equal((await store.claim({
+    id: "owner-enrollment-d1",
+    binding: "binding-d1",
+    claimSecret: "claim-d1",
+    claimedAt: "2026-08-28T08:02:01.000Z",
+  })).outcome, "claimed");
+});
+
 test("PBE Owner sessions require Backstage, freeze fixture identities, close and honor device revocation", async () => {
   let currentNow = new Date("2026-08-12T12:00:00.000Z");
   const now = () => currentNow;
@@ -1191,6 +1354,28 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   }));
   assert.equal(tokenResponse.status, 201);
   const backstageTokens = await tokenResponse.json();
+
+  const secondEnrollmentResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/devices", {
+    name: "Recovery Mac",
+    platform: "macOS",
+  }, bearer(browserToken)));
+  assert.equal(secondEnrollmentResponse.status, 201);
+  const secondEnrollment = await secondEnrollmentResponse.json();
+  const nativeDeviceList = await worker.fetch(new Request("https://worker.test/api/v1/devices", {
+    headers: bearer(backstageTokens.accessToken),
+  }));
+  assert.equal(nativeDeviceList.status, 200);
+  assert.deepEqual((await nativeDeviceList.json()).devices.map((device) => device.name), [
+    "Max Backstage",
+    "Recovery Mac",
+  ]);
+  const nativeRevoke = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/devices/${encodeURIComponent(secondEnrollment.device.id)}/revoke`,
+    {},
+    bearer(backstageTokens.accessToken)
+  ));
+  assert.equal(nativeRevoke.status, 200);
+  assert.equal((await nativeRevoke.json()).device.name, "Recovery Mac");
 
   const browserMint = await worker.fetch(jsonRequest("https://worker.test/api/v1/pbe-owner/sessions", {
     fixtureId: "fixture-la-concha",

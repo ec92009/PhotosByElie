@@ -433,6 +433,42 @@ public struct OwnerDevice: Codable, Identifiable, Sendable, Equatable {
     public var revokedAt: Date?
 }
 
+public struct OwnerDeviceListEnvelope: Codable, Sendable, Equatable {
+    public var ok: Bool
+    public var devices: [OwnerDevice]
+}
+
+public struct OwnerDeviceEnvelope: Codable, Sendable, Equatable {
+    public var ok: Bool
+    public var device: OwnerDevice
+}
+
+public struct OwnerEnrollmentHandoff: Codable, Sendable, Equatable {
+    public var id: String
+    public var state: String
+    public var claimSecret: String
+    public var binding: String
+    public var authorizationURL: URL
+    public var expiresAt: Date
+}
+
+public struct OwnerEnrollmentHandoffEnvelope: Codable, Sendable, Equatable {
+    public var ok: Bool
+    public var handoff: OwnerEnrollmentHandoff
+}
+
+public struct OwnerEnrollmentClaimEnvelope: Codable, Sendable, Equatable {
+    public var ok: Bool
+    public var state: String
+    public var device: OwnerDevice?
+    public var deviceCredential: String?
+}
+
+public struct OwnerEnrollmentCancellationEnvelope: Codable, Sendable, Equatable {
+    public var ok: Bool
+    public var state: String
+}
+
 public struct OwnerConnector: Codable, Identifiable, Sendable, Equatable {
     public var id: String
     public var hostname: String?

@@ -10,6 +10,7 @@ import { isNonRevocablePublicAsset } from "./non-revocable-public-assets.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
+import { createD1OwnerEnrollmentHandoffStore } from "./owner-enrollment-handoff-store.mjs";
 import { createOwnerConnectorAuth } from "./owner-connector-auth.mjs";
 import { createR2OwnerConnectorPackage } from "./owner-connector-package.mjs";
 import { createOwnerAccessAuth } from "./owner-access-auth.mjs";
@@ -557,6 +558,9 @@ export default {
         namespace: env.OWNER_ACTIONS_KV || requiredBinding(env, "ORDERS_KV"),
         prefix: env.KV_PREFIX || "pbe",
       }),
+      ownerEnrollmentHandoffStore: env.ACCESS_DB
+        ? createD1OwnerEnrollmentHandoffStore({ database: env.ACCESS_DB })
+        : null,
       sidecarStateStore: env.ACCESS_DB ? createD1SidecarStateStore({
         database: env.ACCESS_DB,
       }) : undefined,

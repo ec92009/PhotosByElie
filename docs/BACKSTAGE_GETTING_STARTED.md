@@ -154,20 +154,18 @@ preview is opened.
 
 Enrollment is normally needed only once per Mac.
 
-1. In a browser, sign in as Owner at
-   [photos-by-elie.com/owner.html](https://photos-by-elie.com/owner.html).
-2. Find **Backstage enrollment**.
-3. Choose **Create one-time code…**, confirm the prompt, and then choose
-   **Copy code**.
-4. Return to Backstage **Overview**.
-5. Paste the code into **One-time enrollment code** and choose
-   **Enroll this Mac**.
-6. Clear the clipboard after Backstage reports that enrollment was stored in
-   this Mac's Keychain.
+1. Open Backstage **Overview** and choose **Set up this Mac**.
+2. Complete the Owner account-picker and confirmation in the browser.
+3. Return to Backstage. It polls the five-minute handoff, stores the revocable
+   device credential in this Mac's Keychain, and renews a short-lived session.
 
-The code is a one-time device credential. It does not grant Photos access and
-does not change catalog data. If **Authentication** already says
-**Authenticated**, do not create another code.
+The browser URL carries only the handoff id. The independent claim secret and
+Mac binding remain in Backstage memory, and no credential passes through the
+URL or clipboard. A handoff is single-use and rejects expiry, cancellation,
+binding mismatch, replay, and unauthorized identities. **Use one-time code
+fallback** remains available until native setup, revocation, and clean-state
+recovery receive installed/live acceptance. Enrollment does not grant Photos
+access or change Owner.sqlite, fixtures, media, or publication state.
 
 ## A useful mental model
 
@@ -605,8 +603,9 @@ claim the same action through its polling fallback.
 
 ### Enrollment required
 
-Return to the browser Owner page and create a fresh one-time code. A code that
-was already exchanged should not be reused.
+Choose **Set up this Mac** in Overview. If browser authorization is cancelled
+or expires, start a new handoff; an earlier handoff cannot be reused. Use the
+restricted one-time-code fallback only while the native route is unavailable.
 
 ### Photos access is required
 

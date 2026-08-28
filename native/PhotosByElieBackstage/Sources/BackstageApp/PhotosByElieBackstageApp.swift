@@ -224,23 +224,42 @@ private struct OverviewView: View {
                     )
                     if model.authentication.phase == .needsEnrollment
                         || model.authentication.phase == .signedOut {
-                        SecureField("One-time enrollment code", text: $model.enrollmentCode)
-                            .textFieldStyle(.roundedBorder)
                         HStack {
-                            Button("Enroll this Mac") {
-                                Task { await model.enroll() }
+                            Button("Set up this Mac") {
+                                model.setUpThisMac()
                             }
-                            .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
-                            .backstageHelp("Exchange the one-time Owner enrollment code and store this Mac's revocable device credential in Keychain.")
+                            .disabled(model.isAuthenticating || model.isSettingUpThisMac)
+                            .backstageHelp("Open the approved Owner identity check and return this Mac's short-lived enrollment result directly to Backstage. No credential is copied through the URL or clipboard.")
+                            if model.isSettingUpThisMac {
+                                Button("Cancel setup", role: .cancel) {
+                                    model.cancelMacSetup()
+                                }
+                                .backstageHelp("Cancel the active enrollment handoff. No device credential will be stored.")
+                            }
                             Button("Check Keychain again") {
                                 Task { await model.bootstrapAuthentication() }
                             }
-                            .disabled(model.isAuthenticating)
+                            .disabled(model.isAuthenticating || model.isSettingUpThisMac)
                             .backstageHelp("Recheck the saved Keychain credential and renew this Mac's Owner session if possible.")
                         }
-                        Text("Create the code from Owner in a currently authenticated browser. It is exchanged immediately and stored only in this Mac's Keychain.")
+                        Text("Backstage opens the Owner account picker, binds a five-minute single-use handoff to this Mac, and stores the resulting revocable credential only in Keychain. Photos permission remains separate.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        DisclosureGroup("Use one-time code fallback") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                SecureField("One-time enrollment code", text: $model.enrollmentCode)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Enroll with code") {
+                                    Task { await model.enroll() }
+                                }
+                                .disabled(model.isAuthenticating || model.enrollmentCode.isEmpty)
+                                .backstageHelp("Use the restricted provisioning fallback and store the resulting device credential in Keychain.")
+                                Text("Fallback only while native setup, revocation, and clean-state recovery are being accepted.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.top, 4)
+                        }
                     } else if model.authentication.phase == .renewalFailed {
                         Button("Retry Owner session") {
                             Task { await model.bootstrapAuthentication() }
@@ -266,6 +285,61 @@ private struct OverviewView: View {
                     }
                     }
                     .padding(6)
+                }
+                if model.authentication.phase == .authenticated {
+                    GroupBox("Enrolled Macs") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(model.ownerDeviceManagementStatus)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Refresh") {
+                                    Task { await model.refreshOwnerDevices() }
+                                }
+                                .disabled(model.isRefreshingOwnerDevices)
+                                .backstageHelp("Reload the enrolled Mac list through this Mac's verified Backstage device session.")
+                            }
+                            ForEach(model.enrolledOwnerDevices) { device in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(device.name)
+                                        Text("\(device.platform) · enrolled \(device.createdAt.formatted())")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if model.authentication.deviceId == device.id {
+                                        Text("This Mac")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Button("Revoke", role: .destructive) {
+                                        model.requestOwnerDeviceRevocation(device)
+                                    }
+                                    .disabled(model.isRefreshingOwnerDevices)
+                                    .backstageHelp("Confirm revocation of \(device.name). That Mac will no longer be able to renew an Owner session.")
+                                }
+                            }
+                        }
+                        .padding(6)
+                    }
+                    .confirmationDialog(
+                        "Revoke \(model.pendingOwnerDeviceRevocation?.name ?? "this Mac")?",
+                        isPresented: Binding(
+                            get: { model.pendingOwnerDeviceRevocation != nil },
+                            set: { if !$0 { model.cancelOwnerDeviceRevocation() } }
+                        ),
+                        titleVisibility: .visible
+                    ) {
+                        Button("Revoke Mac", role: .destructive) {
+                            Task { await model.confirmOwnerDeviceRevocation() }
+                        }
+                        Button("Cancel", role: .cancel) {
+                            model.cancelOwnerDeviceRevocation()
+                        }
+                    } message: {
+                        Text("The selected Mac will lose Owner access. If it is this Mac, its local Keychain credential will also be removed; Set up this Mac can recover it independently.")
+                    }
                 }
                 GroupBox("Native Photos access") {
                     VStack(alignment: .leading, spacing: 10) {

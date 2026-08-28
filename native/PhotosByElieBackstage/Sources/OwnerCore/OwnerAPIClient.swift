@@ -990,6 +990,69 @@ public actor OwnerAPIClient {
         )
     }
 
+    public func beginOwnerEnrollmentHandoff(
+        name: String,
+        platform: String,
+        binding: String
+    ) async throws -> OwnerEnrollmentHandoff {
+        struct Start: Codable {
+            let name: String
+            let platform: String
+            let binding: String
+        }
+        let envelope: OwnerEnrollmentHandoffEnvelope = try await send(
+            path: "/enrollment-handoffs",
+            method: "POST",
+            body: Start(name: name, platform: platform, binding: binding),
+            authenticated: false
+        )
+        return envelope.handoff
+    }
+
+    public func claimOwnerEnrollmentHandoff(
+        _ handoff: OwnerEnrollmentHandoff
+    ) async throws -> OwnerEnrollmentClaimEnvelope {
+        struct Claim: Codable {
+            let binding: String
+            let claimSecret: String
+        }
+        return try await send(
+            path: "/enrollment-handoffs/\(handoff.id.urlPathEncoded)/claim",
+            method: "POST",
+            body: Claim(binding: handoff.binding, claimSecret: handoff.claimSecret),
+            authenticated: false
+        )
+    }
+
+    public func cancelOwnerEnrollmentHandoff(
+        _ handoff: OwnerEnrollmentHandoff
+    ) async throws -> OwnerEnrollmentCancellationEnvelope {
+        struct Cancellation: Codable {
+            let binding: String
+            let claimSecret: String
+        }
+        return try await send(
+            path: "/enrollment-handoffs/\(handoff.id.urlPathEncoded)/cancel",
+            method: "POST",
+            body: Cancellation(binding: handoff.binding, claimSecret: handoff.claimSecret),
+            authenticated: false
+        )
+    }
+
+    public func listOwnerDevices() async throws -> [OwnerDevice] {
+        let envelope: OwnerDeviceListEnvelope = try await send(path: "/devices")
+        return envelope.devices
+    }
+
+    public func revokeOwnerDevice(id: String) async throws -> OwnerDevice {
+        let envelope: OwnerDeviceEnvelope = try await send(
+            path: "/devices/\(id.urlPathEncoded)/revoke",
+            method: "POST",
+            body: Optional<String>.none
+        )
+        return envelope.device
+    }
+
     public func logout() async throws {
         struct Logout: Codable {}
         let _: EmptyResponse = try await send(

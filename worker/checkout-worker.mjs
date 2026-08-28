@@ -3,6 +3,7 @@ import { createMemoryStore } from "./memory-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { createMemoryOwnerActionStore } from "./owner-action-store.mjs";
 import { createMemoryOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
+import { createMemoryOwnerEnrollmentHandoffStore } from "./owner-enrollment-handoff-store.mjs";
 import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
@@ -122,6 +123,21 @@ const redirectWithCookies = (location, cookies = [], status = 302) => {
   cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
   return new Response(null, { status, headers });
 };
+
+const escapeHTML = (value) => String(value || "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+
+const enrollmentHTML = (title, body, form = "", status = 200) => new Response(`<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHTML(title)}</title><style>body{font:16px system-ui;max-width:38rem;margin:10vh auto;padding:2rem;line-height:1.5}button{font:inherit;padding:.7rem 1rem}</style>
+<main><h1>${escapeHTML(title)}</h1><p>${escapeHTML(body)}</p>${form}</main></html>`, {
+  status,
+  headers: { "content-type": "text/html; charset=utf-8", ...PRIVATE_NO_STORE_HEADERS },
+});
 
 const parseJson = async (request) => {
   try {
@@ -1369,6 +1385,7 @@ export const createPhotosByElieWorker = ({
   accessAdminEmail = "",
   ownerActionStore = createMemoryOwnerActionStore(),
   ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now }),
+  ownerEnrollmentHandoffStore = createMemoryOwnerEnrollmentHandoffStore({ now }),
   sidecarStateStore = createMemorySidecarStateStore({ now, randomUUID }),
   ownerConnectorAuth = null,
   ownerConnectorPackage = null,
@@ -2502,6 +2519,14 @@ export const createPhotosByElieWorker = ({
     return { ...session, purpose: identity.purpose, deviceId: identity.deviceId, device };
   };
 
+  const requireOwnerDeviceManager = async (request) => {
+    const identity = await googleIdentityFor(request, { required: true });
+    if (identity?.provider === "backstage-device") {
+      return requireActiveBackstageDeviceSession(request);
+    }
+    return requireBackstageProvisioner(request);
+  };
+
   const issueOwnerTokenBundle = async ({ email, deviceId = "" }) => {
     if (!googleOAuthAuth?.issueSessionToken) {
       throw Object.assign(new Error("Native Owner token issuance is not configured."), {
@@ -2560,7 +2585,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const listOwnerDevices = async (request) => {
-    const session = await requireBackstageProvisioner(request);
+    const session = await requireOwnerDeviceManager(request);
     const devices = ownerDeviceAuthStore?.listDevices
       ? await ownerDeviceAuthStore.listDevices(session.email)
       : [];
@@ -2595,7 +2620,7 @@ export const createPhotosByElieWorker = ({
   };
 
   const revokeOwnerDevice = async (request, deviceId) => {
-    const session = await requireBackstageProvisioner(request);
+    const session = await requireOwnerDeviceManager(request);
     const device = ownerDeviceAuthStore?.revokeDevice
       ? await ownerDeviceAuthStore.revokeDevice({
         email: session.email,
@@ -2607,6 +2632,144 @@ export const createPhotosByElieWorker = ({
       return credentialedErrorJson(request, 404, "owner_device_not_found", "Owner device was not found.");
     }
     return credentialedJson(request, { ok: true, device: publicOwnerDevice(device) });
+  };
+
+  const beginOwnerEnrollmentHandoff = async (request) => {
+    if (!ownerEnrollmentHandoffStore?.create) {
+      return credentialedErrorJson(request, 503, "owner_enrollment_handoff_unavailable", "Native Backstage enrollment is not configured.");
+    }
+    const payload = await parseJson(request);
+    const binding = String(payload.binding || "").trim();
+    if (!binding || binding.length > 128) {
+      return credentialedErrorJson(request, 400, "owner_enrollment_binding_invalid", "A valid native enrollment binding is required.");
+    }
+    const createdAt = now();
+    const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000);
+    const id = `owner-enrollment-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`;
+    const claimSecret = opaqueToken();
+    const handoff = await ownerEnrollmentHandoffStore.create({
+      id,
+      binding,
+      name: String(payload.name || "PhotosByElie Backstage").trim().slice(0, 120),
+      platform: String(payload.platform || "macOS").trim().slice(0, 80),
+      createdAt: createdAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    }, claimSecret);
+    const authorizationURL = new URL(`/api/owner/enrollment-handoffs/${encodeURIComponent(id)}/authorize`, request.url);
+    return credentialedJson(request, {
+      ok: true,
+      handoff: {
+        id: handoff.id,
+        state: handoff.state,
+        claimSecret,
+        binding,
+        authorizationURL: authorizationURL.href,
+        expiresAt: handoff.expiresAt,
+      },
+    }, 201);
+  };
+
+  const authorizeOwnerEnrollmentHandoff = async (request, handoffId) => {
+    if (!ownerEnrollmentHandoffStore?.get || !ownerEnrollmentHandoffStore?.authorize) {
+      return enrollmentHTML("Enrollment unavailable", "Native Backstage enrollment is not configured.", "", 503);
+    }
+    const handoff = await ownerEnrollmentHandoffStore.get(handoffId);
+    if (!handoff || Date.parse(handoff.expiresAt || "") <= now().getTime()) {
+      return enrollmentHTML("Enrollment expired", "Return to Backstage and choose Set up this Mac again.", "", 410);
+    }
+    const browserIdentity = googleOAuthAuth?.optionalSession
+      ? await googleOAuthAuth.optionalSession(request).catch(() => null)
+      : null;
+    if (!browserIdentity) {
+      if (!googleOAuthAuth?.loginUrlFor) {
+        return enrollmentHTML("Sign-in unavailable", "Google Owner sign-in is not configured.", "", 503);
+      }
+      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+        returnTo: request.url,
+        intent: "backstage-enrollment",
+      }));
+    }
+    const session = await authSessionFor(request, { requiredRole: "owner" });
+    if (session.email !== PBE_OWNER_PROVISIONER_EMAIL
+        || session.provider !== "google-oauth"
+        || session.purpose !== "browser") {
+      return enrollmentHTML("Enrollment denied", "This Google account is not authorized to enroll PhotosByElie Backstage.", "", 403);
+    }
+    if (request.method === "GET") {
+      const action = new URL(request.url).pathname;
+      const form = `<form method="post" action="${escapeHTML(action)}"><button type="submit">Allow ${escapeHTML(handoff.name)} on this Mac</button></form>`;
+      return enrollmentHTML("Set up this Mac", `Confirm enrollment for ${handoff.name}. The device credential will return directly to Backstage and will not be copied to the clipboard.`, form);
+    }
+    if (request.headers.get("origin") !== new URL(request.url).origin) {
+      return credentialedErrorJson(request, 403, "owner_enrollment_origin_required", "Enrollment confirmation must come from the same authenticated browser page.");
+    }
+    const authorized = await ownerEnrollmentHandoffStore.authorize({
+      id: handoffId,
+      email: session.email,
+      authorizedAt: now().toISOString(),
+    });
+    if (!authorized) {
+      return enrollmentHTML("Enrollment unavailable", "This handoff was already used, cancelled, or expired. Return to Backstage and start again.", "", 409);
+    }
+    return enrollmentHTML("This Mac is approved", "Return to PhotosByElie Backstage. It will finish enrollment and store the revocable device credential in Keychain.");
+  };
+
+  const claimOwnerEnrollmentHandoff = async (request, handoffId) => {
+    if (!ownerEnrollmentHandoffStore?.claim || !ownerDeviceAuthStore?.putDevice) {
+      return credentialedErrorJson(request, 503, "owner_enrollment_handoff_unavailable", "Native Backstage enrollment is not configured.");
+    }
+    const payload = await parseJson(request);
+    const result = await ownerEnrollmentHandoffStore.claim({
+      id: handoffId,
+      binding: payload.binding,
+      claimSecret: payload.claimSecret,
+      claimedAt: now().toISOString(),
+    });
+    if (result.outcome === "pending") {
+      return credentialedJson(request, { ok: true, state: "pending" }, 202);
+    }
+    if (result.outcome === "expired") {
+      return credentialedErrorJson(request, 410, "owner_enrollment_handoff_expired", "The native enrollment handoff expired.");
+    }
+    if (result.outcome === "rejected") {
+      return credentialedErrorJson(request, 401, "owner_enrollment_handoff_rejected", "The native enrollment handoff binding or claim secret was not accepted.");
+    }
+    if (result.outcome !== "accepted" || !result.handoff?.email) {
+      return credentialedErrorJson(request, 409, "owner_enrollment_handoff_consumed", "The native enrollment handoff was already claimed or cancelled.");
+    }
+    const deviceCredential = opaqueToken();
+    const device = await ownerDeviceAuthStore.putDevice({
+      id: `owner-device-${randomUUID().replace(/[^a-z0-9-]/gi, "").slice(0, 48)}`,
+      email: result.handoff.email,
+      name: result.handoff.name,
+      platform: result.handoff.platform,
+      createdAt: now().toISOString(),
+      lastUsedAt: "",
+      revokedAt: "",
+    }, deviceCredential);
+    return credentialedJson(request, {
+      ok: true,
+      state: "completed",
+      device: publicOwnerDevice(device),
+      deviceCredential,
+    }, 201);
+  };
+
+  const cancelOwnerEnrollmentHandoff = async (request, handoffId) => {
+    if (!ownerEnrollmentHandoffStore?.cancel) {
+      return credentialedErrorJson(request, 503, "owner_enrollment_handoff_unavailable", "Native Backstage enrollment is not configured.");
+    }
+    const payload = await parseJson(request);
+    const cancelled = await ownerEnrollmentHandoffStore.cancel({
+      id: handoffId,
+      binding: payload.binding,
+      claimSecret: payload.claimSecret,
+      cancelledAt: now().toISOString(),
+    });
+    if (!cancelled) {
+      return credentialedErrorJson(request, 409, "owner_enrollment_handoff_not_cancellable", "The native enrollment handoff was not active or its binding was rejected.");
+    }
+    return credentialedJson(request, { ok: true, state: "cancelled" });
   };
 
   const cleanPBESessionBinding = (value, label, maximum = 256) => {
@@ -4008,6 +4171,19 @@ export const createPhotosByElieWorker = ({
       if (request.method === "POST" && path === "/owner/auth/logout") return await logoutOwnerTokens(request);
       if (request.method === "GET" && path === "/owner/devices") return await listOwnerDevices(request);
       if (request.method === "POST" && path === "/owner/devices") return await enrollOwnerDevice(request);
+      if (request.method === "POST" && path === "/owner/enrollment-handoffs") return await beginOwnerEnrollmentHandoff(request);
+      const ownerEnrollmentAuthorizeMatch = path.match(/^\/owner\/enrollment-handoffs\/([^/]+)\/authorize$/);
+      if ((request.method === "GET" || request.method === "POST") && ownerEnrollmentAuthorizeMatch) {
+        return await authorizeOwnerEnrollmentHandoff(request, decodeURIComponent(ownerEnrollmentAuthorizeMatch[1]));
+      }
+      const ownerEnrollmentClaimMatch = path.match(/^\/owner\/enrollment-handoffs\/([^/]+)\/claim$/);
+      if (request.method === "POST" && ownerEnrollmentClaimMatch) {
+        return await claimOwnerEnrollmentHandoff(request, decodeURIComponent(ownerEnrollmentClaimMatch[1]));
+      }
+      const ownerEnrollmentCancelMatch = path.match(/^\/owner\/enrollment-handoffs\/([^/]+)\/cancel$/);
+      if (request.method === "POST" && ownerEnrollmentCancelMatch) {
+        return await cancelOwnerEnrollmentHandoff(request, decodeURIComponent(ownerEnrollmentCancelMatch[1]));
+      }
       const ownerDeviceRevokeMatch = path.match(/^\/owner\/devices\/([^/]+)\/revoke$/);
       if (request.method === "POST" && ownerDeviceRevokeMatch) {
         return await revokeOwnerDevice(request, decodeURIComponent(ownerDeviceRevokeMatch[1]));

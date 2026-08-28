@@ -58,11 +58,17 @@ test("photo detail and preview omit debugging-only metadata", () => {
   const detail = read("photo-detail.js");
   const html = read("photo.html");
   const photos = read("photos.js");
-  assert.match(detail, /"metadata title", "origin"/);
+  for (const label of ["metadata title", "origin", "camera", "lens", "exposure", "focal length", "original file"]) {
+    assert.match(detail, new RegExp(`"${label}"`));
+  }
   assert.doesNotMatch(html, /data-photo-info-toggle/);
   assert.match(
     photos,
-    /"Keywords",\s*"Captured",\s*"Camera",\s*"Lens",\s*"Exposure",\s*"Focal length",\s*"Original file",\s*"Original size",\s*"Location"/,
+    /"Keywords",\s*"Captured",\s*\.\.\.\(owner \? \["Camera", "Lens", "Exposure", "Focal length", "Original file"\] : \[\]\),\s*"Original size",\s*"Location"/,
+  );
+  assert.doesNotMatch(
+    photos,
+    /"Keywords",\s*"Captured",\s*"Camera",\s*"Lens",\s*"Exposure",\s*"Focal length",\s*"Original file"/,
   );
   assert.doesNotMatch(photos, /\["Media ID"/);
   assert.doesNotMatch(photos, /\["Path", contextUrl\]/);

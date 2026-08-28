@@ -630,7 +630,18 @@ metadataToggle?.addEventListener("click", () => {
   if (metadataRoot) metadataRoot.hidden = !expanded;
 });
 const renderMetadataRows = () => {
-  const hiddenLabels = new Set(["preview file", "software", "color profile", "metadata title", "origin"]);
+  const hiddenLabels = new Set([
+    "preview file",
+    "software",
+    "color profile",
+    "metadata title",
+    "origin",
+    "camera",
+    "lens",
+    "exposure",
+    "focal length",
+    "original file",
+  ]);
   const metadata = Array.isArray(photo.metadata)
     ? photo.metadata.filter((item) => item.label && item.value && !hiddenLabels.has(String(item.label).toLowerCase()))
     : [];

@@ -3105,11 +3105,7 @@ window.photosByElieVideoDurationLabel = (photo) => (
       const desiredLabels = [
         "Keywords",
         "Captured",
-        "Camera",
-        "Lens",
-        "Exposure",
-        "Focal length",
-        "Original file",
+        ...(owner ? ["Camera", "Lens", "Exposure", "Focal length", "Original file"] : []),
         "Original size",
         "Location",
       ];

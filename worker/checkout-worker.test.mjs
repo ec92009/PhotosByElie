@@ -1086,7 +1086,10 @@ test("Owner API v1 re-authenticates Keychain device credentials and independentl
     headers: { origin: "https://photos-by-elie.com" },
   }));
   assert.equal(listResponse.status, 200);
-  assert.deepEqual((await listResponse.json()).devices.map((device) => device.id), [enrollment.device.id]);
+  const listedDevices = (await listResponse.json()).devices;
+  assert.deepEqual(listedDevices.map((device) => device.id), [enrollment.device.id]);
+  assert.equal(listedDevices[0].lastUsedAt, null);
+  assert.equal(listedDevices[0].revokedAt, null);
 
   const tokenResponse = await worker.fetch(jsonRequest("https://worker.test/api/v1/auth/tokens", {
     deviceId: enrollment.device.id,

@@ -2455,8 +2455,8 @@ export const createPhotosByElieWorker = ({
     name: device.name,
     platform: device.platform,
     createdAt: device.createdAt,
-    lastUsedAt: device.lastUsedAt || "",
-    revokedAt: device.revokedAt || "",
+    lastUsedAt: device.lastUsedAt || null,
+    revokedAt: device.revokedAt || null,
   } : null;
 
   const ownerSessionForEmail = async (email, provider = "backstage-device") => {

@@ -431,6 +431,48 @@ public struct OwnerDevice: Codable, Identifiable, Sendable, Equatable {
     public var createdAt: Date
     public var lastUsedAt: Date?
     public var revokedAt: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case platform
+        case createdAt
+        case lastUsedAt
+        case revokedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        platform = try container.decode(String.self, forKey: .platform)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        lastUsedAt = try Self.decodeOptionalDate(forKey: .lastUsedAt, from: container)
+        revokedAt = try Self.decodeOptionalDate(forKey: .revokedAt, from: container)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(platform, forKey: .platform)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(lastUsedAt, forKey: .lastUsedAt)
+        try container.encodeIfPresent(revokedAt, forKey: .revokedAt)
+    }
+
+    private static func decodeOptionalDate(
+        forKey key: CodingKeys,
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> Date? {
+        guard container.contains(key), try !container.decodeNil(forKey: key) else {
+            return nil
+        }
+        let rawValue = try container.decode(String.self, forKey: key)
+        guard !rawValue.isEmpty else { return nil }
+        let encodedValue = try JSONEncoder().encode(rawValue)
+        return try JSONDecoder.ownerAPI.decode(Date.self, from: encodedValue)
+    }
 }
 
 public struct OwnerDeviceListEnvelope: Codable, Sendable, Equatable {

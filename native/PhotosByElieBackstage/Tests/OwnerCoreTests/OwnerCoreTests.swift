@@ -2245,7 +2245,9 @@ struct OwnerCoreTests {
                     "id":"owner-device-native",
                     "name":"Max",
                     "platform":"macOS",
-                    "createdAt":"2026-08-28T08:00:00Z"
+                    "createdAt":"2026-08-28T08:00:00Z",
+                    "lastUsedAt":"",
+                    "revokedAt":""
                   }]
                 }
                 """),
@@ -2287,7 +2289,10 @@ struct OwnerCoreTests {
         let saved = try #require(try await session.load())
         #expect(saved.deviceCredential?.hasPrefix("native-device-credential-") == true)
         #expect(saved.accessToken == "native-access")
-        #expect(try await client.listOwnerDevices().map(\.name) == ["Max"])
+        let devices = try await client.listOwnerDevices()
+        #expect(devices.map(\.name) == ["Max"])
+        #expect(devices.first?.lastUsedAt == nil)
+        #expect(devices.first?.revokedAt == nil)
         #expect(try await client.revokeOwnerDevice(id: "owner-device-native").revokedAt != nil)
         let requests = await transport.requests()
         #expect(requests.map(\.url?.path) == [

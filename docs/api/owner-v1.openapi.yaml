@@ -792,8 +792,8 @@ components:
         name: { type: string }
         platform: { type: string }
         createdAt: { type: string, format: date-time }
-        lastUsedAt: { type: string }
-        revokedAt: { type: string }
+        lastUsedAt: { type: [string, "null"], format: date-time }
+        revokedAt: { type: [string, "null"], format: date-time }
     OwnerEnrollmentHandoff:
       type: object
       required: [id, state, claimSecret, binding, authorizationURL, expiresAt]

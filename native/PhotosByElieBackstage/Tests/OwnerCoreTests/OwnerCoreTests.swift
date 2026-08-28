@@ -1882,9 +1882,13 @@ struct OwnerCoreTests {
         )
         let opaqueIdentity = CullingCandidate(
             id: "opaque-elf-token",
-            title: "Untitled",
-            filename: "flower-photo.jpg",
-            mediaType: "photo"
+            title: "Brick Flowers on a Bookshelf",
+            filename: "selfie-flower-photo.jpg",
+            mediaType: "photo",
+            decision: SidecarDecisionState(
+                assetId: "opaque-elf-token",
+                keywords: ["Delft", "self-playing piano"]
+            )
         )
 
         let commonSpelling = CullingWorkspace.evaluate(

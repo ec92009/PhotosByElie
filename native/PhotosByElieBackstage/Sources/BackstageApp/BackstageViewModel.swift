@@ -2615,26 +2615,12 @@ final class BackstageViewModel: ObservableObject {
 
     var visibleCullingAssets: [FixtureAsset] {
         if cullingPool == nil, hasCurrentCullingFixture {
-            guard fixtureCullingWindow != nil else { return [] }
-            let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
-            let exactWindow = CullingWorkspace.evaluate(
-                cullingAssets.map { asset in
-                    CullingCandidate(
-                        id: asset.id,
-                        title: asset.title,
-                        filename: asset.filename,
-                        mediaType: asset.mediaType,
-                        cameraBody: asset.cameraBody,
-                        lens: asset.lens,
-                        focalLength: asset.focalLength,
-                        decision: cullingStates[asset.id]
-                    )
-                },
-                query: cullingQuery,
-                offset: 0,
-                limit: max(1, cullingAssets.count)
-            )
-            return exactWindow.items.compactMap { assets[$0.id] }
+            // OwnerCullingSQLiteStore is the sole authority for fixture search,
+            // filters, counts, ordering, and pagination. Re-evaluating its
+            // already-filtered page here can make summary counts disagree with
+            // the rendered cards whenever the server matches metadata that is
+            // not duplicated perfectly in the client model.
+            return cullingAssets
         }
         let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
         return cullingWorkspace.items.compactMap { assets[$0.id] }

@@ -216,6 +216,27 @@ public struct CullingTimedItem: Identifiable, Sendable, Equatable {
     }
 }
 
+enum CullingSearch {
+    static func fold(_ value: String) -> String {
+        value.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: .current
+        )
+    }
+
+    static func matches(_ haystack: String, term: String) -> Bool {
+        let foldedTerm = fold(term)
+        guard !foldedTerm.isEmpty else { return true }
+        let foldedHaystack = fold(haystack)
+        if foldedTerm.count <= 3 {
+            return foldedHaystack
+                .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+                .contains { $0 == Substring(foldedTerm) }
+        }
+        return foldedHaystack.contains(foldedTerm)
+    }
+}
+
 public enum CullingWorkspace {
     public static func captureDate(_ value: String) -> Date? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -261,25 +282,22 @@ public enum CullingWorkspace {
     }
 
     private static func matches(_ candidate: CullingCandidate, query: CullingQuery) -> Bool {
-        let terms = query.search
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let terms = CullingSearch.fold(query.search)
             .split(whereSeparator: \.isWhitespace)
-        let exactAssetID = candidate.id
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        let isExactAssetIdentitySearch = terms.count == 1 && terms[0] == Substring(exactAssetID)
+            .map(String.init)
+        let exactAssetID = CullingSearch.fold(candidate.id)
+        let isExactAssetIdentitySearch = terms.count == 1 && terms[0] == exactAssetID
         let haystack = (
             [candidate.title, candidate.filename, candidate.decision.title]
                 + candidate.decision.keywords
         )
         .joined(separator: " ")
-        .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         let equipment = [candidate.cameraBody, candidate.lens, candidate.focalLength]
             .joined(separator: " ")
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         guard isExactAssetIdentitySearch || terms.allSatisfy({ term in
-            haystack.contains(term)
-                || equipment.contains(term)
-                || (term == "elf" && equipment.contains("elph"))
+            CullingSearch.matches(haystack, term: term)
+                || CullingSearch.matches(equipment, term: term)
+                || (term == "elf" && CullingSearch.matches(equipment, term: "elph"))
         }) else {
             return false
         }

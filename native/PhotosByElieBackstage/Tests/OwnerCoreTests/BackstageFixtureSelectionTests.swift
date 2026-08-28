@@ -216,9 +216,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySavedViewLabel == "Custom")
     }
 
-    @Test("Native Gallery equipment matches remain visible in the grid")
+    @Test("Native Gallery renders the authoritative server window without a second filter")
     @MainActor
-    func nativeGalleryEquipmentMatchesRemainVisible() {
+    func nativeGalleryRendersAuthoritativeServerWindow() {
         let equipment = FixtureAsset(
             id: "gallery-elph-camera",
             title: "Untitled",
@@ -250,7 +250,7 @@ struct BackstageFixtureSelectionTests {
             opaqueIdentity.id: SidecarDecisionState(assetId: opaqueIdentity.id, pickState: "picked"),
         ]
 
-        #expect(model.visibleCullingAssets.map(\.id) == [equipment.id])
+        #expect(model.visibleCullingAssets.map(\.id) == [equipment.id, opaqueIdentity.id])
     }
 
     @Test("Gallery returns only approved selections to Review and exact Undo restores delivery")
@@ -1088,7 +1088,9 @@ struct BackstageFixtureSelectionTests {
         )
 
         #expect(await model.applyPickShortcut(.unpick))
-        #expect(model.visibleCullingAssets.isEmpty)
+        // The fixture server window remains the rendering authority until its
+        // next refresh. Local decision changes must not re-filter that page.
+        #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
         #expect(model.cullingHistory.last?.anchorID == items[0].id)
         #expect(model.cullingHistory.last?.focusedID == items[1].id)
 

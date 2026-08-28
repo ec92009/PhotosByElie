@@ -269,10 +269,24 @@ struct OwnerCullingSQLiteStoreTests {
             INSERT INTO sidecar_assets(asset_id, source_anchor, filename, raw_json, captured_at)
               VALUES ('opaque-elf-token', 'apple-photos://opaque-token', 'Ordinary-photo.jpg', '{}', '2026-01-01T03:00:00Z');
             INSERT INTO sidecar_decisions(asset_id) VALUES ('opaque-elf-token');
+            INSERT INTO sidecar_assets(asset_id, source_anchor, filename, photos_title, raw_json, captured_at)
+              VALUES (
+                'visible-partial-token', 'apple-photos://visible-partial-token',
+                'Selfie-bookshelf.jpg', 'Brick Flowers on a Bookshelf', '{}',
+                '2026-01-01T04:00:00Z'
+              );
+            INSERT INTO sidecar_decisions(asset_id, keywords_json)
+              VALUES ('visible-partial-token', '["selfie","bookshelf","Delft"]');
             INSERT INTO fixture_asset_decisions(
               fixture_id, asset_id, placement_state, eligibility_state, created_at, updated_at
             ) VALUES (
               'fixture-expo', 'opaque-elf-token', 'undecided', 'active',
+              '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+            );
+            INSERT INTO fixture_asset_decisions(
+              fixture_id, asset_id, placement_state, eligibility_state, created_at, updated_at
+            ) VALUES (
+              'fixture-expo', 'visible-partial-token', 'undecided', 'active',
               '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
             );
             """
@@ -306,6 +320,45 @@ struct OwnerCullingSQLiteStoreTests {
             search: "21.5 mm"
         )
         #expect(lens.items.map(\.id) == ["asset-1"])
+    }
+
+    @Test("Live Expo elf and elph searches resolve only to the same Canon ELPH assets")
+    func liveExpoEquipmentSearchAcceptance() throws {
+        guard let path = ProcessInfo.processInfo.environment["PBE_OWNER_ACCEPTANCE_DB"],
+              !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+
+        let databaseURL = URL(fileURLWithPath: path)
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+        let views = FixtureCullingView.selectableCases
+        let elf = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            views: views,
+            search: "elf"
+        )
+        let elph = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            views: views,
+            search: "elph"
+        )
+        let elfIDs = Set(elf.items.map(\.id))
+        let elphIDs = Set(elph.items.map(\.id))
+        let equipment = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+            .metadata(assetIDs: Array(elphIDs))
+
+        #expect(elf.summary.filtered == 18)
+        #expect(elph.summary.filtered == 18)
+        #expect(elfIDs == elphIDs)
+        #expect(elfIDs.count == 18)
+        #expect(equipment.count == 18)
+        #expect(equipment.values.allSatisfy {
+            [$0.cameraBody, $0.lens]
+                .joined(separator: " ")
+                .localizedCaseInsensitiveContains("elph")
+        })
+        print("Live Gallery acceptance: elf=\(elfIDs.count), elph=\(elphIDs.count), same Canon ELPH set")
     }
 
     @Test("Unavailable legacy cards retry only through one exact canonical identity sibling")

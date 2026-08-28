@@ -1421,7 +1421,7 @@ class NativeCullingParityTest(unittest.TestCase):
             return match.group(1)
 
         self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "252")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "253")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1847,7 +1847,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("set: { _ = model.selectFixture($0) }", sidebar)
         self.assertIn("allowsSelection: { !$0.isArchived }", sidebar)
 
-    def test_fixture_window_is_filtered_again_before_cards_are_rendered(self):
+    def test_fixture_window_is_the_single_authority_for_rendered_cards(self):
         model_source = (
             NATIVE
             / "Sources"
@@ -1855,9 +1855,11 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("let exactWindow = CullingWorkspace.evaluate(", model_source)
-        self.assertIn("query: cullingQuery", model_source)
-        self.assertIn("return exactWindow.items.compactMap", model_source)
+        visible = model_source.split("var visibleCullingAssets", 1)[1].split(
+            "var selectedCullingAssetIDs", 1
+        )[0]
+        self.assertIn("return cullingAssets", visible)
+        self.assertNotIn("CullingWorkspace.evaluate", visible)
 
     def test_density_controls_resize_only_the_grid_viewport(self):
         source = backstage_ui_source()

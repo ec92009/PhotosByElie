@@ -699,24 +699,21 @@ private func cullingSearchMatches(
         row["location_keywords_json"]?.stringValue ?? "",
         row["decision_title"]?.stringValue ?? "",
         row["decision_keywords_json"]?.stringValue ?? "",
-    ].map(cullingFold).joined(separator: "\n")
+    ].joined(separator: "\n")
     let searchableEquipment = [
         equipment?.cameraBody ?? "",
         equipment?.lens ?? "",
         equipment?.focalLength ?? "",
-    ].map(cullingFold).joined(separator: "\n")
+    ].joined(separator: "\n")
     return terms.allSatisfy { term in
-        searchable.contains(term)
-            || searchableEquipment.contains(term)
-            || (term == "elf" && searchableEquipment.contains("elph"))
+        CullingSearch.matches(searchable, term: term)
+            || CullingSearch.matches(searchableEquipment, term: term)
+            || (term == "elf" && CullingSearch.matches(searchableEquipment, term: "elph"))
     }
 }
 
 private func cullingFold(_ value: String) -> String {
-    value.folding(
-        options: [.caseInsensitive, .diacriticInsensitive],
-        locale: .current
-    )
+    CullingSearch.fold(value)
 }
 
 private func cullingJSONObject(_ value: String) -> [String: JSONValue] {

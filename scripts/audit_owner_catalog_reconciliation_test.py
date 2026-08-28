@@ -46,10 +46,30 @@ class OwnerCatalogReconciliationTest(unittest.TestCase):
                     ("asset-failed", "v2", "absent", "local", "2026-01-04"),
                 ],
             )
+            conn.execute(
+                "CREATE TABLE sidecar_upload_bridge_run_items (asset_id TEXT, photo_id TEXT)"
+            )
+            conn.executemany(
+                "INSERT INTO sidecar_upload_bridge_run_items VALUES (?, ?)",
+                [
+                    ("asset-old", "legacy-mapped"),
+                    ("asset-b", "legacy-bridge"),
+                    ("asset-new", "candidate-new"),
+                ],
+            )
+            conn.execute(
+                "CREATE TABLE country_assignments (asset_id TEXT, media_id TEXT, identity_status TEXT)"
+            )
+            conn.execute(
+                "CREATE TABLE owner_asset_identity_aliases (legacy_asset_id TEXT, canonical_asset_id TEXT)"
+            )
             conn.commit()
 
-        self._catalog(self.production, ["legacy-mapped", "legacy-unmapped"])
-        self._catalog(self.candidate, ["legacy-mapped", "legacy-unmapped", "candidate-new"])
+        self._catalog(self.production, ["legacy-mapped", "legacy-bridge", "legacy-unresolved"])
+        self._catalog(
+            self.candidate,
+            ["legacy-mapped", "legacy-bridge", "legacy-unresolved", "candidate-new"],
+        )
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -71,23 +91,34 @@ class OwnerCatalogReconciliationTest(unittest.TestCase):
 
         self.assertTrue(report["readOnly"])
         self.assertEqual(report["verdict"], "review-required")
-        self.assertEqual(report["production"]["rows"], 2)
-        self.assertEqual(report["candidate"]["rows"], 3)
+        self.assertEqual(report["production"]["rows"], 3)
+        self.assertEqual(report["candidate"]["rows"], 4)
         self.assertEqual(report["ownerAuthority"]["publicationRows"], 4)
         self.assertEqual(report["ownerAuthority"]["distinctMediaIds"], 3)
         self.assertEqual(report["ownerAuthority"]["latestStateCounts"], {"local": 3})
         self.assertEqual(
             report["reconciliation"],
             {
-                "commonRows": 2,
+                "commonRows": 3,
                 "productionOnlyRows": 0,
                 "candidateOnlyRows": 1,
                 "productionMappedInOwnerLedger": 1,
-                "productionUnmappedLegacyRows": 1,
+                "productionUnmappedLegacyRows": 2,
                 "productionMappedByLatestState": {"local": 1},
+                "productionWithExactDurableOwnerAsset": 2,
+                "productionWithConflictingDurableOwnerAssets": 0,
+                "productionWithoutDurableOwnerAsset": 1,
+                "productionHistoricalReceiptDisagreements": 1,
+                "unmappedLegacyWithExactDurableOwnerAsset": 1,
+                "unmappedLegacyWithConflictingDurableOwnerAssets": 0,
+                "unmappedLegacyWithoutDurableOwnerAsset": 1,
                 "candidateOnlyMappedInOwnerLedger": 1,
                 "candidateOnlyUnmappedRows": 0,
                 "candidateOnlyMappedByLatestState": {"local": 1},
+                "candidateWithExactDurableOwnerAsset": 3,
+                "candidateWithConflictingDurableOwnerAssets": 0,
+                "candidateWithoutDurableOwnerAsset": 1,
+                "candidateHistoricalReceiptDisagreements": 1,
                 "ownerLedgerMediaAbsentFromBothCatalogs": 1,
                 "ownerLedgerAbsentByLatestState": {"local": 1},
             },

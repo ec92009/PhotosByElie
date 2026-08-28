@@ -25,6 +25,12 @@
   "ownerAuthority": {
     "publicationRows": 842,
     "distinctMediaIds": 842,
+    "uploadBridgeMediaIds": 7490,
+    "mappedCountryMediaIds": 0,
+    "assetIdentityAliases": 47953,
+    "exactDurableAssetMappings": 7489,
+    "conflictingDurableAssetMappings": 1,
+    "historicalReceiptDisagreements": 102,
     "latestStateCounts": {
       "failed": 41,
       "local": 801
@@ -41,11 +47,22 @@
     "productionMappedByLatestState": {
       "local": 233
     },
+    "productionWithExactDurableOwnerAsset": 1145,
+    "productionWithConflictingDurableOwnerAssets": 0,
+    "productionWithoutDurableOwnerAsset": 1505,
+    "productionHistoricalReceiptDisagreements": 102,
+    "unmappedLegacyWithExactDurableOwnerAsset": 912,
+    "unmappedLegacyWithConflictingDurableOwnerAssets": 0,
+    "unmappedLegacyWithoutDurableOwnerAsset": 1505,
     "candidateOnlyMappedInOwnerLedger": 567,
     "candidateOnlyUnmappedRows": 0,
     "candidateOnlyMappedByLatestState": {
       "local": 567
     },
+    "candidateWithExactDurableOwnerAsset": 1712,
+    "candidateWithConflictingDurableOwnerAssets": 0,
+    "candidateWithoutDurableOwnerAsset": 1505,
+    "candidateHistoricalReceiptDisagreements": 102,
     "ownerLedgerMediaAbsentFromBothCatalogs": 42,
     "ownerLedgerAbsentByLatestState": {
       "failed": 41,

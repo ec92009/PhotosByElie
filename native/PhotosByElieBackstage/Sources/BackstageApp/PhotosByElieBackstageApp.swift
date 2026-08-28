@@ -306,18 +306,29 @@ private struct OverviewView: View {
                                         Text("\(device.platform) · enrolled \(device.createdAt.formatted())")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
+                                        if let revokedAt = device.revokedAt {
+                                            Text("Revoked \(revokedAt.formatted())")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     Spacer()
-                                    if model.authentication.deviceId == device.id {
+                                    if device.revokedAt != nil {
+                                        Label("Revoked", systemImage: "xmark.circle")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                    } else if model.authentication.deviceId == device.id {
                                         Text("This Mac")
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                     }
-                                    Button("Revoke", role: .destructive) {
-                                        model.requestOwnerDeviceRevocation(device)
+                                    if device.revokedAt == nil {
+                                        Button("Revoke", role: .destructive) {
+                                            model.requestOwnerDeviceRevocation(device)
+                                        }
+                                        .disabled(model.isRefreshingOwnerDevices)
+                                        .backstageHelp("Confirm revocation of \(device.name). That Mac will no longer be able to renew an Owner session.")
                                     }
-                                    .disabled(model.isRefreshingOwnerDevices)
-                                    .backstageHelp("Confirm revocation of \(device.name). That Mac will no longer be able to renew an Owner session.")
                                 }
                             }
                         }

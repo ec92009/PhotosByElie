@@ -1424,9 +1424,13 @@ final class BackstageViewModel: ObservableObject {
         do {
             enrolledOwnerDevices = try await api.listOwnerDevices()
                 .sorted { $0.createdAt > $1.createdAt }
-            ownerDeviceManagementStatus = enrolledOwnerDevices.isEmpty
-                ? "No enrolled Macs were returned."
-                : "\(enrolledOwnerDevices.count) enrolled Mac\(enrolledOwnerDevices.count == 1 ? "" : "s")."
+            if enrolledOwnerDevices.isEmpty {
+                ownerDeviceManagementStatus = "No enrolled Macs were returned."
+            } else {
+                let activeCount = enrolledOwnerDevices.count { $0.revokedAt == nil }
+                let revokedCount = enrolledOwnerDevices.count - activeCount
+                ownerDeviceManagementStatus = "\(activeCount) active Mac\(activeCount == 1 ? "" : "s") • \(revokedCount) revoked"
+            }
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
             ownerDeviceManagementStatus = "Enrolled Macs unavailable: \(userFacingMessage(for: error))"

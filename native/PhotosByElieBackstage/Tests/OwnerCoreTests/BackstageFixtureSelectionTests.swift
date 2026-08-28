@@ -446,6 +446,7 @@ struct BackstageFixtureSelectionTests {
         )
 
         await model.refreshOwnerDevices()
+        #expect(model.ownerDeviceManagementStatus == "2 active Macs • 1 revoked")
         let historicalDevice = try #require(
             model.enrolledOwnerDevices.first { $0.id == "owner-device-historical" }
         )
@@ -458,7 +459,7 @@ struct BackstageFixtureSelectionTests {
 
         #expect(await transport.revokedDeviceIDs() == ["owner-device-historical"])
         #expect(model.pendingOwnerDeviceRevocation == nil)
-        #expect(model.enrolledOwnerDevices.map(\.id) == ["owner-device-current"])
+        #expect(model.enrolledOwnerDevices.map(\.id) == ["owner-device-current", "owner-device-revoked"])
         #expect(model.ownerDeviceManagementStatus == "Revoked Max Backstage. It can no longer renew an Owner session.")
     }
 
@@ -2613,6 +2614,14 @@ private actor DeviceRevocationTransport: OwnerAPITransport {
                   "createdAt":"2026-07-25T08:29:04Z",
                   "lastUsedAt":null,
                   "revokedAt":null
+                },
+                {
+                  "id":"owner-device-revoked",
+                  "name":"Old Max Backstage",
+                  "platform":"MacIntel",
+                  "createdAt":"2026-07-25T06:42:00Z",
+                  "lastUsedAt":"2026-07-25T07:00:00Z",
+                  "revokedAt":"2026-08-28T12:00:00Z"
                 }
               ]
             }

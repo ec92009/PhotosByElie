@@ -88,6 +88,7 @@ class TestD1 {
   constructor() {
     this.sqlite = new DatabaseSync(":memory:");
     this.sqlite.exec(fs.readFileSync(new URL("../migrations/0012_lifecycle_deny_plane.sql", import.meta.url), "utf8"));
+    this.sqlite.exec(fs.readFileSync(new URL("../migrations/0014_owner_enrollment_handoffs.sql", import.meta.url), "utf8"));
   }
   prepare(sql) { return new TestD1Statement(this.sqlite, sql); }
   batch(statements) {
@@ -1253,6 +1254,8 @@ test("native Mac enrollment handoff is short-lived, browser-authorized, bound an
 });
 
 test("D1 native enrollment claim atomically consumes one authorized handoff", async () => {
+  const source = fs.readFileSync(new URL("./owner-enrollment-handoff-store.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /CREATE\s+TABLE/i);
   const database = new TestD1();
   const now = () => new Date("2026-08-28T08:00:00.000Z");
   const store = createD1OwnerEnrollmentHandoffStore({ database, now });

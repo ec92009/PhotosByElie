@@ -87,28 +87,9 @@ export const createMemoryOwnerEnrollmentHandoffStore = ({ now = () => new Date()
 
 export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new Date() } = {}) => {
   if (!database) throw new Error("createD1OwnerEnrollmentHandoffStore requires a D1 database binding.");
-  let schemaPromise;
-  const ensureSchema = () => {
-    if (!schemaPromise) {
-      schemaPromise = database.prepare(`
-        CREATE TABLE IF NOT EXISTS pbe_owner_enrollment_handoffs (
-          id TEXT PRIMARY KEY,
-          binding TEXT NOT NULL,
-          name TEXT NOT NULL,
-          platform TEXT NOT NULL,
-          state TEXT NOT NULL,
-          email TEXT NOT NULL DEFAULT '',
-          claim_hash TEXT NOT NULL,
-          created_at TEXT NOT NULL,
-          expires_at TEXT NOT NULL,
-          authorized_at TEXT NOT NULL DEFAULT '',
-          claimed_at TEXT NOT NULL DEFAULT '',
-          cancelled_at TEXT NOT NULL DEFAULT ''
-        )
-      `).run();
-    }
-    return schemaPromise;
-  };
+  const assertReady = () => database
+    .prepare("SELECT 1 FROM pbe_owner_enrollment_handoffs LIMIT 1")
+    .first();
   const fromRow = (row) => row ? {
     id: row.id,
     binding: row.binding,
@@ -123,12 +104,12 @@ export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new 
     cancelledAt: row.cancelled_at,
   } : null;
   const rowFor = async (id) => {
-    await ensureSchema();
+    await assertReady();
     return database.prepare("SELECT * FROM pbe_owner_enrollment_handoffs WHERE id = ?").bind(clean(id, 96)).first();
   };
   return {
     create: async (record, claimSecret) => {
-      await ensureSchema();
+      await assertReady();
       const stored = await normalizeInput(record, claimSecret);
       await database.prepare(`
         INSERT INTO pbe_owner_enrollment_handoffs (
@@ -140,7 +121,7 @@ export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new 
     },
     get: async (id) => fromRow(await rowFor(id)),
     authorize: async ({ id, email, authorizedAt }) => {
-      await ensureSchema();
+      await assertReady();
       const timestamp = clean(authorizedAt, 80) || now().toISOString();
       await database.prepare(`
         UPDATE pbe_owner_enrollment_handoffs
@@ -151,7 +132,7 @@ export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new 
       return row?.state === "authorized" ? fromRow(row) : null;
     },
     claim: async ({ id, binding, claimSecret, claimedAt }) => {
-      await ensureSchema();
+      await assertReady();
       const key = clean(id, 96);
       const timestamp = clean(claimedAt, 80) || now().toISOString();
       const hash = await sha256Hex(claimSecret);
@@ -172,7 +153,7 @@ export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new 
       return { outcome: "accepted", handoff: fromRow(await rowFor(key)) };
     },
     cancel: async ({ id, binding, claimSecret, cancelledAt }) => {
-      await ensureSchema();
+      await assertReady();
       const hash = await sha256Hex(claimSecret);
       const result = await database.prepare(`
         UPDATE pbe_owner_enrollment_handoffs
@@ -182,6 +163,6 @@ export const createD1OwnerEnrollmentHandoffStore = ({ database, now = () => new 
       `).bind(clean(cancelledAt, 80) || now().toISOString(), clean(id, 96), clean(binding, 128), hash, now().toISOString()).run();
       return Number(result?.meta?.changes || 0) === 1 ? fromRow(await rowFor(id)) : null;
     },
-    ensureSchema,
+    ensureSchema: assertReady,
   };
 };

@@ -28,7 +28,21 @@ if ! /usr/bin/open -n -j \
   exit 1
 fi
 
-timeout_seconds="${PBE_BACKSTAGE_CONTROL_TIMEOUT_SECONDS:-300}"
+if [[ -n "${PBE_BACKSTAGE_CONTROL_TIMEOUT_SECONDS:-}" ]]; then
+  timeout_seconds="$PBE_BACKSTAGE_CONTROL_TIMEOUT_SECONDS"
+elif [[ "${1:-}" == "photos" \
+        && "${2:-}" == "raw-recovery" \
+        && "${3:-}" == "batch" \
+        && ( "${4:-}" == "start" || "${4:-}" == "resume" ) ]]; then
+  # A 2,000-photo PhotoKit recovery window can legitimately run for hours,
+  # especially when originals must come down from iCloud. The app checkpoints
+  # after every asset; keep the control launcher attached long enough to return
+  # the final structured receipt instead of reporting a false five-minute
+  # timeout while the durable child continues correctly.
+  timeout_seconds=21600
+else
+  timeout_seconds=300
+fi
 deadline=$(( SECONDS + timeout_seconds ))
 while [[ ! -s "$stdout_path" ]]; do
   if (( SECONDS >= deadline )); then

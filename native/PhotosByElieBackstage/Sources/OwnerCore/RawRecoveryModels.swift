@@ -63,7 +63,7 @@ public struct RawRecoveryQualityAssessment: Codable, Sendable, Equatable {
 
     public init(
         schemaVersion: Int = 1,
-        detector: String = "neutral-pixel-blue-cast-v1",
+        detector: String = "strict-neutral-pixel-blue-cast-v2",
         verdict: RawRecoveryColorVerdict,
         sampledPixelCount: Int,
         neutralPixelCount: Int,
@@ -101,7 +101,10 @@ public enum RawRecoveryColorPolicy {
             let maximum = max(sample.red, sample.green, sample.blue)
             let minimum = min(sample.red, sample.green, sample.blue)
             let luminance = (0.2126 * sample.red) + (0.7152 * sample.green) + (0.0722 * sample.blue)
-            return luminance >= 0.08 && luminance <= 0.92 && maximum - minimum <= 0.18
+            // Keep the cast sample genuinely neutral. A looser chroma bound
+            // mistakes large areas of naturally blue water or sky for gray
+            // surfaces with a blue cast.
+            return luminance >= 0.08 && luminance <= 0.92 && maximum - minimum <= 0.08
         }
         let minimumNeutralCount = max(32, Int((Double(bounded.count) * 0.02).rounded(.up)))
         guard neutral.count >= minimumNeutralCount else {

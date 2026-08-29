@@ -70,17 +70,25 @@ struct RawRecoveryTests {
             count: 128
         )
         let cast = Array(
-            repeating: RawRecoveryColorSample(red: 0.40, green: 0.50, blue: 0.56),
+            repeating: RawRecoveryColorSample(red: 0.455, green: 0.485, blue: 0.53),
             count: 128
         )
         let blueScene = Array(
             repeating: RawRecoveryColorSample(red: 0.10, green: 0.40, blue: 0.90),
             count: 128
         )
+        let oceanWithNeutralWake = Array(
+            repeating: RawRecoveryColorSample(red: 0.22, green: 0.32, blue: 0.37),
+            count: 96
+        ) + Array(
+            repeating: RawRecoveryColorSample(red: 0.78, green: 0.79, blue: 0.80),
+            count: 32
+        )
 
         #expect(RawRecoveryColorPolicy.assess(samples: balanced).verdict == .pass)
         #expect(RawRecoveryColorPolicy.assess(samples: cast).verdict == .suspectBlueCast)
         #expect(RawRecoveryColorPolicy.assess(samples: blueScene).verdict == .inconclusive)
+        #expect(RawRecoveryColorPolicy.assess(samples: oceanWithNeutralWake).verdict == .pass)
     }
 
     @Test("A bounded batch resumes without replay and quarantines cast derivatives")

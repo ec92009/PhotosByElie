@@ -1476,8 +1476,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.13")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "267")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.14")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "268")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1623,6 +1623,8 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("/usr/bin/open -n -j", wrapper)
         self.assertIn('--args --control "$@"', wrapper)
         self.assertIn('--stdout "$stdout_path"', wrapper)
+        self.assertIn('timeout_seconds=21600', wrapper)
+        self.assertIn('"${4:-}" == "resume"', wrapper)
         self.assertIn('payload.get("ok") is True', wrapper)
         self.assertNotIn('exec "$executable" --control', wrapper)
         self.assertIn("scripts/backstage-control.zsh health --pretty", docs)

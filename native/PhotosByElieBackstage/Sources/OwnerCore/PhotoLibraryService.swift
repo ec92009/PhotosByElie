@@ -133,6 +133,10 @@ public protocol PhotoLibraryServing: Sendable {
         allowICloudDownloads: Bool
     ) async throws -> OwnerCurrentEquipment
     func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan
+    func rawRecoveryCandidates(
+        limit: Int,
+        excludingLocalIdentifiers: Set<String>
+    ) async throws -> [RawRecoveryCandidate]
     func recoverRawJPEG(
         localIdentifier: String,
         maxPixelSize: Int,
@@ -169,6 +173,16 @@ public extension PhotoLibraryServing {
 
     func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan {
         throw PhotoLibraryError.metadataFailed("This Photos library service does not provide RAW recovery planning.")
+    }
+
+    func rawRecoveryCandidates(
+        limit: Int,
+        excludingLocalIdentifiers: Set<String>
+    ) async throws -> [RawRecoveryCandidate] {
+        let plan = try await rawRecoveryPlan(sampleLimit: min(32, limit))
+        return plan.sampleCandidates.filter {
+            !excludingLocalIdentifiers.contains($0.localIdentifier)
+        }
     }
 
     func recoverRawJPEG(
@@ -297,14 +311,20 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         // stays out: PBB/PBE accept a JPEG, HEIC, PNG, or TIFF source that Photos can
         // safely render as the JPG consumed by the apps.
         let result = PHAsset.fetchAssets(with: .image, options: options)
+        let recoverySnapshot = RawRecoveryBatchRegistry.snapshot()
         var items: [PhotoLibraryItem] = []
         result.enumerateObjects { asset, _, stop in
-            guard let acceptedSource = preferredAcceptedStillResource(for: asset) else {
+            let acceptedSource = preferredAcceptedStillResource(for: asset)
+            let recovered = recoverySnapshot?.resolvedDerivative(
+                localIdentifier: asset.localIdentifier
+            )
+            guard acceptedSource != nil || recovered != nil else {
                 return
             }
             items.append(PhotoLibraryItem(
                 id: asset.localIdentifier,
-                filename: renderedJPEGFilename(acceptedSource, index: items.count + 1),
+                filename: recovered?.receipt.relativePath
+                    ?? renderedJPEGFilename(acceptedSource, index: items.count + 1),
                 creationDate: asset.creationDate,
                 mediaType: asset.mediaType == .video ? "video" : "photo"
             ))
@@ -339,13 +359,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         // RAW-only PHAsset is excluded because PBB/PBE require a supported still
         // source that Photos can render safely as JPG.
         let assets = PHAsset.fetchAssets(with: .image, options: options)
+        let recoverySnapshot = RawRecoveryBatchRegistry.snapshot()
         // Filter before applying offset/limit. Applying pagination to the raw
         // Photos result first would make a page appear short and could skip
         // valid supported stills after a run of RAW-only assets.
         var acceptedAssets: [PHAsset] = []
         var excludedStillFormatCounts: [String: Int] = [:]
         assets.enumerateObjects { asset, _, _ in
-            if preferredAcceptedStillResource(for: asset) != nil {
+            if preferredAcceptedStillResource(for: asset) != nil
+                || recoverySnapshot?.entry(localIdentifier: asset.localIdentifier) != nil {
                 acceptedAssets.append(asset)
             } else {
                 let formats = PHAssetResource.assetResources(for: asset).map(resourceFormat)
@@ -366,7 +388,10 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             libraryIndexRow(
                 asset,
                 index: pageStart + index + 1,
-                cloudIdentifier: cloudIdentifiers[asset.localIdentifier] ?? ""
+                cloudIdentifier: cloudIdentifiers[asset.localIdentifier] ?? "",
+                recovered: recoverySnapshot?.resolvedDerivative(
+                    localIdentifier: asset.localIdentifier
+                )
             )
         }
         let payload: [String: Any] = [
@@ -389,7 +414,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "notes": [
                 "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
                 "Sidecar culling decisions are local-first. Photos keyword/title write-back is staged separately.",
-                "RAW-only Photos assets without a JPEG, HEIC, PNG, or TIFF resource are excluded from PBB/PBE source intake.",
+                "RAW-only Photos assets enter source intake only after a checksum-receipted JPEG recovery batch; all recovered assets remain Review-gated.",
             ],
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
@@ -415,7 +440,8 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                     filename: raw.originalFilename,
                     resourceFormat: resourceFormat(raw),
                     sourcePixelWidth: asset.pixelWidth,
-                    sourcePixelHeight: asset.pixelHeight
+                    sourcePixelHeight: asset.pixelHeight,
+                    capturedAt: photoLibraryISODate(asset.creationDate)
                 ))
             }
         }
@@ -436,9 +462,42 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             notes: [
                 "Read-only PhotoKit metadata census; no source bytes were downloaded and no Owner state changed.",
                 "Storage range assumes 0.25 to 0.75 JPEG bytes per source pixel and must be calibrated with accepted camera samples.",
-                "Bulk recovery remains disabled. A bounded sample requires one explicit Photos local identifier.",
+                "Bulk recovery is available only through an explicit, durable 2,000-photo batch with a capacity reserve and mandatory Review.",
             ]
         )
+    }
+
+    public func rawRecoveryCandidates(
+        limit: Int,
+        excludingLocalIdentifiers: Set<String> = []
+    ) async throws -> [RawRecoveryCandidate] {
+        try requireAccess()
+        let boundedLimit = max(1, min(2_000, limit))
+        let assets = PHAsset.fetchAssets(with: .image, options: nil)
+        var candidates: [(date: Date, candidate: RawRecoveryCandidate)] = []
+        candidates.reserveCapacity(min(assets.count, 32_000))
+        assets.enumerateObjects { asset, _, _ in
+            guard !excludingLocalIdentifiers.contains(asset.localIdentifier),
+                  preferredAcceptedStillResource(for: asset) == nil,
+                  let raw = preferredRAWResource(for: asset) else { return }
+            candidates.append((
+                asset.creationDate ?? .distantPast,
+                RawRecoveryCandidate(
+                    localIdentifier: asset.localIdentifier,
+                    filename: raw.originalFilename,
+                    resourceFormat: resourceFormat(raw),
+                    sourcePixelWidth: asset.pixelWidth,
+                    sourcePixelHeight: asset.pixelHeight,
+                    capturedAt: photoLibraryISODate(asset.creationDate)
+                )
+            ))
+        }
+        return candidates.sorted {
+            if $0.date != $1.date { return $0.date < $1.date }
+            return $0.candidate.localIdentifier < $1.candidate.localIdentifier
+        }
+        .prefix(boundedLimit)
+        .map(\.candidate)
     }
 
     public func recoverRawJPEG(
@@ -516,6 +575,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 pixelWidth: width,
                 pixelHeight: height
             )
+            let quality = Self.recoveryQualityAssessment(from: data)
+            let technicalEligibility: String
+            if products.isEmpty {
+                technicalEligibility = "insufficient-pixels"
+            } else if quality.blueCastSuspected {
+                technicalEligibility = "quarantined-blue-cast"
+            } else {
+                technicalEligibility = "candidate-after-review"
+            }
             let receiptFilename = "raw-recovery-\(identifierDigest).receipt.json"
             let receipt = RawRecoveryReceipt(
                 generatedAt: photoLibraryISODate(Date()),
@@ -535,12 +603,16 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 receiptRelativePath: receiptFilename,
                 reusedExisting: reusedExisting,
                 publicationProducts: products,
-                technicalEligibility: products.isEmpty ? "insufficient-pixels" : "candidate-after-review",
+                technicalEligibility: technicalEligibility,
+                qualityAssessment: quality,
                 failedRungs: failedRungs,
                 notes: [
                     "The RAW source is unchanged and remains private in Photos.",
                     "This bounded sample is not enrolled in Owner and cannot publish automatically.",
                     "Review must approve the image and editorial metadata before publication.",
+                    quality.blueCastSuspected
+                        ? "The neutral-pixel detector quarantined this derivative for a possible blue/cyan cast."
+                        : "The neutral-pixel detector did not find a systematic blue/cyan cast.",
                 ]
             )
             let encoder = JSONEncoder()
@@ -685,6 +757,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoPreview {
         try requireAccess()
         let asset = try asset(localIdentifier)
+        if let recovered = RawRecoveryBatchRegistry.resolvedDerivative(localIdentifier: localIdentifier),
+           let data = try? Data(contentsOf: recovered.jpegURL) {
+            return try Self.previewFromImageData(
+                data,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize,
+                currentImageByteCount: Int64(data.count)
+            )
+        }
 
         if maxPixelSize <= Self.thumbnailRequestMaxPixelSize {
             return try await requestThumbnailPreview(
@@ -707,6 +788,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoPreview {
         try requireAccess()
         let asset = try asset(localIdentifier)
+        if let recovered = RawRecoveryBatchRegistry.resolvedDerivative(localIdentifier: localIdentifier),
+           let data = try? Data(contentsOf: recovered.jpegURL) {
+            return try Self.previewFromImageData(
+                data,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize,
+                currentImageByteCount: Int64(data.count)
+            )
+        }
 
         if maxPixelSize <= Self.thumbnailRequestMaxPixelSize {
             return try await requestThumbnailPreview(
@@ -734,6 +824,15 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoPreview {
         try requireAccess()
         let asset = try asset(localIdentifier)
+        if let recovered = RawRecoveryBatchRegistry.resolvedDerivative(localIdentifier: localIdentifier),
+           let data = try? Data(contentsOf: recovered.jpegURL) {
+            return try Self.previewFromImageData(
+                data,
+                localIdentifier: localIdentifier,
+                maxPixelSize: maxPixelSize,
+                currentImageByteCount: Int64(data.count)
+            )
+        }
         if let acceptedSource = preferredAcceptedStillResource(for: asset) {
             return try await requestAcceptedStillResourcePreview(
                 resource: acceptedSource,
@@ -1100,6 +1199,65 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             && data[data.endIndex - 1] == 0xd9
     }
 
+    static func recoveryQualityAssessment(from data: Data) -> RawRecoveryQualityAssessment {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 192,
+              ] as CFDictionary)
+        else {
+            return RawRecoveryQualityAssessment(
+                verdict: .inconclusive,
+                sampledPixelCount: 0,
+                neutralPixelCount: 0,
+                neutralPixelFraction: 0,
+                meanBlueExcess: 0,
+                meanCoolExcess: 0,
+                score: 0,
+                notes: ["The derivative could not be decoded for color-quality sampling."]
+            )
+        }
+
+        let width = image.width
+        let height = image.height
+        let bytesPerRow = width * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return RawRecoveryQualityAssessment(
+                verdict: .inconclusive,
+                sampledPixelCount: 0,
+                neutralPixelCount: 0,
+                neutralPixelFraction: 0,
+                meanBlueExcess: 0,
+                meanCoolExcess: 0,
+                score: 0,
+                notes: ["The derivative could not be rasterized for color-quality sampling."]
+            )
+        }
+        context.interpolationQuality = .medium
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        var samples: [RawRecoveryColorSample] = []
+        samples.reserveCapacity(width * height)
+        for offset in stride(from: 0, to: pixels.count, by: 4) {
+            samples.append(RawRecoveryColorSample(
+                red: Double(pixels[offset]) / 255,
+                green: Double(pixels[offset + 1]) / 255,
+                blue: Double(pixels[offset + 2]) / 255
+            ))
+        }
+        return RawRecoveryColorPolicy.assess(samples: samples)
+    }
+
     private static func normalizedRecoveryJPEG(
         from sourceData: Data,
         localIdentifier: String,
@@ -1281,6 +1439,28 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     ) async throws -> PhotoExportReceipt {
         try requireAccess()
         let asset = try asset(localIdentifier)
+        if let recovered = RawRecoveryBatchRegistry.resolvedDerivative(
+            localIdentifier: localIdentifier,
+            verifyChecksum: true
+        ) {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+            let destination = uniqueDestination(
+                directory: directory,
+                filename: recovered.receipt.relativePath
+            )
+            try FileManager.default.copyItem(at: recovered.jpegURL, to: destination)
+            return PhotoExportReceipt(
+                assetID: localIdentifier,
+                filename: recovered.receipt.relativePath,
+                destination: destination,
+                uniformTypeIdentifier: UTType.jpeg.identifier,
+                byteCount: recovered.receipt.byteCount,
+                checksumSHA256: recovered.receipt.checksumSHA256
+            )
+        }
         guard let resource = preferredOriginalResource(for: asset) else {
             throw PhotoLibraryError.resourceNotFound(localIdentifier)
         }
@@ -1339,7 +1519,8 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
     private func libraryIndexRow(
         _ asset: PHAsset,
         index: Int,
-        cloudIdentifier: String
+        cloudIdentifier: String,
+        recovered: RawRecoveryResolvedDerivative? = nil
     ) -> [String: Any] {
         let resources = PHAssetResource.assetResources(for: asset)
         let preferred = preferredOriginalResource(for: asset)
@@ -1354,7 +1535,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         let formatCounts = formats.reduce(into: [String: Int]()) { counts, format in
             counts[format, default: 0] += 1
         }
-        let eligible = acceptedSource != nil
+        let eligible = acceptedSource != nil || recovered != nil
         var row: [String: Any] = [
             "index": index,
             "assetId": assetIdentifier,
@@ -1364,9 +1545,10 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                 ? "apple-photos://\(asset.localIdentifier)"
                 : "apple-photos-cloud://\(cloudIdentifier)",
             "localSourceAnchor": "apple-photos://\(asset.localIdentifier)",
-            "filename": eligible
-                ? renderedJPEGFilename(renderedJPEG ?? acceptedSource, index: index)
-                : displayResource?.originalFilename ?? asset.localIdentifier,
+            "filename": recovered?.receipt.relativePath
+                ?? (eligible
+                    ? renderedJPEGFilename(renderedJPEG ?? acceptedSource, index: index)
+                    : displayResource?.originalFilename ?? asset.localIdentifier),
             "mediaType": "photo",
             "creationDate": photoLibraryISODate(asset.creationDate),
             "modificationDate": photoLibraryISODate(asset.modificationDate),
@@ -1380,22 +1562,38 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "resourceFormat": distinctFormats.isEmpty ? "Unknown" : distinctFormats.joined(separator: "+"),
             "resourceFormats": distinctFormats,
             "resourceFormatCounts": formatCounts,
-            "preferredResourceFilename": acceptedSource?.originalFilename
+            "preferredResourceFilename": recovered?.receipt.relativePath
+                ?? acceptedSource?.originalFilename
                 ?? preferred?.originalFilename
                 ?? "",
-            "preferredResourceFormat": acceptedSource.map(resourceFormat)
+            "preferredResourceFormat": recovered == nil ? (acceptedSource.map(resourceFormat)
                 ?? preferred.map(resourceFormat)
-                ?? "",
+                ?? "") : "JPEG",
             "fallbackResourceFilename": renderedJPEG?.originalFilename ?? "",
             "fallbackResourceFormat": renderedJPEG.map(resourceFormat) ?? "",
             "localJPEGFallbackAvailable": renderedJPEG != nil,
             "eligible": eligible,
-            "exportStrategy": eligible ? "rendered_jpeg" : "unsupported",
+            "exportStrategy": recovered == nil
+                ? (eligible ? "rendered_jpeg" : "unsupported")
+                : "raw_recovered_jpeg",
             "status": eligible ? "candidate" : "unsupported",
             "reason": eligible
-                ? "Photos still image will import as the current rendered JPG from Photos."
+                ? (recovered == nil
+                    ? "Photos still image will import as the current rendered JPG from Photos."
+                    : "RAW-only Photos asset has a private checksum-receipted JPEG derivative and remains Review-gated.")
                 : "Photos asset has no JPEG, HEIC, PNG, or TIFF resource; PBB/PBE source intake excludes it.",
         ]
+        if let recovered {
+            row["rawRecovery"] = [
+                "batchId": recovered.ledgerEntry.batchID,
+                "state": recovered.ledgerEntry.state.rawValue,
+                "receiptRelativePath": recovered.ledgerEntry.receiptRelativePath,
+                "rung": recovered.receipt.rung.rawValue,
+                "checksumSHA256": recovered.receipt.checksumSHA256,
+                "qualityVerdict": recovered.receipt.qualityAssessment?.verdict.rawValue ?? "inconclusive",
+                "requiresReview": true,
+            ] as [String: Any]
+        }
         if let location = locationRow(asset) {
             row["location"] = location
         }

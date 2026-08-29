@@ -535,7 +535,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('metadataRow("Current image size"', inspector)
         self.assertNotIn('metadataRow("Original size"', inspector)
 
-    def test_photo_index_accepts_renderable_stills_and_excludes_raw_only_assets(self):
+    def test_photo_index_accepts_renderable_stills_and_receipted_raw_recoveries(self):
         photo_library = (
             NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
         ).read_text(encoding="utf-8")
@@ -548,9 +548,10 @@ class NativeCullingParityTest(unittest.TestCase):
         row_source = photo_library.split("private func libraryIndexRow(", 1)[1].split(
             "private func resourceRows(", 1
         )[0]
-        self.assertIn("guard let acceptedSource = preferredAcceptedStillResource(for: asset) else", fetch_source)
+        self.assertIn("let recoverySnapshot = RawRecoveryBatchRegistry.snapshot()", fetch_source)
+        self.assertIn("guard acceptedSource != nil || recovered != nil else", fetch_source)
         self.assertIn("var acceptedAssets: [PHAsset] = []", index_source)
-        self.assertIn("if preferredAcceptedStillResource(for: asset) != nil", index_source)
+        self.assertIn("recoverySnapshot?.entry(localIdentifier: asset.localIdentifier) != nil", index_source)
         self.assertIn("let pageStart = min(safeOffset, acceptedAssets.count)", index_source)
         self.assertNotIn("options.fetchLimit = safeOffset + safeLimit", index_source)
         self.assertIn('"photosMediaItemCount": assets.count + videoCount', index_source)
@@ -565,9 +566,11 @@ class NativeCullingParityTest(unittest.TestCase):
             photo_library,
         )
         self.assertIn(
-            "RAW-only Photos assets without a JPEG, HEIC, PNG, or TIFF resource are excluded",
+            "RAW-only Photos assets enter source intake only after a checksum-receipted JPEG recovery batch",
             index_source,
         )
+        self.assertIn('"rawRecovery"', row_source)
+        self.assertIn('"raw_recovered_jpeg"', row_source)
         self.assertIn(
             "Photos asset has no JPEG, HEIC, PNG, or TIFF resource; PBB/PBE source intake excludes it.",
             row_source,
@@ -1473,8 +1476,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.12")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "266")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.13")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "267")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

@@ -382,6 +382,53 @@ public struct BackstageControlService: Sendable {
         )
     }
 
+    public func startRawRecoveryBatch(
+        rootDirectory: URL? = nil,
+        maxItemsThisRun: Int = 2_000,
+        maxPixelSize: Int = 8_192,
+        minimumPixels: Int = RawRecoveryPolicy.minimumPublicationPixels,
+        reserveBytes: Int64 = 15_000_000_000
+    ) async throws -> RawRecoveryBatchResult {
+        try await RawRecoveryBatchService(photoLibrary: photoLibrary).start(
+            rootDirectory: rootDirectory ?? defaultRawRecoveryBatchDirectory,
+            queueWindow: 2_000,
+            maxItemsThisRun: maxItemsThisRun,
+            maxPixelSize: maxPixelSize,
+            minimumPixels: minimumPixels,
+            reserveBytes: reserveBytes
+        )
+    }
+
+    public func resumeRawRecoveryBatch(
+        rootDirectory: URL? = nil,
+        maxItemsThisRun: Int = 2_000
+    ) async throws -> RawRecoveryBatchResult {
+        try await RawRecoveryBatchService(photoLibrary: photoLibrary).resume(
+            rootDirectory: rootDirectory ?? defaultRawRecoveryBatchDirectory,
+            maxItemsThisRun: maxItemsThisRun
+        )
+    }
+
+    public func rawRecoveryBatchStatus(
+        rootDirectory: URL? = nil
+    ) throws -> RawRecoveryBatchResult {
+        try RawRecoveryBatchService(photoLibrary: photoLibrary).status(
+            rootDirectory: rootDirectory ?? defaultRawRecoveryBatchDirectory
+        )
+    }
+
+    public func cancelRawRecoveryBatch(
+        rootDirectory: URL? = nil
+    ) throws -> RawRecoveryBatchResult {
+        try RawRecoveryBatchService(photoLibrary: photoLibrary).cancel(
+            rootDirectory: rootDirectory ?? defaultRawRecoveryBatchDirectory
+        )
+    }
+
+    private var defaultRawRecoveryBatchDirectory: URL {
+        RawRecoveryBatchRegistry.defaultRootDirectory
+    }
+
     private func message(
         photoAccess: String,
         ownerSnapshot: OwnerAuthenticationSnapshot,
@@ -438,6 +485,10 @@ public enum BackstageControlCLI {
       backstage-control [health|doctor|release verify|photos health|photos authorize] [--pretty]
       backstage-control photos raw-recovery plan [--sample-limit <0-32>] [--pretty]
       backstage-control photos raw-recovery sample --asset-id <Photos-local-ID> [--max-pixel <256-8192>] [--minimum-megapixels <1-100>] [--pretty]
+      backstage-control photos raw-recovery batch start [--destination <absolute-directory>] [--max-items <1-2000>] [--max-pixel <256-8192>] [--minimum-megapixels <1-100>] [--reserve-gb <1-100>] [--pretty]
+      backstage-control photos raw-recovery batch resume [--destination <absolute-directory>] [--max-items <1-2000>] [--pretty]
+      backstage-control photos raw-recovery batch status [--destination <absolute-directory>] [--pretty]
+      backstage-control photos raw-recovery batch cancel [--destination <absolute-directory>] [--pretty]
       backstage-control real-estate originals preflight --gallery <gallery-key> --items-file <items.json> [--pretty]
 
     Commands return JSON on stdout. Exit codes: 0 ready, 1 internal error,
@@ -502,6 +553,14 @@ public enum BackstageControlCLI {
         }
         if Array(tokens.prefix(3)) == ["photos", "raw-recovery", "sample"] {
             return await emitRawRecoverySample(
+                arguments: Array(tokens.dropFirst(3)),
+                pretty: pretty,
+                service: service,
+                output: output
+            )
+        }
+        if Array(tokens.prefix(3)) == ["photos", "raw-recovery", "batch"] {
+            return await emitRawRecoveryBatch(
                 arguments: Array(tokens.dropFirst(3)),
                 pretty: pretty,
                 service: service,
@@ -664,6 +723,143 @@ public enum BackstageControlCLI {
         } catch {
             return emitError(
                 code: "raw_recovery_sample_failed",
+                message: error.localizedDescription,
+                pretty: pretty,
+                exitCode: 1,
+                output: output
+            )
+        }
+    }
+
+    private static func emitRawRecoveryBatch(
+        arguments: [String],
+        pretty: Bool,
+        service: BackstageControlService,
+        output: @escaping @Sendable (String) -> Void
+    ) async -> Int32 {
+        guard let action = arguments.first,
+              ["start", "resume", "status", "cancel"].contains(action) else {
+            return emitError(
+                code: "invalid_arguments",
+                message: "RAW recovery batch requires start, resume, status, or cancel.",
+                pretty: pretty,
+                exitCode: 64,
+                output: output
+            )
+        }
+        var destination: URL?
+        var maxItems = 2_000
+        var maxPixel = 8_192
+        var minimumMegapixels = 1
+        var reserveGB = 15
+        var index = 1
+        while index < arguments.count {
+            let argument = arguments[index]
+            guard index + 1 < arguments.count else {
+                return emitError(
+                    code: "invalid_arguments",
+                    message: "RAW recovery batch options require values.",
+                    pretty: pretty,
+                    exitCode: 64,
+                    output: output
+                )
+            }
+            let value = arguments[index + 1]
+            switch argument {
+            case "--destination":
+                guard destination == nil, value.hasPrefix("/"), value != "/" else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--destination must be one specific absolute directory.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                destination = URL(fileURLWithPath: value, isDirectory: true)
+            case "--max-items":
+                guard ["start", "resume"].contains(action),
+                      let parsed = Int(value), (1...2_000).contains(parsed) else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--max-items must be between 1 and 2000 for start or resume.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                maxItems = parsed
+            case "--max-pixel":
+                guard action == "start", let parsed = Int(value), (256...8_192).contains(parsed) else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--max-pixel must be between 256 and 8192 when starting a batch.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                maxPixel = parsed
+            case "--minimum-megapixels":
+                guard action == "start", let parsed = Int(value), (1...100).contains(parsed) else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--minimum-megapixels must be between 1 and 100 when starting a batch.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                minimumMegapixels = parsed
+            case "--reserve-gb":
+                guard action == "start", let parsed = Int(value), (1...100).contains(parsed) else {
+                    return emitError(
+                        code: "invalid_arguments",
+                        message: "--reserve-gb must be between 1 and 100 when starting a batch.",
+                        pretty: pretty,
+                        exitCode: 64,
+                        output: output
+                    )
+                }
+                reserveGB = parsed
+            default:
+                return emitError(
+                    code: "invalid_arguments",
+                    message: "Unsupported RAW recovery batch option \(argument).",
+                    pretty: pretty,
+                    exitCode: 64,
+                    output: output
+                )
+            }
+            index += 2
+        }
+
+        do {
+            let result: RawRecoveryBatchResult
+            switch action {
+            case "start":
+                result = try await service.startRawRecoveryBatch(
+                    rootDirectory: destination,
+                    maxItemsThisRun: maxItems,
+                    maxPixelSize: maxPixel,
+                    minimumPixels: minimumMegapixels * 1_000_000,
+                    reserveBytes: Int64(reserveGB) * 1_000_000_000
+                )
+            case "resume":
+                result = try await service.resumeRawRecoveryBatch(
+                    rootDirectory: destination,
+                    maxItemsThisRun: maxItems
+                )
+            case "status":
+                result = try service.rawRecoveryBatchStatus(rootDirectory: destination)
+            default:
+                result = try service.cancelRawRecoveryBatch(rootDirectory: destination)
+            }
+            output(encode(result, pretty: pretty))
+            return result.ok ? 0 : 2
+        } catch {
+            return emitError(
+                code: "raw_recovery_batch_failed",
                 message: error.localizedDescription,
                 pretty: pretty,
                 exitCode: 1,

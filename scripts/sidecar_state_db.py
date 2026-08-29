@@ -968,6 +968,26 @@ def is_jpeg_source_row(row: dict[str, Any]) -> bool:
     accepted for compatibility with non-Photos callers; once resource
     metadata is present, one supported still format must be explicit.
     """
+    raw_recovery = row.get("rawRecovery") or row.get("raw_recovery") or {}
+    if isinstance(raw_recovery, dict):
+        recovery_state = str(raw_recovery.get("state") or "").strip().casefold()
+        receipt = str(
+            raw_recovery.get("receiptRelativePath")
+            or raw_recovery.get("receipt_relative_path")
+            or ""
+        ).strip()
+        checksum = str(
+            raw_recovery.get("checksumSHA256")
+            or raw_recovery.get("checksum_sha256")
+            or ""
+        ).strip().casefold()
+        if (
+            recovery_state in {"generated", "quarantined-blue-cast"}
+            and receipt
+            and re.fullmatch(r"[0-9a-f]{64}", checksum)
+        ):
+            return True
+
     explicit_metadata, format_tokens = _source_format_tokens(row)
     if any(
         _source_token_matches(token, {"JPEG", "HEIC", "PNG", "TIFF"})

@@ -392,6 +392,20 @@ class FixturePipelineTest(unittest.TestCase):
                 ).fetchone()
             )
 
+        recovered_raw = {
+            **raw_only,
+            "localIdentifier": "raw-recovered",
+            "filename": "raw-recovery-example.jpg",
+            "rawRecovery": {
+                "state": "quarantined-blue-cast",
+                "receiptRelativePath": "batches/raw-example/raw.receipt.json",
+                "checksumSHA256": "a" * 64,
+                "requiresReview": True,
+            },
+        }
+        self.assertTrue(is_jpeg_source_row(recovered_raw))
+        self.assertEqual(upsert_assets(self.root, [recovered_raw]), 1)
+
         jpeg_backed = {
             "localIdentifier": "jpeg-backed",
             "filename": "20220807 153244 00171.jpg",

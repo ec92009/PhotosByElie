@@ -63,6 +63,101 @@ struct RawRecoveryTests {
         #expect(RawRecoveryPolicy.publicationProducts(pixelWidth: 3_000, pixelHeight: 2_000) == ["1MP", "3MP", "6MP"])
     }
 
+    @Test("Blue-cast detection uses neutral midtones without condemning blue scenes")
+    func blueCastDetectionUsesNeutralMidtones() {
+        let balanced = Array(
+            repeating: RawRecoveryColorSample(red: 0.50, green: 0.51, blue: 0.52),
+            count: 128
+        )
+        let cast = Array(
+            repeating: RawRecoveryColorSample(red: 0.40, green: 0.50, blue: 0.56),
+            count: 128
+        )
+        let blueScene = Array(
+            repeating: RawRecoveryColorSample(red: 0.10, green: 0.40, blue: 0.90),
+            count: 128
+        )
+
+        #expect(RawRecoveryColorPolicy.assess(samples: balanced).verdict == .pass)
+        #expect(RawRecoveryColorPolicy.assess(samples: cast).verdict == .suspectBlueCast)
+        #expect(RawRecoveryColorPolicy.assess(samples: blueScene).verdict == .inconclusive)
+    }
+
+    @Test("A bounded batch resumes without replay and quarantines cast derivatives")
+    func boundedBatchResumesWithoutReplay() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raw-batch-test-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let candidates = (1...3).map { index in
+            RawRecoveryCandidate(
+                localIdentifier: "raw-local-\(index)",
+                filename: "IMG_000\(index).CR3",
+                resourceFormat: "RAW",
+                sourcePixelWidth: 6_000,
+                sourcePixelHeight: 4_000,
+                capturedAt: "2026-08-29T13:0\(index):00Z"
+            )
+        }
+        let library = RawRecoveryBatchTestLibrary(candidates: candidates)
+        let service = RawRecoveryBatchService(
+            photoLibrary: library,
+            capacityProvider: { _ in 50_000_000_000 },
+            clock: { Date(timeIntervalSince1970: 1_788_000_000) }
+        )
+
+        let first = try await service.start(
+            rootDirectory: root,
+            queueWindow: 3,
+            maxItemsThisRun: 2,
+            reserveBytes: 15_000_000_000
+        )
+        #expect(first.state == .pausedOperator)
+        #expect(first.queued == 3)
+        #expect(first.generated == 1)
+        #expect(first.quarantinedBlueCast == 1)
+        #expect(first.pending == 1)
+
+        let resumed = try await service.resume(rootDirectory: root, maxItemsThisRun: 3)
+        #expect(resumed.state == .completed)
+        #expect(resumed.generated == 2)
+        #expect(resumed.quarantinedBlueCast == 1)
+        #expect(resumed.pending == 0)
+        #expect(library.recoveryCalls == ["raw-local-1", "raw-local-2", "raw-local-3"])
+
+        let ledgerData = try Data(contentsOf: root.appendingPathComponent("raw-recovery-ledger.json"))
+        let ledger = try JSONDecoder().decode(RawRecoveryLedger.self, from: ledgerData)
+        #expect(ledger.entries.count == 3)
+        #expect(ledger.entries["raw-local-2"]?.state == .quarantinedBlueCast)
+    }
+
+    @Test("A batch pauses before crossing its storage reserve")
+    func batchHonorsCapacityReserve() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raw-capacity-test-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let candidate = RawRecoveryCandidate(
+            localIdentifier: "raw-local-capacity",
+            filename: "CAPACITY.CR3",
+            resourceFormat: "RAW",
+            sourcePixelWidth: 6_000,
+            sourcePixelHeight: 4_000
+        )
+        let library = RawRecoveryBatchTestLibrary(candidates: [candidate])
+        let service = RawRecoveryBatchService(
+            photoLibrary: library,
+            capacityProvider: { _ in 14_999_999_999 }
+        )
+        let result = try await service.start(
+            rootDirectory: root,
+            queueWindow: 1,
+            maxItemsThisRun: 1,
+            reserveBytes: 15_000_000_000
+        )
+        #expect(result.state == .pausedCapacity)
+        #expect(result.pending == 1)
+        #expect(library.recoveryCalls.isEmpty)
+    }
+
     @Test("Control CLI exposes read-only planning and one bounded private sample")
     func controlCLIIsBoundedAndReviewGated() async throws {
         let plan = RawRecoveryPlan(
@@ -148,6 +243,29 @@ struct RawRecoveryTests {
         #expect(decodedReceipt.technicalEligibility == "candidate-after-review")
         #expect(library.lastSampleBounds == .init(assetID: "raw-local-1", maxPixel: 6_000, minimumPixels: 1_000_000))
 
+        let batchRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raw-cli-batch-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: batchRoot) }
+        let batchOutput = RawRecoveryLockedOutput()
+        let batchExit = await BackstageControlCLI.run(
+            arguments: [
+                "photos", "raw-recovery", "batch", "start",
+                "--destination", batchRoot.path,
+                "--max-items", "1",
+                "--reserve-gb", "1",
+            ],
+            service: service,
+            output: { batchOutput.append($0) }
+        )
+        #expect(batchExit == 0)
+        let decodedBatch = try JSONDecoder().decode(
+            RawRecoveryBatchResult.self,
+            from: Data(try #require(batchOutput.values.last).utf8)
+        )
+        #expect(decodedBatch.state == .completed)
+        #expect(decodedBatch.queued == 1)
+        #expect(decodedBatch.generated == 1)
+
         let invalidExit = await BackstageControlCLI.run(
             arguments: ["photos", "raw-recovery", "sample", "--asset-id", "raw-local-1", "--max-pixel", "9000"],
             service: service,
@@ -213,4 +331,73 @@ private final class RawRecoveryLockedOutput: @unchecked Sendable {
 
     var values: [String] { lock.withLock { storage } }
     func append(_ value: String) { lock.withLock { storage.append(value) } }
+}
+
+private final class RawRecoveryBatchTestLibrary: PhotoLibraryServing, @unchecked Sendable {
+    private let lock = NSLock()
+    private let candidates: [RawRecoveryCandidate]
+    private var calls: [String] = []
+
+    init(candidates: [RawRecoveryCandidate]) {
+        self.candidates = candidates
+    }
+
+    var recoveryCalls: [String] { lock.withLock { calls } }
+
+    func authorization() -> PhotoLibraryAccess { .authorized }
+    func requestAuthorization() async -> PhotoLibraryAccess { .authorized }
+    func fetch(limit: Int) async -> [PhotoLibraryItem] { [] }
+    func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+    func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
+        throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+    func rawRecoveryCandidates(
+        limit: Int,
+        excludingLocalIdentifiers: Set<String>
+    ) async throws -> [RawRecoveryCandidate] {
+        candidates.filter { !excludingLocalIdentifiers.contains($0.localIdentifier) }.prefix(limit).map { $0 }
+    }
+    func recoverRawJPEG(
+        localIdentifier: String,
+        maxPixelSize: Int,
+        minimumPixels: Int,
+        to directory: URL
+    ) async throws -> RawRecoveryReceipt {
+        lock.withLock { calls.append(localIdentifier) }
+        let suspect = localIdentifier == "raw-local-2"
+        return RawRecoveryReceipt(
+            generatedAt: "2026-08-29T13:10:00Z",
+            localIdentifier: localIdentifier,
+            sourceAnchor: "apple-photos://\(localIdentifier)",
+            sourceFilename: "\(localIdentifier).CR3",
+            sourceFormat: "RAW",
+            sourcePixelWidth: 6_000,
+            sourcePixelHeight: 4_000,
+            rung: .photosRenderedCurrent,
+            pixelWidth: 6_000,
+            pixelHeight: 4_000,
+            colorProfile: "sRGB",
+            byteCount: 6_000_000,
+            checksumSHA256: String(repeating: suspect ? "b" : "a", count: 64),
+            relativePath: "\(localIdentifier).jpg",
+            receiptRelativePath: "\(localIdentifier).receipt.json",
+            reusedExisting: false,
+            publicationProducts: ["1MP", "3MP", "6MP"],
+            technicalEligibility: suspect ? "quarantined-blue-cast" : "candidate-after-review",
+            qualityAssessment: RawRecoveryQualityAssessment(
+                verdict: suspect ? .suspectBlueCast : .pass,
+                sampledPixelCount: 128,
+                neutralPixelCount: 128,
+                neutralPixelFraction: 1,
+                meanBlueExcess: suspect ? 0.08 : 0.01,
+                meanCoolExcess: suspect ? 0.08 : 0.01,
+                score: suspect ? 1.4 : 0.2,
+                notes: []
+            ),
+            failedRungs: [],
+            notes: []
+        )
+    }
 }

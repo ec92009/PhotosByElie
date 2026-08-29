@@ -274,6 +274,25 @@ struct RawRecoveryTests {
         #expect(decodedBatch.queued == 1)
         #expect(decodedBatch.generated == 1)
 
+        let indexOutput = RawRecoveryLockedOutput()
+        let indexExit = await BackstageControlCLI.run(
+            arguments: [
+                "photos", "raw-recovery", "batch", "index",
+                "--destination", batchRoot.path,
+            ],
+            service: service,
+            output: { indexOutput.append($0) }
+        )
+        #expect(indexExit == 0)
+        let indexText = try #require(indexOutput.values.last)
+        let indexPayload = try #require(
+            JSONSerialization.jsonObject(
+                with: Data(indexText.utf8)
+            ) as? [String: Any]
+        )
+        #expect(indexPayload["mode"] as? String == "exact-completed-batch-index")
+        #expect(indexPayload["indexedCount"] as? Int == 1)
+
         let invalidExit = await BackstageControlCLI.run(
             arguments: ["photos", "raw-recovery", "sample", "--asset-id", "raw-local-1", "--max-pixel", "9000"],
             service: service,
@@ -315,6 +334,19 @@ private final class RawRecoveryTestLibrary: PhotoLibraryServing, @unchecked Send
     }
     func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan {
         plan
+    }
+    func rawRecoveryBatchIndex(rootDirectory: URL) async throws -> Data {
+        try JSONSerialization.data(withJSONObject: [
+            "schemaVersion": 1,
+            "ok": true,
+            "command": "photos raw-recovery batch index",
+            "mode": "exact-completed-batch-index",
+            "batchID": "raw-test",
+            "requestedCount": 1,
+            "indexedCount": 1,
+            "missingCount": 0,
+            "items": [["assetId": "raw-local-1"]],
+        ])
     }
     func recoverRawJPEG(
         localIdentifier: String,

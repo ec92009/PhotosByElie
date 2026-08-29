@@ -137,6 +137,7 @@ public protocol PhotoLibraryServing: Sendable {
         limit: Int,
         excludingLocalIdentifiers: Set<String>
     ) async throws -> [RawRecoveryCandidate]
+    func rawRecoveryBatchIndex(rootDirectory: URL) async throws -> Data
     func recoverRawJPEG(
         localIdentifier: String,
         maxPixelSize: Int,
@@ -183,6 +184,12 @@ public extension PhotoLibraryServing {
         return plan.sampleCandidates.filter {
             !excludingLocalIdentifiers.contains($0.localIdentifier)
         }
+    }
+
+    func rawRecoveryBatchIndex(rootDirectory: URL) async throws -> Data {
+        throw PhotoLibraryError.metadataFailed(
+            "This Photos library service does not provide RAW recovery batch indexing."
+        )
     }
 
     func recoverRawJPEG(
@@ -498,6 +505,75 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
         .prefix(boundedLimit)
         .map(\.candidate)
+    }
+
+    public func rawRecoveryBatchIndex(rootDirectory: URL) async throws -> Data {
+        try requireAccess()
+        let manifestURL = rootDirectory.appendingPathComponent("active-batch.json")
+        guard let manifestData = try? Data(contentsOf: manifestURL),
+              let manifest = try? JSONDecoder().decode(
+                RawRecoveryBatchManifest.self,
+                from: manifestData
+              ),
+              manifest.state == .completed else {
+            throw PhotoLibraryError.metadataFailed(
+                "A completed RAW recovery batch manifest is required before exact enrollment."
+            )
+        }
+        let identifiers = manifest.items.compactMap { item -> String? in
+            [.generated, .quarantinedBlueCast].contains(item.state)
+                ? item.candidate.localIdentifier
+                : nil
+        }
+        guard !identifiers.isEmpty else {
+            throw PhotoLibraryError.metadataFailed(
+                "The completed RAW recovery batch has no generated derivatives to enroll."
+            )
+        }
+
+        let requested = Set(identifiers)
+        let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+        var recoveredAssets: [(asset: PHAsset, recovered: RawRecoveryResolvedDerivative)] = []
+        assets.enumerateObjects { asset, _, _ in
+            guard requested.contains(asset.localIdentifier),
+                  let recovered = RawRecoveryBatchRegistry.resolvedDerivative(
+                    localIdentifier: asset.localIdentifier,
+                    rootDirectory: rootDirectory
+                  ) else { return }
+            recoveredAssets.append((asset, recovered))
+        }
+        recoveredAssets.sort {
+            let lhs = $0.asset.creationDate ?? .distantPast
+            let rhs = $1.asset.creationDate ?? .distantPast
+            if lhs != rhs { return lhs < rhs }
+            return $0.asset.localIdentifier < $1.asset.localIdentifier
+        }
+        let cloud = cloudIdentifiers(
+            for: recoveredAssets.map { $0.asset.localIdentifier }
+        )
+        let rows = recoveredAssets.enumerated().map { index, item in
+            libraryIndexRow(
+                item.asset,
+                index: index + 1,
+                cloudIdentifier: cloud[item.asset.localIdentifier] ?? "",
+                recovered: item.recovered
+            )
+        }
+        let payload: [String: Any] = [
+            "schemaVersion": 1,
+            "ok": true,
+            "command": "photos raw-recovery batch index",
+            "mode": "exact-completed-batch-index",
+            "batchID": manifest.batchID,
+            "requestedCount": identifiers.count,
+            "indexedCount": rows.count,
+            "missingCount": identifiers.count - rows.count,
+            "items": rows,
+        ]
+        return try JSONSerialization.data(
+            withJSONObject: payload,
+            options: [.sortedKeys]
+        )
     }
 
     public func recoverRawJPEG(

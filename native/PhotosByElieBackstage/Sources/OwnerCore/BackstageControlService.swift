@@ -425,6 +425,14 @@ public struct BackstageControlService: Sendable {
         )
     }
 
+    public func rawRecoveryBatchIndex(
+        rootDirectory: URL? = nil
+    ) async throws -> Data {
+        try await photoLibrary.rawRecoveryBatchIndex(
+            rootDirectory: rootDirectory ?? defaultRawRecoveryBatchDirectory
+        )
+    }
+
     private var defaultRawRecoveryBatchDirectory: URL {
         RawRecoveryBatchRegistry.defaultRootDirectory
     }
@@ -489,6 +497,7 @@ public enum BackstageControlCLI {
       backstage-control photos raw-recovery batch resume [--destination <absolute-directory>] [--max-items <1-2000>] [--pretty]
       backstage-control photos raw-recovery batch status [--destination <absolute-directory>] [--pretty]
       backstage-control photos raw-recovery batch cancel [--destination <absolute-directory>] [--pretty]
+      backstage-control photos raw-recovery batch index [--destination <absolute-directory>] [--pretty]
       backstage-control real-estate originals preflight --gallery <gallery-key> --items-file <items.json> [--pretty]
 
     Commands return JSON on stdout. Exit codes: 0 ready, 1 internal error,
@@ -738,10 +747,10 @@ public enum BackstageControlCLI {
         output: @escaping @Sendable (String) -> Void
     ) async -> Int32 {
         guard let action = arguments.first,
-              ["start", "resume", "status", "cancel"].contains(action) else {
+              ["start", "resume", "status", "cancel", "index"].contains(action) else {
             return emitError(
                 code: "invalid_arguments",
-                message: "RAW recovery batch requires start, resume, status, or cancel.",
+                message: "RAW recovery batch requires start, resume, status, cancel, or index.",
                 pretty: pretty,
                 exitCode: 64,
                 output: output
@@ -835,6 +844,18 @@ public enum BackstageControlCLI {
         }
 
         do {
+            if action == "index" {
+                let data = try await service.rawRecoveryBatchIndex(
+                    rootDirectory: destination
+                )
+                guard let text = String(data: data, encoding: .utf8) else {
+                    throw RawRecoveryBatchError.unavailable(
+                        "The exact RAW recovery batch index could not be encoded."
+                    )
+                }
+                output(text)
+                return 0
+            }
             let result: RawRecoveryBatchResult
             switch action {
             case "start":

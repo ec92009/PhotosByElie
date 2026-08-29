@@ -32,6 +32,7 @@ backstage-control photos raw-recovery batch start --max-items 2000 --reserve-gb 
 backstage-control photos raw-recovery batch status --pretty
 backstage-control photos raw-recovery batch resume --max-items 2000 --pretty
 backstage-control photos raw-recovery batch cancel --pretty
+backstage-control photos raw-recovery batch index --pretty
 ```
 
 The plan reads PhotoKit metadata only and reports a deliberately broad storage
@@ -41,6 +42,10 @@ identities. It writes owner-only JPEGs, per-photo receipts, an active manifest,
 and a compact lifetime ledger below Backstage Application Support. Every photo
 is checkpointed before the next starts, so interruption and retry do not replay
 completed work.
+
+After completion, `batch index` emits only that window's receipted PhotoKit
+rows. Owner can enroll the exact recovered identities without repeatedly
+paging and rescanning the complete Photos library.
 
 Before each photo, Backstage checks the destination's capacity and pauses when
 available storage reaches the configured reserve (15 GB by default). A custom

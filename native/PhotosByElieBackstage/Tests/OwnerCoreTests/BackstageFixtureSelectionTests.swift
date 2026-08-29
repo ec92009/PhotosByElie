@@ -1114,6 +1114,13 @@ struct BackstageFixtureSelectionTests {
         )
         var window = cullingWindow(fixtureID: "fixture-expo", photos: 2, videos: 0)
         window.items = items
+        window.summary = FixtureCullingSummary(json: [
+            "filtered": .number(2),
+            "universe": .number(2),
+            "undecided": .number(0),
+            "picked": .number(1),
+            "hidden": .number(1),
+        ])
         model.fixtureCullingWindow = window
         model.cullingViews = [.hidden, .picked]
         model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
@@ -1133,9 +1140,11 @@ struct BackstageFixtureSelectionTests {
         )
 
         #expect(await model.applyPickShortcut(.unpick))
-        // The fixture server window remains the rendering authority until its
-        // next refresh. Local decision changes must not re-filter that page.
         #expect(model.visibleCullingAssets.map(\.id) == items.map(\.id))
+        #expect(model.fixtureCullingWindow?.items.map(\.placementState) == [.undecided, .undecided])
+        #expect(model.fixtureCullingWindow?.summary.undecided == 2)
+        #expect(model.fixtureCullingWindow?.summary.picked == 0)
+        #expect(model.fixtureCullingWindow?.summary.hidden == 0)
         #expect(model.cullingHistory.last?.anchorID == items[0].id)
         #expect(model.cullingHistory.last?.focusedID == items[1].id)
 
@@ -1145,6 +1154,10 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingSelection.selectedIDs == Set(items.map(\.id)))
         #expect(model.cullingSelection.anchorID == items[0].id)
         #expect(model.cullingSelection.focusedID == items[1].id)
+        #expect(model.fixtureCullingWindow?.items.map(\.placementState) == [.hidden, .picked])
+        #expect(model.fixtureCullingWindow?.summary.undecided == 0)
+        #expect(model.fixtureCullingWindow?.summary.picked == 1)
+        #expect(model.fixtureCullingWindow?.summary.hidden == 1)
         #expect(await placementService.undoCount() == 1)
     }
 

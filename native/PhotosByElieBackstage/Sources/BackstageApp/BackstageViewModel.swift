@@ -5967,6 +5967,7 @@ final class BackstageViewModel: ObservableObject {
                     decision.pickState = change.placementState.rawValue
                     cullingStates[change.assetID] = decision
                 }
+                retainFixturePlacementChangesInCurrentWindow(restoredChanges)
                 cullingHistory.removeLast()
                 replaceCullingItems()
                 let orderedIDs = visibleCullingAssets.map(\.id)
@@ -5987,6 +5988,9 @@ final class BackstageViewModel: ObservableObject {
                 )
                 selectedPhotoIDs = cullingSelection.selectedIDs
                 cullingStatus = "Undid \(entry.label)."
+                if cullingPool == nil {
+                    scheduleFixtureCullingBackfill()
+                }
             } catch {
                 cullingStatus = "Undo failed; the history step was preserved. \(error)"
             }
@@ -6565,6 +6569,7 @@ final class BackstageViewModel: ObservableObject {
                 decision.pickState = change.placementState.rawValue
                 cullingStates[change.assetID] = decision
             }
+            retainFixturePlacementChangesInCurrentWindow(changes)
             cullingHistory.append(CullingHistoryEntry(
                 label: label,
                 fixtureChanges: changes,
@@ -6605,6 +6610,64 @@ final class BackstageViewModel: ObservableObject {
             }
             cullingStatus = "\(label) failed. Affected 0 • skipped 0 • failed \(ids.count.formatted()). \(userFacingMessage(for: error))"
             return false
+        }
+    }
+
+    private func retainFixturePlacementChangesInCurrentWindow(
+        _ changes: [FixtureAssetState]
+    ) {
+        guard cullingPool == nil,
+              var window = fixtureCullingWindow,
+              !changes.isEmpty
+        else { return }
+
+        let changesByID = Dictionary(uniqueKeysWithValues: changes.map {
+            ($0.assetID, $0.placementState)
+        })
+        for index in window.items.indices {
+            let before = window.items[index].placementState
+            guard let after = changesByID[window.items[index].id], before != after else {
+                continue
+            }
+            adjustFixturePlacementSummary(
+                &window.summary,
+                from: before,
+                to: after
+            )
+            window.items[index].placementState = after
+        }
+        fixtureCullingWindow = window
+    }
+
+    private func adjustFixturePlacementSummary(
+        _ summary: inout FixtureCullingSummary,
+        from before: FixturePlacementState,
+        to after: FixturePlacementState
+    ) {
+        func adjust(_ state: FixturePlacementState, by delta: Int) {
+            switch state {
+            case .undecided:
+                summary.undecided = max(0, summary.undecided + delta)
+            case .picked:
+                summary.picked = max(0, summary.picked + delta)
+            case .hidden:
+                summary.hidden = max(0, summary.hidden + delta)
+            }
+        }
+
+        adjust(before, by: -1)
+        adjust(after, by: 1)
+        func isIncluded(_ state: FixturePlacementState) -> Bool {
+            switch state {
+            case .undecided: cullingViews.contains(.undecided)
+            case .picked: cullingViews.contains(.picked)
+            case .hidden: cullingViews.contains(.hidden)
+            }
+        }
+        let beforeIncluded = isIncluded(before)
+        let afterIncluded = isIncluded(after)
+        if beforeIncluded != afterIncluded {
+            summary.filtered = max(0, summary.filtered + (afterIncluded ? 1 : -1))
         }
     }
 

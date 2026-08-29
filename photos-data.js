@@ -76,6 +76,17 @@
   const publicPhotos = (data = {}) => Object.values(data)
     .flatMap((collection) => Array.isArray(collection?.photos) ? collection.photos : []);
 
+  const requestedDetailPhotoId = () => {
+    if (!String(window.location.pathname || "").endsWith("/photo.html")) return "";
+    return String(new URLSearchParams(window.location.search || "").get("id") || "").trim();
+  };
+
+  const lifecycleCandidateIds = (data = {}) => {
+    const detailPhotoId = requestedDetailPhotoId();
+    if (detailPhotoId) return [detailPhotoId];
+    return [...new Set(publicPhotos(data).map((photo) => String(photo?.id || "").trim()).filter(Boolean))];
+  };
+
   const isLocalhost = () => /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
   let lifecycleVisibleIds = null;
 
@@ -176,7 +187,7 @@
   const applyLifecycleVisibility = async (data = {}) => {
     if (isLocalhost()) return data;
     const base = lifecycleWorkerBase();
-    const ids = [...new Set(publicPhotos(data).map((photo) => String(photo?.id || "").trim()).filter(Boolean))];
+    const ids = lifecycleCandidateIds(data);
     const requestedIds = new Set(ids);
     if (!base || !ids.length) throw new Error("Lifecycle visibility authority is unavailable.");
     const visibleIds = new Set();

@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const visibleVersion = read("VERSION").trim();
 const ownerSessionSource = read("pbe-owner-session.js");
 
 const runSessionClient = ({
@@ -81,7 +82,7 @@ test("customer gallery and detail do not bootstrap browser Owner capabilities", 
   }
   assert.match(read("photo-gallery.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("photo-gallery.js"), /requestedGalleryKey === pbeOwnerGalleryKey[\s\S]*searchParams\.set\("gallery", "selection"\)/);
-  assert.match(read("gallery.html"), /photo-gallery\.js\?v=239\.0/);
+  assert.match(read("gallery.html"), new RegExp(`photo-gallery\\.js\\?v=${visibleVersion.replaceAll(".", "\\.")}`));
   assert.match(read("photo-detail.js"), /await window\.photosByEliePageReady\(\)/);
   assert.match(read("photo-detail.js"), /isRequestedPBEOwnerCollection[\s\S]*params\.delete\("gallery"\)/);
 });
@@ -1280,7 +1281,7 @@ test("Google browser Owner is credential provisioning only", () => {
   const provisioningScript = read("backstage-provisioning.js");
   const worker = read("worker/checkout-worker.mjs");
   assert.match(owner, /data-owner-provisioning-only(?:[\s>])/);
-  assert.match(owner, /backstage-provisioning\.js\?v=239\.0/);
+  assert.match(owner, new RegExp(`backstage-provisioning\\.js\\?v=${visibleVersion.replaceAll(".", "\\.")}`));
   assert.doesNotMatch(owner, /new-owner\.js|pbe-owner-session\.js|hidden-actions\.js|owner-tools\.js/);
   assert.doesNotMatch(owner, /owner-activity\.js/);
   assert.doesNotMatch(owner, /access-console\.html/);

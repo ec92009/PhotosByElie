@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -92,4 +93,69 @@ test("source-of-truth docs record the accepted customer-only cutover", () => {
   assert.match(readme, /TODO\.md[\s\S]*historical backlog reference; YouTrack is the authoritative current ticket queue/);
   assert.match(historicalBacklog, /^# Photos By Elie Historical Backlog Snapshot/m);
   assert.match(historicalBacklog, /Archived reference only\. YouTrack is the authoritative current PhotosByElie[\s\S]*ticket queue/);
+});
+
+const runCatalogBootstrap = async ({ pathname, search = "", photos }) => {
+  const visibilityRequests = [];
+  class MockXMLHttpRequest {
+    open(_method, url) { this.url = url; }
+    overrideMimeType() {}
+    send() {
+      this.status = 200;
+      this.responseText = this.url.includes("photosbyelie.sqlite") ? "catalog" : "{}";
+    }
+  }
+  const window = {
+    location: { hostname: "photos-by-elie.com", pathname, search, href: `https://photos-by-elie.com${pathname}${search}` },
+    photosByElieMediaConfig: { authWorkerBaseUrl: "https://worker.example" },
+    photosByElieCatalogSqlite: {
+      decodeCatalog: () => ({
+        data: {
+          france: { title: "France", photos },
+          spain: { title: "Spain", photos: [{ id: "spain-one", media: {} }] },
+        },
+        owner: {},
+        productCatalog: {},
+      }),
+    },
+    dispatchEvent: () => {},
+  };
+  const document = {
+    currentScript: { src: "https://photos-by-elie.com/photos-data.js?v=240.0" },
+    querySelector: () => null,
+  };
+  const fetch = async (_url, options) => {
+    const ids = JSON.parse(options.body).mediaIds;
+    visibilityRequests.push(ids);
+    return { ok: true, json: async () => ({ visibleMediaIds: ids }) };
+  };
+  vm.runInNewContext(read("photos-data.js"), {
+    window, document, fetch, URL, URLSearchParams, XMLHttpRequest: MockXMLHttpRequest,
+    Uint8Array, JSON, Intl, navigator: { language: "en-US", languages: ["en-US"] },
+    CustomEvent: class CustomEvent {}, console,
+  });
+  await window.photosByElieCatalogReady;
+  return { window, visibilityRequests };
+};
+
+test("public photo detail verifies only its requested lifecycle identity", async () => {
+  const photos = Array.from({ length: 205 }, (_, index) => ({ id: `france-${index}`, media: {} }));
+  const result = await runCatalogBootstrap({
+    pathname: "/photo.html",
+    search: "?id=france-173",
+    photos,
+  });
+
+  assert.deepEqual(result.visibilityRequests, [["france-173"]]);
+  assert.deepEqual([...result.window.photosByElieData.france.photos].map((photo) => photo.id), ["france-173"]);
+  assert.equal(result.window.photosByElieData.spain.photos.length, 0);
+});
+
+test("public gallery still verifies the complete catalog in bounded batches", async () => {
+  const photos = Array.from({ length: 205 }, (_, index) => ({ id: `france-${index}`, media: {} }));
+  const result = await runCatalogBootstrap({ pathname: "/gallery.html", photos });
+
+  assert.deepEqual(result.visibilityRequests.map((ids) => ids.length), [100, 100, 6]);
+  assert.equal(result.window.photosByElieData.france.photos.length, 205);
+  assert.equal(result.window.photosByElieData.spain.photos.length, 1);
 });

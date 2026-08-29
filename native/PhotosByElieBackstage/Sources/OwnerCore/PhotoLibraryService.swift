@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 import CryptoKit
 import Foundation
 import ImageIO
@@ -127,6 +128,13 @@ public protocol PhotoLibraryServing: Sendable {
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
+    func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan
+    func recoverRawJPEG(
+        localIdentifier: String,
+        maxPixelSize: Int,
+        minimumPixels: Int,
+        to directory: URL
+    ) async throws -> RawRecoveryReceipt
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt
     func exportOriginal(
         localIdentifier: String,
@@ -144,6 +152,19 @@ public extension PhotoLibraryServing {
 
     func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
+    }
+
+    func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan {
+        throw PhotoLibraryError.metadataFailed("This Photos library service does not provide RAW recovery planning.")
+    }
+
+    func recoverRawJPEG(
+        localIdentifier: String,
+        maxPixelSize: Int,
+        minimumPixels: Int,
+        to directory: URL
+    ) async throws -> RawRecoveryReceipt {
+        throw PhotoLibraryError.metadataFailed("This Photos library service does not provide RAW recovery samples.")
     }
 
     func exportOriginal(
@@ -361,6 +382,268 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
     }
 
+    public func rawRecoveryPlan(sampleLimit: Int = 8) async throws -> RawRecoveryPlan {
+        try requireAccess()
+        let limit = max(0, min(32, sampleLimit))
+        let assets = PHAsset.fetchAssets(with: .image, options: nil)
+        var rawOnlyCount = 0
+        var totalSourcePixels: Int64 = 0
+        var candidates: [RawRecoveryCandidate] = []
+
+        assets.enumerateObjects { asset, _, _ in
+            guard preferredAcceptedStillResource(for: asset) == nil,
+                  let raw = preferredRAWResource(for: asset) else { return }
+            rawOnlyCount += 1
+            let pixels = max(0, Int64(asset.pixelWidth)) * max(0, Int64(asset.pixelHeight))
+            totalSourcePixels += pixels
+            if candidates.count < limit {
+                candidates.append(RawRecoveryCandidate(
+                    localIdentifier: asset.localIdentifier,
+                    filename: raw.originalFilename,
+                    resourceFormat: resourceFormat(raw),
+                    sourcePixelWidth: asset.pixelWidth,
+                    sourcePixelHeight: asset.pixelHeight
+                ))
+            }
+        }
+
+        // JPEG size varies heavily by subject and noise. This intentionally
+        // reports a broad planning range rather than pretending to know the
+        // final storage before representative camera samples are accepted.
+        let estimatedLow = Int64(Double(totalSourcePixels) * 0.25)
+        let estimatedHigh = Int64(Double(totalSourcePixels) * 0.75)
+        return RawRecoveryPlan(
+            checkedAt: photoLibraryISODate(Date()),
+            photosImageCount: assets.count,
+            rawOnlyCount: rawOnlyCount,
+            totalSourcePixels: totalSourcePixels,
+            estimatedJPEGStorageLowBytes: estimatedLow,
+            estimatedJPEGStorageHighBytes: estimatedHigh,
+            sampleCandidates: candidates,
+            notes: [
+                "Read-only PhotoKit metadata census; no source bytes were downloaded and no Owner state changed.",
+                "Storage range assumes 0.25 to 0.75 JPEG bytes per source pixel and must be calibrated with accepted camera samples.",
+                "Bulk recovery remains disabled. A bounded sample requires one explicit Photos local identifier.",
+            ]
+        )
+    }
+
+    public func recoverRawJPEG(
+        localIdentifier: String,
+        maxPixelSize: Int = 8_192,
+        minimumPixels: Int = RawRecoveryPolicy.minimumPublicationPixels,
+        to directory: URL
+    ) async throws -> RawRecoveryReceipt {
+        try requireAccess()
+        guard (256...8_192).contains(maxPixelSize),
+              (1...100_000_000).contains(minimumPixels) else {
+            throw PhotoLibraryError.exportFailed("The RAW recovery bounds are invalid.")
+        }
+        let asset = try asset(localIdentifier)
+        guard preferredAcceptedStillResource(for: asset) == nil,
+              let rawResource = preferredRAWResource(for: asset) else {
+            throw PhotoLibraryError.exportFailed("The selected Photos asset is not RAW-only.")
+        }
+        guard asset.pixelWidth > 0, asset.pixelHeight > 0 else {
+            throw PhotoLibraryError.exportFailed("The RAW source dimensions are unavailable.")
+        }
+
+        let targetMaxPixel = min(maxPixelSize, max(asset.pixelWidth, asset.pixelHeight))
+        var failedRungs: [String] = []
+        var rawData: Data?
+
+        func accepted(
+            data: Data,
+            width: Int,
+            height: Int,
+            rung: RawRecoveryRung
+        ) -> Bool {
+            RawRecoveryPolicy.passes(
+                RawRecoveryAttempt(
+                    rung: rung,
+                    pixelWidth: width,
+                    pixelHeight: height,
+                    colorProfile: "sRGB",
+                    isJPEG: Self.isJPEG(data),
+                    orientationApplied: true
+                ),
+                sourcePixelWidth: asset.pixelWidth,
+                sourcePixelHeight: asset.pixelHeight,
+                minimumPixels: minimumPixels
+            )
+        }
+
+        func finish(
+            data: Data,
+            width: Int,
+            height: Int,
+            rung: RawRecoveryRung
+        ) throws -> RawRecoveryReceipt {
+            let fileManager = FileManager.default
+            try fileManager.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+            let identifierDigest = SHA256.hash(data: Data(asset.localIdentifier.utf8))
+                .prefix(12)
+                .map { String(format: "%02x", $0) }
+                .joined()
+            let filename = "raw-recovery-\(identifierDigest).jpg"
+            let destination = directory.appendingPathComponent(filename)
+            let checksum = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            let existingChecksum = try? sha256(of: destination)
+            let reusedExisting = existingChecksum == checksum
+            if !reusedExisting {
+                try data.write(to: destination, options: .atomic)
+            }
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+            let products = RawRecoveryPolicy.publicationProducts(
+                pixelWidth: width,
+                pixelHeight: height
+            )
+            let receiptFilename = "raw-recovery-\(identifierDigest).receipt.json"
+            let receipt = RawRecoveryReceipt(
+                generatedAt: photoLibraryISODate(Date()),
+                localIdentifier: asset.localIdentifier,
+                sourceAnchor: "apple-photos://\(asset.localIdentifier)",
+                sourceFilename: rawResource.originalFilename,
+                sourceFormat: resourceFormat(rawResource),
+                sourcePixelWidth: asset.pixelWidth,
+                sourcePixelHeight: asset.pixelHeight,
+                rung: rung,
+                pixelWidth: width,
+                pixelHeight: height,
+                colorProfile: "sRGB",
+                byteCount: Int64(data.count),
+                checksumSHA256: checksum,
+                relativePath: filename,
+                receiptRelativePath: receiptFilename,
+                reusedExisting: reusedExisting,
+                publicationProducts: products,
+                technicalEligibility: products.isEmpty ? "insufficient-pixels" : "candidate-after-review",
+                failedRungs: failedRungs,
+                notes: [
+                    "The RAW source is unchanged and remains private in Photos.",
+                    "This bounded sample is not enrolled in Owner and cannot publish automatically.",
+                    "Review must approve the image and editorial metadata before publication.",
+                ]
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let receiptDestination = directory.appendingPathComponent(receiptFilename)
+            try encoder.encode(receipt).write(to: receiptDestination, options: .atomic)
+            try fileManager.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: receiptDestination.path
+            )
+            return receipt
+        }
+
+        do {
+            let rendered = try await requestFullPreview(
+                for: asset,
+                localIdentifier: asset.localIdentifier,
+                maxPixelSize: targetMaxPixel
+            )
+            let normalized = try Self.normalizedRecoveryJPEG(
+                from: rendered.jpegData,
+                localIdentifier: asset.localIdentifier,
+                maxPixelSize: targetMaxPixel,
+                embeddedOnly: false
+            )
+            if accepted(
+                data: normalized.data,
+                width: normalized.width,
+                height: normalized.height,
+                rung: .photosRenderedCurrent
+            ) {
+                return try finish(
+                    data: normalized.data,
+                    width: normalized.width,
+                    height: normalized.height,
+                    rung: .photosRenderedCurrent
+                )
+            }
+            failedRungs.append("photos-rendered-current: technical cutoff not met")
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            failedRungs.append("photos-rendered-current: \(error.localizedDescription)")
+        }
+
+        do {
+            let sourceData = try await requestResourceData(
+                resource: rawResource,
+                localIdentifier: asset.localIdentifier
+            )
+            rawData = sourceData
+            let embedded = try Self.normalizedRecoveryJPEG(
+                from: sourceData,
+                localIdentifier: asset.localIdentifier,
+                maxPixelSize: targetMaxPixel,
+                embeddedOnly: true
+            )
+            if accepted(
+                data: embedded.data,
+                width: embedded.width,
+                height: embedded.height,
+                rung: .embeddedJPEGPreview
+            ) {
+                return try finish(
+                    data: embedded.data,
+                    width: embedded.width,
+                    height: embedded.height,
+                    rung: .embeddedJPEGPreview
+                )
+            }
+            failedRungs.append("embedded-jpeg-preview: technical cutoff not met")
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            failedRungs.append("embedded-jpeg-preview: \(error.localizedDescription)")
+        }
+
+        do {
+            let sourceData: Data
+            if let rawData {
+                sourceData = rawData
+            } else {
+                sourceData = try await requestResourceData(
+                    resource: rawResource,
+                    localIdentifier: asset.localIdentifier
+                )
+            }
+            let developed = try Self.coreImageRecoveryJPEG(
+                from: sourceData,
+                localIdentifier: asset.localIdentifier,
+                maxPixelSize: targetMaxPixel
+            )
+            guard accepted(
+                data: developed.data,
+                width: developed.width,
+                height: developed.height,
+                rung: .coreImageRAW
+            ) else {
+                throw PhotoLibraryError.exportFailed("Core Image output did not meet the technical cutoff.")
+            }
+            return try finish(
+                data: developed.data,
+                width: developed.width,
+                height: developed.height,
+                rung: .coreImageRAW
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            failedRungs.append("core-image-raw: \(error.localizedDescription)")
+            throw PhotoLibraryError.exportFailed(
+                "No RAW recovery rung met the publication candidate cutoff. \(failedRungs.joined(separator: "; "))"
+            )
+        }
+    }
+
     public func identityMap(localIdentifiers: [String]) async throws -> Data {
         try requireAccess()
         guard !localIdentifiers.isEmpty, localIdentifiers.count <= 64 else {
@@ -508,6 +791,47 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
                         return
                     }
                     gate.resume(with: .failure(PhotoLibraryError.previewUnavailable(localIdentifier)))
+                })
+            }
+        }, onCancel: {
+            gate.cancel()
+        })
+    }
+
+    private func requestResourceData(
+        resource: PHAssetResource,
+        localIdentifier: String
+    ) async throws -> Data {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let manager = PHAssetResourceManager.default()
+        let gate = PhotoKitResourceDataResultGate()
+
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+                gate.installContinuation(continuation)
+                let requestID = manager.requestData(
+                    for: resource,
+                    options: options,
+                    dataReceivedHandler: { gate.append($0) },
+                    completionHandler: { error in
+                        if let error {
+                            gate.resume(with: .failure(PhotoLibraryError.exportFailed(error.localizedDescription)))
+                        } else {
+                            gate.resume(with: .success(gate.dataSnapshot()))
+                        }
+                    }
+                )
+                gate.installRequest(requestID, manager: manager)
+                gate.installTimeout(Task {
+                    do {
+                        try await Task.sleep(for: .seconds(300))
+                    } catch {
+                        return
+                    }
+                    gate.resume(with: .failure(PhotoLibraryError.exportFailed(
+                        "Timed out while Photos prepared the RAW source for \(localIdentifier)."
+                    )))
                 })
             }
         }, onCancel: {
@@ -687,6 +1011,125 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             lens: equipment.lens,
             focalLength: equipment.focalLength
         )
+    }
+
+    private static func isJPEG(_ data: Data) -> Bool {
+        data.count >= 4
+            && data[data.startIndex] == 0xff
+            && data[data.startIndex + 1] == 0xd8
+            && data[data.endIndex - 2] == 0xff
+            && data[data.endIndex - 1] == 0xd9
+    }
+
+    private static func normalizedRecoveryJPEG(
+        from sourceData: Data,
+        localIdentifier: String,
+        maxPixelSize: Int,
+        embeddedOnly: Bool
+    ) throws -> (data: Data, width: Int, height: Int) {
+        guard let source = CGImageSourceCreateWithData(sourceData as CFData, nil) else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
+        }
+        var options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceShouldCacheImmediately: true,
+        ]
+        if !embeddedOnly {
+            options[kCGImageSourceCreateThumbnailFromImageAlways] = true
+        }
+        guard let image = CGImageSourceCreateThumbnailAtIndex(
+            source,
+            0,
+            options as CFDictionary
+        ) else {
+            throw PhotoLibraryError.previewUnavailable(
+                embeddedOnly
+                    ? "The RAW source has no usable embedded JPEG preview."
+                    : localIdentifier
+            )
+        }
+        return try sRGBJPEG(from: image, localIdentifier: localIdentifier)
+    }
+
+    private static func coreImageRecoveryJPEG(
+        from sourceData: Data,
+        localIdentifier: String,
+        maxPixelSize: Int
+    ) throws -> (data: Data, width: Int, height: Int) {
+        let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let rawImage = CIImage(
+            data: sourceData,
+            options: [.applyOrientationProperty: true]
+        ) else {
+            throw PhotoLibraryError.previewUnavailable("Core Image could not open the RAW source.")
+        }
+        let sourceExtent = rawImage.extent.integral
+        guard sourceExtent.width > 0, sourceExtent.height > 0 else {
+            throw PhotoLibraryError.previewUnavailable("Core Image returned empty RAW dimensions.")
+        }
+        let maximumDimension = max(sourceExtent.width, sourceExtent.height)
+        let scale = min(1, CGFloat(maxPixelSize) / maximumDimension)
+        let scaled = scale < 1
+            ? rawImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            : rawImage
+        let outputExtent = scaled.extent.integral
+        let context = CIContext(options: [
+            .workingColorSpace: sRGB,
+            .outputColorSpace: sRGB,
+            .useSoftwareRenderer: false,
+        ])
+        guard let image = context.createCGImage(
+            scaled,
+            from: outputExtent,
+            format: .RGBA8,
+            colorSpace: sRGB
+        ) else {
+            throw PhotoLibraryError.previewUnavailable("Core Image could not render the RAW source.")
+        }
+        return try sRGBJPEG(from: image, localIdentifier: localIdentifier)
+    }
+
+    private static func sRGBJPEG(
+        from image: CGImage,
+        localIdentifier: String
+    ) throws -> (data: Data, width: Int, height: Int) {
+        guard let sRGB = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                data: nil,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: sRGB,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
+        }
+        context.interpolationQuality = .high
+        context.draw(
+            image,
+            in: CGRect(x: 0, y: 0, width: image.width, height: image.height)
+        )
+        guard let converted = context.makeImage() else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
+        }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ) else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
+        }
+        CGImageDestinationAddImage(destination, converted, [
+            kCGImageDestinationLossyCompressionQuality: 0.90,
+        ] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            throw PhotoLibraryError.previewUnavailable(localIdentifier)
+        }
+        return (output as Data, converted.width, converted.height)
     }
 
     private static func equipmentMetadata(
@@ -1033,6 +1476,18 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return nil
     }
 
+    private func preferredRAWResource(for asset: PHAsset) -> PHAssetResource? {
+        PHAssetResource.assetResources(for: asset)
+            .filter { resourceFormat($0) == "RAW" }
+            .sorted { lhs, rhs in
+                let lhsPriority = imageResourceTypePriority(lhs)
+                let rhsPriority = imageResourceTypePriority(rhs)
+                if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
+                return lhs.originalFilename < rhs.originalFilename
+            }
+            .first
+    }
+
     private func preferredRenderedJPEGResource(for asset: PHAsset) -> PHAssetResource? {
         PHAssetResource.assetResources(for: asset)
             .filter { resourceFormat($0) == "JPEG" }
@@ -1297,6 +1752,90 @@ private final class PhotoKitResourcePreviewResultGate: @unchecked Sendable {
         if let requestID, let manager {
             manager.cancelDataRequest(requestID)
         }
+        continuation?.resume(with: result)
+    }
+
+    func cancel() {
+        resume(with: .failure(CancellationError()))
+    }
+}
+
+/// Completes one bounded RAW resource read exactly once and releases the
+/// accumulated private source bytes as soon as the selected rung finishes.
+private final class PhotoKitResourceDataResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Data, Error>?
+    private var requestID: PHAssetResourceDataRequestID?
+    private weak var manager: PHAssetResourceManager?
+    private var timeoutTask: Task<Void, Never>?
+    private var data = Data()
+    private var finished = false
+
+    func installContinuation(_ continuation: CheckedContinuation<Data, Error>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func append(_ chunk: Data) {
+        lock.lock()
+        if !finished { data.append(chunk) }
+        lock.unlock()
+    }
+
+    func dataSnapshot() -> Data {
+        lock.lock()
+        let snapshot = data
+        lock.unlock()
+        return snapshot
+    }
+
+    func installRequest(_ requestID: PHAssetResourceDataRequestID, manager: PHAssetResourceManager) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            manager.cancelDataRequest(requestID)
+            return
+        }
+        self.requestID = requestID
+        self.manager = manager
+        lock.unlock()
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            task.cancel()
+            return
+        }
+        timeoutTask = task
+        lock.unlock()
+    }
+
+    func resume(with result: Result<Data, Error>) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let continuation = self.continuation
+        self.continuation = nil
+        let timeoutTask = self.timeoutTask
+        self.timeoutTask = nil
+        let requestID = self.requestID
+        let manager = self.manager
+        data.removeAll(keepingCapacity: false)
+        lock.unlock()
+
+        timeoutTask?.cancel()
+        if let requestID, let manager { manager.cancelDataRequest(requestID) }
         continuation?.resume(with: result)
     }
 

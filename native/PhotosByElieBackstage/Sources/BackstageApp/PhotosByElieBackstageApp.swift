@@ -171,6 +171,34 @@ public struct BackstageApplication: App {
     }
 }
 
+/// Renders a visible, semantic section heading outside an unlabeled GroupBox.
+///
+/// Sky Computer Use crashes while observing the accessibility shape emitted by
+/// a labeled GroupBox whose content also exposes accessible elements. Keeping
+/// the heading adjacent to an unlabeled card preserves the same visual and
+/// semantic hierarchy without creating that unstable native AX subtree.
+struct BackstageSectionCard<Content: View>: View {
+    private let title: String
+    private let content: Content
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            GroupBox {
+                content
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct BackstageUndoCommands: Commands {
     @ObservedObject var model: BackstageViewModel
     @Environment(\.undoManager) private var undoManager
@@ -208,7 +236,7 @@ private struct OverviewView: View {
                     .font(.largeTitle.bold())
                 Text("Max-first Owner workspace. Public and client sites remain independent.")
                     .foregroundStyle(.secondary)
-                GroupBox("This Mac") {
+                BackstageSectionCard("This Mac") {
                     VStack(alignment: .leading, spacing: 12) {
                     LabeledContent("Authentication", value: model.authentication.phase.rawValue)
                     if let deviceID = model.authentication.deviceId {
@@ -287,7 +315,7 @@ private struct OverviewView: View {
                     .padding(6)
                 }
                 if model.authentication.phase == .authenticated {
-                    GroupBox("Enrolled Macs") {
+                    BackstageSectionCard("Enrolled Macs") {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text(model.ownerDeviceManagementStatus)
@@ -354,7 +382,7 @@ private struct OverviewView: View {
                         Text("The selected Mac will lose Owner access. If it is this Mac, its local Keychain credential will also be removed; Set up this Mac can recover it independently.")
                     }
                 }
-                GroupBox("Native Photos access") {
+                BackstageSectionCard("Native Photos access") {
                     VStack(alignment: .leading, spacing: 10) {
                     LabeledContent("PhotoKit authority", value: "PhotosByElie Backstage")
                     LabeledContent("Photos access", value: photoAccessLabel(model.photoAccess))
@@ -411,7 +439,7 @@ private struct BackstageUpdatesView: View {
                 Text("Backstage downloads only a compatible, checksum- and signature-verified archive. Installation and rollback remain separate manual actions.")
                     .foregroundStyle(.secondary)
 
-                GroupBox("Installed build") {
+                BackstageSectionCard("Installed build") {
                     VStack(alignment: .leading, spacing: 8) {
                         LabeledContent("Bundle identifier", value: model.installedRelease.bundleIdentifier.isEmpty ? "Unavailable" : model.installedRelease.bundleIdentifier)
                         LabeledContent("Version", value: model.installedRelease.version.isEmpty ? "Unavailable" : model.installedRelease.version)
@@ -420,7 +448,7 @@ private struct BackstageUpdatesView: View {
                     .padding(6)
                 }
 
-                GroupBox("Release status") {
+                BackstageSectionCard("Release status") {
                     VStack(alignment: .leading, spacing: 12) {
                         stateContent
                     }
@@ -1371,7 +1399,7 @@ private struct FixtureWorkflowView: View {
                     ScrollView(.vertical) {
                         VStack(alignment: .leading, spacing: 10) {
                             if !model.selectedFixtureID.isEmpty {
-                                GroupBox("Population contract") {
+                                BackstageSectionCard("Population contract") {
                                     VStack(alignment: .leading, spacing: 8) {
                                         AdaptiveFixtureFieldPair(minimumColumnWidth: 280) {
                                             FixturePickerField(
@@ -1405,7 +1433,7 @@ private struct FixtureWorkflowView: View {
                                         }
                                     }
                                 }
-                                GroupBox("Configured on this fixture") {
+                                BackstageSectionCard("Configured on this fixture") {
                                     VStack(alignment: .leading, spacing: 8) {
                                         AdaptiveFixtureFieldPair {
                                             FixturePickerField(
@@ -1495,7 +1523,7 @@ private struct FixtureWorkflowView: View {
                                         }
                                     }
                                 }
-                                GroupBox("Effective policy • revision \(model.fixturePolicyRevision)") {
+                                BackstageSectionCard("Effective policy • revision \(model.fixturePolicyRevision)") {
                                     Text(model.fixtureEffectivePolicySummary)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -1555,7 +1583,7 @@ private struct FixtureWorkflowView: View {
                                 .frame(minHeight: 140)
                             }
                             if !model.selectedFixtureID.isEmpty {
-                                GroupBox("Saved culling snapshots") {
+                                BackstageSectionCard("Saved culling snapshots") {
                                     VStack(alignment: .leading, spacing: 8) {
                                         if model.fixturePools.isEmpty {
                                             Text("No saved snapshots loaded.")
@@ -1606,7 +1634,7 @@ private struct FixtureWorkflowView: View {
                                 }
                             }
                             if let pool = model.selectedFixturePoolSummary {
-                                GroupBox("Selected snapshot") {
+                                BackstageSectionCard("Selected snapshot") {
                                     LabeledContent("Pool", value: pool.name)
                                     LabeledContent("Assets", value: pool.assetCount.formatted())
                                     LabeledContent("Pool ID", value: pool.id)

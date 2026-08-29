@@ -32,6 +32,32 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_backstage_section_cards_avoid_labeled_groupbox_ax_shape(self):
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("struct BackstageSectionCard<Content: View>: View", app)
+        self.assertIn(".accessibilityAddTraits(.isHeader)", app)
+        self.assertIn("GroupBox {\n                content", app)
+        self.assertNotRegex(app, r"GroupBox\s*\(\s*[^)]")
+        for title in (
+            "This Mac",
+            "Enrolled Macs",
+            "Native Photos access",
+            "Installed build",
+            "Release status",
+            "Population contract",
+            "Configured on this fixture",
+            "Saved culling snapshots",
+            "Selected snapshot",
+        ):
+            self.assertIn(f'BackstageSectionCard("{title}")', app)
+        self.assertIn(
+            'BackstageSectionCard("Effective policy • revision \\(model.fixturePolicyRevision)")',
+            app,
+        )
+
     def test_gallery_is_the_visible_destination_and_culling_is_a_saved_view(self):
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"

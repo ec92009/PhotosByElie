@@ -57,6 +57,13 @@ public struct OwnerEquipmentBackfillSQLiteStore: Sendable {
         let database = try open()
         defer { sqlite3_close_v2(database) }
         try ensureSchema(database)
+        try execute(
+            """
+            DELETE FROM asset_equipment_backfill_state
+            WHERE photo_library_identifier LIKE 'owner://asset/%'
+            """,
+            on: database
+        )
         let timestamp = ISO8601DateFormatter().string(from: now)
         let sql = """
         INSERT OR IGNORE INTO asset_equipment_backfill_state(
@@ -72,7 +79,10 @@ public struct OwnerEquipmentBackfillSQLiteStore: Sendable {
                    NULLIF(json_extract(asset.raw_json, '$.phCloudIdentifier'), ''),
                    NULLIF(json_extract(asset.raw_json, '$.cloudIdentifierString'), ''),
                    NULLIF(json_extract(asset.raw_json, '$.localIdentifier'), ''),
-                   NULLIF(replace(asset.source_anchor, 'apple-photos://', ''), '')
+                   CASE
+                     WHEN asset.source_anchor LIKE 'apple-photos://%'
+                       THEN NULLIF(substr(asset.source_anchor, length('apple-photos://') + 1), '')
+                   END
                  )
                END,
                'pending', 0, '', ?, ?
@@ -89,7 +99,10 @@ public struct OwnerEquipmentBackfillSQLiteStore: Sendable {
                    NULLIF(json_extract(asset.raw_json, '$.phCloudIdentifier'), ''),
                    NULLIF(json_extract(asset.raw_json, '$.cloudIdentifierString'), ''),
                    NULLIF(json_extract(asset.raw_json, '$.localIdentifier'), ''),
-                   NULLIF(replace(asset.source_anchor, 'apple-photos://', ''), '')
+                   CASE
+                     WHEN asset.source_anchor LIKE 'apple-photos://%'
+                       THEN NULLIF(substr(asset.source_anchor, length('apple-photos://') + 1), '')
+                   END
                  )
                END) <> ''
           AND (

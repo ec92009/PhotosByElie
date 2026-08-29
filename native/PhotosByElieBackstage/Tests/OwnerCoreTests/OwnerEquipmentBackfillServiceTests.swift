@@ -87,6 +87,11 @@ struct OwnerEquipmentBackfillServiceTests {
             photoLibraryIdentifier: "local-asset-2/L0/001"
         )))
         #expect(!candidates.contains(where: { $0.assetID == "known" }))
+        #expect(!candidates.contains(where: { $0.assetID == "owner-placeholder" }))
+        #expect(try scalar(
+            databaseURL,
+            sql: "SELECT count(*) FROM asset_equipment_backfill_state WHERE asset_id = 'owner-placeholder'"
+        ) == "0")
     }
 
     private func createDatabase(at url: URL) throws {
@@ -128,11 +133,23 @@ struct OwnerEquipmentBackfillServiceTests {
           ('asset-5', 'apple-photos://failed', 'photo', '2020-01-05', '', '', '{"localIdentifier":"failed"}'),
           ('known', 'apple-photos://known', 'photo', '2020-01-06', '', '', '{"localIdentifier":"known"}'),
           ('missing-source', 'apple-photos://gone', 'photo', '2020-01-07', '', '2026-01-01', '{"localIdentifier":"gone"}'),
-          ('video', 'apple-photos://video', 'video', '2020-01-08', '', '', '{"localIdentifier":"video"}');
+          ('video', 'apple-photos://video', 'video', '2020-01-08', '', '', '{"localIdentifier":"video"}'),
+          ('owner-placeholder', 'owner://asset/owner-placeholder', 'photo', '2020-01-09', '', '', '{}');
         INSERT INTO asset_current_equipment VALUES
           ('known', 'Known Camera', 'Known Lens', '50 mm', '2026-01-01');
         INSERT INTO fixture_asset_decisions VALUES ('expo', 'asset-1', 'hidden', 'active');
         INSERT INTO asset_editorial_state VALUES ('asset-1', 'unreviewed');
+        CREATE TABLE asset_equipment_backfill_state (
+          asset_id TEXT PRIMARY KEY NOT NULL,
+          photo_library_identifier TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          attempt_count INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        INSERT INTO asset_equipment_backfill_state VALUES
+          ('owner-placeholder', 'owner://asset/owner-placeholder', 'unavailable', 1, 'stale', '2026-01-01', '2026-01-01');
         """#
         guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else {
             throw TestDatabaseError.message(String(cString: sqlite3_errmsg(database)))

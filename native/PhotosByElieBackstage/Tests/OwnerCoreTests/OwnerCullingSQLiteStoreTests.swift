@@ -358,7 +358,7 @@ struct OwnerCullingSQLiteStoreTests {
             """
             UPDATE sidecar_assets
                SET filename = 'Canon-photo.jpg',
-                   raw_json = '{"cameraMetadata":{"model":"Canon PowerShot ELPH 300 HS"},"lensMetadata":{"model":"4.3 - 21.5 mm"}}'
+                   raw_json = '{}'
              WHERE asset_id = 'asset-1';
             INSERT INTO sidecar_assets(asset_id, source_anchor, filename, raw_json, captured_at)
               VALUES ('opaque-elf-token', 'apple-photos://opaque-token', 'Ordinary-photo.jpg', '{}', '2026-01-01T03:00:00Z');
@@ -385,6 +385,12 @@ struct OwnerCullingSQLiteStoreTests {
             );
             """
         )
+        try OwnerCurrentEquipmentSQLiteStore(databaseURL: databaseURL).upsert([
+            "asset-1": OwnerCurrentEquipment(
+                cameraBody: "Canon PowerShot ELPH 300 HS",
+                lens: "4.3 - 21.5 mm"
+            ),
+        ], updatedAt: Date())
         let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
 
         let commonSpelling = try store.cullingWindow(

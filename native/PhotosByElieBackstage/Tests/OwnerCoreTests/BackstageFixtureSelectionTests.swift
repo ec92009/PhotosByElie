@@ -2502,7 +2502,11 @@ struct BackstageFixtureSelectionTests {
             lens: "RF24-70mm F2.8 L IS USM",
             focalLength: "35 mm"
         )
-        let model = BackstageViewModel(photoLibrary: photoLibrary)
+        let equipmentCache = RecordingCurrentEquipmentCache()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            currentEquipmentCache: equipmentCache
+        )
         let asset = FixturePoolAsset(
             id: "asset-equipment-preview",
             position: 0,
@@ -2530,6 +2534,13 @@ struct BackstageFixtureSelectionTests {
         #expect(learned.cameraBody == "Canon EOS R5")
         #expect(learned.lens == "RF24-70mm F2.8 L IS USM")
         #expect(learned.focalLength == "35 mm")
+        #expect(equipmentCache.recordedBatches() == [[
+            asset.id: OwnerCurrentEquipment(
+                cameraBody: "Canon EOS R5",
+                lens: "RF24-70mm F2.8 L IS USM",
+                focalLength: "35 mm"
+            ),
+        ]])
 
         let merged = model.quickLookEquipment(
             for: asset.id,
@@ -3386,6 +3397,31 @@ private final class RecordingCurrentImageSizeCache: OwnerCurrentImageSizeCaching
     }
 
     func recordedBatches() -> [[String: Int64]] {
+        lock.withLock { batches }
+    }
+}
+
+private final class RecordingCurrentEquipmentCache: OwnerCurrentEquipmentCaching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValues: [String: OwnerCurrentEquipment] = [:]
+    private var batches: [[String: OwnerCurrentEquipment]] = []
+
+    func values(assetIDs: [String]) throws -> [String: OwnerCurrentEquipment] {
+        lock.withLock {
+            Dictionary(uniqueKeysWithValues: assetIDs.compactMap { assetID in
+                storedValues[assetID].map { (assetID, $0) }
+            })
+        }
+    }
+
+    func upsert(_ values: [String: OwnerCurrentEquipment], updatedAt: Date) throws {
+        lock.withLock {
+            batches.append(values)
+            storedValues.merge(values) { _, refreshed in refreshed }
+        }
+    }
+
+    func recordedBatches() -> [[String: OwnerCurrentEquipment]] {
         lock.withLock { batches }
     }
 }

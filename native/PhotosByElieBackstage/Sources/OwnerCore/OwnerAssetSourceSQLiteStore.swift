@@ -30,7 +30,8 @@ public struct OwnerAssetSourceMetadata: Sendable, Equatable {
 }
 
 /// Reads immutable source characteristics from authoritative Owner.sqlite and
-/// joins read-only equipment fields from its projected public catalog. Exact
+/// joins read-only equipment fields from its projected public catalog and the
+/// separate current-equipment cache learned from Apple Photos. Exact
 /// publication identity wins; legacy filename fallback is accepted only when
 /// that filename is unique in both databases. This store owns no write path
 /// and never inspects a temporary Quick Look export.
@@ -141,12 +142,32 @@ public struct OwnerAssetSourceSQLiteStore: Sendable {
         }
         let mediaIDs = publicationMediaIDs(database: database, assetIDs: ids)
         let filenames = uniqueSourceFilenames(database: database, assetIDs: ids)
-        return catalogEquipment(
+        let catalogResult = catalogEquipment(
             assetIDs: ids,
             publicationMediaIDs: mediaIDs,
             uniqueFilenames: filenames,
             mergingInto: result
         )
+        return currentEquipment(assetIDs: ids, mergingInto: catalogResult)
+    }
+
+    private func currentEquipment(
+        assetIDs: [String],
+        mergingInto source: [String: OwnerAssetSourceMetadata]
+    ) -> [String: OwnerAssetSourceMetadata] {
+        guard let learned = try? OwnerCurrentEquipmentSQLiteStore(databaseURL: databaseURL)
+            .values(assetIDs: assetIDs),
+              !learned.isEmpty
+        else { return source }
+        var result = source
+        for (assetID, equipment) in learned {
+            guard var metadata = result[assetID] else { continue }
+            if !equipment.cameraBody.isEmpty { metadata.cameraBody = equipment.cameraBody }
+            if !equipment.lens.isEmpty { metadata.lens = equipment.lens }
+            if !equipment.focalLength.isEmpty { metadata.focalLength = equipment.focalLength }
+            result[assetID] = metadata
+        }
+        return result
     }
 
     private func catalogEquipment(

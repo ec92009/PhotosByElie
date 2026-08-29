@@ -444,6 +444,7 @@ final class BackstageViewModel: ObservableObject {
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
     private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
+    private let currentEquipmentCache: (any OwnerCurrentEquipmentCaching)?
     private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
@@ -626,6 +627,9 @@ final class BackstageViewModel: ObservableObject {
         currentImageSizeCache: (any OwnerCurrentImageSizeCaching)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerCurrentImageSizeSQLiteStore(databaseURL: $0) },
+        currentEquipmentCache: (any OwnerCurrentEquipmentCaching)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { OwnerCurrentEquipmentSQLiteStore(databaseURL: $0) },
         customerPhotoLinks: (any CustomerPhotoLinkResolving)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
@@ -694,6 +698,7 @@ final class BackstageViewModel: ObservableObject {
         )
         self.workflowRecoveryStore = workflowRecoveryStore
         self.currentImageSizeCache = currentImageSizeCache
+        self.currentEquipmentCache = currentEquipmentCache
         self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
     }
@@ -5587,7 +5592,7 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: item.photoLibraryIdentifier,
                         maxPixelSize: 4_000
                     )
-                    learnQuickLookEquipment(from: preview, for: item.id)
+                    await learnQuickLookEquipment(from: preview, for: item.id)
                     await learnCurrentImageByteCount(
                         from: preview,
                         for: item.id,
@@ -6358,7 +6363,7 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 4_000
             )
-            learnQuickLookEquipment(from: preview, for: item.mediaID)
+            await learnQuickLookEquipment(from: preview, for: item.mediaID)
             await learnCurrentImageByteCount(
                 from: preview,
                 for: item.mediaID,
@@ -6415,7 +6420,7 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
                     )
-                    learnQuickLookEquipment(from: preview, for: id)
+                    await learnQuickLookEquipment(from: preview, for: id)
                     if let image = NSImage(data: preview.jpegData) {
                         recoverCullingThumbnail(image, for: id)
                     }
@@ -7243,7 +7248,7 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: localIdentifier,
                 maxPixelSize: 4_000
             )
-            learnQuickLookEquipment(from: preview, for: assetID)
+            await learnQuickLookEquipment(from: preview, for: assetID)
             await learnCurrentImageByteCount(
                 from: preview,
                 for: assetID,
@@ -7277,7 +7282,7 @@ final class BackstageViewModel: ObservableObject {
         )
     }
 
-    private func learnQuickLookEquipment(from preview: PhotoPreview, for assetID: String) {
+    private func learnQuickLookEquipment(from preview: PhotoPreview, for assetID: String) async {
         let equipment = BackstageQuickLookEquipment(
             cameraBody: preview.cameraBody,
             lens: preview.lens,
@@ -7285,6 +7290,15 @@ final class BackstageViewModel: ObservableObject {
         )
         guard equipment.displayValue != nil else { return }
         quickLookEquipmentByAssetID[assetID] = equipment
+        guard let currentEquipmentCache else { return }
+        let current = OwnerCurrentEquipment(
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength
+        )
+        try? await Task.detached(priority: .utility) {
+            try currentEquipmentCache.upsert([assetID: current], updatedAt: Date())
+        }.value
     }
 
     private func preferredQuickLookEquipmentValue(

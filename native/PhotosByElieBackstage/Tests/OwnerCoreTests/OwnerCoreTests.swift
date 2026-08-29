@@ -371,6 +371,70 @@ struct OwnerCoreTests {
         sqlite3_close(database)
     }
 
+    @Test("Current-equipment cache merges learned values without changing original metadata")
+    func currentEquipmentCachePreservesOriginalMetadata() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-current-equipment-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        var database: OpaquePointer?
+        #expect(sqlite3_open(databaseURL.path, &database) == SQLITE_OK)
+        #expect(sqlite3_exec(database, #"""
+        CREATE TABLE sidecar_assets(
+          asset_id TEXT PRIMARY KEY,
+          media_type TEXT,
+          pixel_width INTEGER,
+          pixel_height INTEGER,
+          raw_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO sidecar_assets VALUES
+          ('photo-41892', 'photo', 4000, 3000, '{"originalByteCount":4000000}');
+        """#, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(database)
+
+        let cache = OwnerCurrentEquipmentSQLiteStore(databaseURL: databaseURL)
+        #expect(try cache.values(assetIDs: ["photo-41892"]) == [:])
+        try cache.upsert([
+            "photo-41892": OwnerCurrentEquipment(
+                cameraBody: "  CANON   POWERSHOT ELPH  ",
+                focalLength: "5 mm"
+            ),
+        ], updatedAt: Date(timeIntervalSince1970: 2_000_000_000))
+        try cache.upsert([
+            "photo-41892": OwnerCurrentEquipment(lens: "Canon compact lens"),
+        ], updatedAt: Date())
+
+        #expect(try cache.values(assetIDs: ["photo-41892", "photo-41892"]) == [
+            "photo-41892": OwnerCurrentEquipment(
+                cameraBody: "CANON POWERSHOT ELPH",
+                lens: "Canon compact lens",
+                focalLength: "5 mm"
+            ),
+        ])
+        let metadata = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
+            .metadata(assetIDs: ["photo-41892"])
+        #expect(metadata["photo-41892"]?.cameraBody == "CANON POWERSHOT ELPH")
+        #expect(metadata["photo-41892"]?.lens == "Canon compact lens")
+        #expect(metadata["photo-41892"]?.focalLength == "5 mm")
+
+        database = nil
+        #expect(sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK)
+        var statement: OpaquePointer?
+        #expect(sqlite3_prepare_v2(
+            database,
+            "SELECT raw_json FROM sidecar_assets WHERE asset_id = 'photo-41892'",
+            -1,
+            &statement,
+            nil
+        ) == SQLITE_OK)
+        #expect(sqlite3_step(statement) == SQLITE_ROW)
+        let rawJSON = sqlite3_column_text(statement, 0).map(String.init(cString:))
+        #expect(rawJSON == #"{"originalByteCount":4000000}"#)
+        sqlite3_finalize(statement)
+        sqlite3_close(database)
+    }
+
     @Test("Owner source metadata lookup is read-only and asset scoped")
     func ownerSourceMetadataLookup() throws {
         let root = FileManager.default.temporaryDirectory

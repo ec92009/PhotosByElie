@@ -99,6 +99,7 @@
 		DF59BAC48BF3C522B83B4DDE /* PBEOwnerNativeHostServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC25E64348D1749C03E148EC /* PBEOwnerNativeHostServer.swift */; };
 		E2B10266D6447BB375A995F6 /* CullingCanvasControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BDAE462E61C0469B47ED87 /* CullingCanvasControls.swift */; };
 		E391650A2878205E0719A648 /* OwnerCurrentImageSizeSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */; };
+		A136E0010000000000000001 /* OwnerCurrentEquipmentSQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A136E0020000000000000002 /* OwnerCurrentEquipmentSQLiteStore.swift */; };
 		E954263E3BC15A1C8C466586 /* ReviewCanvasInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA623348E56504F6CBE7FDBA /* ReviewCanvasInspector.swift */; };
 		EB5F3BB74623800A27583BC1 /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5BEA77F78B6B15A631E14C /* Photos.framework */; };
 		EDE2B294DDEAC12A59BD3DBE /* UploadPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF43CB6B8F4DB1C945F5CE8C /* UploadPreview.swift */; };
@@ -156,6 +157,7 @@
 /* Begin PBXFileReference section */
 		00048564F5CACC0A500A714E /* PBEOwnerNativeHostService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PBEOwnerNativeHostService.swift; sourceTree = "<group>"; };
 		0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCurrentImageSizeSQLiteStore.swift; sourceTree = "<group>"; };
+		A136E0020000000000000002 /* OwnerCurrentEquipmentSQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerCurrentEquipmentSQLiteStore.swift; sourceTree = "<group>"; };
 		0276A82E1C8B5457FF2B74D0 /* BackstageFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageFeedbackView.swift; sourceTree = "<group>"; };
 		031D83FD70EDA99A4325EC56 /* action-page.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "action-page.json"; sourceTree = "<group>"; };
 		04733C0078B7BE63D367291F /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
@@ -411,6 +413,7 @@
 				68CDF73A599DEB65435F5B77 /* OwnerConnectorIdentity.swift */,
 				CA1FB5719D1DED9B3990790E /* OwnerCullingSQLiteStore.swift */,
 				0028F594E1DE4820E17C0457 /* OwnerCurrentImageSizeSQLiteStore.swift */,
+				A136E0020000000000000002 /* OwnerCurrentEquipmentSQLiteStore.swift */,
 				E74871E8B7478FC401020DCB /* OwnerDatabase.swift */,
 				868995929E0CDCA67A31BF88 /* OwnerFixtureSQLiteStore.swift */,
 				0CB6E2056746C1F076962053 /* OwnerModels.swift */,
@@ -642,6 +645,7 @@
 				A8C212ABEA7861B0844FC0D4 /* OwnerContract.generated.swift in Sources */,
 				61DA4C6715BB657A4D4DC325 /* OwnerCullingSQLiteStore.swift in Sources */,
 				E391650A2878205E0719A648 /* OwnerCurrentImageSizeSQLiteStore.swift in Sources */,
+				A136E0010000000000000001 /* OwnerCurrentEquipmentSQLiteStore.swift in Sources */,
 				16E6283E9B3803D08B399ACD /* OwnerDatabase.swift in Sources */,
 				3E3EF6EFCCB7D245DC677579 /* OwnerFixtureSQLiteStore.swift in Sources */,
 				52A6320189F7C459878B87C1 /* OwnerModels.swift in Sources */,

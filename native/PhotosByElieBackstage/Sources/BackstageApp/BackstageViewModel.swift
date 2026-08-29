@@ -2406,6 +2406,31 @@ final class BackstageViewModel: ObservableObject {
         toggle(view, in: &cullingViews)
     }
 
+    var cullingHiddenMatchViews: [FixtureCullingView] {
+        guard cullingPool == nil,
+              hasCurrentCullingFixture,
+              cullingWorkspace.summary.filtered == 0,
+              cullingWorkspace.summary.total > 0
+        else { return [] }
+        return FixtureCullingView.selectableCases.filter {
+            !cullingViews.contains($0) && cullingMatchCount(for: $0) > 0
+        }
+    }
+
+    func cullingMatchCount(for view: FixtureCullingView) -> Int {
+        switch view {
+        case .undecided: cullingWorkspace.summary.undecided
+        case .picked: cullingWorkspace.summary.picked
+        case .hidden: cullingWorkspace.summary.rejected
+        case .allActive: cullingWorkspace.summary.total
+        }
+    }
+
+    func includeCullingViewFilter(_ view: FixtureCullingView) {
+        guard view != .allActive, !cullingViews.contains(view) else { return }
+        cullingViews.insert(view)
+    }
+
     func showAllFixtureAssetsInGallery() {
         applyGallerySavedView(.allAssets)
     }

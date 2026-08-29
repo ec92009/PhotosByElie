@@ -768,6 +768,23 @@ struct CullingView: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if !model.cullingHiddenMatchViews.isEmpty {
+            VStack(spacing: 12) {
+                ContentUnavailableView(
+                    "Matches hidden by status filters",
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    description: Text("The search found assets, but their Gallery states are turned off.")
+                )
+                HStack {
+                    ForEach(model.cullingHiddenMatchViews, id: \.self) { view in
+                        Button("Show \(model.cullingMatchCount(for: view).formatted()) \(view.label)") {
+                            model.includeCullingViewFilter(view)
+                        }
+                        .backstageHelp("Include matching \(view.label.lowercased()) assets without clearing the search.")
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.visibleCullingAssets.isEmpty {
             ContentUnavailableView(
                 model.cullingAssets.isEmpty ? "No culling items" : "No matching items",

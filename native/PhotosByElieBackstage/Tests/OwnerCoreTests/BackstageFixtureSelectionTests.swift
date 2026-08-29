@@ -253,6 +253,36 @@ struct BackstageFixtureSelectionTests {
         #expect(model.visibleCullingAssets.map(\.id) == [equipment.id, opaqueIdentity.id])
     }
 
+    @Test("Gallery explains search matches hidden by state filters")
+    @MainActor
+    func galleryExplainsSearchMatchesHiddenByStateFilters() {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 18, videos: 0)
+        window.items = []
+        window.summary = FixtureCullingSummary(json: [
+            "filtered": .number(0),
+            "universe": .number(18),
+            "undecided": .number(0),
+            "picked": .number(18),
+            "hidden": .number(0),
+        ])
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.undecided]
+        model.cullingSearch = "ELPH"
+
+        #expect(model.cullingHiddenMatchViews == [.picked])
+        #expect(model.cullingMatchCount(for: .picked) == 18)
+
+        model.includeCullingViewFilter(.picked)
+        #expect(model.cullingViews == [.undecided, .picked])
+        #expect(model.cullingSearch == "ELPH")
+    }
+
     @Test("Gallery returns only approved selections to Review and exact Undo restores delivery")
     @MainActor
     func galleryReturnToReviewPreservesLiveAndUndo() async throws {

@@ -7,6 +7,21 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Updates checks automatically only when no update operation is in progress")
+    @MainActor
+    func updatesAutoCheckDoesNotInterruptUpdateWork() {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+
+        model.updateState = .idle
+        #expect(model.shouldAutomaticallyCheckForUpdates)
+
+        model.updateState = .checking
+        #expect(!model.shouldAutomaticallyCheckForUpdates)
+
+        model.updateState = .failed(message: "Offline", recovery: "Try again")
+        #expect(model.shouldAutomaticallyCheckForUpdates)
+    }
+
     @Test("Compact fixture picker renders without changing data", arguments: [230, 320], [false, true])
     @MainActor
     func compactFixturePicker(width: Int, dark: Bool) throws {

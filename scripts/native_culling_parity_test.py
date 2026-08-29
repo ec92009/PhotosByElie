@@ -1420,8 +1420,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "255")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.2")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "256")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1453,6 +1453,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "Refusing to publish Backstage without the signed Photos Library entitlement",
             manifest_builder,
         )
+
         entitlements = (NATIVE / "Backstage.entitlements").read_text(encoding="utf-8")
         self.assertIn("com.apple.security.automation.apple-events", entitlements)
         self.assertIn(
@@ -1479,6 +1480,28 @@ class NativeCullingParityTest(unittest.TestCase):
             'identifier "com.photosbyelie.backstage"',
             build_script,
         )
+
+    def test_backstage_updates_check_on_open_and_install_without_confirmation(self):
+        app_source = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn('Button("Check for updates")', app_source)
+        self.assertNotIn("isConfirmingInstallation", app_source)
+        self.assertNotIn(
+            'confirmationDialog(\n            "Install this verified Backstage update?"',
+            app_source,
+        )
+        self.assertIn(
+            "guard model.shouldAutomaticallyCheckForUpdates else { return }",
+            app_source,
+        )
+        self.assertIn(
+            'Button("Install verified update") {\n'
+            "                Task { await model.installVerifiedUpdate() }",
+            app_source,
+        )
+
     def test_bridge_installer_fails_closed_without_touching_a_legacy_bundle(self):
         installer = ROOT / "scripts" / "install_sidecar_photos_bridge_app.zsh"
         with tempfile.TemporaryDirectory() as temporary_directory:

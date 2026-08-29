@@ -1210,6 +1210,15 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    var shouldAutomaticallyCheckForUpdates: Bool {
+        switch updateState {
+        case .idle, .current, .updateAvailable, .failed:
+            true
+        case .checking, .downloading, .verified, .installing, .installed:
+            false
+        }
+    }
+
     func downloadVerifiedUpdate() async {
         guard case let .updateAvailable(manifest) = updateState else { return }
         updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)

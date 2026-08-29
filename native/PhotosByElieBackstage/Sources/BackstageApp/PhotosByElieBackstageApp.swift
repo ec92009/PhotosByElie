@@ -402,21 +402,12 @@ private struct OverviewView: View {
 
 private struct BackstageUpdatesView: View {
     @ObservedObject var model: BackstageViewModel
-    @State private var isConfirmingInstallation = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Label("Backstage updates", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.largeTitle.bold())
-                    Spacer()
-                    Button("Check for updates") {
-                        Task { await model.checkForUpdates() }
-                    }
-                    .disabled(isBusy)
-                    .backstageHelp("Check the configured authoritative HTTPS release manifest without changing Photos, Owner, connector, fixture, or running-app state.")
-                }
+                Label("Backstage updates", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.largeTitle.bold())
                 Text("Backstage downloads only a compatible, checksum- and signature-verified archive. Installation and rollback remain separate manual actions.")
                     .foregroundStyle(.secondary)
 
@@ -438,19 +429,9 @@ private struct BackstageUpdatesView: View {
             }
             .padding(24)
         }
-        .confirmationDialog(
-            "Install this verified Backstage update?",
-            isPresented: $isConfirmingInstallation,
-            titleVisibility: .visible
-        ) {
-            Button("Install and retain rollback") {
-                Task { await model.installVerifiedUpdate() }
-            }
-            .backstageHelp("Install only the already verified release, retain the incumbent signed app as a private rollback, and atomically exchange the canonical bundle.")
-            Button("Cancel", role: .cancel) {}
-                .backstageHelp("Close this confirmation without installing or changing the canonical Backstage app.")
-        } message: {
-            Text("Backstage will stage and reverify the complete app, preserve the incumbent signed bundle, then atomically replace only /Applications/PhotosByElie Backstage.app.")
+        .task {
+            guard model.shouldAutomaticallyCheckForUpdates else { return }
+            await model.checkForUpdates()
         }
     }
 
@@ -458,8 +439,8 @@ private struct BackstageUpdatesView: View {
     private var stateContent: some View {
         switch model.updateState {
         case .idle:
-            Label("Ready to check", systemImage: "questionmark.circle")
-            Text("No cloud release check has run yet. If the signed app has no approved manifest endpoint, the check will explain that blocker without attempting a download.")
+            Label("Preparing update check", systemImage: "arrow.triangle.2.circlepath")
+            Text("The authoritative release check starts automatically when this panel opens.")
                 .foregroundStyle(.secondary)
         case .checking:
             ProgressView("Checking authoritative release metadata…")
@@ -497,10 +478,10 @@ private struct BackstageUpdatesView: View {
             }
             .backstageHelp("Reveal the isolated verified app bundle for a separately confirmed manual installation or rollback decision.")
             Button("Install verified update") {
-                isConfirmingInstallation = true
+                Task { await model.installVerifiedUpdate() }
             }
             .buttonStyle(.borderedProminent)
-            .backstageHelp("Confirm a complete staged copy, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
+            .backstageHelp("Install the already verified release immediately, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
         case let .installing(manifest):
             statusLabel("Installing verified update", systemImage: "arrow.triangle.2.circlepath", color: .orange)
             releaseSummary(manifest)
@@ -535,13 +516,6 @@ private struct BackstageUpdatesView: View {
             Text(recovery)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private var isBusy: Bool {
-        if case .checking = model.updateState { return true }
-        if case .downloading = model.updateState { return true }
-        if case .installing = model.updateState { return true }
-        return false
     }
 
     private func statusLabel(_ title: String, systemImage: String, color: Color) -> some View {

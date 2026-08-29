@@ -395,7 +395,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "manager.cancelImageRequest",
             "func cullingPreview(localIdentifier: String, maxPixelSize: Int)",
             "preferredAcceptedStillResource(for asset: PHAsset)",
-            "for format in [\"JPEG\", \"HEIC\"]",
+            "for format in [\"JPEG\", \"HEIC\", \"PNG\", \"TIFF\"]",
             "preferredRenderedJPEGResource(for asset: PHAsset)",
             "resourceFormat($0) == \"JPEG\"",
             "PHAssetResourceManager.default()",
@@ -509,7 +509,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('metadataRow("Current image size"', inspector)
         self.assertNotIn('metadataRow("Original size"', inspector)
 
-    def test_photo_index_excludes_raw_only_assets_before_pagination(self):
+    def test_photo_index_accepts_renderable_stills_and_excludes_raw_only_assets(self):
         photo_library = (
             NATIVE / "Sources" / "OwnerCore" / "PhotoLibraryService.swift"
         ).read_text(encoding="utf-8")
@@ -527,8 +527,25 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("if preferredAcceptedStillResource(for: asset) != nil", index_source)
         self.assertIn("let pageStart = min(safeOffset, acceptedAssets.count)", index_source)
         self.assertNotIn("options.fetchLimit = safeOffset + safeLimit", index_source)
-        self.assertIn("RAW-only Photos assets without a JPEG or HEIC resource are excluded", index_source)
-        self.assertIn("Photos asset has no JPEG or HEIC resource; PBB/PBE source intake excludes it.", row_source)
+        self.assertIn('"photosMediaItemCount": assets.count + videoCount', index_source)
+        self.assertIn('"eligibleStillCount": acceptedAssets.count', index_source)
+        self.assertIn('"excludedStillFormatCounts": excludedStillFormatCounts', index_source)
+        self.assertIn(
+            'for format in ["JPEG", "HEIC", "PNG", "TIFF"]',
+            photo_library,
+        )
+        self.assertIn(
+            'case "HEIC", "JPEG", "PNG", "TIFF": return true',
+            photo_library,
+        )
+        self.assertIn(
+            "RAW-only Photos assets without a JPEG, HEIC, PNG, or TIFF resource are excluded",
+            index_source,
+        )
+        self.assertIn(
+            "Photos asset has no JPEG, HEIC, PNG, or TIFF resource; PBB/PBE source intake excludes it.",
+            row_source,
+        )
 
     def test_quick_look_h_preserves_an_existing_multi_selection(self):
         culling = (

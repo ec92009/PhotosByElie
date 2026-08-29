@@ -364,7 +364,7 @@ class FixturePipelineTest(unittest.TestCase):
         )
         self.assertEqual(approved["items"][0]["after"]["country"], "spain")
 
-    def test_source_index_requires_a_real_jpeg_or_heic_resource(self):
+    def test_source_index_requires_a_supported_still_resource(self):
         raw_only = {
             "localIdentifier": "raw-only",
             "filename": "20220807 153244 00170.jpg",
@@ -424,6 +424,40 @@ class FixturePipelineTest(unittest.TestCase):
         }
         self.assertTrue(is_jpeg_source_row(heic_backed))
         self.assertEqual(upsert_assets(self.root, [heic_backed]), 1)
+
+        png_backed = {
+            "localIdentifier": "png-backed",
+            "filename": "Graphic.png",
+            "mediaType": "photo",
+            "resourceFormats": ["PNG"],
+            "resourceFormat": "PNG",
+            "preferredResourceFilename": "Graphic.png",
+            "preferredResourceFormat": "PNG",
+            "resources": [{
+                "originalFilename": "Graphic.png",
+                "uniformTypeIdentifier": "public.png",
+                "format": "PNG",
+            }],
+        }
+        self.assertTrue(is_jpeg_source_row(png_backed))
+        self.assertEqual(upsert_assets(self.root, [png_backed]), 1)
+
+        tiff_backed = {
+            "localIdentifier": "tiff-backed",
+            "filename": "Scan.tif",
+            "mediaType": "photo",
+            "resourceFormats": ["TIFF"],
+            "resourceFormat": "TIFF",
+            "preferredResourceFilename": "Scan.tif",
+            "preferredResourceFormat": "TIFF",
+            "resources": [{
+                "originalFilename": "Scan.tif",
+                "uniformTypeIdentifier": "public.tiff",
+                "format": "TIFF",
+            }],
+        }
+        self.assertTrue(is_jpeg_source_row(tiff_backed))
+        self.assertEqual(upsert_assets(self.root, [tiff_backed]), 1)
 
         # Existing non-Photos callers use compact rows without resource
         # metadata; retain that compatibility while the Photos path remains
@@ -1504,16 +1538,20 @@ class FixturePipelineTest(unittest.TestCase):
         upsert_assets(self.root, [
             {
                 "localIdentifier": "asset-1",
-                "filename": "A refreshed.JPG",
+                "filename": "A refreshed.png",
                 "mediaType": "photo",
+                "resourceFormat": "PNG",
+                "resourceFormats": ["PNG"],
                 "creationDate": "2026-07-18T10:00:00Z",
                 "pixelWidth": 6000,
                 "pixelHeight": 4000,
             },
             {
                 "localIdentifier": "asset-2",
-                "filename": "B refreshed.JPG",
+                "filename": "B refreshed.tif",
                 "mediaType": "photo",
+                "resourceFormat": "TIFF",
+                "resourceFormats": ["TIFF"],
                 "creationDate": "2026-07-18T11:00:00Z",
                 "pixelWidth": 4000,
                 "pixelHeight": 6000,

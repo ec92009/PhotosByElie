@@ -663,6 +663,12 @@ class BackstagePhotosClientTest(unittest.TestCase):
             responses = {
                 0: {
                     "ok": True,
+                    "photosMediaItemCount": 10,
+                    "photosImageCount": 9,
+                    "photosVideoCount": 1,
+                    "eligibleStillCount": 3,
+                    "excludedStillCount": 6,
+                    "excludedStillFormatCounts": {"RAW": 5, "PSD": 1},
                     "items": [{"assetId": "asset-1"}, {"assetId": "asset-2"}],
                 },
                 2: {"ok": True, "items": [{"assetId": "asset-3"}]},
@@ -680,6 +686,9 @@ class BackstagePhotosClientTest(unittest.TestCase):
                 )
 
             self.assertEqual(result["count"], 3)
+            self.assertEqual(result["photosMediaItemCount"], 10)
+            self.assertEqual(result["eligibleStillCount"], 3)
+            self.assertEqual(result["excludedStillFormatCounts"], {"RAW": 5, "PSD": 1})
             self.assertEqual(
                 [json.loads(line)["assetId"] for line in destination.read_text(encoding="utf-8").splitlines()],
                 ["asset-1", "asset-2", "asset-3"],

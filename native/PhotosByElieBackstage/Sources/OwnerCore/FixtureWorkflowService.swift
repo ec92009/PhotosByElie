@@ -1246,6 +1246,12 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
     public var importedCount: Int
     public var totalCount: Int
     public var missingMarkedCount: Int
+    public var photosMediaItemCount: Int
+    public var photosImageCount: Int
+    public var photosVideoCount: Int
+    public var eligibleStillCount: Int
+    public var excludedStillCount: Int
+    public var excludedStillFormatCounts: [String: Int]
     public var completedAt: String
     public var checkpointCaptureDate: String
 
@@ -1257,6 +1263,15 @@ public struct PhotosIndexReconciliationReport: Sendable, Equatable {
         importedCount = json["importedCount"]?.intValue ?? 0
         totalCount = json["totalCount"]?.intValue ?? 0
         missingMarkedCount = json["missingMarkedCount"]?.intValue ?? 0
+        photosMediaItemCount = json["photosMediaItemCount"]?.intValue ?? 0
+        photosImageCount = json["photosImageCount"]?.intValue ?? 0
+        photosVideoCount = json["photosVideoCount"]?.intValue ?? 0
+        eligibleStillCount = json["eligibleStillCount"]?.intValue ?? totalCount
+        excludedStillCount = json["excludedStillCount"]?.intValue ?? 0
+        excludedStillFormatCounts = (json["excludedStillFormatCounts"]?.objectValue ?? [:])
+            .reduce(into: [:]) { result, entry in
+                result[entry.key] = entry.value.intValue ?? 0
+            }
         completedAt = json["completedAt"]?.stringValue ?? ""
         checkpointCaptureDate = json["discoveryCheckpoint"]?.objectValue?["captureDate"]?.stringValue ?? ""
     }

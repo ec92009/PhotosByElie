@@ -21,7 +21,7 @@ public struct PhotoPreview: Sendable, Equatable {
     public var jpegData: Data
     public var pixelWidth: Int
     public var pixelHeight: Int
-    /// Byte count of complete accepted JPEG or HEIC data received directly
+    /// Byte count of complete accepted still-image data received directly
     /// from Photos before any preview downsampling or JPEG encoding. Nil when
     /// the preview came from a rendered `requestImage` raster or another
     /// partial path.
@@ -260,7 +260,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         // Backstage source intake is still-photo only. Real-estate videos are
         // generated deliverables built from approved stills and do not belong
         // in the PhotoKit culling/preview universe. A RAW-only PHAsset also
-        // stays out: PBB/PBE accept a JPEG or HEIC source that Photos can
+        // stays out: PBB/PBE accept a JPEG, HEIC, PNG, or TIFF source that Photos can
         // safely render as the JPG consumed by the apps.
         let result = PHAsset.fetchAssets(with: .image, options: options)
         var items: [PhotoLibraryItem] = []
@@ -302,18 +302,24 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
         // Backstage source intake is still-photo only. Generated real-estate
         // videos are downstream deliverables and never enter this index. A
-        // RAW-only PHAsset is excluded because PBB/PBE require a JPEG or HEIC
+        // RAW-only PHAsset is excluded because PBB/PBE require a supported still
         // source that Photos can render safely as JPG.
         let assets = PHAsset.fetchAssets(with: .image, options: options)
         // Filter before applying offset/limit. Applying pagination to the raw
         // Photos result first would make a page appear short and could skip
-        // valid JPEG/HEIC-backed assets after a run of RAW-only assets.
+        // valid supported stills after a run of RAW-only assets.
         var acceptedAssets: [PHAsset] = []
+        var excludedStillFormatCounts: [String: Int] = [:]
         assets.enumerateObjects { asset, _, _ in
             if preferredAcceptedStillResource(for: asset) != nil {
                 acceptedAssets.append(asset)
+            } else {
+                let formats = PHAssetResource.assetResources(for: asset).map(resourceFormat)
+                let category = excludedStillCategory(formats)
+                excludedStillFormatCounts[category, default: 0] += 1
             }
         }
+        let videoCount = PHAsset.fetchAssets(with: .video, options: options).count
         let pageStart = min(safeOffset, acceptedAssets.count)
         let pageEnd = min(pageStart + safeLimit, acceptedAssets.count)
         let selected = pageStart < pageEnd
@@ -337,13 +343,19 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "count": rows.count,
             "fetchedCount": acceptedAssets.count,
             "skippedCount": pageStart,
+            "photosMediaItemCount": assets.count + videoCount,
+            "photosImageCount": assets.count,
+            "photosVideoCount": videoCount,
+            "eligibleStillCount": acceptedAssets.count,
+            "excludedStillCount": max(0, assets.count - acceptedAssets.count),
+            "excludedStillFormatCounts": excludedStillFormatCounts,
             "dateFrom": photoLibraryISODate(dateFrom),
             "dateTo": photoLibraryISODate(dateTo),
             "items": rows,
             "notes": [
                 "Uses PhotoKit metadata only; does not read .photoslibrary package internals.",
                 "Sidecar culling decisions are local-first. Photos keyword/title write-back is staged separately.",
-                "RAW-only Photos assets without a JPEG or HEIC resource are excluded from PBB/PBE source intake.",
+                "RAW-only Photos assets without a JPEG, HEIC, PNG, or TIFF resource are excluded from PBB/PBE source intake.",
             ],
         ]
         return try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
@@ -409,7 +421,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         }
 
         // Idle culling upgrades need a bounded rendered image, not the complete
-        // accepted JPEG or HEIC resource. Downloading full source data for every
+        // accepted still resource. Downloading full source data for every
         // visible card can exhaust the viewport's bounded retries before Photos
         // finishes serving large or iCloud-backed assets. Explicit workflows
         // that need complete bytes continue through renderedJPEGPreview.
@@ -860,7 +872,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             "status": eligible ? "candidate" : "unsupported",
             "reason": eligible
                 ? "Photos still image will import as the current rendered JPG from Photos."
-                : "Photos asset has no JPEG or HEIC resource; PBB/PBE source intake excludes it.",
+                : "Photos asset has no JPEG, HEIC, PNG, or TIFF resource; PBB/PBE source intake excludes it.",
         ]
         if let location = locationRow(asset) {
             row["location"] = location
@@ -991,16 +1003,21 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return ext.isEmpty ? (uti.isEmpty ? "Unknown" : uti) : ext.uppercased()
     }
 
+    private func excludedStillCategory(_ formats: [String]) -> String {
+        if formats.contains("RAW") { return "RAW" }
+        return formats.first(where: { !$0.isEmpty && $0 != "Unknown" }) ?? "Other"
+    }
+
     private func isJPEGConvertibleImageResource(_ resource: PHAssetResource) -> Bool {
         switch resourceFormat(resource) {
-        case "HEIC", "JPEG": return true
+        case "HEIC", "JPEG", "PNG", "TIFF": return true
         default: return false
         }
     }
 
     private func preferredAcceptedStillResource(for asset: PHAsset) -> PHAssetResource? {
         let resources = PHAssetResource.assetResources(for: asset)
-        for format in ["JPEG", "HEIC"] {
+        for format in ["JPEG", "HEIC", "PNG", "TIFF"] {
             if let resource = resources
                 .filter({ resourceFormat($0) == format })
                 .sorted(by: { lhs, rhs in

@@ -3442,6 +3442,12 @@ struct OwnerCoreTests {
                     "importedCount": 52_400,
                     "totalCount": 52_400,
                     "missingMarkedCount": 17,
+                    "photosMediaItemCount": 57_000,
+                    "photosImageCount": 55_000,
+                    "photosVideoCount": 2_000,
+                    "eligibleStillCount": 52_400,
+                    "excludedStillCount": 2_600,
+                    "excludedStillFormatCounts": .object(["RAW": .number(2_500)]),
                     "completedAt": "2026-07-28T12:00:00Z",
                     "discoveryCheckpoint": .object([
                         "captureDate": "2026-07-28T11:59:00Z",
@@ -3472,6 +3478,10 @@ struct OwnerCoreTests {
         #expect(report.importedCount == 52_400)
         #expect(report.totalCount == 52_400)
         #expect(report.missingMarkedCount == 17)
+        #expect(report.photosMediaItemCount == 57_000)
+        #expect(report.photosVideoCount == 2_000)
+        #expect(report.eligibleStillCount == 52_400)
+        #expect(report.excludedStillFormatCounts["RAW"] == 2_500)
         let request = try #require(await api.requests().first)
         #expect(request.actionKind == "sidecar-photos-index-sync")
         #expect(request.target == "david")

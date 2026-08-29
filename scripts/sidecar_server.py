@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 import uuid
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -379,6 +380,7 @@ def _write_backstage_library_index(
     index_path.parent.mkdir(parents=True, exist_ok=True)
     offset = 0
     total_count = 0
+    source_census: dict[str, Any] = {}
     with index_path.open("w", encoding="utf-8") as stream:
         while True:
             payload = _run_backstage_photos_library_index(
@@ -392,6 +394,15 @@ def _write_backstage_library_index(
                 code = str(payload.get("code") or "library_index_failed")
                 message = str(payload.get("error") or "Backstage could not index the Photos library.")
                 raise RuntimeError(f"{code}: {message}")
+            if not source_census:
+                source_census = {
+                    "photosMediaItemCount": int(payload.get("photosMediaItemCount") or 0),
+                    "photosImageCount": int(payload.get("photosImageCount") or 0),
+                    "photosVideoCount": int(payload.get("photosVideoCount") or 0),
+                    "eligibleStillCount": int(payload.get("eligibleStillCount") or 0),
+                    "excludedStillCount": int(payload.get("excludedStillCount") or 0),
+                    "excludedStillFormatCounts": payload.get("excludedStillFormatCounts") or {},
+                }
             rows = [
                 row for row in payload.get("items") or []
                 if isinstance(row, dict) and is_jpeg_source_row(row)
@@ -415,7 +426,13 @@ def _write_backstage_library_index(
                 break
             if offset >= 1_000_000:
                 raise RuntimeError("Backstage library-index exceeded the safe offset limit.")
-    return {"ok": True, "mode": "library-index", "count": total_count, "totalCount": total_count}
+    return {
+        "ok": True,
+        "mode": "library-index",
+        "count": total_count,
+        "totalCount": total_count,
+        **source_census,
+    }
 
 
 def _run_index_job(
@@ -484,6 +501,12 @@ def _run_index_job(
             completedAt=completed_at,
             missingMarkedCount=missing_count,
             invalidSourceMarkedCount=invalid_source_count,
+            photosMediaItemCount=int(index_payload.get("photosMediaItemCount") or 0),
+            photosImageCount=int(index_payload.get("photosImageCount") or 0),
+            photosVideoCount=int(index_payload.get("photosVideoCount") or 0),
+            eligibleStillCount=int(index_payload.get("eligibleStillCount") or total_count),
+            excludedStillCount=int(index_payload.get("excludedStillCount") or 0),
+            excludedStillFormatCounts=index_payload.get("excludedStillFormatCounts") or {},
             mode=mode,
             dateFrom=date_from,
             dateTo=date_to,

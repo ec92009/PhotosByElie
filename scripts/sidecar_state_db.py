@@ -937,6 +937,18 @@ def _source_token_matches(token: str, accepted_formats: set[str]) -> bool:
         or normalized.endswith((".heic", ".heif", ".hif"))
     ):
         return True
+    if "PNG" in accepted_formats and (
+        normalized == "png"
+        or "png" in normalized
+        or normalized.endswith(".png")
+    ):
+        return True
+    if "TIFF" in accepted_formats and (
+        normalized in {"tif", "tiff"}
+        or "tiff" in normalized
+        or normalized.endswith((".tif", ".tiff"))
+    ):
+        return True
     return False
 
 
@@ -946,28 +958,31 @@ def _row_has_source_format(row: dict[str, Any], source_format: str) -> bool:
 
 
 def is_jpeg_source_row(row: dict[str, Any]) -> bool:
-    """Accept source rows backed by a JPEG or HEIC Photos resource.
+    """Accept source rows backed by a renderable Photos still resource.
 
     Native Backstage rows carry resource metadata. A top-level ``.jpg``
     filename is deliberately not evidence: RAW-only PhotoKit assets can have
-    a synthetic JPG display name. HEIC is intentionally accepted because
-    Photos can safely render it as the JPG consumed by PBB/PBE. Minimal
-    legacy/test rows without any resource metadata remain accepted for
-    compatibility with non-Photos callers; once resource metadata is present,
-    JPEG or HEIC must be explicit.
+    a synthetic JPG display name. JPEG, HEIC, PNG, and TIFF are accepted
+    because Photos and ImageIO can safely render them as the JPG consumed by
+    PBB/PBE. Minimal legacy/test rows without any resource metadata remain
+    accepted for compatibility with non-Photos callers; once resource
+    metadata is present, one supported still format must be explicit.
     """
     explicit_metadata, format_tokens = _source_format_tokens(row)
-    if any(_source_token_matches(token, {"JPEG", "HEIC"}) for token in format_tokens):
+    if any(
+        _source_token_matches(token, {"JPEG", "HEIC", "PNG", "TIFF"})
+        for token in format_tokens
+    ):
         return True
     return not explicit_metadata
 
 
 def mark_invalid_source_assets_missing(repo_root: Path) -> int:
-    """Hide previously indexed rows that are not JPEG/HEIC-backed stills.
+    """Hide previously indexed rows that are not supported stills.
 
     This repairs databases populated before the source boundary existed. The
-    The row and its decisions remain recoverable: a later valid JPEG/HEIC
-    index row can clear ``missing_at`` through the normal upsert path.
+    row and its decisions remain recoverable: a later valid JPEG, HEIC, PNG,
+    or TIFF index row can clear ``missing_at`` through the normal upsert path.
     """
     now = now_iso()
     with connect(repo_root) as conn:

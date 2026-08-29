@@ -1614,11 +1614,22 @@ final class BackstageViewModel: ObservableObject {
             if hasCurrentCullingFixture, cullingPool == nil {
                 await loadFixtureCullingWindow()
             }
-            photoStatus = [
-                "Owner reconciled",
-                "\(report.importedCount.formatted()) indexed",
-                "\(report.missingMarkedCount.formatted()) unavailable marked",
-            ].joined(separator: " • ")
+            let rawOnly = report.excludedStillFormatCounts["RAW"] ?? 0
+            var parts = ["Owner reconciled"]
+            if report.photosMediaItemCount > 0 {
+                parts.append("\(report.photosMediaItemCount.formatted()) Photos items")
+                parts.append("\(report.eligibleStillCount.formatted()) supported stills")
+                if rawOnly > 0 {
+                    parts.append("\(rawOnly.formatted()) RAW-only excluded")
+                }
+                if report.photosVideoCount > 0 {
+                    parts.append("\(report.photosVideoCount.formatted()) videos excluded")
+                }
+            } else {
+                parts.append("\(report.importedCount.formatted()) indexed")
+            }
+            parts.append("\(report.missingMarkedCount.formatted()) unavailable marked")
+            photoStatus = parts.joined(separator: " • ")
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
             if authentication.phase == .authenticated {

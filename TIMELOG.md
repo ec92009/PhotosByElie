@@ -790,8 +790,9 @@ Clock state: running
 | 2026-08-27 | 10:11 CEST | 10:12 CEST | 0:01 | Directed the PBE-164 Gallery thumbnail lifecycle correction for bounded visible upgrades and scroll-cancelable APL backfill; background implementation, tests, build, commit, and ticket API runtime excluded. |
 | 2026-08-29 | 09:36 CEST | 09:37 CEST | 0:01 | Directed automatic checking when Updates opens and removal of the redundant verified-install confirmation; background implementation, tests, release, and ticket API runtime excluded. |
 | 2026-08-29 | 10:18 CEST | 10:19 CEST | 0:01 | Reported Hidden plus Needs Review as an incompatible dual state and confirmed the canonical-stage direction; background implementation, tests, and release work excluded. |
+| 2026-08-29 | 11:25 CEST | 11:27 CEST | 0:02 | Confirmed automatic update checking and removal of the manual button while aligning operator documentation with accepted behavior; background documentation, tests, and ticket work excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:34
+Active collaboration time used: 38:36
 Remaining budget: not set

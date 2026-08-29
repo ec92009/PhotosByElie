@@ -50,12 +50,14 @@ other release object names are not public routes.
 archive and manifest from the same bytes, uploads and re-reads the immutable
 archive first, preserves the previous manifest as immutable rollback history,
 and writes `latest.json` last. A failure before that final write leaves clients
-on the previous verified release. Installation remains a separate, confirmed
-operator action after verification. It stages a complete copy beside the
-canonical app, repeats archive, Info.plist, version/build, signature, and
-designated-requirement checks, preserves the incumbent signed app below the
-private Backstage rollback directory, and atomically exchanges the staged app
-into `/Applications/PhotosByElie Backstage.app`.
+on the previous verified release. Installation remains a separate operator
+action after verification: pressing **Install verified update** starts the
+guarded installer immediately, without a second confirmation dialog. It stages
+a complete copy beside the canonical app, repeats archive, Info.plist,
+version/build, signature, and designated-requirement checks, preserves the
+incumbent signed app below the private Backstage rollback directory, and
+atomically exchanges the staged app into `/Applications/PhotosByElie
+Backstage.app`.
 
 Before replacement, the installer inventories only exact hidden
 `.PhotosByElie Backstage.install-<UUID>.app` siblings. It retains recent
@@ -83,14 +85,16 @@ rejects a declared HTTP length or streamed byte that exceeds either the manifest
 size or the hard 1 GiB archive ceiling; it never accumulates the complete archive
 in `Data`. A rejected partial or temporary download is removed; after
 verification, the archive and extracted app remain there for review. The
-read-only updater has no install, overwrite, launch, Keychain, Photos,
+download-and-verify path has no install, overwrite, launch, Keychain, Photos,
 connector, Owner database, fixture, catalog, upload, or publication operation.
-After verification, the separate installer requires explicit confirmation. It
+After verification, the explicit **Install verified update** button is the
+installation boundary; the separate installer does not add another modal. It
 may copy and atomically exchange only the canonical Backstage app, retain one
 verified rollback bundle, and offer a separate quit-and-open action. It never
 touches Photos, Keychain, connector, Owner database, fixture, catalog, upload,
-or publication state. Any staging or verification failure leaves the incumbent
-app untouched; any failed post-swap verification atomically restores it.
+or publication state. Any staging or verification failure leaves the
+incumbent app untouched; any failed post-swap verification atomically restores
+it.
 
 Verification checks, in order:
 
@@ -115,8 +119,9 @@ Verification checks, in order:
 Any download, inspection, extraction, tree-validation, checksum, or signature
 failure removes the unique temporary directory. Only after all six checks does
 Backstage show `verified`. The operator may reveal the isolated artifact or
-explicitly confirm the separate canonical installer. Finder replacement is not
-the supported installation path.
+press **Install verified update** to enter the separate canonical installer
+without a second confirmation dialog. Finder replacement is not the supported
+installation path.
 
 ## Connector runtime materialization
 

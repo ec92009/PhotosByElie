@@ -1,13 +1,23 @@
 # SQLite Catalog And Owner State
 
-Date: 2026-05-17
+Date: 2026-08-29
 
-PhotosByElie is moving toward two SQLite files with different trust boundaries:
+PhotosByElie uses two SQLite files with different trust boundaries and one
+normal editable authority:
 
-- `assets/catalog/photosbyelie.sqlite`: public/deployable catalog truth.
-- `assets/owner-actions/Owner.sqlite`: local Owner-only workflow truth, ignored by Git.
+- `assets/owner-actions/Owner.sqlite`: the local Owner-only, sole normal editable
+  authority for identity, workflow, public metadata, collection membership,
+  and publication state; ignored by Git.
+- `assets/catalog/photosbyelie.sqlite`: a deterministic, privacy-safe, read-only
+  projection and deployment artifact for public browser use.
 
-The goal is to eliminate alternate sources of truth. The public browser runtime loads plain `photosbyelie.sqlite` directly; normal catalog rebuilds do not generate or prefer a Brotli-compressed copy. Owner JSON files are compatibility views, handoff files, or audit artifacts while `Owner.sqlite` is the private workflow source of truth and write target.
+The projection boundary is one-way: supported Owner operations write
+`Owner.sqlite`, then guarded projection and deployment paths regenerate and
+verify the public catalog. The browser loads plain `photosbyelie.sqlite`
+directly; normal catalog rebuilds do not generate or prefer a Brotli-compressed
+copy. Owner JSON files are compatibility views, handoff files, or audit
+artifacts, never alternate write authorities. The dated migration and parity
+receipt is [PBE-173 Owner/catalog migration audit](../audits/pbe-173-owner-catalog-migration.md).
 
 ## Public Catalog DB
 
@@ -55,35 +65,7 @@ pod_quality_tiers
 pod_options
 ```
 
-The populated compact-id database currently contains:
-
-```text
-collections:     8
-cameras:         13
-lenses:          22
-media_types:     2
-source_origins:  2
-formats:         6
-asset_types:     7
-keyword_terms:   3,521
-source_folders:  144
-source_files:    6,019
-media_items:     6,019
-media_assets:    35,724
-price_tiers:     2
-products:        7
-product_prices:  8
-frame_options:   4
-frame_prices:    9
-shipping_prices: 3
-video_tiers:     5
-pod_settings:    9
-pod_suppliers:   4
-pod_quality_tiers: 3
-pod_options:     24
-```
-
-Historical size check from the compact-id rebuild:
+Historical size check from the 2026-05-17 compact-id rebuild:
 
 ```text
 Raw SQLite:         6.6 MiB
@@ -91,11 +73,10 @@ SQLite gzip -9:     1.04 MiB
 SQLite brotli -11:  0.50 MiB
 ```
 
-The active count dropped from 5,844 to 5,827 after 17 discarded/tombstoned rows
-were removed from the public catalog. Those media objects had already been
-purged from R2, so keeping them in public metadata caused missing-preview cards.
-The validator now rejects discarded/tombstoned ids in the public catalog and
-Expo manifest.
+Live row counts are deliberately omitted from this architecture contract. Use
+the current Owner projection and deployment receipts for operational counts.
+The validator rejects discarded or tombstoned identities in the public catalog
+and Expo manifest.
 
 Plain `assets/catalog/photosbyelie.sqlite` is the active public transfer artifact.
 Later pages should reopen the same database from browser cache instead of
@@ -527,7 +508,9 @@ assets/owner-actions/Owner.sqlite
 assets/owner-actions/Owner.sqlite-*
 ```
 
-It replaces Owner workflow JSON as the private source of truth. Accepted review decisions update the public catalog DB; pending, rejected, parked, blocked, and proposal history remain local.
+It replaces Owner workflow JSON as the sole normal editable authority. Accepted
+review decisions become public only through the guarded catalog projection;
+pending, rejected, parked, blocked, and proposal history remain local.
 
 Current draft tables:
 
@@ -543,27 +526,8 @@ title_keyword_decisions
 
 Because this database never travels on the public internet, size is not a constraint. It carries explicit workflow indexes for review state, batch lookup, proposal status/confidence, decision timing, country assignment, and blacklist maintenance.
 
-The populated local database currently contains:
-
-```text
-owner_settings:           4
-keyword_blacklist:        32
-country_assignments:      1,553
-title_keyword_batches:    5
-title_keyword_queue:      662
-title_keyword_proposals:  662
-title_keyword_decisions:  452
-```
-
-Current title/keyword score from `Owner.sqlite`:
-
-```text
-accepted/applied:    120
-submitted-unchecked: 210
-rejected/rework:     323
-parked:              0
-blocked:             9
-```
+Live workflow counts are deliberately omitted from this architecture contract.
+Use Backstage and the current Owner receipts for operational queue totals.
 
 `Owner.sqlite` owns title/keyword batches, queue state, proposals, decisions, country assignments, and keyword blacklist entries. The localhost helper writes decisions, country assignments, and blacklist changes into the DB, then exports only the JSON views that the current UI, handoff path, or audit trail still needs. `title-keyword-review-queue/proposed-state.json` is retired; the corresponding state lives in `title_keyword_queue`, `title_keyword_proposals`, and `title_keyword_decisions`.
 

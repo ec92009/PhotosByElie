@@ -2442,6 +2442,32 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, guide)
 
+    def test_operator_docs_match_current_update_and_catalog_authority(self):
+        guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
+            encoding="utf-8"
+        )
+        update_contract = (
+            ROOT / "docs" / "architecture" / "backstage-update-contract.md"
+        ).read_text(encoding="utf-8")
+        catalog_contract = (
+            ROOT / "docs" / "architecture" / "sqlite-catalog-owner-state.md"
+        ).read_text(encoding="utf-8")
+        scripts_guide = (ROOT / "scripts" / "README.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Opening the workspace automatically reads", guide)
+        self.assertNotIn("**Check for updates**", guide)
+        self.assertIn("there is no second confirmation dialog", guide)
+        self.assertIn("without a second confirmation dialog", update_contract)
+        self.assertIn("sole normal editable authority", catalog_contract)
+        self.assertIn("sole normal editable authority", scripts_guide)
+        self.assertNotIn("moving toward two SQLite files", catalog_contract)
+        self.assertNotIn("currently contains:", catalog_contract)
+        self.assertNotIn("current active public database has", scripts_guide)
+        for document in (catalog_contract, scripts_guide):
+            self.assertIn("pbe-173-owner-catalog-migration.md", document)
+
     def test_current_source_media_contract_is_documented(self):
         guide = (ROOT / "docs" / "BACKSTAGE_GETTING_STARTED.md").read_text(
             encoding="utf-8"

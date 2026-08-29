@@ -77,9 +77,11 @@ signature-verified installer stages are eligible for bounded reconciliation.
 ## Updates
 
 Open **Updates** to see the exact installed bundle identifier, version, and
-build. **Check for updates** reads only the configured authoritative HTTPS
-release manifest. When a newer compatible release is available, Backstage shows
-its version/build, minimum macOS version, release notes, and archive size.
+build. Opening the workspace automatically reads the configured authoritative
+HTTPS release manifest when no update operation is already active; there is no
+separate manual check control. When a newer compatible release is available,
+Backstage shows its version/build, minimum macOS version, release notes, and
+archive size.
 
 Production signed builds use
 `https://download.photos-by-elie.com/backstage/releases/latest.json`. Release
@@ -114,13 +116,18 @@ and ref—for rollback, and updates `latest.json` only as the final write.
 
 **Download and verify** writes a unique archive below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,
-signing authority, and designated requirement. A verified archive can be
-revealed in Finder for a separately confirmed manual action. Backstage never
-overwrites or launches the running app and never changes Photos permission,
-connector enrollment, Keychain credentials, Owner SQLite, fixtures, catalog, or
-publication state. If the endpoint is not configured, the release is a
-downgrade/incompatible, or verification fails, the workspace explains the
-blocker and recovery guidance.
+signing authority, and designated requirement without changing the installed
+app. A verified archive can be revealed in Finder for inspection. Choosing
+**Install verified update** immediately enters the separate guarded installer;
+there is no second confirmation dialog. The installer repeats release and
+signing checks, stages the complete app, preserves the incumbent signed app for
+rollback, and atomically replaces only the canonical app bundle. It does not
+relaunch or terminate the current process; **Quit and open installed
+Backstage** remains a separate action after installation. Neither path changes
+Photos permission, connector enrollment, Keychain credentials, Owner SQLite,
+fixtures, catalog, or publication state. If the endpoint is not configured,
+the release is a downgrade/incompatible, or verification fails, the workspace
+explains the blocker and recovery guidance.
 
 ### No-send client-originals preflight API
 

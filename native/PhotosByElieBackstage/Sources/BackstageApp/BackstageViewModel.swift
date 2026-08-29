@@ -2940,6 +2940,21 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = cullingSelection.selectedIDs
     }
 
+    /// Move the focused Gallery item while Quick Look remains open and ask
+    /// the grid to reveal the exact new focus. The view consumes the target
+    /// with an unanchored `scrollTo`, which moves only when needed and by the
+    /// minimum amount required to make the card visible.
+    @discardableResult
+    func moveCullingQuickLookSelection(by delta: Int, from assetID: String) -> String? {
+        clickCullingAsset(assetID, modifiers: [])
+        moveCullingSelection(by: delta, extending: false)
+        guard let focusedID = focusedCullingAssetID, focusedID != assetID else {
+            return nil
+        }
+        cullingScrollTargetID = focusedID
+        return focusedID
+    }
+
     var canIncreaseCullingThumbnailSize: Bool {
         cullingGridDensity > 1
     }

@@ -933,6 +933,9 @@ class NativeCullingParityTest(unittest.TestCase):
 
     def test_quick_look_supports_culling_review_shortcuts_metadata_and_advancement(self):
         app = backstage_ui_source()
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
         adapter = (
             NATIVE
             / "Sources"
@@ -985,7 +988,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("if model.selectedCullingAssetIDs.count == 1", culling)
         self.assertIn("shortcut.selectionDelta(", culling)
         self.assertIn("rowStride: model.cullingGridDensity", culling)
-        self.assertIn("model.moveCullingSelection(by: delta", culling)
+        self.assertIn("model.moveCullingQuickLookSelection(by: delta", culling)
+        self.assertIn("func moveCullingQuickLookSelection(by delta: Int", model)
+        self.assertIn("cullingScrollTargetID = focusedID", model)
+        self.assertIn("proxy.scrollTo(target)", culling)
+        self.assertNotIn("proxy.scrollTo(target, anchor: .center)", culling)
         self.assertIn("guard wasVisible && !remainsVisible else", culling)
         self.assertIn("onReturnToReview: onReturnToReview", culling)
         self.assertIn("case .returnToReview:", culling)
@@ -1423,8 +1430,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "258")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "259")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

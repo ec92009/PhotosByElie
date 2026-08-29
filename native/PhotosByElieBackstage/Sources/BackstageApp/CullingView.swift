@@ -157,9 +157,9 @@ private enum CullingQuickLookPresenter {
         coordinator: BackstageQuickLookCoordinator,
         onReturnToReview: @escaping () -> Void
     ) {
-        model.clickCullingAsset(assetID, modifiers: [])
-        model.moveCullingSelection(by: delta, extending: false)
-        guard model.focusedCullingAssetID != assetID, coordinator.isVisible else { return }
+        guard model.moveCullingQuickLookSelection(by: delta, from: assetID) != nil,
+              coordinator.isVisible
+        else { return }
         present(
             model: model,
             coordinator: coordinator,
@@ -678,7 +678,11 @@ struct CullingView: View {
                 .modifier(CullingDisplayKeyCommands(model: model))
                 .onChange(of: model.cullingScrollTargetID) { _, target in
                     guard let target else { return }
-                    proxy.scrollTo(target, anchor: .center)
+                    // Omitting an anchor asks SwiftUI to move only as much as
+                    // needed to reveal the exact card. This keeps Quick Look
+                    // navigation spatially stable instead of recentering every
+                    // already-visible selection.
+                    proxy.scrollTo(target)
                     model.cullingScrollTargetID = nil
                 }
         }

@@ -7,6 +7,75 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Quick Look navigation keeps every new Gallery focus revealable")
+    @MainActor
+    func quickLookRowNavigationRequestsVisibleCardsInBothDirections() throws {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        let ids = (0..<30).map { "quick-look-grid-\($0)" }
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: ids,
+            selectedIDs: [ids[1]],
+            anchorID: ids[1],
+            focusedID: ids[1]
+        )
+        model.cullingGridDensity = 5
+        model.cullingWindowOffset = 37
+        model.cullingSearch = "ELPH"
+        let originalViews = model.cullingViews
+        let originalRatingFilters = model.cullingRatingFilters
+        let originalColorFilters = model.cullingColorFilters
+
+        for expected in [ids[6], ids[11], ids[16], ids[21]] {
+            let previous = try #require(model.focusedCullingAssetID)
+            #expect(model.moveCullingQuickLookSelection(
+                by: model.cullingGridDensity,
+                from: previous
+            ) == expected)
+            #expect(model.cullingScrollTargetID == expected)
+            model.cullingScrollTargetID = nil
+        }
+
+        for expected in [ids[16], ids[11], ids[6], ids[1]] {
+            let previous = try #require(model.focusedCullingAssetID)
+            #expect(model.moveCullingQuickLookSelection(
+                by: -model.cullingGridDensity,
+                from: previous
+            ) == expected)
+            #expect(model.cullingScrollTargetID == expected)
+            model.cullingScrollTargetID = nil
+        }
+
+        // Adjacent navigation crosses a row edge in each direction while
+        // continuing to ask the grid for the exact new focused card.
+        for expected in [ids[2], ids[3], ids[4], ids[5], ids[6]] {
+            let previous = try #require(model.focusedCullingAssetID)
+            #expect(model.moveCullingQuickLookSelection(by: 1, from: previous) == expected)
+            #expect(model.cullingScrollTargetID == expected)
+            model.cullingScrollTargetID = nil
+        }
+
+        for expected in [ids[5], ids[4], ids[3], ids[2], ids[1]] {
+            let previous = try #require(model.focusedCullingAssetID)
+            #expect(model.moveCullingQuickLookSelection(by: -1, from: previous) == expected)
+            #expect(model.cullingScrollTargetID == expected)
+            model.cullingScrollTargetID = nil
+        }
+
+        #expect(model.selectedCullingAssetIDs == [ids[1]])
+        #expect(model.cullingWindowOffset == 37)
+        #expect(model.cullingSearch == "ELPH")
+        #expect(model.cullingViews == originalViews)
+        #expect(model.cullingRatingFilters == originalRatingFilters)
+        #expect(model.cullingColorFilters == originalColorFilters)
+        #expect(model.cullingHistory.isEmpty)
+        #expect(model.cullingStates.isEmpty)
+    }
+
     @Test("Updates checks automatically only when no update operation is in progress")
     @MainActor
     func updatesAutoCheckDoesNotInterruptUpdateWork() {

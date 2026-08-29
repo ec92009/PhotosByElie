@@ -112,6 +112,18 @@ public struct NativeUploadRunItem: Identifiable, Sendable, Equatable {
     public var status: String
     public var catalogState: String
     public var errorText: String
+
+    public var workflowStage: AssetWorkflowStage {
+        let cleanCatalog = catalogState.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if cleanCatalog == "live" { return .live }
+        if ["pending", "local"].contains(cleanCatalog) { return .publishing }
+        let cleanStatus = status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if ["live", "verified", "uploaded"].contains(cleanStatus) {
+            return .fullResolutionUploaded
+        }
+        if cleanStatus == "uploading" || cleanStatus == "running" { return .uploading }
+        return .needsUpload
+    }
 }
 
 public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
@@ -132,6 +144,14 @@ public struct NativeUploadPlanItem: Identifiable, Sendable, Equatable {
     public var cameraBody: String
     public var lens: String
     public var focalLength: String
+
+    public var workflowStage: AssetWorkflowStage {
+        AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: deliveryState
+        )
+    }
 
     public init(
         assetID: String,
@@ -207,6 +227,25 @@ public struct NativeUploadPlan: Sendable, Equatable {
     public var limit: Int
     public var hasNext: Bool
     public var items: [NativeUploadPlanItem]
+
+    /// Mutually exclusive owner-facing stages. The raw receipt counters remain
+    /// available for diagnostics, but these are the counts presented as the
+    /// workflow so parent totals are not mistaken for additional states.
+    public var publishingCount: Int {
+        max(0, projectionPendingCount) + max(0, deploymentPendingCount)
+    }
+
+    public var fullResolutionUploadedCount: Int {
+        max(0, mediaUploadedCount - publishingCount - liveOnWebsiteCount)
+    }
+
+    public var approvedOnlyCount: Int {
+        max(0, approvedCount - needsUploadCount - mediaUploadedCount)
+    }
+
+    public var failedHealthCount: Int {
+        max(0, projectionFailedCount) + max(0, deploymentFailedCount)
+    }
 
     public init(
         fixtureID: String,

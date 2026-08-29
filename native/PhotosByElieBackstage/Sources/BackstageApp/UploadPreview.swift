@@ -34,7 +34,7 @@ enum UploadPreviewFixtures {
             items: items
         )
         model.selectedDeliveryIDs = [items[0].id]
-        model.nativeUploadStatus = "4 approved need upload • 843 media uploaded • 800 live on website • showing the complete eligible window."
+        model.nativeUploadStatus = "4 need upload • 0 approved • 11 full-resolution uploaded • 32 publishing • 800 live • 1,701 not yet approved."
         model.nativeUploadThumbnails = Dictionary(
             uniqueKeysWithValues: items.enumerated().map { index, item in
                 (item.id, placeholderImage(index: index))
@@ -66,7 +66,7 @@ enum UploadPreviewFixtures {
             hasNext: false,
             items: []
         )
-        model.nativeUploadStatus = "847 approved • 847 media uploaded • 847 live on website • nothing needs upload."
+        model.nativeUploadStatus = "0 approved • 0 full-resolution uploaded • 0 publishing • 847 live • 1,701 not yet approved • nothing needs upload."
         return model
     }
 

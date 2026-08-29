@@ -357,7 +357,7 @@ private enum CullingQuickLookPresenter {
             ),
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
-            state: decision?.pickState ?? asset.placementState.rawValue,
+            state: asset.workflowStage.label,
             shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • R return approved to Review • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
         )
     }
@@ -1160,12 +1160,10 @@ struct CullingView: View {
                     : asset.resourceFormat
             )
             metadataRow("Captured", value: formattedCaptureDate(asset.capturedAt))
-            metadataRow("Fixture state", value: asset.placementState.galleryLabel)
-            metadataRow("Editorial", value: asset.galleryEditorialLabel)
+            metadataRow("Workflow stage", value: asset.workflowStage.label)
             if asset.proposalAvailable {
                 metadataRow("AI proposal", value: "Proposal Available")
             }
-            metadataRow("Delivery / publication", value: asset.galleryDeliveryLabel)
             metadataRow("Source", value: asset.sourceAvailable ? "Available" : "Unavailable")
             metadataRow("Dimensions", value: formattedDimensions(asset))
             if let byteCount = model.currentImageByteCount(for: asset.id) {
@@ -1246,49 +1244,8 @@ struct CullingView: View {
     }
 }
 
-private extension FixturePlacementState {
-    var galleryLabel: String {
-        switch self {
-        case .undecided: "Undecided"
-        case .picked: "Picked"
-        case .hidden: "Hidden"
-        }
-    }
-}
-
 private extension FixtureAsset {
-    var galleryEditorialLabel: String {
-        switch editorialState {
-        case "requesting-ai": "AI Requested"
-        case "proposed": "Proposal Available"
-        case "approved": "Approved"
-        default: "Needs Review"
-        }
-    }
-
-    var galleryDeliveryLabel: String {
-        switch deliveryState {
-        case "needs-upload": "Needs Upload"
-        case "uploading": "Uploading"
-        case "live": "Live"
-        case "failed": "Failed"
-        default: "Not Ready"
-        }
-    }
-
-    var galleryStateBadges: [String] {
-        var badges = [placementState.galleryLabel, galleryEditorialLabel]
-        if proposalAvailable, editorialState != "proposed" {
-            badges.append("Proposal Available")
-        }
-        if deliveryState != "not-ready" {
-            badges.append(galleryDeliveryLabel)
-        }
-        if !sourceAvailable {
-            badges.append("Unavailable")
-        }
-        return badges
-    }
+    var galleryStateBadges: [String] { [workflowStage.label] }
 }
 
 private struct CullingPrimaryKeyCommands: ViewModifier {

@@ -4657,14 +4657,6 @@ final class BackstageViewModel: ObservableObject {
         let changesByID = Dictionary(
             uniqueKeysWithValues: result.changes.map { ($0.assetID, $0.after) }
         )
-        if action == .requestAI {
-            for change in result.changes {
-                guard let before = change.before["editorialState"]?.stringValue,
-                      let after = change.after["editorialState"]?.stringValue
-                else { continue }
-                window.summary.applyEditorialStateTransition(from: before, to: after)
-            }
-        }
         let updatesTitle = action == .approve
             || action == .editMetadata
             || action == .propagateTitle
@@ -4686,7 +4678,10 @@ final class BackstageViewModel: ObservableObject {
                 }
             }
         }
-        window.items = window.items.map { current in
+        let previousItemsByID = Dictionary(
+            uniqueKeysWithValues: window.items.map { ($0.id, $0) }
+        )
+        let updatedItems = window.items.map { current in
             guard let after = changesByID[current.id] else { return current }
             var item = current
             if updatesTitle, let title = after["title"]?.stringValue {
@@ -4733,7 +4728,29 @@ final class BackstageViewModel: ObservableObject {
             }
             return item
         }
-        .filter { item in
+        for item in updatedItems {
+            guard let previous = previousItemsByID[item.id],
+                  changesByID[item.id] != nil
+            else { continue }
+            let retainsCompletedAction = changesByID[item.id] != nil
+                && (action == .approve || action == .hide)
+            if reviewItemMatchesActiveFilters(
+                item,
+                retainingConsumedProposal: retainsCompletedAction
+            ) {
+                window.summary.applyWorkflowStageTransition(
+                    from: previous.workflowStage,
+                    to: item.workflowStage
+                )
+            } else {
+                window.summary.total = max(0, window.summary.total - 1)
+                window.summary.applyWorkflowStageTransition(
+                    from: previous.workflowStage,
+                    to: .discovered
+                )
+            }
+        }
+        window.items = updatedItems.filter { item in
             let retainsCompletedAction = changesByID[item.id] != nil
                 && (action == .approve || action == .hide)
             return reviewItemMatchesActiveFilters(
@@ -4785,12 +4802,11 @@ final class BackstageViewModel: ObservableObject {
                     window.summary.countryMissing + (restoredCountry.isEmpty ? 1 : -1)
                 )
             }
-            guard let current = existingItems[change.assetID],
-                  let restoredState = change.review["editorialState"]?.stringValue
-            else { continue }
-            window.summary.applyEditorialStateTransition(
-                from: current.editorialState,
-                to: restoredState
+            guard let current = existingItems[change.assetID] else { continue }
+            let restored = applyReviewItemUpdate(current, from: change.review)
+            window.summary.applyWorkflowStageTransition(
+                from: current.workflowStage,
+                to: restored.workflowStage
             )
         }
         window.items = items.map { current in
@@ -4917,26 +4933,12 @@ final class BackstageViewModel: ObservableObject {
         let removed = window.items.filter { ids.contains($0.id) }
         window.items.removeAll { ids.contains($0.id) }
         window.summary.total = max(0, window.summary.total - removed.count)
-        window.summary.unreviewed = max(
-            0,
-            window.summary.unreviewed
-                - removed.filter { $0.editorialState == "unreviewed" }.count
-        )
-        window.summary.requestingAI = max(
-            0,
-            window.summary.requestingAI
-                - removed.filter { $0.editorialState == "requesting-ai" }.count
-        )
-        window.summary.proposed = max(
-            0,
-            window.summary.proposed
-                - removed.filter { $0.editorialState == "proposed" }.count
-        )
-        window.summary.approved = max(
-            0,
-            window.summary.approved
-                - removed.filter { $0.editorialState == "approved" }.count
-        )
+        for item in removed {
+            window.summary.applyWorkflowStageTransition(
+                from: item.workflowStage,
+                to: .discovered
+            )
+        }
         fixtureReviewWindow = window
         let orderedIDs = window.items.map(\.id)
         let replacementID = orderedIDs.indices.contains(preferredIndex)
@@ -7137,9 +7139,9 @@ final class BackstageViewModel: ObservableObject {
             if !plan.cloudAllowed {
                 nativeUploadStatus = "\(plan.fixtureName) policy does not permit cloud publication."
             } else if plan.needsUploadCount == 0 {
-                nativeUploadStatus = "\(plan.approvedCount) approved • \(plan.mediaUploadedCount) media uploaded • \(plan.liveOnWebsiteCount) live on website • \(plan.needsReviewCount) picked awaiting Review • nothing needs upload."
+                nativeUploadStatus = "\(plan.approvedOnlyCount) approved • \(plan.fullResolutionUploadedCount) full-resolution uploaded • \(plan.publishingCount) publishing • \(plan.liveOnWebsiteCount) live • \(plan.needsReviewCount) not yet approved • nothing needs upload."
             } else {
-                nativeUploadStatus = "\(plan.needsUploadCount) approved need upload • \(plan.mediaUploadedCount) media uploaded • \(plan.liveOnWebsiteCount) live on website • \(plan.needsReviewCount) picked awaiting Review. Showing \(plan.items.count) \(plan.order.label)."
+                nativeUploadStatus = "\(plan.needsUploadCount) need upload • \(plan.approvedOnlyCount) approved • \(plan.fullResolutionUploadedCount) full-resolution uploaded • \(plan.publishingCount) publishing • \(plan.liveOnWebsiteCount) live • \(plan.needsReviewCount) not yet approved. Showing \(plan.items.count) \(plan.order.label)."
             }
         } catch {
             nativeUploadPlan = nil

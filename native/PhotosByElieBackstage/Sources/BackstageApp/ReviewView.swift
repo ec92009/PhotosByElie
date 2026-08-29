@@ -184,7 +184,6 @@ private enum ReviewQuickLookPresenter {
             return nil
         }
         let draft = model.reviewProposalDrafts[assetID]
-        let state = item.placementState == "hidden" ? item.placementState : item.editorialState
         let equipment = model.quickLookEquipment(
             for: assetID,
             cameraBody: item.cameraBody,
@@ -210,7 +209,7 @@ private enum ReviewQuickLookPresenter {
             ),
             rating: item.rating,
             color: item.color,
-            state: state,
+            state: item.workflowStage.label,
             shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick • \(BackstageQuickLookDecisionRouter.shortcutHint) • ⌘Z undo"
         )
     }
@@ -280,11 +279,12 @@ struct ReviewView: View {
                 if let summary = model.fixtureReviewWindow?.summary {
                     FlowLayout(spacing: 10) {
                         Text("\(summary.total.formatted()) matching")
-                        Text("\(summary.unreviewed.formatted()) unreviewed")
-                        Text("\(summary.requestingAI.formatted()) requesting AI")
-                        Text("\(summary.proposed.formatted()) proposed")
+                        Text("\(summary.unreviewed.formatted()) awaiting Review")
+                        Text("\(summary.requestingAI.formatted()) AI requested")
+                        Text("\(summary.proposed.formatted()) proposal ready")
                         if model.reviewMode == .full {
                             Text("\(summary.approved.formatted()) approved")
+                            Text("\(summary.hidden.formatted()) hidden")
                         }
                     }
                     .font(.caption)
@@ -642,8 +642,8 @@ private struct ReviewAssetRow: View {
                     )
                 }
                 HStack {
-                    Text(item.editorialState.replacingOccurrences(of: "-", with: " ").capitalized)
-                    if item.editorialState == "requesting-ai" {
+                    Text(item.workflowStage.label)
+                    if item.workflowStage == .aiRequested {
                         Text("• \(item.aiReasons.count) reason\(item.aiReasons.count == 1 ? "" : "s")")
                     }
                     if hasProposalDraft {
@@ -722,13 +722,25 @@ private struct ReviewAssetRow: View {
 
     @ViewBuilder
     private var reviewStateBadge: some View {
-        if hasDraftAIReason || item.editorialState == "requesting-ai" {
+        if item.workflowStage == .hiddenFromFixture {
+            Image(systemName: "eye.slash.circle.fill")
+                .font(.system(size: 30, weight: .bold))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .secondary)
+                .accessibilityLabel("Hidden")
+        } else if hasDraftAIReason || item.workflowStage == .aiRequested {
             Image(systemName: "questionmark.circle.fill")
                 .font(.system(size: 30, weight: .bold))
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(.white, .orange)
                 .accessibilityLabel("Marked for AI review")
-        } else if item.editorialState == "approved" {
+        } else if item.workflowStage == .approved
+            || item.workflowStage == .needsUpload
+            || item.workflowStage == .uploading
+            || item.workflowStage == .fullResolutionUploaded
+            || item.workflowStage == .publishing
+            || item.workflowStage == .live
+            || item.workflowStage == .sold {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 30, weight: .bold))
                 .symbolRenderingMode(.palette)
@@ -905,14 +917,26 @@ private struct ReviewInspector: View {
                             .background(.quaternary.opacity(0.35))
                             .clipShape(RoundedRectangle(cornerRadius: 9))
                             .overlay(alignment: .topTrailing) {
-                                if !model.reviewAIReasons.isEmpty
-                                    || item.editorialState == "requesting-ai" {
+                                if item.workflowStage == .hiddenFromFixture {
+                                    Image(systemName: "eye.slash.circle.fill")
+                                        .font(.system(size: 30, weight: .bold))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .secondary)
+                                        .padding(8)
+                                } else if !model.reviewAIReasons.isEmpty
+                                    || item.workflowStage == .aiRequested {
                                     Image(systemName: "questionmark.circle.fill")
                                         .font(.system(size: 30, weight: .bold))
                                         .symbolRenderingMode(.palette)
                                         .foregroundStyle(.white, .orange)
                                         .padding(8)
-                                } else if item.editorialState == "approved" {
+                                } else if item.workflowStage == .approved
+                                    || item.workflowStage == .needsUpload
+                                    || item.workflowStage == .uploading
+                                    || item.workflowStage == .fullResolutionUploaded
+                                    || item.workflowStage == .publishing
+                                    || item.workflowStage == .live
+                                    || item.workflowStage == .sold {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 30, weight: .bold))
                                         .symbolRenderingMode(.palette)

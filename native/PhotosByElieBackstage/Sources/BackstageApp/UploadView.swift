@@ -31,18 +31,17 @@ struct UploadView: View {
             )
             if let plan = model.nativeUploadPlan {
                 HStack {
-                    LabeledContent("Picked", value: "\(plan.pickedCount)")
-                    LabeledContent("Awaiting Review", value: "\(plan.needsReviewCount)")
-                    LabeledContent("Approved", value: "\(plan.approvedCount)")
+                    LabeledContent("In workflow", value: "\(plan.pickedCount)")
+                    LabeledContent("Not yet approved", value: "\(plan.needsReviewCount)")
+                    LabeledContent("Approved", value: "\(plan.approvedOnlyCount)")
                     LabeledContent("Needs Upload", value: "\(plan.needsUploadCount)")
-                    LabeledContent("Media Uploaded", value: "\(plan.mediaUploadedCount)")
-                }
-                HStack {
-                    LabeledContent("Projection Pending", value: "\(plan.projectionPendingCount)")
-                    LabeledContent("Projection Failed", value: "\(plan.projectionFailedCount)")
-                    LabeledContent("Deployment Pending", value: "\(plan.deploymentPendingCount)")
-                    LabeledContent("Deployment Failed", value: "\(plan.deploymentFailedCount)")
-                    LabeledContent("Live on Website", value: "\(plan.liveOnWebsiteCount)")
+                    LabeledContent("Full-resolution Uploaded", value: "\(plan.fullResolutionUploadedCount)")
+                    LabeledContent("Publishing", value: "\(plan.publishingCount)")
+                    LabeledContent("Live", value: "\(plan.liveOnWebsiteCount)")
+                    if plan.failedHealthCount > 0 {
+                        LabeledContent("Failed health", value: "\(plan.failedHealthCount)")
+                            .foregroundStyle(.red)
+                    }
                 }
                 if plan.needsUploadCount > 0 {
                     HStack {
@@ -110,7 +109,7 @@ struct UploadView: View {
                                 .lineLimit(2)
                         }
                         TableColumn("Captured", value: \.capturedAt)
-                        TableColumn("State", value: \.deliveryState)
+                        TableColumn("Stage") { Text($0.workflowStage.label) }
                         TableColumn("Error", value: \.errorText)
                     }
                     .frame(minHeight: 220)
@@ -190,8 +189,7 @@ struct UploadView: View {
                !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)
-                    TableColumn("Upload", value: \.status)
-                    TableColumn("Public catalog", value: \.catalogState)
+                    TableColumn("Stage") { Text($0.workflowStage.label) }
                     TableColumn("Error", value: \.errorText)
                 }
                 .frame(minHeight: 180)
@@ -381,7 +379,7 @@ struct UploadView: View {
                 ),
                 rating: decision?.rating ?? source?.rating ?? 0,
                 color: decision?.color ?? source?.color ?? "",
-                state: item.deliveryState,
+                state: item.workflowStage.label,
                 shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • R return to Review • \(BackstageQuickLookDecisionRouter.shortcutHint)"
             )
             quickLook.present(

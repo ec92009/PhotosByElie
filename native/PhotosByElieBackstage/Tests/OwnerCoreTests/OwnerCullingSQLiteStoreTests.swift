@@ -5,6 +5,101 @@ import Testing
 
 @Suite("Owner Culling SQLite parity")
 struct OwnerCullingSQLiteStoreTests {
+    @Test("Canonical workflow stage gives fixture hiding sole precedence")
+    func canonicalWorkflowStageHasOneVisibleWinner() {
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "hidden",
+            editorialState: "unreviewed"
+        ) == .hiddenFromFixture)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "hidden",
+            editorialState: "approved",
+            deliveryState: "live",
+            catalogState: "live",
+            sold: true
+        ) == .hiddenFromFixture)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "unreviewed"
+        ) == .awaitingReview)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "requesting-ai"
+        ) == .aiRequested)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "unreviewed",
+            proposalAvailable: true
+        ) == .proposalReady)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: "needs-upload"
+        ) == .needsUpload)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: "live"
+        ) == .fullResolutionUploaded)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: "live",
+            catalogState: "pending"
+        ) == .publishing)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: "live",
+            catalogState: "live"
+        ) == .live)
+        #expect(AssetWorkflowStage.resolve(
+            placementState: "picked",
+            editorialState: "approved",
+            deliveryState: "live",
+            catalogState: "live",
+            sold: true
+        ) == .sold)
+    }
+
+    @Test("Hidden assets do not also match editorial or delivery stages")
+    func hiddenAssetsSuppressDownstreamStageFilters() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-canonical-stage-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            INSERT INTO asset_editorial_state(asset_id, editorial_state)
+              VALUES ('asset-2', 'approved');
+            INSERT INTO asset_delivery_state(asset_id, delivery_state)
+              VALUES ('asset-2', 'live');
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let hidden = try store.cullingWindow(fixtureID: "fixture-expo", view: .hidden)
+        #expect(hidden.items.map(\.id) == ["asset-2"])
+        #expect(hidden.items.first?.workflowStage == .hiddenFromFixture)
+
+        let editorial = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            editorialFilters: [.approved]
+        )
+        #expect(!editorial.items.map(\.id).contains("asset-2"))
+
+        let delivery = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            deliveryFilters: [.live]
+        )
+        #expect(!delivery.items.map(\.id).contains("asset-2"))
+    }
+
     @Test("Fixture placement stays local and recomputes inherited eligibility")
     func appliesFixtureStateAndUndo() throws {
         let root = FileManager.default.temporaryDirectory
@@ -224,8 +319,7 @@ struct OwnerCullingSQLiteStoreTests {
             editorialFilters: [.proposalAvailable],
             deliveryFilters: [.failed]
         )
-        #expect(proposedFailure.items.map(\.id) == ["asset-2"])
-        #expect(proposedFailure.items.first?.proposalAvailable == true)
+        #expect(proposedFailure.items.isEmpty)
 
         let unavailable = try store.cullingWindow(
             fixtureID: "fixture-expo",

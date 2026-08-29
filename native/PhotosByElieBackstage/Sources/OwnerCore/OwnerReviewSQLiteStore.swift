@@ -230,10 +230,19 @@ public struct OwnerReviewSQLiteStore: Sendable {
         let page = Array(items[pageStart..<pageEnd])
         let summary = FixtureReviewSummary(
             total: items.count,
-            unreviewed: items.filter { $0.editorialState == "unreviewed" }.count,
-            requestingAI: items.filter { $0.editorialState == "requesting-ai" }.count,
-            proposed: items.filter { $0.editorialState == "proposed" }.count,
-            approved: items.filter { $0.editorialState == "approved" }.count,
+            unreviewed: items.filter { $0.workflowStage == .awaitingReview }.count,
+            requestingAI: items.filter { $0.workflowStage == .aiRequested }.count,
+            proposed: items.filter { $0.workflowStage == .proposalReady }.count,
+            approved: items.filter {
+                switch $0.workflowStage {
+                case .approved, .needsUpload, .uploading, .fullResolutionUploaded,
+                     .publishing, .live, .sold:
+                    true
+                default:
+                    false
+                }
+            }.count,
+            hidden: items.filter { $0.workflowStage == .hiddenFromFixture }.count,
             countryMissing: items.filter { $0.country.isEmpty }.count
         )
         let outputStates = stateFilters ?? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])

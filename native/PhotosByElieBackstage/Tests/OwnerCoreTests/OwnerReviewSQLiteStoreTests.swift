@@ -661,6 +661,11 @@ struct OwnerReviewSQLiteStoreTests {
         #expect(hidden.items.map(\.id) == ["asset-3"])
         #expect(hidden.items.first?.locationLabel == "Alhambrá, Granada, Spain")
         #expect(hidden.items.first?.locationKeywords == ["Alhambrá", "Granada", "Spain"])
+        #expect(hidden.summary.hidden == 1)
+        #expect(hidden.summary.unreviewed == 0)
+        #expect(hidden.summary.requestingAI == 0)
+        #expect(hidden.summary.proposed == 0)
+        #expect(hidden.summary.approved == 0)
 
         let all = try store.reviewWindow(
             fixtureID: "fixture-expo",
@@ -669,6 +674,7 @@ struct OwnerReviewSQLiteStoreTests {
         )
         #expect(all.items.map(\.id) == ["asset-1", "asset-2", "asset-3"])
         #expect(all.summary.approved == 1)
+        #expect(all.summary.hidden == 1)
     }
 
     @Test("Undo refuses a later mutation instead of overwriting it")

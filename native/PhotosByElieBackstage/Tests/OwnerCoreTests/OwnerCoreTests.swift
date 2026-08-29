@@ -4848,6 +4848,8 @@ struct OwnerCoreTests {
                     "needsReviewCount": 3,
                     "needsUploadCount": 2,
                     "liveCount": 7,
+                    "mediaUploadedCount": 7,
+                    "liveOnWebsiteCount": 7,
                     "offset": 0,
                     "limit": 200,
                     "hasNext": false,
@@ -4969,7 +4971,12 @@ struct OwnerCoreTests {
         #expect(plan.fixtureName == "Expo")
         #expect(plan.needsUploadCount == 2)
         #expect(plan.needsReviewCount == 3)
+        #expect(plan.approvedOnlyCount == 0)
+        #expect(plan.publishingCount == 0)
+        #expect(plan.fullResolutionUploadedCount == 0)
+        #expect(plan.failedHealthCount == 0)
         #expect(plan.items[0].photoLibraryIdentifier == "photos-asset-1")
+        #expect(plan.items[0].workflowStage == .needsUpload)
         #expect(FixtureReviewAction.returnToReview.rawValue == "return-to-review")
         #expect(plan.items[1].deliveryState == "failed")
         #expect(plan.items[1].errorText == "network")
@@ -4985,6 +4992,8 @@ struct OwnerCoreTests {
         #expect(completed.live == 1)
         #expect(completed.failed == 1)
         #expect(completed.items[1].errorText == "network")
+        #expect(completed.items[0].workflowStage == .fullResolutionUploaded)
+        #expect(completed.items[1].workflowStage == .needsUpload)
         let safety = try await service.r2Reconciliation()
         #expect(safety.protected == 1)
         #expect(safety.eligibleDelete == 1)
@@ -5108,6 +5117,29 @@ struct OwnerCoreTests {
             to: "requesting-ai"
         )
         #expect(summary.requestingAI == 2)
+    }
+
+    @Test("Review summary makes Hidden exclusive from editorial stages")
+    func reviewSummaryTracksCanonicalHiddenTransition() {
+        var summary = FixtureReviewSummary(
+            total: 1,
+            unreviewed: 1,
+            requestingAI: 0,
+            proposed: 0,
+            approved: 0
+        )
+        summary.applyWorkflowStageTransition(
+            from: .awaitingReview,
+            to: .hiddenFromFixture
+        )
+        #expect(summary.unreviewed == 0)
+        #expect(summary.hidden == 1)
+        summary.applyWorkflowStageTransition(
+            from: .hiddenFromFixture,
+            to: .awaitingReview
+        )
+        #expect(summary.unreviewed == 1)
+        #expect(summary.hidden == 0)
     }
 
     @Test("Connector identity is explicit and requires neither daemon nor credential config")

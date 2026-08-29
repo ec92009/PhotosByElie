@@ -724,8 +724,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "Batch complete",
         ):
             self.assertIn(marker, upload)
-        for column in ("Title", "Keywords", "Captured", "State", "Error"):
+        for column in ("Title", "Keywords", "Captured", "Error"):
             self.assertIn(f'TableColumn("{column}", value:', upload)
+        self.assertIn('TableColumn("Stage")', upload)
+        self.assertNotIn('TableColumn("State", value:', upload)
         self.assertNotIn('TableColumn("File", value:', upload)
         self.assertIn("func returnSelectedUploadsToReview()", model)
         self.assertIn("func hideSelectedUploads()", model)
@@ -795,7 +797,8 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         self.assertNotIn("reviewScrollTargetID =", review_action_and_retention)
         self.assertIn('.saturation(item.placementState == "hidden" ? 0 : 1)', row)
-        self.assertIn('item.editorialState == "approved"', row)
+        self.assertIn("item.workflowStage == .hiddenFromFixture", row)
+        self.assertIn("item.workflowStage == .approved", row)
         self.assertIn('systemName: "checkmark.circle.fill"', row)
         self.assertIn(".font(.system(size: 30", row)
         self.assertIn("var proposalDraft: ReviewMetadataDraft?", row)
@@ -1420,8 +1423,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.3")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "257")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "258")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

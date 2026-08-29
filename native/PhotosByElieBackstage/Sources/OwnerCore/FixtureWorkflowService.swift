@@ -384,6 +384,116 @@ public enum FixturePlacementState: String, Codable, Sendable, CaseIterable {
     case hidden
 }
 
+/// The single owner-facing stage projected from the durable workflow columns.
+///
+/// Placement is fixture-local and therefore wins over downstream editorial or
+/// delivery state: a hidden asset is Hidden in that fixture until it is
+/// restored. Failure and source availability remain health signals rather than
+/// competing workflow stages.
+public enum AssetWorkflowStage: String, Codable, Sendable, CaseIterable {
+    case discovered
+    case undecided
+    case awaitingReview = "awaiting-review"
+    case aiRequested = "ai-requested"
+    case proposalReady = "proposal-ready"
+    case approved
+    case needsUpload = "needs-upload"
+    case uploading
+    case fullResolutionUploaded = "full-resolution-uploaded"
+    case publishing
+    case live
+    case sold
+    case hiddenFromFixture = "hidden-from-fixture"
+    case wasteBasket = "waste-basket"
+    case globallyTombstoned = "globally-tombstoned"
+
+    public var label: String {
+        switch self {
+        case .discovered: "Discovered"
+        case .undecided: "Undecided"
+        case .awaitingReview: "Awaiting Review"
+        case .aiRequested: "AI Requested"
+        case .proposalReady: "Proposal Ready"
+        case .approved: "Approved"
+        case .needsUpload: "Needs Upload"
+        case .uploading: "Uploading"
+        case .fullResolutionUploaded: "Full-resolution Uploaded"
+        case .publishing: "Publishing"
+        case .live: "Live"
+        case .sold: "Sold"
+        case .hiddenFromFixture: "Hidden"
+        case .wasteBasket: "Waste Basket"
+        case .globallyTombstoned: "Globally Tombstoned"
+        }
+    }
+
+    public static func resolve(
+        placementState: String,
+        editorialState: String,
+        proposalAvailable: Bool = false,
+        deliveryState: String = "not-ready",
+        catalogState: String = "",
+        sold: Bool = false,
+        inWasteBasket: Bool = false,
+        globallyTombstoned: Bool = false
+    ) -> Self {
+        if globallyTombstoned { return .globallyTombstoned }
+        if inWasteBasket { return .wasteBasket }
+
+        let placement = normalizedWorkflowValue(placementState)
+        if placement == FixturePlacementState.hidden.rawValue { return .hiddenFromFixture }
+        if placement == FixturePlacementState.undecided.rawValue { return .undecided }
+        guard placement == FixturePlacementState.picked.rawValue else { return .discovered }
+
+        let editorial = normalizedWorkflowValue(editorialState)
+        if editorial == "requesting-ai" { return .aiRequested }
+        if editorial == "proposed" || proposalAvailable { return .proposalReady }
+        guard editorial == "approved" else { return .awaitingReview }
+
+        if sold { return .sold }
+        switch normalizedWorkflowValue(deliveryState) {
+        case "needs-upload", "failed":
+            return .needsUpload
+        case "uploading":
+            return .uploading
+        case "live":
+            switch normalizedWorkflowValue(catalogState) {
+            case "live": return .live
+            case "pending", "local": return .publishing
+            default: return .fullResolutionUploaded
+            }
+        default:
+            return .approved
+        }
+    }
+}
+
+public extension FixtureAsset {
+    var workflowStage: AssetWorkflowStage {
+        AssetWorkflowStage.resolve(
+            placementState: placementState.rawValue,
+            editorialState: editorialState,
+            proposalAvailable: proposalAvailable,
+            deliveryState: deliveryState
+        )
+    }
+}
+
+public extension FixtureReviewItem {
+    var workflowStage: AssetWorkflowStage {
+        AssetWorkflowStage.resolve(
+            placementState: placementState,
+            editorialState: editorialState,
+            proposalAvailable: proposalReady,
+            deliveryState: deliveryState
+        )
+    }
+}
+
+private func normalizedWorkflowValue(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+}
+
 public enum FixtureCullingAction: Sendable, Equatable {
     case include
     case exclude
@@ -446,9 +556,9 @@ public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Ide
 
     public var label: String {
         switch self {
-        case .needsReview: "Needs Review"
+        case .needsReview: "Awaiting Review"
         case .aiRequested: "AI Requested"
-        case .proposalAvailable: "Proposal Available"
+        case .proposalAvailable: "Proposal Ready"
         case .approved: "Approved"
         }
     }
@@ -782,6 +892,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
     public var requestingAI: Int
     public var proposed: Int
     public var approved: Int
+    public var hidden: Int
     public var countryMissing: Int
 
     public init(
@@ -790,6 +901,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         requestingAI: Int,
         proposed: Int,
         approved: Int,
+        hidden: Int = 0,
         countryMissing: Int = 0
     ) {
         self.total = total
@@ -797,6 +909,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         self.requestingAI = requestingAI
         self.proposed = proposed
         self.approved = approved
+        self.hidden = hidden
         self.countryMissing = countryMissing
     }
 
@@ -806,6 +919,7 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         requestingAI = json["requestingAI"]?.intValue ?? 0
         proposed = json["proposed"]?.intValue ?? 0
         approved = json["approved"]?.intValue ?? 0
+        hidden = json["hidden"]?.intValue ?? 0
         countryMissing = json["countryMissing"]?.intValue ?? 0
     }
 
@@ -829,6 +943,36 @@ public struct FixtureReviewSummary: Sendable, Equatable {
         case "proposed": proposed += 1
         case "approved": approved += 1
         default: break
+        }
+    }
+
+    /// Apply the single projected workflow-stage transition used by Review.
+    /// Downstream delivery stages remain grouped under Approved on this
+    /// editorial surface, while Hidden is always exclusive.
+    public mutating func applyWorkflowStageTransition(
+        from before: AssetWorkflowStage,
+        to after: AssetWorkflowStage
+    ) {
+        guard before != after else { return }
+        adjust(stage: before, by: -1)
+        adjust(stage: after, by: 1)
+    }
+
+    private mutating func adjust(stage: AssetWorkflowStage, by delta: Int) {
+        switch stage {
+        case .awaitingReview:
+            unreviewed = max(0, unreviewed + delta)
+        case .aiRequested:
+            requestingAI = max(0, requestingAI + delta)
+        case .proposalReady:
+            proposed = max(0, proposed + delta)
+        case .approved, .needsUpload, .uploading, .fullResolutionUploaded,
+             .publishing, .live, .sold:
+            approved = max(0, approved + delta)
+        case .hiddenFromFixture:
+            hidden = max(0, hidden + delta)
+        case .discovered, .undecided, .wasteBasket, .globallyTombstoned:
+            break
         }
     }
 }

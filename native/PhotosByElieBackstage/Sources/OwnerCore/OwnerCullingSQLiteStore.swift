@@ -268,7 +268,13 @@ public struct OwnerCullingSQLiteStore: Sendable {
             let delivery = GalleryDeliveryFilter(
                 rawValue: row["delivery_state"]?.stringValue ?? "not-ready"
             )
-            guard selectedDelivery.isEmpty || delivery.map(selectedDelivery.contains) == true else {
+            let placement = row["placement_state"]?.stringValue ?? "undecided"
+            let editorial = row["editorial_state"]?.stringValue ?? "unreviewed"
+            guard selectedDelivery.isEmpty || (
+                placement == FixturePlacementState.picked.rawValue
+                    && editorial == "approved"
+                    && delivery.map(selectedDelivery.contains) == true
+            ) else {
                 return false
             }
             let source = ((row["source_available"]?.intValue ?? 1) != 0)
@@ -647,6 +653,10 @@ private func cullingEditorialMatches(
     filters: Set<GalleryEditorialFilter>
 ) -> Bool {
     guard !filters.isEmpty else { return true }
+    guard (row["placement_state"]?.stringValue ?? "undecided")
+        == FixturePlacementState.picked.rawValue else {
+        return false
+    }
     let state = row["editorial_state"]?.stringValue ?? "unreviewed"
     let proposalAvailable = (row["proposal_available"]?.intValue ?? 0) != 0
     return filters.contains { filter in

@@ -34,6 +34,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isRunningDelivery = false
     var isRunningNativePublication = false
     var isSyncingPhotos = false
+    var isBackfillingEquipment = false
     var isRunningR2Reconciliation = false
     var isSavingMetadataModelLadder = false
 
@@ -63,6 +64,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
         if isRunningDelivery { reasons.append("delivery work") }
         if isRunningNativePublication { reasons.append("publication upload") }
         if isSyncingPhotos { reasons.append("Apple Photos sync") }
+        if isBackfillingEquipment { reasons.append("camera equipment backfill") }
         if isRunningR2Reconciliation { reasons.append("R2 reconciliation") }
         if isSavingMetadataModelLadder { reasons.append("AI model settings save") }
         return reasons
@@ -110,6 +112,7 @@ extension BackstageViewModel {
             isRunningDelivery: isRunningDelivery,
             isRunningNativePublication: isRunningNativePublication,
             isSyncingPhotos: isSyncingPhotos,
+            isBackfillingEquipment: isBackfillingEquipment,
             isRunningR2Reconciliation: isRunningR2Reconciliation,
             isSavingMetadataModelLadder: isSavingMetadataModelLadder
         )

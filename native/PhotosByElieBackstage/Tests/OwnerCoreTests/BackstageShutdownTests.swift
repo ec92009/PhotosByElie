@@ -20,6 +20,7 @@ struct BackstageShutdownTests {
             { $0.isRunningDelivery = true },
             { $0.isRunningNativePublication = true },
             { $0.isSyncingPhotos = true },
+            { $0.isBackfillingEquipment = true },
         ]
 
         for check in checks {
@@ -34,7 +35,8 @@ struct BackstageShutdownTests {
         let state = BackstageShutdownWorkState(
             isApplyingCullingDecision: true,
             isRunningDelivery: true,
-            isSyncingPhotos: true
+            isSyncingPhotos: true,
+            isBackfillingEquipment: true
         )
         let prompt = BackstageShutdownPromptModel(workState: state)
 
@@ -42,8 +44,9 @@ struct BackstageShutdownTests {
             "culling decision write",
             "delivery work",
             "Apple Photos sync",
+            "camera equipment backfill",
         ])
-        #expect(prompt.informativeText.contains("culling decision write, delivery work, and Apple Photos sync"))
+        #expect(prompt.informativeText.contains("culling decision write, delivery work, Apple Photos sync, and camera equipment backfill"))
         #expect(prompt.actions.map(\.title) == ["Wait and Quit", "Cancel Quit", "Force Quit"])
         #expect(prompt.actions.last?.isDestructive == true)
     }

@@ -406,9 +406,12 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativeUploadStatus = "Choose a fixture to load its approved publication queue."
     @Published var photosSyncReport: PhotosSyncReport?
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
+    @Published var equipmentBackfillReport: OwnerEquipmentBackfillReport?
+    @Published var equipmentBackfillStatus = "Camera equipment backfill has not run yet."
     @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
     @Published var activityStatus = "Refresh to load the latest audited cloud activity."
     @Published var isSyncingPhotos = false
+    @Published var isBackfillingEquipment = false
     @Published var r2Reconciliation: R2ReconciliationReport?
     @Published var r2ReconciliationStatus = "Preview protected sales and 30-day quarantine before committing cleanup."
     @Published var isRunningR2Reconciliation = false
@@ -445,6 +448,7 @@ final class BackstageViewModel: ObservableObject {
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
     private let currentImageSizeCache: (any OwnerCurrentImageSizeCaching)?
     private let currentEquipmentCache: (any OwnerCurrentEquipmentCaching)?
+    private let equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore?
     private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
@@ -455,6 +459,7 @@ final class BackstageViewModel: ObservableObject {
     private var reviewMetadataAutosaveTask: Task<Void, Never>?
     private var reviewMetadataAutosaveTaskToken: UUID?
     private var reviewAIStatusRefreshTask: Task<Void, Never>?
+    private var equipmentBackfillTask: Task<OwnerEquipmentBackfillReport, Error>?
     private var cullingFilterTask: Task<Void, Never>?
     private var cullingBackfillTask: Task<Void, Never>?
     private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
@@ -630,6 +635,9 @@ final class BackstageViewModel: ObservableObject {
         currentEquipmentCache: (any OwnerCurrentEquipmentCaching)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerCurrentEquipmentSQLiteStore(databaseURL: $0) },
+        equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { OwnerEquipmentBackfillSQLiteStore(databaseURL: $0) },
         customerPhotoLinks: (any CustomerPhotoLinkResolving)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
@@ -699,6 +707,7 @@ final class BackstageViewModel: ObservableObject {
         self.workflowRecoveryStore = workflowRecoveryStore
         self.currentImageSizeCache = currentImageSizeCache
         self.currentEquipmentCache = currentEquipmentCache
+        self.equipmentBackfillStore = equipmentBackfillStore
         self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
     }
@@ -7507,6 +7516,59 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func backfillPhotoEquipment(
+        limit: Int = 25,
+        retryUnavailableAndFailed: Bool = false
+    ) async {
+        guard !isBackfillingEquipment else { return }
+        guard [.authorized, .limited].contains(photoAccess) else {
+            equipmentBackfillStatus = "Allow Photos before running equipment backfill."
+            return
+        }
+        guard let equipmentBackfillStore, let currentEquipmentCache else {
+            equipmentBackfillStatus = "Owner.sqlite is unavailable for equipment backfill."
+            return
+        }
+        isBackfillingEquipment = true
+        equipmentBackfillStatus = "Reading camera equipment from the next bounded Photos batch…"
+        let service = OwnerEquipmentBackfillService(
+            store: equipmentBackfillStore,
+            cache: currentEquipmentCache,
+            photoLibrary: photoLibrary
+        )
+        let task = Task.detached(priority: .utility) {
+            try await service.runBatch(
+                limit: limit,
+                allowICloudDownloads: true,
+                retryUnavailableAndFailed: retryUnavailableAndFailed
+            )
+        }
+        equipmentBackfillTask = task
+        defer {
+            equipmentBackfillTask = nil
+            isBackfillingEquipment = false
+        }
+        do {
+            let report = try await task.value
+            equipmentBackfillReport = report
+            equipmentBackfillStatus = "Processed \(report.processedThisPass.formatted()) this pass: \(report.updated.formatted()) updated, \(report.skipped.formatted()) without equipment, \(report.unavailable.formatted()) unavailable, \(report.failed.formatted()) failed; \(report.remaining.formatted()) remain."
+            if selection == .culling, !selectedFixtureID.isEmpty {
+                await loadFixtureCullingWindow(preservingVisibleWindow: true)
+            }
+        } catch is CancellationError {
+            equipmentBackfillStatus = "Stopped safely. Completed photo checkpoints were preserved."
+            equipmentBackfillReport = try? equipmentBackfillStore.report()
+        } catch {
+            equipmentBackfillStatus = userFacingMessage(for: error)
+        }
+    }
+
+    func cancelPhotoEquipmentBackfill() {
+        guard isBackfillingEquipment else { return }
+        equipmentBackfillStatus = "Stopping safely after the current Photos request…"
+        equipmentBackfillTask?.cancel()
+    }
+
     func prepareForTermination() async {
         terminationRequested = true
 
@@ -7516,6 +7578,7 @@ final class BackstageViewModel: ObservableObject {
         // still be between a debounce and the audited query; canceling them
         // here could strand that flag and prevent the drain from completing.
         reviewAIStatusRefreshTask?.cancel()
+        equipmentBackfillTask?.cancel()
         cancelCullingThumbnailWork()
         reviewThumbnailTasks.values.forEach { $0.cancel() }
 

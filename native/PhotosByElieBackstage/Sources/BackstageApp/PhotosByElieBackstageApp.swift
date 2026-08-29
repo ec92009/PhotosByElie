@@ -1866,6 +1866,49 @@ private struct MetadataGiveBackView: View {
                     .font(.caption)
                 }
             }
+            Section("Camera equipment backfill") {
+                Text("Read camera, lens, and focal-length metadata directly through PhotoKit in bounded, resumable batches. Backstage writes only the Owner equipment cache and durable checkpoints; fixture decisions, editorial state, originals, and public catalog state remain unchanged.")
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("Backfill next 25") {
+                        Task { await model.backfillPhotoEquipment() }
+                    }
+                    .disabled(model.isBackfillingEquipment)
+                    .backstageHelp("Read equipment metadata for the next 25 indexed Owner photos that still lack complete searchable equipment.")
+                    if model.isBackfillingEquipment {
+                        Button("Stop safely") {
+                            model.cancelPhotoEquipmentBackfill()
+                        }
+                        .backstageHelp("Cancel the current PhotoKit request and preserve every completed equipment checkpoint.")
+                        ProgressView().controlSize(.small)
+                    } else if let report = model.equipmentBackfillReport,
+                              report.unavailable + report.failed > 0 {
+                        Button("Retry unavailable & failed") {
+                            Task {
+                                await model.backfillPhotoEquipment(
+                                    retryUnavailableAndFailed: true
+                                )
+                            }
+                        }
+                        .backstageHelp("Requeue photos that were unavailable or failed in earlier equipment passes, then process the next 25.")
+                    }
+                    BackstageFeedbackView(
+                        message: model.equipmentBackfillStatus,
+                        isWorking: model.isBackfillingEquipment
+                    )
+                }
+                if let report = model.equipmentBackfillReport {
+                    HStack(spacing: 18) {
+                        LabeledContent("Eligible", value: report.eligible.formatted())
+                        LabeledContent("Updated", value: report.updated.formatted())
+                        LabeledContent("No equipment", value: report.skipped.formatted())
+                        LabeledContent("Unavailable", value: report.unavailable.formatted())
+                        LabeledContent("Failed", value: report.failed.formatted())
+                        LabeledContent("Remaining", value: report.remaining.formatted())
+                    }
+                    .font(.caption)
+                }
+            }
             Section("Title, caption, and keywords") {
                 HStack {
                     TextField("Asset ID", text: $model.metadataAssetID)

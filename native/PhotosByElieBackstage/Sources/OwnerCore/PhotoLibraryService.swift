@@ -128,6 +128,10 @@ public protocol PhotoLibraryServing: Sendable {
     func preview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func cullingPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
     func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview
+    func equipmentMetadata(
+        localIdentifier: String,
+        allowICloudDownloads: Bool
+    ) async throws -> OwnerCurrentEquipment
     func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan
     func recoverRawJPEG(
         localIdentifier: String,
@@ -152,6 +156,15 @@ public extension PhotoLibraryServing {
 
     func renderedJPEGPreview(localIdentifier: String, maxPixelSize: Int) async throws -> PhotoPreview {
         try await preview(localIdentifier: localIdentifier, maxPixelSize: maxPixelSize)
+    }
+
+    func equipmentMetadata(
+        localIdentifier: String,
+        allowICloudDownloads: Bool
+    ) async throws -> OwnerCurrentEquipment {
+        throw PhotoLibraryError.metadataFailed(
+            "This Photos library service does not provide equipment metadata."
+        )
     }
 
     func rawRecoveryPlan(sampleLimit: Int) async throws -> RawRecoveryPlan {
@@ -734,6 +747,71 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         )
     }
 
+    public func equipmentMetadata(
+        localIdentifier: String,
+        allowICloudDownloads: Bool = true
+    ) async throws -> OwnerCurrentEquipment {
+        try requireAccess()
+        let asset = try asset(localIdentifier)
+        guard let resource = preferredAcceptedStillResource(for: asset)
+            ?? preferredRAWResource(for: asset)
+        else {
+            throw PhotoLibraryError.resourceNotFound(localIdentifier)
+        }
+        return try await requestEquipmentMetadata(
+            resource: resource,
+            localIdentifier: localIdentifier,
+            allowICloudDownloads: allowICloudDownloads
+        )
+    }
+
+    private func requestEquipmentMetadata(
+        resource: PHAssetResource,
+        localIdentifier: String,
+        allowICloudDownloads: Bool
+    ) async throws -> OwnerCurrentEquipment {
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = allowICloudDownloads
+        let manager = PHAssetResourceManager.default()
+        let gate = PhotoKitEquipmentMetadataResultGate()
+
+        return try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<OwnerCurrentEquipment, Error>) in
+                gate.installContinuation(continuation)
+                let requestID = manager.requestData(
+                    for: resource,
+                    options: options,
+                    dataReceivedHandler: { gate.append($0) },
+                    completionHandler: { error in
+                        if let error {
+                            gate.resume(with: .failure(
+                                PhotoLibraryError.metadataFailed(error.localizedDescription)
+                            ))
+                        } else {
+                            gate.finish()
+                        }
+                    }
+                )
+                gate.installRequest(requestID, manager: manager)
+                gate.installTimeout(Task {
+                    do {
+                        try await Task.sleep(for: .seconds(300))
+                    } catch {
+                        return
+                    }
+                    gate.resume(with: .failure(
+                        PhotoLibraryError.metadataFailed(
+                            "Timed out reading equipment for \(localIdentifier)."
+                        )
+                    ))
+                })
+            }
+        }, onCancel: {
+            gate.cancel()
+        })
+    }
+
     private func requestThumbnailPreview(
         for asset: PHAsset,
         localIdentifier: String,
@@ -800,10 +878,11 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
 
     private func requestResourceData(
         resource: PHAssetResource,
-        localIdentifier: String
+        localIdentifier: String,
+        allowICloudDownloads: Bool = true
     ) async throws -> Data {
         let options = PHAssetResourceRequestOptions()
-        options.isNetworkAccessAllowed = true
+        options.isNetworkAccessAllowed = allowICloudDownloads
         let manager = PHAssetResourceManager.default()
         let gate = PhotoKitResourceDataResultGate()
 
@@ -1132,7 +1211,7 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
         return (output as Data, converted.width, converted.height)
     }
 
-    private static func equipmentMetadata(
+    fileprivate static func equipmentMetadata(
         from source: CGImageSource
     ) -> (cameraBody: String, lens: String, focalLength: String) {
         guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
@@ -1841,6 +1920,120 @@ private final class PhotoKitResourceDataResultGate: @unchecked Sendable {
 
     func cancel() {
         resume(with: .failure(CancellationError()))
+    }
+}
+
+/// Reads only as much of a Photos resource as ImageIO needs to expose EXIF/TIFF
+/// equipment. JPEG and HEIC metadata normally resolves from the first chunks;
+/// the PhotoKit request is then cancelled without retaining the complete image.
+private final class PhotoKitEquipmentMetadataResultGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<OwnerCurrentEquipment, Error>?
+    private var requestID: PHAssetResourceDataRequestID?
+    private weak var manager: PHAssetResourceManager?
+    private var timeoutTask: Task<Void, Never>?
+    private var data = Data()
+    private let source = CGImageSourceCreateIncremental(nil)
+    private var finished = false
+
+    func installContinuation(
+        _ continuation: CheckedContinuation<OwnerCurrentEquipment, Error>
+    ) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+    }
+
+    func append(_ chunk: Data) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        data.append(chunk)
+        CGImageSourceUpdateData(source, data as CFData, false)
+        let metadata = Self.metadata(from: source)
+        lock.unlock()
+        if !metadata.isEmpty {
+            resume(with: .success(metadata))
+        }
+    }
+
+    func finish() {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        CGImageSourceUpdateData(source, data as CFData, true)
+        let metadata = Self.metadata(from: source)
+        lock.unlock()
+        resume(with: .success(metadata))
+    }
+
+    func installRequest(
+        _ requestID: PHAssetResourceDataRequestID,
+        manager: PHAssetResourceManager
+    ) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            manager.cancelDataRequest(requestID)
+            return
+        }
+        self.requestID = requestID
+        self.manager = manager
+        lock.unlock()
+    }
+
+    func installTimeout(_ task: Task<Void, Never>) {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            task.cancel()
+            return
+        }
+        timeoutTask = task
+        lock.unlock()
+    }
+
+    func resume(with result: Result<OwnerCurrentEquipment, Error>) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let continuation = self.continuation
+        self.continuation = nil
+        let timeoutTask = self.timeoutTask
+        self.timeoutTask = nil
+        let requestID = self.requestID
+        let manager = self.manager
+        data.removeAll(keepingCapacity: false)
+        lock.unlock()
+
+        timeoutTask?.cancel()
+        if let requestID, let manager { manager.cancelDataRequest(requestID) }
+        continuation?.resume(with: result)
+    }
+
+    func cancel() {
+        resume(with: .failure(CancellationError()))
+    }
+
+    private static func metadata(from source: CGImageSource) -> OwnerCurrentEquipment {
+        let equipment = PhotoKitLibraryService.equipmentMetadata(from: source)
+        return OwnerCurrentEquipment(
+            cameraBody: equipment.cameraBody,
+            lens: equipment.lens,
+            focalLength: equipment.focalLength
+        )
     }
 }
 

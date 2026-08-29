@@ -495,6 +495,18 @@ choose **Approve** or return the item through **Needs AI** with specific reasons
 Backstage preserves unrelated Photos keywords and re-reads every changed item
 before recording a verified receipt.
 
+### Backfill searchable camera equipment
+
+Choose **Start backfill** in Metadata to read camera, lens, and focal-length
+metadata from Apple Photos entirely on this Mac. Backstage advances through
+durable 25-photo checkpoints at low priority and updates the six progress
+counts after every checkpoint. Choose **Stop safely** at any time; **Resume
+backfill** continues the remaining exact PhotoKit identities without replaying
+completed photos. Unavailable and failed photos remain terminal until you
+explicitly choose **Retry unavailable & failed**. Finish or stop other
+publication, delivery, sync, metadata, fixture, Review, or R2 work before
+starting this maintenance run.
+
 The bounded incremental Photos scan reports its current stage, checked count,
 and remaining count. **Stop safely** requests a stop after the current PhotoKit
 checkpoint; completed classifications remain recorded and the remaining items

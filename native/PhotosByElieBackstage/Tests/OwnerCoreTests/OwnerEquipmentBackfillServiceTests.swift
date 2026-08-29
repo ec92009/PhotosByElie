@@ -94,6 +94,43 @@ struct OwnerEquipmentBackfillServiceTests {
         ) == "0")
     }
 
+    @Test("Continuous backfill checkpoints, cancels, and resumes without replay")
+    func continuousCancellationAndResume() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("equipment-continuous-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try createDatabase(at: databaseURL)
+        let store = OwnerEquipmentBackfillSQLiteStore(databaseURL: databaseURL)
+        let service = OwnerEquipmentBackfillService(
+            store: store,
+            cache: OwnerCurrentEquipmentSQLiteStore(databaseURL: databaseURL),
+            photoLibrary: EquipmentBackfillPhotoLibrary()
+        )
+        let firstRun = EquipmentCheckpointRecorder(cancelAfter: 1)
+
+        await #expect(throws: CancellationError.self) {
+            _ = try await service.runUntilComplete(batchLimit: 2) { report in
+                try await firstRun.record(report)
+            }
+        }
+        #expect(await firstRun.processed == [2])
+        #expect(try store.report().remaining == 3)
+
+        let resumed = EquipmentCheckpointRecorder()
+        let final = try await service.runUntilComplete(batchLimit: 2) { report in
+            try await resumed.record(report)
+        }
+        #expect(await resumed.processed == [2, 1])
+        #expect(final.processedThisPass == 1)
+        #expect(final.remaining == 0)
+        #expect(final.updated == 2)
+        #expect(final.skipped == 1)
+        #expect(final.unavailable == 1)
+        #expect(final.failed == 1)
+    }
+
     private func createDatabase(at url: URL) throws {
         var database: OpaquePointer?
         #expect(sqlite3_open(url.path, &database) == SQLITE_OK)
@@ -205,6 +242,22 @@ private struct EquipmentBackfillPhotoLibrary: PhotoLibraryServing {
     }
     func metadataReadMany(assetIDs: [String]) async throws -> Data { Data() }
     func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data { Data() }
+}
+
+private actor EquipmentCheckpointRecorder {
+    private(set) var processed: [Int] = []
+    private let cancelAfter: Int?
+
+    init(cancelAfter: Int? = nil) {
+        self.cancelAfter = cancelAfter
+    }
+
+    func record(_ report: OwnerEquipmentBackfillReport) throws {
+        processed.append(report.processedThisPass)
+        if processed.count == cancelAfter {
+            throw CancellationError()
+        }
+    }
 }
 
 private enum TestDatabaseError: Error {

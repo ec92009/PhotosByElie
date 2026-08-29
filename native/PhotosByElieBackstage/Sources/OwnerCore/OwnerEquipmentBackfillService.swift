@@ -405,4 +405,26 @@ public struct OwnerEquipmentBackfillService: Sendable {
         }
         return try store.report(processedThisPass: processed)
     }
+
+    public func runUntilComplete(
+        batchLimit: Int = 25,
+        allowICloudDownloads: Bool = true,
+        retryUnavailableAndFailed: Bool = false,
+        onCheckpoint: @escaping @Sendable (OwnerEquipmentBackfillReport) async throws -> Void = { _ in }
+    ) async throws -> OwnerEquipmentBackfillReport {
+        var retry = retryUnavailableAndFailed
+        while true {
+            try Task.checkCancellation()
+            let report = try await runBatch(
+                limit: batchLimit,
+                allowICloudDownloads: allowICloudDownloads,
+                retryUnavailableAndFailed: retry
+            )
+            retry = false
+            try await onCheckpoint(report)
+            if report.remaining == 0 || report.processedThisPass == 0 {
+                return report
+            }
+        }
+    }
 }

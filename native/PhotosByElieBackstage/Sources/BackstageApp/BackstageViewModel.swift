@@ -408,6 +408,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var photosSyncStatus = "Apple Photos sync runs incrementally in the background."
     @Published var equipmentBackfillReport: OwnerEquipmentBackfillReport?
     @Published var equipmentBackfillStatus = "Camera equipment backfill has not run yet."
+    @Published var equipmentBackfillProcessedThisRun = 0
     @Published var ownerWorkflowRecoveryStatus = "Workflow recovery is checked at Backstage launch."
     @Published var activityStatus = "Refresh to load the latest audited cloud activity."
     @Published var isSyncingPhotos = false
@@ -7518,9 +7519,14 @@ final class BackstageViewModel: ObservableObject {
 
     func backfillPhotoEquipment(
         limit: Int = 25,
+        continuously: Bool = true,
         retryUnavailableAndFailed: Bool = false
     ) async {
         guard !isBackfillingEquipment else { return }
+        if let conflict = equipmentBackfillConflict {
+            equipmentBackfillStatus = "Finish or stop \(conflict) before starting the camera equipment backfill."
+            return
+        }
         guard [.authorized, .limited].contains(photoAccess) else {
             equipmentBackfillStatus = "Allow Photos before running equipment backfill."
             return
@@ -7530,18 +7536,34 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isBackfillingEquipment = true
-        equipmentBackfillStatus = "Reading camera equipment from the next bounded Photos batch…"
+        equipmentBackfillProcessedThisRun = 0
+        equipmentBackfillStatus = continuously
+            ? "Reading camera equipment in repeated bounded Photos batches…"
+            : "Reading camera equipment from the next bounded Photos batch…"
         let service = OwnerEquipmentBackfillService(
             store: equipmentBackfillStore,
             cache: currentEquipmentCache,
             photoLibrary: photoLibrary
         )
+        let (checkpoints, checkpointContinuation) = AsyncStream<OwnerEquipmentBackfillReport>.makeStream()
         let task = Task.detached(priority: .utility) {
-            try await service.runBatch(
+            defer { checkpointContinuation.finish() }
+            if continuously {
+                return try await service.runUntilComplete(
+                    batchLimit: limit,
+                    allowICloudDownloads: true,
+                    retryUnavailableAndFailed: retryUnavailableAndFailed
+                ) { report in
+                    checkpointContinuation.yield(report)
+                }
+            }
+            let report = try await service.runBatch(
                 limit: limit,
                 allowICloudDownloads: true,
                 retryUnavailableAndFailed: retryUnavailableAndFailed
             )
+            checkpointContinuation.yield(report)
+            return report
         }
         equipmentBackfillTask = task
         defer {
@@ -7549,9 +7571,14 @@ final class BackstageViewModel: ObservableObject {
             isBackfillingEquipment = false
         }
         do {
+            for await report in checkpoints {
+                recordEquipmentBackfillCheckpoint(report)
+            }
             let report = try await task.value
             equipmentBackfillReport = report
-            equipmentBackfillStatus = "Processed \(report.processedThisPass.formatted()) this pass: \(report.updated.formatted()) updated, \(report.skipped.formatted()) without equipment, \(report.unavailable.formatted()) unavailable, \(report.failed.formatted()) failed; \(report.remaining.formatted()) remain."
+            equipmentBackfillStatus = report.remaining == 0
+                ? "Backfill complete. Processed \(equipmentBackfillProcessedThisRun.formatted()) this run; \(report.updated.formatted()) updated, \(report.skipped.formatted()) without equipment, \(report.unavailable.formatted()) unavailable, \(report.failed.formatted()) failed."
+                : equipmentBackfillProgressMessage(report)
             if selection == .culling, !selectedFixtureID.isEmpty {
                 await loadFixtureCullingWindow(preservingVisibleWindow: true)
             }
@@ -7561,6 +7588,27 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             equipmentBackfillStatus = userFacingMessage(for: error)
         }
+    }
+
+    private var equipmentBackfillConflict: String? {
+        if isSyncingPhotos { return "Apple Photos sync" }
+        if isRunningNativePublication || isRunningDelivery { return "publication or delivery work" }
+        if isRunningMetadata { return "metadata work" }
+        if isRunningFixture || isApplyingCullingDecision || isRunningReview {
+            return "fixture or review work"
+        }
+        if isRunningR2Reconciliation { return "R2 reconciliation" }
+        return nil
+    }
+
+    private func recordEquipmentBackfillCheckpoint(_ report: OwnerEquipmentBackfillReport) {
+        equipmentBackfillReport = report
+        equipmentBackfillProcessedThisRun += report.processedThisPass
+        equipmentBackfillStatus = equipmentBackfillProgressMessage(report)
+    }
+
+    private func equipmentBackfillProgressMessage(_ report: OwnerEquipmentBackfillReport) -> String {
+        "Processed \(equipmentBackfillProcessedThisRun.formatted()) this run: \(report.updated.formatted()) updated, \(report.skipped.formatted()) without equipment, \(report.unavailable.formatted()) unavailable, \(report.failed.formatted()) failed; \(report.remaining.formatted()) remain."
     }
 
     func cancelPhotoEquipmentBackfill() {

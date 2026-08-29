@@ -1870,11 +1870,11 @@ private struct MetadataGiveBackView: View {
                 Text("Read camera, lens, and focal-length metadata directly through PhotoKit in bounded, resumable batches. Backstage writes only the Owner equipment cache and durable checkpoints; fixture decisions, editorial state, originals, and public catalog state remain unchanged.")
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button("Backfill next 25") {
+                    Button(model.equipmentBackfillReport?.remaining ?? 0 > 0 ? "Resume backfill" : "Start backfill") {
                         Task { await model.backfillPhotoEquipment() }
                     }
                     .disabled(model.isBackfillingEquipment)
-                    .backstageHelp("Read equipment metadata for the next 25 indexed Owner photos that still lack complete searchable equipment.")
+                    .backstageHelp("Continue through repeated 25-photo checkpoints until the equipment backfill finishes or you choose Stop safely.")
                     if model.isBackfillingEquipment {
                         Button("Stop safely") {
                             model.cancelPhotoEquipmentBackfill()
@@ -1886,6 +1886,7 @@ private struct MetadataGiveBackView: View {
                         Button("Retry unavailable & failed") {
                             Task {
                                 await model.backfillPhotoEquipment(
+                                    continuously: true,
                                     retryUnavailableAndFailed: true
                                 )
                             }

@@ -17,8 +17,10 @@ workflow.
   `asset_current_equipment` in Owner.sqlite.
 - `asset_equipment_backfill_state` records the exact PhotoKit identity,
   attempts, terminal result, and resumable pending work.
-- A pass processes at most 25 photos by default. Stop and app termination both
-  cancel the active PhotoKit request while preserving completed checkpoints.
+- A checkpoint processes at most 25 photos by default. The explicit Start or
+  Resume action continues through repeated checkpoints at utility priority.
+  Stop and app termination both cancel the active PhotoKit request while
+  preserving every completed checkpoint.
 - Explicit retry requeues only unavailable and failed items.
 
 ## Non-mutation guarantees
@@ -33,7 +35,8 @@ Backstage refreshes the current Gallery window so equipment terms such as
 
 ## Acceptance
 
-Synthetic coverage proves exact cloud/local identity resolution, bounded
-resume, idempotence, retry enrollment, and preservation of fixture/editorial
-state. Installed acceptance must additionally prove one bounded PhotoKit batch
-on Max and a resulting equipment search without requiring another machine.
+Synthetic coverage proves exact cloud/local identity resolution, multi-batch
+completion, bounded cancellation and resume, idempotence, retry enrollment,
+and preservation of fixture/editorial state. Installed acceptance must
+additionally prove multiple bounded PhotoKit checkpoints on Max and a resulting
+equipment search without requiring another machine.

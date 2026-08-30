@@ -32,6 +32,42 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_command_a_select_all_routes_to_focused_control_or_loaded_workspace(self):
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        selection = (
+            NATIVE / "Sources" / "OwnerCore" / "OwnerSelectionModel.swift"
+        ).read_text(encoding="utf-8")
+
+        for marker in (
+            "BackstageSelectAllCommands(model: model)",
+            "CommandGroup(replacing: .textEditing)",
+            'Button("Select All")',
+            "#selector(NSResponder.selectAll(_:))",
+            'keyboardShortcut("a", modifiers: .command)',
+            "model.selectAllCurrentContent()",
+        ):
+            self.assertIn(marker, app)
+        for marker in (
+            "enum ContentSelectionScope",
+            "case fixtureAssets",
+            "case culling",
+            "case review",
+            "case wasteBasket",
+            "case uploads",
+            "func selectAllCurrentContent() -> Bool",
+            "selectedFixtureAssetIDs = Set(fixtureAssets.map(\\.id))",
+            "selectedLifecycleIDs = Set(lifecycleItems.map(\\.id))",
+            "nativeUploadPlan?.items.map(\\.id)",
+        ):
+            self.assertIn(marker, model)
+        self.assertIn("let preservedFocus = focusedID.flatMap", selection)
+        self.assertNotIn("focusedID = orderedIDs.last", selection)
+
     def test_backstage_section_cards_avoid_labeled_groupbox_ax_shape(self):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"

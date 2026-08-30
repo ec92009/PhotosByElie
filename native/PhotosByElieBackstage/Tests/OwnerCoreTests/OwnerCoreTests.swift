@@ -1866,6 +1866,28 @@ struct OwnerCoreTests {
         #expect(fresh.focusedID == nil)
     }
 
+    @Test("Select All preserves the current focus and anchor")
+    func selectAllPreservesFocus() {
+        var selection = OwnerSelectionModel(
+            orderedIDs: ["a", "b", "c"],
+            selectedIDs: ["b"],
+            anchorID: "b",
+            focusedID: "b"
+        )
+
+        selection.selectAll()
+
+        #expect(selection.selectedIDs == ["a", "b", "c"])
+        #expect(selection.anchorID == "b")
+        #expect(selection.focusedID == "b")
+
+        var fresh = OwnerSelectionModel<String>(orderedIDs: ["x", "y"])
+        fresh.selectAll()
+        #expect(fresh.selectedIDs == ["x", "y"])
+        #expect(fresh.anchorID == "x")
+        #expect(fresh.focusedID == "x")
+    }
+
     @Test("Culling grid keeps 84-point cards and adapts column count")
     func cullingGridLayout() {
         #expect(CullingGridLayout.maximumColumnsThatFit(width: 83) == 1)

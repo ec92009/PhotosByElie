@@ -161,9 +161,12 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
     }
 
     public mutating func selectAll() {
+        let preservedFocus = focusedID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? anchorID.flatMap { orderedIDs.contains($0) ? $0 : nil }
+            ?? orderedIDs.first
         selectedIDs = Set(orderedIDs)
-        anchorID = orderedIDs.first
-        focusedID = orderedIDs.last
+        anchorID = preservedFocus
+        focusedID = preservedFocus
     }
 
     public mutating func clear() {

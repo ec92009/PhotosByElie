@@ -210,7 +210,7 @@ private enum ReviewQuickLookPresenter {
             rating: item.rating,
             color: item.color,
             state: item.workflowStage.label,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • A approve • H hide • X Waste Basket • U unpick • \(BackstageQuickLookDecisionRouter.shortcutHint) • ⌘Z undo"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • ⌘A select all shown • A approve • H hide • X Waste Basket • U unpick • \(BackstageQuickLookDecisionRouter.shortcutHint) • ⌘Z undo"
         )
     }
 }
@@ -474,6 +474,9 @@ struct ReviewView: View {
                     Button("Clear selection") { model.clearReviewSelection() }
                         .disabled(model.reviewSelection.selectedIDs.isEmpty)
                         .backstageHelp("Deselect every Review item without changing titles, keywords, or workflow states.")
+                    Text("⌘A selects all shown")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                     BackstageFeedbackView(
                         message: model.reviewStatus,

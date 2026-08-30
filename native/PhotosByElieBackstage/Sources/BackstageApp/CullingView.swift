@@ -358,7 +358,7 @@ private enum CullingQuickLookPresenter {
             rating: decision?.rating ?? asset.rating,
             color: decision?.color ?? asset.color,
             state: asset.workflowStage.label,
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • H hide • P pick • R return approved to Review • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • ⌘A select all shown • H hide • P pick • R return approved to Review • X Waste Basket • \(BackstageQuickLookDecisionRouter.shortcutHint)"
         )
     }
 }
@@ -828,7 +828,7 @@ struct CullingView: View {
             cullingHistoryActions
             cullingStatusFeedback
             cullingOperationProgress
-            Text("P pick • H hide • U clears the selected fixture decision • R returns approved assets to Review after confirmation • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
+            Text("⌘A select all shown • P pick • H hide • U clears the selected fixture decision • R returns approved assets to Review after confirmation • X Waste Basket • Rating slider 0–5 • Color buttons and 6–9 toggle • +/− density • Z fit/fill • Space Quick Look • ⌘Z undo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }

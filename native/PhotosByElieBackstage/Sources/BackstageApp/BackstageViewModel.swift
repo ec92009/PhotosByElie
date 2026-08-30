@@ -167,6 +167,15 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    enum ContentSelectionScope: String, Equatable, Sendable {
+        case none
+        case fixtureAssets
+        case culling
+        case review
+        case wasteBasket
+        case uploads
+    }
+
     @Published var selection: Section? {
         didSet {
             if let selection {
@@ -3074,6 +3083,54 @@ final class BackstageViewModel: ObservableObject {
     func selectAllCullingAssets() {
         cullingSelection.selectAll()
         selectedPhotoIDs = cullingSelection.selectedIDs
+    }
+
+    var currentContentSelectionScope: ContentSelectionScope {
+        switch selection ?? .overview {
+        case .fixtures:
+            .fixtureAssets
+        case .culling:
+            .culling
+        case .review:
+            .review
+        case .wasteBasket:
+            .wasteBasket
+        case .uploads:
+            .uploads
+        default:
+            .none
+        }
+    }
+
+    /// Selects the bounded, currently loaded content of the active workspace.
+    /// Native text and table responders get first refusal from the app command;
+    /// this fallback covers custom photo grids and a workspace whose table does
+    /// not currently own keyboard focus. It never expands across unloaded pages.
+    @discardableResult
+    func selectAllCurrentContent() -> Bool {
+        switch currentContentSelectionScope {
+        case .fixtureAssets:
+            selectedFixtureAssetIDs = Set(fixtureAssets.map(\.id))
+            return !selectedFixtureAssetIDs.isEmpty
+        case .culling:
+            selectAllCullingAssets()
+            return !cullingSelection.selectedIDs.isEmpty
+        case .review:
+            selectAllReviewItems()
+            return !reviewSelection.selectedIDs.isEmpty
+        case .wasteBasket:
+            selectedLifecycleIDs = Set(lifecycleItems.map(\.id))
+            return !selectedLifecycleIDs.isEmpty
+        case .uploads:
+            let primaryIDs = nativeUploadPlan?.items.map(\.id) ?? []
+            let loadedIDs = primaryIDs.isEmpty
+                ? (deliveryPlan?.items.map(\.id) ?? [])
+                : primaryIDs
+            selectedDeliveryIDs = Set(loadedIDs)
+            return !selectedDeliveryIDs.isEmpty
+        case .none:
+            return false
+        }
     }
 
     func clearCullingSelection() {

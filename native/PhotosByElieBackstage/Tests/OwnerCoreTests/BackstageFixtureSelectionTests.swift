@@ -7,6 +7,108 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Command-A selects every loaded actionable item in the active workspace")
+    @MainActor
+    func selectAllRoutesAcrossBackstageWorkspaces() {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+
+        model.selection = .culling
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: ["gallery-a", "gallery-b"],
+            selectedIDs: ["gallery-b"],
+            anchorID: "gallery-b",
+            focusedID: "gallery-b"
+        )
+        #expect(model.selectAllCurrentContent())
+        #expect(model.selectedCullingAssetIDs == ["gallery-a", "gallery-b"])
+        #expect(model.cullingSelection.focusedID == "gallery-b")
+
+        model.selection = .review
+        model.reviewSelection = OwnerSelectionModel(
+            orderedIDs: ["review-a", "review-b"],
+            selectedIDs: ["review-a"],
+            anchorID: "review-a",
+            focusedID: "review-a"
+        )
+        #expect(model.selectAllCurrentContent())
+        #expect(model.reviewSelection.selectedIDs == ["review-a", "review-b"])
+        #expect(model.reviewSelection.focusedID == "review-a")
+
+        model.selection = .fixtures
+        model.fixtureAssets = [
+            FixtureAsset(id: "fixture-a", title: "A", filename: "a.jpg", mediaType: "photo"),
+            FixtureAsset(id: "fixture-b", title: "B", filename: "b.jpg", mediaType: "photo"),
+        ]
+        #expect(model.selectAllCurrentContent())
+        #expect(model.selectedFixtureAssetIDs == ["fixture-a", "fixture-b"])
+
+        model.selection = .wasteBasket
+        model.lifecycleItems = [
+            LifecycleItem(
+                mediaID: "waste-a",
+                state: "hidden",
+                title: "A",
+                filename: "a.jpg",
+                capturedAt: "",
+                photoLibraryIdentifier: "",
+                mediaType: "photo",
+                sourceSlug: "",
+                updatedAt: ""
+            ),
+            LifecycleItem(
+                mediaID: "waste-b",
+                state: "hidden",
+                title: "B",
+                filename: "b.jpg",
+                capturedAt: "",
+                photoLibraryIdentifier: "",
+                mediaType: "photo",
+                sourceSlug: "",
+                updatedAt: ""
+            ),
+        ]
+        #expect(model.selectAllCurrentContent())
+        #expect(model.selectedLifecycleIDs == ["waste-a", "waste-b"])
+
+        model.selection = .uploads
+        let uploadItems = ["upload-a", "upload-b"].map { id in
+            NativeUploadPlanItem(
+                assetID: id,
+                photoLibraryIdentifier: id,
+                title: id,
+                keywords: [],
+                filename: "\(id).jpg",
+                capturedAt: "",
+                deliveryState: "needs-upload",
+                errorText: ""
+            )
+        }
+        model.nativeUploadPlan = NativeUploadPlan(
+            fixtureID: "fixture",
+            fixtureName: "Fixture",
+            cloudAllowed: true,
+            pickedCount: 2,
+            approvedCount: 2,
+            needsReviewCount: 0,
+            needsUploadCount: 2,
+            liveCount: 0,
+            offset: 0,
+            limit: 200,
+            hasNext: false,
+            items: uploadItems
+        )
+        #expect(model.selectAllCurrentContent())
+        #expect(model.selectedDeliveryIDs == ["upload-a", "upload-b"])
+
+        model.selection = .overview
+        #expect(!model.selectAllCurrentContent())
+    }
+
     @Test("Gallery keeps one selected card as filters replace visible results")
     @MainActor
     func galleryFilteringKeepsVisibleSelection() {

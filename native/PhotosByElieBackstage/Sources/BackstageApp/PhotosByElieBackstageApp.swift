@@ -95,6 +95,7 @@ public struct BackstageApplication: App {
             }
         }
         .commands {
+            BackstageSelectAllCommands(model: model)
             BackstageUndoCommands(model: model)
             CommandMenu("Backstage") {
                 Button("Refresh Activity") {
@@ -196,6 +197,29 @@ struct BackstageSectionCard<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct BackstageSelectAllCommands: Commands {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some Commands {
+        CommandGroup(replacing: .textEditing) {
+            Button("Select All") {
+                let handledByFocusedControl = NSApp.sendAction(
+                    #selector(NSResponder.selectAll(_:)),
+                    to: nil,
+                    from: nil
+                )
+                if !handledByFocusedControl {
+                    model.selectAllCurrentContent()
+                }
+            }
+            .keyboardShortcut("a", modifiers: .command)
+            .backstageHelp(
+                "Select all text in the focused field, all rows in the focused table, or every currently loaded item in the active Backstage workspace."
+            )
+        }
     }
 }
 
@@ -888,7 +912,7 @@ struct LifecycleView: View {
             state: item.state == "hidden"
                 ? "Recoverable"
                 : "Active global tombstone",
-            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • P put back • X delete selected recoverable • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
+            shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • ⌘A select all shown • P put back • X delete selected recoverable • \(BackstageQuickLookDecisionRouter.shortcutHint) • Escape closes"
         )
     }
 

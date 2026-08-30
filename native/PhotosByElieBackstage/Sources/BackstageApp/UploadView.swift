@@ -156,7 +156,7 @@ struct UploadView: View {
                         .disabled(model.selectedDeliveryIDs.isEmpty)
                         .backstageHelp("Deselect every Upload row without changing approval, visibility, or publication state.")
                         Spacer()
-                        Text("Use Command-click or Shift-click to select multiple rows.")
+                        Text("Use Command-click or Shift-click to adjust the selection; ⌘A selects all shown rows.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

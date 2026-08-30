@@ -1838,6 +1838,34 @@ struct OwnerCoreTests {
         #expect(selection.selectedIDs == ["c"])
     }
 
+    @Test("Filtered collections always retain or establish one visible selection")
+    func filteredCollectionsKeepSelection() {
+        var selection = OwnerSelectionModel(
+            orderedIDs: ["a", "b", "c", "d"],
+            selectedIDs: ["b", "c"],
+            anchorID: "b",
+            focusedID: "b"
+        )
+
+        let retained = selection.replaceItemsEnsuringSelection(["a", "c", "d"])
+        #expect(retained == "c")
+        #expect(selection.selectedIDs == ["c"])
+        #expect(selection.anchorID == "c")
+        #expect(selection.focusedID == "c")
+
+        let successor = selection.replaceItemsEnsuringSelection(["a", "d"])
+        #expect(successor == "d")
+        #expect(selection.selectedIDs == ["d"])
+
+        var fresh = OwnerSelectionModel<String>(orderedIDs: ["x", "y"])
+        #expect(fresh.replaceItemsEnsuringSelection(["x", "y"]) == "x")
+        #expect(fresh.selectedIDs == ["x"])
+
+        #expect(fresh.replaceItemsEnsuringSelection([]) == nil)
+        #expect(fresh.selectedIDs.isEmpty)
+        #expect(fresh.focusedID == nil)
+    }
+
     @Test("Culling grid keeps 84-point cards and adapts column count")
     func cullingGridLayout() {
         #expect(CullingGridLayout.maximumColumnsThatFit(width: 83) == 1)

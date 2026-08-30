@@ -985,10 +985,6 @@ struct CullingView: View {
                 .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()
-            if !model.cullingSelection.selectedIDs.isEmpty {
-                Button("Clear selection") { model.clearCullingSelection() }
-                    .backstageHelp("Deselect every currently selected Culling asset without changing any decisions.")
-            }
         }
     }
 

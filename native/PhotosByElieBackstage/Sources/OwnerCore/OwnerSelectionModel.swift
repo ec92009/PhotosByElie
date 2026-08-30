@@ -40,6 +40,52 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
         if let focusedID, !ids.contains(focusedID) { self.focusedID = nil }
     }
 
+    /// Reconciles the selection with a new visible order while guaranteeing a
+    /// focused selection whenever at least one item remains visible.
+    ///
+    /// Existing visible selections survive intact. If every selected item was
+    /// filtered out, the nearest following item is preferred, then the nearest
+    /// preceding item. A newly loaded non-empty collection with no prior focus
+    /// selects its first item.
+    @discardableResult
+    public mutating func replaceItemsEnsuringSelection(
+        _ ids: [ID],
+        direction: OwnerSelectionDirection = .next
+    ) -> ID? {
+        let previousIDs = orderedIDs
+        let previousFocusedID = focusedID
+            ?? anchorID
+            ?? previousIDs.first(where: selectedIDs.contains)
+        let previousIndex = previousFocusedID.flatMap(previousIDs.firstIndex(of:))
+        replaceItems(ids)
+
+        if !selectedIDs.isEmpty {
+            let replacementFocus = focusedID.flatMap {
+                selectedIDs.contains($0) ? $0 : nil
+            } ?? ids.first(where: selectedIDs.contains)
+            focusedID = replacementFocus
+            if anchorID.map(selectedIDs.contains) != true {
+                anchorID = replacementFocus
+            }
+            return replacementFocus
+        }
+
+        guard let fallback = nearestSurvivingID(
+            in: ids,
+            previousIDs: previousIDs,
+            previousIndex: previousIndex,
+            direction: direction
+        ) else {
+            anchorID = nil
+            focusedID = nil
+            return nil
+        }
+        selectedIDs = [fallback]
+        anchorID = fallback
+        focusedID = fallback
+        return fallback
+    }
+
     @discardableResult
     public mutating func replaceItems(
         _ ids: [ID],
@@ -124,6 +170,29 @@ public struct OwnerSelectionModel<ID: Hashable & Sendable>: Sendable {
         selectedIDs.removeAll()
         anchorID = nil
         focusedID = nil
+    }
+
+    private func nearestSurvivingID(
+        in ids: [ID],
+        previousIDs: [ID],
+        previousIndex: Int?,
+        direction: OwnerSelectionDirection
+    ) -> ID? {
+        guard !ids.isEmpty else { return nil }
+        guard let previousIndex else { return ids.first }
+        let remainingIDs = Set(ids)
+        let successor = previousIDs
+            .dropFirst(previousIndex + 1)
+            .first(where: remainingIDs.contains)
+        let predecessor = previousIDs[..<previousIndex]
+            .reversed()
+            .first(where: remainingIDs.contains)
+        return switch direction {
+        case .next:
+            successor ?? predecessor ?? ids.first
+        case .previous:
+            predecessor ?? successor ?? ids.first
+        }
     }
 
     private func range(from start: ID, through end: ID) -> Set<ID> {

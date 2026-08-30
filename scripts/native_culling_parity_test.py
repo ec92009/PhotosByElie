@@ -355,6 +355,9 @@ class NativeCullingParityTest(unittest.TestCase):
         ui = backstage_ui_source()
         self.assertIn("fixtureCullingWindow = nil", model)
         self.assertIn('cullingStatus = "Applying culling filters…"', model)
+        self.assertIn("let selectionBeforeFilter = cullingSelection", model)
+        self.assertIn("restoring: selectionBeforeFilter", model)
+        self.assertIn("replaceCullingItems(preserving: selectionBeforeLoad)", model)
         self.assertIn("if !model.isBlockingFixtureCullingLoad", ui)
         self.assertIn('Text("Applying filters…")', ui)
         self.assertIn(".fixedSize(horizontal: true, vertical: false)", ui)
@@ -1476,8 +1479,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "241.16")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "270")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "242.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "271")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1990,6 +1993,12 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertIn("cullingSelection.selectedInDisplayOrder", model)
         self.assertIn("public var selectedInDisplayOrder", selection)
+        self.assertIn("public mutating func replaceItemsEnsuringSelection", selection)
+        self.assertIn("if cullingSelection.selectedIDs.isEmpty", model)
+        culling_view = backstage_ui_source().split("struct CullingView", 1)[1].split(
+            "private struct CullingAssetCard", 1
+        )[0]
+        self.assertNotIn('Button("Clear selection")', culling_view)
         self.assertIn("LifecycleActionReceipt.summarize(", model)
         self.assertIn("Affected \\(affected.formatted())", lifecycle)
         self.assertIn("skipped \\(skipped.formatted())", lifecycle)

@@ -7,6 +7,140 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Gallery keeps one selected card as filters replace visible results")
+    @MainActor
+    func galleryFilteringKeepsVisibleSelection() {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        let assets = ["a", "b", "c"].enumerated().map { index, id in
+            FixturePoolAsset(
+                id: id,
+                position: index,
+                title: id.uppercased(),
+                filename: "\(id).jpg",
+                mediaType: "photo"
+            )
+        }
+        model.cullingPool = FixturePool(
+            id: "pool-selection",
+            name: "Selection",
+            fixtureID: "fixture-selection",
+            assetCount: assets.count,
+            snapshotHash: "before",
+            assets: assets
+        )
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: assets.map(\.id),
+            selectedIDs: ["b"],
+            anchorID: "b",
+            focusedID: "b"
+        )
+
+        model.cullingPool = FixturePool(
+            id: "pool-selection",
+            name: "Selection",
+            fixtureID: "fixture-selection",
+            assetCount: 2,
+            snapshotHash: "after",
+            assets: [assets[0], assets[2]]
+        )
+        model.replaceCullingItems()
+
+        #expect(model.selectedCullingAssetIDs == ["c"])
+        #expect(model.cullingSelection.focusedID == "c")
+        #expect(model.cullingScrollTargetID == "c")
+
+        model.clickCullingAsset("c", modifiers: [.command])
+        #expect(model.selectedCullingAssetIDs == ["c"])
+
+        model.clearCullingSelection()
+        model.replaceCullingItems()
+        #expect(model.selectedCullingAssetIDs == ["a"])
+
+        model.cullingPool = FixturePool(
+            id: "pool-selection",
+            name: "Selection",
+            fixtureID: "fixture-selection",
+            assetCount: 0,
+            snapshotHash: "empty",
+            assets: []
+        )
+        model.replaceCullingItems()
+        #expect(model.selectedCullingAssetIDs.isEmpty)
+        #expect(model.cullingSelection.focusedID == nil)
+    }
+
+    @Test("Asynchronous Gallery filter loads restore the nearest surviving selection")
+    @MainActor
+    func galleryFilterLoadRestoresNearestSelection() async {
+        let items = ["a", "b", "c"].map { id in
+            FixtureAsset(
+                id: id,
+                title: id.uppercased(),
+                filename: "\(id).jpg",
+                mediaType: "photo"
+            )
+        }
+        var filteredWindow = cullingWindow(
+            fixtureID: "fixture-expo",
+            photos: 2,
+            videos: 0
+        )
+        filteredWindow.items = [items[0], items[2]]
+        filteredWindow.summary = FixtureCullingSummary(json: [
+            "filtered": .number(2),
+            "universe": .number(3),
+            "undecided": .number(2),
+            "picked": .number(0),
+            "hidden": .number(0),
+        ])
+        let reader = StaticCullingWindowService(window: filteredWindow)
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: ReviewLifecycleActionAPI(terminalActions: []),
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: reader
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var originalWindow = filteredWindow
+        originalWindow.items = items
+        model.fixtureCullingWindow = originalWindow
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: ["b"],
+            anchorID: "b",
+            focusedID: "b"
+        )
+
+        model.applyCullingFilters()
+        for _ in 0..<200 where model.isLoadingFixtureCulling || model.fixtureCullingWindow == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.fixtureCullingWindow?.items.map(\.id) == ["a", "c"])
+        #expect(model.selectedCullingAssetIDs == ["c"])
+        #expect(model.cullingSelection.focusedID == "c")
+        #expect(model.cullingScrollTargetID == "c")
+    }
+
     @Test("Quick Look navigation keeps every new Gallery focus revealable")
     @MainActor
     func quickLookRowNavigationRequestsVisibleCardsInBothDirections() throws {
@@ -3090,6 +3224,40 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
             "beforePlacementState": .string(beforePlacementState.rawValue),
             "beforeEligibilityState": .string("active"),
         ])
+    }
+}
+
+private actor StaticCullingWindowService: LocalFixtureReviewServing, LocalFixtureCullingReading {
+    let window: FixtureCullingWindow
+
+    init(window: FixtureCullingWindow) {
+        self.window = window
+    }
+
+    func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
+        throw CancellationError()
+    }
+
+    func undoReview(operationID: String) async throws -> FixtureReviewUndoResult {
+        throw CancellationError()
+    }
+
+    func nativeCullingWindow(
+        fixtureID: String,
+        view: FixtureCullingView,
+        views: [FixtureCullingView],
+        offset: Int,
+        limit: Int,
+        search: String,
+        mediaTypes: [String],
+        ratings: [Int],
+        colors: [String],
+        editorialFilters: [GalleryEditorialFilter],
+        deliveryFilters: [GalleryDeliveryFilter],
+        sourceFilters: [GallerySourceFilter],
+        burstsOnly: Bool
+    ) async throws -> FixtureCullingWindow? {
+        window
     }
 }
 

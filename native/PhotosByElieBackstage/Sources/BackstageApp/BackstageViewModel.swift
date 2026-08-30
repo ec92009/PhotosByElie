@@ -2874,18 +2874,32 @@ final class BackstageViewModel: ObservableObject {
         ]
     }
 
-    func replaceCullingItems() {
+    func replaceCullingItems(
+        preserving selectionBeforeUpdate: OwnerSelectionModel<String>? = nil
+    ) {
         if cullingPool != nil || !hasCurrentCullingFixture {
             normalizeCullingMediaFilters(for: cullingMediaFilterControls)
         }
-        cullingSelection.replaceItems(visibleCullingAssets.map(\.id))
-        selectedPhotoIDs = cullingSelection.selectedIDs
+        let focusedBefore = (selectionBeforeUpdate ?? cullingSelection).focusedID
+        var selection = selectionBeforeUpdate ?? cullingSelection
+        let focusedAfter = selection.replaceItemsEnsuringSelection(
+            visibleCullingAssets.map(\.id)
+        )
+        cullingSelection = selection
+        selectedPhotoIDs = selection.selectedIDs
+        if focusedAfter == nil {
+            photoPreview = nil
+        } else if focusedAfter != focusedBefore {
+            cullingScrollTargetID = focusedAfter
+            photoPreview = nil
+        }
     }
 
     func applyCullingFilters(debounceNanoseconds: UInt64 = 0) {
         cullingWindowOffset = 0
         invalidateCullingWindowLoads()
         if !selectedFixtureID.isEmpty, cullingPool == nil {
+            let selectionBeforeFilter = cullingSelection
             // Invalidate the old response immediately. Until the audited
             // fixture query completes, the grid must not fall back to the
             // unrelated recent-Photos preview cache or show stale results.
@@ -2899,7 +2913,10 @@ final class BackstageViewModel: ObservableObject {
                     try? await Task.sleep(nanoseconds: debounceNanoseconds)
                 }
                 guard !Task.isCancelled else { return }
-                await self?.loadFixtureCullingWindow()
+                await self?.loadFixtureCullingWindow(
+                    preservingVisibleWindow: false,
+                    restoring: selectionBeforeFilter
+                )
             }
             return
         }
@@ -2976,6 +2993,9 @@ final class BackstageViewModel: ObservableObject {
             extending: modifiers.contains(.shift),
             toggling: modifiers.contains(.command)
         )
+        if cullingSelection.selectedIDs.isEmpty {
+            cullingSelection.click(id, extending: false, toggling: false)
+        }
         selectedPhotoIDs = cullingSelection.selectedIDs
     }
 
@@ -3077,6 +3097,10 @@ final class BackstageViewModel: ObservableObject {
             )
         }
         let ids = CullingWorkspace.burstRejectCandidates(in: timedItems)
+        guard !ids.isEmpty else {
+            cullingStatus = "No adjacent capture-time bursts found in the visible items."
+            return
+        }
         cullingSelection = OwnerSelectionModel(
             orderedIDs: visibleIDs,
             selectedIDs: Set(ids),
@@ -3084,9 +3108,7 @@ final class BackstageViewModel: ObservableObject {
             focusedID: ids.first
         )
         selectedPhotoIDs = Set(ids)
-        cullingStatus = ids.isEmpty
-            ? "No adjacent capture-time bursts found in the visible items."
-            : "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across adjacent capture-time bursts; each second frame remains as the likely keeper."
+        cullingStatus = "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across adjacent capture-time bursts; each second frame remains as the likely keeper."
     }
 
     func cancelCullingOperation() {
@@ -3099,8 +3121,15 @@ final class BackstageViewModel: ObservableObject {
         cullingPool = fixturePool
         cullingWindowOffset = 0
         normalizeCullingMediaFilters(for: cullingMediaFilterControls)
-        cullingSelection = OwnerSelectionModel(orderedIDs: fixturePool.assets.map(\.id))
-        selectedPhotoIDs = []
+        let orderedIDs = fixturePool.assets.map(\.id)
+        let focusedID = orderedIDs.first
+        cullingSelection = OwnerSelectionModel(
+            orderedIDs: orderedIDs,
+            selectedIDs: Set(focusedID.map { [$0] } ?? []),
+            anchorID: focusedID,
+            focusedID: focusedID
+        )
+        selectedPhotoIDs = cullingSelection.selectedIDs
         photoPreview = nil
         cancelCullingThumbnailWork()
         cullingThumbnails = [:]
@@ -3122,6 +3151,16 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixtureCullingWindow(preservingVisibleWindow: Bool = false) async {
+        await loadFixtureCullingWindow(
+            preservingVisibleWindow: preservingVisibleWindow,
+            restoring: cullingSelection
+        )
+    }
+
+    private func loadFixtureCullingWindow(
+        preservingVisibleWindow: Bool,
+        restoring selectionBeforeLoad: OwnerSelectionModel<String>
+    ) async {
         guard !selectedFixtureID.isEmpty else {
             cullingStatus = "Choose a fixture to browse its Gallery."
             return
@@ -3196,7 +3235,7 @@ final class BackstageViewModel: ObservableObject {
                     )
                 )
             })
-            replaceCullingItems()
+            replaceCullingItems(preserving: selectionBeforeLoad)
             let didRevealGallerySelection = applyPendingGalleryRevealIfPossible()
             if !preservingVisibleWindow {
                 photoPreview = nil
@@ -3886,7 +3925,7 @@ final class BackstageViewModel: ObservableObject {
                 cullingHistory.removeFirst(cullingHistory.count - 100)
             }
             retainCullingReviewResultInCurrentWindow(result.changes)
-            reconcileCullingSelection(after: completedEntry, primaryChangedID: anchorID)
+            reconcileCullingSelection(after: completedEntry)
             let returnedCount = result.changes.count
             var message = "Returned \(returnedCount.formatted()) approved asset\(returnedCount == 1 ? "" : "s") to Review. Metadata and fixture picks were preserved."
             if liveCount > 0 {
@@ -3931,10 +3970,7 @@ final class BackstageViewModel: ObservableObject {
         replaceCullingItems()
     }
 
-    private func reconcileCullingSelection(
-        after entry: CullingHistoryEntry,
-        primaryChangedID: String
-    ) {
+    private func reconcileCullingSelection(after entry: CullingHistoryEntry) {
         let visibleIDs = visibleCullingAssets.map(\.id)
         var selection = OwnerSelectionModel(
             orderedIDs: entry.orderedIDs,
@@ -3942,23 +3978,7 @@ final class BackstageViewModel: ObservableObject {
             anchorID: entry.anchorID,
             focusedID: entry.focusedID
         )
-        if visibleIDs.contains(primaryChangedID) {
-            selection.replaceItems(visibleIDs)
-        } else {
-            _ = selection.replaceItems(
-                visibleIDs,
-                selectingSuccessorAfterRemoving: primaryChangedID,
-                direction: .next
-            )
-        }
-        if selection.selectedIDs.isEmpty, let fallback = visibleIDs.first {
-            selection = OwnerSelectionModel(
-                orderedIDs: visibleIDs,
-                selectedIDs: [fallback],
-                anchorID: fallback,
-                focusedID: fallback
-            )
-        }
+        _ = selection.replaceItemsEnsuringSelection(visibleIDs)
         cullingSelection = selection
         selectedPhotoIDs = selection.selectedIDs
         cullingScrollTargetID = selection.focusedID
@@ -6296,13 +6316,10 @@ final class BackstageViewModel: ObservableObject {
             anchorID: focusedID,
             focusedID: focusedID
         )
-        let replacementID = focusedID.flatMap {
-            selection.replaceItems(
-                orderedIDs,
-                selectingSuccessorAfterRemoving: $0,
-                direction: removalDirection
-            )
-        }
+        let replacementID = selection.replaceItemsEnsuringSelection(
+            orderedIDs,
+            direction: removalDirection
+        )
         cullingSelection = selection
         selectedPhotoIDs = selection.selectedIDs
         return replacementID
@@ -6616,15 +6633,10 @@ final class BackstageViewModel: ObservableObject {
             cullingStates[id] = decision
         }
         let visibleIDs = visibleCullingAssets.map(\.id)
-        if let focusedBefore {
-            _ = cullingSelection.replaceItems(
-                visibleIDs,
-                selectingSuccessorAfterRemoving: focusedBefore,
-                direction: removalDirection
-            )
-        } else {
-            cullingSelection.replaceItems(visibleIDs)
-        }
+        _ = cullingSelection.replaceItemsEnsuringSelection(
+            visibleIDs,
+            direction: removalDirection
+        )
         selectedPhotoIDs = cullingSelection.selectedIDs
         if focusedCullingAssetID == nil {
             photoPreview = nil

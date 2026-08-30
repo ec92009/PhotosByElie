@@ -48,7 +48,11 @@ public protocol LocalFixtureCullingReading: Sendable {
         editorialFilters: [GalleryEditorialFilter],
         deliveryFilters: [GalleryDeliveryFilter],
         sourceFilters: [GallerySourceFilter],
-        burstsOnly: Bool
+        burstsOnly: Bool,
+        dateFrom: String,
+        dateTo: String,
+        megapixelComparison: CullingMegapixelComparison?,
+        megapixelValue: Double?
     ) async throws -> FixtureCullingWindow?
 }
 
@@ -136,7 +140,11 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         editorialFilters: [GalleryEditorialFilter],
         deliveryFilters: [GalleryDeliveryFilter],
         sourceFilters: [GallerySourceFilter],
-        burstsOnly: Bool
+        burstsOnly: Bool,
+        dateFrom: String,
+        dateTo: String,
+        megapixelComparison: CullingMegapixelComparison?,
+        megapixelValue: Double?
     ) throws -> FixtureCullingWindow? {
         var window = try nativeCullingStore().cullingWindow(
             fixtureID: fixtureID,
@@ -151,7 +159,11 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             editorialFilters: editorialFilters,
             deliveryFilters: deliveryFilters,
             sourceFilters: sourceFilters,
-            burstsOnly: burstsOnly
+            burstsOnly: burstsOnly,
+            dateFrom: dateFrom,
+            dateTo: dateTo,
+            megapixelComparison: megapixelComparison,
+            megapixelValue: megapixelValue
         )
         let metadata = sourceMetadata(assetIDs: window.items.map(\.id))
         for index in window.items.indices {

@@ -99,25 +99,67 @@ public enum CullingColorFilter: String, CaseIterable, Sendable {
     }
 }
 
+public enum CullingMegapixelComparison: String, CaseIterable, Sendable, Identifiable {
+    case lessThan = "lt"
+    case atMost = "lte"
+    case equal = "eq"
+    case atLeast = "gte"
+    case greaterThan = "gt"
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .lessThan: "<"
+        case .atMost: "≤"
+        case .equal: "="
+        case .atLeast: "≥"
+        case .greaterThan: ">"
+        }
+    }
+
+    public func matches(_ megapixels: Double, threshold: Double) -> Bool {
+        switch self {
+        case .lessThan: megapixels < threshold
+        case .atMost: megapixels <= threshold
+        case .equal: megapixels == threshold
+        case .atLeast: megapixels >= threshold
+        case .greaterThan: megapixels > threshold
+        }
+    }
+}
+
 public struct CullingQuery: Sendable, Equatable {
     public var search: String
     public var media: Set<CullingMediaFilter>
     public var pick: Set<CullingPickFilter>
     public var ratings: Set<Int>
     public var colors: Set<CullingColorFilter>
+    public var dateFrom: String
+    public var dateTo: String
+    public var megapixelComparison: CullingMegapixelComparison?
+    public var megapixelValue: Double?
 
     public init(
         search: String = "",
         media: Set<CullingMediaFilter> = Set(CullingMediaFilter.selectableCases),
         pick: Set<CullingPickFilter> = Set(CullingPickFilter.selectableCases),
         ratings: Set<Int> = Set(0...5),
-        colors: Set<CullingColorFilter> = Set(CullingColorFilter.selectableCases)
+        colors: Set<CullingColorFilter> = Set(CullingColorFilter.selectableCases),
+        dateFrom: String = "",
+        dateTo: String = "",
+        megapixelComparison: CullingMegapixelComparison? = nil,
+        megapixelValue: Double? = nil
     ) {
         self.search = search
         self.media = media
         self.pick = pick
         self.ratings = ratings
         self.colors = colors
+        self.dateFrom = dateFrom
+        self.dateTo = dateTo
+        self.megapixelComparison = megapixelComparison
+        self.megapixelValue = megapixelValue
     }
 }
 
@@ -129,6 +171,9 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
     public var cameraBody: String
     public var lens: String
     public var focalLength: String
+    public var capturedAt: String
+    public var pixelWidth: Int
+    public var pixelHeight: Int
     public var decision: SidecarDecisionState
 
     public init(
@@ -139,6 +184,9 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
         cameraBody: String = "",
         lens: String = "",
         focalLength: String = "",
+        capturedAt: String = "",
+        pixelWidth: Int = 0,
+        pixelHeight: Int = 0,
         decision: SidecarDecisionState? = nil
     ) {
         self.id = id
@@ -148,6 +196,9 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
         self.cameraBody = cameraBody
         self.lens = lens
         self.focalLength = focalLength
+        self.capturedAt = capturedAt
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
         self.decision = decision ?? SidecarDecisionState(assetId: id)
     }
 }
@@ -238,6 +289,12 @@ enum CullingSearch {
 }
 
 public enum CullingWorkspace {
+    public static func displayedMegapixels(pixelWidth: Int, pixelHeight: Int) -> Double? {
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+        let raw = Double(pixelWidth) * Double(pixelHeight) / 1_000_000
+        return (raw * 10).rounded() / 10
+    }
+
     public static func captureDate(_ value: String) -> Date? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -302,6 +359,29 @@ public enum CullingWorkspace {
             return false
         }
 
+        let (dateFrom, dateTo) = normalizedDateRange(
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo
+        )
+        if dateFrom != nil || dateTo != nil {
+            guard let capturedDay = normalizedCapturedDay(candidate.capturedAt) else {
+                return false
+            }
+            if let dateFrom, capturedDay < dateFrom { return false }
+            if let dateTo, capturedDay > dateTo { return false }
+        }
+
+        if let comparison = query.megapixelComparison,
+           let threshold = query.megapixelValue,
+           threshold > 0 {
+            guard let megapixels = displayedMegapixels(
+                pixelWidth: candidate.pixelWidth,
+                pixelHeight: candidate.pixelHeight
+            ), comparison.matches(megapixels, threshold: threshold) else {
+                return false
+            }
+        }
+
         let media = normalizedMedia(candidate.mediaType)
         let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos
         guard query.media.contains(mediaFilter) else { return false }
@@ -313,6 +393,57 @@ public enum CullingWorkspace {
         ) ?? .none
         guard query.colors.contains(colorFilter) else { return false }
         return true
+    }
+
+    static func normalizedDateBoundary(_ value: String, endOfRange: Bool) -> String? {
+        let parts = value.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "-")
+        guard (1...3).contains(parts.count),
+              parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }),
+              let year = Int(parts[0]), (1...9_999).contains(year) else {
+            return nil
+        }
+        let month = parts.count >= 2 ? Int(parts[1]) : (endOfRange ? 12 : 1)
+        guard let month, (1...12).contains(month) else { return nil }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day: Int
+        if parts.count == 3 {
+            guard let parsedDay = Int(parts[2]) else { return nil }
+            day = parsedDay
+        } else if endOfRange,
+                  let monthStart = calendar.date(from: DateComponents(year: year, month: month)),
+                  let range = calendar.range(of: .day, in: .month, for: monthStart) {
+            day = range.count
+        } else {
+            day = 1
+        }
+        let components = DateComponents(year: year, month: month, day: day)
+        guard let date = calendar.date(from: components),
+              calendar.dateComponents([.year, .month, .day], from: date) == components else {
+            return nil
+        }
+        return String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    static func normalizedDateRange(
+        dateFrom: String,
+        dateTo: String
+    ) -> (from: String?, to: String?) {
+        let from = normalizedDateBoundary(dateFrom, endOfRange: false)
+        let to = normalizedDateBoundary(dateTo, endOfRange: true)
+        if let from, let to, from > to {
+            return (to, from)
+        }
+        return (from, to)
+    }
+
+    static func normalizedCapturedDay(_ value: String) -> String? {
+        let prefix = String(value.trimmingCharacters(in: .whitespacesAndNewlines).prefix(10))
+            .replacingOccurrences(of: ":", with: "-")
+            .replacingOccurrences(of: "/", with: "-")
+        guard prefix.split(separator: "-").count == 3 else { return nil }
+        return normalizedDateBoundary(prefix, endOfRange: false)
     }
 
     private static func normalizedMedia(_ value: String) -> String {

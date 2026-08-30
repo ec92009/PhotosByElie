@@ -50,7 +50,11 @@ public struct OwnerCullingSQLiteStore: Sendable {
         editorialFilters: [GalleryEditorialFilter] = [],
         deliveryFilters: [GalleryDeliveryFilter] = [],
         sourceFilters: [GallerySourceFilter] = [.available],
-        burstsOnly: Bool = false
+        burstsOnly: Bool = false,
+        dateFrom: String = "",
+        dateTo: String = "",
+        megapixelComparison: CullingMegapixelComparison? = nil,
+        megapixelValue: Double? = nil
     ) throws -> FixtureCullingWindow {
         let cleanFixtureID = fixtureID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanFixtureID.isEmpty else {
@@ -76,6 +80,13 @@ public struct OwnerCullingSQLiteStore: Sendable {
         let selectedEditorial = Set(editorialFilters)
         let selectedDelivery = Set(deliveryFilters)
         let selectedSources = Set(sourceFilters)
+        let (selectedDateFrom, selectedDateTo) = CullingWorkspace.normalizedDateRange(
+            dateFrom: dateFrom,
+            dateTo: dateTo
+        )
+        let selectedMegapixels = megapixelValue.flatMap {
+            $0.isFinite && $0 > 0 ? $0 : nil
+        }
         let needsUnavailableIdentityFallback = selectedSources.isEmpty
             || selectedSources.contains(.unavailable)
 
@@ -249,6 +260,24 @@ public struct OwnerCullingSQLiteStore: Sendable {
             if burstsOnly,
                !burstAssetIDs.contains(row["asset_id"]?.stringValue ?? "") {
                 return false
+            }
+            if selectedDateFrom != nil || selectedDateTo != nil {
+                guard let capturedDay = CullingWorkspace.normalizedCapturedDay(
+                    row["captured_at"]?.stringValue ?? ""
+                ) else {
+                    return false
+                }
+                if let selectedDateFrom, capturedDay < selectedDateFrom { return false }
+                if let selectedDateTo, capturedDay > selectedDateTo { return false }
+            }
+            if let megapixelComparison,
+               let selectedMegapixels {
+                guard let megapixels = CullingWorkspace.displayedMegapixels(
+                    pixelWidth: row["pixel_width"]?.intValue ?? 0,
+                    pixelHeight: row["pixel_height"]?.intValue ?? 0
+                ), megapixelComparison.matches(megapixels, threshold: selectedMegapixels) else {
+                    return false
+                }
             }
             let media = cullingMediaType(row["media_type"]?.stringValue ?? "photo") ?? "photo"
             guard selectedMedia.isEmpty || selectedMedia.count == 2 || selectedMedia.contains(media) else {

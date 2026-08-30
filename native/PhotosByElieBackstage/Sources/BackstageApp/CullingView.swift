@@ -551,6 +551,40 @@ struct CullingView: View {
                 .toggleStyle(.checkbox)
                 .frame(height: CullingCompactControlMetrics.height)
                 .backstageHelp("Show only assets that belong to a capture-time burst. This filter has no mutation shortcut.")
+            HStack(spacing: 4) {
+                Text("Date")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("From", text: $model.galleryDateFrom)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 94)
+                    .accessibilityLabel("Captured from date")
+                TextField("To", text: $model.galleryDateTo)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 94)
+                    .accessibilityLabel("Captured to date")
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .backstageHelp("Filter by inclusive capture date. Enter YYYY, YYYY-MM, or YYYY-MM-DD, matching the PBE From and To date fields.")
+            HStack(spacing: 4) {
+                Text("MP")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Picker("Megapixel comparison", selection: $model.galleryMegapixelComparison) {
+                    ForEach(CullingMegapixelComparison.allCases) { comparison in
+                        Text(comparison.label).tag(comparison)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 48)
+                TextField("Count", text: $model.galleryMegapixelValue)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 64)
+                    .accessibilityLabel("Megapixel count")
+            }
+            .frame(height: CullingCompactControlMetrics.height)
+            .backstageHelp("Compare each photo's displayed one-decimal megapixel size with this number. Leave the number empty to disable the filter.")
             Menu("Editorial") {
                 ForEach(GalleryEditorialFilter.allCases) { filter in
                     Toggle(
@@ -589,7 +623,7 @@ struct CullingView: View {
             .accessibilityLabel("Source availability filters")
             Button("Clear filters") { model.clearCullingFilters() }
                 .frame(height: CullingCompactControlMetrics.height)
-                .backstageHelp("Show all Gallery decision states, ratings, colors, and search results.")
+                .backstageHelp("Show all Gallery decision states, dates, megapixel sizes, ratings, colors, and search results.")
         }
         .onChange(of: model.cullingSearch) { _, _ in
             model.scheduleCullingSearchRefresh()
@@ -601,6 +635,12 @@ struct CullingView: View {
         .onChange(of: model.galleryDeliveryFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.gallerySourceFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.galleryBurstsOnly) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryDateFrom) { _, _ in model.scheduleCullingSearchRefresh() }
+        .onChange(of: model.galleryDateTo) { _, _ in model.scheduleCullingSearchRefresh() }
+        .onChange(of: model.galleryMegapixelComparison) { _, _ in
+            if model.galleryMegapixelThreshold != nil { model.applyCullingFilters() }
+        }
+        .onChange(of: model.galleryMegapixelValue) { _, _ in model.scheduleCullingSearchRefresh() }
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -1068,6 +1108,10 @@ struct CullingView: View {
             model.galleryDeliveryFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.gallerySourceFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.galleryBurstsOnly ? "bursts" : "all-captures",
+            model.galleryDateFrom,
+            model.galleryDateTo,
+            model.galleryMegapixelComparison.rawValue,
+            model.galleryMegapixelValue,
             model.cullingSearch,
             model.cullingRatingFilters.sorted().map(String.init).joined(separator: ","),
             model.cullingColorFilters.map(\.rawValue).sorted().joined(separator: ","),

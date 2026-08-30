@@ -100,6 +100,58 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(!delivery.items.map(\.id).contains("asset-2"))
     }
 
+    @Test("Authoritative Culling window applies date and displayed-MP filters before summaries")
+    func cullingWindowFiltersDateAndMegapixelsBeforeSummaries() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-date-mp-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+            SET captured_at = '2014-06-02T09:37:04Z', pixel_width = 2048, pixel_height = 1536
+            WHERE asset_id = 'asset-1';
+            UPDATE sidecar_assets
+            SET captured_at = '2015-12-31T23:59:59Z', pixel_width = 6000, pixel_height = 4000
+            WHERE asset_id = 'asset-2';
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let byYear = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            dateFrom: "2014",
+            dateTo: "2014"
+        )
+        #expect(byYear.items.map(\.id) == ["asset-1"])
+        #expect(byYear.summary.filtered == 1)
+        #expect(byYear.summary.universe == 1)
+
+        let equalDisplayedMP = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            megapixelComparison: .equal,
+            megapixelValue: 3.1
+        )
+        #expect(equalDisplayedMP.items.map(\.id) == ["asset-1"])
+
+        let combined = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            dateFrom: "2015-12-31",
+            dateTo: "2015-12-31",
+            megapixelComparison: .atLeast,
+            megapixelValue: 24
+        )
+        #expect(combined.items.map(\.id) == ["asset-2"])
+        #expect(combined.summary.filtered == 1)
+        #expect(combined.summary.universe == 1)
+    }
+
     @Test("Fixture placement stays local and recomputes inherited eligibility")
     func appliesFixtureStateAndUndo() throws {
         let root = FileManager.default.temporaryDirectory

@@ -532,6 +532,20 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySourceFilters == [.unavailable])
         #expect(model.gallerySavedViewLabel == "Unavailable")
 
+        model.galleryDateFrom = "2014"
+        #expect(model.gallerySavedViewLabel == "Custom")
+        model.applyGallerySavedView(.culling)
+        #expect(model.galleryDateFrom.isEmpty)
+        #expect(model.galleryDateTo.isEmpty)
+
+        model.galleryMegapixelComparison = .equal
+        model.galleryMegapixelValue = "3,1"
+        #expect(model.galleryMegapixelThreshold == 3.1)
+        #expect(model.gallerySavedViewLabel == "Custom")
+        model.clearCullingFilters()
+        #expect(model.galleryMegapixelComparison == .atLeast)
+        #expect(model.galleryMegapixelValue.isEmpty)
+
         model.cullingSearch = "custom"
         #expect(model.gallerySavedViewLabel == "Custom")
     }
@@ -3357,7 +3371,11 @@ private actor StaticCullingWindowService: LocalFixtureReviewServing, LocalFixtur
         editorialFilters: [GalleryEditorialFilter],
         deliveryFilters: [GalleryDeliveryFilter],
         sourceFilters: [GallerySourceFilter],
-        burstsOnly: Bool
+        burstsOnly: Bool,
+        dateFrom: String,
+        dateTo: String,
+        megapixelComparison: CullingMegapixelComparison?,
+        megapixelValue: Double?
     ) async throws -> FixtureCullingWindow? {
         window
     }

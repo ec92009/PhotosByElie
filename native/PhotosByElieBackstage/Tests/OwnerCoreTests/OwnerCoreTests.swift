@@ -1943,6 +1943,60 @@ struct OwnerCoreTests {
         #expect(result.summary.videos == 1)
     }
 
+    @Test("Culling date and megapixel filters use inclusive PBE-style boundaries")
+    func cullingDateAndMegapixelFilters() {
+        let candidates = [
+            CullingCandidate(
+                id: "elph",
+                filename: "ELPH.JPG",
+                mediaType: "photo",
+                capturedAt: "2014-06-02T09:37:04Z",
+                pixelWidth: 2_048,
+                pixelHeight: 1_536
+            ),
+            CullingCandidate(
+                id: "large",
+                filename: "LARGE.JPG",
+                mediaType: "photo",
+                capturedAt: "2015-12-31T23:59:59Z",
+                pixelWidth: 6_000,
+                pixelHeight: 4_000
+            ),
+            CullingCandidate(
+                id: "unknown",
+                filename: "UNKNOWN.JPG",
+                mediaType: "photo"
+            ),
+        ]
+
+        let year = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(dateFrom: "2014", dateTo: "2014")
+        )
+        #expect(year.items.map(\.id) == ["elph"])
+
+        let exactDisplayedMP = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(
+                megapixelComparison: .equal,
+                megapixelValue: 3.1
+            )
+        )
+        #expect(exactDisplayedMP.items.map(\.id) == ["elph"])
+
+        let large = CullingWorkspace.evaluate(
+            candidates,
+            query: CullingQuery(
+                dateFrom: "2015-12-31",
+                dateTo: "2015-12-31",
+                megapixelComparison: .atLeast,
+                megapixelValue: 24
+            )
+        )
+        #expect(large.items.map(\.id) == ["large"])
+        #expect(CullingWorkspace.displayedMegapixels(pixelWidth: 2_048, pixelHeight: 1_536) == 3.1)
+    }
+
     @Test("Culling search matches the exact asset identity used by workflow handoffs")
     func cullingSearchMatchesAssetIdentity() {
         let candidate = CullingCandidate(
@@ -3511,7 +3565,11 @@ struct OwnerCoreTests {
             search: "Madrid",
             mediaTypes: ["photo"],
             ratings: [4],
-            colors: ["green"]
+            colors: ["green"],
+            dateFrom: "2026-07",
+            dateTo: "2026-07-31",
+            megapixelComparison: .atLeast,
+            megapixelValue: 24
         )
 
         #expect(window.fixtureID == "fixture-expo")
@@ -3538,6 +3596,10 @@ struct OwnerCoreTests {
         )
         #expect(manifest?["limit"]?.intValue == 200)
         #expect(manifest?["search"]?.stringValue == "Madrid")
+        #expect(manifest?["dateFrom"]?.stringValue == "2026-07")
+        #expect(manifest?["dateTo"]?.stringValue == "2026-07-31")
+        #expect(manifest?["megapixelComparison"]?.stringValue == "gte")
+        #expect(manifest?["megapixelValue"]?.intValue == 24)
     }
 
     @Test("Native Photos reconciliation uses the enrolled connector and signed full index action")

@@ -3473,6 +3473,10 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 media_types=manifest.get("mediaTypes") or [],
                 ratings=manifest.get("ratings") or [],
                 colors=manifest.get("colors") or [],
+                date_from=str(manifest.get("dateFrom") or ""),
+                date_to=str(manifest.get("dateTo") or ""),
+                megapixel_comparison=str(manifest.get("megapixelComparison") or ""),
+                megapixel_value=manifest.get("megapixelValue"),
             ),
         })
     elif mode == "fixture-state-apply":

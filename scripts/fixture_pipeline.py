@@ -8,9 +8,11 @@ for culling and editorial decisions.
 
 from __future__ import annotations
 
+import calendar
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -1467,6 +1469,10 @@ def fixture_culling_window(
     media_types: Iterable[Any] | None = None,
     ratings: Iterable[Any] | None = None,
     colors: Iterable[Any] | None = None,
+    date_from: str = "",
+    date_to: str = "",
+    megapixel_comparison: str = "",
+    megapixel_value: Any = None,
 ) -> dict[str, Any]:
     """Query one fixture's complete effective universe without materializing ID lists."""
     clean_view = str(view or "undecided").strip().casefold()
@@ -1554,6 +1560,32 @@ def fixture_culling_window(
             placeholders = ",".join("?" for _ in clean_colors)
             predicates.append(f"COALESCE(global_decision.color, '') IN ({placeholders})")
             params.extend(sorted(clean_colors))
+        clean_date_from = _normalized_culling_date(date_from, end_of_range=False)
+        clean_date_to = _normalized_culling_date(date_to, end_of_range=True)
+        if clean_date_from and clean_date_to and clean_date_from > clean_date_to:
+            clean_date_from, clean_date_to = clean_date_to, clean_date_from
+        if clean_date_from:
+            predicates.append("date(a.captured_at) >= date(?)")
+            params.append(clean_date_from)
+        if clean_date_to:
+            predicates.append("date(a.captured_at) <= date(?)")
+            params.append(clean_date_to)
+        clean_mp_comparison = str(megapixel_comparison or "").strip().casefold()
+        mp_operators = {"lt": "<", "lte": "<=", "eq": "=", "gte": ">=", "gt": ">"}
+        try:
+            clean_mp_value = float(megapixel_value)
+        except (TypeError, ValueError):
+            clean_mp_value = 0.0
+        if (
+            clean_mp_comparison in mp_operators
+            and math.isfinite(clean_mp_value)
+            and clean_mp_value > 0
+        ):
+            predicates.append(
+                "round((COALESCE(a.pixel_width, 0) * COALESCE(a.pixel_height, 0)) / 1000000.0, 1) "
+                f"{mp_operators[clean_mp_comparison]} ?"
+            )
+            params.append(clean_mp_value)
         search_columns = (
             "a.asset_id",
             "a.filename",
@@ -1712,6 +1744,31 @@ def fixture_culling_window(
         },
         "items": items,
     }
+
+
+def _normalized_culling_date(value: Any, *, end_of_range: bool) -> str:
+    """Expand PBE-style YYYY / YYYY-MM / YYYY-MM-DD boundaries."""
+
+    match = re.fullmatch(
+        r"\s*(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?\s*",
+        str(value or ""),
+    )
+    if not match:
+        return ""
+    year = int(match.group(1))
+    month = int(match.group(2)) if match.group(2) else (12 if end_of_range else 1)
+    if not 1 <= month <= 12:
+        return ""
+    if match.group(3):
+        day = int(match.group(3))
+    elif end_of_range:
+        day = calendar.monthrange(year, month)[1]
+    else:
+        day = 1
+    try:
+        return datetime(year, month, day).date().isoformat()
+    except ValueError:
+        return ""
 
 
 def _fixture_review_from_sql(

@@ -313,6 +313,10 @@ final class BackstageViewModel: ObservableObject {
     @Published var galleryDeliveryFilters: Set<GalleryDeliveryFilter> = []
     @Published var gallerySourceFilters: Set<GallerySourceFilter> = [.available]
     @Published var galleryBurstsOnly = false
+    @Published var galleryDateFrom = ""
+    @Published var galleryDateTo = ""
+    @Published var galleryMegapixelComparison: CullingMegapixelComparison = .atLeast
+    @Published var galleryMegapixelValue = ""
     @Published var cullingWindowOffset = 0
     @Published var cullingWindowLimit = 200
     @Published var cullingThumbnails: [String: NSImage] = [:]
@@ -2440,8 +2444,22 @@ final class BackstageViewModel: ObservableObject {
                 }
             }),
             ratings: cullingRatingFilters,
-            colors: cullingColorFilters
+            colors: cullingColorFilters,
+            dateFrom: galleryDateFrom,
+            dateTo: galleryDateTo,
+            megapixelComparison: galleryMegapixelThreshold == nil
+                ? nil
+                : galleryMegapixelComparison,
+            megapixelValue: galleryMegapixelThreshold
         )
+    }
+
+    var galleryMegapixelThreshold: Double? {
+        let normalized = galleryMegapixelValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized), value.isFinite, value > 0 else { return nil }
+        return value
     }
 
     var cullingViewFilterLabel: String {
@@ -2530,6 +2548,10 @@ final class BackstageViewModel: ObservableObject {
         galleryDeliveryFilters = preset.delivery
         gallerySourceFilters = preset.sources
         galleryBurstsOnly = false
+        galleryDateFrom = ""
+        galleryDateTo = ""
+        galleryMegapixelComparison = .atLeast
+        galleryMegapixelValue = ""
         cullingSearch = targetID
         cullingWindowOffset = 0
         pendingGalleryRevealIDs = ids
@@ -2548,6 +2570,10 @@ final class BackstageViewModel: ObservableObject {
         galleryDeliveryFilters = preset.delivery
         gallerySourceFilters = preset.sources
         galleryBurstsOnly = false
+        galleryDateFrom = ""
+        galleryDateTo = ""
+        galleryMegapixelComparison = .atLeast
+        galleryMegapixelValue = ""
         applyCullingFilters()
     }
 
@@ -2599,6 +2625,9 @@ final class BackstageViewModel: ObservableObject {
             && galleryDeliveryFilters == preset.delivery
             && gallerySourceFilters == preset.sources
             && !galleryBurstsOnly
+            && galleryDateFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && galleryDateTo.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && galleryMegapixelValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func gallerySavedViewPreset(
@@ -2654,6 +2683,9 @@ final class BackstageViewModel: ObservableObject {
                         cameraBody: asset.cameraBody,
                         lens: asset.lens,
                         focalLength: asset.focalLength,
+                        capturedAt: asset.capturedAt,
+                        pixelWidth: asset.pixelWidth,
+                        pixelHeight: asset.pixelHeight,
                         decision: cullingStates[asset.id]
                     )
                 },
@@ -2696,6 +2728,9 @@ final class BackstageViewModel: ObservableObject {
                     cameraBody: asset.cameraBody,
                     lens: asset.lens,
                     focalLength: asset.focalLength,
+                    capturedAt: asset.capturedAt,
+                    pixelWidth: asset.pixelWidth,
+                    pixelHeight: asset.pixelHeight,
                     decision: cullingStates[asset.id]
                 )
             },
@@ -2960,6 +2995,10 @@ final class BackstageViewModel: ObservableObject {
         galleryDeliveryFilters = []
         gallerySourceFilters = Set(GallerySourceFilter.allCases)
         galleryBurstsOnly = false
+        galleryDateFrom = ""
+        galleryDateTo = ""
+        galleryMegapixelComparison = .atLeast
+        galleryMegapixelValue = ""
         let allViews = Set(FixtureCullingView.selectableCases)
         let viewsChanged = cullingViews != allViews
         cullingViews = allViews
@@ -3248,6 +3287,12 @@ final class BackstageViewModel: ObservableObject {
             let ratings = cullingRatingFilters.sorted()
             let requestedOffset = cullingWindowOffset
             let requestedLimit = cullingWindowLimit
+            let requestedDateFrom = galleryDateFrom
+            let requestedDateTo = galleryDateTo
+            let requestedMegapixelComparison = galleryMegapixelThreshold == nil
+                ? nil
+                : galleryMegapixelComparison
+            let requestedMegapixelValue = galleryMegapixelThreshold
 
             func requestWindow(offset: Int) async throws -> FixtureCullingWindow {
                 return try await fixtureService.cullingWindow(
@@ -3263,7 +3308,11 @@ final class BackstageViewModel: ObservableObject {
                     editorialFilters: galleryEditorialFilters.sorted(by: { $0.rawValue < $1.rawValue }),
                     deliveryFilters: galleryDeliveryFilters.sorted(by: { $0.rawValue < $1.rawValue }),
                     sourceFilters: gallerySourceFilters.sorted(by: { $0.rawValue < $1.rawValue }),
-                    burstsOnly: galleryBurstsOnly
+                    burstsOnly: galleryBurstsOnly,
+                    dateFrom: requestedDateFrom,
+                    dateTo: requestedDateTo,
+                    megapixelComparison: requestedMegapixelComparison,
+                    megapixelValue: requestedMegapixelValue
                 )
             }
 

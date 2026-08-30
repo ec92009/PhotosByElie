@@ -1400,7 +1400,11 @@ public actor FixtureWorkflowService {
         editorialFilters: [GalleryEditorialFilter] = [],
         deliveryFilters: [GalleryDeliveryFilter] = [],
         sourceFilters: [GallerySourceFilter] = [.available],
-        burstsOnly: Bool = false
+        burstsOnly: Bool = false,
+        dateFrom: String = "",
+        dateTo: String = "",
+        megapixelComparison: CullingMegapixelComparison? = nil,
+        megapixelValue: Double? = nil
     ) async throws -> FixtureCullingWindow {
         if let localReviewService,
            let localCullingReader = localReviewService as? any LocalFixtureCullingReading,
@@ -1417,7 +1421,11 @@ public actor FixtureWorkflowService {
                editorialFilters: editorialFilters,
                deliveryFilters: deliveryFilters,
                sourceFilters: sourceFilters,
-               burstsOnly: burstsOnly
+               burstsOnly: burstsOnly,
+               dateFrom: dateFrom,
+               dateTo: dateTo,
+               megapixelComparison: megapixelComparison,
+               megapixelValue: megapixelValue
            ) {
             return localWindow
         }
@@ -1435,6 +1443,10 @@ public actor FixtureWorkflowService {
             "deliveryFilters": .array(deliveryFilters.map { .string($0.rawValue) }),
             "sourceFilters": .array(sourceFilters.map { .string($0.rawValue) }),
             "burstsOnly": .bool(burstsOnly),
+            "dateFrom": .string(dateFrom),
+            "dateTo": .string(dateTo),
+            "megapixelComparison": .string(megapixelComparison?.rawValue ?? ""),
+            "megapixelValue": .number(megapixelValue ?? 0),
         ])
         return FixtureCullingWindow(
             json: result["cullingWindow"]?.objectValue ?? [:]

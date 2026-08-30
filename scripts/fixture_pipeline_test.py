@@ -675,6 +675,43 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(backfilled["summary"]["picked"], 1)
         self.assertFalse(backfilled["hasNext"])
 
+    def test_culling_window_filters_inclusive_dates_and_displayed_megapixels(self):
+        fixture = create_fixture(self.root, "Root", fixture_id="root")
+
+        by_day = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="all-active",
+            date_from="2026-07-15",
+            date_to="2026-07-15",
+        )
+        self.assertEqual(
+            [item["assetId"] for item in by_day["items"]],
+            ["asset-2", "asset-1"],
+        )
+        self.assertEqual(by_day["summary"]["universe"], 2)
+
+        equal_mp = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="all-active",
+            megapixel_comparison="eq",
+            megapixel_value=24,
+        )
+        self.assertEqual([item["assetId"] for item in equal_mp["items"]], ["asset-1"])
+        self.assertEqual(equal_mp["summary"]["universe"], 1)
+
+        combined = fixture_culling_window(
+            self.root,
+            fixture["fixtureId"],
+            view="all-active",
+            date_from="2026",
+            date_to="2026",
+            megapixel_comparison="gte",
+            megapixel_value=24,
+        )
+        self.assertEqual([item["assetId"] for item in combined["items"]], ["asset-1"])
+
     def test_culling_and_review_keep_photos_keywords_and_expose_location_separately(self):
         upsert_assets(self.root, [{
             "localIdentifier": "asset-gps",

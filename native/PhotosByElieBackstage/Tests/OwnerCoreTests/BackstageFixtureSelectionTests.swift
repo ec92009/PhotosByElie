@@ -2550,6 +2550,41 @@ struct BackstageFixtureSelectionTests {
         #expect(merged.lens == learned.lens)
     }
 
+    @Test("Idle Gallery thumbnails persist Photos equipment for search")
+    @MainActor
+    func idleThumbnailLearnsEquipmentForSearch() async {
+        let photoLibrary = RecordingPreviewPhotoLibrary(
+            fallbackEquipment: OwnerCurrentEquipment(
+                cameraBody: "Canon PowerShot ELPH 300 HS",
+                focalLength: "4.3 mm"
+            )
+        )
+        let equipmentCache = RecordingCurrentEquipmentCache()
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            currentEquipmentCache: equipmentCache
+        )
+
+        await model.loadThumbnail(
+            for: "asset-idle-equipment",
+            preferredIdentifier: "photos-local-id"
+        )
+
+        #expect(model.cullingThumbnails["asset-idle-equipment"] != nil)
+        let metadataRequests = photoLibrary.equipmentMetadataRequests()
+        #expect(metadataRequests.count == 1)
+        #expect(metadataRequests.first?.0 == "photos-local-id")
+        #expect(metadataRequests.first?.1 == false)
+        #expect(equipmentCache.recordedBatches() == [[
+            "asset-idle-equipment": OwnerCurrentEquipment(
+                cameraBody: "Canon PowerShot ELPH 300 HS",
+                focalLength: "4.3 mm"
+            ),
+        ]])
+        #expect(model.quickLookEquipment(for: "asset-idle-equipment").cameraBody ==
+            "Canon PowerShot ELPH 300 HS")
+    }
+
     @Test("Missing media availability still keeps Culling on photos")
     @MainActor
     func missingMediaAvailabilityFallsBackSafely() throws {
@@ -3231,18 +3266,22 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
     private let cameraBody: String
     private let lens: String
     private let focalLength: String
+    private let fallbackEquipment: OwnerCurrentEquipment?
+    private var equipmentRequests: [(String, Bool)] = []
     private static let previewData = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
 
     init(
         transientUpgradeFailures: [String: Int] = [:],
         cameraBody: String = "",
         lens: String = "",
-        focalLength: String = ""
+        focalLength: String = "",
+        fallbackEquipment: OwnerCurrentEquipment? = nil
     ) {
         self.transientUpgradeFailures = transientUpgradeFailures
         self.cameraBody = cameraBody
         self.lens = lens
         self.focalLength = focalLength
+        self.fallbackEquipment = fallbackEquipment
     }
 
     func authorization() -> PhotoLibraryAccess { .authorized }
@@ -3286,6 +3325,17 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
         )
     }
 
+    func equipmentMetadata(
+        localIdentifier: String,
+        allowICloudDownloads: Bool
+    ) async throws -> OwnerCurrentEquipment {
+        lock.withLock { equipmentRequests.append((localIdentifier, allowICloudDownloads)) }
+        guard let fallbackEquipment else {
+            throw PhotoLibraryError.metadataFailed("Synthetic equipment metadata is unavailable.")
+        }
+        return fallbackEquipment
+    }
+
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
         throw PhotoLibraryError.exportFailed("Synthetic idle-upgrade test does not export originals.")
     }
@@ -3296,6 +3346,10 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
 
     func requestedIDs(at pixelSize: Int) -> [String] {
         lock.withLock { requests.filter { $0.1 == pixelSize }.map(\.0) }
+    }
+
+    func equipmentMetadataRequests() -> [(String, Bool)] {
+        lock.withLock { equipmentRequests }
     }
 
     func setThumbnailDelay(_ delay: Duration) {

@@ -1712,6 +1712,11 @@ final class BackstageViewModel: ObservableObject {
             )
             guard focusedCullingAssetID == id else { return }
             photoPreview = preview
+            await learnEquipment(
+                from: preview,
+                for: id,
+                allowICloudDownloads: true
+            )
             photoStatus = "Preview prepared from Photos without exporting the original."
         } catch {
             photoStatus = userFacingMessage(for: error)
@@ -1838,6 +1843,12 @@ final class BackstageViewModel: ObservableObject {
                 }
                 lifecycleThumbnails[assetID] = image
                 lifecycleThumbnailFailures.removeValue(forKey: assetID)
+                await learnEquipment(
+                    from: preview,
+                    for: assetID,
+                    preferredIdentifier: preferredIdentifier,
+                    allowICloudDownloads: false
+                )
                 return
             } catch {
                 lastFailure = CullingThumbnailFailure(error: error)
@@ -2102,6 +2113,12 @@ final class BackstageViewModel: ObservableObject {
                 }
                 cullingBasicThumbnails[assetID] = cullingThumbnails[assetID]
                 cullingThumbnails[assetID] = image
+                await learnEquipment(
+                    from: preview,
+                    for: assetID,
+                    preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
+                    allowICloudDownloads: false
+                )
                 await learnCurrentImageByteCount(
                     from: preview,
                     for: assetID,
@@ -2165,6 +2182,12 @@ final class BackstageViewModel: ObservableObject {
                 cacheCullingThumbnail(image, for: assetID)
                 cullingThumbnailFailures.removeValue(forKey: assetID)
                 scheduleThumbnailUpgrade(for: assetID)
+                await learnEquipment(
+                    from: preview,
+                    for: assetID,
+                    preferredIdentifier: preferredIdentifier,
+                    allowICloudDownloads: false
+                )
                 return
             } catch {
                 lastFailure = CullingThumbnailFailure(error: error)
@@ -5602,7 +5625,12 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: item.photoLibraryIdentifier,
                         maxPixelSize: 4_000
                     )
-                    await learnQuickLookEquipment(from: preview, for: item.id)
+                    await learnEquipment(
+                        from: preview,
+                        for: item.id,
+                        preferredIdentifier: item.photoLibraryIdentifier,
+                        allowICloudDownloads: true
+                    )
                     await learnCurrentImageByteCount(
                         from: preview,
                         for: item.id,
@@ -6373,7 +6401,12 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 4_000
             )
-            await learnQuickLookEquipment(from: preview, for: item.mediaID)
+            await learnEquipment(
+                from: preview,
+                for: item.mediaID,
+                preferredIdentifier: item.photoLibraryIdentifier,
+                allowICloudDownloads: true
+            )
             await learnCurrentImageByteCount(
                 from: preview,
                 for: item.mediaID,
@@ -6430,7 +6463,11 @@ final class BackstageViewModel: ObservableObject {
                         preferredIdentifier: photoLibraryIdentifier(for: id),
                         maxPixelSize: 4_000
                     )
-                    await learnQuickLookEquipment(from: preview, for: id)
+                    await learnEquipment(
+                        from: preview,
+                        for: id,
+                        allowICloudDownloads: true
+                    )
                     if let image = NSImage(data: preview.jpegData) {
                         recoverCullingThumbnail(image, for: id)
                     }
@@ -7198,6 +7235,12 @@ final class BackstageViewModel: ObservableObject {
                 maxPixelSize: 100
             )
             guard let image = NSImage(data: preview.jpegData) else { return }
+            await learnEquipment(
+                from: preview,
+                for: item.id,
+                preferredIdentifier: item.photoLibraryIdentifier,
+                allowICloudDownloads: false
+            )
             if nativeUploadThumbnails.count >= 300,
                let oldest = nativeUploadThumbnails.keys.first {
                 nativeUploadThumbnails.removeValue(forKey: oldest)
@@ -7258,7 +7301,12 @@ final class BackstageViewModel: ObservableObject {
                 preferredIdentifier: localIdentifier,
                 maxPixelSize: 4_000
             )
-            await learnQuickLookEquipment(from: preview, for: assetID)
+            await learnEquipment(
+                from: preview,
+                for: assetID,
+                preferredIdentifier: localIdentifier,
+                allowICloudDownloads: true
+            )
             await learnCurrentImageByteCount(
                 from: preview,
                 for: assetID,
@@ -7292,12 +7340,51 @@ final class BackstageViewModel: ObservableObject {
         )
     }
 
-    private func learnQuickLookEquipment(from preview: PhotoPreview, for assetID: String) async {
-        let equipment = BackstageQuickLookEquipment(
+    private func learnEquipment(
+        from preview: PhotoPreview,
+        for assetID: String,
+        preferredIdentifier: String? = nil,
+        allowICloudDownloads: Bool
+    ) async {
+        let previewEquipment = BackstageQuickLookEquipment(
             cameraBody: preview.cameraBody,
             lens: preview.lens,
             focalLength: preview.focalLength
         )
+        if previewEquipment.displayValue != nil {
+            await persistEquipment(previewEquipment, for: assetID)
+            return
+        }
+        guard quickLookEquipmentByAssetID[assetID]?.displayValue == nil else { return }
+
+        for identifier in photoLibraryIdentifierCandidates(
+            for: assetID,
+            preferredIdentifier: preferredIdentifier
+        ) {
+            guard !Task.isCancelled else { return }
+            do {
+                let current = try await photoLibrary.equipmentMetadata(
+                    localIdentifier: identifier,
+                    allowICloudDownloads: allowICloudDownloads
+                )
+                let equipment = BackstageQuickLookEquipment(
+                    cameraBody: current.cameraBody,
+                    lens: current.lens,
+                    focalLength: current.focalLength
+                )
+                guard equipment.displayValue != nil else { continue }
+                await persistEquipment(equipment, for: assetID)
+                return
+            } catch {
+                guard !(error is CancellationError), !Task.isCancelled else { return }
+            }
+        }
+    }
+
+    private func persistEquipment(
+        _ equipment: BackstageQuickLookEquipment,
+        for assetID: String
+    ) async {
         guard equipment.displayValue != nil else { return }
         quickLookEquipmentByAssetID[assetID] = equipment
         guard let currentEquipmentCache else { return }

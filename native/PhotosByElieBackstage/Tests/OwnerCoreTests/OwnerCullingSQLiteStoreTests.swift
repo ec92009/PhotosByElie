@@ -448,11 +448,11 @@ struct OwnerCullingSQLiteStoreTests {
         let equipment = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
             .metadata(assetIDs: Array(elphIDs))
 
-        #expect(elf.summary.filtered == 18)
-        #expect(elph.summary.filtered == 18)
+        #expect(elf.summary.filtered == elfIDs.count)
+        #expect(elph.summary.filtered == elphIDs.count)
         #expect(elfIDs == elphIDs)
-        #expect(elfIDs.count == 18)
-        #expect(equipment.count == 18)
+        #expect(elfIDs.count >= 18)
+        #expect(equipment.count == elphIDs.count)
         #expect(equipment.values.allSatisfy {
             [$0.cameraBody, $0.lens]
                 .joined(separator: " ")

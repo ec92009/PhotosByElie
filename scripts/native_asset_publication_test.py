@@ -102,7 +102,12 @@ class NativeAssetPublicationTest(unittest.TestCase):
             conn.executescript(
                 """
                 CREATE TABLE asset_upload_runs (
-                  run_id TEXT PRIMARY KEY, status TEXT, last_error TEXT,
+                  run_id TEXT PRIMARY KEY,
+                  status TEXT CHECK (status IN (
+                    'queued', 'running', 'completed', 'completed-with-errors',
+                    'cancelled', 'failed'
+                  )),
+                  last_error TEXT,
                   completed_at TEXT, updated_at TEXT
                 );
                 INSERT INTO asset_upload_runs VALUES (
@@ -142,7 +147,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
         self.assertTrue(first["claimed"])
         self.assertTrue(duplicate["attached"])
         self.assertTrue(retry["claimed"])
-        self.assertEqual((count, status), (1, "starting"))
+        self.assertEqual((count, status), (1, "running"))
 
     def test_terminal_runner_failure_is_durable_and_same_run_becomes_retryable(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -165,7 +170,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                   last_error TEXT, updated_at TEXT
                 );
                 INSERT INTO asset_upload_runs VALUES (
-                  'run-1', 'starting', 0, 0, 0, 2, '', NULL, ''
+                  'run-1', 'running', 0, 0, 0, 2, '', NULL, ''
                 );
                 INSERT INTO asset_upload_run_items VALUES (
                   'run-1', 'asset-1', 'queued', '', '[]', '', NULL, NULL, ''
@@ -211,7 +216,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
 
         self.assertTrue(failure["recorded"])
         self.assertEqual(reset["resetCount"], 0)
-        self.assertEqual(run, ("queued", 2, ""))
+        self.assertEqual(run, ("running", 2, ""))
         self.assertEqual(run_count, 1)
 
     def test_fixture_schema_initialization_runs_once_per_database_inode(self):
@@ -402,7 +407,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
 
         self.assertEqual(result["resetCount"], 2)
         self.assertEqual(statuses, [("queued",), ("queued",)])
-        self.assertEqual(run, ("queued", 0, 0, 2))
+        self.assertEqual(run, ("running", 0, 0, 2))
         self.assertEqual(delivery, ("needs-upload",))
 
     def test_reset_upload_run_leaves_completed_run_unchanged(self):

@@ -5309,7 +5309,7 @@ struct OwnerCoreTests {
             state: .completed,
             result: ["uploadRun": [
                 "runId": "uplrun-locked",
-                "status": "starting",
+                "status": "running",
                 "requested": 50,
                 "processed": 0,
                 "remaining": 50,
@@ -5332,7 +5332,7 @@ struct OwnerCoreTests {
         #expect(recovered.latestFailedRun?.runID == "uplrun-locked")
         #expect(recovered.latestFailedRun?.lastError == "database is locked")
         #expect(run.runID == "uplrun-locked")
-        #expect(run.status == "starting")
+        #expect(run.status == "running")
         #expect(run.lastError == "database is locked")
         let requests = await api.requests()
         #expect(requests.count == 2)

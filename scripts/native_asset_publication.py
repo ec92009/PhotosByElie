@@ -64,7 +64,7 @@ def claim_upload_run_start(
         if row is None:
             raise ValueError("upload run does not exist")
         status = str(row["status"] or "")
-        if status in {"starting", "running"}:
+        if status == "running":
             conn.commit()
             return {
                 "ok": True,
@@ -82,7 +82,7 @@ def claim_upload_run_start(
         updated = conn.execute(
             """
             UPDATE asset_upload_runs
-            SET status = 'starting', last_error = '', completed_at = NULL,
+            SET status = 'running', last_error = '', completed_at = NULL,
                 updated_at = ?
             WHERE run_id = ? AND status = ?
             """,
@@ -103,7 +103,7 @@ def claim_upload_run_start(
         "runId": run_id,
         "claimed": True,
         "attached": False,
-        "status": "starting",
+        "status": "running",
     }
 
 
@@ -171,7 +171,7 @@ def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
                    count(item.asset_id) AS item_count
             FROM asset_upload_runs AS run
             LEFT JOIN asset_upload_run_items AS item ON item.run_id = run.run_id
-            WHERE run.status IN ('starting', 'queued', 'running')
+            WHERE run.status IN ('queued', 'running')
             GROUP BY run.run_id, run.status, run.requested_count
             ORDER BY run.created_at, run.run_id
             """
@@ -193,7 +193,7 @@ def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
                         SET status = 'completed', remaining_count = 0,
                             last_error = '', completed_at = ?, updated_at = ?
                         WHERE run_id = ?
-                          AND status IN ('starting', 'queued', 'running')
+                          AND status IN ('queued', 'running')
                           AND requested_count = 0
                           AND NOT EXISTS (
                             SELECT 1 FROM asset_upload_run_items WHERE run_id = ?
@@ -251,7 +251,7 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
         if run is None:
             raise ValueError("upload run does not exist")
         run_status = str(run["status"] or "")
-        if run_status not in {"starting", "queued", "running", "failed"}:
+        if run_status not in {"queued", "running", "failed"}:
             return {"ok": True, "runId": run_id, "resetCount": 0}
         retryable = conn.execute(
             """
@@ -299,12 +299,13 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
         conn.execute(
             """
             UPDATE asset_upload_runs
-            SET status = 'queued', processed_count = ?, live_count = ?,
+            SET status = ?, processed_count = ?, live_count = ?,
                 failed_count = ?, remaining_count = ?, last_error = '',
                 completed_at = NULL, updated_at = ?
-            WHERE run_id = ? AND status IN ('starting', 'queued', 'running', 'failed')
+            WHERE run_id = ? AND status IN ('queued', 'running', 'failed')
             """,
             (
+                "running" if run_status == "running" else "queued",
                 processed,
                 int(summary["live"] or 0),
                 int(summary["failed"] or 0),
@@ -387,6 +388,8 @@ def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str
 
 
 def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, Any]:
+    # The launcher has already claimed this exact run as `running`. Reset only
+    # retryable item state while preserving that durable single-flight claim.
     retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
     status = retry_sqlite_lock(lambda: upload_run_status(repo_root, run_id))
     asset_ids = [

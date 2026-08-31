@@ -3370,7 +3370,7 @@ def _start_native_publication_run(
         return {
             "started": False,
             "attached": bool(claim.get("attached")),
-            "reason": "The existing upload worker is already starting or running.",
+            "reason": "The existing upload worker is already running.",
         }
     log_root = repo_root / ".review-logs" / "native-publication-runs"
     log_root.mkdir(parents=True, exist_ok=True)

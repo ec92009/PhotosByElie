@@ -5281,6 +5281,75 @@ struct OwnerCoreTests {
         ])
     }
 
+    @Test("Native upload retry reuses the exact failed run and surfaces its durable error")
+    func nativeUploadRetryContract() async throws {
+        let recovery = OwnerAction(
+            id: "upload-recover",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: ["uploadRecovery": [
+                "completedZeroCount": 1,
+                "failedReceiptCount": 1,
+                "needsReviewCount": 0,
+                "latestFailedRun": [
+                    "runId": "uplrun-locked",
+                    "status": "failed",
+                    "requested": 50,
+                    "processed": 0,
+                    "remaining": 50,
+                    "lastError": "database is locked",
+                ],
+            ]]
+        )
+        let response = OwnerAction(
+            id: "upload-resume",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: ["uploadRun": [
+                "runId": "uplrun-locked",
+                "status": "starting",
+                "requested": 50,
+                "processed": 0,
+                "remaining": 50,
+                "lastError": "database is locked",
+            ]]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [recovery, response])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let recovered = try await service.recoverNativeUploadRuns()
+        let run = try await service.resumeNativeUpload(runID: "uplrun-locked")
+
+        #expect(recovered.completedZeroCount == 1)
+        #expect(recovered.failedReceiptCount == 1)
+        #expect(recovered.latestFailedRun?.runID == "uplrun-locked")
+        #expect(recovered.latestFailedRun?.lastError == "database is locked")
+        #expect(run.runID == "uplrun-locked")
+        #expect(run.status == "starting")
+        #expect(run.lastError == "database is locked")
+        let requests = await api.requests()
+        #expect(requests.count == 2)
+        #expect(
+            requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue
+                == "asset-upload-run-recover"
+        )
+        #expect(
+            requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue
+                == "asset-upload-run-resume"
+        )
+        #expect(
+            requests[1].payload["manifest"]?.objectValue?["runId"]?.stringValue
+                == "uplrun-locked"
+        )
+    }
+
     @Test("Review AI requests update the loaded editorial summary")
     func reviewSummaryTracksAIRequestTransition() {
         var summary = FixtureReviewSummary(

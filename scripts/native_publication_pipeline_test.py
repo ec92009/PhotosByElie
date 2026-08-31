@@ -322,6 +322,16 @@ class NativePublicationPipelineTest(unittest.TestCase):
             self.assertAlmostEqual(resolution["confidence"], 0.88)
             self.assertIn("Valencia, Spain", resolution["response_json"])
 
+    def test_empty_upload_run_is_immediately_terminal(self):
+        run = create_upload_run(self.root, ["missing-asset"], limit=50, concurrency=2)
+        status = upload_run_status(self.root, run["runId"])
+
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(status["status"], "completed")
+        self.assertEqual(status["requested"], 0)
+        self.assertEqual(status["remaining"], 0)
+        self.assertTrue(status["completedAt"])
+
     def test_upload_run_is_bounded_and_isolates_failure(self):
         record_photos_sync_snapshot(
             self.root,

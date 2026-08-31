@@ -1037,14 +1037,16 @@ def create_upload_run(
             """
             INSERT INTO asset_upload_runs (
               run_id, status, requested_count, remaining_count, concurrency,
-              created_at, updated_at
-            ) VALUES (?, 'queued', ?, ?, ?, ?, ?)
+              completed_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id,
+                "queued" if selected else "completed",
                 len(selected),
                 len(selected),
                 safe_concurrency,
+                None if selected else timestamp,
                 timestamp,
                 timestamp,
             ),
@@ -1061,7 +1063,7 @@ def create_upload_run(
     return {
         "ok": True,
         "runId": run_id,
-        "status": "queued",
+        "status": "queued" if selected else "completed",
         "count": len(selected),
         "assetIds": selected,
         "limit": safe_limit,
@@ -1318,6 +1320,7 @@ def upload_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         "concurrency": int(row["concurrency"] or 1),
         "startedAt": str(row["started_at"] or ""),
         "completedAt": str(row["completed_at"] or ""),
+        "lastError": str(row["last_error"] or ""),
         "items": [dict(item) for item in items],
     }
 

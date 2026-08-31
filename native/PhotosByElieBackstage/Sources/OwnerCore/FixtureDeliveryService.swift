@@ -301,12 +301,20 @@ public struct NativeUploadRun: Sendable, Equatable {
     public var concurrency: Int
     public var startedAt: String
     public var completedAt: String
+    public var lastError: String
     public var cancelRequested: Bool
     public var items: [NativeUploadRunItem]
 
     public var isFinished: Bool {
         ["completed", "completed-with-errors", "failed", "cancelled"].contains(status)
     }
+}
+
+public struct NativeUploadRecoveryReport: Sendable, Equatable {
+    public var completedZeroCount: Int
+    public var failedReceiptCount: Int
+    public var needsReviewCount: Int
+    public var latestFailedRun: NativeUploadRun?
 }
 
 public struct R2ReconciliationItem: Identifiable, Sendable, Equatable {
@@ -526,9 +534,34 @@ public actor FixtureDeliveryService {
         return try decodeNativeUploadRun(action)
     }
 
+    public func recoverNativeUploadRuns() async throws -> NativeUploadRecoveryReport {
+        let action = try await fixtureAction(
+            mode: "asset-upload-run-recover",
+            fixtureID: ""
+        )
+        guard let recovery = action.result?["uploadRecovery"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("uploadRecovery")
+        }
+        let latest = recovery["latestFailedRun"]?.objectValue
+        return NativeUploadRecoveryReport(
+            completedZeroCount: recovery["completedZeroCount"]?.intValue ?? 0,
+            failedReceiptCount: recovery["failedReceiptCount"]?.intValue ?? 0,
+            needsReviewCount: recovery["needsReviewCount"]?.intValue ?? 0,
+            latestFailedRun: latest.map { nativeUploadRun(from: $0) }
+        )
+    }
+
     public func cancelNativeUpload(runID: String) async throws -> NativeUploadRun {
         let action = try await runAction(
             mode: "asset-upload-run-cancel",
+            runID: runID
+        )
+        return try decodeNativeUploadRun(action)
+    }
+
+    public func resumeNativeUpload(runID: String) async throws -> NativeUploadRun {
+        let action = try await runAction(
+            mode: "asset-upload-run-resume",
             runID: runID
         )
         return try decodeNativeUploadRun(action)
@@ -819,6 +852,10 @@ public actor FixtureDeliveryService {
         guard let result = action.result?["uploadRun"]?.objectValue else {
             throw FixtureDeliveryError.missingResult("uploadRun")
         }
+        return nativeUploadRun(from: result)
+    }
+
+    private func nativeUploadRun(from result: [String: JSONValue]) -> NativeUploadRun {
         let items = (result["items"]?.arrayValue ?? []).compactMap { value -> NativeUploadRunItem? in
             guard let item = value.objectValue,
                   let assetID = item["asset_id"]?.stringValue ?? item["assetId"]?.stringValue
@@ -849,6 +886,7 @@ public actor FixtureDeliveryService {
             concurrency: result["concurrency"]?.intValue ?? 1,
             startedAt: result["startedAt"]?.stringValue ?? "",
             completedAt: result["completedAt"]?.stringValue ?? "",
+            lastError: result["lastError"]?.stringValue ?? "",
             cancelRequested: result["cancelRequested"]?.boolValue ?? false,
             items: items
         )

@@ -7454,6 +7454,17 @@ final class BackstageViewModel: ObservableObject {
             } else {
                 nativeUploadStatus = "\(plan.needsUploadCount) need upload • \(plan.approvedOnlyCount) approved • \(plan.fullResolutionUploadedCount) full-resolution uploaded • \(plan.publishingCount) publishing • \(plan.liveOnWebsiteCount) live • \(plan.needsReviewCount) not yet approved. Showing \(plan.items.count) \(plan.order.label)."
             }
+            do {
+                let recovery = try await deliveryService.recoverNativeUploadRuns()
+                if let failedRun = recovery.latestFailedRun {
+                    nativeUploadRun = failedRun
+                    nativeUploadStatus = "Recovered failed publication run \(failedRun.runID). \(failedRun.remaining) item\(failedRun.remaining == 1 ? " remains" : "s remain"); Retry same run preserves completed receipts."
+                } else if recovery.needsReviewCount > 0 {
+                    nativeUploadStatus += " \(recovery.needsReviewCount) older nonterminal run\(recovery.needsReviewCount == 1 ? " needs" : "s need") explicit review because no terminal worker receipt exists."
+                }
+            } catch {
+                nativeUploadStatus += " Upload recovery check failed: \(userFacingMessage(for: error))"
+            }
         } catch {
             nativeUploadPlan = nil
             nativeUploadStatus = userFacingMessage(for: error)
@@ -8098,6 +8109,45 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             nativeUploadStatus = userFacingMessage(for: error)
             isCancellingNativePublication = false
+        }
+    }
+
+    func resumeFailedNativePublicationRun() async {
+        guard !isRunningDelivery,
+              let current = nativeUploadRun,
+              current.status == "failed",
+              current.remaining > 0 else { return }
+        isRunningDelivery = true
+        isRunningNativePublication = true
+        nativePublicationBatchNumber = 1
+        nativePublicationBatchCount = 1
+        nativeUploadStatus = "Retrying the same failed publication run…"
+        defer {
+            nativePublicationBatchNumber = 0
+            nativePublicationBatchCount = 0
+            isRunningNativePublication = false
+            isRunningDelivery = false
+        }
+        do {
+            var run = try await deliveryService.resumeNativeUpload(runID: current.runID)
+            nativeUploadRun = run
+            while !run.isFinished {
+                nativeUploadStatus = "Retrying the same publication run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                run = try await deliveryService.nativeUploadStatus(runID: current.runID)
+                nativeUploadRun = run
+            }
+            if run.status == "failed" {
+                nativeUploadStatus = run.lastError.isEmpty
+                    ? "The publication run failed before it could finish. Retry uses this same run."
+                    : "The publication run failed: \(run.lastError) Retry uses this same run."
+            } else if run.status == "cancelled" {
+                nativeUploadStatus = "The publication run stopped safely. Completed items remain verified."
+            } else {
+                nativeUploadStatus = "Publication retry finished: \(run.processed) processed • \(run.live) live • \(run.failed) failed."
+            }
+        } catch {
+            nativeUploadStatus = "Publication retry could not start: \(userFacingMessage(for: error))"
         }
     }
 

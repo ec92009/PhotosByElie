@@ -32,6 +32,36 @@ def backstage_ui_source() -> str:
 
 
 class NativeCullingParityTest(unittest.TestCase):
+    def test_native_upload_failure_recovery_reuses_one_run_with_immediate_feedback(self):
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        model = (source_dir / "BackstageViewModel.swift").read_text(encoding="utf-8")
+        upload = (source_dir / "UploadView.swift").read_text(encoding="utf-8")
+        delivery = (
+            NATIVE / "Sources" / "OwnerCore" / "FixtureDeliveryService.swift"
+        ).read_text(encoding="utf-8")
+        connector = (ROOT / "scripts" / "local_server.py").read_text(encoding="utf-8")
+        runner = (ROOT / "scripts" / "native_asset_publication.py").read_text(
+            encoding="utf-8"
+        )
+
+        retry = model.split("func resumeFailedNativePublicationRun", 1)[1].split(
+            "private func preserveNativeUploadTray", 1
+        )[0]
+        self.assertIn("guard !isRunningDelivery", retry)
+        self.assertIn("isRunningDelivery = true", retry)
+        self.assertIn('nativeUploadStatus = "Retrying the same failed publication run…"', retry)
+        self.assertIn("deliveryService.resumeNativeUpload(runID: current.runID)", retry)
+        self.assertNotIn("startNativeUpload", retry)
+        self.assertIn('Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run")', upload)
+        self.assertIn(".disabled(model.isRunningDelivery || run.remaining == 0)", upload)
+        self.assertIn('mode: "asset-upload-run-resume"', delivery)
+        self.assertIn('mode: "asset-upload-run-recover"', delivery)
+        self.assertIn('elif mode == "asset-upload-run-resume":', connector)
+        self.assertIn('elif mode == "asset-upload-run-recover":', connector)
+        self.assertIn("claim_upload_run_start", runner)
+        self.assertIn("record_upload_run_failure", runner)
+        self.assertIn("reconcile_upload_run_receipts", runner)
+
     def test_command_a_select_all_routes_to_focused_control_or_loaded_workspace(self):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
@@ -1515,8 +1545,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.0")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "274")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.1")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "275")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

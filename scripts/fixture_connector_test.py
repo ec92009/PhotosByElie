@@ -727,6 +727,41 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertEqual(status["result"]["uploadRun"]["requested"], 1)
             self.assertEqual(status["result"]["uploadRun"]["remaining"], 1)
 
+            with sidecar_state_db.connect(root) as connection:
+                connection.execute(
+                    """
+                    UPDATE asset_upload_runs
+                    SET status = 'failed', last_error = 'database is locked'
+                    WHERE run_id = ?
+                    """,
+                    (run["runId"],),
+                )
+                connection.commit()
+            recovery = local_server.new_owner_connector_result(
+                root,
+                action("asset-upload-run-recover"),
+            )
+            self.assertFalse(recovery["result"]["readOnly"])
+            self.assertEqual(
+                recovery["result"]["uploadRecovery"]["latestFailedRun"]["runId"],
+                run["runId"],
+            )
+            with patch.object(
+                local_server,
+                "_start_native_publication_run",
+                return_value={"started": True, "attached": False, "pid": 43},
+            ) as resume:
+                resumed = local_server.new_owner_connector_result(
+                    root,
+                    action("asset-upload-run-resume", runId=run["runId"]),
+                )
+            resumed_run = resumed["result"]["uploadRun"]
+            self.assertFalse(resumed["result"]["readOnly"])
+            self.assertEqual(resumed_run["runId"], run["runId"])
+            self.assertEqual(resumed_run["lastError"], "database is locked")
+            self.assertTrue(resumed_run["started"])
+            resume.assert_called_once_with(root, run["runId"], retry_failed=True)
+
     def test_connector_imports_photos_snapshot_and_previews_r2_reconciliation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

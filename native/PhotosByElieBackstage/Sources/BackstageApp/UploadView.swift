@@ -186,6 +186,24 @@ struct UploadView: View {
                 }
             }
             if let run = model.nativeUploadRun,
+               run.status == "failed" {
+                HStack {
+                    Label(
+                        run.lastError.isEmpty
+                            ? "Publication stopped before the run became terminal."
+                            : run.lastError,
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(.orange)
+                    Spacer()
+                    Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run") {
+                        Task { await model.resumeFailedNativePublicationRun() }
+                    }
+                    .disabled(model.isRunningDelivery || run.remaining == 0)
+                    .backstageHelp("Resume the exact failed publication run. Verified items are preserved and no replacement run is created.")
+                }
+            }
+            if let run = model.nativeUploadRun,
                !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)

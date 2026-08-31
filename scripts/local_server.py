@@ -586,6 +586,12 @@ from native_publication_pipeline import (  # noqa: E402
     upload_eligibility_plan as native_upload_eligibility_plan,
     upload_run_status as native_upload_run_status,
 )
+from native_asset_publication import (  # noqa: E402
+    claim_upload_run_start,
+    reconcile_upload_run_receipts,
+    record_upload_run_failure,
+    retry_sqlite_lock as retry_native_publication_lock,
+)
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -3347,27 +3353,51 @@ def _start_requested_ai_pass(repo_root: Path) -> dict:
     }
 
 
-def _start_native_publication_run(repo_root: Path, run_id: str) -> dict:
+def _start_native_publication_run(
+    repo_root: Path,
+    run_id: str,
+    *,
+    retry_failed: bool = False,
+) -> dict:
+    claim = retry_native_publication_lock(
+        lambda: claim_upload_run_start(
+            repo_root,
+            run_id,
+            retry_failed=retry_failed,
+        )
+    )
+    if not claim.get("claimed"):
+        return {
+            "started": False,
+            "attached": bool(claim.get("attached")),
+            "reason": "The existing upload worker is already starting or running.",
+        }
     log_root = repo_root / ".review-logs" / "native-publication-runs"
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"{run_id}.log"
     log_handle = log_path.open("ab")
     try:
-        process = subprocess.Popen(
-            [
-                sys.executable,
-                str(_connector_runtime_script("native_asset_publication.py")),
-                "--repo-root",
-                str(repo_root),
-                "--run-id",
-                run_id,
-            ],
-            cwd=repo_root,
-            stdin=subprocess.DEVNULL,
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
+        try:
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    str(_connector_runtime_script("native_asset_publication.py")),
+                    "--repo-root",
+                    str(repo_root),
+                    "--run-id",
+                    run_id,
+                ],
+                cwd=repo_root,
+                stdin=subprocess.DEVNULL,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        except Exception as error:
+            retry_native_publication_lock(
+                lambda: record_upload_run_failure(repo_root, run_id, str(error))
+            )
+            raise
     finally:
         log_handle.close()
     return {
@@ -3693,6 +3723,25 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 repo_root,
                 str(manifest.get("runId") or ""),
             ),
+        })
+    elif mode == "asset-upload-run-recover":
+        result.update({
+            "readOnly": False,
+            "uploadRecovery": reconcile_upload_run_receipts(repo_root),
+        })
+    elif mode == "asset-upload-run-resume":
+        run_id = str(manifest.get("runId") or "")
+        background = _start_native_publication_run(
+            repo_root,
+            run_id,
+            retry_failed=True,
+        )
+        result.update({
+            "readOnly": False,
+            "uploadRun": {
+                **native_upload_run_status(repo_root, run_id),
+                **background,
+            },
         })
     elif mode == "asset-upload-run-cancel":
         result.update({
@@ -4216,6 +4265,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "asset-upload-plan": "Loaded the fixture-scoped approved publication queue without changing any asset.",
         "asset-upload-run-start": "Started a bounded verified upload run. Each successful asset publishes immediately.",
         "asset-upload-run-status": "Loaded current upload and publication progress.",
+        "asset-upload-run-recover": "Reconciled exact terminal upload receipts and surfaced unresolved runs for review.",
+        "asset-upload-run-resume": "Resumed the exact failed upload run without creating a replacement batch.",
         "asset-upload-run-cancel": "Requested a safe stop after currently uploading assets finish.",
         "asset-sale-reference-record": "Protected the exact sold source version and object keys.",
         "r2-reconciliation-plan": "Previewed protected, referenced, quarantined, and deletion-eligible R2 objects.",
@@ -4251,6 +4302,8 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         "asset-upload-plan",
         "asset-upload-run-start",
         "asset-upload-run-status",
+        "asset-upload-run-recover",
+        "asset-upload-run-resume",
         "asset-upload-run-cancel",
         "asset-sale-reference-record",
         "r2-reconciliation-plan",

@@ -126,6 +126,16 @@ def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str
         row = next((item for item in rows if str(item["asset_id"]) == asset_id), None)
         if row is None:
             return []
+        receipt_asset_ids = [asset_id]
+        row_keys = set(row.keys()) if hasattr(row, "keys") else set()
+        r2_source_anchor = str(
+            row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
+        ).strip()
+        legacy_prefix = "apple-photos://"
+        if r2_source_anchor.startswith(legacy_prefix):
+            legacy_asset_id = r2_source_anchor[len(legacy_prefix):].strip()
+            if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
+                receipt_asset_ids.append(legacy_asset_id)
         _, planned_keys = _planned_r2_keys(row)
         recovered: list[dict[str, Any]] = []
         for planned in planned_keys:
@@ -141,17 +151,21 @@ def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str
             ).fetchone()
             if current is None:
                 return []
-            receipt = conn.execute(
-                """
-                SELECT checksum_sha256, verification_json
-                FROM fixture_delivery_receipts
-                WHERE asset_id = ? AND destination = 'r2'
-                  AND status = 'verified' AND object_key = ?
-                ORDER BY COALESCE(verified_at, updated_at) DESC, receipt_id DESC
-                LIMIT 1
-                """,
-                (asset_id, object_key),
-            ).fetchone()
+            receipt = None
+            for receipt_asset_id in receipt_asset_ids:
+                receipt = conn.execute(
+                    """
+                    SELECT checksum_sha256, verification_json
+                    FROM fixture_delivery_receipts
+                    WHERE asset_id = ? AND destination = 'r2'
+                      AND status = 'verified' AND object_key = ?
+                    ORDER BY COALESCE(verified_at, updated_at) DESC, receipt_id DESC
+                    LIMIT 1
+                    """,
+                    (receipt_asset_id, object_key),
+                ).fetchone()
+                if receipt is not None:
+                    break
             if receipt is None or not str(receipt["checksum_sha256"] or ""):
                 return []
             try:

@@ -1381,24 +1381,143 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
                 "recoverable",
             )
 
-    def test_connector_rejects_local_only_global_tombstone_without_remote_arm(self):
+    def test_connector_tombstones_explicitly_selected_local_only_asset_without_remote_arm(self):
+        calls = []
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-2"],
+            source="backstage-culling",
+            request_key="seed-local-only-empty",
+            db_path=self.db,
+        )
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.empty_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                confirmed=payload["confirmed"],
+                confirmation_token=payload["confirmationToken"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "local-only-empty",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-empty",
+                    "photoIds": ["asset-2"],
+                    "source": "backstage-waste-basket",
+                    "confirmed": True,
+                    "confirmationToken": "EMPTY_WASTE_BASKET",
+                },
+            })
+
+        worker_client.assert_not_called()
+        self.assertEqual(calls[0][0]["request_key"], "owner-action:local-only-empty")
+        self.assertIsNone(calls[0][1])
+        self.assertEqual(result["result"]["assetIds"], ["asset-2"])
+        self.assertEqual(result["lifecycle"], {
+            "scope": "local-only",
+            "remoteArmRequired": False,
+            "reason": "no-cloud-media-evidence",
+            "localTombstone": True,
+        })
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT state FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                "tombstoned",
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT tombstone_state FROM sidecar_tombstones WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                "active",
+            )
+
+        def restore(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.restore_tombstone(
+                self.root,
+                payload["photo_ids"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                explicit_tombstone_restore=payload["explicitTombstoneRestore"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, restore),
+        ):
+            restored = execute_action(self.config, {
+                "id": "local-only-tombstone-restore",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-tombstone-restore",
+                    "photoIds": ["asset-2"],
+                    "source": "backstage-waste-basket",
+                    "explicitTombstoneRestore": True,
+                },
+            })
+
+        worker_client.assert_not_called()
+        self.assertEqual(restored["lifecycle"], {
+            "scope": "local-only",
+            "remoteArmRequired": False,
+            "reason": "no-cloud-media-evidence",
+            "localTombstoneRestore": True,
+        })
+        with sqlite3.connect(self.db) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT state FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                ).fetchone()[0],
+                "restored",
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM sidecar_tombstones "
+                    "WHERE asset_id = 'asset-2' AND tombstone_state = 'active'"
+                ).fetchone()[0],
+                0,
+            )
+
+    def test_connector_still_rejects_unscoped_local_only_empty(self):
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-2"],
+            source="backstage-culling",
+            request_key="seed-local-only-unscoped-empty",
+            db_path=self.db,
+        )
         with patch("scripts.new_owner_connector.WorkerClient") as worker_client, patch(
             "scripts.new_owner_connector._load_local_modules",
             return_value=(None, None, None, None, None),
         ):
             with self.assertRaisesRegex(
                 RuntimeError,
-                "global tombstone operations require deployed lifecycle eligibility",
+                "only explicitly selected local-only assets may be tombstoned",
             ):
                 execute_action(self.config, {
-                    "id": "local-only-empty",
+                    "id": "local-only-unscoped-empty",
                     "type": "photo-moderation",
                     "payload": {
                         "operation": "waste-basket-empty",
-                        "photoIds": ["asset-2"],
-                        "source": "backstage-review",
+                        "photoIds": [],
+                        "source": "backstage-waste-basket",
                         "confirmed": True,
-                        "confirmationToken": "EMPTY",
+                        "confirmationToken": "EMPTY_WASTE_BASKET",
                     },
                 })
 
@@ -1406,9 +1525,9 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
         with sqlite3.connect(self.db) as connection:
             self.assertEqual(
                 connection.execute(
-                    "SELECT COUNT(*) FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
+                    "SELECT state FROM owner_waste_basket_entries WHERE asset_id = 'asset-2'"
                 ).fetchone()[0],
-                0,
+                "recoverable",
             )
 
     def test_connector_partitions_mixed_empty_and_retains_local_only_asset(self):

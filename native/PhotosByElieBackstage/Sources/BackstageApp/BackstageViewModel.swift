@@ -7911,7 +7911,7 @@ final class BackstageViewModel: ObservableObject {
             nativeUploadStatus = "No approved assets in this fixture currently need upload."
             return
         }
-        await startNativePublication(assetIDs: ids)
+        await startNativePublication(assetIDs: ids, continueThroughEligibleQueue: true)
     }
 
     func syncPhotosIncrementally(limit: Int = 25) async {
@@ -8059,7 +8059,10 @@ final class BackstageViewModel: ObservableObject {
         await saveReviewMetadataIfNeeded()
     }
 
-    private func startNativePublication(assetIDs: [String]) async {
+    private func startNativePublication(
+        assetIDs: [String],
+        continueThroughEligibleQueue: Bool = false
+    ) async {
         guard canStartCloudWorkflow else {
             nativeUploadStatus = isAIPassActive
                 ? "Finish the AI proposal pass before starting an upload."
@@ -8074,17 +8077,22 @@ final class BackstageViewModel: ObservableObject {
             nativeUploadStatus = "No approved assets currently need upload."
             return
         }
-        let batches = stride(from: 0, to: ids.count, by: 50).map {
-            Array(ids[$0..<min($0 + 50, ids.count)])
-        }
+        let queueOrder = nativeUploadPlan?.order ?? .oldest
+        let initialEligibleCount = continueThroughEligibleQueue
+            ? max(ids.count, nativeUploadPlan?.needsUploadCount ?? ids.count)
+            : ids.count
         isRunningDelivery = true
         isRunningNativePublication = true
         isCancellingNativePublication = false
         nativePublicationCancellationRequested = false
-        nativeUploadStatus = "Starting upload for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
+        nativeUploadStatus = continueThroughEligibleQueue
+            ? "Starting continuous upload for \(initialEligibleCount.formatted()) eligible asset\(initialEligibleCount == 1 ? "" : "s")…"
+            : "Starting upload for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
         nativeUploadRun = nil
         nativePublicationBatchNumber = 0
-        nativePublicationBatchCount = batches.count
+        nativePublicationBatchCount = NativeUploadQueueContinuation.batchCount(
+            for: initialEligibleCount
+        )
         defer {
             isRunningNativePublication = false
             nativePublicationBatchNumber = 0
@@ -8099,55 +8107,76 @@ final class BackstageViewModel: ObservableObject {
         var totalFailed = 0
         var totalCatalogPending = 0
         var totalCatalogFailed = 0
-        var attemptedIDs = Set<String>()
-        var successfulIDs = Set<String>()
-        var failedIDs = Set<String>()
+        var totalScheduled = 0
+        var batchOrdinal = 0
+        var continuation = NativeUploadQueueContinuation()
+        var windowIDs = ids
         do {
-            for (batchIndex, batch) in batches.enumerated() {
-                if nativePublicationCancellationRequested { break }
-                nativePublicationBatchNumber = batchIndex + 1
-                var run = try await deliveryService.startNativeUpload(
-                    assetIDs: batch,
-                    limit: batch.count,
-                    concurrency: 4
-                )
-                nativeUploadRun = run
-                if nativePublicationCancellationRequested, !run.runID.isEmpty {
-                    run = try await deliveryService.cancelNativeUpload(runID: run.runID)
-                    nativeUploadRun = run
+            while !windowIDs.isEmpty {
+                totalScheduled += windowIDs.count
+                let batches = stride(from: 0, to: windowIDs.count, by: 50).map {
+                    Array(windowIDs[$0..<min($0 + 50, windowIDs.count)])
                 }
-                totalRequested += run.requested
-                if run.requested == 0 { continue }
-                nativeUploadStatus = "Uploading shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed) of \(ids.count) processed."
-                while !run.isFinished {
-                    try await Task.sleep(nanoseconds: 1_000_000_000)
-                    run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+                for batch in batches {
+                    if nativePublicationCancellationRequested { break }
+                    batchOrdinal += 1
+                    nativePublicationBatchNumber = batchOrdinal
+                    var run = try await deliveryService.startNativeUpload(
+                        assetIDs: batch,
+                        limit: batch.count,
+                        concurrency: 4
+                    )
                     nativeUploadRun = run
-                    nativeUploadStatus = "Uploading shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed + run.processed) of \(ids.count) processed • \(totalLive + run.live) website live • \(totalFailed + run.failed) failed."
+                    if nativePublicationCancellationRequested, !run.runID.isEmpty {
+                        run = try await deliveryService.cancelNativeUpload(runID: run.runID)
+                        nativeUploadRun = run
+                    }
+                    totalRequested += run.requested
+                    if run.requested == 0 {
+                        continuation.record(run.items)
+                        continue
+                    }
+                    nativeUploadStatus = "Uploading eligible queue • batch \(batchOrdinal) of \(nativePublicationBatchCount) • \(totalProcessed) of \(initialEligibleCount) processed."
+                    while !run.isFinished {
+                        try await Task.sleep(nanoseconds: 1_000_000_000)
+                        run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+                        nativeUploadRun = run
+                        nativeUploadStatus = "Uploading eligible queue • batch \(batchOrdinal) of \(nativePublicationBatchCount) • \(totalProcessed + run.processed) of \(initialEligibleCount) processed • \(totalLive + run.live) website live • \(totalFailed + run.failed) failed."
+                    }
+                    continuation.record(run.items)
+                    totalProcessed += run.processed
+                    totalLive += run.live
+                    totalFailed += run.failed
+                    totalCatalogPending += run.items.lazy.filter {
+                        $0.status == "verified" && ["pending", "local"].contains($0.catalogState)
+                    }.count
+                    totalCatalogFailed += run.items.lazy.filter {
+                        $0.status == "verified" && $0.catalogState == "failed"
+                    }.count
+                    if run.status == "cancelled" { break }
                 }
-                attemptedIDs.formUnion(
-                    run.items.lazy.filter {
-                        ["verified", "live", "failed", "skipped"].contains($0.status)
-                    }.map(\.assetID)
+                guard continueThroughEligibleQueue,
+                      !nativePublicationCancellationRequested else {
+                    break
+                }
+                let nextPlan = try await deliveryService.nativeUploadPlan(
+                    fixtureID: selectedFixtureID,
+                    offset: continuation.nextPlanOffset,
+                    limit: 200,
+                    order: queueOrder
                 )
-                totalProcessed += run.processed
-                totalLive += run.live
-                totalFailed += run.failed
-                totalCatalogPending += run.items.lazy.filter {
-                    $0.status == "verified" && ["pending", "local"].contains($0.catalogState)
-                }.count
-                totalCatalogFailed += run.items.lazy.filter {
-                    $0.status == "verified" && $0.catalogState == "failed"
-                }.count
-                successfulIDs.formUnion(
-                    run.items.lazy.filter { ["verified", "live"].contains($0.status) }.map(\.assetID)
+                let nextIDs = continuation.nextAssetIDs(in: nextPlan.items)
+                guard !nextIDs.isEmpty else { break }
+                windowIDs = nextIDs
+                nativePublicationBatchCount = max(
+                    nativePublicationBatchCount,
+                    batchOrdinal + NativeUploadQueueContinuation.batchCount(for: nextIDs.count)
                 )
-                failedIDs.formUnion(
-                    run.items.lazy.filter { $0.status == "failed" }.map(\.assetID)
-                )
-                if run.status == "cancelled" { break }
+                nativeUploadStatus = "Continuing automatically with the next \(nextIDs.count.formatted()) eligible asset\(nextIDs.count == 1 ? "" : "s") • \(continuation.failedIDs.count) failed and deferred."
             }
-            let skipped = nativePublicationCancellationRequested ? 0 : max(0, ids.count - totalRequested)
+            let skipped = nativePublicationCancellationRequested
+                ? 0
+                : max(0, totalScheduled - totalRequested)
             let checksumVerified = totalLive + totalCatalogPending + totalCatalogFailed
             let completion = "Uploaded and checksum-verified \(checksumVerified) asset\(checksumVerified == 1 ? "" : "s"); \(totalLive) live on the public site."
                 + (totalCatalogPending > 0
@@ -8159,27 +8188,33 @@ final class BackstageViewModel: ObservableObject {
                 + (totalFailed > 0
                     ? " \(totalFailed) upload\(totalFailed == 1 ? "" : "s") failed and remain independently retryable."
                     : "")
-            await preserveNativeUploadTray(
-                afterAttempting: attemptedIDs,
-                successfulIDs: successfulIDs,
-                failedIDs: failedIDs
-            )
+            if continueThroughEligibleQueue {
+                try await refreshNativeUploadPlanAfterContinuousRun(order: queueOrder)
+            } else {
+                await preserveNativeUploadTray(
+                    afterAttempting: continuation.attemptedIDs,
+                    successfulIDs: continuation.successfulIDs,
+                    failedIDs: continuation.failedIDs
+                )
+            }
             nativeUploadStatus = (nativePublicationCancellationRequested
-                ? "Stopped safely after \(totalProcessed) of \(ids.count); completed uploads remain verified and all unstarted items remain in the tray. "
+                ? "Stopped safely after \(totalProcessed) of \(totalScheduled); completed uploads remain verified and all unstarted items remain eligible. "
                 : completion)
                 + (skipped > 0 ? " \(skipped) changed eligibility before publication and were skipped safely." : "")
                 + (nativePublicationCancellationRequested
                     ? " Retry resumes from the remaining independently eligible items."
-                    : failedIDs.isEmpty
-                    ? " This batch is complete; load the next 200 when ready."
-                    : " Failed items remain in this tray for retry.")
+                    : continuation.failedIDs.isEmpty
+                    ? " The eligible upload queue is complete."
+                    : " Failed items remain independently retryable; they did not stop the rest of the queue.")
                 + (nativePublicationCancellationRequested ? "" : " Give Back completed for approved metadata.")
         } catch {
-            if !attemptedIDs.isEmpty {
+            if continueThroughEligibleQueue {
+                try? await refreshNativeUploadPlanAfterContinuousRun(order: queueOrder)
+            } else if !continuation.attemptedIDs.isEmpty {
                 await preserveNativeUploadTray(
-                    afterAttempting: attemptedIDs,
-                    successfulIDs: successfulIDs,
-                    failedIDs: failedIDs
+                    afterAttempting: continuation.attemptedIDs,
+                    successfulIDs: continuation.successfulIDs,
+                    failedIDs: continuation.failedIDs
                 )
             }
             nativeUploadStatus = (totalProcessed > 0
@@ -8187,6 +8222,21 @@ final class BackstageViewModel: ObservableObject {
                 : "")
                 + userFacingMessage(for: error)
         }
+    }
+
+    /// Reloads the authoritative first window after a continuous run so failed,
+    /// cancelled, or newly ineligible rows remain visible without stale cards.
+    private func refreshNativeUploadPlanAfterContinuousRun(
+        order: NativeUploadPlanOrder
+    ) async throws {
+        let plan = try await deliveryService.nativeUploadPlan(
+            fixtureID: selectedFixtureID,
+            limit: 200,
+            order: order
+        )
+        nativeUploadPlan = plan
+        await hydrateCurrentImageByteCounts(for: plan.items.map(\.id))
+        selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
     }
 
     func cancelNativePublication() async {

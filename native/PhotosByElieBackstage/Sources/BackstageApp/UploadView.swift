@@ -59,11 +59,15 @@ struct UploadView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Upload these \(plan.items.count.formatted())…") {
+                        Button(
+                            plan.needsUploadCount > plan.items.count
+                                ? "Upload all \(plan.needsUploadCount.formatted())…"
+                                : "Upload these \(plan.items.count.formatted())…"
+                        ) {
                             confirmingVisiblePublication = true
                         }
                         .disabled(!model.canStartCloudWorkflow || plan.items.isEmpty)
-                        .backstageHelp("Review the confirmation for uploading every eligible asset currently shown and preparing its catalog entry.")
+                        .backstageHelp("Review the confirmation for continuously uploading every eligible asset. Failed items remain independently retryable without blocking later windows.")
                     }
                 }
                 if plan.items.isEmpty {
@@ -72,7 +76,7 @@ struct UploadView: View {
                         systemImage: plan.needsUploadCount > 0 ? "tray" : "checkmark.circle",
                         description: Text(
                             plan.needsUploadCount > 0
-                                ? "\(plan.needsUploadCount) eligible item\(plan.needsUploadCount == 1 ? "" : "s") remain. Load the next batch of up to 200 when ready."
+                                ? "\(plan.needsUploadCount) eligible item\(plan.needsUploadCount == 1 ? "" : "s") remain. Refresh Uploads to retry any independently failed items."
                                 : plan.needsReviewCount > 0
                                 ? "\(plan.needsReviewCount) picked item\(plan.needsReviewCount == 1 ? "" : "s") still need Review approval."
                                 : "This fixture has no approved upload work waiting."
@@ -357,17 +361,17 @@ struct UploadView: View {
             Text("This uploads the media and prepares its catalog entries. The assets are not called Live until Deploy & verify website completes with an exact checksum match.")
         }
         .confirmationDialog(
-            "Upload and prepare the \(model.nativeUploadPlan?.items.count ?? 0) shown assets?",
+            "Upload and prepare all \(model.nativeUploadPlan?.needsUploadCount ?? 0) eligible assets?",
             isPresented: $confirmingVisiblePublication
         ) {
-            Button("Upload these \(model.nativeUploadPlan?.items.count ?? 0) assets") {
+            Button("Upload all \(model.nativeUploadPlan?.needsUploadCount ?? 0) assets") {
                 Task { await model.publishVisibleNativeWindow() }
             }
-            .backstageHelp("Confirm sequential upload and catalog preparation for every asset remaining in the visible tray.")
+            .backstageHelp("Confirm continuous upload and catalog preparation across every eligible queue window.")
             Button("Cancel", role: .cancel) {}
                 .backstageHelp("Close this confirmation without uploading the visible tray.")
         } message: {
-            Text("Backstage will upload exactly the assets remaining in this tray, in sequential batches of up to 50, and prepare their catalog entries. Successful rows leave the tray; failures remain for retry. Website deployment remains a separate verified step.")
+            Text("Backstage will continue through the complete eligible queue in sequential batches of up to 50. A failed item keeps its error and receipt for retry while later photos continue automatically. Website deployment remains a separate verified step.")
         }
         .confirmationDialog(
             "Deploy the prepared catalog to the public website?",

@@ -198,8 +198,10 @@ struct UploadView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Button("Load receipt audit") { Task { await model.loadDeliveryPlan() } }
+                            .disabled(model.isRunningDelivery)
                             .backstageHelp("Load legacy fixture delivery receipts for inspection and recovery planning.")
                         Button("Queue health") { Task { await model.loadUploadHealth() } }
+                            .disabled(model.isRunningDelivery)
                             .backstageHelp("Inspect legacy upload coverage, queue eligibility, and partial delivery health.")
                         Button("Retry legacy failures") { Task { await model.retryDeliveryFailures() } }
                             .disabled(model.isRunningDelivery || model.deliveryFailedIDs.isEmpty)
@@ -219,6 +221,12 @@ struct UploadView: View {
                         Button("Preview adoption") {
                             Task { await model.previewUploadRunAdoption() }
                         }
+                        .disabled(
+                            model.isRunningDelivery
+                                || model.uploadRunID
+                                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                                    .isEmpty
+                        )
                         .backstageHelp("Verify the entered legacy Upload Bridge run and preview exactly which items could be adopted.")
                         Button("Adopt verified run…") { confirmingAdoption = true }
                             .disabled(
@@ -346,6 +354,7 @@ struct UploadView: View {
         _ item: NativeUploadPlanItem,
         direction: OwnerSelectionDirection = .next
     ) {
+        model.nativeUploadStatus = "Preparing the selected Upload photo for Quick Look…"
         let presentationID = quickLook.beginPresentation()
         Task {
             guard let url = await model.prepareNativeUploadQuickLookURL(for: item) else {
@@ -417,6 +426,7 @@ struct UploadView: View {
                     return true
                 }
             )
+            model.nativeUploadStatus = "Quick Look opened for the selected Upload photo."
         }
     }
 

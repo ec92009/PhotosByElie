@@ -408,6 +408,72 @@ struct BackstageFixtureSelectionTests {
         #expect(!model.canRunAIProposalPass)
     }
 
+    @Test("Every delayed Backstage operation family keeps a handler-level duplicate guard")
+    @MainActor
+    func delayedOperationFamiliesRejectDuplicateStarts() async {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+
+        model.authenticationStatus = "authentication sentinel"
+        model.isAuthenticating = true
+        await model.bootstrapAuthentication()
+        #expect(model.authenticationStatus == "authentication sentinel")
+        model.isAuthenticating = false
+
+        model.photoStatus = "photos sentinel"
+        model.isLoadingPhotos = true
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: ["asset-a"],
+            selectedIDs: ["asset-a"],
+            anchorID: "asset-a",
+            focusedID: "asset-a"
+        )
+        await model.exportSelected(to: FileManager.default.temporaryDirectory)
+        #expect(model.photoStatus == "photos sentinel")
+        #expect(model.isPhotoLibraryOperationInProgress)
+        model.isLoadingPhotos = false
+
+        model.fixtureName = "Renamed"
+        model.fixtureStatus = "fixture sentinel"
+        model.isRunningFixture = true
+        await model.renameFixture()
+        #expect(model.fixtureStatus == "Finish the current fixture operation first.")
+        model.isRunningFixture = false
+
+        model.personEmail = "owner@example.test"
+        model.accessStatus = "access sentinel"
+        model.isRunningAccess = true
+        await model.savePerson()
+        #expect(model.accessStatus == "Finish the current access operation first.")
+        model.isRunningAccess = false
+
+        model.metadataAssetID = "asset-a"
+        model.metadataTitle = "Title"
+        model.metadataReviewStatus = "metadata sentinel"
+        model.isRunningMetadata = true
+        await model.updatePhotoMetadata()
+        #expect(model.metadataReviewStatus == "metadata sentinel")
+        #expect(model.isMetadataReviewOperationInProgress)
+        model.isRunningMetadata = false
+
+        model.deliveryStatus = "delivery sentinel"
+        model.isRunningDelivery = true
+        await model.loadDeliverables()
+        #expect(model.deliveryStatus == "delivery sentinel")
+        model.isRunningDelivery = false
+    }
+
     @Test("Compact fixture picker renders without changing data", arguments: [230, 320], [false, true])
     @MainActor
     func compactFixturePicker(width: Int, dark: Bool) throws {

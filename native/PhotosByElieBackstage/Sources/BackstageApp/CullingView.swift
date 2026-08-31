@@ -22,6 +22,7 @@ private enum CullingQuickLookPresenter {
             model.cullingStatus = "Quick Look opens one selected Culling item at a time."
             return
         }
+        model.cullingStatus = "Preparing the selected Gallery photo for Quick Look…"
         let presentationID = coordinator.beginPresentation()
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
@@ -146,6 +147,7 @@ private enum CullingQuickLookPresenter {
                     return true
                 }
             )
+            model.cullingStatus = "Quick Look opened for the selected Gallery photo."
         }
     }
 
@@ -1021,7 +1023,7 @@ struct CullingView: View {
                 .foregroundStyle(.secondary)
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
-                .disabled(model.cullingHistory.isEmpty)
+                .disabled(model.cullingHistory.isEmpty || model.isApplyingCullingDecision)
                 .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()
@@ -1134,7 +1136,10 @@ struct CullingView: View {
                     guard let directory = chooseExportDirectory() else { return }
                     Task { await model.exportSelected(to: directory) }
                 }
-                .disabled(model.cullingSelection.selectedIDs.isEmpty)
+                .disabled(
+                    model.cullingSelection.selectedIDs.isEmpty
+                        || model.isPhotoLibraryOperationInProgress
+                )
                 .backstageHelp("Choose a destination for verified original resources from the explicit Gallery selection; this does not upload or publish them.")
             }
             .disabled(model.cullingSelection.selectedIDs.isEmpty)
@@ -1148,6 +1153,7 @@ struct CullingView: View {
             Button("Allow Photos") {
                 Task { await model.authorizeAndLoadPhotos() }
             }
+            .disabled(model.isPhotoLibraryOperationInProgress)
             .backstageHelp("Request Photos permission for Backstage and load the available local library previews.")
             Button {
                 Task {
@@ -1167,7 +1173,7 @@ struct CullingView: View {
                     Text("Refresh & discover")
                 }
             }
-            .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .disabled(model.isPhotoLibraryOperationInProgress)
             .accessibilityLabel(
                 model.isLoadingPhotos || model.isReconcilingPhotosIndex
                     ? "Discovering recent Photos"
@@ -1185,7 +1191,7 @@ struct CullingView: View {
                     Text("Full library audit")
                 }
             }
-            .disabled(model.isLoadingPhotos || model.isReconcilingPhotosIndex)
+            .disabled(model.isPhotoLibraryOperationInProgress)
             .backstageHelp("Explicitly audit the complete Photos library and reconcile unavailable assets. This maintenance pass can take several minutes and does not change existing decisions.")
         }
     }

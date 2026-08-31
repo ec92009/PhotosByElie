@@ -219,6 +219,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var authenticationStatus = "Checking this Mac's Keychain session…"
     @Published var isAuthenticating = false
     @Published private(set) var isSettingUpThisMac = false
+    @Published private(set) var isCancellingMacSetup = false
     @Published private(set) var enrolledOwnerDevices: [OwnerDevice] = []
     @Published private(set) var ownerDeviceManagementStatus = "Enrolled Macs have not been refreshed."
     @Published private(set) var isRefreshingOwnerDevices = false
@@ -228,6 +229,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var selectedPhotoIDs: Set<String> = []
     @Published var photoPreview: PhotoPreview?
     @Published var photoStatus = "Photo library not loaded."
+    @Published private(set) var isAuthorizingPhotos = false
     @Published var isLoadingPhotos = false
     @Published var isReconcilingPhotosIndex = false
     @Published var metadataReport: MetadataGiveBackReport?
@@ -369,12 +371,15 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewHistory: [ReviewHistoryEntry] = []
     @Published var aiProposalStatus = "AI runs only for explicitly requested photos."
     @Published var isRunningAIPass = false
+    @Published private(set) var isCancellingAIPass = false
+    @Published private(set) var isLoadingAIProposals = false
     @Published var metadataAssetID = ""
     @Published var metadataTitle = ""
     @Published var metadataCaption = ""
     @Published var metadataKeywords = ""
     @Published var metadataBlacklist = ""
     @Published var metadataReviewStatus = "Metadata changes use audited Max actions."
+    @Published private(set) var isRunningMetadataReview = false
     @Published var metadataHistory: [MetadataHistoryEntry] = []
     @Published var metadataModelCatalog: [MetadataModelLadderRung] = MetadataModelLadderRung.catalog
     @Published var metadataModelLadder: [MetadataModelLadderRung] = MetadataModelLadderRung.defaultLadder
@@ -545,7 +550,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canRunAIProposalPass: Bool {
-        guard !isAIPassActive, !isUpdateOperationInProgress else { return false }
+        guard !isAIPassActive,
+              !isCancellingAIPass,
+              !isUpdateOperationInProgress else { return false }
         return (fixtureAIStatus?.requested ?? 0) > 0
     }
 
@@ -564,6 +571,14 @@ final class BackstageViewModel: ObservableObject {
 
     var canPerformBackstageUpdateActions: Bool {
         !isAIPassActive
+    }
+
+    var isPhotoLibraryOperationInProgress: Bool {
+        isAuthorizingPhotos || isLoadingPhotos || isReconcilingPhotosIndex
+    }
+
+    var isMetadataReviewOperationInProgress: Bool {
+        isRunningMetadataReview || isRunningMetadata
     }
 
     var hasReviewAIDraft: Bool {
@@ -1318,10 +1333,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func bootstrapAuthentication() async {
+        guard !isAuthenticating else { return }
+        isAuthenticating = true
+        authenticationStatus = "Checking this Mac's Keychain session…"
+        defer { isAuthenticating = false }
         await reconcileInterruptedOwnerWorkflows()
         photoAccess = photoLibrary.authorization()
-        isAuthenticating = true
-        defer { isAuthenticating = false }
         authentication = await ensuredAuthentication()
         switch authentication.phase {
         case .authenticated:
@@ -1385,14 +1402,24 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func authorizePhotosAccess() async {
+        guard !isAuthorizingPhotos else { return }
+        isAuthorizingPhotos = true
+        photoStatus = photoLibrary.authorization() == .notDetermined
+            ? "Requesting Photos access…"
+            : "Refreshing Photos access…"
+        defer { isAuthorizingPhotos = false }
         if photoLibrary.authorization() == .notDetermined {
             photoAccess = await photoLibrary.requestAuthorization()
         } else {
             refreshPhotosAccess()
         }
+        photoStatus = [.authorized, .limited].contains(photoAccess)
+            ? "Photos access is ready."
+            : "Photos access is unavailable. Allow Photos in System Settings, then retry."
     }
 
     func enroll() async {
+        guard !isAuthenticating else { return }
         let code = enrollmentCode.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !code.isEmpty else {
             authenticationStatus = "Paste the one-time enrollment code from Owner."
@@ -1414,18 +1441,20 @@ final class BackstageViewModel: ObservableObject {
 
     func setUpThisMac() {
         guard nativeEnrollmentTask == nil else { return }
+        isSettingUpThisMac = true
+        isAuthenticating = true
+        isCancellingMacSetup = false
+        authenticationStatus = "Preparing a private, five-minute enrollment handoff…"
         nativeEnrollmentTask = Task { [weak self] in
             await self?.runNativeEnrollment()
         }
     }
 
     private func runNativeEnrollment() async {
-        isSettingUpThisMac = true
-        isAuthenticating = true
-        authenticationStatus = "Preparing a private, five-minute enrollment handoff…"
         defer {
             isSettingUpThisMac = false
             isAuthenticating = false
+            isCancellingMacSetup = false
             nativeEnrollmentTask = nil
             nativeEnrollmentHandoff = nil
         }
@@ -1469,6 +1498,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func cancelMacSetup() {
+        guard isSettingUpThisMac, !isCancellingMacSetup else { return }
+        isCancellingMacSetup = true
+        authenticationStatus = "Cancelling Mac setup…"
         nativeEnrollmentTask?.cancel()
         if let nativeEnrollmentHandoff {
             Task { [authenticationService] in
@@ -1478,12 +1510,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshOwnerDevices() async {
+        guard !isRefreshingOwnerDevices else { return }
         guard authentication.phase == .authenticated else {
             enrolledOwnerDevices = []
             ownerDeviceManagementStatus = "Enroll this Mac before managing device credentials."
             return
         }
         isRefreshingOwnerDevices = true
+        ownerDeviceManagementStatus = "Refreshing enrolled Macs…"
         defer { isRefreshingOwnerDevices = false }
         do {
             enrolledOwnerDevices = try await api.listOwnerDevices()
@@ -1510,13 +1544,15 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func confirmOwnerDeviceRevocation() {
-        guard let device = pendingOwnerDeviceRevocation else { return }
+        guard let device = pendingOwnerDeviceRevocation,
+              !isRefreshingOwnerDevices else { return }
         pendingOwnerDeviceRevocation = nil
+        isRefreshingOwnerDevices = true
+        ownerDeviceManagementStatus = "Revoking \(device.name)…"
         Task { await revokeOwnerDevice(device) }
     }
 
     private func revokeOwnerDevice(_ device: OwnerDevice) async {
-        isRefreshingOwnerDevices = true
         defer { isRefreshingOwnerDevices = false }
         do {
             _ = try await api.revokeOwnerDevice(id: device.id)
@@ -1537,12 +1573,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func signOut() async {
+        guard !isAuthenticating else { return }
+        isAuthenticating = true
+        authenticationStatus = "Signing out and removing this Mac's local Owner session…"
+        defer { isAuthenticating = false }
         cancelMacSetup()
         if pbeOwnerFixtureSession != nil {
             await endPBEOwnerSession(reason: "PBE Owner closed before sign-out.")
         }
-        isAuthenticating = true
-        defer { isAuthenticating = false }
         do {
             authentication = try await authenticationService.signOut()
             actions = []
@@ -1559,7 +1597,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshActions() async {
+        guard !isRefreshing else { return }
         isRefreshing = true
+        activityStatus = "Refreshing audited cloud activity…"
         defer { isRefreshing = false }
         guard await prepareAuthenticatedOperation() else { return }
         do {
@@ -1630,12 +1670,16 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func authorizeAndLoadPhotos() async {
+        guard !isPhotoLibraryOperationInProgress else { return }
         await authorizePhotosAccess()
+        guard [.authorized, .limited].contains(photoAccess) else { return }
         await refreshPhotos()
     }
 
-    func refreshPhotos() async {
-        guard !isLoadingPhotos else { return }
+    func refreshPhotos(allowDuringReconciliation: Bool = false) async {
+        guard !isLoadingPhotos,
+              !isAuthorizingPhotos,
+              allowDuringReconciliation || !isReconcilingPhotosIndex else { return }
         photoAccess = photoLibrary.authorization()
         guard [.authorized, .limited].contains(photoAccess) else {
             photoStatus = "Photos access is required. Choose Allow Photos, then retry Refresh previews."
@@ -1653,13 +1697,13 @@ final class BackstageViewModel: ObservableObject {
 
     func reconcilePhotosLibraryIndex() async {
         guard !isReconcilingPhotosIndex else { return }
-        guard await prepareAuthenticatedOperation() else { return }
         isReconcilingPhotosIndex = true
         photoStatus = "Reconciling the complete Photos library with Owner…"
         defer { isReconcilingPhotosIndex = false }
+        guard await prepareAuthenticatedOperation() else { return }
         do {
             let report = try await fixtureService.reconcilePhotosIndex(fullLibrary: true)
-            await refreshPhotos()
+            await refreshPhotos(allowDuringReconciliation: true)
             if hasCurrentCullingFixture, cullingPool == nil {
                 await loadFixtureCullingWindow()
             }
@@ -1705,10 +1749,10 @@ final class BackstageViewModel: ObservableObject {
     func reconcileRecentPhotosIndex() async {
         guard !isReconcilingPhotosIndex else { return }
         guard [.authorized, .limited].contains(photoAccess) else { return }
-        guard await prepareAuthenticatedOperation() else { return }
         isReconcilingPhotosIndex = true
         photoStatus = "Synchronizing recent Photos with the Owner index…"
         defer { isReconcilingPhotosIndex = false }
+        guard await prepareAuthenticatedOperation() else { return }
         do {
             let report = try await fixtureService.reconcilePhotosIndex()
             photoStatus = [
@@ -2339,12 +2383,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func exportSelected(to directory: URL) async {
+        guard !isPhotoLibraryOperationInProgress else { return }
         let ids = selectedCullingAssetIDs
         guard !ids.isEmpty else {
             photoStatus = "Select one or more items to export."
             return
         }
         isLoadingPhotos = true
+        photoStatus = "Exporting \(ids.count.formatted()) selected original\(ids.count == 1 ? "" : "s")…"
         defer { isLoadingPhotos = false }
         var receipts: [PhotoExportReceipt] = []
         var failures: [String] = []
@@ -3427,7 +3473,7 @@ final class BackstageViewModel: ObservableObject {
             fixtureStatus = "PBE Owner is opening with the captured current fixture; refresh is disabled."
             return
         }
-        guard !isLoadingFixtureTree else { return }
+        guard !isLoadingFixtureTree, !isRunningFixture else { return }
         isLoadingFixtureTree = true
         isRunningFixture = true
         fixtureSelectionCoordinator.beginLoading()
@@ -3572,6 +3618,7 @@ final class BackstageViewModel: ObservableObject {
             fixturePolicyStatus = ""
             return
         }
+        guard !isLoadingFixturePolicy else { return }
         isLoadingFixturePolicy = true
         fixturePolicyStatus = "Loading fixture contract…"
         defer { isLoadingFixturePolicy = false }
@@ -3602,6 +3649,7 @@ final class BackstageViewModel: ObservableObject {
 
     func saveFixtureConfiguration() async {
         guard !selectedFixtureID.isEmpty else { return }
+        guard !isLoadingFixturePolicy else { return }
         isLoadingFixturePolicy = true
         fixturePolicyStatus = "Saving revisioned fixture contract…"
         defer { isLoadingFixturePolicy = false }
@@ -3720,7 +3768,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadAccess() async {
+        guard !isRunningAccess else { return }
         isRunningAccess = true
+        accessStatus = "Loading people and access groups…"
         defer { isRunningAccess = false }
         do {
             accessState = try await accessService.load()
@@ -4341,6 +4391,10 @@ final class BackstageViewModel: ObservableObject {
         _ decision: VisualRepairDecision,
         for assetID: String
     ) async {
+        guard !isRunningReview else {
+            visualRepairStatus = "Finish the current Review action first."
+            return
+        }
         guard isREReviewScope,
               let proposal = reviewVisualProposals[assetID] else {
             visualRepairStatus = "No RE visual repair draft is available for this item."
@@ -4350,6 +4404,9 @@ final class BackstageViewModel: ObservableObject {
             visualRepairStatus = "Regeneration is unavailable until a privacy-reviewed visual generator is configured."
             return
         }
+        isRunningReview = true
+        visualRepairStatus = "Recording visual draft \(decision.rawValue)…"
+        defer { isRunningReview = false }
         do {
             let updated = try await visualRepairService.decide(
                 decision,
@@ -5614,6 +5671,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func cancelAIProposalPass() async {
+        guard !isCancellingAIPass else { return }
+        guard isAIPassActive else {
+            aiProposalStatus = "No AI proposal pass is currently active."
+            return
+        }
+        isCancellingAIPass = true
+        aiProposalStatus = "Requesting AI pass cancellation…"
+        defer { isCancellingAIPass = false }
         do {
             fixtureAIStatus = try await fixtureService.cancelAIPass()
             if fixtureAIStatus?.active == true {
@@ -5628,6 +5693,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadAIProposals(replacingConflicts: Bool = false) async {
+        guard !isLoadingAIProposals else { return }
+        isLoadingAIProposals = true
+        aiProposalStatus = replacingConflicts
+            ? "Replacing conflicting AI proposal drafts…"
+            : "Loading completed AI proposal drafts…"
+        defer { isLoadingAIProposals = false }
         preserveCurrentReviewDraft()
         do {
             let proposals = try await fixtureService.aiProposals(includeLoaded: false)
@@ -6920,11 +6991,15 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func updatePhotoMetadata() async {
+        guard !isMetadataReviewOperationInProgress else { return }
         let id = metadataAssetID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !id.isEmpty, !metadataTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             metadataReviewStatus = "Choose one asset and enter a non-empty title."
             return
         }
+        isRunningMetadataReview = true
+        metadataReviewStatus = "Saving title, caption, and keywords…"
+        defer { isRunningMetadataReview = false }
         do {
             let change = try await metadataReviewService.updateDetailed(
                 assetID: id,
@@ -6945,6 +7020,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func saveMetadataBlacklist() async {
+        guard !isMetadataReviewOperationInProgress else { return }
+        isRunningMetadataReview = true
+        metadataReviewStatus = "Replacing the keyword blacklist…"
+        defer { isRunningMetadataReview = false }
         do {
             let terms = metadataBlacklist.components(separatedBy: ",")
             let change = try await metadataReviewService.replaceBlacklistDetailed(terms)
@@ -6962,10 +7041,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func undoLastMetadataChange() async {
+        guard !isMetadataReviewOperationInProgress else { return }
         guard let entry = metadataHistory.last else {
             metadataReviewStatus = "Nothing to undo in this Backstage session."
             return
         }
+        isRunningMetadataReview = true
+        metadataReviewStatus = "Undoing \(entry.label)…"
+        defer { isRunningMetadataReview = false }
         do {
             switch entry.kind {
             case .edit(let change):
@@ -7008,6 +7091,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func saveMetadataModelLadder() async {
+        guard !isSavingMetadataModelLadder else { return }
         if let validation = metadataModelLadderValidation {
             metadataModelLadderStatus = validation
             return
@@ -7053,6 +7137,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadLifecycle(successStatus: String? = nil) async {
+        guard !isRunningLifecycle else { return }
         isRunningLifecycle = true
         lifecycleStatus = "Loading the private lifecycle ledger…"
         defer { isRunningLifecycle = false }
@@ -7320,23 +7405,30 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadDeliveryPlan() async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty else {
             deliveryStatus = "Choose a fixture first."
             return
         }
         isRunningDelivery = true
+        deliveryStatus = "Loading the fixture delivery receipt audit…"
         defer { isRunningDelivery = false }
         do {
-            let plan = try await deliveryService.plan(fixtureID: selectedFixtureID)
-            deliveryPlan = plan
-            selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
-            deliveryStatus = "\(plan.completeCount) of \(plan.items.count) complete; \(plan.retryableIDs.count) approved items remain."
+            try await refreshDeliveryPlanWithinActiveOperation()
         } catch {
             deliveryStatus = userFacingMessage(for: error)
         }
     }
 
+    private func refreshDeliveryPlanWithinActiveOperation() async throws {
+        let plan = try await deliveryService.plan(fixtureID: selectedFixtureID)
+        deliveryPlan = plan
+        selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+        deliveryStatus = "\(plan.completeCount) of \(plan.items.count) complete; \(plan.retryableIDs.count) approved items remain."
+    }
+
     func loadNativeUploadPlan(order requestedOrder: NativeUploadPlanOrder? = nil) async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty else {
             nativeUploadPlan = nil
             nativeUploadStatus = "Choose a fixture to load its approved publication queue."
@@ -7651,11 +7743,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadUploadHealth() async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty else {
             uploadRecoveryStatus = "Choose a fixture first."
             return
         }
         isRunningDelivery = true
+        uploadRecoveryStatus = "Checking upload queue health…"
         defer { isRunningDelivery = false }
         do {
             uploadHealth = try await deliveryService.uploadHealth(fixtureID: selectedFixtureID)
@@ -7676,11 +7770,15 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runUploadAdoption(commit: Bool) async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty, !uploadRunID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             uploadRecoveryStatus = "Choose a fixture and enter an Upload Bridge run ID."
             return
         }
         isRunningDelivery = true
+        uploadRecoveryStatus = commit
+            ? "Adopting the verified legacy upload run…"
+            : "Previewing the legacy upload run…"
         defer { isRunningDelivery = false }
         do {
             let plan = try await (commit
@@ -7698,7 +7796,7 @@ final class BackstageViewModel: ObservableObject {
             uploadRecoveryStatus = commit
                 ? "Adopted \(plan.eligibleIDs.count) exact verified item\(plan.eligibleIDs.count == 1 ? "" : "s"); Apple Photos give-back remains visible in the delivery plan."
                 : "\(plan.eligibleIDs.count) eligible; \(plan.blocked.count) blocked. No state changed."
-            if commit { await loadDeliveryPlan() }
+            if commit { try await refreshDeliveryPlanWithinActiveOperation() }
         } catch {
             uploadRecoveryStatus = userFacingMessage(for: error)
         }
@@ -7725,6 +7823,7 @@ final class BackstageViewModel: ObservableObject {
         guard !isSyncingPhotos else { return }
         guard authentication.phase == .authenticated else { return }
         isSyncingPhotos = true
+        photosSyncStatus = "Starting a bounded Apple Photos synchronization pass…"
         defer { isSyncingPhotos = false }
         do {
             let report = try await deliveryService.syncPhotos(limit: limit)
@@ -7880,6 +7979,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningNativePublication = true
         isCancellingNativePublication = false
         nativePublicationCancellationRequested = false
+        nativeUploadStatus = "Starting publication for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
         nativeUploadRun = nil
         nativePublicationBatchNumber = 0
         nativePublicationBatchCount = batches.count
@@ -8077,11 +8177,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runR2Reconciliation(commit: Bool) async {
-        guard !isRunningR2Reconciliation else { return }
+        guard !isRunningDelivery, !isRunningR2Reconciliation else { return }
         isRunningDelivery = true
         isRunningR2Reconciliation = true
         isCancellingR2Reconciliation = false
         r2ReconciliationCancellationRequested = false
+        r2ReconciliationStatus = commit
+            ? "Starting the guarded R2 reconciliation…"
+            : "Starting a read-only R2 reconciliation preview…"
         defer {
             isRunningDelivery = false
             isRunningR2Reconciliation = false
@@ -8136,11 +8239,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func deliver(ids: [String]) async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             deliveryStatus = "Choose a fixture and one or more approved items."
             return
         }
         isRunningDelivery = true
+        deliveryStatus = "Starting delivery for \(ids.count.formatted()) approved item\(ids.count == 1 ? "" : "s")…"
         deliveryCompleted = 0
         deliveryTotal = ids.count
         deliveryFailedIDs = []
@@ -8172,11 +8277,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadDeliverables() async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty else {
             deliveryStatus = "Choose a fixture first."
             return
         }
         isRunningDelivery = true
+        deliveryStatus = "Loading delivery and share-link records…"
         defer { isRunningDelivery = false }
         do {
             deliverables = try await deliveryService.deliverables(fixtureID: selectedFixtureID)
@@ -8187,12 +8294,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func linkDeliverable() async {
+        guard !isRunningDelivery else { return }
         let link = deliverableShareLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !selectedFixtureID.isEmpty, URL(string: link) != nil else {
             deliveryStatus = "Choose a fixture and enter a complete share URL."
             return
         }
         isRunningDelivery = true
+        deliveryStatus = "Recording the ready \(deliverableKind.uppercased()) share link…"
         defer { isRunningDelivery = false }
         do {
             deliverables = try await deliveryService.linkDeliverable(
@@ -8208,10 +8317,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadPublicationPlan() async {
+        guard !isRunningDelivery else { return }
         guard !selectedFixtureID.isEmpty else {
             publicationStatus = "Choose a public fixture first."
             return
         }
+        isRunningDelivery = true
+        publicationStatus = "Building a read-only publication plan…"
+        defer { isRunningDelivery = false }
         do {
             let plan = try await deliveryService.publicationPlan(
                 fixtureID: selectedFixtureID,
@@ -8225,11 +8338,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func publishEligible() async {
+        guard !isRunningDelivery else { return }
         guard let publicationPlan, !publicationPlan.eligibleIDs.isEmpty else {
             publicationStatus = "Run the publication preview and select eligible assets first."
             return
         }
         isRunningDelivery = true
+        publicationStatus = "Starting publication for \(publicationPlan.eligibleIDs.count.formatted()) eligible item\(publicationPlan.eligibleIDs.count == 1 ? "" : "s")…"
         defer { isRunningDelivery = false }
         do {
             let report = try await deliveryService.publish(
@@ -8245,7 +8360,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func fixtureOperation(_ operation: () async throws -> Void) async {
+        guard !isRunningFixture else {
+            fixtureStatus = "Finish the current fixture operation first."
+            return
+        }
         isRunningFixture = true
+        fixtureStatus = "Working on the selected fixture…"
         defer { isRunningFixture = false }
         guard await prepareAuthenticatedOperation() else {
             fixtureStatus = authenticationOperationRecoveryMessage
@@ -8263,7 +8383,12 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func accessOperation(_ operation: () async throws -> Void) async {
+        guard !isRunningAccess else {
+            accessStatus = "Finish the current access operation first."
+            return
+        }
         isRunningAccess = true
+        accessStatus = "Saving access changes…"
         defer { isRunningAccess = false }
         guard await prepareAuthenticatedOperation() else {
             accessStatus = authenticationOperationRecoveryMessage
@@ -8396,6 +8521,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runMetadata(commit: Bool) async {
+        guard !isMetadataReviewOperationInProgress else { return }
         guard fixtureScopedActionsAllowed else {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
             return
@@ -8411,6 +8537,9 @@ final class BackstageViewModel: ObservableObject {
             metadataGiveBackPlannedAssetIDs = nil
         }
         isRunningMetadata = true
+        metadataStatus = commit
+            ? "Writing and verifying approved metadata in Apple Photos…"
+            : "Building a read-only Apple Photos metadata plan…"
         defer { isRunningMetadata = false }
         if commit, !(await preparePhotosMutation()) {
             metadataStatus = photosMutationReadinessMessage()

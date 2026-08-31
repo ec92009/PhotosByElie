@@ -21,6 +21,7 @@ private enum ReviewQuickLookPresenter {
             model.reviewStatus = "Quick Look opens one selected Review item at a time."
             return
         }
+        model.reviewStatus = "Preparing the selected Review photo for Quick Look…"
         let presentationID = coordinator.beginPresentation()
         Task { [weak model, weak coordinator] in
             guard let model, let coordinator else { return }
@@ -98,6 +99,7 @@ private enum ReviewQuickLookPresenter {
                     return true
                 }
             )
+            model.reviewStatus = "Quick Look opened for the selected Review photo."
         }
     }
 
@@ -263,6 +265,7 @@ struct ReviewView: View {
                             model.reviewWindowOffset = 0
                             Task { await model.loadFixtureReviewWindow() }
                         }
+                        .disabled(model.isRunningReview)
                         .backstageHelp("Run the current search across the complete Review queue and return to its first page.")
                         Button("Refresh") {
                             Task { await model.loadFixtureReviewWindow() }
@@ -303,6 +306,7 @@ struct ReviewView: View {
                         Button("Replace \(model.reviewProposalConflictIDs.count) conflicting draft\(model.reviewProposalConflictIDs.count == 1 ? "" : "s")") {
                             Task { await model.loadAIProposals(replacingConflicts: true) }
                         }
+                        .disabled(model.isLoadingAIProposals || model.isRunningReview)
                         .tint(.orange)
                         .backstageHelp("Replace the listed local conflicting drafts with the latest completed AI proposals.")
                     }
@@ -317,9 +321,10 @@ struct ReviewView: View {
                     .disabled(!model.canRunAIProposalPass)
                     .backstageHelp("Start the prepared AI proposal pass for assets currently requesting AI review.")
                     if model.fixtureAIStatus?.active == true {
-                        Button("Cancel") {
+                        Button(model.isCancellingAIPass ? "Cancelling…" : "Cancel") {
                             Task { await model.cancelAIProposalPass() }
                         }
+                        .disabled(model.isCancellingAIPass)
                         .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
                     }
                 }
@@ -982,11 +987,13 @@ private struct ReviewInspector: View {
                         Button("Approve") {
                             Task { await model.applyReviewAction(.approve) }
                         }
+                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("a", modifiers: [])
                         .backstageHelp("Approve the selected title and keywords and make the assets eligible for Uploads.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }
+                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("h", modifiers: [])
                         .backstageHelp("Hide the selected assets from this fixture without deleting their files.")
                         Button("Waste Basket") {
@@ -1001,6 +1008,7 @@ private struct ReviewInspector: View {
                         Button("Unpick") {
                             Task { await model.unpickReviewSelection() }
                         }
+                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("u", modifiers: [])
                         .backstageHelp("Clear the fixture pick and return the selected assets to Culling as Undecided.")
                         Button("Needs AI") {
@@ -1090,11 +1098,12 @@ private struct ReviewInspector: View {
                                     Button("Accept draft") {
                                         Task { await model.decideVisualRepair(.accept, for: item.id) }
                                     }
-                                    .disabled(!hasRenderedProposal)
+                                    .disabled(!hasRenderedProposal || model.isRunningReview)
                                     .backstageHelp("Record acceptance of this visual draft only; it will not replace the source or change title, keywords, delivery, or publication.")
                                     Button("Reject draft") {
                                         Task { await model.decideVisualRepair(.reject, for: item.id) }
                                     }
+                                    .disabled(model.isRunningReview)
                                     .backstageHelp("Reject and hide this derived visual reference while retaining its audit provenance.")
                                     Button("Regenerate unavailable") {}
                                         .disabled(true)

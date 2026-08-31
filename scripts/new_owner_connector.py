@@ -51,6 +51,7 @@ MAX_PREVIEW_BYTES = 250_000
 DEFAULT_LOCAL_STATUS_PORT = 8766
 ON_DEMAND_CONNECTOR_LOCK_NAME = ".owner-connector-on-demand.lock"
 ON_DEMAND_CONNECTOR_LOCK_WAIT_SECONDS = 15 * 60
+CLAIM_VISIBILITY_RETRY_DELAYS_SECONDS = (0.1, 0.25, 0.5, 1.0, 2.0)
 LOCAL_STATUS_PATH = "/photosbyelie/connector-status"
 LOCAL_SIDECAR_OPEN_PATH = "/photosbyelie/open-sidecar"
 LOCAL_SIDECAR_STATUS_PATH = "/photosbyelie/open-sidecar/status"
@@ -1162,6 +1163,37 @@ class WorkerClient:
         )
 
 
+def _complete_claimed_action(
+    client: WorkerClient,
+    action_id: str,
+    payload: dict,
+) -> dict:
+    """Complete after a claim even when the cloud ledger briefly reads stale.
+
+    The production Owner action store is eventually consistent. A successful
+    claim response can therefore be followed by a complete request that still
+    sees the older queued record. Retry only that exact visibility conflict;
+    every other transition error remains terminal.
+    """
+    for attempt in range(len(CLAIM_VISIBILITY_RETRY_DELAYS_SECONDS) + 1):
+        try:
+            return client.transition(action_id, "complete", payload)
+        except WorkerRequestError as error:
+            is_claim_visibility_race = (
+                error.status == 409
+                and error.code == "owner_action_not_claimed"
+            )
+            if not is_claim_visibility_race or attempt >= len(CLAIM_VISIBILITY_RETRY_DELAYS_SECONDS):
+                raise
+
+            current = client.action(action_id)
+            if current.get("state") == "completed":
+                return {"action": current}
+            if current.get("state") in {"failed", "cancelled"}:
+                raise
+            time.sleep(CLAIM_VISIBILITY_RETRY_DELAYS_SECONDS[attempt])
+
+
 def _load_local_modules(runtime_root: Path):
     scripts_root = (runtime_root / "scripts").resolve(strict=True)
     scripts_path = str(scripts_root)
@@ -2236,9 +2268,9 @@ def process_exact_action(
                 "outcome": "submitted",
             }
             _finish_action_timing(timing, timing_started, outcome="submitted")
-            completed = client.transition(
+            completed = _complete_claimed_action(
+                client,
                 action_id,
-                "complete",
                 {
                     "result": result,
                     "timing": {

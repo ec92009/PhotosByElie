@@ -7185,7 +7185,6 @@ final class BackstageViewModel: ObservableObject {
                 nativeUploadStatus = "\(plan.needsUploadCount) need upload • \(plan.approvedOnlyCount) approved • \(plan.fullResolutionUploadedCount) full-resolution uploaded • \(plan.publishingCount) publishing • \(plan.liveOnWebsiteCount) live • \(plan.needsReviewCount) not yet approved. Showing \(plan.items.count) \(plan.order.label)."
             }
         } catch {
-            nativeUploadPlan = nil
             nativeUploadStatus = userFacingMessage(for: error)
         }
     }

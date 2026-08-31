@@ -545,8 +545,25 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canRunAIProposalPass: Bool {
-        guard !isRunningAIPass else { return false }
+        guard !isAIPassActive, !isUpdateOperationInProgress else { return false }
         return (fixtureAIStatus?.requested ?? 0) > 0
+    }
+
+    var isAIPassActive: Bool {
+        isRunningAIPass || fixtureAIStatus?.active == true
+    }
+
+    var isUpdateOperationInProgress: Bool {
+        switch updateState {
+        case .checking, .downloading, .installing:
+            true
+        case .idle, .current, .updateAvailable, .verified, .installed, .failed:
+            false
+        }
+    }
+
+    var canPerformBackstageUpdateActions: Bool {
+        !isAIPassActive
     }
 
     var hasReviewAIDraft: Bool {
@@ -1209,6 +1226,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func checkForUpdates() async {
+        guard canPerformBackstageUpdateActions else { return }
         updateState = .checking
         do {
             let check = try await updateService.check(current: installedRelease)
@@ -1239,7 +1257,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var shouldAutomaticallyCheckForUpdates: Bool {
-        switch updateState {
+        guard canPerformBackstageUpdateActions else { return false }
+        return switch updateState {
         case .idle, .current, .updateAvailable, .failed:
             true
         case .checking, .downloading, .verified, .installing, .installed:
@@ -1248,6 +1267,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func downloadVerifiedUpdate() async {
+        guard canPerformBackstageUpdateActions else { return }
         guard case let .updateAvailable(manifest) = updateState else { return }
         updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)
         do {
@@ -1278,6 +1298,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func installVerifiedUpdate() async {
+        guard canPerformBackstageUpdateActions else { return }
         guard case let .verified(update) = updateState else { return }
         updateState = .installing(update.manifest)
         do {
@@ -5551,19 +5572,21 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func runAIProposalPass() async {
-        if isRunningAIPass {
-            await refreshAIStatus()
-            return
-        }
-        await refreshAIStatus()
-        guard (fixtureAIStatus?.requested ?? 0) > 0 else {
-            aiProposalStatus = "No requested AI work is waiting."
+        guard !isRunningAIPass else { return }
+        guard !isUpdateOperationInProgress else {
+            aiProposalStatus = "Finish the Backstage update before starting an AI pass."
             return
         }
         isRunningAIPass = true
         aiPassMonitoringDetached = false
         aiProposalStatus = "Starting or attaching to the requested AI pass…"
         defer { isRunningAIPass = false }
+
+        await refreshAIStatus()
+        guard (fixtureAIStatus?.requested ?? 0) > 0 else {
+            aiProposalStatus = "No requested AI work is waiting."
+            return
+        }
         do {
             fixtureAIStatus = try await fixtureService.startAIPass()
             repeat {

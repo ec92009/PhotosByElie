@@ -307,7 +307,11 @@ struct ReviewView: View {
                         .backstageHelp("Replace the listed local conflicting drafts with the latest completed AI proposals.")
                     }
                     Spacer()
-                    Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now") {
+                    Button(
+                        model.isRunningAIPass && model.fixtureAIStatus?.active != true
+                            ? "Starting AI pass…"
+                            : model.isAIPassActive ? "AI pass running…" : "Run AI pass now"
+                    ) {
                         Task { await model.runAIProposalPass() }
                     }
                     .disabled(!model.canRunAIProposalPass)

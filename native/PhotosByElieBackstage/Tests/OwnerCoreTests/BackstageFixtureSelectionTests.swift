@@ -327,6 +327,87 @@ struct BackstageFixtureSelectionTests {
         #expect(model.shouldAutomaticallyCheckForUpdates)
     }
 
+    @Test("AI pass latches before its first status refresh and rejects a duplicate start")
+    @MainActor
+    func aiPassStartLatchesImmediately() async throws {
+        let actionAPI = BlockingAIActionAPI()
+        let fixtureService = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: actionAPI,
+            waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+        model.fixtureAIStatus = FixtureAIStatus(json: [
+            "active": .bool(false),
+            "requested": .number(25),
+        ])
+
+        let firstStart = Task { await model.runAIProposalPass() }
+        for _ in 0..<1_000 where await actionAPI.requestCount() < 1 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.isRunningAIPass)
+        #expect(!model.canRunAIProposalPass)
+        #expect(model.aiProposalStatus == "Starting or attaching to the requested AI pass…")
+        #expect(await actionAPI.requestCount() == 1)
+
+        await model.runAIProposalPass()
+        #expect(await actionAPI.requestCount() == 1)
+
+        firstStart.cancel()
+        await firstStart.value
+        #expect(!model.isRunningAIPass)
+    }
+
+    @Test("AI and Backstage update operations exclude each other")
+    @MainActor
+    func aiAndUpdateOperationsAreMutuallyExclusive() async {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+        model.fixtureAIStatus = FixtureAIStatus(json: [
+            "active": .bool(false),
+            "requested": .number(1),
+        ])
+
+        model.updateState = .checking
+        #expect(model.isUpdateOperationInProgress)
+        #expect(!model.canRunAIProposalPass)
+        await model.runAIProposalPass()
+        #expect(!model.isRunningAIPass)
+        #expect(model.aiProposalStatus == "Finish the Backstage update before starting an AI pass.")
+
+        model.updateState = .idle
+        model.isRunningAIPass = true
+        #expect(!model.canPerformBackstageUpdateActions)
+        #expect(!model.shouldAutomaticallyCheckForUpdates)
+        await model.checkForUpdates()
+        #expect(model.updateState == .idle)
+
+        model.isRunningAIPass = false
+        model.fixtureAIStatus = FixtureAIStatus(json: [
+            "active": .bool(true),
+            "requested": .number(1),
+        ])
+        #expect(!model.canPerformBackstageUpdateActions)
+        #expect(!model.canRunAIProposalPass)
+    }
+
     @Test("Compact fixture picker renders without changing data", arguments: [230, 320], [false, true])
     @MainActor
     func compactFixturePicker(width: Int, dark: Bool) throws {
@@ -3168,6 +3249,25 @@ private struct RejectingFixtureSelectionWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         throw CancellationError()
     }
+}
+
+private actor BlockingAIActionAPI: OwnerActionServing {
+    private var createdRequests: [OwnerActionCreate] = []
+
+    func createAction(
+        _ action: OwnerActionCreate,
+        idempotencyKey: String
+    ) async throws -> OwnerActionEnvelope {
+        createdRequests.append(action)
+        try await Task.sleep(for: .seconds(60))
+        throw CancellationError()
+    }
+
+    func getAction(id: String) async throws -> OwnerAction {
+        throw CancellationError()
+    }
+
+    func requestCount() -> Int { createdRequests.count }
 }
 
 private actor ReviewLifecycleActionAPI: OwnerActionServing {

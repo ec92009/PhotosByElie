@@ -481,7 +481,7 @@ private struct BackstageUpdatesView: View {
             }
             .padding(24)
         }
-        .task {
+        .task(id: model.isAIPassActive) {
             guard model.shouldAutomaticallyCheckForUpdates else { return }
             await model.checkForUpdates()
         }
@@ -489,6 +489,13 @@ private struct BackstageUpdatesView: View {
 
     @ViewBuilder
     private var stateContent: some View {
+        if model.isAIPassActive {
+            Label(
+                "Update actions are unavailable while the AI proposal pass is active.",
+                systemImage: "sparkles"
+            )
+            .foregroundStyle(.orange)
+        }
         switch model.updateState {
         case .idle:
             Label("Preparing update check", systemImage: "arrow.triangle.2.circlepath")
@@ -505,6 +512,7 @@ private struct BackstageUpdatesView: View {
             Button("Download and verify") {
                 Task { await model.downloadVerifiedUpdate() }
             }
+            .disabled(!model.canPerformBackstageUpdateActions)
             .backstageHelp("Download the compatible archive into Backstage's cache, verify exact bytes and macOS signing trust, and leave the running app untouched.")
         case let .downloading(manifest, receivedBytes, totalBytes):
             statusLabel("Downloading", systemImage: "arrow.down.circle", color: .orange)
@@ -532,6 +540,7 @@ private struct BackstageUpdatesView: View {
             Button("Install verified update") {
                 Task { await model.installVerifiedUpdate() }
             }
+            .disabled(!model.canPerformBackstageUpdateActions)
             .buttonStyle(.borderedProminent)
             .backstageHelp("Install the already verified release immediately, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
         case let .installing(manifest):
@@ -560,6 +569,7 @@ private struct BackstageUpdatesView: View {
                     DispatchQueue.main.async { NSApp.terminate(nil) }
                 }
             }
+            .disabled(!model.canPerformBackstageUpdateActions)
             .buttonStyle(.borderedProminent)
             .backstageHelp("Launch a new instance of the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
         case let .failed(message, recovery):

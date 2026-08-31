@@ -50,7 +50,9 @@ other release object names are not public routes.
 archive and manifest from the same bytes, uploads and re-reads the immutable
 archive first, preserves the previous manifest as immutable rollback history,
 and writes `latest.json` last. A failure before that final write leaves clients
-on the previous verified release. Installation remains a separate operator
+on the previous verified release. Discovery of a newer compatible manifest
+immediately starts one bounded download and verification pass; concurrent
+checks cannot replace or duplicate it. Installation remains a separate operator
 action after verification: pressing **Install verified update** starts the
 guarded installer immediately, without a second confirmation dialog. It stages
 a complete copy beside the canonical app, repeats archive, Info.plist,
@@ -72,14 +74,18 @@ read-only Owner runtime cannot strand a partially removed app bundle.
 
 ## State and safety
 
-The native state model distinguishes `checking`, `current`, `updateAvailable`,
-`downloading` with received/total bytes, `verified`, `installing`, `installed`,
-and `failed`. A failed state includes recovery guidance. A downgrade,
+The native state model distinguishes `checking`, `current`, the transient
+`updateAvailable` handoff, `downloading` with received/total bytes, `verified`,
+`installing`, `installed`, and `failed`. A newer compatible release moves from
+the handoff directly into one automatic download; the handler-level operation
+latch rejects concurrent checks or download starts. A failed state includes
+recovery guidance. A downgrade,
 incompatible minimum OS, wrong bundle identity, invalid manifest, size
 mismatch, SHA-256 mismatch, archive shape mismatch, signature/trust mismatch,
 or staging/install verification failure fails closed.
 
-Downloads stream through a fixed 64 KiB buffer directly into a file below the
+Downloads start automatically after compatible update discovery and stream
+through a fixed 64 KiB buffer directly into a file below the
 app's user cache directory in a unique, isolated review directory. The transport
 rejects a declared HTTP length or streamed byte that exceeds either the manifest
 size or the hard 1 GiB archive ceiling; it never accumulates the complete archive

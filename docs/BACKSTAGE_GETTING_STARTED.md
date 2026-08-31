@@ -120,10 +120,12 @@ reachability. Publication keeps versioned archives immutable, verifies the
 uploaded bytes, preserves the previous manifest—including its source commit
 and ref—for rollback, and updates `latest.json` only as the final write.
 
-**Download and verify** writes a unique archive below the app cache and checks
+When the automatic manifest check finds a newer compatible release, Backstage
+immediately downloads it into a unique directory below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,
 signing authority, and designated requirement without changing the installed
-app. A verified archive can be revealed in Finder for inspection. Choosing
+app. Concurrent checks cannot start a duplicate download. A verified archive
+can be revealed in Finder for inspection. Choosing
 **Install verified update** immediately enters the separate guarded installer;
 there is no second confirmation dialog. The installer repeats release and
 signing checks, stages the complete app, preserves the incumbent signed app for

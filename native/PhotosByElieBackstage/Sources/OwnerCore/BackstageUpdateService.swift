@@ -368,7 +368,17 @@ public struct DittoBackstageUpdateArtifactExtractor: BackstageUpdateArtifactExtr
     }
 }
 
-public struct BackstageUpdateService: Sendable {
+public protocol BackstageUpdateServicing: Sendable {
+    func check(current: BackstageReleaseIdentity) async throws -> BackstageUpdateCheck
+
+    func downloadAndVerify(
+        current: BackstageReleaseIdentity,
+        manifest: BackstageReleaseManifest,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws -> BackstageVerifiedUpdate
+}
+
+public struct BackstageUpdateService: BackstageUpdateServicing, Sendable {
     public let configuration: BackstageUpdateConfiguration
     private let transport: any BackstageUpdateTransport
     private let extractor: any BackstageUpdateArtifactExtracting

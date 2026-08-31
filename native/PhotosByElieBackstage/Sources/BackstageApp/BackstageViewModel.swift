@@ -460,7 +460,7 @@ final class BackstageViewModel: ObservableObject {
     let visualRepairService: VisualRepairProposalService
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
-    let updateService: BackstageUpdateService
+    let updateService: any BackstageUpdateServicing
     let updateInstaller: BackstageUpdateInstaller
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
@@ -562,9 +562,9 @@ final class BackstageViewModel: ObservableObject {
 
     var isUpdateOperationInProgress: Bool {
         switch updateState {
-        case .checking, .downloading, .installing:
+        case .checking, .updateAvailable, .downloading, .installing:
             true
-        case .idle, .current, .updateAvailable, .verified, .installed, .failed:
+        case .idle, .current, .verified, .installed, .failed:
             false
         }
     }
@@ -667,7 +667,7 @@ final class BackstageViewModel: ObservableObject {
         preferences: UserDefaults = .standard,
         pbeOwnerHost: (any PBEOwnerHostServing)? = nil,
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
-        updateService: BackstageUpdateService = BackstageUpdateService(),
+        updateService: any BackstageUpdateServicing = BackstageUpdateService(),
         updateInstaller: BackstageUpdateInstaller = BackstageUpdateInstaller(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
@@ -1241,7 +1241,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func checkForUpdates() async {
-        guard canPerformBackstageUpdateActions else { return }
+        guard canPerformBackstageUpdateActions, !isUpdateOperationInProgress else { return }
         updateState = .checking
         do {
             let check = try await updateService.check(current: installedRelease)
@@ -1250,6 +1250,7 @@ final class BackstageViewModel: ObservableObject {
                 updateState = .current(check.manifest)
             case .updateAvailable:
                 updateState = .updateAvailable(check.manifest)
+                await downloadVerifiedUpdate(manifest: check.manifest)
             case .downgradeRejected:
                 updateState = .failed(
                     message: BackstageUpdateError.downgradeRejected.localizedDescription,
@@ -1274,9 +1275,9 @@ final class BackstageViewModel: ObservableObject {
     var shouldAutomaticallyCheckForUpdates: Bool {
         guard canPerformBackstageUpdateActions else { return false }
         return switch updateState {
-        case .idle, .current, .updateAvailable, .failed:
+        case .idle, .current, .failed:
             true
-        case .checking, .downloading, .verified, .installing, .installed:
+        case .checking, .updateAvailable, .downloading, .verified, .installing, .installed:
             false
         }
     }
@@ -1284,6 +1285,11 @@ final class BackstageViewModel: ObservableObject {
     func downloadVerifiedUpdate() async {
         guard canPerformBackstageUpdateActions else { return }
         guard case let .updateAvailable(manifest) = updateState else { return }
+        await downloadVerifiedUpdate(manifest: manifest)
+    }
+
+    private func downloadVerifiedUpdate(manifest: BackstageReleaseManifest) async {
+        guard canPerformBackstageUpdateActions else { return }
         updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)
         do {
             let verified = try await updateService.downloadAndVerify(

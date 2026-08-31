@@ -323,8 +323,58 @@ struct BackstageFixtureSelectionTests {
         model.updateState = .checking
         #expect(!model.shouldAutomaticallyCheckForUpdates)
 
+        model.updateState = .updateAvailable(syntheticUpdateManifest())
+        #expect(model.isUpdateOperationInProgress)
+        #expect(!model.shouldAutomaticallyCheckForUpdates)
+
         model.updateState = .failed(message: "Offline", recovery: "Try again")
         #expect(model.shouldAutomaticallyCheckForUpdates)
+    }
+
+    @Test("A newer compatible update downloads and verifies immediately without installing")
+    @MainActor
+    func updateDiscoveryStartsOneAutomaticDownload() async throws {
+        let service = RecordingBackstageUpdateService(
+            manifest: syntheticUpdateManifest()
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            updateService: service,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+
+        let firstCheck = Task { await model.checkForUpdates() }
+        for _ in 0..<1_000 where await service.downloadCount() == 0 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        guard case .downloading = model.updateState else {
+            Issue.record("A discovered update did not immediately enter the downloading state.")
+            await service.releaseDownload()
+            firstCheck.cancel()
+            await firstCheck.value
+            return
+        }
+        #expect(model.isUpdateOperationInProgress)
+        #expect(!model.canRunAIProposalPass)
+
+        await model.checkForUpdates()
+        await model.downloadVerifiedUpdate()
+        #expect(await service.checkCount() == 1)
+        #expect(await service.downloadCount() == 1)
+
+        await service.releaseDownload()
+        await firstCheck.value
+        guard case let .verified(update) = model.updateState else {
+            Issue.record("The automatic download did not become a verified, separately installable update.")
+            return
+        }
+        #expect(update.manifest == syntheticUpdateManifest())
+        #expect(await service.downloadCount() == 1)
     }
 
     @Test("AI pass latches before its first status refresh and rejects a duplicate start")
@@ -3932,6 +3982,70 @@ private final class RecordingCurrentEquipmentCache: OwnerCurrentEquipmentCaching
     func recordedBatches() -> [[String: OwnerCurrentEquipment]] {
         lock.withLock { batches }
     }
+}
+
+private actor RecordingBackstageUpdateService: BackstageUpdateServicing {
+    private let manifest: BackstageReleaseManifest
+    private var recordedCheckCount = 0
+    private var recordedDownloadCount = 0
+    private var downloadContinuation: CheckedContinuation<Void, Never>?
+
+    init(manifest: BackstageReleaseManifest) {
+        self.manifest = manifest
+    }
+
+    func check(current: BackstageReleaseIdentity) async throws -> BackstageUpdateCheck {
+        recordedCheckCount += 1
+        return BackstageUpdateCheck(
+            current: current,
+            manifest: manifest,
+            availability: .updateAvailable
+        )
+    }
+
+    func downloadAndVerify(
+        current: BackstageReleaseIdentity,
+        manifest: BackstageReleaseManifest,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) async throws -> BackstageVerifiedUpdate {
+        recordedDownloadCount += 1
+        progress(0, manifest.fileSize)
+        await withCheckedContinuation { continuation in
+            downloadContinuation = continuation
+        }
+        progress(manifest.fileSize, manifest.fileSize)
+        return BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: URL(fileURLWithPath: "/tmp/Backstage-update.zip"),
+            bundleURL: URL(fileURLWithPath: "/tmp/PhotosByElie Backstage.app")
+        )
+    }
+
+    func checkCount() -> Int { recordedCheckCount }
+    func downloadCount() -> Int { recordedDownloadCount }
+
+    func releaseDownload() {
+        downloadContinuation?.resume()
+        downloadContinuation = nil
+    }
+}
+
+private func syntheticUpdateManifest() -> BackstageReleaseManifest {
+    BackstageReleaseManifest(
+        version: "999.1",
+        build: "9991",
+        minimumOSVersion: "14.0",
+        releaseNotes: "Synthetic automatic-download verification.",
+        architectures: ["arm64"],
+        downloadURL: URL(string: "https://updates.test/Backstage.zip")!,
+        fileSize: 1_024,
+        sha256: String(repeating: "a", count: 64),
+        trust: BackstageReleaseTrust(
+            teamIdentifier: "TESTTEAM",
+            signingIdentity: "Apple Development: Test",
+            designatedRequirement: "identifier com.photosbyelie.backstage"
+        )
+    )
 }
 
 private final class RefreshPhotoLibrary: PhotoLibraryServing, @unchecked Sendable {

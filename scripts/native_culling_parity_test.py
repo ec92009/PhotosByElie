@@ -1545,8 +1545,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.1")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "275")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.2")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "276")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1612,6 +1612,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertNotIn('Button("Check for updates")', app_source)
+        self.assertNotIn('Button("Download and verify")', app_source)
         self.assertNotIn("isConfirmingInstallation", app_source)
         self.assertNotIn(
             'confirmationDialog(\n            "Install this verified Backstage update?"',
@@ -1620,6 +1621,14 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn(
             "guard model.shouldAutomaticallyCheckForUpdates else { return }",
             app_source,
+        )
+        view_model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "updateState = .updateAvailable(check.manifest)\n"
+            "                await downloadVerifiedUpdate(manifest: check.manifest)",
+            view_model,
         )
         self.assertIn(
             'Button("Install verified update") {\n'

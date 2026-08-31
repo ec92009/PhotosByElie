@@ -464,7 +464,7 @@ private struct BackstageUpdatesView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Label("Backstage updates", systemImage: "arrow.triangle.2.circlepath")
                     .font(.largeTitle.bold())
-                Text("Backstage downloads only a compatible, checksum- and signature-verified archive. Installation and rollback remain separate manual actions.")
+                Text("Backstage immediately downloads a newer compatible release, then verifies its checksum and signature. Installation and rollback remain separate manual actions.")
                     .foregroundStyle(.secondary)
 
                 BackstageSectionCard("Installed build") {
@@ -511,13 +511,11 @@ private struct BackstageUpdatesView: View {
             statusLabel("Current", systemImage: "checkmark.circle.fill", color: .green)
             releaseSummary(manifest)
         case let .updateAvailable(manifest):
-            statusLabel("Update available", systemImage: "arrow.down.circle.fill", color: .orange)
+            statusLabel("Starting automatic download", systemImage: "arrow.down.circle.fill", color: .orange)
             releaseSummary(manifest)
-            Button("Download and verify") {
-                Task { await model.downloadVerifiedUpdate() }
-            }
-            .disabled(!model.canPerformBackstageUpdateActions)
-            .backstageHelp("Download the compatible archive into Backstage's cache, verify exact bytes and macOS signing trust, and leave the running app untouched.")
+            ProgressView()
+            Text("The compatible archive downloads automatically. Verification leaves the running app untouched; installation remains separate.")
+                .foregroundStyle(.secondary)
         case let .downloading(manifest, receivedBytes, totalBytes):
             statusLabel("Downloading", systemImage: "arrow.down.circle", color: .orange)
             releaseSummary(manifest)

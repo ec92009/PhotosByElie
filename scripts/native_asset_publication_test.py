@@ -343,6 +343,132 @@ class NativeAssetPublicationTest(unittest.TestCase):
         self.assertEqual(result[0]["verificationMethod"], "existing-verified-receipt")
         self.assertEqual(result[0]["remoteChecksumSha256"], "a" * 64)
 
+    def test_recovers_receipt_from_canonical_legacy_photos_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "Owner.sqlite"
+            conn = sqlite3.connect(database)
+            conn.executescript(
+                """
+                CREATE TABLE r2_objects (
+                  bucket TEXT, object_key TEXT, lifecycle_state TEXT, bytes INTEGER
+                );
+                CREATE TABLE fixture_delivery_receipts (
+                  receipt_id TEXT, asset_id TEXT, destination TEXT, status TEXT,
+                  object_key TEXT, checksum_sha256 TEXT, verification_json TEXT,
+                  verified_at TEXT, updated_at TEXT
+                );
+                """
+            )
+            conn.execute(
+                "INSERT INTO r2_objects VALUES ('photosbyelie-public', 'media/legacy.jpg', 'current', 24)"
+            )
+            conn.execute(
+                """
+                INSERT INTO fixture_delivery_receipts VALUES (
+                  'receipt-legacy', 'legacy/L0/001', 'r2', 'verified',
+                  'media/legacy.jpg', ?, ?,
+                  '2026-07-28T00:00:00Z', '2026-07-28T00:00:00Z'
+                )
+                """,
+                ("b" * 64, json.dumps({"bucket": "photosbyelie-public", "bytes": 24})),
+            )
+            conn.commit()
+            conn.close()
+
+            def open_database(_repo_root):
+                connection = sqlite3.connect(database)
+                connection.row_factory = sqlite3.Row
+                return connection
+
+            bridge_row = {
+                "asset_id": "cloud-asset-1",
+                "r2_source_anchor": "apple-photos://legacy/L0/001",
+            }
+            with (
+                patch("native_asset_publication.connect_owner", side_effect=open_database),
+                patch("native_asset_publication._upload_bridge_rows", return_value=[bridge_row]),
+                patch(
+                    "native_asset_publication._planned_r2_keys",
+                    return_value=(
+                        "legacy-photo-1",
+                        [
+                            {
+                                "bucket": "photosbyelie-public",
+                                "key": "media/legacy.jpg",
+                                "kind": "public-preview",
+                            }
+                        ],
+                    ),
+                ),
+            ):
+                result = verified_covered_r2_results(Path(directory), "cloud-asset-1")
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["key"], "media/legacy.jpg")
+        self.assertEqual(result[0]["remoteChecksumSha256"], "b" * 64)
+
+    def test_does_not_recover_receipt_from_unrelated_asset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "Owner.sqlite"
+            conn = sqlite3.connect(database)
+            conn.executescript(
+                """
+                CREATE TABLE r2_objects (
+                  bucket TEXT, object_key TEXT, lifecycle_state TEXT, bytes INTEGER
+                );
+                CREATE TABLE fixture_delivery_receipts (
+                  receipt_id TEXT, asset_id TEXT, destination TEXT, status TEXT,
+                  object_key TEXT, checksum_sha256 TEXT, verification_json TEXT,
+                  verified_at TEXT, updated_at TEXT
+                );
+                INSERT INTO r2_objects VALUES (
+                  'photosbyelie-public', 'media/shared.jpg', 'current', 24
+                );
+                INSERT INTO fixture_delivery_receipts VALUES (
+                  'receipt-unrelated', 'unrelated-asset', 'r2', 'verified',
+                  'media/shared.jpg', 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                  '{"bucket":"photosbyelie-public","bytes":24}',
+                  '2026-07-28T00:00:00Z', '2026-07-28T00:00:00Z'
+                );
+                """
+            )
+            conn.commit()
+            conn.close()
+
+            def open_database(_repo_root):
+                connection = sqlite3.connect(database)
+                connection.row_factory = sqlite3.Row
+                return connection
+
+            with (
+                patch("native_asset_publication.connect_owner", side_effect=open_database),
+                patch(
+                    "native_asset_publication._upload_bridge_rows",
+                    return_value=[
+                        {
+                            "asset_id": "cloud-asset-1",
+                            "r2_source_anchor": "apple-photos://legacy/L0/001",
+                        }
+                    ],
+                ),
+                patch(
+                    "native_asset_publication._planned_r2_keys",
+                    return_value=(
+                        "legacy-photo-1",
+                        [
+                            {
+                                "bucket": "photosbyelie-public",
+                                "key": "media/shared.jpg",
+                                "kind": "public-preview",
+                            }
+                        ],
+                    ),
+                ),
+            ):
+                result = verified_covered_r2_results(Path(directory), "cloud-asset-1")
+
+        self.assertEqual(result, [])
+
     def test_reset_upload_run_requeues_failed_and_interrupted_items(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "Owner.sqlite"

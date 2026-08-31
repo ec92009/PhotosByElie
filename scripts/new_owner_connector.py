@@ -1971,6 +1971,9 @@ def execute_action(
         lifecycle_arm = None
         lifecycle_result = None
         retained_local_only_ids: list[str] = []
+        # A selected-row delete names its exact local identities. Preserve the
+        # broad Empty Waste Basket safeguard when no explicit IDs were sent.
+        explicitly_scoped_lifecycle = bool(photo_ids)
         active_lifecycle_client = lifecycle_client
         if operation in lifecycle_operations:
             lifecycle_operation, denied = lifecycle_operations[operation]
@@ -1989,16 +1992,25 @@ def execute_action(
             if operation_id == "owner-action:":
                 raise RuntimeError("Lifecycle moderation requires a durable Owner action ID")
             if lifecycle_scope["scope"] == "local-only":
-                if lifecycle_operation not in {"x", "restore"}:
+                local_only_lifecycle_allowed = lifecycle_operation in {"x", "restore"} or (
+                    explicitly_scoped_lifecycle
+                    and lifecycle_operation in {"empty", "tombstone-restore"}
+                )
+                if not local_only_lifecycle_allowed:
                     raise RuntimeError(
                         "Local-only assets support recoverable Waste Basket X and Restore; "
-                        "global tombstone operations require deployed lifecycle eligibility"
+                        "only explicitly selected local-only assets may be tombstoned without "
+                        "deployed lifecycle eligibility"
                     )
                 lifecycle_result = {
                     "scope": "local-only",
                     "remoteArmRequired": False,
                     "reason": lifecycle_scope["reason"],
                 }
+                if lifecycle_operation == "empty":
+                    lifecycle_result["localTombstone"] = True
+                elif lifecycle_operation == "tombstone-restore":
+                    lifecycle_result["localTombstoneRestore"] = True
             elif lifecycle_scope["scope"] == "mixed":
                 if lifecycle_operation != "empty":
                     raise RuntimeError(

@@ -1515,8 +1515,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "242.2")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "273")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.0")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "274")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1698,7 +1698,12 @@ class NativeCullingParityTest(unittest.TestCase):
             culling,
         )
         self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
-        self.assertIn("guard !isLoadingPhotos else { return }", model_source)
+        self.assertIn(
+            "guard !isLoadingPhotos,\n"
+            "              !isAuthorizingPhotos,\n"
+            "              allowDuringReconciliation || !isReconcilingPhotosIndex else { return }",
+            model_source,
+        )
         self.assertIn('Text("Discovering recent Photos…")', culling)
         self.assertIn('Text("Refresh & discover")', culling)
         self.assertIn('Text("Full library audit")', culling)
@@ -2225,7 +2230,12 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertNotIn("hasExplicitPendingMetadataEdit", model)
         self.assertIn("if action == .approve", model)
-        self.assertIn('Button(model.isRunningAIPass ? "AI pass running…" : "Run AI pass now")', ui)
+        self.assertIn(
+            'model.isRunningAIPass && model.fixtureAIStatus?.active != true\n'
+            '                            ? "Starting AI pass…"\n'
+            '                            : model.isAIPassActive ? "AI pass running…" : "Run AI pass now"',
+            ui,
+        )
         self.assertIn(".disabled(!model.canRunAIProposalPass)", ui)
         actions = inspector.split('Button("Approve")', 1)[1].split("Divider()", 1)[0]
         self.assertIn('Button("Hide")', actions)

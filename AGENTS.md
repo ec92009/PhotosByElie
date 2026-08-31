@@ -33,6 +33,18 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 
 - Follow `~/Dev/.SOPs/VERSIONING_SOP.md`.
 
+## Backstage Release Default
+
+- When a Backstage code change is complete and its release checks pass, finish
+  the same cycle by compiling and signing the app, promoting the reviewed
+  source to `refs/heads/release/backstage`, and publishing the verified archive
+  and update manifest. Do not stop at a source-ready or candidate-only state
+  unless a real build, signing, test, network, or credential blocker prevents
+  publication.
+- Publication makes the build available for download. Installation and live UI
+  acceptance remain separately reported evidence; never claim either unless it
+  was actually performed.
+
 ## Timelog
 
 - Local SOP: [`docs/sops/TIMELOG_SOP.md`](./docs/sops/TIMELOG_SOP.md).

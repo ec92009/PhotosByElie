@@ -108,6 +108,12 @@ scripts/publish_backstage_release.zsh \
   --release-notes 'Short operator-facing summary'
 ```
 
+For this single-operator app, source-ready Backstage changes normally continue
+through this compile, sign, source-promotion, and publication path in the same
+work cycle. Pause only for a concrete failing check or unavailable release
+dependency. Installation and live UI acceptance are still separate evidence
+and must be reported truthfully.
+
 Use `--dry-run` to perform the complete local archive and manifest validation
 without changing Cloudflare. The dry run still checks canonical remote source
 reachability. Publication keeps versioned archives immutable, verifies the

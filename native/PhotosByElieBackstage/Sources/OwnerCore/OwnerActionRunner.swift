@@ -114,6 +114,24 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         )
     }
 
+    /// Run a connector process without occupying a Swift cooperative-executor
+    /// thread while the operating system waits for it to exit. Multiple Owner
+    /// actions can overlap, so a synchronous `waitUntilExit()` here can starve
+    /// the action polling tasks that observe their durable terminal receipts.
+    static func runAndAwaitTermination(_ process: Process) async throws -> Int32 {
+        try await withCheckedThrowingContinuation { continuation in
+            process.terminationHandler = { terminatedProcess in
+                continuation.resume(returning: terminatedProcess.terminationStatus)
+            }
+            do {
+                try process.run()
+            } catch {
+                process.terminationHandler = nil
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
     public func wake(actionID: String) async throws -> OwnerAction? {
         guard actionID.hasPrefix("owner-action-"), actionID.count <= 96 else {
             throw OwnerActionRunError.invalidActionID
@@ -166,11 +184,10 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         process.environment = environment
         process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
         process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
+        let terminationStatus = try await Self.runAndAwaitTermination(process)
+        guard terminationStatus == 0 else {
             throw OwnerActionRunError.failed(
-                "The on-demand Owner connector exited with status \(process.terminationStatus)."
+                "The on-demand Owner connector exited with status \(terminationStatus)."
             )
         }
         return nil

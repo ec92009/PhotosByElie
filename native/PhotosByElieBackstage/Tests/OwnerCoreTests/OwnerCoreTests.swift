@@ -5976,6 +5976,24 @@ struct PBEOwnerHostContractTests {
         }
     }
 
+    @Test("On-demand Owner connector exit waits suspend instead of blocking app work")
+    func onDemandOwnerConnectorExitWaitIsAsynchronous() async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", "sleep 0.15; exit 7"]
+        process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
+        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
+
+        let appWork = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(20))
+            return "responsive"
+        }
+        async let terminationStatus = OnDemandOwnerActionWaker.runAndAwaitTermination(process)
+
+        #expect(try await appWork.value == "responsive")
+        #expect(try await terminationStatus == 7)
+    }
+
     private func makeWritable(_ root: URL) {
         guard FileManager.default.fileExists(atPath: root.path) else { return }
         if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {

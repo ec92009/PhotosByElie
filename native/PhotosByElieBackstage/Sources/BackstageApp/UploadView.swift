@@ -8,6 +8,8 @@ import SwiftUI
 struct UploadView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode = false
+    @AppStorage(BackstagePanelPreferenceKey.uploadRecoveryExpanded)
+    private var uploadRecoveryExpanded = false
     @State private var uploadSortOrder = [
         KeyPathComparator(\NativeUploadPlanItem.capturedAt, order: .forward),
     ]
@@ -208,7 +210,10 @@ struct UploadView: View {
                 }
                 .frame(minHeight: 180)
             }
-            DisclosureGroup("Legacy recovery and fixture receipt inspection") {
+            DisclosureGroup(
+                "Legacy recovery and fixture receipt inspection",
+                isExpanded: $uploadRecoveryExpanded
+            ) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Button("Load receipt audit") { Task { await model.loadDeliveryPlan() } }

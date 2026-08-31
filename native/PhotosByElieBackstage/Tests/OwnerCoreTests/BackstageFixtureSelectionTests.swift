@@ -649,6 +649,61 @@ struct BackstageFixtureSelectionTests {
         #expect(relaunchedModel.selectedFixtureBreadcrumb == "RE › La Concha › Pool")
     }
 
+    @Test("Gallery and Review remember their independent inspector visibility")
+    @MainActor
+    func previewPanelVisibilityPersistsByWorkspace() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+
+        let firstModel = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences
+        )
+        firstModel.selection = .culling
+        firstModel.isPreviewPanelVisible = false
+        firstModel.selection = .review
+        firstModel.isPreviewPanelVisible = true
+
+        let relaunchedModel = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            preferences: preferences
+        )
+        relaunchedModel.selection = .culling
+        #expect(!relaunchedModel.isPreviewPanelVisible)
+        relaunchedModel.selection = .review
+        #expect(relaunchedModel.isPreviewPanelVisible)
+    }
+
+    @Test("Saved window geometry stays visible after display changes")
+    @MainActor
+    func restoredWindowFrameIsClampedToVisibleScreens() throws {
+        let primary = NSRect(x: 0, y: 0, width: 1_440, height: 900)
+        let visible = NSRect(x: 120, y: 80, width: 1_120, height: 720)
+        #expect(
+            WindowFrameAutosaveView.visibleRestoredFrame(
+                visible,
+                screenFrames: [primary]
+            ) == visible
+        )
+
+        let offscreen = NSRect(x: 3_000, y: -2_000, width: 1_120, height: 720)
+        let recovered = try #require(
+            WindowFrameAutosaveView.visibleRestoredFrame(
+                offscreen,
+                screenFrames: [primary]
+            )
+        )
+        #expect(primary.contains(recovered))
+
+        #expect(
+            WindowFrameAutosaveView.visibleRestoredFrame(
+                NSRect(x: CGFloat.nan, y: 0, width: 1_120, height: 720),
+                screenFrames: [primary]
+            ) == nil
+        )
+    }
+
     @Test("PBE Owner disables the global chooser without changing sections")
     @MainActor
     func ownerSessionDisablesChooser() throws {

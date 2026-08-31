@@ -6,7 +6,7 @@ public struct BackstageApplication: App {
     @StateObject private var model: BackstageViewModel
     @NSApplicationDelegateAdaptor(BackstageApplicationDelegate.self)
     private var applicationDelegate
-    @AppStorage("PhotosByElieBackstage.navigationSidebarVisible")
+    @AppStorage(BackstagePanelPreferenceKey.sidebarVisible)
     private var navigationSidebarVisible = true
 
     public init() {
@@ -228,6 +228,8 @@ private struct BackstageUndoCommands: Commands {
 
 private struct OverviewView: View {
     @ObservedObject var model: BackstageViewModel
+    @AppStorage(BackstagePanelPreferenceKey.enrollmentFallbackExpanded)
+    private var enrollmentFallbackExpanded = false
 
     var body: some View {
         ScrollView {
@@ -273,7 +275,10 @@ private struct OverviewView: View {
                         Text("Backstage opens the Owner account picker, binds a five-minute single-use handoff to this Mac, and stores the resulting revocable credential only in Keychain. Photos permission remains separate.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        DisclosureGroup("Use one-time code fallback") {
+                        DisclosureGroup(
+                            "Use one-time code fallback",
+                            isExpanded: $enrollmentFallbackExpanded
+                        ) {
                             VStack(alignment: .leading, spacing: 8) {
                                 SecureField("One-time enrollment code", text: $model.enrollmentCode)
                                     .textFieldStyle(.roundedBorder)
@@ -1286,6 +1291,8 @@ private struct ActivityView: View {
 @MainActor
 private struct FixtureWorkflowView: View {
     @ObservedObject var model: BackstageViewModel
+    @AppStorage(BackstagePanelPreferenceKey.fixturePlacementsExpanded)
+    private var fixturePlacementsExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1531,7 +1538,10 @@ private struct FixtureWorkflowView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
-                            DisclosureGroup("Reversible fixture placements") {
+                            DisclosureGroup(
+                                "Reversible fixture placements",
+                                isExpanded: $fixturePlacementsExpanded
+                            ) {
                                 HStack(alignment: .top) {
                                     List(selection: $model.placementTargetFixtureIDs) {
                                         OutlineGroup(model.fixtures, children: \.outlineChildren) { fixture in

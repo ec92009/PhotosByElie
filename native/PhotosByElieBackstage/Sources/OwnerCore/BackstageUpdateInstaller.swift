@@ -1,6 +1,10 @@
 import Darwin
 import Foundation
 
+public protocol BackstageUpdateInstalling: Sendable {
+    func install(_ update: BackstageVerifiedUpdate) throws -> BackstageInstallationReceipt
+}
+
 @usableFromInline
 func removeInstallerOwnedStagingBundle(at bundleURL: URL) throws {
     let fileManager = FileManager.default
@@ -428,3 +432,5 @@ public struct BackstageUpdateInstaller: Sendable {
         }
     }
 }
+
+extension BackstageUpdateInstaller: BackstageUpdateInstalling {}

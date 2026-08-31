@@ -1,0 +1,48 @@
+import AppKit
+import Foundation
+
+enum BackstageInstalledUpdateLaunchError: LocalizedError {
+    case launchFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .launchFailed(detail):
+            detail.isEmpty
+                ? "macOS did not start the newly installed Backstage app."
+                : detail
+        }
+    }
+}
+
+@MainActor
+protocol BackstageInstalledUpdateLaunching {
+    func launchAndTerminateCurrentApplication(at bundleURL: URL) async throws
+}
+
+@MainActor
+struct SystemBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching {
+    func launchAndTerminateCurrentApplication(at bundleURL: URL) async throws {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            NSWorkspace.shared.openApplication(
+                at: bundleURL,
+                configuration: configuration
+            ) { application, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let application, !application.isTerminated {
+                    continuation.resume()
+                } else if application != nil {
+                    continuation.resume(throwing: BackstageInstalledUpdateLaunchError.launchFailed(
+                        "The newly installed Backstage app exited before the handoff completed."
+                    ))
+                } else {
+                    continuation.resume(throwing: BackstageInstalledUpdateLaunchError.launchFailed(""))
+                }
+            }
+        }
+        NSApp.terminate(nil)
+    }
+}

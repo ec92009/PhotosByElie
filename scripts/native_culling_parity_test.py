@@ -1545,8 +1545,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.3")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "277")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.4")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "278")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",
@@ -1606,7 +1606,7 @@ class NativeCullingParityTest(unittest.TestCase):
             build_script,
         )
 
-    def test_backstage_updates_check_on_open_and_install_without_confirmation(self):
+    def test_backstage_updates_check_on_open_and_install_and_run_in_one_action(self):
         app_source = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
         ).read_text(encoding="utf-8")
@@ -1631,9 +1631,16 @@ class NativeCullingParityTest(unittest.TestCase):
             view_model,
         )
         self.assertIn(
-            'Button("Install verified update") {\n'
-            "                Task { await model.installVerifiedUpdate() }",
+            'Button("Install and run new version") {\n'
+            "                Task { await model.installAndRunVerifiedUpdate() }",
             app_source,
+        )
+        self.assertNotIn('Button("Reveal verified update in Finder")', app_source)
+        self.assertNotIn('Button(isLaunchingInstalledUpdate', app_source)
+        self.assertNotIn("Quit and open installed Backstage", app_source)
+        self.assertIn(
+            "try await installedUpdateLauncher.launchAndTerminateCurrentApplication",
+            view_model,
         )
 
     def test_bridge_installer_fails_closed_without_touching_a_legacy_bundle(self):
@@ -2600,8 +2607,13 @@ class NativeCullingParityTest(unittest.TestCase):
 
         self.assertIn("Opening the workspace automatically reads", guide)
         self.assertNotIn("**Check for updates**", guide)
-        self.assertIn("there is no second confirmation dialog", guide)
-        self.assertIn("without a second confirmation dialog", update_contract)
+        self.assertIn(
+            "no Finder review step, second confirmation dialog, or follow-up launch",
+            guide,
+        )
+        self.assertIn("Install and run new version", update_contract)
+        self.assertIn("without another confirmation", update_contract)
+        self.assertIn("or intermediary click", update_contract)
         self.assertIn("sole normal editable authority", catalog_contract)
         self.assertIn("sole normal editable authority", scripts_guide)
         self.assertNotIn("moving toward two SQLite files", catalog_contract)

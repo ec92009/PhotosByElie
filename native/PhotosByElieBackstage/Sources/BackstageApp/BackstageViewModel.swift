@@ -461,7 +461,8 @@ final class BackstageViewModel: ObservableObject {
     let lifecycleService: LifecycleService
     let deliveryService: FixtureDeliveryService
     let updateService: any BackstageUpdateServicing
-    let updateInstaller: BackstageUpdateInstaller
+    let updateInstaller: any BackstageUpdateInstalling
+    let installedUpdateLauncher: any BackstageInstalledUpdateLaunching
     let installedRelease: BackstageReleaseIdentity
     private let pbeOwnerHost: any PBEOwnerHostServing
     private let workflowRecoveryStore: OwnerWorkflowRecoverySQLiteStore?
@@ -668,7 +669,8 @@ final class BackstageViewModel: ObservableObject {
         pbeOwnerHost: (any PBEOwnerHostServing)? = nil,
         openExternalURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
         updateService: any BackstageUpdateServicing = BackstageUpdateService(),
-        updateInstaller: BackstageUpdateInstaller = BackstageUpdateInstaller(),
+        updateInstaller: any BackstageUpdateInstalling = BackstageUpdateInstaller(),
+        installedUpdateLauncher: any BackstageInstalledUpdateLaunching = SystemBackstageInstalledUpdateLauncher(),
         authenticationService: OwnerAuthenticationService? = nil,
         fixtureService: FixtureWorkflowService? = nil,
         lifecycleService: LifecycleService? = nil,
@@ -699,6 +701,7 @@ final class BackstageViewModel: ObservableObject {
         self.preferences = preferences
         self.updateService = updateService
         self.updateInstaller = updateInstaller
+        self.installedUpdateLauncher = installedUpdateLauncher
         self.installedRelease = BackstageReleaseIdentity(bundle: Bundle.main)
         self.fixtureSelectionCoordinator = FixtureSelectionCoordinator(
             lastUsedFixtureID: preferences.string(forKey: Self.selectedFixturePreferenceKey)
@@ -1318,7 +1321,7 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    func installVerifiedUpdate() async {
+    func installAndRunVerifiedUpdate() async {
         guard canPerformBackstageUpdateActions else { return }
         guard case let .verified(update) = updateState else { return }
         updateState = .installing(update.manifest)
@@ -1328,6 +1331,16 @@ final class BackstageViewModel: ObservableObject {
                 try installer.install(update)
             }.value
             updateState = .installed(receipt)
+            do {
+                try await installedUpdateLauncher.launchAndTerminateCurrentApplication(
+                    at: receipt.installedBundleURL
+                )
+            } catch {
+                updateState = .failed(
+                    message: "Backstage \(receipt.manifest.version) (\(receipt.manifest.build)) was installed, but macOS could not start it: \(error.localizedDescription)",
+                    recovery: "Open \(receipt.installedBundleURL.path) directly. The previous signed app remains available in the private rollback directory."
+                )
+            }
         } catch {
             let updateError = (error as? BackstageUpdateError)
                 ?? BackstageUpdateError.installationFailed(error.localizedDescription)

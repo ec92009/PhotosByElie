@@ -377,6 +377,84 @@ struct BackstageFixtureSelectionTests {
         #expect(await service.downloadCount() == 1)
     }
 
+    @Test("One verified-update action installs and launches the canonical new version")
+    @MainActor
+    func verifiedUpdateInstallsAndLaunchesInOneAction() async {
+        let manifest = syntheticUpdateManifest()
+        let verified = BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: URL(fileURLWithPath: "/tmp/Backstage-update.zip"),
+            bundleURL: URL(fileURLWithPath: "/tmp/Verified/PhotosByElie Backstage.app")
+        )
+        let receipt = BackstageInstallationReceipt(
+            manifest: manifest,
+            installedBundleURL: URL(fileURLWithPath: "/Applications/PhotosByElie Backstage.app"),
+            rollbackBundleURL: URL(fileURLWithPath: "/tmp/rollback.app")
+        )
+        let installer = RecordingBackstageUpdateInstaller(receipt: receipt)
+        let launcher = RecordingBackstageInstalledUpdateLauncher()
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            updateInstaller: installer,
+            installedUpdateLauncher: launcher,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+        model.updateState = .verified(verified)
+
+        await model.installAndRunVerifiedUpdate()
+
+        #expect(installer.installCount == 1)
+        #expect(launcher.launchedBundleURLs == [receipt.installedBundleURL])
+        #expect(model.updateState == .installed(receipt))
+    }
+
+    @Test("A launch failure reports that installation succeeded and gives the canonical recovery path")
+    @MainActor
+    func verifiedUpdateLaunchFailureIsActionable() async {
+        let manifest = syntheticUpdateManifest()
+        let verified = BackstageVerifiedUpdate(
+            manifest: manifest,
+            archiveURL: URL(fileURLWithPath: "/tmp/Backstage-update.zip"),
+            bundleURL: URL(fileURLWithPath: "/tmp/Verified/PhotosByElie Backstage.app")
+        )
+        let receipt = BackstageInstallationReceipt(
+            manifest: manifest,
+            installedBundleURL: URL(fileURLWithPath: "/Applications/PhotosByElie Backstage.app"),
+            rollbackBundleURL: nil
+        )
+        let installer = RecordingBackstageUpdateInstaller(receipt: receipt)
+        let launcher = RecordingBackstageInstalledUpdateLauncher(
+            error: BackstageInstalledUpdateLaunchError.launchFailed("Launch denied for test.")
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            updateInstaller: installer,
+            installedUpdateLauncher: launcher,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+        model.updateState = .verified(verified)
+
+        await model.installAndRunVerifiedUpdate()
+
+        guard case let .failed(message, recovery) = model.updateState else {
+            Issue.record("A post-install launch failure did not remain visible.")
+            return
+        }
+        #expect(installer.installCount == 1)
+        #expect(launcher.launchedBundleURLs == [receipt.installedBundleURL])
+        #expect(message.contains("was installed"))
+        #expect(message.contains("Launch denied for test"))
+        #expect(recovery.contains("/Applications/PhotosByElie Backstage.app"))
+    }
+
     @Test("AI pass latches before its first status refresh and rejects a duplicate start")
     @MainActor
     func aiPassStartLatchesImmediately() async throws {
@@ -3981,6 +4059,40 @@ private final class RecordingCurrentEquipmentCache: OwnerCurrentEquipmentCaching
 
     func recordedBatches() -> [[String: OwnerCurrentEquipment]] {
         lock.withLock { batches }
+    }
+}
+
+private final class RecordingBackstageUpdateInstaller: BackstageUpdateInstalling, @unchecked Sendable {
+    private let lock = NSLock()
+    private let receipt: BackstageInstallationReceipt
+    private var recordedInstallCount = 0
+
+    init(receipt: BackstageInstallationReceipt) {
+        self.receipt = receipt
+    }
+
+    func install(_ update: BackstageVerifiedUpdate) throws -> BackstageInstallationReceipt {
+        lock.withLock { recordedInstallCount += 1 }
+        return receipt
+    }
+
+    var installCount: Int {
+        lock.withLock { recordedInstallCount }
+    }
+}
+
+@MainActor
+private final class RecordingBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching {
+    private(set) var launchedBundleURLs: [URL] = []
+    private let error: Error?
+
+    init(error: Error? = nil) {
+        self.error = error
+    }
+
+    func launchAndTerminateCurrentApplication(at bundleURL: URL) async throws {
+        launchedBundleURLs.append(bundleURL)
+        if let error { throw error }
     }
 }
 

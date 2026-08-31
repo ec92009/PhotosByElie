@@ -124,14 +124,14 @@ When the automatic manifest check finds a newer compatible release, Backstage
 immediately downloads it into a unique directory below the app cache and checks
 the declared byte count, SHA-256, stable bundle identity, version/build, team,
 signing authority, and designated requirement without changing the installed
-app. Concurrent checks cannot start a duplicate download. A verified archive
-can be revealed in Finder for inspection. Choosing
-**Install verified update** immediately enters the separate guarded installer;
-there is no second confirmation dialog. The installer repeats release and
-signing checks, stages the complete app, preserves the incumbent signed app for
-rollback, and atomically replaces only the canonical app bundle. It does not
-relaunch or terminate the current process; **Quit and open installed
-Backstage** remains a separate action after installation. Neither path changes
+app. Concurrent checks cannot start a duplicate download. Choosing **Install
+and run new version** immediately enters the separate guarded installer; there
+is no Finder review step, second confirmation dialog, or follow-up launch
+button. The installer repeats release and signing checks, stages the complete
+app, preserves the incumbent signed app for rollback, atomically replaces only
+the canonical app bundle, launches that replacement, and closes the older copy
+only after macOS confirms the new process started. If launch fails, the old copy
+stays open and reports the canonical recovery path. Neither path changes
 Photos permission, connector enrollment, Keychain credentials, Owner SQLite,
 fixtures, catalog, or publication state. If the endpoint is not configured,
 the release is a downgrade/incompatible, or verification fails, the workspace

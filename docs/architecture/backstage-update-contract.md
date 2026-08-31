@@ -53,13 +53,14 @@ and writes `latest.json` last. A failure before that final write leaves clients
 on the previous verified release. Discovery of a newer compatible manifest
 immediately starts one bounded download and verification pass; concurrent
 checks cannot replace or duplicate it. Installation remains a separate operator
-action after verification: pressing **Install verified update** starts the
-guarded installer immediately, without a second confirmation dialog. It stages
-a complete copy beside the canonical app, repeats archive, Info.plist,
-version/build, signature, and designated-requirement checks, preserves the
-incumbent signed app below the private Backstage rollback directory, and
-atomically exchanges the staged app into `/Applications/PhotosByElie
-Backstage.app`.
+action after verification: pressing **Install and run new version** starts the
+guarded installer immediately, without a second confirmation dialog or Finder
+review step. It stages a complete copy beside the canonical app, repeats
+archive, Info.plist, version/build, signature, and designated-requirement
+checks, preserves the incumbent signed app below the private Backstage rollback
+directory, atomically exchanges the staged app into `/Applications/PhotosByElie
+Backstage.app`, launches that canonical new app, and closes the older copy only
+after macOS confirms the new process started.
 
 Before replacement, the installer inventories only exact hidden
 `.PhotosByElie Backstage.install-<UUID>.app` siblings. It retains recent
@@ -93,14 +94,16 @@ in `Data`. A rejected partial or temporary download is removed; after
 verification, the archive and extracted app remain there for review. The
 download-and-verify path has no install, overwrite, launch, Keychain, Photos,
 connector, Owner database, fixture, catalog, upload, or publication operation.
-After verification, the explicit **Install verified update** button is the
+After verification, the explicit **Install and run new version** button is the
 installation boundary; the separate installer does not add another modal. It
 may copy and atomically exchange only the canonical Backstage app, retain one
-verified rollback bundle, and offer a separate quit-and-open action. It never
+verified rollback bundle, then launch the canonical replacement and terminate
+the older copy only after launch succeeds. It never
 touches Photos, Keychain, connector, Owner database, fixture, catalog, upload,
 or publication state. Any staging or verification failure leaves the
 incumbent app untouched; any failed post-swap verification atomically restores
-it.
+it. If installation succeeds but macOS cannot start the new app, the old copy
+stays open and shows the canonical app path for manual recovery.
 
 Verification checks, in order:
 
@@ -124,10 +127,10 @@ Verification checks, in order:
 
 Any download, inspection, extraction, tree-validation, checksum, or signature
 failure removes the unique temporary directory. Only after all six checks does
-Backstage show `verified`. The operator may reveal the isolated artifact or
-press **Install verified update** to enter the separate canonical installer
-without a second confirmation dialog. Finder replacement is not the supported
-installation path.
+Backstage show `verified`. The operator presses **Install and run new version**
+to enter the canonical installer and launch handoff without another confirmation
+or intermediary click. Finder replacement is not the supported installation
+path.
 
 ## Connector runtime materialization
 

@@ -457,7 +457,6 @@ private struct OverviewView: View {
 
 private struct BackstageUpdatesView: View {
     @ObservedObject var model: BackstageViewModel
-    @State private var isLaunchingInstalledUpdate = false
 
     var body: some View {
         ScrollView {
@@ -531,56 +530,32 @@ private struct BackstageUpdatesView: View {
                     .foregroundStyle(.secondary)
             }
         case let .verified(update):
-            statusLabel("Verified and ready for review", systemImage: "checkmark.shield.fill", color: .green)
+            statusLabel("Verified and ready to install", systemImage: "checkmark.shield.fill", color: .green)
             releaseSummary(update.manifest)
-            Text("The archive passed exact-size, SHA-256, bundle-identity, and macOS code-signature checks. No install or launch was performed.")
+            Text("The archive passed exact-size, SHA-256, bundle-identity, and macOS code-signature checks. One action installs it, starts the new version, and closes this older copy after launch succeeds.")
                 .foregroundStyle(.secondary)
-            Button("Reveal verified update in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([update.bundleURL])
-            }
-            .backstageHelp("Reveal the isolated verified app bundle for a separately confirmed manual installation or rollback decision.")
-            Button("Install verified update") {
-                Task { await model.installVerifiedUpdate() }
+            Button("Install and run new version") {
+                Task { await model.installAndRunVerifiedUpdate() }
             }
             .disabled(!model.canPerformBackstageUpdateActions)
             .buttonStyle(.borderedProminent)
-            .backstageHelp("Install the already verified release immediately, repeat release and signing checks, preserve the incumbent app as rollback, and atomically replace the canonical Backstage bundle.")
+            .backstageHelp("Install the verified release, repeat release and signing checks, preserve rollback, atomically replace the canonical app, start the new version, and close this older copy after launch succeeds.")
         case let .installing(manifest):
-            statusLabel("Installing verified update", systemImage: "arrow.triangle.2.circlepath", color: .orange)
+            statusLabel("Installing and opening new version", systemImage: "arrow.triangle.2.circlepath", color: .orange)
             releaseSummary(manifest)
             ProgressView()
-            Text("Staging and reverifying the complete app before the canonical bundle is exchanged.")
+            Text("Staging and reverifying the complete app before the canonical bundle is exchanged and launched.")
                 .foregroundStyle(.secondary)
         case let .installed(receipt):
-            statusLabel("Installed safely", systemImage: "checkmark.seal.fill", color: .green)
+            statusLabel("Installed; opening new version", systemImage: "checkmark.seal.fill", color: .green)
             releaseSummary(receipt.manifest)
-            Text("The verified release is installed at /Applications/PhotosByElie Backstage.app.")
+            ProgressView()
+            Text("The verified release is installed at /Applications/PhotosByElie Backstage.app. Waiting for the new process before closing this copy.")
                 .foregroundStyle(.secondary)
             if receipt.rollbackBundleURL != nil {
                 Text("The previous signed app is retained privately for rollback.")
                     .foregroundStyle(.secondary)
             }
-            Button(isLaunchingInstalledUpdate ? "Opening installed Backstage…" : "Quit and open installed Backstage") {
-                guard !isLaunchingInstalledUpdate else { return }
-                isLaunchingInstalledUpdate = true
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.createsNewApplicationInstance = true
-                NSWorkspace.shared.openApplication(
-                    at: receipt.installedBundleURL,
-                    configuration: configuration
-                ) { _, error in
-                    DispatchQueue.main.async {
-                        guard error == nil else {
-                            isLaunchingInstalledUpdate = false
-                            return
-                        }
-                        NSApp.terminate(nil)
-                    }
-                }
-            }
-            .disabled(!model.canPerformBackstageUpdateActions || isLaunchingInstalledUpdate)
-            .buttonStyle(.borderedProminent)
-            .backstageHelp("Launch a new instance of the newly installed canonical Backstage app, then quit this older running copy after the launch succeeds.")
         case let .failed(message, recovery):
             statusLabel("Failed safely", systemImage: "exclamationmark.triangle.fill", color: .red)
             Text(message)

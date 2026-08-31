@@ -1266,6 +1266,11 @@ final class BackstageViewModel: ObservableObject {
 
     func checkForUpdates() async {
         guard canPerformBackstageUpdateActions, !isUpdateOperationInProgress else { return }
+        let existingVerifiedUpdate: BackstageVerifiedUpdate? = if case let .verified(update) = updateState {
+            update
+        } else {
+            nil
+        }
         updateState = .checking
         do {
             let check = try await updateService.check(current: installedRelease)
@@ -1273,8 +1278,13 @@ final class BackstageViewModel: ObservableObject {
             case .current:
                 updateState = .current(check.manifest)
             case .updateAvailable:
-                updateState = .updateAvailable(check.manifest)
-                await downloadVerifiedUpdate(manifest: check.manifest)
+                if let existingVerifiedUpdate,
+                   existingVerifiedUpdate.manifest == check.manifest {
+                    updateState = .verified(existingVerifiedUpdate)
+                } else {
+                    updateState = .updateAvailable(check.manifest)
+                    await downloadVerifiedUpdate(manifest: check.manifest)
+                }
             case .downgradeRejected:
                 updateState = .failed(
                     message: BackstageUpdateError.downgradeRejected.localizedDescription,
@@ -1299,9 +1309,9 @@ final class BackstageViewModel: ObservableObject {
     var shouldAutomaticallyCheckForUpdates: Bool {
         guard canPerformBackstageUpdateActions else { return false }
         return switch updateState {
-        case .idle, .current, .failed:
+        case .idle, .current, .verified, .failed:
             true
-        case .checking, .updateAvailable, .downloading, .verified, .installing, .installed:
+        case .checking, .updateAvailable, .downloading, .installing, .installed:
             false
         }
     }

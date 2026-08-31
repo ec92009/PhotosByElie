@@ -397,6 +397,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.isUpdateOperationInProgress)
         #expect(!model.shouldAutomaticallyCheckForUpdates)
 
+        model.updateState = .verified(syntheticVerifiedUpdate())
+        #expect(model.shouldAutomaticallyCheckForUpdates)
+
         model.updateState = .failed(message: "Offline", recovery: "Try again")
         #expect(model.shouldAutomaticallyCheckForUpdates)
     }
@@ -445,6 +448,53 @@ struct BackstageFixtureSelectionTests {
         }
         #expect(update.manifest == syntheticUpdateManifest())
         #expect(await service.downloadCount() == 1)
+    }
+
+    @Test("A staged update is reused until a newer manifest replaces it automatically")
+    @MainActor
+    func stagedUpdateDoesNotMaskNewerRelease() async throws {
+        let firstManifest = syntheticUpdateManifest()
+        let service = RecordingBackstageUpdateService(manifest: firstManifest)
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            updateService: service,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            currentEquipmentCache: nil,
+            equipmentBackfillStore: nil,
+            customerPhotoLinks: nil
+        )
+
+        let firstCheck = Task { await model.checkForUpdates() }
+        for _ in 0..<1_000 where await service.downloadCount() == 0 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        await service.releaseDownload()
+        await firstCheck.value
+        #expect(await service.downloadCount() == 1)
+
+        await model.checkForUpdates()
+        #expect(await service.checkCount() == 2)
+        #expect(await service.downloadCount() == 1)
+        #expect(model.updateState == .verified(syntheticVerifiedUpdate(manifest: firstManifest)))
+
+        let newerManifest = syntheticUpdateManifest(version: "999.2", build: "9992")
+        await service.setManifest(newerManifest)
+        let replacementCheck = Task { await model.checkForUpdates() }
+        for _ in 0..<1_000 where await service.downloadCount() == 1 {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        guard case let .downloading(manifest, _, _) = model.updateState else {
+            Issue.record("A newer manifest did not replace the staged update immediately.")
+            await service.releaseDownload()
+            await replacementCheck.value
+            return
+        }
+        #expect(manifest == newerManifest)
+        await service.releaseDownload()
+        await replacementCheck.value
+        #expect(model.updateState == .verified(syntheticVerifiedUpdate(manifest: newerManifest)))
+        #expect(await service.downloadCount() == 2)
     }
 
     @Test("One verified-update action installs and launches the canonical new version")
@@ -4232,7 +4282,7 @@ private final class RecordingBackstageInstalledUpdateLauncher: BackstageInstalle
 }
 
 private actor RecordingBackstageUpdateService: BackstageUpdateServicing {
-    private let manifest: BackstageReleaseManifest
+    private var manifest: BackstageReleaseManifest
     private var recordedCheckCount = 0
     private var recordedDownloadCount = 0
     private var downloadContinuation: CheckedContinuation<Void, Never>?
@@ -4271,16 +4321,23 @@ private actor RecordingBackstageUpdateService: BackstageUpdateServicing {
     func checkCount() -> Int { recordedCheckCount }
     func downloadCount() -> Int { recordedDownloadCount }
 
+    func setManifest(_ manifest: BackstageReleaseManifest) {
+        self.manifest = manifest
+    }
+
     func releaseDownload() {
         downloadContinuation?.resume()
         downloadContinuation = nil
     }
 }
 
-private func syntheticUpdateManifest() -> BackstageReleaseManifest {
+private func syntheticUpdateManifest(
+    version: String = "999.1",
+    build: String = "9991"
+) -> BackstageReleaseManifest {
     BackstageReleaseManifest(
-        version: "999.1",
-        build: "9991",
+        version: version,
+        build: build,
         minimumOSVersion: "14.0",
         releaseNotes: "Synthetic automatic-download verification.",
         architectures: ["arm64"],
@@ -4292,6 +4349,16 @@ private func syntheticUpdateManifest() -> BackstageReleaseManifest {
             signingIdentity: "Apple Development: Test",
             designatedRequirement: "identifier com.photosbyelie.backstage"
         )
+    )
+}
+
+private func syntheticVerifiedUpdate(
+    manifest: BackstageReleaseManifest = syntheticUpdateManifest()
+) -> BackstageVerifiedUpdate {
+    BackstageVerifiedUpdate(
+        manifest: manifest,
+        archiveURL: URL(fileURLWithPath: "/tmp/Backstage-update.zip"),
+        bundleURL: URL(fileURLWithPath: "/tmp/PhotosByElie Backstage.app")
     )
 }
 

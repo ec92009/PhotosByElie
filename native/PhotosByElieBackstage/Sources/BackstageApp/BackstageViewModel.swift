@@ -194,7 +194,7 @@ final class BackstageViewModel: ObservableObject {
         didSet {
             preferences.set(
                 cullingPreviewPanelVisible,
-                forKey: Self.cullingPreviewPanelVisibilityPreferenceKey
+                forKey: BackstagePanelPreferenceKey.cullingInspectorVisible
             )
         }
     }
@@ -202,7 +202,7 @@ final class BackstageViewModel: ObservableObject {
         didSet {
             preferences.set(
                 reviewPreviewPanelVisible,
-                forKey: Self.reviewPreviewPanelVisibilityPreferenceKey
+                forKey: BackstagePanelPreferenceKey.reviewInspectorVisible
             )
         }
     }
@@ -544,10 +544,6 @@ final class BackstageViewModel: ObservableObject {
         "PhotosByElieBackstage.selectedFixtureID"
     private static let legacyPreviewPanelVisibilityPreferenceKey =
         "PhotosByElieBackstage.previewPanelVisible"
-    private static let cullingPreviewPanelVisibilityPreferenceKey =
-        "PhotosByElieBackstage.cullingPreviewPanelVisible"
-    private static let reviewPreviewPanelVisibilityPreferenceKey =
-        "PhotosByElieBackstage.reviewPreviewPanelVisible"
     private static let cullingThumbnailUpgradePixelSize = 900
     private static let cullingThumbnailUpgradeConcurrencyLimit = 4
     private static let cullingThumbnailBackfillAssetLimit = 2_000
@@ -738,13 +734,13 @@ final class BackstageViewModel: ObservableObject {
                 ? true
                 : preferences.bool(forKey: Self.legacyPreviewPanelVisibilityPreferenceKey)
         self.cullingPreviewPanelVisible =
-            preferences.object(forKey: Self.cullingPreviewPanelVisibilityPreferenceKey) == nil
+            preferences.object(forKey: BackstagePanelPreferenceKey.cullingInspectorVisible) == nil
                 ? legacyPreviewVisibility
-                : preferences.bool(forKey: Self.cullingPreviewPanelVisibilityPreferenceKey)
+                : preferences.bool(forKey: BackstagePanelPreferenceKey.cullingInspectorVisible)
         self.reviewPreviewPanelVisible =
-            preferences.object(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey) == nil
+            preferences.object(forKey: BackstagePanelPreferenceKey.reviewInspectorVisible) == nil
                 ? legacyPreviewVisibility
-                : preferences.bool(forKey: Self.reviewPreviewPanelVisibilityPreferenceKey)
+                : preferences.bool(forKey: BackstagePanelPreferenceKey.reviewInspectorVisible)
         self.api = api
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary

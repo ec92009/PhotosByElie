@@ -1,6 +1,15 @@
 import AppKit
 import SwiftUI
 
+enum BackstagePanelPreferenceKey {
+    static let sidebarVisible = "PhotosByElieBackstage.navigationSidebarVisible"
+    static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"
+    static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"
+    static let enrollmentFallbackExpanded = "PhotosByElieBackstage.enrollmentFallbackExpanded"
+    static let fixturePlacementsExpanded = "PhotosByElieBackstage.fixturePlacementsExpanded"
+    static let uploadRecoveryExpanded = "PhotosByElieBackstage.uploadRecoveryExpanded"
+}
+
 /// Gives the production window an AppKit autosave identity without moving the
 /// SwiftUI scene lifecycle into an application delegate.
 struct WindowFrameAutosaver: NSViewRepresentable {
@@ -37,9 +46,52 @@ final class WindowFrameAutosaveView: NSView {
 
     func configureWindowIfNeeded() {
         guard let window, configuredWindow !== window else { return }
+        // AppKit saves this named frame as it changes and when the window
+        // closes. The explicit restore below also repairs stale off-screen
+        // geometry after a monitor arrangement changes.
         window.setFrameAutosaveName(autosaveName)
-        _ = window.setFrameUsingName(autosaveName)
+        if window.setFrameUsingName(autosaveName),
+           let restoredFrame = Self.visibleRestoredFrame(
+               window.frame,
+               screenFrames: NSScreen.screens.map(\.visibleFrame)
+           ), restoredFrame != window.frame {
+            window.setFrame(restoredFrame, display: false)
+        }
         configuredWindow = window
+    }
+
+    static func visibleRestoredFrame(
+        _ frame: NSRect,
+        screenFrames: [NSRect]
+    ) -> NSRect? {
+        guard frame.origin.x.isFinite,
+              frame.origin.y.isFinite,
+              frame.width.isFinite,
+              frame.height.isFinite,
+              frame.width > 0,
+              frame.height > 0,
+              let primaryScreen = screenFrames.first else {
+            return nil
+        }
+        let requiredVisibleWidth = min(120, frame.width)
+        let requiredVisibleHeight = min(80, frame.height)
+        if screenFrames.contains(where: {
+            let intersection = frame.intersection($0)
+            return !intersection.isNull
+                && intersection.width >= requiredVisibleWidth
+                && intersection.height >= requiredVisibleHeight
+        }) {
+            return frame
+        }
+
+        let width = min(frame.width, primaryScreen.width)
+        let height = min(frame.height, primaryScreen.height)
+        return NSRect(
+            x: min(max(frame.minX, primaryScreen.minX), primaryScreen.maxX - width),
+            y: min(max(frame.minY, primaryScreen.minY), primaryScreen.maxY - height),
+            width: width,
+            height: height
+        )
     }
 }
 

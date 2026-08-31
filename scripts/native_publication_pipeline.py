@@ -36,6 +36,7 @@ MANAGED_EXACT = {"PBE:Approved", "PBE:Tombstone", "PBE-Approved"}
 PUBLICATION_BATCH_LIMIT = 50
 DEFAULT_UPLOAD_CONCURRENCY = 4
 QUARANTINE_DAYS = 30
+R2_RECONCILIATION_START_GRACE_SECONDS = 30
 
 
 def _json(value: Any) -> str:
@@ -1377,6 +1378,7 @@ def create_r2_reconciliation_run(
     *,
     commit: bool = False,
     exceptional_sold_purge: bool = False,
+    worker_token: str = "",
     now: str | None = None,
 ) -> dict[str, Any]:
     timestamp = now or now_iso()
@@ -1390,10 +1392,19 @@ def create_r2_reconciliation_run(
             """
             INSERT INTO r2_reconciliation_runs (
               run_id, mode, status, stage, requested_count, remaining_count,
-              created_at, updated_at
-            ) VALUES (?, ?, 'running', 'Queued', ?, ?, ?, ?)
+              worker_token, heartbeat_at, created_at, updated_at
+            ) VALUES (?, ?, 'running', 'Starting worker', ?, ?, ?, ?, ?, ?)
             """,
-            (run_id, mode, requested, requested, timestamp, timestamp),
+            (
+                run_id,
+                mode,
+                requested,
+                requested,
+                str(worker_token or ""),
+                timestamp,
+                timestamp,
+                timestamp,
+            ),
         )
         conn.commit()
     return reconciliation_run_status(repo_root, run_id)
@@ -1423,8 +1434,167 @@ def reconciliation_run_status(repo_root: Path, run_id: str) -> dict[str, Any]:
         "remaining": int(row["remaining_count"] or 0),
         "cancelRequested": bool(row["cancel_requested"]),
         "error": str(row["error_text"] or ""),
+        "recoveryState": str(row["recovery_state"] or ""),
+        "recoveryReason": str(row["recovery_reason"] or ""),
         "completedAt": str(row["completed_at"] or ""),
         "actions": _read_json(row["actions_json"], []),
+    }
+
+
+def register_r2_reconciliation_worker(
+    repo_root: Path,
+    run_id: str,
+    *,
+    worker_pid: int,
+    worker_token: str,
+    now: str | None = None,
+) -> dict[str, Any]:
+    timestamp = now or now_iso()
+    token = str(worker_token or "").strip()
+    if worker_pid <= 0 or not token:
+        raise ValueError("R2 reconciliation worker identity is incomplete")
+    with connect(repo_root) as conn:
+        cursor = conn.execute(
+            """
+            UPDATE r2_reconciliation_runs
+            SET worker_pid = ?, heartbeat_at = ?, stage = 'Checking R2 references',
+                updated_at = ?
+            WHERE run_id = ? AND status = 'running' AND worker_token = ?
+            """,
+            (worker_pid, timestamp, timestamp, run_id, token),
+        )
+        if cursor.rowcount != 1:
+            raise ValueError("R2 reconciliation worker could not claim its durable run")
+        conn.commit()
+    return reconciliation_run_status(repo_root, run_id)
+
+
+def record_r2_reconciliation_failure(
+    repo_root: Path,
+    run_id: str,
+    error: str,
+    *,
+    now: str | None = None,
+) -> dict[str, Any]:
+    timestamp = now or now_iso()
+    with connect(repo_root) as conn:
+        cursor = conn.execute(
+            """
+            UPDATE r2_reconciliation_runs
+            SET status = 'failed', stage = 'Failed', error_text = ?,
+                completed_at = ?, heartbeat_at = ?, updated_at = ?
+            WHERE run_id = ? AND status = 'running'
+            """,
+            (str(error or "R2 reconciliation worker failed"), timestamp, timestamp, timestamp, run_id),
+        )
+        if cursor.rowcount == 0:
+            row = conn.execute(
+                "SELECT run_id FROM r2_reconciliation_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if not row:
+                raise ValueError("R2 reconciliation run does not exist")
+        conn.commit()
+    return reconciliation_run_status(repo_root, run_id)
+
+
+def recover_r2_reconciliation_runs(
+    repo_root: Path,
+    *,
+    worker_alive: Callable[[int, str, str], bool] | None = None,
+    now: str | None = None,
+    startup_grace_seconds: int = R2_RECONCILIATION_START_GRACE_SECONDS,
+) -> dict[str, Any]:
+    """Terminalize orphaned R2 workers while preserving every checkpoint."""
+    timestamp = now or now_iso()
+    checked_at = _parse_timestamp(timestamp)
+    alive = worker_alive or (lambda _pid, _run_id, _token: False)
+    recovered_cancelled = 0
+    recovered_failed = 0
+    active_run_ids: list[str] = []
+    recovered_run_ids: list[str] = []
+    with connect(repo_root) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        rows = conn.execute(
+            """
+            SELECT * FROM r2_reconciliation_runs
+            WHERE status = 'running'
+            ORDER BY created_at, run_id
+            """
+        ).fetchall()
+        for row in rows:
+            run_id = str(row["run_id"])
+            worker_pid = int(row["worker_pid"] or 0)
+            worker_token = str(row["worker_token"] or "")
+            updated_at = _parse_timestamp(str(row["heartbeat_at"] or row["updated_at"]))
+            within_start_grace = (
+                worker_pid <= 0
+                and max(0.0, (checked_at - updated_at).total_seconds())
+                <= max(0, startup_grace_seconds)
+            )
+            process_is_alive = bool(
+                worker_pid > 0
+                and worker_token
+                and alive(worker_pid, run_id, worker_token)
+            )
+            if within_start_grace or process_is_alive:
+                active_run_ids.append(run_id)
+                conn.execute(
+                    """
+                    UPDATE r2_reconciliation_runs
+                    SET recovery_checked_at = ?
+                    WHERE run_id = ? AND status = 'running'
+                    """,
+                    (timestamp, run_id),
+                )
+                continue
+
+            cancelled = bool(row["cancel_requested"])
+            terminal_status = "cancelled" if cancelled else "failed"
+            stage = "Recovered stopped run" if cancelled else "Interrupted worker"
+            reason = (
+                "Cancellation was already requested and the recorded worker is no longer running."
+                if cancelled
+                else "The recorded R2 reconciliation worker exited before a terminal receipt; start a new preview."
+            )
+            conn.execute(
+                """
+                UPDATE r2_reconciliation_runs
+                SET status = ?, stage = ?, error_text = ?, completed_at = ?,
+                    heartbeat_at = ?, recovery_state = 'recovered',
+                    recovery_reason = ?, recovery_checked_at = ?, updated_at = ?
+                WHERE run_id = ? AND status = 'running'
+                """,
+                (
+                    terminal_status,
+                    stage,
+                    "" if cancelled else reason,
+                    timestamp,
+                    timestamp,
+                    reason,
+                    timestamp,
+                    timestamp,
+                    run_id,
+                ),
+            )
+            recovered_run_ids.append(run_id)
+            if cancelled:
+                recovered_cancelled += 1
+            else:
+                recovered_failed += 1
+        conn.commit()
+
+    latest_run_id = (active_run_ids or recovered_run_ids or [""])[-1]
+    return {
+        "ok": True,
+        "activeCount": len(active_run_ids),
+        "recoveredCancelledCount": recovered_cancelled,
+        "recoveredFailedCount": recovered_failed,
+        "latestRun": (
+            reconciliation_run_status(repo_root, latest_run_id)
+            if latest_run_id
+            else None
+        ),
     }
 
 
@@ -1506,8 +1676,13 @@ def reconcile_r2_objects(
             """
         ).fetchall()
         conn.execute(
-            "UPDATE r2_reconciliation_runs SET status = 'running', stage = 'Checking R2 references', updated_at = ? WHERE run_id = ?",
-            (timestamp, run_id),
+            """
+            UPDATE r2_reconciliation_runs
+            SET status = 'running', stage = 'Checking R2 references',
+                heartbeat_at = ?, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (timestamp, timestamp, run_id),
         )
         conn.commit()
         counts = {
@@ -1676,7 +1851,7 @@ def reconcile_r2_objects(
                 SET stage = ?, scanned_count = ?, protected_count = ?,
                     quarantined_count = ?, restored_count = ?,
                     eligible_delete_count = ?, deleted_count = ?,
-                    remaining_count = ?, actions_json = ?, updated_at = ?
+                    remaining_count = ?, actions_json = ?, heartbeat_at = ?, updated_at = ?
                 WHERE run_id = ?
                 """,
                 (
@@ -1689,6 +1864,7 @@ def reconcile_r2_objects(
                     counts["deleted"],
                     max(0, len(objects) - counts["scanned"]),
                     _json(actions),
+                    checkpoint,
                     checkpoint,
                     run_id,
                 ),
@@ -1704,7 +1880,7 @@ def reconcile_r2_objects(
                 quarantined_count = ?, restored_count = ?,
                 eligible_delete_count = ?, deleted_count = ?,
                 remaining_count = ?, actions_json = ?,
-                completed_at = ?, updated_at = ?
+                completed_at = ?, heartbeat_at = ?, updated_at = ?
             WHERE run_id = ?
             """,
             (
@@ -1718,6 +1894,7 @@ def reconcile_r2_objects(
                 counts["deleted"],
                 max(0, len(objects) - counts["scanned"]),
                 _json(actions),
+                completed_at,
                 completed_at,
                 completed_at,
                 run_id,

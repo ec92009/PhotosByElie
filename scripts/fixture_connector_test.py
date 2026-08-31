@@ -5,6 +5,7 @@ import hashlib
 import os
 import sqlite3
 import subprocess
+from types import SimpleNamespace
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -37,6 +38,72 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_r2_recovery_mode_surfaces_the_durable_terminal_receipt(self):
+        recovery = {
+            "ok": True,
+            "activeCount": 0,
+            "recoveredCancelledCount": 1,
+            "recoveredFailedCount": 0,
+            "latestRun": {"runId": "r2rec-stopped", "status": "cancelled"},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir, patch(
+            "local_server.recover_r2_reconciliation_runs",
+            return_value=recovery,
+        ) as recover:
+            root = Path(temp_dir)
+            result = local_server.new_owner_connector_result(
+                root,
+                action("r2-reconciliation-run-recover"),
+            )
+
+        recover.assert_called_once_with(
+            root,
+            worker_alive=local_server._r2_reconciliation_worker_alive,
+        )
+        self.assertFalse(result["result"]["readOnly"])
+        self.assertEqual(
+            result["result"]["reconciliationRecovery"]["latestRun"]["status"],
+            "cancelled",
+        )
+
+    def test_r2_start_uses_a_detached_receipt_backed_worker(self):
+        with tempfile.TemporaryDirectory() as temp_dir, patch(
+            "local_server.recover_r2_reconciliation_runs",
+            return_value={
+                "activeCount": 0,
+                "recoveredCancelledCount": 1,
+                "recoveredFailedCount": 0,
+                "latestRun": None,
+            },
+        ), patch(
+            "local_server.create_r2_reconciliation_run",
+            return_value={"runId": "r2rec-new", "status": "running"},
+        ) as create, patch(
+            "local_server.reconciliation_run_status",
+            return_value={"runId": "r2rec-new", "status": "running"},
+        ), patch(
+            "local_server._connector_runtime_script",
+            return_value=Path("/runtime/scripts/native_r2_reconciliation.py"),
+        ), patch(
+            "local_server.subprocess.Popen",
+            return_value=SimpleNamespace(pid=4242),
+        ) as popen:
+            root = Path(temp_dir)
+            result = local_server._start_r2_reconciliation_run(root, commit=False)
+
+        create.assert_called_once()
+        self.assertEqual(create.call_args.kwargs["commit"], False)
+        self.assertTrue(create.call_args.kwargs["worker_token"])
+        command = popen.call_args.args[0]
+        self.assertIn("/runtime/scripts/native_r2_reconciliation.py", command)
+        self.assertIn("--run-id", command)
+        self.assertIn("r2rec-new", command)
+        self.assertTrue(popen.call_args.kwargs["start_new_session"])
+        self.assertTrue(result["started"])
+        self.assertFalse(result["attached"])
+        self.assertEqual(result["pid"], 4242)
+        self.assertEqual(result["recoveredCancelledCount"], 1)
+
     def test_public_catalog_deploy_mode_returns_the_verified_receipt(self):
         with tempfile.TemporaryDirectory() as temp_dir, patch(
             "local_server.deploy_public_catalog",

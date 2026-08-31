@@ -577,7 +577,9 @@ from apple_photos_metadata_writer import BackstagePhotosMetadataAdapter, commit_
 from native_publication_pipeline import (  # noqa: E402
     create_r2_reconciliation_run,
     create_upload_run as create_native_upload_run,
+    recover_r2_reconciliation_runs,
     reconciliation_run_status,
+    record_r2_reconciliation_failure,
     record_photos_sync_snapshot,
     record_sale_reference,
     reconcile_r2_objects,
@@ -3408,38 +3410,79 @@ def _start_native_publication_run(
     }
 
 
-def _run_r2_reconciliation_task(repo_root: Path, run_id: str, commit: bool) -> None:
-    try:
-        reconcile_r2_objects(
-            repo_root,
-            commit=commit,
-            delete_object=_delete_reconciled_r2_object if commit else None,
-            run_id=run_id,
-        )
-    except Exception as error:  # noqa: BLE001 - persist the failed run for inspection and retry.
-        completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        with fixture_connect(repo_root) as connection:
-            connection.execute(
-                """
-                UPDATE r2_reconciliation_runs
-                SET status = 'failed', stage = 'Failed', error_text = ?,
-                    completed_at = ?, updated_at = ?
-                WHERE run_id = ?
-                """,
-                (str(error), completed_at, completed_at, run_id),
-            )
-            connection.commit()
+def _r2_reconciliation_worker_alive(pid: int, run_id: str, worker_token: str) -> bool:
+    if pid <= 0 or not run_id or not worker_token:
+        return False
+    completed = subprocess.run(
+        ["ps", "-p", str(pid), "-o", "command="],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    command = (completed.stdout or "").strip()
+    return (
+        completed.returncode == 0
+        and "native_r2_reconciliation.py" in command
+        and f"--run-id {run_id}" in command
+        and f"--worker-token {worker_token}" in command
+    )
 
 
 def _start_r2_reconciliation_run(repo_root: Path, *, commit: bool) -> dict:
-    run = create_r2_reconciliation_run(repo_root, commit=commit)
-    worker = threading.Thread(
-        target=_run_r2_reconciliation_task,
-        args=(repo_root, str(run["runId"]), commit),
-        daemon=True,
+    recovery = recover_r2_reconciliation_runs(
+        repo_root,
+        worker_alive=_r2_reconciliation_worker_alive,
     )
-    worker.start()
-    return {**run, "started": True}
+    if int(recovery.get("activeCount") or 0) > 0 and recovery.get("latestRun"):
+        return {**recovery["latestRun"], "started": False, "attached": True}
+
+    worker_token = uuid.uuid4().hex
+    run = create_r2_reconciliation_run(
+        repo_root,
+        commit=commit,
+        worker_token=worker_token,
+    )
+    run_id = str(run["runId"])
+    log_directory = repo_root / "assets" / "owner-actions" / "r2-reconciliation-runs"
+    log_directory.mkdir(parents=True, exist_ok=True)
+    log_path = log_directory / f"{run_id}.log"
+    log_handle = log_path.open("ab")
+    command = [
+        sys.executable,
+        str(_connector_runtime_script("native_r2_reconciliation.py")),
+        "--repo-root",
+        str(repo_root),
+        "--run-id",
+        run_id,
+        "--worker-token",
+        worker_token,
+    ]
+    if commit:
+        command.append("--commit")
+    try:
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=repo_root,
+                stdin=subprocess.DEVNULL,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        except Exception as error:
+            record_r2_reconciliation_failure(repo_root, run_id, str(error))
+            raise
+    finally:
+        log_handle.close()
+    return {
+        **reconciliation_run_status(repo_root, run_id),
+        "started": True,
+        "attached": False,
+        "pid": process.pid,
+        "logPath": str(log_path),
+        "recoveredCancelledCount": int(recovery.get("recoveredCancelledCount") or 0),
+        "recoveredFailedCount": int(recovery.get("recoveredFailedCount") or 0),
+    }
 
 
 def _delete_reconciled_r2_object(bucket: str, key: str) -> None:
@@ -3806,6 +3849,14 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             "reconciliation": request_r2_reconciliation_cancel(
                 repo_root,
                 str(manifest.get("runId") or ""),
+            ),
+        })
+    elif mode == "r2-reconciliation-run-recover":
+        result.update({
+            "readOnly": False,
+            "reconciliationRecovery": recover_r2_reconciliation_runs(
+                repo_root,
+                worker_alive=_r2_reconciliation_worker_alive,
             ),
         })
     elif mode == "fixture-access-effective":
@@ -4281,6 +4332,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "r2-reconciliation-run-start": "Started guarded R2 reconciliation with per-object checkpoints.",
         "r2-reconciliation-run-status": "Loaded current R2 reconciliation progress and receipts.",
         "r2-reconciliation-run-cancel": "Requested a safe stop after the current R2 object checkpoint.",
+        "r2-reconciliation-run-recover": "Reconciled interrupted R2 workers and surfaced their durable terminal receipt.",
     }.get(mode, "Fixture operation completed."))
     return {
         "ok": True,
@@ -4319,6 +4371,7 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         "r2-reconciliation-run-start",
         "r2-reconciliation-run-status",
         "r2-reconciliation-run-cancel",
+        "r2-reconciliation-run-recover",
     }:
         return _new_owner_fixture_pipeline_result(repo_root, action, connector_id)
     if mode.startswith("apple-photos-re-"):

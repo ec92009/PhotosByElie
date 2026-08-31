@@ -5308,6 +5308,54 @@ struct OwnerCoreTests {
         ])
     }
 
+    @Test("R2 recovery surfaces an interrupted durable run without starting storage work")
+    func r2RecoveryContract() async throws {
+        let response = OwnerAction(
+            id: "r2-recover",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: ["reconciliationRecovery": [
+                "activeCount": 0,
+                "recoveredCancelledCount": 1,
+                "recoveredFailedCount": 0,
+                "latestRun": [
+                    "runId": "r2rec-stopped",
+                    "mode": "plan",
+                    "status": "cancelled",
+                    "stage": "Recovered stopped run",
+                    "requested": 8_671,
+                    "scanned": 0,
+                    "remaining": 8_671,
+                    "cancelRequested": true,
+                    "actions": [],
+                ],
+            ]]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [response])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let recovery = try await service.recoverR2ReconciliationRuns()
+        #expect(recovery.activeCount == 0)
+        #expect(recovery.recoveredCancelledCount == 1)
+        #expect(recovery.recoveredFailedCount == 0)
+        #expect(recovery.latestRun?.status == "cancelled")
+        #expect(recovery.latestRun?.scanned == 0)
+        #expect(recovery.latestRun?.remaining == 8_671)
+
+        let requests = await api.requests()
+        #expect(requests.count == 1)
+        #expect(
+            requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue
+                == "r2-reconciliation-run-recover"
+        )
+    }
+
     @Test("Native upload retry reuses the exact failed run and surfaces its durable error")
     func nativeUploadRetryContract() async throws {
         let recovery = OwnerAction(

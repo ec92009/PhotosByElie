@@ -732,6 +732,7 @@ private struct PublicationView: View {
         .padding()
         .task {
             if model.fixtures.isEmpty { await model.loadFixtures() }
+            await model.recoverR2ReconciliationRuns()
         }
         .confirmationDialog("Apply the guarded R2 reconciliation?", isPresented: $confirming) {
             Button("Apply reconciliation", role: .destructive) {

@@ -366,6 +366,13 @@ public struct R2ReconciliationReport: Sendable, Equatable {
     }
 }
 
+public struct R2ReconciliationRecoveryReport: Sendable, Equatable {
+    public var activeCount: Int
+    public var recoveredCancelledCount: Int
+    public var recoveredFailedCount: Int
+    public var latestRun: R2ReconciliationReport?
+}
+
 public struct PhotosSyncReport: Sendable, Equatable {
     public var runID: String
     public var status: String
@@ -627,6 +634,24 @@ public actor FixtureDeliveryService {
         return try decodeR2Reconciliation(action, commit: false)
     }
 
+    public func recoverR2ReconciliationRuns() async throws -> R2ReconciliationRecoveryReport {
+        let action = try await fixtureAction(
+            mode: "r2-reconciliation-run-recover",
+            fixtureID: ""
+        )
+        guard let recovery = action.result?["reconciliationRecovery"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("reconciliationRecovery")
+        }
+        return R2ReconciliationRecoveryReport(
+            activeCount: recovery["activeCount"]?.intValue ?? 0,
+            recoveredCancelledCount: recovery["recoveredCancelledCount"]?.intValue ?? 0,
+            recoveredFailedCount: recovery["recoveredFailedCount"]?.intValue ?? 0,
+            latestRun: recovery["latestRun"]?.objectValue.map {
+                r2Reconciliation(from: $0, commit: false)
+            }
+        )
+    }
+
     public func r2Reconciliation(commit: Bool = false) async throws -> R2ReconciliationReport {
         let action = try await fixtureAction(
             mode: commit ? "r2-reconciliation-commit" : "r2-reconciliation-plan",
@@ -642,6 +667,13 @@ public actor FixtureDeliveryService {
         guard let result = action.result?["reconciliation"]?.objectValue else {
             throw FixtureDeliveryError.missingResult("reconciliation")
         }
+        return r2Reconciliation(from: result, commit: commit)
+    }
+
+    private func r2Reconciliation(
+        from result: [String: JSONValue],
+        commit: Bool
+    ) -> R2ReconciliationReport {
         let items = (result["actions"]?.arrayValue ?? []).compactMap { value -> R2ReconciliationItem? in
             guard let item = value.objectValue,
                   let key = item["key"]?.stringValue else { return nil }

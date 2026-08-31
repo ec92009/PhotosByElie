@@ -20,6 +20,8 @@ from native_publication_pipeline import (
     publish_verified_asset,
     reconcile_r2_objects,
     reconciliation_run_status,
+    recover_r2_reconciliation_runs,
+    register_r2_reconciliation_worker,
     record_photos_sync_snapshot,
     record_sale_reference,
     run_upload_batch,
@@ -637,6 +639,96 @@ class NativePublicationPipelineTest(unittest.TestCase):
         self.assertEqual(receipt["scanned"], 1)
         self.assertEqual(receipt["remaining"], 1)
         self.assertEqual(len(receipt["actions"]), 1)
+
+    def test_recovery_terminalizes_a_stopped_orphan_without_losing_checkpoints(self):
+        run = create_r2_reconciliation_run(
+            self.root,
+            commit=False,
+            worker_token="worker-stopped",
+            now="2026-01-01T00:00:00Z",
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                UPDATE r2_reconciliation_runs
+                SET cancel_requested = 1, scanned_count = 3, remaining_count = 7,
+                    actions_json = '[{"action":"protected"}]',
+                    updated_at = '2026-01-01T00:00:10Z',
+                    heartbeat_at = '2026-01-01T00:00:10Z'
+                WHERE run_id = ?
+                """,
+                (run["runId"],),
+            )
+            conn.commit()
+
+        recovery = recover_r2_reconciliation_runs(
+            self.root,
+            worker_alive=lambda _pid, _run_id, _token: False,
+            now="2026-01-01T00:05:00Z",
+            startup_grace_seconds=30,
+        )
+        receipt = reconciliation_run_status(self.root, run["runId"])
+        self.assertEqual(recovery["recoveredCancelledCount"], 1)
+        self.assertEqual(recovery["recoveredFailedCount"], 0)
+        self.assertEqual(receipt["status"], "cancelled")
+        self.assertEqual(receipt["stage"], "Recovered stopped run")
+        self.assertEqual(receipt["scanned"], 3)
+        self.assertEqual(receipt["remaining"], 7)
+        self.assertEqual(receipt["actions"], [{"action": "protected"}])
+        self.assertEqual(receipt["recoveryState"], "recovered")
+        self.assertEqual(receipt["error"], "")
+
+    def test_recovery_fails_a_dead_worker_and_preserves_retryable_state(self):
+        run = create_r2_reconciliation_run(
+            self.root,
+            commit=True,
+            worker_token="worker-dead",
+            now="2026-01-01T00:00:00Z",
+        )
+        register_r2_reconciliation_worker(
+            self.root,
+            run["runId"],
+            worker_pid=4242,
+            worker_token="worker-dead",
+            now="2026-01-01T00:00:01Z",
+        )
+        recovery = recover_r2_reconciliation_runs(
+            self.root,
+            worker_alive=lambda pid, run_id, token: False,
+            now="2026-01-01T00:05:00Z",
+        )
+        receipt = reconciliation_run_status(self.root, run["runId"])
+        self.assertEqual(recovery["recoveredFailedCount"], 1)
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["stage"], "Interrupted worker")
+        self.assertIn("start a new preview", receipt["error"])
+        self.assertEqual(receipt["recoveryState"], "recovered")
+
+    def test_recovery_keeps_a_live_worker_attached(self):
+        run = create_r2_reconciliation_run(
+            self.root,
+            commit=False,
+            worker_token="worker-live",
+            now="2026-01-01T00:00:00Z",
+        )
+        register_r2_reconciliation_worker(
+            self.root,
+            run["runId"],
+            worker_pid=5252,
+            worker_token="worker-live",
+            now="2026-01-01T00:00:01Z",
+        )
+        observed = []
+        recovery = recover_r2_reconciliation_runs(
+            self.root,
+            worker_alive=lambda pid, run_id, token: observed.append((pid, run_id, token)) or True,
+            now="2026-01-01T00:05:00Z",
+        )
+        self.assertEqual(recovery["activeCount"], 1)
+        self.assertEqual(recovery["recoveredCancelledCount"], 0)
+        self.assertEqual(recovery["recoveredFailedCount"], 0)
+        self.assertEqual(observed, [(5252, run["runId"], "worker-live")])
+        self.assertEqual(reconciliation_run_status(self.root, run["runId"])["status"], "running")
 
 
 if __name__ == "__main__":

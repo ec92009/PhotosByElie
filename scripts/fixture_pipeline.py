@@ -459,6 +459,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           cancel_requested INTEGER NOT NULL DEFAULT 0,
           actions_json TEXT NOT NULL DEFAULT '[]',
           error_text TEXT NOT NULL DEFAULT '',
+          worker_pid INTEGER,
+          worker_token TEXT NOT NULL DEFAULT '',
+          heartbeat_at TEXT,
+          recovery_state TEXT NOT NULL DEFAULT '',
+          recovery_reason TEXT NOT NULL DEFAULT '',
+          recovery_checked_at TEXT,
           created_at TEXT NOT NULL,
           completed_at TEXT,
           updated_at TEXT NOT NULL
@@ -760,6 +766,12 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         "remaining_count": "ALTER TABLE r2_reconciliation_runs ADD COLUMN remaining_count INTEGER NOT NULL DEFAULT 0",
         "cancel_requested": "ALTER TABLE r2_reconciliation_runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0",
         "actions_json": "ALTER TABLE r2_reconciliation_runs ADD COLUMN actions_json TEXT NOT NULL DEFAULT '[]'",
+        "worker_pid": "ALTER TABLE r2_reconciliation_runs ADD COLUMN worker_pid INTEGER",
+        "worker_token": "ALTER TABLE r2_reconciliation_runs ADD COLUMN worker_token TEXT NOT NULL DEFAULT ''",
+        "heartbeat_at": "ALTER TABLE r2_reconciliation_runs ADD COLUMN heartbeat_at TEXT",
+        "recovery_state": "ALTER TABLE r2_reconciliation_runs ADD COLUMN recovery_state TEXT NOT NULL DEFAULT ''",
+        "recovery_reason": "ALTER TABLE r2_reconciliation_runs ADD COLUMN recovery_reason TEXT NOT NULL DEFAULT ''",
+        "recovery_checked_at": "ALTER TABLE r2_reconciliation_runs ADD COLUMN recovery_checked_at TEXT",
     }.items():
         if column not in reconciliation_columns:
             conn.execute(ddl)

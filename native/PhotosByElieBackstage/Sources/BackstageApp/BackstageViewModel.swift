@@ -8313,6 +8313,48 @@ final class BackstageViewModel: ObservableObject {
         await runR2Reconciliation(commit: false)
     }
 
+    func recoverR2ReconciliationRuns() async {
+        guard canStartCloudWorkflow else { return }
+        isRunningDelivery = true
+        isRunningR2Reconciliation = true
+        isCancellingR2Reconciliation = false
+        r2ReconciliationStatus = "Checking for interrupted R2 maintenance…"
+        defer {
+            isRunningDelivery = false
+            isRunningR2Reconciliation = false
+            isCancellingR2Reconciliation = false
+        }
+        do {
+            let recovery = try await deliveryService.recoverR2ReconciliationRuns()
+            guard var report = recovery.latestRun else {
+                r2ReconciliationStatus = "Ready"
+                return
+            }
+            r2Reconciliation = report
+            while !report.isFinished {
+                r2ReconciliationStatus = "Reattached to \(report.stage) • \(report.scanned) of \(report.requested) checked • \(report.remaining) remaining."
+                try await Task.sleep(for: .seconds(1))
+                report = try await deliveryService.r2ReconciliationStatus(runID: report.runID)
+                r2Reconciliation = report
+            }
+            if recovery.recoveredCancelledCount > 0 {
+                r2ReconciliationStatus = "Recovered \(recovery.recoveredCancelledCount.formatted()) stopped R2 run\(recovery.recoveredCancelledCount == 1 ? "" : "s") after the worker exited. Existing checkpoints were preserved; no new storage action started."
+            } else if recovery.recoveredFailedCount > 0 {
+                r2ReconciliationStatus = "Recovered \(recovery.recoveredFailedCount.formatted()) interrupted R2 run\(recovery.recoveredFailedCount == 1 ? "" : "s"). Existing checkpoints were preserved; start a new preview when ready."
+            } else if report.status == "cancelled" {
+                r2ReconciliationStatus = "The attached R2 run stopped safely after \(report.scanned) of \(report.requested); \(report.remaining) remain."
+            } else if report.status == "failed" {
+                r2ReconciliationStatus = report.errorText.isEmpty
+                    ? "The attached R2 run failed with its checkpoints preserved."
+                    : report.errorText
+            } else {
+                r2ReconciliationStatus = "The attached R2 run completed \(report.scanned) checkpoints."
+            }
+        } catch {
+            r2ReconciliationStatus = "R2 recovery check failed safely: \(userFacingMessage(for: error))"
+        }
+    }
+
     func commitR2Reconciliation() async {
         await runR2Reconciliation(commit: true)
     }

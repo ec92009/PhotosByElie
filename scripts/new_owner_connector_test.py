@@ -426,6 +426,85 @@ class UploadRegistrationScopeTest(unittest.TestCase):
             set(),
         )
 
+    def test_complete_retries_exact_claim_visibility_race_without_reexecuting(self):
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+        class FakeClient:
+            def __init__(self):
+                self.action_record = {
+                    "id": "owner-action-stale-claim",
+                    "type": "owner-connector-check",
+                    "state": "queued",
+                    "payload": {"requestedConnector": "david"},
+                }
+                self.complete_attempts = 0
+
+            def action(self, _action_id):
+                return dict(self.action_record)
+
+            def transition(self, _action_id, transition, payload=None):
+                if transition == "claim":
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "claimed",
+                        "claim": {"connectorId": "david"},
+                    }
+                elif transition == "complete":
+                    self.complete_attempts += 1
+                    if self.complete_attempts < 3:
+                        raise WorkerRequestError(
+                            "Only claimed Owner actions can be completed.",
+                            status=409,
+                            code="owner_action_not_claimed",
+                        )
+                    self.action_record = {
+                        **self.action_record,
+                        "state": "completed",
+                        "result": (payload or {}).get("result", {}),
+                    }
+                return {"action": dict(self.action_record)}
+
+        client = FakeClient()
+        with patch("scripts.new_owner_connector.execute_action", return_value={"ok": True}) as execute, \
+             patch("scripts.new_owner_connector.time.sleep") as sleep:
+            action, processed = process_exact_action(config, client, "owner-action-stale-claim")
+
+        self.assertTrue(processed)
+        self.assertEqual(action["state"], "completed")
+        self.assertEqual(client.complete_attempts, 3)
+        self.assertEqual(execute.call_count, 1)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_complete_does_not_retry_unrelated_transition_conflict(self):
+        config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
+
+        class FakeClient:
+            def action(self, _action_id):
+                return {
+                    "id": "owner-action-wrong-connector",
+                    "type": "owner-connector-check",
+                    "state": "claimed",
+                    "claim": {"connectorId": "david"},
+                }
+
+            def transition(self, _action_id, transition, payload=None):
+                if transition == "complete":
+                    raise WorkerRequestError(
+                        "This action is claimed by another connector.",
+                        status=409,
+                        code="owner_action_connector_mismatch",
+                    )
+                return {"action": self.action(_action_id)}
+
+        client = FakeClient()
+        with patch("scripts.new_owner_connector.execute_action", return_value={"ok": True}) as execute, \
+             patch("scripts.new_owner_connector.time.sleep") as sleep:
+            with self.assertRaisesRegex(WorkerRequestError, "another connector"):
+                process_exact_action(config, client, "owner-action-wrong-connector")
+
+        self.assertEqual(execute.call_count, 1)
+        sleep.assert_not_called()
+
     def test_review_action_receipt_carries_owner_and_local_phase_timings(self):
         config = ConnectorConfig("https://worker.test", "david", "x" * 32, Path("/tmp/repo"))
 

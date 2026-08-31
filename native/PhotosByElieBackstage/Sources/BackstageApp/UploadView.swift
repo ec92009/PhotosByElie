@@ -164,6 +164,20 @@ struct UploadView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            } else if !model.isRunningDelivery {
+                VStack(spacing: 12) {
+                    ContentUnavailableView(
+                        "Upload queue unavailable",
+                        systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+                        description: Text(model.nativeUploadStatus)
+                    )
+                    Button("Retry loading uploads") {
+                        Task { await model.loadNativeUploadPlan() }
+                    }
+                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .backstageHelp("Retry loading the fixture upload queue. No publication starts until you explicitly choose an upload action.")
+                }
+                .frame(maxWidth: .infinity, minHeight: 180)
             }
             if model.isRunningNativePublication,
                let run = model.nativeUploadRun,

@@ -7515,7 +7515,6 @@ final class BackstageViewModel: ObservableObject {
                 nativeUploadStatus += " Upload recovery check failed: \(userFacingMessage(for: error))"
             }
         } catch {
-            nativeUploadPlan = nil
             nativeUploadStatus = userFacingMessage(for: error)
         }
     }

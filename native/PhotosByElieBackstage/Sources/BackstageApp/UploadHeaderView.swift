@@ -6,12 +6,13 @@ struct UploadHeaderView: View {
     @ObservedObject var model: BackstageViewModel
     var isPreviewMode: Bool
     @Binding var confirmingSelectedPublication: Bool
+    @Binding var confirmingCatalogDeployment: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Upload & publish").font(.largeTitle.bold())
+                    Text("Uploads & website").font(.largeTitle.bold())
                     Text(model.selectedFixtureBreadcrumb.isEmpty
                         ? "Fixture unavailable"
                         : model.selectedFixtureBreadcrumb)
@@ -29,8 +30,8 @@ struct UploadHeaderView: View {
                     }
                     .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                     .backstageHelp(plan.order == .recent
-                        ? "Return to the oldest-first publication queue. Recent approvals remain eligible and are not changed by this view switch."
-                        : "Load the newest approved items first so recent Review approvals can be found without changing the oldest-first publication queue.")
+                        ? "Return to the oldest-first upload queue. Recent approvals remain eligible and are not changed by this view switch."
+                        : "Load the newest approved items first so recent Review approvals can be found without changing the oldest-first upload queue.")
                 }
                 if model.nativeUploadPlan?.items.isEmpty == true {
                     Button("Load next 200") {
@@ -42,13 +43,21 @@ struct UploadHeaderView: View {
                 Button("Upload selection…") {
                     confirmingSelectedPublication = true
                 }
-                    .disabled(model.isRunningDelivery || model.selectedDeliveryIDs.isEmpty)
-                    .backstageHelp("Review the confirmation for publishing only the selected eligible assets.")
+                    .disabled(!model.canStartCloudWorkflow || model.selectedDeliveryIDs.isEmpty)
+                    .backstageHelp("Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.")
+                if let plan = model.nativeUploadPlan,
+                   plan.deploymentPendingCount + plan.deploymentFailedCount > 0 {
+                    Button(model.isDeployingPublicCatalog ? "Deploying & verifying…" : "Deploy & verify website…") {
+                        confirmingCatalogDeployment = true
+                    }
+                    .disabled(!model.canStartPublicCatalogDeployment)
+                    .backstageHelp("Deploy the exact approved Owner catalog projection, then wait until the public website returns the same verified checksum.")
+                }
             }
-            Text("Media upload, catalog projection, catalog deployment, and verified website visibility are separate receipts. A failed asset remains independently retryable without blocking the rest.")
+            Text("Upload prepares full-resolution media and catalog entries. Deploy & verify website is the separate final step; only checksum-verified website items are Live.")
                 .foregroundStyle(.secondary)
             if model.isRunningDelivery, model.nativeUploadPlan == nil {
-                ProgressView("Loading approved publication eligibility…")
+                ProgressView("Loading approved upload eligibility…")
             }
             BackstageFeedbackView(
                 message: model.nativeUploadStatus,
@@ -72,7 +81,8 @@ private func uploadHeaderPreviewModel() -> BackstageViewModel {
     UploadHeaderView(
         model: uploadHeaderPreviewModel(),
         isPreviewMode: true,
-        confirmingSelectedPublication: .constant(false)
+        confirmingSelectedPublication: .constant(false),
+        confirmingCatalogDeployment: .constant(false)
     )
     .padding()
     .frame(width: 1_200, height: 240)

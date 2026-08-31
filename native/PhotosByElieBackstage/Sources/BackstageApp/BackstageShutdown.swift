@@ -62,7 +62,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
         if isRunningAccess { reasons.append("access update") }
         if isRunningLifecycle { reasons.append("Waste Basket update") }
         if isRunningDelivery { reasons.append("delivery work") }
-        if isRunningNativePublication { reasons.append("publication upload") }
+        if isRunningNativePublication { reasons.append("media upload") }
         if isSyncingPhotos { reasons.append("Apple Photos sync") }
         if isBackfillingEquipment { reasons.append("camera equipment backfill") }
         if isRunningR2Reconciliation { reasons.append("R2 reconciliation") }

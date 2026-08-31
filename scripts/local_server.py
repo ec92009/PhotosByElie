@@ -592,6 +592,7 @@ from native_asset_publication import (  # noqa: E402
     record_upload_run_failure,
     retry_sqlite_lock as retry_native_publication_lock,
 )
+from public_catalog_deployment import deploy_public_catalog  # noqa: E402
 
 
 COLLECTION_KEYWORD_TARGETS = {
@@ -3751,6 +3752,11 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 str(manifest.get("runId") or ""),
             ),
         })
+    elif mode == "public-catalog-deploy":
+        result.update({
+            "readOnly": False,
+            "catalogDeployment": deploy_public_catalog(repo_root),
+        })
     elif mode == "asset-sale-reference-record":
         result.update({
             "readOnly": False,
@@ -4263,11 +4269,12 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "photos-sync-run-status": "Loaded current Apple Photos sync progress.",
         "photos-sync-run-cancel": "Requested a safe stop after the current Apple Photos checkpoint.",
         "asset-upload-plan": "Loaded the fixture-scoped approved publication queue without changing any asset.",
-        "asset-upload-run-start": "Started a bounded verified upload run. Each successful asset publishes immediately.",
-        "asset-upload-run-status": "Loaded current upload and publication progress.",
+        "asset-upload-run-start": "Started a bounded verified media upload and catalog-preparation run.",
+        "asset-upload-run-status": "Loaded current upload, catalog-preparation, and website-verification progress.",
         "asset-upload-run-recover": "Reconciled exact terminal upload receipts and surfaced unresolved runs for review.",
         "asset-upload-run-resume": "Resumed the exact failed upload run without creating a replacement batch.",
         "asset-upload-run-cancel": "Requested a safe stop after currently uploading assets finish.",
+        "public-catalog-deploy": "Deployed the exact Owner catalog projection and recorded website checksum verification.",
         "asset-sale-reference-record": "Protected the exact sold source version and object keys.",
         "r2-reconciliation-plan": "Previewed protected, referenced, quarantined, and deletion-eligible R2 objects.",
         "r2-reconciliation-commit": "Applied the guarded two-pass R2 reconciliation.",
@@ -4305,6 +4312,7 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         "asset-upload-run-recover",
         "asset-upload-run-resume",
         "asset-upload-run-cancel",
+        "public-catalog-deploy",
         "asset-sale-reference-record",
         "r2-reconciliation-plan",
         "r2-reconciliation-commit",

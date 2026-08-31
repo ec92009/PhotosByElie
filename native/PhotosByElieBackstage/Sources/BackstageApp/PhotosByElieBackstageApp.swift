@@ -499,6 +499,13 @@ private struct BackstageUpdatesView: View {
             )
             .foregroundStyle(.orange)
         }
+        if model.isCloudWorkflowActive {
+            Label(
+                "Update actions are unavailable while upload, catalog deployment, client delivery, or storage maintenance is active.",
+                systemImage: "shippingbox.and.arrow.backward"
+            )
+            .foregroundStyle(.orange)
+        }
         switch model.updateState {
         case .idle:
             Label("Preparing update check", systemImage: "arrow.triangle.2.circlepath")
@@ -600,7 +607,7 @@ private struct DeliverablesView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Delivery & share links").font(.largeTitle.bold())
+                    Text("Client delivery").font(.largeTitle.bold())
                     Text(model.selectedFixtureBreadcrumb.isEmpty
                         ? "Fixture unavailable"
                         : model.selectedFixtureBreadcrumb)
@@ -612,7 +619,7 @@ private struct DeliverablesView: View {
                     .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                     .backstageHelp("Load the selected fixture's existing PDF, video, originals, and share-link delivery records.")
             }
-            Text("Attach completed PDF, video, or originals products to their fixture. Recording a link never messages a client.")
+            Text("Record completed PDF, video, or originals packages and their authenticated share links. This workspace does not upload website photos or message a client.")
                 .foregroundStyle(.secondary)
             HStack {
                 Picker("Product", selection: $model.deliverableKind) {
@@ -624,7 +631,7 @@ private struct DeliverablesView: View {
                 TextField("Authenticated share URL", text: $model.deliverableShareLink)
                 Button("Record ready link") { Task { await model.linkDeliverable() } }
                     .disabled(
-                        model.isRunningDelivery
+                        !model.canStartCloudWorkflow
                             || model.selectedFixtureID.isEmpty
                             || !model.deliverableShareLink
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -645,12 +652,12 @@ private struct DeliverablesView: View {
             .overlay {
                 if model.deliverables.isEmpty {
                     ContentUnavailableView(
-                        model.selectedFixtureID.isEmpty ? "Choose a fixture" : "No products loaded",
+                        model.selectedFixtureID.isEmpty ? "Choose a fixture" : "No client deliveries yet",
                         systemImage: "shippingbox",
                         description: Text(
                             model.selectedFixtureID.isEmpty
                                 ? "Select a fixture, then load its existing delivery records."
-                                : "Load the fixture to inspect its PDF, video, originals, and share-link records."
+                                : "This stays empty until a completed PDF, video, or originals package is recorded for the fixture."
                         )
                     )
                 }
@@ -670,15 +677,15 @@ private struct PublicationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("R2 safety").font(.largeTitle.bold())
+                Text("Storage maintenance").font(.largeTitle.bold())
                 Spacer()
                 Button("Preview reconciliation") {
                     Task { await model.previewR2Reconciliation() }
                 }
-                .disabled(model.isRunningDelivery)
+                .disabled(!model.canStartCloudWorkflow)
                 .backstageHelp("Scan R2 references and sales protection, then preview quarantine, restore, and deletion eligibility without changing objects.")
                 Button("Apply guarded reconciliation…") { confirming = true }
-                    .disabled(model.isRunningDelivery || model.r2Reconciliation == nil)
+                    .disabled(!model.canStartCloudWorkflow || model.r2Reconciliation == nil)
                     .backstageHelp("Review the confirmation for applying exactly the currently previewed guarded R2 reconciliation.")
                 if model.isRunningR2Reconciliation {
                     Button(model.isCancellingR2Reconciliation ? "Stopping…" : "Stop safely") {
@@ -688,7 +695,7 @@ private struct PublicationView: View {
                     .backstageHelp("Stop after the current R2 object checkpoint. Completed quarantine, restore, protection, or deletion receipts remain auditable.")
                 }
             }
-            Text("Sold masters and sold derivatives are protected indefinitely. Other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
+            Text("This is R2 storage cleanup, not website publication. Sold masters and derivatives stay protected; other unreferenced objects enter a 30-day quarantine and can be deleted only after a second reconciliation still finds them unreferenced.")
                 .foregroundStyle(.secondary)
             BackstageFeedbackView(
                 message: model.r2ReconciliationStatus,

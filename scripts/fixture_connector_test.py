@@ -37,6 +37,26 @@ def action(mode, **manifest):
 
 
 class FixtureConnectorTest(unittest.TestCase):
+    def test_public_catalog_deploy_mode_returns_the_verified_receipt(self):
+        with tempfile.TemporaryDirectory() as temp_dir, patch(
+            "local_server.deploy_public_catalog",
+            return_value={
+                "ok": True,
+                "state": "verified",
+                "deploymentId": "catalog-deploy-1",
+                "projectionRevision": 42,
+            },
+        ) as deploy:
+            root = Path(temp_dir)
+            result = local_server.new_owner_connector_result(
+                root,
+                action("public-catalog-deploy"),
+            )
+
+        deploy.assert_called_once_with(root)
+        self.assertFalse(result["result"]["readOnly"])
+        self.assertEqual(result["result"]["catalogDeployment"]["state"], "verified")
+
     def test_photos_sync_db_writes_retry_transient_locks(self):
         attempts = 0
 

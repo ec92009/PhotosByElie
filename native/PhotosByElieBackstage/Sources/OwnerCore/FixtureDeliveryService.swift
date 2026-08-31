@@ -317,6 +317,23 @@ public struct NativeUploadRecoveryReport: Sendable, Equatable {
     public var latestFailedRun: NativeUploadRun?
 }
 
+public struct PublicCatalogDeploymentReport: Sendable, Equatable {
+    public var state: String
+    public var pushed: Bool
+    public var commitSHA: String
+    public var deploymentID: String
+    public var projectionRevision: Int
+    public var projectionSHA256: String
+    public var remoteSHA256: String
+    public var mediaCount: Int
+    public var publicURL: String
+    public var verifiedAt: String
+    public var attempts: Int
+    public var errorText: String
+
+    public var isVerified: Bool { state == "verified" }
+}
+
 public struct R2ReconciliationItem: Identifiable, Sendable, Equatable {
     public var id: String { "\(bucket):\(key)" }
     public var bucket: String
@@ -548,6 +565,30 @@ public actor FixtureDeliveryService {
             failedReceiptCount: recovery["failedReceiptCount"]?.intValue ?? 0,
             needsReviewCount: recovery["needsReviewCount"]?.intValue ?? 0,
             latestFailedRun: latest.map { nativeUploadRun(from: $0) }
+        )
+    }
+
+    public func deployPublicCatalog() async throws -> PublicCatalogDeploymentReport {
+        let action = try await fixtureAction(
+            mode: "public-catalog-deploy",
+            fixtureID: ""
+        )
+        guard let deployment = action.result?["catalogDeployment"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("catalogDeployment")
+        }
+        return PublicCatalogDeploymentReport(
+            state: deployment["state"]?.stringValue ?? "failed",
+            pushed: deployment["pushed"]?.boolValue ?? false,
+            commitSHA: deployment["commitSha"]?.stringValue ?? "",
+            deploymentID: deployment["deploymentId"]?.stringValue ?? "",
+            projectionRevision: deployment["projectionRevision"]?.intValue ?? 0,
+            projectionSHA256: deployment["projectionSha256"]?.stringValue ?? "",
+            remoteSHA256: deployment["remoteSha256"]?.stringValue ?? "",
+            mediaCount: deployment["mediaCount"]?.intValue ?? 0,
+            publicURL: deployment["publicUrl"]?.stringValue ?? "",
+            verifiedAt: deployment["verifiedAt"]?.stringValue ?? "",
+            attempts: deployment["attempts"]?.intValue ?? 0,
+            errorText: deployment["error"]?.stringValue ?? ""
         )
     }
 

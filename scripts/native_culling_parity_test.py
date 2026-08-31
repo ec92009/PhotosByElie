@@ -47,13 +47,13 @@ class NativeCullingParityTest(unittest.TestCase):
         retry = model.split("func resumeFailedNativePublicationRun", 1)[1].split(
             "private func preserveNativeUploadTray", 1
         )[0]
-        self.assertIn("guard !isRunningDelivery", retry)
+        self.assertIn("guard canStartCloudWorkflow", retry)
         self.assertIn("isRunningDelivery = true", retry)
-        self.assertIn('nativeUploadStatus = "Retrying the same failed publication run…"', retry)
+        self.assertIn('nativeUploadStatus = "Retrying the same failed upload run…"', retry)
         self.assertIn("deliveryService.resumeNativeUpload(runID: current.runID)", retry)
         self.assertNotIn("startNativeUpload", retry)
         self.assertIn('Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run")', upload)
-        self.assertIn(".disabled(model.isRunningDelivery || run.remaining == 0)", upload)
+        self.assertIn(".disabled(!model.canStartCloudWorkflow || run.remaining == 0)", upload)
         self.assertIn('mode: "asset-upload-run-resume"', delivery)
         self.assertIn('mode: "asset-upload-run-recover"', delivery)
         self.assertIn('elif mode == "asset-upload-run-resume":', connector)
@@ -139,7 +139,9 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('case culling = "Culling"', model)
-        self.assertIn('self == .culling ? "Gallery" : rawValue', model)
+        self.assertIn('case .culling: "Gallery"', model)
+        self.assertIn('case .delivery: "Client Delivery"', model)
+        self.assertIn('case .publication: "Storage Maintenance"', model)
         self.assertIn("Label(section.title, systemImage: icon(for: section))", app)
         self.assertIn('Text("Gallery")', surface)
         self.assertIn('Menu("View: \\(model.gallerySavedViewLabel)")', controls)
@@ -819,9 +821,10 @@ class NativeCullingParityTest(unittest.TestCase):
             "shown of",
             "not shown",
             "plan.order.label",
-            'Button("Publish these \\(plan.items.count.formatted())…")',
+            'Button("Upload these \\(plan.items.count.formatted())…")',
             "confirmingVisiblePublication",
             'Button("Upload selection…")',
+            'Button(model.isDeployingPublicCatalog ? "Deploying & verifying…" : "Deploy & verify website…")',
             'onKeyPress("r")',
             'onKeyPress("h")',
             "onKeyPress(.space)",
@@ -858,6 +861,9 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
         self.assertIn("isRunningNativePublication = true", model)
+        self.assertIn("func deployPublicCatalog()", model)
+        self.assertNotIn("Upload equals publication", upload)
+        self.assertNotIn("immediate publication", upload)
         self.assertIn("nativePublicationBatchNumber = batchIndex + 1", model)
         self.assertIn("nativePublicationBatchCount = batches.count", model)
         self.assertIn("if model.isRunningNativePublication,", upload)
@@ -1545,8 +1551,8 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIsNotNone(match, name)
             return match.group(1)
 
-        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.4")
-        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "278")
+        self.assertEqual(value("PBE_BACKSTAGE_VERSION"), "243.5")
+        self.assertEqual(value("PBE_BACKSTAGE_BUILD"), "279")
         self.assertEqual(
             value("PBE_BACKSTAGE_UPDATE_MANIFEST_URL"),
             "https://download.photos-by-elie.com/backstage/releases/latest.json",

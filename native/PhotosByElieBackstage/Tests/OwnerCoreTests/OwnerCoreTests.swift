@@ -5096,6 +5096,27 @@ struct OwnerCoreTests {
                 ],
             ]
         )
+        let catalogDeployment = OwnerAction(
+            id: "owner-action-catalog-deploy",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "catalogDeployment": .object([
+                    "state": .string("verified"),
+                    "pushed": .bool(true),
+                    "commitSha": .string("abc123"),
+                    "deploymentId": .string("catalog-deploy-1"),
+                    "projectionRevision": .number(42),
+                    "projectionSha256": .string(String(repeating: "a", count: 64)),
+                    "remoteSha256": .string(String(repeating: "a", count: 64)),
+                    "mediaCount": .number(3_804),
+                    "publicUrl": .string("https://photos-by-elie.com/assets/catalog/photosbyelie.sqlite"),
+                    "verifiedAt": .string("2026-08-31T18:00:00Z"),
+                    "attempts": .number(3),
+                ]),
+            ]
+        )
         let reconciliation = OwnerAction(
             id: "owner-action-r2-plan",
             actionKind: "sidecar-culling-review",
@@ -5145,7 +5166,7 @@ struct OwnerCoreTests {
                 ],
             ]
         )
-        let api = ScriptedOwnerActionAPI(completed: [eligibility, started, status, reconciliation, photosSync])
+        let api = ScriptedOwnerActionAPI(completed: [eligibility, started, status, catalogDeployment, reconciliation, photosSync])
         let service = FixtureDeliveryService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -5180,6 +5201,11 @@ struct OwnerCoreTests {
         #expect(completed.items[1].errorText == "network")
         #expect(completed.items[0].workflowStage == .fullResolutionUploaded)
         #expect(completed.items[1].workflowStage == .needsUpload)
+        let deployment = try await service.deployPublicCatalog()
+        #expect(deployment.isVerified)
+        #expect(deployment.projectionRevision == 42)
+        #expect(deployment.mediaCount == 3_804)
+        #expect(deployment.attempts == 3)
         let safety = try await service.r2Reconciliation()
         #expect(safety.protected == 1)
         #expect(safety.eligibleDelete == 1)
@@ -5197,9 +5223,10 @@ struct OwnerCoreTests {
         #expect(requests[0].payload["manifest"]?.objectValue?["fixtureId"]?.stringValue == "fixture-expo")
         #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-start")
         #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
-        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
-        #expect(requests[4].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
-        #expect(requests[4].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
+        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "public-catalog-deploy")
+        #expect(requests[4].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
+        #expect(requests[5].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
+        #expect(requests[5].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
     @Test("Native long-running publication operations expose checkpointed cancellation")

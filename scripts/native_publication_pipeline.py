@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Versioned Photos sync, immediate publication, and guarded R2 reconciliation."""
+"""Versioned Photos sync, verified media upload, and guarded R2 reconciliation."""
 
 from __future__ import annotations
 

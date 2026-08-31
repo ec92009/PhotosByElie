@@ -14,6 +14,7 @@ struct UploadView: View {
     @State private var confirmingAdoption = false
     @State private var confirmingSelectedPublication = false
     @State private var confirmingVisiblePublication = false
+    @State private var confirmingCatalogDeployment = false
     @State private var confirmingReturnToReview = false
     @State private var confirmingUploadHide = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
@@ -27,7 +28,8 @@ struct UploadView: View {
             UploadHeaderView(
                 model: model,
                 isPreviewMode: isPreviewMode,
-                confirmingSelectedPublication: $confirmingSelectedPublication
+                confirmingSelectedPublication: $confirmingSelectedPublication,
+                confirmingCatalogDeployment: $confirmingCatalogDeployment
             )
             if let plan = model.nativeUploadPlan {
                 HStack {
@@ -35,8 +37,9 @@ struct UploadView: View {
                     LabeledContent("Not yet approved", value: "\(plan.needsReviewCount)")
                     LabeledContent("Approved", value: "\(plan.approvedOnlyCount)")
                     LabeledContent("Needs Upload", value: "\(plan.needsUploadCount)")
-                    LabeledContent("Full-resolution Uploaded", value: "\(plan.fullResolutionUploadedCount)")
-                    LabeledContent("Publishing", value: "\(plan.publishingCount)")
+                    LabeledContent("Media Uploaded", value: "\(plan.fullResolutionUploadedCount)")
+                    LabeledContent("Catalog Preparing", value: "\(plan.projectionPendingCount)")
+                    LabeledContent("Ready to Deploy", value: "\(plan.deploymentPendingCount)")
                     LabeledContent("Live", value: "\(plan.liveOnWebsiteCount)")
                     if plan.failedHealthCount > 0 {
                         LabeledContent("Failed health", value: "\(plan.failedHealthCount)")
@@ -54,11 +57,11 @@ struct UploadView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Publish these \(plan.items.count.formatted())…") {
+                        Button("Upload these \(plan.items.count.formatted())…") {
                             confirmingVisiblePublication = true
                         }
-                        .disabled(model.isRunningDelivery || plan.items.isEmpty)
-                        .backstageHelp("Review the confirmation for publishing every eligible asset currently shown in this fixed upload tray.")
+                        .disabled(!model.canStartCloudWorkflow || plan.items.isEmpty)
+                        .backstageHelp("Review the confirmation for uploading every eligible asset currently shown and preparing its catalog entry.")
                     }
                 }
                 if plan.items.isEmpty {
@@ -70,7 +73,7 @@ struct UploadView: View {
                                 ? "\(plan.needsUploadCount) eligible item\(plan.needsUploadCount == 1 ? "" : "s") remain. Load the next batch of up to 200 when ready."
                                 : plan.needsReviewCount > 0
                                 ? "\(plan.needsReviewCount) picked item\(plan.needsReviewCount == 1 ? "" : "s") still need Review approval."
-                                : "This fixture has no approved publication work waiting."
+                                : "This fixture has no approved upload work waiting."
                         )
                     )
                     .frame(maxWidth: .infinity, minHeight: 150)
@@ -173,7 +176,7 @@ struct UploadView: View {
                         Text(
                             "Batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
                             + " • \(run.processed) of \(run.requested)"
-                            + " • \(run.live) live"
+                            + " • \(run.live) website live"
                             + " • \(run.failed) failed"
                             + " • \(run.remaining) remaining"
                         )
@@ -190,7 +193,7 @@ struct UploadView: View {
                 HStack {
                     Label(
                         run.lastError.isEmpty
-                            ? "Publication stopped before the run became terminal."
+                            ? "Upload stopped before the run became terminal."
                             : run.lastError,
                         systemImage: "exclamationmark.triangle.fill"
                     )
@@ -199,8 +202,8 @@ struct UploadView: View {
                     Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run") {
                         Task { await model.resumeFailedNativePublicationRun() }
                     }
-                    .disabled(model.isRunningDelivery || run.remaining == 0)
-                    .backstageHelp("Resume the exact failed publication run. Verified items are preserved and no replacement run is created.")
+                    .disabled(!model.canStartCloudWorkflow || run.remaining == 0)
+                    .backstageHelp("Resume the exact failed upload run. Verified items are preserved and no replacement run is created.")
                 }
             }
             if let run = model.nativeUploadRun,
@@ -322,30 +325,43 @@ struct UploadView: View {
             Text("The existing R2 objects are checksum-verified before fixture receipts are reconstructed. No client message or publication is triggered.")
         }
         .confirmationDialog(
-            "Upload the selected eligible assets now?",
+            "Upload and prepare the selected assets?",
             isPresented: $confirmingSelectedPublication
         ) {
             Button("Upload selection") {
                 Task { await model.publishSelectedNatively() }
             }
-            .backstageHelp("Confirm upload and immediate publication of the selected eligible assets.")
+            .backstageHelp("Confirm full-resolution upload and local catalog preparation for the selected eligible assets.")
             Button("Cancel", role: .cancel) {}
-                .backstageHelp("Close this confirmation without uploading or publishing the selection.")
+                .backstageHelp("Close this confirmation without uploading or preparing the selection.")
         } message: {
-            Text("Upload equals publication. Verified assets become live immediately in their effective picked fixtures.")
+            Text("This uploads the media and prepares its catalog entries. The assets are not called Live until Deploy & verify website completes with an exact checksum match.")
         }
         .confirmationDialog(
-            "Publish the \(model.nativeUploadPlan?.items.count ?? 0) shown assets now?",
+            "Upload and prepare the \(model.nativeUploadPlan?.items.count ?? 0) shown assets?",
             isPresented: $confirmingVisiblePublication
         ) {
-            Button("Publish these \(model.nativeUploadPlan?.items.count ?? 0) assets") {
+            Button("Upload these \(model.nativeUploadPlan?.items.count ?? 0) assets") {
                 Task { await model.publishVisibleNativeWindow() }
             }
-            .backstageHelp("Confirm sequential upload and immediate publication of every asset remaining in the visible tray.")
+            .backstageHelp("Confirm sequential upload and catalog preparation for every asset remaining in the visible tray.")
             Button("Cancel", role: .cancel) {}
-                .backstageHelp("Close this confirmation without publishing the visible upload tray.")
+                .backstageHelp("Close this confirmation without uploading the visible tray.")
         } message: {
-            Text("Backstage will publish exactly the assets remaining in this tray, in sequential batches of up to 50. Successful rows leave the tray; failures remain for retry. Load the next 200 only after this batch is complete.")
+            Text("Backstage will upload exactly the assets remaining in this tray, in sequential batches of up to 50, and prepare their catalog entries. Successful rows leave the tray; failures remain for retry. Website deployment remains a separate verified step.")
+        }
+        .confirmationDialog(
+            "Deploy the prepared catalog to the public website?",
+            isPresented: $confirmingCatalogDeployment
+        ) {
+            Button("Deploy & verify website") {
+                Task { await model.deployPublicCatalog() }
+            }
+            .backstageHelp("Publish only the exact approved Owner catalog projection and wait for the public website checksum to match.")
+            Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without changing the public website catalog.")
+        } message: {
+            Text("Backstage uses an isolated checkout, publishes only the catalog file, and records Live only after the website returns the same checksum. A failed verification remains safely retryable.")
         }
     }
 

@@ -534,6 +534,16 @@ struct BackstageFixtureSelectionTests {
         ])
         #expect(!model.canPerformBackstageUpdateActions)
         #expect(!model.canRunAIProposalPass)
+
+        model.fixtureAIStatus = FixtureAIStatus(json: [
+            "active": .bool(false),
+            "requested": .number(1),
+        ])
+        model.isRunningDelivery = true
+        #expect(model.isCloudWorkflowActive)
+        #expect(!model.canRunAIProposalPass)
+        #expect(!model.canPerformBackstageUpdateActions)
+        #expect(!model.canStartCloudWorkflow)
     }
 
     @Test("Every delayed Backstage operation family keeps a handler-level duplicate guard")

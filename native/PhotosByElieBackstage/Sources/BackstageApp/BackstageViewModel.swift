@@ -163,7 +163,12 @@ final class BackstageViewModel: ObservableObject {
         var id: String { rawValue }
 
         var title: String {
-            self == .culling ? "Gallery" : rawValue
+            switch self {
+            case .culling: "Gallery"
+            case .delivery: "Client Delivery"
+            case .publication: "Storage Maintenance"
+            default: rawValue
+            }
         }
     }
 
@@ -417,6 +422,8 @@ final class BackstageViewModel: ObservableObject {
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
     @Published var isRunningNativePublication = false
+    @Published var isDeployingPublicCatalog = false
+    @Published var publicCatalogDeployment: PublicCatalogDeploymentReport?
     @Published var isCancellingNativePublication = false
     @Published var nativePublicationBatchNumber = 0
     @Published var nativePublicationBatchCount = 0
@@ -553,7 +560,10 @@ final class BackstageViewModel: ObservableObject {
     var canRunAIProposalPass: Bool {
         guard !isAIPassActive,
               !isCancellingAIPass,
-              !isUpdateOperationInProgress else { return false }
+              !isUpdateOperationInProgress,
+              !isRunningDelivery,
+              !isRunningNativePublication,
+              !isRunningR2Reconciliation else { return false }
         return (fixtureAIStatus?.requested ?? 0) > 0
     }
 
@@ -572,6 +582,21 @@ final class BackstageViewModel: ObservableObject {
 
     var canPerformBackstageUpdateActions: Bool {
         !isAIPassActive
+            && !isCloudWorkflowActive
+    }
+
+    var isCloudWorkflowActive: Bool {
+        isRunningDelivery || isRunningNativePublication || isRunningR2Reconciliation
+    }
+
+    var canStartCloudWorkflow: Bool {
+        !isCloudWorkflowActive && !isAIPassActive && !isUpdateOperationInProgress
+    }
+
+    var canStartPublicCatalogDeployment: Bool {
+        guard let plan = nativeUploadPlan else { return false }
+        return canStartCloudWorkflow
+            && (plan.deploymentPendingCount + plan.deploymentFailedCount > 0)
     }
 
     var isPhotoLibraryOperationInProgress: Bool {
@@ -7490,6 +7515,46 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
+    func deployPublicCatalog() async {
+        guard canStartPublicCatalogDeployment else {
+            nativeUploadStatus = isAIPassActive
+                ? "Finish the AI proposal pass before deploying the website catalog."
+                : isUpdateOperationInProgress
+                ? "Finish the Backstage update before deploying the website catalog."
+                : "No prepared website catalog is waiting to deploy."
+            return
+        }
+        let order = nativeUploadPlan?.order ?? .oldest
+        isRunningDelivery = true
+        isDeployingPublicCatalog = true
+        nativeUploadStatus = "Deploying the exact approved catalog, then waiting for website checksum verification…"
+        defer {
+            isDeployingPublicCatalog = false
+            isRunningDelivery = false
+        }
+        do {
+            let report = try await deliveryService.deployPublicCatalog()
+            publicCatalogDeployment = report
+            let plan = try await deliveryService.nativeUploadPlan(
+                fixtureID: selectedFixtureID,
+                limit: 200,
+                order: order
+            )
+            nativeUploadPlan = plan
+            await hydrateCurrentImageByteCounts(for: plan.items.map(\.id))
+            selectedDeliveryIDs.formIntersection(Set(plan.items.map(\.id)))
+            if report.isVerified {
+                nativeUploadStatus = "Website catalog revision \(report.projectionRevision) is verified live with \(report.mediaCount.formatted()) items."
+            } else {
+                nativeUploadStatus = report.errorText.isEmpty
+                    ? "The catalog push completed, but the website checksum was not verified. Retry deploy and verify."
+                    : "Website catalog verification failed: \(report.errorText)"
+            }
+        } catch {
+            nativeUploadStatus = "Website catalog deployment failed safely: \(userFacingMessage(for: error))"
+        }
+    }
+
     func loadNativeUploadThumbnail(for item: NativeUploadPlanItem) async {
         guard nativeUploadThumbnails[item.id] == nil else { return }
         do {
@@ -7995,7 +8060,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func startNativePublication(assetIDs: [String]) async {
-        guard !isRunningDelivery else { return }
+        guard canStartCloudWorkflow else {
+            nativeUploadStatus = isAIPassActive
+                ? "Finish the AI proposal pass before starting an upload."
+                : isUpdateOperationInProgress
+                ? "Finish the Backstage update before starting an upload."
+                : "Finish the current cloud workflow before starting another upload."
+            return
+        }
         var seen = Set<String>()
         let ids = assetIDs.filter { !$0.isEmpty && seen.insert($0).inserted }
         guard !ids.isEmpty else {
@@ -8009,7 +8081,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningNativePublication = true
         isCancellingNativePublication = false
         nativePublicationCancellationRequested = false
-        nativeUploadStatus = "Starting publication for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
+        nativeUploadStatus = "Starting upload for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
         nativeUploadRun = nil
         nativePublicationBatchNumber = 0
         nativePublicationBatchCount = batches.count
@@ -8046,12 +8118,12 @@ final class BackstageViewModel: ObservableObject {
                 }
                 totalRequested += run.requested
                 if run.requested == 0 { continue }
-                nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed) of \(ids.count) processed."
+                nativeUploadStatus = "Uploading shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed) of \(ids.count) processed."
                 while !run.isFinished {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
                     run = try await deliveryService.nativeUploadStatus(runID: run.runID)
                     nativeUploadRun = run
-                    nativeUploadStatus = "Publishing shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed + run.processed) of \(ids.count) processed • \(totalLive + run.live) live • \(totalFailed + run.failed) failed."
+                    nativeUploadStatus = "Uploading shown queue • batch \(batchIndex + 1) of \(batches.count) • \(totalProcessed + run.processed) of \(ids.count) processed • \(totalLive + run.live) website live • \(totalFailed + run.failed) failed."
                 }
                 attemptedIDs.formUnion(
                     run.items.lazy.filter {
@@ -8111,7 +8183,7 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
             nativeUploadStatus = (totalProcessed > 0
-                ? "Published \(totalLive) before the run stopped; \(totalFailed) failed. "
+                ? "Uploaded \(totalProcessed) before the run stopped; \(totalFailed) failed. "
                 : "")
                 + userFacingMessage(for: error)
         }
@@ -8132,7 +8204,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func resumeFailedNativePublicationRun() async {
-        guard !isRunningDelivery,
+        guard canStartCloudWorkflow,
               let current = nativeUploadRun,
               current.status == "failed",
               current.remaining > 0 else { return }
@@ -8140,7 +8212,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningNativePublication = true
         nativePublicationBatchNumber = 1
         nativePublicationBatchCount = 1
-        nativeUploadStatus = "Retrying the same failed publication run…"
+        nativeUploadStatus = "Retrying the same failed upload run…"
         defer {
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
@@ -8151,22 +8223,22 @@ final class BackstageViewModel: ObservableObject {
             var run = try await deliveryService.resumeNativeUpload(runID: current.runID)
             nativeUploadRun = run
             while !run.isFinished {
-                nativeUploadStatus = "Retrying the same publication run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
+                nativeUploadStatus = "Retrying the same upload run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
                 try await Task.sleep(nanoseconds: 1_000_000_000)
                 run = try await deliveryService.nativeUploadStatus(runID: current.runID)
                 nativeUploadRun = run
             }
             if run.status == "failed" {
                 nativeUploadStatus = run.lastError.isEmpty
-                    ? "The publication run failed before it could finish. Retry uses this same run."
-                    : "The publication run failed: \(run.lastError) Retry uses this same run."
+                    ? "The upload run failed before it could finish. Retry uses this same run."
+                    : "The upload run failed: \(run.lastError) Retry uses this same run."
             } else if run.status == "cancelled" {
-                nativeUploadStatus = "The publication run stopped safely. Completed items remain verified."
+                nativeUploadStatus = "The upload run stopped safely. Completed items remain verified."
             } else {
-                nativeUploadStatus = "Publication retry finished: \(run.processed) processed • \(run.live) live • \(run.failed) failed."
+                nativeUploadStatus = "Upload retry finished: \(run.processed) processed • \(run.live) website live • \(run.failed) failed."
             }
         } catch {
-            nativeUploadStatus = "Publication retry could not start: \(userFacingMessage(for: error))"
+            nativeUploadStatus = "Upload retry could not start: \(userFacingMessage(for: error))"
         }
     }
 
@@ -8246,7 +8318,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runR2Reconciliation(commit: Bool) async {
-        guard !isRunningDelivery, !isRunningR2Reconciliation else { return }
+        guard canStartCloudWorkflow else {
+            r2ReconciliationStatus = isAIPassActive
+                ? "Finish the AI proposal pass before starting storage maintenance."
+                : isUpdateOperationInProgress
+                ? "Finish the Backstage update before starting storage maintenance."
+                : "Finish the current cloud workflow before starting storage maintenance."
+            return
+        }
         isRunningDelivery = true
         isRunningR2Reconciliation = true
         isCancellingR2Reconciliation = false

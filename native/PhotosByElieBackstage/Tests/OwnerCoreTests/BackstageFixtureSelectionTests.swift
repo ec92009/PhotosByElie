@@ -243,6 +243,76 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingScrollTargetID == "c")
     }
 
+    @Test("Gallery filter invalidation cancels obsolete PhotoKit card work")
+    @MainActor
+    func galleryFilterCancelsOutgoingThumbnailWork() async {
+        let items = ["a", "b", "c"].map { id in
+            FixtureAsset(
+                id: id,
+                title: id.uppercased(),
+                filename: "\(id).jpg",
+                mediaType: "photo"
+            )
+        }
+        var window = cullingWindow(
+            fixtureID: "fixture-expo",
+            photos: items.count,
+            videos: 0
+        )
+        window.items = items
+        window.summary = FixtureCullingSummary(json: [
+            "filtered": .number(Double(items.count)),
+            "universe": .number(Double(items.count)),
+            "undecided": .number(Double(items.count)),
+            "picked": .number(0),
+            "hidden": .number(0),
+        ])
+        let reader = StaticCullingWindowService(window: window)
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: ReviewLifecycleActionAPI(terminalActions: []),
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: reader
+        )
+        let photoLibrary = RecordingPreviewPhotoLibrary()
+        photoLibrary.setThumbnailDelay(.seconds(60))
+        let model = BackstageViewModel(
+            photoLibrary: photoLibrary,
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil,
+            currentImageSizeCache: nil,
+            customerPhotoLinks: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        model.fixtureCullingWindow = window
+        for item in items {
+            model.requestThumbnail(for: item.id)
+        }
+        for _ in 0..<100 where photoLibrary.requestedIDs(at: 180).count < items.count {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(photoLibrary.requestedIDs(at: 180).count == items.count)
+
+        model.applyCullingFilters()
+        for _ in 0..<100 where photoLibrary.cancelledThumbnails < items.count {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(photoLibrary.cancelledThumbnails == items.count)
+        for _ in 0..<200 where model.isLoadingFixtureCulling || model.fixtureCullingWindow == nil {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(model.fixtureCullingWindow?.items.map(\.id) == items.map(\.id))
+        #expect(model.selectedCullingAssetIDs == ["a"])
+    }
+
     @Test("Quick Look navigation keeps every new Gallery focus revealable")
     @MainActor
     func quickLookRowNavigationRequestsVisibleCardsInBothDirections() throws {

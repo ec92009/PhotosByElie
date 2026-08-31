@@ -3090,7 +3090,12 @@ final class BackstageViewModel: ObservableObject {
         cullingBackfillTask = nil
         cullingFilterTask?.cancel()
         cullingFilterTask = nil
-        cancelCullingThumbnailBackfill()
+        // A fixture filter replaces the entire visible window. Cancel every
+        // PhotoKit request owned by that outgoing window before the next
+        // SQLite read starts; cancelling only the backfill coordinator leaves
+        // already-issued card requests and metadata writes running, which can
+        // starve the main actor and strand the replacement UI at 0 selected.
+        cancelCullingThumbnailWork()
     }
 
     func scheduleCullingSearchRefresh() {

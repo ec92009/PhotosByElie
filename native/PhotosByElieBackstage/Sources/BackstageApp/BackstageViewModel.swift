@@ -7321,12 +7321,23 @@ final class BackstageViewModel: ObservableObject {
                 : "Finish the current Waste Basket action first."
             return
         }
+        let ids = lifecycleItems
+            .filter { $0.state == "hidden" }
+            .map(\.id)
+            .sorted()
+        guard !ids.isEmpty else {
+            lifecycleStatus = "Waste Basket is already empty."
+            return
+        }
         lifecycleQueueing = true
-        lifecycleStatus = "Submitting Empty Waste Basket… Browsing and Quick Look remain available."
+        lifecycleStatus = "Submitting Empty Waste Basket for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Browsing and Quick Look remain available."
         lifecycleMonitorTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let action = try await self.lifecycleService.enqueueEmptyWasteBasket(confirmed: true)
+                let action = try await self.lifecycleService.enqueueEmptyWasteBasket(
+                    mediaIDs: ids,
+                    confirmed: true
+                )
                 self.lifecycleQueueing = false
                 self.lifecyclePendingActionID = action.id
                 self.lifecyclePendingAction = action
@@ -7350,12 +7361,12 @@ final class BackstageViewModel: ObservableObject {
                     self.lifecyclePendingAction = nil
                     let lifecycle = completed.result?["lifecycle"]?.objectValue
                     let retainedLocalOnlyCount = lifecycle?["retainedLocalOnlyAssetIds"]?.arrayValue?.count ?? 0
+                    let emptiedCount = completed.result?["result"]?.objectValue?["assetIds"]?.arrayValue?.count ?? 0
                     let completionStatus: String
                     if retainedLocalOnlyCount > 0 {
-                        let emptiedCount = completed.result?["result"]?.objectValue?["assetIds"]?.arrayValue?.count ?? 0
                         completionStatus = "Empty Waste Basket activated the audited global tombstone state for \(emptiedCount.formatted()) deployed item\(emptiedCount == 1 ? "" : "s") through action \(action.id). \(retainedLocalOnlyCount.formatted()) local-only item\(retainedLocalOnlyCount == 1 ? " remains" : "s remain") recoverable because no cloud media exists. Source and R2 media were retained."
                     } else {
-                        completionStatus = "Empty Waste Basket activated the audited global tombstone state through action \(action.id). Source and R2 media were retained."
+                        completionStatus = "Empty Waste Basket activated the audited global tombstone state for \(emptiedCount.formatted()) item\(emptiedCount == 1 ? "" : "s") through action \(action.id). Source and R2 media were retained."
                     }
                     await self.loadLifecycle(successStatus: completionStatus)
                 } catch {

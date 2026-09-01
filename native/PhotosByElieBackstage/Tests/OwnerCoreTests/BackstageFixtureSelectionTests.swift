@@ -2543,9 +2543,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.lifecycleStatus.contains("no retry"))
     }
 
-    @Test("Mixed Empty Waste Basket reports retained local-only rows after refresh")
+    @Test("Confirmed Empty freezes every recoverable row independent of selection")
     @MainActor
-    func mixedEmptyWasteBasketReportsRetainedLocalOnlyRows() async throws {
+    func emptyWasteBasketFreezesEveryRecoverableRow() async throws {
         let actionAPI = ReviewLifecycleActionAPI(terminalActions: [
             OwnerAction(
                 id: "owner-action-mixed-empty",
@@ -2553,11 +2553,11 @@ struct BackstageFixtureSelectionTests {
                 target: "max",
                 state: .completed,
                 result: [
-                    "result": ["assetIds": ["asset-deployed"]],
+                    "result": ["assetIds": ["asset-deployed", "asset-local-only"]],
                     "lifecycle": [
                         "scope": "mixed",
-                        "partial": true,
-                        "retainedLocalOnlyAssetIds": ["asset-local-only"],
+                        "partial": false,
+                        "retainedLocalOnlyAssetIds": [],
                     ],
                 ]
             ),
@@ -2568,13 +2568,9 @@ struct BackstageFixtureSelectionTests {
                 state: .completed,
                 result: [
                     "lifecycle": [
-                        "hiddenCount": 1,
-                        "discardedCount": 1,
-                        "items": [[
-                            "mediaId": "asset-local-only",
-                            "state": "hidden",
-                            "title": "Local only",
-                        ]],
+                        "hiddenCount": 0,
+                        "discardedCount": 3,
+                        "items": [],
                     ],
                 ]
             ),
@@ -2590,15 +2586,37 @@ struct BackstageFixtureSelectionTests {
             lifecycleService: lifecycleService,
             workflowRecoveryStore: nil
         )
+        model.lifecycleItems = [
+            LifecycleItem(json: [
+                "mediaId": "asset-local-only",
+                "state": "hidden",
+                "title": "Local only",
+            ]),
+            LifecycleItem(json: [
+                "mediaId": "asset-deployed",
+                "state": "hidden",
+                "title": "Deployed",
+            ]),
+            LifecycleItem(json: [
+                "mediaId": "asset-active-tombstone",
+                "state": "discarded",
+                "title": "Already tombstoned",
+            ]),
+        ]
+        model.selectedLifecycleIDs = ["asset-deployed"]
 
         await model.emptyWasteBasket()
-        for _ in 0..<300 where !model.lifecycleStatus.contains("local-only") {
+        for _ in 0..<1_000 where !model.lifecycleItems.isEmpty {
             try await Task.sleep(for: .milliseconds(1))
         }
 
-        #expect(model.lifecycleItems.map(\.id) == ["asset-local-only"])
-        #expect(model.lifecycleStatus.contains("1 deployed item"))
-        #expect(model.lifecycleStatus.contains("1 local-only item remains recoverable"))
+        let requests = await actionAPI.requests()
+        #expect(
+            requests.first?.payload["photoIds"]?.arrayValue?.compactMap(\.stringValue)
+                == ["asset-deployed", "asset-local-only"]
+        )
+        #expect(model.lifecycleItems.isEmpty)
+        #expect(model.lifecycleStatus.contains("2 items"))
         #expect(model.lifecycleStatus.contains("owner-action-mixed-empty"))
     }
 

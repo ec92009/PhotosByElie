@@ -1680,6 +1680,88 @@ class ConnectorLifecycleProtocolTest(unittest.TestCase):
             ).fetchall())
         self.assertEqual(states, {"asset-1": "tombstoned", "asset-2": "recoverable"})
 
+    def test_connector_explicit_mixed_empty_tombstones_deployed_and_local_only_assets(self):
+        worker = self.FakeWorker(self)
+        calls = []
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-2"],
+            source="backstage-culling",
+            request_key="seed-explicit-local-only",
+            db_path=self.db,
+        )
+        deployed_arm = self._arm({
+            "operationId": "seed-explicit-deployed",
+            "operation": "x",
+            "denied": True,
+            "items": lifecycle_gateway.derive_deployed_lifecycle_members(
+                self.root, ["asset-1"], self.db
+            ),
+        })
+        lifecycle_gateway.record_deployed_lifecycle_arm(
+            self.root, "x", ["asset-1"], deployed_arm, self.db
+        )
+        lifecycle_gateway.move_to_waste_basket(
+            self.root,
+            ["asset-1"],
+            source="backstage-culling",
+            request_key="seed-explicit-deployed",
+            deployed_lifecycle=deployed_arm,
+            db_path=self.db,
+        )
+
+        def apply(_root, payload, *, trusted_deployed_lifecycle=None):
+            calls.append((dict(payload), trusted_deployed_lifecycle))
+            return lifecycle_gateway.empty_waste_basket(
+                self.root,
+                payload["photo_ids"],
+                confirmed=payload["confirmed"],
+                confirmation_token=payload["confirmationToken"],
+                source=payload["source"],
+                request_key=payload["request_key"],
+                deployed_lifecycle=trusted_deployed_lifecycle,
+                db_path=self.db,
+            )
+
+        with patch("scripts.new_owner_connector.WorkerClient", return_value=worker), patch(
+            "scripts.new_owner_connector._load_local_modules",
+            return_value=(None, None, None, None, apply),
+        ):
+            result = execute_action(self.config, {
+                "id": "explicit-mixed-empty",
+                "type": "photo-moderation",
+                "payload": {
+                    "operation": "waste-basket-empty",
+                    "photoIds": ["asset-1", "asset-2"],
+                    "source": "backstage-waste-basket",
+                    "confirmed": True,
+                    "confirmationToken": "EMPTY_WASTE_BASKET",
+                },
+            }, lifecycle_client=worker)
+
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0][0]["photo_ids"], ["asset-1"])
+        self.assertIsNotNone(calls[0][1])
+        self.assertEqual(calls[1][0]["photo_ids"], ["asset-2"])
+        self.assertEqual(
+            calls[1][0]["request_key"],
+            "owner-action:explicit-mixed-empty:local-only",
+        )
+        self.assertIsNone(calls[1][1])
+        self.assertEqual(result["result"]["assetIds"], ["asset-1", "asset-2"])
+        self.assertEqual(result["lifecycle"]["scope"], "mixed")
+        self.assertFalse(result["lifecycle"]["partial"])
+        self.assertEqual(
+            result["lifecycle"]["localOnlyTombstonedAssetIds"],
+            ["asset-2"],
+        )
+        self.assertEqual(result["lifecycle"]["retainedLocalOnlyAssetIds"], [])
+        with sqlite3.connect(self.db) as connection:
+            states = dict(connection.execute(
+                "SELECT asset_id, state FROM owner_waste_basket_entries ORDER BY asset_id"
+            ).fetchall())
+        self.assertEqual(states, {"asset-1": "tombstoned", "asset-2": "tombstoned"})
+
     def test_commit_then_arm_response_loss_replays_stable_intent_and_aborts(self):
         worker = self.FakeWorker(self, lose_response_once_at="arm")
         applied = []

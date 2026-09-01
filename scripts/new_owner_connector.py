@@ -2003,8 +2003,10 @@ def execute_action(
         lifecycle_arm = None
         lifecycle_result = None
         retained_local_only_ids: list[str] = []
-        # A selected-row delete names its exact local identities. Preserve the
-        # broad Empty Waste Basket safeguard when no explicit IDs were sent.
+        local_only_empty_ids: list[str] = []
+        # Backstage freezes the exact recoverable membership for both Delete
+        # Selected and confirmed Empty. Keep truly unscoped legacy calls
+        # fail-closed for an all-local-only basket.
         explicitly_scoped_lifecycle = bool(photo_ids)
         active_lifecycle_client = lifecycle_client
         if operation in lifecycle_operations:
@@ -2048,7 +2050,10 @@ def execute_action(
                     raise RuntimeError(
                         "lifecycle batch mixes deployed and local-only assets; submit separate actions"
                     )
-                retained_local_only_ids = list(lifecycle_scope["localOnlyAssetIds"])
+                if explicitly_scoped_lifecycle:
+                    local_only_empty_ids = list(lifecycle_scope["localOnlyAssetIds"])
+                else:
+                    retained_local_only_ids = list(lifecycle_scope["localOnlyAssetIds"])
                 authoritative_ids = list(lifecycle_scope["deployedAssetIds"])
                 arm_request = {
                     "operationId": operation_id,
@@ -2143,6 +2148,29 @@ def execute_action(
         else:
             with _timed_phase(action_timing, "lifecycle.local-moderation"):
                 result = apply_public_photo_moderation(config.repo_root, moderation_payload)
+        if local_only_empty_ids:
+            local_only_payload = dict(moderation_payload)
+            local_only_payload["photo_ids"] = local_only_empty_ids
+            local_only_payload.pop("requestKey", None)
+            local_only_payload["request_key"] = f"{operation_id}:local-only"
+            with _timed_phase(action_timing, "lifecycle.local-only-moderation"):
+                local_only_result = apply_public_photo_moderation(
+                    config.repo_root,
+                    local_only_payload,
+                )
+            result = {
+                **result,
+                "assetIds": list(dict.fromkeys([
+                    *(result.get("assetIds") or []),
+                    *(local_only_result.get("assetIds") or []),
+                ])),
+                "items": [
+                    *(result.get("items") or []),
+                    *(local_only_result.get("items") or []),
+                ],
+                "localOnlyResult": local_only_result,
+            }
+            photo_ids = list(dict.fromkeys([*photo_ids, *local_only_empty_ids]))
         if lifecycle_arm and active_lifecycle_client:
             with _timed_phase(action_timing, "lifecycle.outbox.replay"):
                 replay = drain_deployed_lifecycle_outbox(
@@ -2157,6 +2185,18 @@ def execute_action(
                     "partial": True,
                     "deployedAssetIds": photo_ids,
                     "retainedLocalOnlyAssetIds": retained_local_only_ids,
+                    "reason": "local-only-assets-have-no-cloud-media-evidence",
+                })
+            elif local_only_empty_ids:
+                lifecycle_result.update({
+                    "scope": "mixed",
+                    "partial": False,
+                    "deployedAssetIds": [
+                        asset_id for asset_id in photo_ids
+                        if asset_id not in local_only_empty_ids
+                    ],
+                    "localOnlyTombstonedAssetIds": local_only_empty_ids,
+                    "retainedLocalOnlyAssetIds": [],
                     "reason": "local-only-assets-have-no-cloud-media-evidence",
                 })
         result_payload = {

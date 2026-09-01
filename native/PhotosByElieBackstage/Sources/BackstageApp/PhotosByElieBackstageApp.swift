@@ -1209,7 +1209,7 @@ struct LifecycleView: View {
             Button("Cancel", role: .cancel) { confirmingEmpty = false }
                 .backstageHelp("Close this confirmation and keep every recoverable item in the Waste Basket.")
         } message: {
-            Text("This changes recoverable Waste Basket entries into active global tombstones. Explicit tombstone restore remains a separate audited path.")
+            Text("This changes all \(model.lifecycleItems.filter { $0.state == "hidden" }.count.formatted()) current recoverable Waste Basket entries into active global tombstones, regardless of table selection. Explicit tombstone restore remains a separate audited path.")
         }
         .confirmationDialog(
             "Delete selected recoverable items?",

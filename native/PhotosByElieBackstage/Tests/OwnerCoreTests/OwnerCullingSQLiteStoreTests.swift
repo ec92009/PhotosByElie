@@ -571,6 +571,73 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(filenameOnly.items.first?.photoLibraryIdentifier == "local-filename-only")
     }
 
+    @Test("Mixed-source Gallery collapses an unavailable alias into its exact available identity")
+    func mixedSourceGalleryCollapsesExactUnavailableAlias() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-collapse-alias-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            INSERT INTO sidecar_assets(asset_id, source_anchor, raw_json, filename, missing_at)
+            VALUES
+              ('legacy-duplicate', 'apple-photos://local-duplicate',
+               '{"localIdentifier":"local-duplicate"}', 'IMG_5014.jpg', '2026-01-02T00:00:00Z'),
+              ('canonical-duplicate', 'apple-photos-cloud://cloud-duplicate',
+               '{"localIdentifier":"local-duplicate","cloudIdentifier":"cloud-duplicate"}',
+               'IMG_5014.jpg', NULL);
+            INSERT INTO sidecar_decisions(asset_id) VALUES
+              ('legacy-duplicate'), ('canonical-duplicate');
+            """
+        )
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let mixed = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "IMG_5014",
+            sourceFilters: GallerySourceFilter.allCases
+        )
+        #expect(mixed.items.count == 1)
+        #expect(mixed.items.first?.id == "canonical-duplicate")
+        #expect(mixed.items.first?.sourceAvailable == true)
+        #expect(mixed.summary.filtered == 1)
+        #expect(mixed.summary.universe == 1)
+
+        let unavailable = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            search: "IMG_5014",
+            sourceFilters: [.unavailable]
+        )
+        #expect(unavailable.items.map(\.id) == ["legacy-duplicate"])
+        #expect(unavailable.items.first?.sourceAvailable == false)
+    }
+
+    @Test("Live Expo mixed-source search collapses the IMG_5014 legacy alias")
+    func liveMixedSourceGalleryCollapsesIMG5014Alias() throws {
+        guard let path = ProcessInfo.processInfo.environment["PBE_OWNER_ACCEPTANCE_DB"],
+              !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+
+        let store = OwnerCullingSQLiteStore(databaseURL: URL(fileURLWithPath: path))
+        let window = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            views: FixtureCullingView.selectableCases,
+            search: "IMG_5014",
+            sourceFilters: GallerySourceFilter.allCases
+        )
+
+        #expect(window.items.count == 1)
+        #expect(window.items.first?.sourceAvailable == true)
+        #expect(window.summary.filtered == 1)
+        print("Live Gallery acceptance: IMG_5014 resolved to one available Photos identity")
+    }
+
     @Test("Fixture workflow uses native Culling reads without an Owner action")
     func cullingWorkflowUsesNativeRead() async throws {
         let root = FileManager.default.temporaryDirectory

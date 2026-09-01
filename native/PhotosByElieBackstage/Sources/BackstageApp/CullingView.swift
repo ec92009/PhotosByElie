@@ -1294,8 +1294,10 @@ struct CullingView: View {
     }
 }
 
-private extension FixtureAsset {
-    var galleryStateBadges: [String] { [workflowStage.label] }
+extension FixtureAsset {
+    var galleryStateBadges: [String] {
+        [workflowStage.label] + (sourceAvailable ? [] : ["Source Unavailable"])
+    }
 }
 
 private struct CullingPrimaryKeyCommands: ViewModifier {

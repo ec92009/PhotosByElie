@@ -26,6 +26,27 @@ struct UploadView: View {
         plan.items.sorted(using: uploadSortOrder)
     }
 
+    static func catalogRecoveryConfirmationTitle(count: Int) -> String {
+        "Recover \(count) catalog entries from existing R2 receipts?"
+    }
+
+    static func catalogRecoveryStageLabel(_ stage: AssetWorkflowStage) -> String {
+        switch stage {
+        case .needsUpload, .approved:
+            "Queued"
+        case .uploading:
+            "Verifying R2"
+        case .fullResolutionUploaded:
+            "R2 Verified"
+        case .publishing:
+            "Rebuilding Catalog"
+        case .live:
+            "Catalog Recovered"
+        default:
+            stage.label
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             UploadHeaderView(
@@ -235,7 +256,13 @@ struct UploadView: View {
                !run.items.isEmpty {
                 Table(run.items) {
                     TableColumn("Asset", value: \.assetID)
-                    TableColumn("Stage") { Text($0.workflowStage.label) }
+                    TableColumn("Stage") {
+                        Text(
+                            model.isRunningCatalogRecovery
+                                ? Self.catalogRecoveryStageLabel($0.workflowStage)
+                                : $0.workflowStage.label
+                        )
+                    }
                     TableColumn("Error", value: \.errorText)
                 }
                 .frame(minHeight: 180)
@@ -379,7 +406,11 @@ struct UploadView: View {
             Text("Backstage will continue through the complete eligible queue in sequential batches of up to 50. A failed item keeps its error and receipt for retry while later photos continue automatically. Website deployment remains a separate verified step.")
         }
         .confirmationDialog(
-            "Recover (model.nativeUploadPlan.map { $0.projectionPendingCount + $0.projectionFailedCount } ?? 0) catalog entries from existing R2 receipts?",
+            Self.catalogRecoveryConfirmationTitle(
+                count: model.nativeUploadPlan.map {
+                    $0.projectionPendingCount + $0.projectionFailedCount
+                } ?? 0
+            ),
             isPresented: $confirmingCatalogRecovery
         ) {
             Button("Recover catalog entries") {

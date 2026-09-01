@@ -5083,6 +5083,19 @@ struct OwnerCoreTests {
         #expect(runManifest?["concurrency"]?.intValue == 8)
     }
 
+    @Test("Catalog recovery UI names its exact count and no-upload stages")
+    @MainActor
+    func catalogRecoveryLabelsStayDistinctFromUploads() {
+        #expect(
+            UploadView.catalogRecoveryConfirmationTitle(count: 397)
+                == "Recover 397 catalog entries from existing R2 receipts?"
+        )
+        #expect(UploadView.catalogRecoveryStageLabel(.needsUpload) == "Queued")
+        #expect(UploadView.catalogRecoveryStageLabel(.uploading) == "Verifying R2")
+        #expect(UploadView.catalogRecoveryStageLabel(.publishing) == "Rebuilding Catalog")
+        #expect(UploadView.catalogRecoveryStageLabel(.live) == "Catalog Recovered")
+    }
+
     @Test("Native upload publishes verified assets and exposes reconciliation progress")
     func nativeUploadAndR2Safety() async throws {
         let eligibility = OwnerAction(

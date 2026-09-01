@@ -992,6 +992,21 @@ struct BackstageFixtureSelectionTests {
         #expect(model.visibleCullingAssets.map(\.id) == [equipment.id, opaqueIdentity.id])
     }
 
+    @Test("Gallery identifies unavailable source cards without disguising their workflow state")
+    func galleryUnavailableSourceBadge() {
+        let unavailable = FixtureAsset(
+            id: "legacy-unavailable",
+            title: "Sunset",
+            filename: "IMG_5014.jpg",
+            mediaType: "photo",
+            placementState: .picked,
+            editorialState: "unreviewed",
+            sourceAvailable: false
+        )
+
+        #expect(unavailable.galleryStateBadges == ["Awaiting Review", "Source Unavailable"])
+    }
+
     @Test("Gallery explains search matches hidden by state filters")
     @MainActor
     func galleryExplainsSearchMatchesHiddenByStateFilters() {

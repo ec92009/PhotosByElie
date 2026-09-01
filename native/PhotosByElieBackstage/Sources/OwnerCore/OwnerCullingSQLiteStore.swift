@@ -256,7 +256,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
         let burstAssetIDs = burstsOnly
             ? Set(cullingBurstRows(rows).compactMap { $0["asset_id"]?.stringValue })
             : []
-        let filteredRows = rows.filter { row in
+        let sourceFilteredRows = rows.filter { row in
             if burstsOnly,
                !burstAssetIDs.contains(row["asset_id"]?.stringValue ?? "") {
                 return false
@@ -318,6 +318,10 @@ public struct OwnerCullingSQLiteStore: Sendable {
                 terms: searchTerms
             )
         }
+        let filteredRows = cullingCollapseExactIdentityAliases(
+            sourceFilteredRows,
+            sourceFilters: selectedSources
+        )
         let viewRows = filteredRows.filter {
             effectiveViews.contains($0["placement_state"]?.stringValue ?? "undecided")
         }
@@ -783,22 +787,8 @@ private func summaryJSON(_ summary: FixtureCullingSummary) -> [String: JSONValue
 
 private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
     let raw = cullingJSONObject(row["raw_json"]?.stringValue ?? "{}")
-    let sourceAnchor = row["source_anchor"]?.stringValue ?? ""
     let sourceAvailable = (row["source_available"]?.intValue ?? 1) != 0
-    let cloudIdentifier = sourceAnchor.hasPrefix("apple-photos-cloud://")
-        ? String(sourceAnchor.dropFirst("apple-photos-cloud://".count))
-        : ""
-    let exactIdentityCloudFallback = row["exact_identity_cloud_fallback"]?.stringValue ?? ""
-    let photoLibraryIdentifier = cloudIdentifier.isEmpty
-        ? raw["cloudIdentifier"]?.stringValue
-            ?? raw["phCloudIdentifier"]?.stringValue
-            ?? raw["cloudIdentifierString"]?.stringValue
-            ?? (!sourceAvailable && !exactIdentityCloudFallback.isEmpty
-                ? exactIdentityCloudFallback
-                : nil)
-            ?? raw["localIdentifier"]?.stringValue
-            ?? sourceAnchor.replacingOccurrences(of: "apple-photos://", with: "")
-        : cloudIdentifier
+    let photoLibraryIdentifier = cullingPhotoLibraryIdentifier(row)
     let photosTitle = row["photos_title"]?.stringValue ?? ""
     let decisionTitle = row["decision_title"]?.stringValue ?? ""
     let editorialState = row["editorial_state"]?.stringValue ?? "unreviewed"
@@ -835,6 +825,61 @@ private func cullingAssetJSON(_ row: [String: JSONValue]) -> JSONValue {
                 .map(JSONValue.string)
         ),
     ])
+}
+
+/// Mixed Available + Unavailable views should represent one Photos identity
+/// once. A missing legacy alias remains inspectable in the dedicated
+/// Unavailable view, and an exact asset-ID search still returns the one matching
+/// row because the canonical sibling is not part of that filtered result.
+private func cullingCollapseExactIdentityAliases(
+    _ rows: [[String: JSONValue]],
+    sourceFilters: Set<GallerySourceFilter>
+) -> [[String: JSONValue]] {
+    let showsMixedSourceStates = sourceFilters.isEmpty
+        || sourceFilters == Set(GallerySourceFilter.allCases)
+    guard showsMixedSourceStates else { return rows }
+
+    var collapsed: [[String: JSONValue]] = []
+    var indexByPhotosIdentity: [String: Int] = [:]
+    for row in rows {
+        let photosIdentity = cullingPhotoLibraryIdentifier(row)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !photosIdentity.isEmpty else {
+            collapsed.append(row)
+            continue
+        }
+        if let existingIndex = indexByPhotosIdentity[photosIdentity] {
+            let existingAvailable = (collapsed[existingIndex]["source_available"]?.intValue ?? 1) != 0
+            let candidateAvailable = (row["source_available"]?.intValue ?? 1) != 0
+            if candidateAvailable && !existingAvailable {
+                collapsed[existingIndex] = row
+            }
+        } else {
+            indexByPhotosIdentity[photosIdentity] = collapsed.count
+            collapsed.append(row)
+        }
+    }
+    return collapsed
+}
+
+private func cullingPhotoLibraryIdentifier(_ row: [String: JSONValue]) -> String {
+    let raw = cullingJSONObject(row["raw_json"]?.stringValue ?? "{}")
+    let sourceAnchor = row["source_anchor"]?.stringValue ?? ""
+    let sourceAvailable = (row["source_available"]?.intValue ?? 1) != 0
+    let cloudIdentifier = sourceAnchor.hasPrefix("apple-photos-cloud://")
+        ? String(sourceAnchor.dropFirst("apple-photos-cloud://".count))
+        : ""
+    let exactIdentityCloudFallback = row["exact_identity_cloud_fallback"]?.stringValue ?? ""
+    return cloudIdentifier.isEmpty
+        ? raw["cloudIdentifier"]?.stringValue
+            ?? raw["phCloudIdentifier"]?.stringValue
+            ?? raw["cloudIdentifierString"]?.stringValue
+            ?? (!sourceAvailable && !exactIdentityCloudFallback.isEmpty
+                ? exactIdentityCloudFallback
+                : nil)
+            ?? raw["localIdentifier"]?.stringValue
+            ?? sourceAnchor.replacingOccurrences(of: "apple-photos://", with: "")
+        : cloudIdentifier
 }
 
 private enum CullingSQLiteBinding {

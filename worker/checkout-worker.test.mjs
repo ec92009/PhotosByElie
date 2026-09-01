@@ -2736,6 +2736,22 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
     basket: [{ photoId, options: [{ id: "full" }] }],
     language: "fr",
     theme: "dark",
+    galleryCheckpoints: [
+      {
+        collectionKey: "spain",
+        photoId,
+        filterState: { query: "Spain", orientation: "landscape", sort: "oldest" },
+        windowStart: 96,
+        windowEnd: 999,
+        anchorOffset: 42.5,
+        updatedAt: "2026-05-07T11:59:00.000Z",
+      },
+      {
+        collectionKey: "invalid key",
+        photoId: "missing-photo",
+        updatedAt: "2026-05-07T11:59:30.000Z",
+      },
+    ],
   }, { origin }));
   assert.equal(saveProfileResponse.status, 200);
   const savedProfile = await saveProfileResponse.json();
@@ -2745,6 +2761,11 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(savedProfile.profile.basket[0].options[0].id, "full");
   assert.equal(savedProfile.profile.language, "fr");
   assert.equal(savedProfile.profile.theme, "dark");
+  assert.equal(savedProfile.profile.galleryCheckpoints.length, 1);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].collectionKey, "spain");
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].windowStart, 96);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].windowEnd, 288);
+  assert.equal(savedProfile.profile.galleryCheckpoints[0].anchorOffset, 42.5);
 
   const mismatchResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/account", {
     email: "other@example.com",
@@ -2777,6 +2798,7 @@ test("signed-in account remembers likes, basket, orders, and redownload access",
   assert.equal(accountProfileResponse.headers.get("cache-control"), "private, no-store");
   const accountProfile = await accountProfileResponse.json();
   assert.equal(accountProfile.orders.length, 1);
+  assert.equal(accountProfile.profile.galleryCheckpoints[0].photoId, photoId);
   assert.equal(accountProfile.orders[0].id, paid.order.id);
   assert.equal(accountProfile.orders[0].delivery.files[0].downloadUrl, paid.order.delivery.files[0].downloadUrl);
 

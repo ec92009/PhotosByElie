@@ -531,7 +531,10 @@ const writeGalleryReturnState = () => {
       selectionRecency: Array.isArray(payload?.selectionRecency) ? payload.selectionRecency.slice(-500) : [],
       navigationNonce: payload?.navigationNonce || "",
       filterState: publicFilterState,
+      visibleStart: Number.isFinite(Number(payload?.visibleStart)) ? Number(payload.visibleStart) : 0,
       visibleLimit: payload?.visibleLimit || null,
+      anchorPhotoId: String(payload?.anchorPhotoId || ""),
+      anchorOffset: Number.isFinite(Number(payload?.anchorOffset)) ? Number(payload.anchorOffset) : 0,
       createdAt: Date.now()
     }));
   } catch {

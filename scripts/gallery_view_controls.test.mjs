@@ -230,35 +230,28 @@ test("search and filter changes keep the filter controls in view", () => {
   assert.match(emptyFilterReset, /renderGallery\(\{ scrollSelection: false \}\);/);
 });
 
-test("pagination anchors every append to the first new card and keeps it keyboard-reachable", () => {
-  assert.match(galleryJs, /const paginationPhotoIdAtCurrentLimit = \(\) =>/);
-  assert.match(galleryJs, /return photos\[visibleLimit\]\?\.id \|\| "";/);
-  assert.match(galleryJs, /targetTop: controls\.getBoundingClientRect\(\)\.top/);
+test("pagination exposes symmetric 24, 48, and 96 controls while preserving its visual anchor", () => {
+  assert.match(galleryJs, /lessButton = makeWindowButton\(\{ count: pageSize/);
+  assert.match(galleryJs, /lessDoubleButton = makeWindowButton\(\{ count: pageSize \* 2/);
+  assert.match(galleryJs, /lessQuadButton = makeWindowButton\(\{ count: pageSize \* 4/);
+  assert.match(galleryJs, /moreButton\.textContent = `\+\$\{pageSize\}`/);
+  assert.match(galleryJs, /moreDoubleButton\.textContent = `\+\$\{pageSize \* 2\}`/);
+  assert.match(galleryJs, /moreQuadButton\.textContent = `\+\$\{pageSize \* 4\}`/);
+  assert.match(galleryJs, /galleryWindowModel\.moveGalleryWindow/);
+  assert.match(galleryJs, /visibleStart = nextWindow\.start/);
+  assert.match(galleryJs, /visibleLimit = nextWindow\.end/);
+  assert.match(galleryJs, /backwardControls\.append\(lessQuadButton, lessDoubleButton, lessButton\)/);
+  assert.match(galleryJs, /forwardControls\.append\(moreButton, moreDoubleButton, moreQuadButton\)/);
+  assert.match(galleryJs, /galleryRoot\.before\(backwardControls\)/);
+  assert.match(galleryJs, /galleryRoot\.after\(forwardControls\)/);
+  assert.match(galleryJs, /backwardControls\.getBoundingClientRect\(\)\.bottom/);
+  assert.match(galleryJs, /forwardControls\.getBoundingClientRect\(\)\.top/);
+  assert.match(galleryJs, /targetTop: resolvedTargetTop/);
   assert.match(galleryJs, /top: Math\.max\(0, \(window\.scrollY \|\| 0\) \+ delta\)/);
   assert.match(galleryJs, /link\.focus\(\{ preventScroll: true \}\)/);
   assert.match(galleryJs, /new window\.ResizeObserver\(schedulePaginationAnchorRestore\)/);
   assert.doesNotMatch(galleryJs, /preserveScrollAfterRender/);
-
-  const moreHandler = galleryJs.slice(
-    galleryJs.indexOf('moreButton.addEventListener("click"'),
-    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
-  );
-  const remainingHandler = galleryJs.slice(
-    galleryJs.indexOf('moreDoubleButton.addEventListener("click"'),
-    galleryJs.indexOf('showAllButton.addEventListener("click"'),
-  );
-  for (const handler of [moreHandler, remainingHandler]) {
-    assert.match(handler, /paginationPhotoIdAtCurrentLimit\(\)/);
-    assert.match(handler, /beginPaginationAnchor\(anchorPhotoId\)/);
-    assert.match(handler, /renderGallery\(\{ scrollSelection: false \}\);/);
-    assert.match(handler, /schedulePaginationAnchorRestore\(\);/);
-  }
-
-  const showAllHandler = galleryJs.slice(galleryJs.indexOf('showAllButton.addEventListener("click"'));
-  assert.match(showAllHandler, /setPaginationBusy\(true\)/);
-  assert.match(showAllHandler, /beginPaginationAnchor\(anchorPhotoId, \{ focusEachRender: true \}\)/);
-  assert.match(showAllHandler, /setPaginationBusy\(false\)/);
-  assert.doesNotMatch(showAllHandler, /showAllButton\.blur\(\)/);
+  assert.doesNotMatch(galleryJs, /galleryShowAll|showAllButton|showAllChunkSize/);
   assert.match(galleryHtml, /data-gallery-status aria-live="polite"/);
 });
 
@@ -361,14 +354,29 @@ test("public gallery retires Media state without changing the private generic fi
 });
 
 test("detail round trips restore the loaded boundary and focus after click or double-click navigation", () => {
-  assert.match(galleryJs, /visibleLimit: visibleLimit >= photos\.length \? "all" : visibleLimit/);
+  assert.match(galleryJs, /visibleStart,\s*visibleLimit,/);
   assert.match(galleryJs, /pendingGalleryReturnState\?\.visibleLimit === "all"/);
   assert.match(galleryJs, /expandGalleryToIncludeIndex\(returnIndex\)/);
   assert.match(galleryJs, /restorePendingGalleryReturn\(\)/);
   assert.match(galleryJs, /card\.querySelector\("\[data-photo-link\]"\)\?\.focus\?\.\(\{ preventScroll: true \}\)/);
   assert.match(galleryJs, /card\.addEventListener\("dblclick"[\s\S]*window\.location\.assign/);
   assert.match(detailJs, /link\.addEventListener\("click", writeGalleryReturnState\)/);
+  assert.match(detailJs, /visibleStart: Number\.isFinite\(Number\(payload\?\.visibleStart\)\)/);
   assert.match(detailJs, /visibleLimit: payload\?\.visibleLimit \|\| null/);
+});
+
+test("gallery checkpoints are local-first, bounded, and included in signed-in profile sync", () => {
+  assert.match(photosJs, /photosbyelie-gallery-checkpoints-v1/);
+  assert.match(photosJs, /const maxGalleryCheckpoints = 24/);
+  assert.match(photosJs, /window\.photosByElieGalleryCheckpoints =/);
+  assert.match(photosJs, /galleryCheckpoints: readGalleryCheckpoints\(\)/);
+  assert.match(photosJs, /photosbyelie:gallerycheckpointschange/);
+  assert.match(galleryJs, /windowStart: visibleStart/);
+  assert.match(galleryJs, /windowEnd: visibleLimit/);
+  assert.match(galleryJs, /anchorOffset: card\?\.getBoundingClientRect\(\)\.top \|\| 0/);
+  assert.match(galleryJs, /window\.addEventListener\("scroll", queueGalleryCheckpointWrite/);
+  assert.match(galleryJs, /window\.addEventListener\("pagehide", persistGalleryCheckpoint\)/);
+  assert.doesNotMatch(galleryJs, /document\.cookie/);
 });
 
 test("Back to top is body-mounted above the version pill with safe-area and reduced-motion support", () => {

@@ -52,11 +52,10 @@ struct SystemBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching
         preferences: UserDefaults = .standard
     ) {
         guard let window else { return }
-        BackstageWindowFrameStore.save(
+        BackstageWindowFrameStore.stageUpdateHandoff(
             window.frame,
             autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
-            preferences: preferences,
-            synchronize: true
+            preferences: preferences
         )
     }
 }

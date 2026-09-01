@@ -1431,6 +1431,75 @@ struct BackstageFixtureSelectionTests {
                 preferences: preferences
             ) == window.frame
         )
+        #expect(
+            BackstageWindowFrameStore.pendingUpdateHandoff(
+                autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+                preferences: preferences
+            ) == window.frame
+        )
+    }
+
+    @Test("Incoming update rejects transient window cascading before live persistence resumes")
+    @MainActor
+    func incomingUpdateProtectsHandoffFrame() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let autosaveName = "PhotosByElieBackstageTests.MainWindow"
+        let expectedFrame = NSRect(x: 0, y: 60, width: 1_440, height: 840)
+        let cascadedFrame = NSRect(x: 420, y: 100, width: 980, height: 720)
+        BackstageWindowFrameStore.stageUpdateHandoff(
+            expectedFrame,
+            autosaveName: autosaveName,
+            preferences: preferences
+        )
+        let window = NSWindow(
+            contentRect: cascadedFrame,
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let autosaver = WindowFrameAutosaveView(
+            name: autosaveName,
+            preferences: preferences
+        )
+        window.contentView?.addSubview(autosaver)
+        autosaver.configureWindowIfNeeded()
+        #expect(window.frame == expectedFrame)
+
+        window.setFrame(cascadedFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
+        #expect(window.frame == expectedFrame)
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == expectedFrame
+        )
+
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(
+            BackstageWindowFrameStore.pendingUpdateHandoff(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == nil
+        )
+
+        let userFrame = NSRect(x: 180, y: 120, width: 1_100, height: 740)
+        window.setFrame(userFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didResizeNotification,
+            object: window
+        )
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == userFrame
+        )
     }
 
     @Test("PBE Owner disables the global chooser without changing sections")

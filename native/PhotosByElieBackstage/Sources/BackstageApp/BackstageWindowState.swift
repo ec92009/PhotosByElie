@@ -17,6 +17,10 @@ enum BackstageWindowFrameStore {
         "PhotosByElieBackstage.windowFrame.\(autosaveName)"
     }
 
+    static func updateHandoffPreferenceKey(for autosaveName: String) -> String {
+        "PhotosByElieBackstage.updateHandoffWindowFrame.\(autosaveName)"
+    }
+
     static func save(
         _ frame: NSRect,
         autosaveName: String,
@@ -43,6 +47,46 @@ enum BackstageWindowFrameStore {
             return nil
         }
         return validFrame(NSRectFromString(storedValue))
+    }
+
+    static func stageUpdateHandoff(
+        _ frame: NSRect,
+        autosaveName: String,
+        preferences: UserDefaults = .standard
+    ) {
+        guard validFrame(frame) != nil else { return }
+        save(
+            frame,
+            autosaveName: autosaveName,
+            preferences: preferences
+        )
+        preferences.set(
+            NSStringFromRect(frame),
+            forKey: updateHandoffPreferenceKey(for: autosaveName)
+        )
+        preferences.synchronize()
+    }
+
+    static func pendingUpdateHandoff(
+        autosaveName: String,
+        preferences: UserDefaults = .standard
+    ) -> NSRect? {
+        guard let storedValue = preferences.string(
+            forKey: updateHandoffPreferenceKey(for: autosaveName)
+        ) else {
+            return nil
+        }
+        return validFrame(NSRectFromString(storedValue))
+    }
+
+    static func finishUpdateHandoff(
+        autosaveName: String,
+        preferences: UserDefaults = .standard
+    ) {
+        preferences.removeObject(
+            forKey: updateHandoffPreferenceKey(for: autosaveName)
+        )
+        preferences.synchronize()
     }
 
     private static func validFrame(_ frame: NSRect) -> NSRect? {
@@ -78,6 +122,8 @@ final class WindowFrameAutosaveView: NSView {
     var autosaveName: String
     private let preferences: UserDefaults
     private weak var configuredWindow: NSWindow?
+    private var protectedUpdateHandoffFrame: NSRect?
+    private var updateHandoffGeneration = 0
 
     init(name: String, preferences: UserDefaults = .standard) {
         self.autosaveName = name
@@ -103,7 +149,11 @@ final class WindowFrameAutosaveView: NSView {
         guard let window, configuredWindow !== window else { return }
         // The explicit preference is written on every move and resize. AppKit's
         // named autosave remains as a compatibility fallback for older builds.
-        if let storedFrame = BackstageWindowFrameStore.load(
+        let pendingHandoffFrame = BackstageWindowFrameStore.pendingUpdateHandoff(
+            autosaveName: autosaveName,
+            preferences: preferences
+        )
+        if let storedFrame = pendingHandoffFrame ?? BackstageWindowFrameStore.load(
             autosaveName: autosaveName,
             preferences: preferences
         ) {
@@ -119,8 +169,21 @@ final class WindowFrameAutosaveView: NSView {
         }
         window.setFrameAutosaveName(autosaveName)
         configuredWindow = window
+        protectedUpdateHandoffFrame = pendingHandoffFrame.flatMap {
+            Self.visibleRestoredFrame(
+                $0,
+                screenFrames: NSScreen.screens.map(\.visibleFrame)
+            )
+        }
         startObservingWindowFrameChanges(window)
-        persistCurrentWindowFrame()
+        if let protectedUpdateHandoffFrame {
+            protectUpdateHandoffFrame(
+                protectedUpdateHandoffFrame,
+                in: window
+            )
+        } else {
+            persistCurrentWindowFrame()
+        }
     }
 
     private func startObservingWindowFrameChanges(_ window: NSWindow) {
@@ -151,7 +214,49 @@ final class WindowFrameAutosaveView: NSView {
 
     @objc private func windowFrameDidChange(_ notification: Notification) {
         guard notification.object as? NSWindow === configuredWindow else { return }
+        if let protectedUpdateHandoffFrame,
+           configuredWindow?.frame != protectedUpdateHandoffFrame {
+            configuredWindow?.setFrame(
+                protectedUpdateHandoffFrame,
+                display: true
+            )
+            return
+        }
         persistCurrentWindowFrame()
+    }
+
+    private func protectUpdateHandoffFrame(
+        _ frame: NSRect,
+        in window: NSWindow
+    ) {
+        updateHandoffGeneration += 1
+        let generation = updateHandoffGeneration
+        if window.frame != frame {
+            window.setFrame(frame, display: false)
+        }
+        // A second app instance can be cascaded after SwiftUI first attaches
+        // its window. Keep the outgoing frame authoritative until that launch
+        // choreography settles, then return to ordinary live persistence.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self, weak window] in
+            guard let self,
+                  let window,
+                  self.configuredWindow === window,
+                  self.updateHandoffGeneration == generation else { return }
+            if window.frame != frame {
+                window.setFrame(frame, display: true)
+            }
+            BackstageWindowFrameStore.save(
+                frame,
+                autosaveName: self.autosaveName,
+                preferences: self.preferences,
+                synchronize: true
+            )
+            BackstageWindowFrameStore.finishUpdateHandoff(
+                autosaveName: self.autosaveName,
+                preferences: self.preferences
+            )
+            self.protectedUpdateHandoffFrame = nil
+        }
     }
 
     private func persistCurrentWindowFrame() {

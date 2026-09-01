@@ -7,6 +7,40 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Gallery grid owns card width without a layout feedback constraint")
+    func galleryGridDoesNotDoubleConstrainFlexibleColumns() throws {
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = packageRoot
+            .appendingPathComponent("Sources/BackstageApp/CullingView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains(
+            ".fixed(CGFloat(model.cullingGridColumnWidth))"
+        ))
+        #expect(source.contains(
+            "width: CGFloat(model.cullingGridColumnWidth)"
+        ))
+        #expect(!source.contains(".flexible(minimum: 0"))
+        #expect(source.contains(
+            "ZStack {\n            Rectangle().fill(.quaternary.opacity(0.45))"
+        ))
+        #expect(source.contains(
+            ".frame(maxWidth: .infinity, maxHeight: .infinity)"
+        ))
+        #expect(source.contains(
+            ".frame(width: previewWidth, height: previewWidth * 3 / 4)"
+        ))
+        #expect(source.contains(
+            "Image(systemName: \"line.3.horizontal.decrease.circle\")"
+        ))
+        #expect(source.contains(
+            "Image(systemName: \"photo\")\n                    .font(.title3)"
+        ))
+    }
+
     @Test("Command-A selects every loaded actionable item in the active workspace")
     @MainActor
     func selectAllRoutesAcrossBackstageWorkspaces() {

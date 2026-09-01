@@ -759,10 +759,15 @@ struct CullingView: View {
     private var cullingGridCards: some View {
         LazyVGrid(
             columns: Array(
-                repeating: GridItem(.flexible(minimum: 0), spacing: 8),
+                // Keep grid and card geometry identical so thumbnail aspect
+                // ratios cannot feed a conflicting width back into LazyVGrid.
+                repeating: GridItem(
+                    .fixed(CGFloat(model.cullingGridColumnWidth)),
+                    spacing: CGFloat(CullingGridLayout.spacing)
+                ),
                 count: model.cullingGridDensity
             ),
-            spacing: 8
+            spacing: CGFloat(CullingGridLayout.spacing)
         ) {
             ForEach(model.visibleCullingAssets) { asset in
                 CullingAssetCard(
@@ -779,7 +784,11 @@ struct CullingView: View {
                     },
                     isSelected: model.cullingSelection.selectedIDs.contains(asset.id),
                     isFocused: model.cullingSelection.focusedID == asset.id,
-                    usesFill: model.cullingUsesFill
+                    usesFill: model.cullingUsesFill,
+                    previewWidth: max(
+                        0,
+                        CGFloat(model.cullingGridColumnWidth) - 12
+                    )
                 )
                 .frame(
                     width: CGFloat(model.cullingGridColumnWidth),
@@ -808,8 +817,9 @@ struct CullingView: View {
     private var cullingGridOverlay: some View {
         if model.isBlockingFixtureCullingLoad {
             VStack(spacing: 12) {
-                ProgressView()
-                    .controlSize(.large)
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
                 Text("Applying filters…")
                     .fixedSize(horizontal: true, vertical: false)
             }
@@ -1444,107 +1454,12 @@ private struct CullingAssetCard: View {
     var isSelected: Bool
     var isFocused: Bool
     var usesFill: Bool
+    var previewWidth: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Group {
-                if let thumbnail {
-                    Image(nsImage: thumbnail)
-                        .resizable()
-                        .aspectRatio(contentMode: usesFill ? .fill : .fit)
-                } else if let thumbnailFailure {
-                    VStack(spacing: 5) {
-                        Image(systemName: thumbnailFailure.systemImage)
-                            .font(.title2)
-                        Text(thumbnailFailure.title)
-                            .font(.caption2.weight(.semibold))
-                        Text(thumbnailFailure.detail)
-                            .font(.caption2)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(3)
-                        Button(thumbnailFailure.actionTitle) {
-                            if thumbnailFailure.offersPhotosAccess {
-                                onAllowPhotos()
-                            } else {
-                                onRetryThumbnail()
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .backstageHelp(
-                            thumbnailFailure.offersPhotosAccess
-                                ? "Request Photos permission for Backstage, then retry this thumbnail."
-                                : "Retry loading this individual Photos thumbnail without changing its culling decision."
-                        )
-                    }
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(
-                        "\(thumbnailFailure.title). \(thumbnailFailure.detail)"
-                    )
-                } else {
-                    VStack(spacing: 5) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Loading preview…")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .aspectRatio(4 / 3, contentMode: .fit)
-            .background(.quaternary.opacity(0.45))
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .clipped()
-            .saturation(isHidden ? 0 : 1)
-            .overlay(alignment: .topTrailing) {
-                if isPicked {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(6)
-                        .background(.blue, in: Circle())
-                        .padding(6)
-                        .accessibilityLabel("Picked")
-                }
-            }
-            .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(asset.galleryStateBadges, id: \.self) { badge in
-                        Text(badge)
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .foregroundStyle(.white)
-                            .background(.black.opacity(0.72), in: Capsule())
-                    }
-                }
-                .padding(6)
-            }
-            HStack(spacing: 5) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(asset.title.isEmpty ? asset.filename : asset.title)
-                        .lineLimit(1)
-                        .font(.caption.weight(.semibold))
-                    if !asset.title.isEmpty {
-                        Text(asset.filename)
-                            .lineLimit(1)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 2)
-                Text(starLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Circle()
-                    .fill(color(state?.color ?? ""))
-                    .overlay(Circle().stroke(.secondary.opacity(0.5)))
-                    .frame(width: 11, height: 11)
-            }
+            previewWell
+            metadataRow
         }
         .padding(6)
         .background(
@@ -1560,6 +1475,118 @@ private struct CullingAssetCard: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var previewWell: some View {
+        ZStack {
+            Rectangle().fill(.quaternary.opacity(0.45))
+            previewContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: previewWidth, height: previewWidth * 3 / 4)
+        .clipShape(RoundedRectangle(cornerRadius: 7))
+        .clipped()
+        .saturation(isHidden ? 0 : 1)
+        .overlay(alignment: .topTrailing) { pickedBadge }
+        .overlay(alignment: .topLeading) { galleryStateBadges }
+    }
+
+    @ViewBuilder
+    private var pickedBadge: some View {
+        if isPicked {
+            Image(systemName: "flag.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(6)
+                .background(.blue, in: Circle())
+                .padding(6)
+                .accessibilityLabel("Picked")
+        }
+    }
+
+    private var galleryStateBadges: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(asset.galleryStateBadges, id: \.self) { badge in
+                Text(badge)
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .foregroundStyle(.white)
+                    .background(.black.opacity(0.72), in: Capsule())
+            }
+        }
+        .padding(6)
+    }
+
+    private var metadataRow: some View {
+        HStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(asset.title.isEmpty ? asset.filename : asset.title)
+                    .lineLimit(1)
+                    .font(.caption.weight(.semibold))
+                if !asset.title.isEmpty {
+                    Text(asset.filename)
+                        .lineLimit(1)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 2)
+            Text(starLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Circle()
+                .fill(color(state?.color ?? ""))
+                .overlay(Circle().stroke(.secondary.opacity(0.5)))
+                .frame(width: 11, height: 11)
+        }
+    }
+
+    @ViewBuilder
+    private var previewContent: some View {
+        if let thumbnail {
+            Image(nsImage: thumbnail)
+                .resizable()
+                .aspectRatio(contentMode: usesFill ? .fill : .fit)
+        } else if let thumbnailFailure {
+            VStack(spacing: 5) {
+                Image(systemName: thumbnailFailure.systemImage)
+                    .font(.title2)
+                Text(thumbnailFailure.title)
+                    .font(.caption2.weight(.semibold))
+                Text(thumbnailFailure.detail)
+                    .font(.caption2)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                Button(thumbnailFailure.actionTitle) {
+                    if thumbnailFailure.offersPhotosAccess {
+                        onAllowPhotos()
+                    } else {
+                        onRetryThumbnail()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .backstageHelp(
+                    thumbnailFailure.offersPhotosAccess
+                        ? "Request Photos permission for Backstage, then retry this thumbnail."
+                        : "Retry loading this individual Photos thumbnail without changing its culling decision."
+                )
+            }
+            .foregroundStyle(.secondary)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(thumbnailFailure.title). \(thumbnailFailure.detail)"
+            )
+        } else {
+            VStack(spacing: 5) {
+                Image(systemName: "photo")
+                    .font(.title3)
+                Text("Loading preview…")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+        }
     }
 
     private var starLabel: String {

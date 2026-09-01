@@ -95,6 +95,9 @@ public struct OwnerCullingSQLiteStore: Sendable {
             busyTimeoutMilliseconds: busyTimeoutMilliseconds,
             readOnly: true
         )
+        let hasCurrentEquipment = try connection.queryOne(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'asset_current_equipment'"
+        ) != nil
         guard let fixture = try connection.queryOne(
             "SELECT fixture_id, parent_fixture_id, candidate_mode FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
             bindings: [.string(cleanFixtureID)]
@@ -134,6 +137,12 @@ public struct OwnerCullingSQLiteStore: Sendable {
                 LIMIT 1
               )
             """
+        if hasCurrentEquipment {
+            fromSQL += """
+                LEFT JOIN asset_current_equipment AS current_equipment
+                  ON current_equipment.asset_id = asset.asset_id
+                """
+        }
         if needsUnavailableIdentityFallback {
             fromSQL += """
                 LEFT JOIN exact_identity_cloud_fallbacks AS exact_identity
@@ -172,6 +181,15 @@ public struct OwnerCullingSQLiteStore: Sendable {
         let exactIdentitySelection = needsUnavailableIdentityFallback
             ? "COALESCE(exact_identity.cloud_identifier, '')"
             : "''"
+        let currentCameraSelection = hasCurrentEquipment
+            ? "NULLIF(current_equipment.camera_body, '')"
+            : "NULL"
+        let currentLensSelection = hasCurrentEquipment
+            ? "NULLIF(current_equipment.lens, '')"
+            : "NULL"
+        let currentFocalLengthSelection = hasCurrentEquipment
+            ? "NULLIF(current_equipment.focal_length, '')"
+            : "NULL"
         let rows = try connection.query(
             """
             \(exactIdentityCTE)
@@ -187,6 +205,32 @@ public struct OwnerCullingSQLiteStore: Sendable {
                    COALESCE(asset.location_keywords_json, '[]') AS location_keywords_json,
                    COALESCE(asset.pixel_width, 0) AS pixel_width,
                    COALESCE(asset.pixel_height, 0) AS pixel_height,
+                   COALESCE(
+                     \(currentCameraSelection),
+                     json_extract(asset.raw_json, '$.cameraMetadata.model'),
+                     json_extract(asset.raw_json, '$.cameraMetadata.name'),
+                     json_extract(asset.raw_json, '$.camera.model'),
+                     json_extract(asset.raw_json, '$.camera.name'),
+                     json_extract(asset.raw_json, '$.cameraBody'),
+                     ''
+                   ) AS search_camera_body,
+                   COALESCE(
+                     \(currentLensSelection),
+                     json_extract(asset.raw_json, '$.lensMetadata.model'),
+                     json_extract(asset.raw_json, '$.lensMetadata.name'),
+                     json_extract(asset.raw_json, '$.lens.model'),
+                     json_extract(asset.raw_json, '$.lens.name'),
+                     json_extract(asset.raw_json, '$.cameraMetadata.lensModel'),
+                     json_extract(asset.raw_json, '$.camera.lensModel'),
+                     ''
+                   ) AS search_lens,
+                   COALESCE(
+                     \(currentFocalLengthSelection),
+                     json_extract(asset.raw_json, '$.focalLength'),
+                     json_extract(asset.raw_json, '$.cameraMetadata.focalLength'),
+                     json_extract(asset.raw_json, '$.camera.focalLength'),
+                     ''
+                   ) AS search_focal_length,
                    COALESCE(global_decision.title, '') AS decision_title,
                    COALESCE(global_decision.keywords_json, '[]') AS decision_keywords_json,
                    COALESCE(current_decision.placement_state, 'undecided') AS placement_state,
@@ -250,8 +294,14 @@ public struct OwnerCullingSQLiteStore: Sendable {
         if searchTerms.isEmpty || exactAssetIDSearch {
             searchableEquipment = [:]
         } else {
-            searchableEquipment = (try? OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
-                .metadata(assetIDs: rows.compactMap { $0["asset_id"]?.stringValue })) ?? [:]
+            searchableEquipment = Dictionary(
+                uniqueKeysWithValues: rows.compactMap { row in
+                    guard let assetID = row["asset_id"]?.stringValue, !assetID.isEmpty else {
+                        return nil
+                    }
+                    return (assetID, cullingInlineEquipment(row))
+                }
+            )
         }
         let burstAssetIDs = burstsOnly
             ? Set(cullingBurstRows(rows).compactMap { $0["asset_id"]?.stringValue })
@@ -722,6 +772,19 @@ private func cullingSearchTerms(_ search: String) -> [String] {
         .filter { !$0.isEmpty }
         .prefix(8)
         .map(cullingFold)
+}
+
+private func cullingInlineEquipment(
+    _ row: [String: JSONValue]
+) -> OwnerAssetSourceMetadata {
+    OwnerAssetSourceMetadata(
+        mediaType: row["media_type"]?.stringValue ?? "photo",
+        pixelWidth: row["pixel_width"]?.intValue ?? 0,
+        pixelHeight: row["pixel_height"]?.intValue ?? 0,
+        cameraBody: row["search_camera_body"]?.stringValue ?? "",
+        lens: row["search_lens"]?.stringValue ?? "",
+        focalLength: row["search_focal_length"]?.stringValue ?? ""
+    )
 }
 
 private func cullingSearchMatches(

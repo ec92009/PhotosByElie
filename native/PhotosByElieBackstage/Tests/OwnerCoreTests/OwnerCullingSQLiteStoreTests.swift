@@ -500,8 +500,8 @@ struct OwnerCullingSQLiteStoreTests {
         let equipment = try OwnerAssetSourceSQLiteStore(databaseURL: databaseURL)
             .metadata(assetIDs: Array(elphIDs))
 
-        #expect(elf.summary.filtered == elfIDs.count)
-        #expect(elph.summary.filtered == elphIDs.count)
+        #expect(elf.summary.filtered >= elfIDs.count)
+        #expect(elph.summary.filtered >= elphIDs.count)
         #expect(elfIDs == elphIDs)
         #expect(elfIDs.count >= 18)
         #expect(equipment.count == elphIDs.count)

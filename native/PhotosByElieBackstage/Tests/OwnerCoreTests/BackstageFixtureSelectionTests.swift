@@ -39,6 +39,13 @@ struct BackstageFixtureSelectionTests {
         #expect(source.contains(
             "Image(systemName: \"photo\")\n                    .font(.title3)"
         ))
+
+        let viewModelURL = packageRoot
+            .appendingPathComponent("Sources/BackstageApp/BackstageViewModel.swift")
+        let viewModel = try String(contentsOf: viewModelURL, encoding: .utf8)
+        #expect(viewModel.contains(
+            "cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty"
+        ))
     }
 
     @Test("Command-A selects every loaded actionable item in the active workspace")

@@ -1078,6 +1078,7 @@ def run_upload_batch(
     upload: Callable[[str], Iterable[dict[str, Any]]],
     *,
     progress: Callable[[dict[str, Any]], None] | None = None,
+    preserve_live_delivery_on_failure: bool = False,
 ) -> dict[str, Any]:
     """Upload one <=50 item run concurrently; publish verified items independently."""
     started_at = now_iso()
@@ -1184,12 +1185,21 @@ def run_upload_batch(
                             asset_id,
                         ),
                     )
-                    if error_text:
+                    if error_text and not preserve_live_delivery_on_failure:
                         conn.execute(
                             """
                             UPDATE asset_delivery_state
                             SET delivery_state = 'failed', last_error = ?, updated_at = ?
                             WHERE asset_id = ?
+                            """,
+                            (error_text, timestamp, asset_id),
+                        )
+                    elif error_text:
+                        conn.execute(
+                            """
+                            UPDATE asset_delivery_state
+                            SET last_error = ?, updated_at = ?
+                            WHERE asset_id = ? AND delivery_state = 'live'
                             """,
                             (error_text, timestamp, asset_id),
                         )

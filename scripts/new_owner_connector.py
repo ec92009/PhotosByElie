@@ -82,6 +82,7 @@ ACTION_LOCKS: dict[str, tuple[threading.Lock, int]] = {}
 ACTION_WAKE_GUARD = threading.Lock()
 ACTION_WAKE_ACTIVE: set[str] = set()
 READ_ONLY_FIXTURE_MODES = {
+    "asset-catalog-recovery-plan",
     "asset-upload-plan",
     "fixture-access-effective",
     "fixture-ai-proposals-ready",

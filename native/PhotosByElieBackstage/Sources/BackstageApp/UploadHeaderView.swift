@@ -7,6 +7,7 @@ struct UploadHeaderView: View {
     var isPreviewMode: Bool
     @Binding var confirmingSelectedPublication: Bool
     @Binding var confirmingCatalogDeployment: Bool
+    @Binding var confirmingCatalogRecovery: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -46,6 +47,14 @@ struct UploadHeaderView: View {
                     .disabled(!model.canStartCloudWorkflow || model.selectedDeliveryIDs.isEmpty)
                     .backstageHelp("Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.")
                 if let plan = model.nativeUploadPlan,
+                   plan.projectionPendingCount + plan.projectionFailedCount > 0 {
+                    Button(model.isRunningCatalogRecovery ? "Recovering catalog…" : "Recover catalog entries…") {
+                        confirmingCatalogRecovery = true
+                    }
+                    .disabled(!model.canStartCloudWorkflow)
+                    .backstageHelp("Verify existing R2 receipts and rebuild missing catalog entries without uploading media again.")
+                }
+                if let plan = model.nativeUploadPlan,
                    plan.deploymentPendingCount + plan.deploymentFailedCount > 0 {
                     Button(model.isDeployingPublicCatalog ? "Deploying & verifying…" : "Deploy & verify website…") {
                         confirmingCatalogDeployment = true
@@ -82,7 +91,8 @@ private func uploadHeaderPreviewModel() -> BackstageViewModel {
         model: uploadHeaderPreviewModel(),
         isPreviewMode: true,
         confirmingSelectedPublication: .constant(false),
-        confirmingCatalogDeployment: .constant(false)
+        confirmingCatalogDeployment: .constant(false),
+        confirmingCatalogRecovery: .constant(false)
     )
     .padding()
     .frame(width: 1_200, height: 240)

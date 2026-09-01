@@ -17,6 +17,7 @@ struct UploadView: View {
     @State private var confirmingSelectedPublication = false
     @State private var confirmingVisiblePublication = false
     @State private var confirmingCatalogDeployment = false
+    @State private var confirmingCatalogRecovery = false
     @State private var confirmingReturnToReview = false
     @State private var confirmingUploadHide = false
     @StateObject private var quickLook = BackstageQuickLookCoordinator()
@@ -31,7 +32,8 @@ struct UploadView: View {
                 model: model,
                 isPreviewMode: isPreviewMode,
                 confirmingSelectedPublication: $confirmingSelectedPublication,
-                confirmingCatalogDeployment: $confirmingCatalogDeployment
+                confirmingCatalogDeployment: $confirmingCatalogDeployment,
+                confirmingCatalogRecovery: $confirmingCatalogRecovery
             )
             if let plan = model.nativeUploadPlan {
                 HStack {
@@ -194,9 +196,12 @@ struct UploadView: View {
                         total: Double(run.requested)
                     ) {
                         Text(
-                            "Batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
+                            (model.isRunningCatalogRecovery ? "Catalog recovery" : "Upload")
+                            + " • batch \(model.nativePublicationBatchNumber) of \(model.nativePublicationBatchCount)"
                             + " • \(run.processed) of \(run.requested)"
-                            + " • \(run.live) website live"
+                            + (model.isRunningCatalogRecovery
+                                ? " • existing R2 only"
+                                : " • \(run.live) website live")
                             + " • \(run.failed) failed"
                             + " • \(run.remaining) remaining"
                         )
@@ -205,7 +210,7 @@ struct UploadView: View {
                         Task { await model.cancelNativePublication() }
                     }
                     .disabled(model.isCancellingNativePublication)
-                    .backstageHelp("Stop after currently uploading assets finish. Completed receipts remain valid and unstarted assets stay retryable.")
+                    .backstageHelp("Stop after currently active items finish. Completed receipts remain valid and unstarted items stay retryable.")
                 }
             }
             if let run = model.nativeUploadRun,
@@ -372,6 +377,19 @@ struct UploadView: View {
                 .backstageHelp("Close this confirmation without uploading the visible tray.")
         } message: {
             Text("Backstage will continue through the complete eligible queue in sequential batches of up to 50. A failed item keeps its error and receipt for retry while later photos continue automatically. Website deployment remains a separate verified step.")
+        }
+        .confirmationDialog(
+            "Recover (model.nativeUploadPlan.map { $0.projectionPendingCount + $0.projectionFailedCount } ?? 0) catalog entries from existing R2 receipts?",
+            isPresented: $confirmingCatalogRecovery
+        ) {
+            Button("Recover catalog entries") {
+                Task { await model.recoverCatalogPreparing() }
+            }
+            .backstageHelp("Confirm bounded catalog-only recovery from exact current checksum-verified R2 receipts.")
+            Button("Cancel", role: .cancel) {}
+                .backstageHelp("Close this confirmation without changing catalog state.")
+        } message: {
+            Text("Backstage verifies each existing R2 object and rebuilds only the missing local catalog entry in batches of 50. It will not upload media. One failed asset remains independently retryable while later assets continue.")
         }
         .confirmationDialog(
             "Deploy the prepared catalog to the public website?",

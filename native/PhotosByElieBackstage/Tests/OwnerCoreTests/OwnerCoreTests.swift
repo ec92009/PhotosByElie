@@ -5017,6 +5017,72 @@ struct OwnerCoreTests {
         #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "fixture-upload-run-adoption-plan")
     }
 
+    @Test("Catalog recovery plans read-only receipts and starts one bounded no-upload run")
+    func nativeCatalogRecoveryUsesBoundedOwnerActions() async throws {
+        let planAction = OwnerAction(
+            id: "owner-action-catalog-recovery-plan",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "catalogRecoveryPlan": [
+                    "fixtureId": "fixture-expo",
+                    "candidateCount": 397,
+                    "recoverableCount": 397,
+                    "blockedCount": 0,
+                    "retryableFailureCount": 0,
+                    "batchLimit": 50,
+                ],
+            ]
+        )
+        let runAction = OwnerAction(
+            id: "owner-action-catalog-recovery-run",
+            actionKind: "sidecar-culling-review",
+            target: "max",
+            state: .completed,
+            result: [
+                "uploadRun": [
+                    "runId": "catrec-test",
+                    "status": "queued",
+                    "count": 50,
+                    "remaining": 50,
+                    "concurrency": 4,
+                    "catalogRecovery": true,
+                    "items": [],
+                ],
+            ]
+        )
+        let api = ScriptedOwnerActionAPI(completed: [planAction, runAction])
+        let service = FixtureDeliveryService(runner: OwnerActionRunner(
+            api: api,
+            waker: UnavailableWaker(),
+            pollInterval: .milliseconds(1),
+            timeout: .seconds(1)
+        ))
+
+        let plan = try await service.nativeCatalogRecoveryPlan(
+            fixtureID: "fixture-expo"
+        )
+        #expect(plan.recoverableCount == 397)
+        #expect(plan.blockedCount == 0)
+        #expect(plan.batchLimit == 50)
+        let run = try await service.startNativeCatalogRecovery(
+            fixtureID: "fixture-expo",
+            limit: 500,
+            concurrency: 99
+        )
+        #expect(run.runID == "catrec-test")
+        #expect(run.requested == 50)
+
+        let requests = await api.requests()
+        let planManifest = requests[0].payload["manifest"]?.objectValue
+        #expect(planManifest?["mode"]?.stringValue == "asset-catalog-recovery-plan")
+        let runManifest = requests[1].payload["manifest"]?.objectValue
+        #expect(runManifest?["mode"]?.stringValue == "asset-catalog-recovery-run-start")
+        #expect(runManifest?["limit"]?.intValue == 50)
+        #expect(runManifest?["concurrency"]?.intValue == 8)
+    }
+
     @Test("Native upload publishes verified assets and exposes reconciliation progress")
     func nativeUploadAndR2Safety() async throws {
         let eligibility = OwnerAction(

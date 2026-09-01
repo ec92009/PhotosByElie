@@ -11,6 +11,7 @@ import sqlite3
 import sys
 import time
 from typing import Any
+import uuid
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = Path(
@@ -243,6 +244,7 @@ def reconcile_upload_run_receipts(repo_root: Path) -> dict[str, Any]:
 def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
     """Return interrupted or failed items in one explicit run to its durable queue."""
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    catalog_recovery = str(run_id).startswith("catrec-")
     with connect_owner(repo_root) as conn:
         run = conn.execute(
             "SELECT status FROM asset_upload_runs WHERE run_id = ?",
@@ -263,10 +265,15 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
         ).fetchall()
         asset_ids = [str(row["asset_id"]) for row in retryable]
         if asset_ids:
+            source_reset = (
+                "source_version_hash = source_version_hash"
+                if catalog_recovery
+                else "source_version_hash = ''"
+            )
             conn.execute(
-                """
+                f"""
                 UPDATE asset_upload_run_items
-                SET status = 'queued', source_version_hash = '',
+                SET status = 'queued', {source_reset},
                     object_keys_json = '[]', error_text = '',
                     started_at = NULL, completed_at = NULL, updated_at = ?
                 WHERE run_id = ? AND status IN ('failed', 'uploading')
@@ -274,15 +281,16 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
                 (timestamp, run_id),
             )
             placeholders = ",".join("?" for _ in asset_ids)
-            conn.execute(
-                f"""
-                UPDATE asset_delivery_state
-                SET delivery_state = 'needs-upload', last_error = '', updated_at = ?
-                WHERE asset_id IN ({placeholders})
-                  AND delivery_state IN ('failed', 'uploading')
-                """,
-                (timestamp, *asset_ids),
-            )
+            if not catalog_recovery:
+                conn.execute(
+                    f"""
+                    UPDATE asset_delivery_state
+                    SET delivery_state = 'needs-upload', last_error = '', updated_at = ?
+                    WHERE asset_id IN ({placeholders})
+                      AND delivery_state IN ('failed', 'uploading')
+                    """,
+                    (timestamp, *asset_ids),
+                )
         summary = conn.execute(
             """
                 SELECT count(*) total,
@@ -318,7 +326,11 @@ def reset_upload_run_for_retry(repo_root: Path, run_id: str) -> dict[str, Any]:
     return {"ok": True, "runId": run_id, "resetCount": len(asset_ids)}
 
 
-def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str, Any]]:
+def verified_covered_r2_results(
+    repo_root: Path,
+    asset_id: str,
+    source_version_hash: str = "",
+) -> list[dict[str, Any]]:
     """Recover exact planned objects from current R2 inventory and verified receipts."""
     with connect_owner(repo_root) as conn:
         rows = _upload_bridge_rows(
@@ -329,76 +341,458 @@ def verified_covered_r2_results(repo_root: Path, asset_id: str) -> list[dict[str
         row = next((item for item in rows if str(item["asset_id"]) == asset_id), None)
         if row is None:
             return []
-        receipt_asset_ids = [asset_id]
-        row_keys = set(row.keys()) if hasattr(row, "keys") else set()
-        r2_source_anchor = str(
-            row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
-        ).strip()
-        legacy_prefix = "apple-photos://"
-        if r2_source_anchor.startswith(legacy_prefix):
-            legacy_asset_id = r2_source_anchor[len(legacy_prefix):].strip()
-            if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
-                receipt_asset_ids.append(legacy_asset_id)
-        _, planned_keys = _planned_r2_keys(row)
-        recovered: list[dict[str, Any]] = []
-        for planned in planned_keys:
-            bucket = str(planned["bucket"])
-            object_key = str(planned["key"])
-            current = conn.execute(
-                """
-                SELECT bytes
-                FROM r2_objects
-                WHERE bucket = ? AND object_key = ? AND lifecycle_state = 'current'
+        return _verified_covered_r2_results_from_row(
+            conn,
+            row,
+            asset_id,
+            source_version_hash,
+        )
+
+
+def _verified_covered_r2_results_from_row(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row | dict[str, Any],
+    asset_id: str,
+    source_version_hash: str = "",
+) -> list[dict[str, Any]]:
+    """Verify one already-loaded bridge row without repeating the universe query."""
+    receipt_asset_ids = [asset_id]
+    row_keys = set(row.keys()) if hasattr(row, "keys") else set()
+    r2_source_anchor = str(
+        row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
+    ).strip()
+    legacy_prefix = "apple-photos://"
+    if r2_source_anchor.startswith(legacy_prefix):
+        legacy_asset_id = r2_source_anchor[len(legacy_prefix):].strip()
+        if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
+            receipt_asset_ids.append(legacy_asset_id)
+    _, planned_keys = _planned_r2_keys(row)
+    recovered: list[dict[str, Any]] = []
+    for planned in planned_keys:
+        bucket = str(planned["bucket"])
+        object_key = str(planned["key"])
+        current = conn.execute(
+            """
+            SELECT bytes
+            FROM r2_objects
+            WHERE bucket = ? AND object_key = ? AND lifecycle_state = 'current'
+            """,
+            (bucket, object_key),
+        ).fetchone()
+        if current is None:
+            return []
+        receipt = None
+        for receipt_asset_id in receipt_asset_ids:
+            version_clause = " AND version_hash = ?" if source_version_hash else ""
+            receipt = conn.execute(
+                f"""
+                SELECT checksum_sha256, verification_json
+                FROM fixture_delivery_receipts
+                WHERE asset_id = ? AND destination = 'r2'
+                  AND status = 'verified' AND object_key = ?
+                  {version_clause}
+                ORDER BY COALESCE(verified_at, updated_at) DESC, receipt_id DESC
+                LIMIT 1
                 """,
-                (bucket, object_key),
+                (
+                    (receipt_asset_id, object_key, source_version_hash)
+                    if source_version_hash
+                    else (receipt_asset_id, object_key)
+                ),
             ).fetchone()
-            if current is None:
-                return []
-            receipt = None
-            for receipt_asset_id in receipt_asset_ids:
-                receipt = conn.execute(
-                    """
-                    SELECT checksum_sha256, verification_json
-                    FROM fixture_delivery_receipts
-                    WHERE asset_id = ? AND destination = 'r2'
-                      AND status = 'verified' AND object_key = ?
-                    ORDER BY COALESCE(verified_at, updated_at) DESC, receipt_id DESC
-                    LIMIT 1
-                    """,
-                    (receipt_asset_id, object_key),
-                ).fetchone()
-                if receipt is not None:
-                    break
-            if receipt is None or not str(receipt["checksum_sha256"] or ""):
-                return []
+            if receipt is not None:
+                break
+        if receipt is None or not str(receipt["checksum_sha256"] or ""):
+            return []
+        try:
+            verification = json.loads(str(receipt["verification_json"] or "{}"))
+        except json.JSONDecodeError:
+            return []
+        recorded_bucket = str(verification.get("bucket") or "")
+        if recorded_bucket and recorded_bucket != bucket:
+            return []
+        checksum = str(receipt["checksum_sha256"])
+        recovered.append(
+            {
+                "status": "uploaded",
+                "bucket": bucket,
+                "key": object_key,
+                "kind": str(planned.get("kind") or ""),
+                "objectKind": str(planned.get("kind") or ""),
+                "checksumSha256": checksum,
+                "remoteChecksumSha256": checksum,
+                "remoteVerified": True,
+                "bytes": int(
+                    verification.get("bytes")
+                    if verification.get("bytes") is not None
+                    else current["bytes"] or 0
+                ),
+                "contentType": str(verification.get("contentType") or ""),
+                "verificationMethod": "existing-verified-receipt",
+            }
+        )
+    return recovered
+
+
+def _catalog_recovery_coverage(
+    repo_root: Path,
+    rows: list[sqlite3.Row] | list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Verify already-loaded recovery rows without scanning the upload universe."""
+    if not rows:
+        return {}
+    with connect_owner(repo_root) as conn:
+        expected: list[tuple[str, str, str, str, str, str]] = []
+        expected_counts: dict[str, int] = {}
+        for row in rows:
+            asset_id = str(row["asset_id"])
+            receipt_asset_ids = [asset_id]
+            row_keys = set(row.keys()) if hasattr(row, "keys") else set()
+            r2_source_anchor = str(
+                row["r2_source_anchor"]
+                if "r2_source_anchor" in row_keys
+                else ""
+            ).strip()
+            if r2_source_anchor.startswith("apple-photos://"):
+                legacy_asset_id = r2_source_anchor[len("apple-photos://"):].strip()
+                if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
+                    receipt_asset_ids.append(legacy_asset_id)
+            _, planned_keys = _planned_r2_keys(row)
+            expected_counts[asset_id] = len(planned_keys)
+            for planned in planned_keys:
+                for receipt_asset_id in receipt_asset_ids:
+                    expected.append((
+                        asset_id,
+                        receipt_asset_id,
+                        str(row["source_version_hash"]),
+                        str(planned["bucket"]),
+                        str(planned["key"]),
+                        str(planned.get("kind") or ""),
+                    ))
+
+        conn.execute(
+            """
+            CREATE TEMP TABLE IF NOT EXISTS catalog_recovery_expected (
+              asset_id TEXT NOT NULL,
+              receipt_asset_id TEXT NOT NULL,
+              version_hash TEXT NOT NULL,
+              bucket TEXT NOT NULL,
+              object_key TEXT NOT NULL,
+              object_kind TEXT NOT NULL,
+              PRIMARY KEY (
+                asset_id, receipt_asset_id, version_hash, bucket, object_key
+              )
+            ) WITHOUT ROWID
+            """
+        )
+        conn.execute("DELETE FROM catalog_recovery_expected")
+        conn.executemany(
+            """
+            INSERT OR IGNORE INTO catalog_recovery_expected (
+              asset_id, receipt_asset_id, version_hash,
+              bucket, object_key, object_kind
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            expected,
+        )
+        receipt_rows = conn.execute(
+            """
+            SELECT expected.asset_id, expected.bucket, expected.object_key,
+                   expected.object_kind, r2.object_key AS current_object_key,
+                   r2.bytes, receipt.checksum_sha256, receipt.verification_json
+            FROM catalog_recovery_expected AS expected
+            LEFT JOIN r2_objects AS r2
+              ON r2.bucket = expected.bucket
+             AND r2.object_key = expected.object_key
+             AND r2.lifecycle_state = 'current'
+            LEFT JOIN fixture_delivery_receipts AS receipt
+              ON receipt.asset_id = expected.receipt_asset_id
+             AND receipt.destination = 'r2'
+             AND receipt.version_hash = expected.version_hash
+             AND receipt.status = 'verified'
+             AND receipt.object_key = expected.object_key
+            ORDER BY expected.asset_id, expected.object_key,
+                     COALESCE(receipt.verified_at, receipt.updated_at) DESC,
+                     receipt.receipt_id DESC
+            """
+        ).fetchall()
+
+        recovered: dict[str, list[dict[str, Any]]] = {
+            str(row["asset_id"]): [] for row in rows
+        }
+        accepted: set[tuple[str, str, str]] = set()
+        for receipt_row in receipt_rows:
+            asset_id = str(receipt_row["asset_id"])
+            bucket = str(receipt_row["bucket"])
+            object_key = str(receipt_row["object_key"])
+            identity = (asset_id, bucket, object_key)
+            if identity in accepted or receipt_row["current_object_key"] is None:
+                continue
+            checksum = str(receipt_row["checksum_sha256"] or "")
+            if not checksum:
+                continue
             try:
-                verification = json.loads(str(receipt["verification_json"] or "{}"))
+                verification = json.loads(
+                    str(receipt_row["verification_json"] or "{}")
+                )
             except json.JSONDecodeError:
-                return []
+                continue
             recorded_bucket = str(verification.get("bucket") or "")
             if recorded_bucket and recorded_bucket != bucket:
-                return []
-            checksum = str(receipt["checksum_sha256"])
-            recovered.append(
-                {
-                    "status": "uploaded",
-                    "bucket": bucket,
-                    "key": object_key,
-                    "kind": str(planned.get("kind") or ""),
-                    "objectKind": str(planned.get("kind") or ""),
-                    "checksumSha256": checksum,
-                    "remoteChecksumSha256": checksum,
-                    "remoteVerified": True,
-                    "bytes": int(
-                        verification.get("bytes")
-                        if verification.get("bytes") is not None
-                        else current["bytes"] or 0
-                    ),
-                    "contentType": str(verification.get("contentType") or ""),
-                    "verificationMethod": "existing-verified-receipt",
-                }
+                continue
+            recovered[asset_id].append({
+                "status": "uploaded",
+                "bucket": bucket,
+                "key": object_key,
+                "kind": str(receipt_row["object_kind"] or ""),
+                "objectKind": str(receipt_row["object_kind"] or ""),
+                "checksumSha256": checksum,
+                "remoteChecksumSha256": checksum,
+                "remoteVerified": True,
+                "bytes": int(
+                    verification.get("bytes")
+                    if verification.get("bytes") is not None
+                    else receipt_row["bytes"] or 0
+                ),
+                "contentType": str(verification.get("contentType") or ""),
+                "verificationMethod": "existing-verified-receipt",
+            })
+            accepted.add(identity)
+
+        return {
+            asset_id: items
+            if len(items) == expected_counts.get(asset_id, 0)
+            else []
+            for asset_id, items in recovered.items()
+        }
+
+
+def _catalog_recovery_rows(
+    repo_root: Path,
+    fixture_id: str,
+) -> list[sqlite3.Row]:
+    clean_fixture_id = str(fixture_id or "").strip()
+    if not clean_fixture_id:
+        raise ValueError("fixture ID is required")
+    with connect_owner(repo_root) as conn:
+        fixture = conn.execute(
+            "SELECT fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
+            (clean_fixture_id,),
+        ).fetchone()
+        if fixture is None:
+            raise ValueError("fixture does not exist or is archived")
+        return conn.execute(
+            """
+            SELECT delivery.asset_id, delivery.source_version_hash,
+                   COALESCE(catalog.state, 'missing') AS catalog_state,
+                   COALESCE(catalog.error_text, '') AS catalog_error,
+                   delivery.updated_at,
+                   asset.source_anchor, asset.raw_json, asset.media_type, asset.filename,
+                   CASE
+                     WHEN COALESCE(
+                       NULLIF(json_extract(asset.raw_json, '$.localIdentifier'), ''), ''
+                     ) <> ''
+                      AND EXISTS (
+                        SELECT 1
+                        FROM sidecar_upload_bridge_run_items AS legacy_item
+                        JOIN sidecar_upload_bridge_runs AS legacy_run
+                          ON legacy_run.run_id = legacy_item.run_id
+                        WHERE legacy_item.asset_id = json_extract(
+                          asset.raw_json, '$.localIdentifier'
+                        )
+                          AND legacy_item.asset_id <> asset.asset_id
+                          AND legacy_run.execute_upload = 1
+                          AND legacy_item.status = 'uploaded'
+                          AND legacy_item.upload_status IN (
+                            'uploaded', 'uploaded_with_skips'
+                          )
+                      )
+                     THEN 'apple-photos://' || json_extract(
+                       asset.raw_json, '$.localIdentifier'
+                     )
+                     ELSE asset.source_anchor
+                   END AS r2_source_anchor
+            FROM fixture_asset_decisions AS decision
+            JOIN sidecar_assets AS asset ON asset.asset_id = decision.asset_id
+            JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = decision.asset_id
+            JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = decision.asset_id
+            LEFT JOIN public_catalog_publications AS catalog
+              ON catalog.asset_id = delivery.asset_id
+             AND catalog.source_version_hash = delivery.source_version_hash
+            WHERE decision.fixture_id = ?
+              AND decision.eligibility_state = 'active'
+              AND decision.placement_state = 'picked'
+              AND editorial.editorial_state = 'approved'
+              AND delivery.delivery_state = 'live'
+              AND trim(delivery.source_version_hash) <> ''
+              AND (asset.missing_at IS NULL OR asset.missing_at = '')
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS tombstone
+                WHERE tombstone.asset_id = delivery.asset_id
+                  AND tombstone.tombstone_state = 'active'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM media_lifecycle AS lifecycle
+                WHERE lifecycle.media_id = delivery.asset_id
+                  AND lifecycle.lifecycle_state IN ('hidden', 'discarded')
+              )
+              AND (
+                catalog.asset_id IS NULL
+                OR catalog.state = 'pending'
+                OR (
+                  catalog.state = 'failed'
+                  AND catalog.error_text LIKE 'deployed catalog does not contain media id %'
+                )
+              )
+            ORDER BY
+              CASE COALESCE(catalog.state, 'missing') WHEN 'failed' THEN 0 ELSE 1 END,
+              delivery.updated_at,
+              delivery.asset_id
+            """,
+            (clean_fixture_id,),
+        ).fetchall()
+
+
+def catalog_recovery_plan(repo_root: Path, fixture_id: str) -> dict[str, Any]:
+    """Identify exact current R2 receipts that can rebuild catalog rows only."""
+    rows = _catalog_recovery_rows(repo_root, fixture_id)
+    recoverable = 0
+    blocked = 0
+    retryable_failures = 0
+    coverage = _catalog_recovery_coverage(repo_root, rows)
+    for row in rows:
+        if str(row["catalog_state"]) == "failed":
+            retryable_failures += 1
+        covered = coverage.get(str(row["asset_id"]), [])
+        if covered:
+            recoverable += 1
+        else:
+            blocked += 1
+    return {
+        "ok": True,
+        "readOnly": True,
+        "fixtureId": str(fixture_id or "").strip(),
+        "candidateCount": len(rows),
+        "recoverableCount": recoverable,
+        "blockedCount": blocked,
+        "retryableFailureCount": retryable_failures,
+        "batchLimit": 50,
+    }
+
+
+def create_catalog_recovery_run(
+    repo_root: Path,
+    fixture_id: str,
+    *,
+    limit: int = 50,
+    concurrency: int = 4,
+) -> dict[str, Any]:
+    """Queue one bounded catalog-only run without scheduling any R2 upload."""
+    safe_limit = max(1, min(50, int(limit or 50)))
+    safe_concurrency = max(1, min(8, int(concurrency or 4)))
+    rows = _catalog_recovery_rows(repo_root, fixture_id)
+    coverage = _catalog_recovery_coverage(repo_root, rows)
+    selected: list[tuple[str, str]] = []
+    blocked = 0
+    for row in rows:
+        asset_id = str(row["asset_id"])
+        source_version_hash = str(row["source_version_hash"])
+        if coverage.get(asset_id):
+            selected.append((asset_id, source_version_hash))
+            if len(selected) >= safe_limit:
+                break
+        else:
+            blocked += 1
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    run_id = f"catrec-{uuid.uuid4().hex[:16]}"
+    with connect_owner(repo_root) as conn:
+        conn.execute(
+            """
+            INSERT INTO asset_upload_runs (
+              run_id, status, requested_count, remaining_count, concurrency,
+              completed_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                "queued" if selected else "completed",
+                len(selected),
+                len(selected),
+                safe_concurrency,
+                None if selected else timestamp,
+                timestamp,
+                timestamp,
+            ),
+        )
+        conn.executemany(
+            """
+            INSERT INTO asset_upload_run_items (
+              run_id, asset_id, source_version_hash, status, updated_at
+            ) VALUES (?, ?, ?, 'queued', ?)
+            """,
+            [(run_id, asset_id, version_hash, timestamp) for asset_id, version_hash in selected],
+        )
+        conn.commit()
+    return {
+        "ok": True,
+        "runId": run_id,
+        "status": "queued" if selected else "completed",
+        "count": len(selected),
+        "candidateCount": len(rows),
+        "blockedCount": blocked,
+        "limit": safe_limit,
+        "concurrency": safe_concurrency,
+        "catalogRecovery": True,
+    }
+
+
+def execute_catalog_recovery_run(repo_root: Path, run_id: str) -> dict[str, Any]:
+    """Promote exact existing R2 receipts while never invoking Upload Bridge."""
+    retry_sqlite_lock(lambda: reset_upload_run_for_retry(repo_root, run_id))
+    status = retry_sqlite_lock(lambda: upload_run_status(repo_root, run_id))
+    source_versions = {
+        str(item.get("asset_id") or item.get("assetId") or ""):
+            str(item.get("source_version_hash") or item.get("sourceVersionHash") or "")
+        for item in status.get("items") or []
+    }
+
+    def existing_receipts(asset_id: str) -> list[dict[str, Any]]:
+        covered = retry_sqlite_lock(
+            lambda: verified_covered_r2_results(
+                repo_root,
+                asset_id,
+                source_versions.get(asset_id, ""),
             )
-        return recovered
+        )
+        if not covered:
+            raise RuntimeError(
+                "The exact current checksum-verified R2 receipt set is unavailable; "
+                "catalog recovery did not upload replacement media."
+            )
+        return covered
+
+    completed = retry_sqlite_lock(
+        lambda: run_upload_batch(
+            repo_root,
+            run_id,
+            existing_receipts,
+            preserve_live_delivery_on_failure=True,
+        )
+    )
+    if any(
+        str(item.get("catalog_state") or "") == "local"
+        for item in completed.get("items") or []
+    ):
+        artifacts = retry_sqlite_lock(
+            lambda: refresh_public_catalog_artifacts(repo_root)
+        )
+        completed["publicCatalogArtifacts"] = artifacts
+        if not artifacts.get("ok"):
+            completed["ok"] = False
+    completed["catalogRecovery"] = True
+    return completed
 
 
 def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, Any]:
@@ -524,9 +918,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--catalog-recovery", action="store_true")
     args = parser.parse_args()
     try:
-        result = execute_native_publication_run(args.repo_root.resolve(), args.run_id)
+        result = (
+            execute_catalog_recovery_run(args.repo_root.resolve(), args.run_id)
+            if args.catalog_recovery
+            else execute_native_publication_run(args.repo_root.resolve(), args.run_id)
+        )
     except Exception as error:  # noqa: BLE001 - background runner needs a durable error envelope.
         error_text = str(error)
         try:

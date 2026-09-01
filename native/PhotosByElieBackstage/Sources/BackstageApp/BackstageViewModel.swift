@@ -421,7 +421,9 @@ final class BackstageViewModel: ObservableObject {
     @Published var uploadRecoveryStatus = "Existing verified upload runs can be adopted explicitly."
     @Published var nativeUploadPlan: NativeUploadPlan?
     @Published var nativeUploadRun: NativeUploadRun?
+    @Published var nativeCatalogRecoveryPlan: NativeCatalogRecoveryPlan?
     @Published var isRunningNativePublication = false
+    @Published var isRunningCatalogRecovery = false
     @Published var isDeployingPublicCatalog = false
     @Published var publicCatalogDeployment: PublicCatalogDeploymentReport?
     @Published var isCancellingNativePublication = false
@@ -7935,6 +7937,122 @@ final class BackstageViewModel: ObservableObject {
         await startNativePublication(assetIDs: ids, continueThroughEligibleQueue: true)
     }
 
+    func recoverCatalogPreparing() async {
+        guard canStartCloudWorkflow else {
+            nativeUploadStatus = isAIPassActive
+                ? "Finish the AI proposal pass before recovering catalog entries."
+                : isUpdateOperationInProgress
+                ? "Finish the Backstage update before recovering catalog entries."
+                : "Finish the current cloud workflow before recovering catalog entries."
+            return
+        }
+        guard !selectedFixtureID.isEmpty else {
+            nativeUploadStatus = "Choose a fixture before recovering catalog entries."
+            return
+        }
+        isRunningDelivery = true
+        isRunningNativePublication = true
+        isRunningCatalogRecovery = true
+        isCancellingNativePublication = false
+        nativePublicationCancellationRequested = false
+        nativeUploadRun = nil
+        nativeUploadStatus = "Checking exact checksum-verified R2 receipts for catalog-only recovery…"
+        defer {
+            isRunningCatalogRecovery = false
+            isRunningNativePublication = false
+            isCancellingNativePublication = false
+            nativePublicationCancellationRequested = false
+            nativePublicationBatchNumber = 0
+            nativePublicationBatchCount = 0
+            isRunningDelivery = false
+        }
+
+        var recovered = 0
+        var failed = 0
+        var blocked = 0
+        var batchOrdinal = 0
+        do {
+            var recovery = try await deliveryService.nativeCatalogRecoveryPlan(
+                fixtureID: selectedFixtureID
+            )
+            nativeCatalogRecoveryPlan = recovery
+            blocked = recovery.blockedCount
+            nativePublicationBatchCount = NativeUploadQueueContinuation.batchCount(
+                for: recovery.recoverableCount
+            )
+            nativeUploadStatus = "Recovering \(recovery.recoverableCount.formatted()) catalog entr\(recovery.recoverableCount == 1 ? "y" : "ies") from existing verified R2 receipts; no media upload will run."
+
+            while recovery.recoverableCount > 0,
+                  !nativePublicationCancellationRequested {
+                batchOrdinal += 1
+                nativePublicationBatchNumber = batchOrdinal
+                var run = try await deliveryService.startNativeCatalogRecovery(
+                    fixtureID: selectedFixtureID,
+                    limit: recovery.batchLimit,
+                    concurrency: 4
+                )
+                nativeUploadRun = run
+                guard run.requested > 0 else { break }
+                nativeUploadStatus = "Catalog recovery • batch \(batchOrdinal) of \(max(batchOrdinal, nativePublicationBatchCount)) • \(recovered) recovered • \(failed) isolated failures • no R2 upload."
+                while !run.isFinished {
+                    if nativePublicationCancellationRequested, !run.cancelRequested {
+                        run = try await deliveryService.cancelNativeUpload(runID: run.runID)
+                        nativeUploadRun = run
+                    }
+                    if run.isFinished { break }
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                    run = try await deliveryService.nativeUploadStatus(runID: run.runID)
+                    nativeUploadRun = run
+                    nativeUploadStatus = "Catalog recovery • batch \(batchOrdinal) of \(max(batchOrdinal, nativePublicationBatchCount)) • \(recovered + run.processed - run.failed) recovered • \(failed + run.failed) isolated failures • \(run.remaining) remain in this batch • no R2 upload."
+                }
+                recovered += max(0, run.processed - run.failed)
+                failed += run.failed
+                if run.status == "cancelled" { break }
+
+                let previousRecoverable = recovery.recoverableCount
+                recovery = try await deliveryService.nativeCatalogRecoveryPlan(
+                    fixtureID: selectedFixtureID
+                )
+                nativeCatalogRecoveryPlan = recovery
+                blocked = recovery.blockedCount
+                if recovery.recoverableCount >= previousRecoverable,
+                   run.processed == 0 {
+                    throw FixtureDeliveryError.missingResult(
+                        "catalog recovery made no durable progress"
+                    )
+                }
+                nativePublicationBatchCount = max(
+                    nativePublicationBatchCount,
+                    batchOrdinal + NativeUploadQueueContinuation.batchCount(
+                        for: recovery.recoverableCount
+                    )
+                )
+            }
+
+            try await refreshNativeUploadPlanAfterContinuousRun(
+                order: nativeUploadPlan?.order ?? .oldest
+            )
+            if nativePublicationCancellationRequested {
+                nativeUploadStatus = "Stopped catalog recovery safely after \(recovered.formatted()) entries. Existing R2 receipts and completed catalog rows remain intact."
+            } else {
+                nativeUploadStatus = "Recovered \(recovered.formatted()) catalog entr\(recovered == 1 ? "y" : "ies") without uploading media."
+                    + (failed > 0
+                        ? " \(failed.formatted()) independently failed and remain retryable."
+                        : "")
+                    + (blocked > 0
+                        ? " \(blocked.formatted()) lack an exact current verified receipt set and remain explicitly blocked."
+                        : "")
+                    + " Deploy & verify website is the next separate step."
+            }
+        } catch {
+            try? await refreshNativeUploadPlanAfterContinuousRun(
+                order: nativeUploadPlan?.order ?? .oldest
+            )
+            nativeUploadStatus = "Catalog recovery preserved \(recovered.formatted()) completed entr\(recovered == 1 ? "y" : "ies"). "
+                + userFacingMessage(for: error)
+        }
+    }
+
     func syncPhotosIncrementally(limit: Int = 25) async {
         guard !isSyncingPhotos else { return }
         guard authentication.phase == .authenticated else { return }
@@ -8279,22 +8397,29 @@ final class BackstageViewModel: ObservableObject {
               let current = nativeUploadRun,
               current.status == "failed",
               current.remaining > 0 else { return }
+        let catalogRecovery = current.runID.hasPrefix("catrec-")
         isRunningDelivery = true
         isRunningNativePublication = true
+        isRunningCatalogRecovery = catalogRecovery
         nativePublicationBatchNumber = 1
         nativePublicationBatchCount = 1
-        nativeUploadStatus = "Retrying the same failed upload run…"
+        nativeUploadStatus = catalogRecovery
+            ? "Retrying the same failed catalog-only run from existing R2 receipts…"
+            : "Retrying the same failed upload run…"
         defer {
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
             isRunningNativePublication = false
+            isRunningCatalogRecovery = false
             isRunningDelivery = false
         }
         do {
             var run = try await deliveryService.resumeNativeUpload(runID: current.runID)
             nativeUploadRun = run
             while !run.isFinished {
-                nativeUploadStatus = "Retrying the same upload run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
+                nativeUploadStatus = catalogRecovery
+                    ? "Retrying the same catalog-only run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining • no R2 upload."
+                    : "Retrying the same upload run • \(run.processed) of \(run.requested) processed • \(run.remaining) remaining."
                 try await Task.sleep(nanoseconds: 1_000_000_000)
                 run = try await deliveryService.nativeUploadStatus(runID: current.runID)
                 nativeUploadRun = run
@@ -8306,7 +8431,9 @@ final class BackstageViewModel: ObservableObject {
             } else if run.status == "cancelled" {
                 nativeUploadStatus = "The upload run stopped safely. Completed items remain verified."
             } else {
-                nativeUploadStatus = "Upload retry finished: \(run.processed) processed • \(run.live) website live • \(run.failed) failed."
+                nativeUploadStatus = catalogRecovery
+                    ? "Catalog recovery retry finished: \(run.processed - run.failed) recovered • \(run.failed) failed • no R2 upload."
+                    : "Upload retry finished: \(run.processed) processed • \(run.live) website live • \(run.failed) failed."
             }
         } catch {
             nativeUploadStatus = "Upload retry could not start: \(userFacingMessage(for: error))"

@@ -589,7 +589,9 @@ from native_publication_pipeline import (  # noqa: E402
     upload_run_status as native_upload_run_status,
 )
 from native_asset_publication import (  # noqa: E402
+    catalog_recovery_plan,
     claim_upload_run_start,
+    create_catalog_recovery_run,
     reconcile_upload_run_receipts,
     record_upload_run_failure,
     retry_sqlite_lock as retry_native_publication_lock,
@@ -3361,6 +3363,7 @@ def _start_native_publication_run(
     run_id: str,
     *,
     retry_failed: bool = False,
+    catalog_recovery: bool = False,
 ) -> dict:
     claim = retry_native_publication_lock(
         lambda: claim_upload_run_start(
@@ -3381,15 +3384,18 @@ def _start_native_publication_run(
     log_handle = log_path.open("ab")
     try:
         try:
-            process = subprocess.Popen(
-                [
+            command = [
                     sys.executable,
                     str(_connector_runtime_script("native_asset_publication.py")),
                     "--repo-root",
                     str(repo_root),
                     "--run-id",
                     run_id,
-                ],
+                ]
+            if catalog_recovery:
+                command.append("--catalog-recovery")
+            process = subprocess.Popen(
+                command,
                 cwd=repo_root,
                 stdin=subprocess.DEVNULL,
                 stdout=log_handle,
@@ -3760,6 +3766,34 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             "readOnly": False,
             "uploadRun": {**upload_run, **background},
         })
+    elif mode == "asset-catalog-recovery-plan":
+        result.update({
+            "readOnly": True,
+            "catalogRecoveryPlan": catalog_recovery_plan(
+                repo_root,
+                str(manifest.get("fixtureId") or ""),
+            ),
+        })
+    elif mode == "asset-catalog-recovery-run-start":
+        recovery_run = create_catalog_recovery_run(
+            repo_root,
+            str(manifest.get("fixtureId") or ""),
+            limit=int(manifest.get("limit") or 50),
+            concurrency=int(manifest.get("concurrency") or 4),
+        )
+        background = (
+            _start_native_publication_run(
+                repo_root,
+                str(recovery_run["runId"]),
+                catalog_recovery=True,
+            )
+            if int(recovery_run.get("count") or 0)
+            else {"started": False, "reason": "No exact verified catalog recovery remains."}
+        )
+        result.update({
+            "readOnly": False,
+            "uploadRun": {**recovery_run, **background},
+        })
     elif mode == "asset-upload-run-status":
         result.update({
             "readOnly": True,
@@ -3775,11 +3809,19 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         })
     elif mode == "asset-upload-run-resume":
         run_id = str(manifest.get("runId") or "")
-        background = _start_native_publication_run(
-            repo_root,
-            run_id,
-            retry_failed=True,
-        )
+        if run_id.startswith("catrec-"):
+            background = _start_native_publication_run(
+                repo_root,
+                run_id,
+                retry_failed=True,
+                catalog_recovery=True,
+            )
+        else:
+            background = _start_native_publication_run(
+                repo_root,
+                run_id,
+                retry_failed=True,
+            )
         result.update({
             "readOnly": False,
             "uploadRun": {
@@ -4321,6 +4363,8 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
         "photos-sync-run-cancel": "Requested a safe stop after the current Apple Photos checkpoint.",
         "asset-upload-plan": "Loaded the fixture-scoped approved publication queue without changing any asset.",
         "asset-upload-run-start": "Started a bounded verified media upload and catalog-preparation run.",
+        "asset-catalog-recovery-plan": "Verified exact existing R2 receipts for catalog-only recovery without uploading media.",
+        "asset-catalog-recovery-run-start": "Started a bounded catalog-only recovery run from exact verified R2 receipts.",
         "asset-upload-run-status": "Loaded current upload, catalog-preparation, and website-verification progress.",
         "asset-upload-run-recover": "Reconciled exact terminal upload receipts and surfaced unresolved runs for review.",
         "asset-upload-run-resume": "Resumed the exact failed upload run without creating a replacement batch.",
@@ -4360,6 +4404,8 @@ def new_owner_connector_result(repo_root: Path, payload: dict) -> dict:
         "photos-sync-run-cancel",
         "asset-upload-plan",
         "asset-upload-run-start",
+        "asset-catalog-recovery-plan",
+        "asset-catalog-recovery-run-start",
         "asset-upload-run-status",
         "asset-upload-run-recover",
         "asset-upload-run-resume",

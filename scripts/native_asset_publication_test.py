@@ -9,7 +9,9 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fixture_pipeline
 from native_asset_publication import (
+    create_catalog_recovery_run,
     claim_upload_run_start,
+    execute_catalog_recovery_run,
     reconcile_upload_run_receipts,
     record_upload_run_failure,
     reset_upload_run_for_retry,
@@ -19,6 +21,185 @@ from native_asset_publication import (
 
 
 class NativeAssetPublicationTest(unittest.TestCase):
+    def test_verified_receipts_must_match_current_source_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "Owner.sqlite"
+            conn = sqlite3.connect(database)
+            conn.executescript(
+                """
+                CREATE TABLE r2_objects (
+                  bucket TEXT, object_key TEXT, lifecycle_state TEXT, bytes INTEGER
+                );
+                CREATE TABLE fixture_delivery_receipts (
+                  receipt_id TEXT, asset_id TEXT, destination TEXT, version_hash TEXT,
+                  status TEXT, object_key TEXT, checksum_sha256 TEXT,
+                  verification_json TEXT, verified_at TEXT, updated_at TEXT
+                );
+                INSERT INTO r2_objects VALUES (
+                  'photosbyelie-public', 'media/current.jpg', 'current', 24
+                );
+                INSERT INTO fixture_delivery_receipts VALUES (
+                  'receipt-old', 'asset-1', 'r2', 'version-old', 'verified',
+                  'media/current.jpg',
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                  '{"bucket":"photosbyelie-public","bytes":24}', 'old', 'old'
+                );
+                """
+            )
+            conn.commit()
+            conn.close()
+
+            def open_database(_repo_root):
+                connection = sqlite3.connect(database)
+                connection.row_factory = sqlite3.Row
+                return connection
+
+            bridge_row = {"asset_id": "asset-1", "r2_source_anchor": ""}
+            planned = (
+                "media-current",
+                [{
+                    "bucket": "photosbyelie-public",
+                    "key": "media/current.jpg",
+                    "kind": "public-preview",
+                }],
+            )
+            with (
+                patch("native_asset_publication.connect_owner", side_effect=open_database),
+                patch("native_asset_publication._upload_bridge_rows", return_value=[bridge_row]),
+                patch("native_asset_publication._planned_r2_keys", return_value=planned),
+            ):
+                self.assertEqual(
+                    verified_covered_r2_results(
+                        Path(directory), "asset-1", "version-current"
+                    ),
+                    [],
+                )
+                with open_database(Path(directory)) as connection:
+                    connection.execute(
+                        """
+                        INSERT INTO fixture_delivery_receipts VALUES (
+                          'receipt-current', 'asset-1', 'r2', 'version-current',
+                          'verified', 'media/current.jpg', ?, ?, 'new', 'new'
+                        )
+                        """,
+                        (
+                            "b" * 64,
+                            json.dumps({
+                                "bucket": "photosbyelie-public",
+                                "bytes": 24,
+                            }),
+                        ),
+                    )
+                    connection.commit()
+                recovered = verified_covered_r2_results(
+                    Path(directory), "asset-1", "version-current"
+                )
+
+        self.assertEqual(len(recovered), 1)
+        self.assertEqual(recovered[0]["remoteChecksumSha256"], "b" * 64)
+
+    def test_catalog_recovery_run_is_bounded_and_preserves_source_versions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "Owner.sqlite"
+            conn = sqlite3.connect(database)
+            conn.executescript(
+                """
+                CREATE TABLE asset_upload_runs (
+                  run_id TEXT PRIMARY KEY, status TEXT, requested_count INTEGER,
+                  remaining_count INTEGER, concurrency INTEGER,
+                  completed_at TEXT, created_at TEXT, updated_at TEXT
+                );
+                CREATE TABLE asset_upload_run_items (
+                  run_id TEXT, asset_id TEXT, source_version_hash TEXT,
+                  status TEXT, updated_at TEXT
+                );
+                """
+            )
+            conn.commit()
+            conn.close()
+
+            def open_database(_repo_root):
+                connection = sqlite3.connect(database)
+                connection.row_factory = sqlite3.Row
+                return connection
+
+            candidates = [
+                {
+                    "asset_id": f"asset-{index:03d}",
+                    "source_version_hash": f"version-{index:03d}",
+                    "catalog_state": "missing",
+                }
+                for index in range(60)
+            ]
+            with (
+                patch("native_asset_publication.connect_owner", side_effect=open_database),
+                patch("native_asset_publication._catalog_recovery_rows", return_value=candidates),
+                patch(
+                    "native_asset_publication._catalog_recovery_coverage",
+                    return_value={
+                        item["asset_id"]: [{"remoteVerified": True}]
+                        for item in candidates
+                    },
+                ),
+            ):
+                run = create_catalog_recovery_run(
+                    Path(directory), "fixture-expo", limit=500, concurrency=99
+                )
+
+            with open_database(Path(directory)) as connection:
+                items = connection.execute(
+                    """
+                    SELECT asset_id, source_version_hash
+                    FROM asset_upload_run_items ORDER BY asset_id
+                    """
+                ).fetchall()
+
+        self.assertTrue(run["runId"].startswith("catrec-"))
+        self.assertEqual(run["count"], 50)
+        self.assertEqual(run["limit"], 50)
+        self.assertEqual(run["concurrency"], 8)
+        self.assertEqual(len(items), 50)
+        self.assertEqual(tuple(items[-1]), ("asset-049", "version-049"))
+
+    def test_catalog_recovery_worker_uses_receipts_without_upload_bridge(self):
+        status = {
+            "items": [{
+                "asset_id": "asset-1",
+                "source_version_hash": "version-current",
+            }]
+        }
+
+        def run_batch(_root, _run_id, receipt_loader, **kwargs):
+            self.assertTrue(kwargs["preserve_live_delivery_on_failure"])
+            self.assertEqual(
+                receipt_loader("asset-1"),
+                [{"key": "media/current.jpg", "remoteVerified": True}],
+            )
+            return {"items": [{"catalog_state": "local"}]}
+
+        with (
+            patch("native_asset_publication.reset_upload_run_for_retry"),
+            patch("native_asset_publication.upload_run_status", return_value=status),
+            patch(
+                "native_asset_publication.verified_covered_r2_results",
+                return_value=[{"key": "media/current.jpg", "remoteVerified": True}],
+            ),
+            patch("native_asset_publication.run_upload_batch", side_effect=run_batch),
+            patch(
+                "native_asset_publication.refresh_public_catalog_artifacts",
+                return_value={"ok": True},
+            ),
+            patch("native_asset_publication.queue_upload_bridge") as queue_bridge,
+            patch(
+                "native_asset_publication.execute_upload_bridge_batch_item"
+            ) as execute_bridge,
+        ):
+            result = execute_catalog_recovery_run(Path("/tmp/repo"), "catrec-test")
+
+        queue_bridge.assert_not_called()
+        execute_bridge.assert_not_called()
+        self.assertTrue(result["catalogRecovery"])
+
     def test_reconciliation_uses_exact_terminal_receipts_not_age(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

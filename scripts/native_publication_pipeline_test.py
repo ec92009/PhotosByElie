@@ -392,6 +392,39 @@ class NativePublicationPipelineTest(unittest.TestCase):
             "live",
         )
 
+    def test_catalog_only_failure_preserves_live_delivery_state(self):
+        run = create_upload_run(self.root, ["asset-1"], limit=50, concurrency=1)
+        with connect(self.root) as conn:
+            conn.execute(
+                """
+                UPDATE asset_delivery_state
+                SET delivery_state = 'live', last_error = ''
+                WHERE asset_id = 'asset-1'
+                """
+            )
+            conn.commit()
+
+        def fail_catalog(_asset_id):
+            raise RuntimeError("catalog projection failed")
+
+        result = run_upload_batch(
+            self.root,
+            run["runId"],
+            fail_catalog,
+            preserve_live_delivery_on_failure=True,
+        )
+
+        self.assertEqual(result["status"], "completed-with-errors")
+        with connect(self.root) as conn:
+            delivery = conn.execute(
+                """
+                SELECT delivery_state, last_error
+                FROM asset_delivery_state WHERE asset_id = 'asset-1'
+                """
+            ).fetchone()
+        self.assertEqual(delivery["delivery_state"], "live")
+        self.assertEqual(delivery["last_error"], "catalog projection failed")
+
     def test_upload_cancellation_finishes_in_flight_work_and_leaves_the_rest_retryable(self):
         run = create_upload_run(self.root, ["asset-1", "asset-2"], limit=50, concurrency=1)
         started = threading.Event()

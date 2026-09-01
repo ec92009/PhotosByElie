@@ -317,6 +317,15 @@ public struct NativeUploadRecoveryReport: Sendable, Equatable {
     public var latestFailedRun: NativeUploadRun?
 }
 
+public struct NativeCatalogRecoveryPlan: Sendable, Equatable {
+    public var fixtureID: String
+    public var candidateCount: Int
+    public var recoverableCount: Int
+    public var blockedCount: Int
+    public var retryableFailureCount: Int
+    public var batchLimit: Int
+}
+
 public struct PublicCatalogDeploymentReport: Sendable, Equatable {
     public var state: String
     public var pushed: Bool
@@ -470,6 +479,42 @@ public actor FixtureDeliveryService {
                 "assetIds": .array(clean(assetIDs).map(JSONValue.string)),
                 "limit": .number(Double(limit)),
                 "concurrency": .number(Double(concurrency)),
+            ]
+        )
+        return try decodeNativeUploadRun(action)
+    }
+
+    public func nativeCatalogRecoveryPlan(
+        fixtureID: String
+    ) async throws -> NativeCatalogRecoveryPlan {
+        let action = try await fixtureAction(
+            mode: "asset-catalog-recovery-plan",
+            fixtureID: fixtureID
+        )
+        guard let plan = action.result?["catalogRecoveryPlan"]?.objectValue else {
+            throw FixtureDeliveryError.missingResult("catalogRecoveryPlan")
+        }
+        return NativeCatalogRecoveryPlan(
+            fixtureID: plan["fixtureId"]?.stringValue ?? fixtureID,
+            candidateCount: plan["candidateCount"]?.intValue ?? 0,
+            recoverableCount: plan["recoverableCount"]?.intValue ?? 0,
+            blockedCount: plan["blockedCount"]?.intValue ?? 0,
+            retryableFailureCount: plan["retryableFailureCount"]?.intValue ?? 0,
+            batchLimit: plan["batchLimit"]?.intValue ?? 50
+        )
+    }
+
+    public func startNativeCatalogRecovery(
+        fixtureID: String,
+        limit: Int = 50,
+        concurrency: Int = 4
+    ) async throws -> NativeUploadRun {
+        let action = try await fixtureAction(
+            mode: "asset-catalog-recovery-run-start",
+            fixtureID: fixtureID,
+            extra: [
+                "limit": .number(Double(max(1, min(50, limit)))),
+                "concurrency": .number(Double(max(1, min(8, concurrency)))),
             ]
         )
         return try decodeNativeUploadRun(action)

@@ -849,6 +849,55 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertTrue(resumed_run["started"])
             resume.assert_called_once_with(root, run["runId"], retry_failed=True)
 
+    def test_connector_plans_and_starts_catalog_only_recovery(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            plan = {
+                "ok": True,
+                "readOnly": True,
+                "candidateCount": 12,
+                "recoverableCount": 10,
+                "blockedCount": 2,
+                "batchLimit": 50,
+            }
+            with patch.object(local_server, "catalog_recovery_plan", return_value=plan):
+                preview = local_server.new_owner_connector_result(
+                    root,
+                    action("asset-catalog-recovery-plan", fixtureId="fixture-expo"),
+                )
+            self.assertTrue(preview["result"]["readOnly"])
+            self.assertEqual(
+                preview["result"]["catalogRecoveryPlan"]["recoverableCount"],
+                10,
+            )
+
+            run = {
+                "runId": "catrec-test",
+                "status": "queued",
+                "count": 10,
+                "catalogRecovery": True,
+            }
+            with (
+                patch.object(local_server, "create_catalog_recovery_run", return_value=run),
+                patch.object(
+                    local_server,
+                    "_start_native_publication_run",
+                    return_value={"started": True, "pid": 42},
+                ) as start,
+            ):
+                created = local_server.new_owner_connector_result(
+                    root,
+                    action(
+                        "asset-catalog-recovery-run-start",
+                        fixtureId="fixture-expo",
+                        limit=50,
+                        concurrency=4,
+                    ),
+                )
+            self.assertFalse(created["result"]["readOnly"])
+            self.assertTrue(created["result"]["uploadRun"]["catalogRecovery"])
+            start.assert_called_once_with(root, "catrec-test", catalog_recovery=True)
+
     def test_connector_imports_photos_snapshot_and_previews_r2_reconciliation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

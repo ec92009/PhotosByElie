@@ -22,6 +22,7 @@ protocol BackstageInstalledUpdateLaunching {
 @MainActor
 struct SystemBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching {
     func launchAndTerminateCurrentApplication(at bundleURL: URL) async throws {
+        Self.persistCurrentWindowFrame()
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         try await withCheckedThrowingContinuation {
@@ -44,5 +45,18 @@ struct SystemBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching
             }
         }
         NSApp.terminate(nil)
+    }
+
+    static func persistCurrentWindowFrame(
+        _ window: NSWindow? = NSApp.keyWindow ?? NSApp.mainWindow,
+        preferences: UserDefaults = .standard
+    ) {
+        guard let window else { return }
+        BackstageWindowFrameStore.save(
+            window.frame,
+            autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+            preferences: preferences,
+            synchronize: true
+        )
     }
 }

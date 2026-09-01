@@ -84,7 +84,9 @@ public struct BackstageApplication: App {
                     }
             }
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
-            .background(WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow"))
+            .background(WindowFrameAutosaver(
+                name: BackstageWindowFrameStore.mainWindowAutosaveName
+            ))
             .frame(minWidth: 1_120, minHeight: 720)
             .onAppear { applicationDelegate.attach(model: model) }
             .task { model.startPreviewIPC() }

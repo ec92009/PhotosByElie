@@ -10,13 +10,62 @@ enum BackstagePanelPreferenceKey {
     static let uploadRecoveryExpanded = "PhotosByElieBackstage.uploadRecoveryExpanded"
 }
 
+enum BackstageWindowFrameStore {
+    static let mainWindowAutosaveName = "PhotosByElieBackstage.MainWindow"
+
+    static func preferenceKey(for autosaveName: String) -> String {
+        "PhotosByElieBackstage.windowFrame.\(autosaveName)"
+    }
+
+    static func save(
+        _ frame: NSRect,
+        autosaveName: String,
+        preferences: UserDefaults = .standard,
+        synchronize: Bool = false
+    ) {
+        guard validFrame(frame) != nil else { return }
+        preferences.set(
+            NSStringFromRect(frame),
+            forKey: preferenceKey(for: autosaveName)
+        )
+        if synchronize {
+            preferences.synchronize()
+        }
+    }
+
+    static func load(
+        autosaveName: String,
+        preferences: UserDefaults = .standard
+    ) -> NSRect? {
+        guard let storedValue = preferences.string(
+            forKey: preferenceKey(for: autosaveName)
+        ) else {
+            return nil
+        }
+        return validFrame(NSRectFromString(storedValue))
+    }
+
+    private static func validFrame(_ frame: NSRect) -> NSRect? {
+        guard frame.origin.x.isFinite,
+              frame.origin.y.isFinite,
+              frame.width.isFinite,
+              frame.height.isFinite,
+              frame.width > 0,
+              frame.height > 0 else {
+            return nil
+        }
+        return frame
+    }
+}
+
 /// Gives the production window an AppKit autosave identity without moving the
 /// SwiftUI scene lifecycle into an application delegate.
 struct WindowFrameAutosaver: NSViewRepresentable {
     let name: String
+    var preferences: UserDefaults = .standard
 
     func makeNSView(context: Context) -> WindowFrameAutosaveView {
-        WindowFrameAutosaveView(name: name)
+        WindowFrameAutosaveView(name: name, preferences: preferences)
     }
 
     func updateNSView(_ nsView: WindowFrameAutosaveView, context: Context) {
@@ -27,10 +76,12 @@ struct WindowFrameAutosaver: NSViewRepresentable {
 
 final class WindowFrameAutosaveView: NSView {
     var autosaveName: String
+    private let preferences: UserDefaults
     private weak var configuredWindow: NSWindow?
 
-    init(name: String) {
+    init(name: String, preferences: UserDefaults = .standard) {
         self.autosaveName = name
+        self.preferences = preferences
         super.init(frame: .zero)
     }
 
@@ -41,23 +92,75 @@ final class WindowFrameAutosaveView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if configuredWindow !== window {
+            stopObservingWindowFrameChanges()
+            configuredWindow = nil
+        }
         configureWindowIfNeeded()
     }
 
     func configureWindowIfNeeded() {
         guard let window, configuredWindow !== window else { return }
-        // AppKit saves this named frame as it changes and when the window
-        // closes. The explicit restore below also repairs stale off-screen
-        // geometry after a monitor arrangement changes.
-        window.setFrameAutosaveName(autosaveName)
-        if window.setFrameUsingName(autosaveName),
-           let restoredFrame = Self.visibleRestoredFrame(
-               window.frame,
-               screenFrames: NSScreen.screens.map(\.visibleFrame)
-           ), restoredFrame != window.frame {
+        // The explicit preference is written on every move and resize. AppKit's
+        // named autosave remains as a compatibility fallback for older builds.
+        if let storedFrame = BackstageWindowFrameStore.load(
+            autosaveName: autosaveName,
+            preferences: preferences
+        ) {
+            window.setFrame(storedFrame, display: false)
+        } else {
+            window.setFrameUsingName(autosaveName)
+        }
+        if let restoredFrame = Self.visibleRestoredFrame(
+            window.frame,
+            screenFrames: NSScreen.screens.map(\.visibleFrame)
+        ), restoredFrame != window.frame {
             window.setFrame(restoredFrame, display: false)
         }
+        window.setFrameAutosaveName(autosaveName)
         configuredWindow = window
+        startObservingWindowFrameChanges(window)
+        persistCurrentWindowFrame()
+    }
+
+    private func startObservingWindowFrameChanges(_ window: NSWindow) {
+        let center = NotificationCenter.default
+        center.addObserver(
+            self,
+            selector: #selector(windowFrameDidChange(_:)),
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
+        center.addObserver(
+            self,
+            selector: #selector(windowFrameDidChange(_:)),
+            name: NSWindow.didResizeNotification,
+            object: window
+        )
+        center.addObserver(
+            self,
+            selector: #selector(windowFrameDidChange(_:)),
+            name: NSWindow.didEndLiveResizeNotification,
+            object: window
+        )
+    }
+
+    private func stopObservingWindowFrameChanges() {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func windowFrameDidChange(_ notification: Notification) {
+        guard notification.object as? NSWindow === configuredWindow else { return }
+        persistCurrentWindowFrame()
+    }
+
+    private func persistCurrentWindowFrame() {
+        guard let configuredWindow else { return }
+        BackstageWindowFrameStore.save(
+            configuredWindow.frame,
+            autosaveName: autosaveName,
+            preferences: preferences
+        )
     }
 
     static func visibleRestoredFrame(

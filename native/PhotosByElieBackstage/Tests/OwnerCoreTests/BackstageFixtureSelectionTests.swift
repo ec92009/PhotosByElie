@@ -1359,6 +1359,80 @@ struct BackstageFixtureSelectionTests {
         )
     }
 
+    @Test("Window moves and resizes persist immediately")
+    @MainActor
+    func windowFrameChangesPersistImmediately() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let autosaveName = "PhotosByElieBackstageTests.MainWindow"
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 900, height: 600),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let autosaver = WindowFrameAutosaveView(
+            name: autosaveName,
+            preferences: preferences
+        )
+        window.contentView?.addSubview(autosaver)
+        autosaver.configureWindowIfNeeded()
+
+        let movedFrame = NSRect(x: 240, y: 180, width: 900, height: 600)
+        window.setFrame(movedFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == movedFrame
+        )
+
+        let resizedFrame = NSRect(x: 240, y: 180, width: 1_120, height: 720)
+        window.setFrame(resizedFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didResizeNotification,
+            object: window
+        )
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == resizedFrame
+        )
+    }
+
+    @Test("Update handoff flushes the current window frame")
+    @MainActor
+    func updateHandoffFlushesCurrentWindowFrame() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let expectedFrame = NSRect(x: 320, y: 220, width: 1_080, height: 680)
+        let window = NSWindow(
+            contentRect: expectedFrame,
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        SystemBackstageInstalledUpdateLauncher.persistCurrentWindowFrame(
+            window,
+            preferences: preferences
+        )
+
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+                preferences: preferences
+            ) == window.frame
+        )
+    }
+
     @Test("PBE Owner disables the global chooser without changing sections")
     @MainActor
     func ownerSessionDisablesChooser() throws {

@@ -374,6 +374,12 @@ test("gallery checkpoints are local-first, bounded, and included in signed-in pr
   assert.match(galleryJs, /windowStart: visibleStart/);
   assert.match(galleryJs, /windowEnd: visibleLimit/);
   assert.match(galleryJs, /anchorOffset: card\?\.getBoundingClientRect\(\)\.top \|\| 0/);
+  assert.match(galleryJs, /querySelectorAll\("\[data-photo-index\]\[data-photo-id\]"\)/);
+  assert.match(galleryJs, /checkpointMatchesExplicitFilter/);
+  assert.match(galleryJs, /galleryCheckpointRestoreActive/);
+  assert.match(galleryJs, /const earliestCompletion = Date\.now\(\) \+ 2000/);
+  assert.match(galleryJs, /const deadline = Date\.now\(\) \+ 10000/);
+  assert.match(galleryJs, /imagesSettled && stablePasses >= 3 && Date\.now\(\) >= earliestCompletion/);
   assert.match(galleryJs, /window\.addEventListener\("scroll", queueGalleryCheckpointWrite/);
   assert.match(galleryJs, /window\.addEventListener\("pagehide", persistGalleryCheckpoint\)/);
   assert.doesNotMatch(galleryJs, /document\.cookie/);

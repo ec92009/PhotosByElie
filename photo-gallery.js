@@ -151,6 +151,8 @@ const galleryReturnStateKey = "photosbyelie-gallery-return-state";
 let galleryCheckpointWriteTimer = 0;
 let pendingDurableGalleryCheckpoint = null;
 let appliedGalleryCheckpointAt = 0;
+let galleryCheckpointRestoreTimer = 0;
+let galleryCheckpointRestoreActive = false;
 let detailRoundTripNonce = globalThis.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const diversityBucketMinutes = 10;
@@ -489,8 +491,22 @@ try {
 
 const explicitGalleryLocation = (() => {
   const params = new URLSearchParams(window.location.search);
-  return ["q", "search", "dateFrom", "date_from", "from", "dateTo", "date_to", "to"]
-    .some((key) => params.has(key));
+  const filterState = {};
+  const keys = [];
+  const queryKey = ["q", "search"].find((key) => params.has(key));
+  if (queryKey) {
+    keys.push("query");
+    filterState.query = params.get(queryKey) || "";
+  }
+  const addDate = (stateKey, aliases) => {
+    const queryKey = aliases.find((key) => params.has(key));
+    if (!queryKey) return;
+    keys.push(stateKey);
+    filterState[stateKey] = validDateFilterValue(params.get(queryKey));
+  };
+  addDate("dateFrom", ["dateFrom", "date_from", "from"]);
+  addDate("dateTo", ["dateTo", "date_to", "to"]);
+  return { filterState, keys };
 })();
 
 const durableGalleryCheckpoint = () => (
@@ -503,7 +519,11 @@ const stageDurableGalleryCheckpoint = (checkpoint, { rerender = false } = {}) =>
   const updatedAt = Date.parse(checkpoint?.updatedAt || 0);
   if (
     pendingGalleryReturnState
-    || explicitGalleryLocation
+    || !galleryWindowModel.checkpointMatchesExplicitFilter({
+      checkpointFilter: checkpoint?.filterState,
+      explicitFilter: explicitGalleryLocation.filterState,
+      explicitKeys: explicitGalleryLocation.keys,
+    })
     || checkpoint?.collectionKey !== galleryKey
     || !checkpoint?.photoId
     || !Number.isFinite(updatedAt)
@@ -562,7 +582,7 @@ const writeDetailSequenceContext = (photos) => {
 };
 
 const checkpointAnchorCard = () => {
-  const cards = [...(galleryRoot?.querySelectorAll("[data-photo-id]") || [])];
+  const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index][data-photo-id]") || [])];
   if (!cards.length) return null;
   return cards.reduce((closest, card) => (
     Math.abs(card.getBoundingClientRect().top) < Math.abs(closest.getBoundingClientRect().top) ? card : closest
@@ -572,6 +592,7 @@ const checkpointAnchorCard = () => {
 const persistGalleryCheckpoint = () => {
   window.clearTimeout(galleryCheckpointWriteTimer);
   galleryCheckpointWriteTimer = 0;
+  if (galleryCheckpointRestoreActive) return;
   if (isSelectionGallery || !renderedGalleryPhotos.length) return;
   const card = checkpointAnchorCard();
   const photoId = card?.dataset.photoId || renderedGalleryPhotos[0]?.id || "";
@@ -591,26 +612,53 @@ const persistGalleryCheckpoint = () => {
 
 const queueGalleryCheckpointWrite = () => {
   window.clearTimeout(galleryCheckpointWriteTimer);
+  if (galleryCheckpointRestoreActive) return;
   galleryCheckpointWriteTimer = window.setTimeout(persistGalleryCheckpoint, 180);
 };
 
 const restoreDurableGalleryCheckpoint = () => {
   const checkpoint = pendingDurableGalleryCheckpoint;
   if (!checkpoint || !galleryRoot) return;
-  const card = [...galleryRoot.querySelectorAll("[data-photo-id]")]
-    .find((item) => item.dataset.photoId === checkpoint.photoId);
   pendingDurableGalleryCheckpoint = null;
-  if (!card) return;
-  window.requestAnimationFrame(() => {
-    const delta = card.getBoundingClientRect().top - Number(checkpoint.anchorOffset || 0);
+  window.clearTimeout(galleryCheckpointWriteTimer);
+  galleryCheckpointWriteTimer = 0;
+  window.clearTimeout(galleryCheckpointRestoreTimer);
+  galleryCheckpointRestoreActive = true;
+  const targetOffset = Number(checkpoint.anchorOffset || 0);
+  const earliestCompletion = Date.now() + 2000;
+  const deadline = Date.now() + 10000;
+  let stablePasses = 0;
+  const settle = () => {
+    const card = [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
+      .find((item) => item.dataset.photoId === checkpoint.photoId);
+    if (!card) {
+      galleryCheckpointRestoreActive = false;
+      queueGalleryCheckpointWrite();
+      return;
+    }
+    const delta = card.getBoundingClientRect().top - targetOffset;
     if (Math.abs(delta) > 0.5) {
+      stablePasses = 0;
       window.scrollTo({
         left: window.scrollX || 0,
         top: Math.max(0, (window.scrollY || 0) + delta),
         behavior: "auto",
       });
+    } else {
+      stablePasses += 1;
     }
-  });
+    const imagesSettled = [...galleryRoot.querySelectorAll("img[data-photo-card-image]")]
+      .every((image) => image.complete);
+    if ((imagesSettled && stablePasses >= 3 && Date.now() >= earliestCompletion) || Date.now() >= deadline) {
+      galleryCheckpointRestoreActive = false;
+      queueGalleryCheckpointWrite();
+      return;
+    }
+    galleryCheckpointRestoreTimer = window.setTimeout(() => {
+      window.requestAnimationFrame(settle);
+    }, 100);
+  };
+  window.requestAnimationFrame(settle);
 };
 
 const restorePendingGalleryReturn = () => {
@@ -621,12 +669,12 @@ const restorePendingGalleryReturn = () => {
   try {
     sessionStorage.removeItem(galleryReturnStateKey);
   } catch {}
-  const card = [...galleryRoot.querySelectorAll("[data-photo-id]")]
+  const card = [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
     .find((item) => item.dataset.photoId === photoId);
   if (!card) return;
   window.requestAnimationFrame(() => {
     const anchorCard = returnState?.anchorPhotoId
-      ? [...galleryRoot.querySelectorAll("[data-photo-id]")]
+      ? [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
         .find((item) => item.dataset.photoId === returnState.anchorPhotoId)
       : null;
     if (anchorCard) {

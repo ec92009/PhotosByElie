@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   GALLERY_PAGE_SIZE,
   MAX_RENDERED_GALLERY_PHOTOS,
+  checkpointMatchesExplicitFilter,
   moveGalleryWindow,
   normalizeGalleryWindow,
 } from "../gallery-window.mjs";
@@ -48,4 +49,23 @@ test("Spain-sized traversal never renders more than 192 cards", () => {
     assert.ok(window.end - window.start <= MAX_RENDERED_GALLERY_PHOTOS);
   }
   assert.deepEqual(normalizeGalleryWindow({ start: 0, end: 1_649, total: 1_649 }), { start: 1_457, end: 1_649 });
+});
+
+test("matching explicit URL filters preserve a durable checkpoint while conflicting links override it", () => {
+  const checkpointFilter = {
+    query: "Paris",
+    dateFrom: "2011-11-02",
+    dateTo: "2026-06-23",
+  };
+  assert.equal(checkpointMatchesExplicitFilter({ checkpointFilter }), true);
+  assert.equal(checkpointMatchesExplicitFilter({
+    checkpointFilter,
+    explicitFilter: { dateFrom: "2011-11-02", dateTo: "2026-06-23" },
+    explicitKeys: ["dateFrom", "dateTo"],
+  }), true);
+  assert.equal(checkpointMatchesExplicitFilter({
+    checkpointFilter,
+    explicitFilter: { query: "Lyon" },
+    explicitKeys: ["query"],
+  }), false);
 });

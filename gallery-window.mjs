@@ -34,3 +34,11 @@ export const moveGalleryWindow = ({ start = 0, end = GALLERY_PAGE_SIZE, total = 
     total,
   });
 };
+
+export const checkpointMatchesExplicitFilter = ({
+  checkpointFilter = {},
+  explicitFilter = {},
+  explicitKeys = [],
+} = {}) => explicitKeys.every((key) => (
+  String(checkpointFilter?.[key] ?? "") === String(explicitFilter?.[key] ?? "")
+));

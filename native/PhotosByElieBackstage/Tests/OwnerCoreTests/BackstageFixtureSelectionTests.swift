@@ -1365,7 +1365,7 @@ struct BackstageFixtureSelectionTests {
         let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
         let preferences = try #require(UserDefaults(suiteName: suiteName))
         defer { preferences.removePersistentDomain(forName: suiteName) }
-        let autosaveName = "PhotosByElieBackstageTests.MainWindow"
+        let autosaveName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
         let window = NSWindow(
             contentRect: NSRect(x: 100, y: 100, width: 900, height: 600),
             styleMask: [.titled, .resizable],
@@ -1439,13 +1439,53 @@ struct BackstageFixtureSelectionTests {
         )
     }
 
+    @Test("Update handoff keeps the last live-saved frame over transient AppKit layout")
+    @MainActor
+    func updateHandoffPrefersLiveSavedFrame() throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let settledFrame = NSRect(x: 0, y: 60, width: 1_440, height: 840)
+        let transientFrame = NSRect(x: 420, y: 100, width: 980, height: 720)
+        BackstageWindowFrameStore.save(
+            settledFrame,
+            autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+            preferences: preferences,
+            synchronize: true
+        )
+        let window = NSWindow(
+            contentRect: transientFrame,
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        SystemBackstageInstalledUpdateLauncher.persistCurrentWindowFrame(
+            window,
+            preferences: preferences
+        )
+
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+                preferences: preferences
+            ) == settledFrame
+        )
+        #expect(
+            BackstageWindowFrameStore.pendingUpdateHandoff(
+                autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+                preferences: preferences
+            ) == settledFrame
+        )
+    }
+
     @Test("Incoming update rejects transient window cascading before live persistence resumes")
     @MainActor
     func incomingUpdateProtectsHandoffFrame() async throws {
         let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
         let preferences = try #require(UserDefaults(suiteName: suiteName))
         defer { preferences.removePersistentDomain(forName: suiteName) }
-        let autosaveName = "PhotosByElieBackstageTests.MainWindow"
+        let autosaveName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
         let expectedFrame = NSRect(x: 0, y: 60, width: 1_440, height: 840)
         let cascadedFrame = NSRect(x: 420, y: 100, width: 980, height: 720)
         BackstageWindowFrameStore.stageUpdateHandoff(
@@ -1480,7 +1520,7 @@ struct BackstageFixtureSelectionTests {
             ) == expectedFrame
         )
 
-        try await Task.sleep(for: .milliseconds(600))
+        try await Task.sleep(for: .milliseconds(850))
         #expect(
             BackstageWindowFrameStore.pendingUpdateHandoff(
                 autosaveName: autosaveName,
@@ -1488,6 +1528,67 @@ struct BackstageFixtureSelectionTests {
             ) == nil
         )
 
+        let userFrame = NSRect(x: 180, y: 120, width: 1_100, height: 740)
+        window.setFrame(userFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didResizeNotification,
+            object: window
+        )
+        #expect(
+            BackstageWindowFrameStore.load(
+                autosaveName: autosaveName,
+                preferences: preferences
+            ) == userFrame
+        )
+    }
+
+    @Test("Ordinary relaunch rejects delayed default sizing before live persistence resumes")
+    @MainActor
+    func ordinaryRelaunchProtectsRestoredFrame() async throws {
+        let suiteName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let preferences = try #require(UserDefaults(suiteName: suiteName))
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        let autosaveName = "PhotosByElieBackstageTests.\(UUID().uuidString)"
+        let expectedFrame = NSRect(x: 0, y: 60, width: 1_440, height: 840)
+        let defaultFrame = NSRect(x: 320, y: 100, width: 1_120, height: 720)
+        BackstageWindowFrameStore.save(
+            expectedFrame,
+            autosaveName: autosaveName,
+            preferences: preferences,
+            synchronize: true
+        )
+        let window = NSWindow(
+            contentRect: defaultFrame,
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let autosaver = WindowFrameAutosaveView(
+            name: autosaveName,
+            preferences: preferences
+        )
+        window.contentView?.addSubview(autosaver)
+        autosaver.configureWindowIfNeeded()
+        #expect(window.frame == expectedFrame)
+
+        try await Task.sleep(for: .milliseconds(400))
+        window.setFrame(defaultFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didResizeNotification,
+            object: window
+        )
+        #expect(window.frame == expectedFrame)
+
+        // The delayed startup write restarts the quiet-period timer.
+        try await Task.sleep(for: .milliseconds(500))
+        window.setFrame(defaultFrame, display: false)
+        NotificationCenter.default.post(
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
+        #expect(window.frame == expectedFrame)
+
+        try await Task.sleep(for: .milliseconds(850))
         let userFrame = NSRect(x: 180, y: 120, width: 1_100, height: 740)
         window.setFrame(userFrame, display: false)
         NotificationCenter.default.post(

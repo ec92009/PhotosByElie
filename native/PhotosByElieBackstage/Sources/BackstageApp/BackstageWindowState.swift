@@ -122,8 +122,8 @@ final class WindowFrameAutosaveView: NSView {
     var autosaveName: String
     private let preferences: UserDefaults
     private weak var configuredWindow: NSWindow?
-    private var protectedUpdateHandoffFrame: NSRect?
-    private var updateHandoffGeneration = 0
+    private var protectedRestoredFrame: NSRect?
+    private var restorationGeneration = 0
 
     init(name: String, preferences: UserDefaults = .standard) {
         self.autosaveName = name
@@ -153,13 +153,15 @@ final class WindowFrameAutosaveView: NSView {
             autosaveName: autosaveName,
             preferences: preferences
         )
+        var restoredFrameWasLoaded = false
         if let storedFrame = pendingHandoffFrame ?? BackstageWindowFrameStore.load(
             autosaveName: autosaveName,
             preferences: preferences
         ) {
             window.setFrame(storedFrame, display: false)
+            restoredFrameWasLoaded = true
         } else {
-            window.setFrameUsingName(autosaveName)
+            restoredFrameWasLoaded = window.setFrameUsingName(autosaveName)
         }
         if let restoredFrame = Self.visibleRestoredFrame(
             window.frame,
@@ -169,16 +171,16 @@ final class WindowFrameAutosaveView: NSView {
         }
         window.setFrameAutosaveName(autosaveName)
         configuredWindow = window
-        protectedUpdateHandoffFrame = pendingHandoffFrame.flatMap {
-            Self.visibleRestoredFrame(
-                $0,
+        protectedRestoredFrame = restoredFrameWasLoaded
+            ? Self.visibleRestoredFrame(
+                window.frame,
                 screenFrames: NSScreen.screens.map(\.visibleFrame)
             )
-        }
+            : nil
         startObservingWindowFrameChanges(window)
-        if let protectedUpdateHandoffFrame {
-            protectUpdateHandoffFrame(
-                protectedUpdateHandoffFrame,
+        if let protectedRestoredFrame {
+            protectRestoredFrame(
+                protectedRestoredFrame,
                 in: window
             )
         } else {
@@ -214,34 +216,40 @@ final class WindowFrameAutosaveView: NSView {
 
     @objc private func windowFrameDidChange(_ notification: Notification) {
         guard notification.object as? NSWindow === configuredWindow else { return }
-        if let protectedUpdateHandoffFrame,
-           configuredWindow?.frame != protectedUpdateHandoffFrame {
-            configuredWindow?.setFrame(
-                protectedUpdateHandoffFrame,
-                display: true
-            )
+        if let protectedRestoredFrame, let configuredWindow {
+            if configuredWindow.frame != protectedRestoredFrame {
+                configuredWindow.setFrame(
+                    protectedRestoredFrame,
+                    display: true
+                )
+                protectRestoredFrame(
+                    protectedRestoredFrame,
+                    in: configuredWindow
+                )
+            }
             return
         }
         persistCurrentWindowFrame()
     }
 
-    private func protectUpdateHandoffFrame(
+    private func protectRestoredFrame(
         _ frame: NSRect,
         in window: NSWindow
     ) {
-        updateHandoffGeneration += 1
-        let generation = updateHandoffGeneration
+        restorationGeneration += 1
+        let generation = restorationGeneration
         if window.frame != frame {
             window.setFrame(frame, display: false)
         }
-        // A second app instance can be cascaded after SwiftUI first attaches
-        // its window. Keep the outgoing frame authoritative until that launch
-        // choreography settles, then return to ordinary live persistence.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self, weak window] in
+        // SwiftUI and macOS can apply their default size or cascade after the
+        // window first attaches, on ordinary launches as well as update
+        // handoffs. Keep the restored frame authoritative until startup layout
+        // has stayed quiet, restarting this timer whenever it tries again.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self, weak window] in
             guard let self,
                   let window,
                   self.configuredWindow === window,
-                  self.updateHandoffGeneration == generation else { return }
+                  self.restorationGeneration == generation else { return }
             if window.frame != frame {
                 window.setFrame(frame, display: true)
             }
@@ -255,7 +263,7 @@ final class WindowFrameAutosaveView: NSView {
                 autosaveName: self.autosaveName,
                 preferences: self.preferences
             )
-            self.protectedUpdateHandoffFrame = nil
+            self.protectedRestoredFrame = nil
         }
     }
 

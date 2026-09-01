@@ -52,8 +52,16 @@ struct SystemBackstageInstalledUpdateLauncher: BackstageInstalledUpdateLaunching
         preferences: UserDefaults = .standard
     ) {
         guard let window else { return }
+        // Live move/resize persistence is the authority. The AppKit frame can
+        // briefly diverge during SwiftUI layout or macOS zoom/cascade work;
+        // copying that transient frame here would destroy the user's last
+        // settled geometry immediately before launching the new process.
+        let handoffFrame = BackstageWindowFrameStore.load(
+            autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
+            preferences: preferences
+        ) ?? window.frame
         BackstageWindowFrameStore.stageUpdateHandoff(
-            window.frame,
+            handoffFrame,
             autosaveName: BackstageWindowFrameStore.mainWindowAutosaveName,
             preferences: preferences
         )

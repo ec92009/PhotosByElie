@@ -2105,6 +2105,7 @@ final class BackstageViewModel: ObservableObject {
 
     private func scheduleCullingThumbnailBackfill() {
         guard !terminationRequested, !isCullingScrolling,
+              cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !cullingVisibleAssetIDs.isEmpty,
               cullingThumbnailBackfillTask == nil else { return }
         let assets = cullingThumbnailBackfillAssets.filter {

@@ -10,4 +10,5 @@ Process docs that guide local development and handoff work.
 - [SOCIAL_POSTING_SOP.md](SOCIAL_POSTING_SOP.md): daily social package posting workflow, including Facebook Built-in Browser Page posting and personal repost handling.
 - [TITLE_KEYWORD_REVIEW_SOP.md](TITLE_KEYWORD_REVIEW_SOP.md): Owner proposal queue, approve/reject state flags, and nightly rework behavior.
 - [MAX_DAVID_SYNC_SOP.md](MAX_DAVID_SYNC_SOP.md): GitHub, R2, SSH, and Codex mobile workflow for moving ignored Owner state between Max and David.
+- [PBB_SEQUENTIAL_CYCLE_SOP.md](PBB_SEQUENTIAL_CYCLE_SOP.md): one-ticket-at-a-time Backstage clarification, implementation, signed local installation, owner acceptance, and closeout loop on `release/backstage`.
 - [SHOW_ME_SOP.md](../../SHOW_ME_SOP.md): local and public preview reporting workflow.

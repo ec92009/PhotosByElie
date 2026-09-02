@@ -29,6 +29,14 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Make small, clear commits with the prefix `photosbyelie:`.
 - Use branches for larger changes; preferred branch prefix: `codex/`.
 
+## PBB Straight-Line Cycle
+
+- Follow [`docs/sops/PBB_SEQUENTIAL_CYCLE_SOP.md`](./docs/sops/PBB_SEQUENTIAL_CYCLE_SOP.md) for PhotosByElie Backstage (`PBB`) ticket work.
+- Keep exactly one PBB ticket active and use the single canonical `release/backstage` worktree and branch. Do not create a branch or worktree per PBB ticket.
+- Clarify the ticket with Elie before coding when product intent is material, then code, test, compile, sign, install, launch, and present that exact local build for acceptance.
+- Elie's rejection keeps the same ticket active and returns it to implementation. Elie's acceptance closes that ticket with commit/build evidence before the next PBB ticket is selected from a fresh YouTrack read.
+- PBE remains a separate web/customer release line. Do not fold PBE source, ticket, deployment, or acceptance work into the PBB cycle.
+
 ## Versioning
 
 - Follow `~/Dev/.SOPs/VERSIONING_SOP.md`.

@@ -6,10 +6,14 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v245.1`
+- Current visible version: `v245.2`
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
+- `v245.2` reconciles the Owner-authoritative public catalog with current
+  lifecycle blocks, removes the redundant camera-origin badge from ordinary
+  still-photo cards, and lets Gallery selection span every filtered result
+  while preserving bounded internal batches.
 - `v219.0` releases the verified 121-photo La Concha receipt set into Corine's
   private gallery without re-exporting source media. The Worker authorizes the
   canonical private masters through a fixture-derived allowlist, while the

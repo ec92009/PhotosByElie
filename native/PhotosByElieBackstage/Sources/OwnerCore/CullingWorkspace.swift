@@ -5,6 +5,22 @@ public enum CullingGridLayout {
     public static let spacing = 8.0
     public static let maximumColumns = 10
 
+    public struct Viewport: Equatable, Sendable {
+        public let width: Double
+        public let contentWidth: Double
+        public let columns: Int
+        public let columnWidth: Double
+
+        public var occupiedWidth: Double {
+            columnWidth * Double(columns)
+                + CullingGridLayout.spacing * Double(max(0, columns - 1))
+        }
+
+        public var occupiedViewportWidth: Double {
+            occupiedWidth + max(0, width - contentWidth)
+        }
+    }
+
     public static func maximumColumnsThatFit(width: Double) -> Int {
         guard width > 0 else { return 1 }
         let count = Int((width + spacing) / (minimumColumnWidth + spacing))
@@ -19,6 +35,27 @@ public enum CullingGridLayout {
         let count = max(1, columns)
         let available = width - (Double(count - 1) * spacing)
         return max(minimumColumnWidth, available / Double(count))
+    }
+
+    public static func viewport(
+        width: Double,
+        requestedColumns: Int,
+        horizontalPadding: Double = 6
+    ) -> Viewport {
+        let viewportWidth = max(0, width)
+        let paddingWidth = max(0, horizontalPadding) * 2
+        let contentWidth = max(0, viewportWidth - paddingWidth)
+        let columns = clampedColumnCount(requestedColumns, width: contentWidth)
+        let availableForColumns = max(
+            0,
+            contentWidth - spacing * Double(max(0, columns - 1))
+        )
+        return Viewport(
+            width: viewportWidth,
+            contentWidth: contentWidth,
+            columns: columns,
+            columnWidth: availableForColumns / Double(columns)
+        )
     }
 }
 

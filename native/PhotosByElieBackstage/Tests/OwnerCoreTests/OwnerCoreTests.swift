@@ -1907,6 +1907,30 @@ struct OwnerCoreTests {
         }
     }
 
+    @Test("Culling grid stays inside the resized viewport")
+    func cullingGridResizedViewport() {
+        let wide = CullingGridLayout.viewport(width: 552, requestedColumns: 5)
+        #expect(wide.columns == 5)
+        #expect(wide.contentWidth == 540)
+        #expect(abs(wide.occupiedViewportWidth - wide.width) < 0.001)
+
+        let narrow = CullingGridLayout.viewport(width: 312, requestedColumns: 5)
+        #expect(narrow.columns == 3)
+        #expect(narrow.contentWidth == 300)
+        #expect(abs(narrow.occupiedViewportWidth - narrow.width) < 0.001)
+
+        let smallerThanOnePreferredCard = CullingGridLayout.viewport(
+            width: 72,
+            requestedColumns: 5
+        )
+        #expect(smallerThanOnePreferredCard.columns == 1)
+        #expect(smallerThanOnePreferredCard.columnWidth == 60)
+        #expect(
+            smallerThanOnePreferredCard.occupiedViewportWidth
+                <= smallerThanOnePreferredCard.width
+        )
+    }
+
     @Test("Ten-item culling rehearsal preserves scope and composes filters")
     func tenItemCullingRehearsal() {
         let candidates = (0..<10).map { index in

@@ -702,70 +702,79 @@ struct CullingView: View {
     }
 
     private var cullingGrid: some View {
-        ScrollViewReader { proxy in
-            cullingGridViewport
-                .onMoveCommand { direction in
-                    moveCullingSelection(direction)
-                    if let focused = model.focusedCullingAssetID {
-                        proxy.scrollTo(focused, anchor: .center)
+        GeometryReader { gridGeometry in
+            let layout = CullingGridLayout.viewport(
+                width: Double(gridGeometry.size.width),
+                requestedColumns: model.cullingGridDensity
+            )
+            ScrollViewReader { proxy in
+                cullingGridViewport(layout: layout)
+                    .onMoveCommand { direction in
+                        moveCullingSelection(direction)
+                        if let focused = model.focusedCullingAssetID {
+                            proxy.scrollTo(focused, anchor: .center)
+                        }
                     }
-                }
-                .modifier(
-                    CullingPrimaryKeyCommands(
-                        model: model,
-                        quickLook: quickLook,
-                        onReturnToReview: requestReturnToReview
+                    .modifier(
+                        CullingPrimaryKeyCommands(
+                            model: model,
+                            quickLook: quickLook,
+                            onReturnToReview: requestReturnToReview
+                        )
                     )
-                )
-                .modifier(CullingDisplayKeyCommands(model: model))
-                .onChange(of: model.cullingScrollTargetID) { _, target in
-                    guard let target else { return }
-                    // Omitting an anchor asks SwiftUI to move only as much as
-                    // needed to reveal the exact card. This keeps Quick Look
-                    // navigation spatially stable instead of recentering every
-                    // already-visible selection.
-                    proxy.scrollTo(target)
-                    model.cullingScrollTargetID = nil
-                }
+                    .modifier(CullingDisplayKeyCommands(model: model))
+                    .onChange(of: model.cullingScrollTargetID) { _, target in
+                        guard let target else { return }
+                        // Omitting an anchor asks SwiftUI to move only as much as
+                        // needed to reveal the exact card. This keeps Quick Look
+                        // navigation spatially stable instead of recentering every
+                        // already-visible selection.
+                        proxy.scrollTo(target)
+                        model.cullingScrollTargetID = nil
+                    }
+            }
+            .frame(
+                width: CGFloat(layout.width),
+                height: gridGeometry.size.height,
+                alignment: .topLeading
+            )
+            .clipped()
         }
         .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .clipped()
         .layoutPriority(1)
     }
 
-    private var cullingGridViewport: some View {
-        ScrollView {
+    private func cullingGridViewport(layout: CullingGridLayout.Viewport) -> some View {
+        ScrollView(.vertical) {
             if !model.isBlockingFixtureCullingLoad {
-                cullingGridCards
+                cullingGridCards(layout: layout)
             }
         }
         .id(cullingViewportIdentity)
-        .background {
-            GeometryReader { gridGeometry in
-                Color.clear
-                    .onAppear {
-                        updateCullingGridWidth(gridGeometry.size.width)
-                    }
-                    .onChange(of: gridGeometry.size.width) { _, width in
-                        updateCullingGridWidth(width)
-                    }
-            }
+        .frame(width: CGFloat(layout.width), alignment: .topLeading)
+        .clipped()
+        .onAppear {
+            updateCullingGridWidth(CGFloat(layout.contentWidth))
+        }
+        .onChange(of: layout.contentWidth) { _, width in
+            updateCullingGridWidth(CGFloat(width))
         }
         .focusable()
         .overlay { cullingGridOverlay }
         .modifier(CullingScrollPhaseObserver(model: model))
     }
 
-    private var cullingGridCards: some View {
+    private func cullingGridCards(layout: CullingGridLayout.Viewport) -> some View {
         LazyVGrid(
             columns: Array(
                 // Keep grid and card geometry identical so thumbnail aspect
                 // ratios cannot feed a conflicting width back into LazyVGrid.
                 repeating: GridItem(
-                    .fixed(CGFloat(model.cullingGridColumnWidth)),
+                    .fixed(CGFloat(layout.columnWidth)),
                     spacing: CGFloat(CullingGridLayout.spacing)
                 ),
-                count: model.cullingGridDensity
+                count: layout.columns
             ),
             spacing: CGFloat(CullingGridLayout.spacing)
         ) {
@@ -787,11 +796,11 @@ struct CullingView: View {
                     usesFill: model.cullingUsesFill,
                     previewWidth: max(
                         0,
-                        CGFloat(model.cullingGridColumnWidth) - 12
+                        CGFloat(layout.columnWidth) - 12
                     )
                 )
                 .frame(
-                    width: CGFloat(model.cullingGridColumnWidth),
+                    width: CGFloat(layout.columnWidth),
                     alignment: .topLeading
                 )
                 .clipped()
@@ -809,7 +818,8 @@ struct CullingView: View {
         .padding(.horizontal, 6)
         .padding(.top, 12)
         .padding(.bottom, 6)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(width: CGFloat(layout.width), alignment: .topLeading)
+        .clipped()
         .animation(.snappy(duration: 0.24), value: model.cullingGridDensity)
     }
 
@@ -855,7 +865,7 @@ struct CullingView: View {
     }
 
     private func updateCullingGridWidth(_ width: CGFloat) {
-        model.updateCullingGridWidth(Double(width - 12))
+        model.updateCullingGridWidth(Double(width))
     }
 
     private func moveCullingSelection(_ direction: MoveCommandDirection) {

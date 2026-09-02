@@ -49,7 +49,12 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         self.assertIn("guard canStartCloudWorkflow", retry)
         self.assertIn("isRunningDelivery = true", retry)
-        self.assertIn('nativeUploadStatus = "Retrying the same failed upload run…"', retry)
+        self.assertIn("nativeUploadStatus = catalogRecovery", retry)
+        self.assertIn(
+            '? "Retrying the same failed catalog-only run from existing R2 receipts…"',
+            retry,
+        )
+        self.assertIn(': "Retrying the same failed upload run…"', retry)
         self.assertIn("deliveryService.resumeNativeUpload(runID: current.runID)", retry)
         self.assertNotIn("startNativeUpload", retry)
         self.assertIn('Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run")', upload)
@@ -368,7 +373,7 @@ class NativeCullingParityTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertRegex(
             app,
-            r'WindowFrameAutosaver\(name: (?:"PhotosByElieBackstage\.MainWindow"|BackstageWindowFrameStore\.mainWindowAutosaveName)\)',
+            r'WindowFrameAutosaver\(\s*name:\s*(?:"PhotosByElieBackstage\.MainWindow"|BackstageWindowFrameStore\.mainWindowAutosaveName)\s*\)',
         )
         self.assertIn('"PhotosByElieBackstage.MainWindow"', app + persistence)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit")', app)
@@ -833,7 +838,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "shown of",
             "not shown",
             "plan.order.label",
-            'Button("Upload these \\(plan.items.count.formatted())…")',
+            '"Upload these \\(plan.items.count.formatted())…"',
             "confirmingVisiblePublication",
             'Button("Upload selection…")',
             'Button(model.isDeployingPublicCatalog ? "Deploying & verifying…" : "Deploy & verify website…")',
@@ -869,18 +874,24 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("func preserveNativeUploadTray(", model)
         self.assertIn("items: retainedItems", model)
         self.assertIn("attemptedIDs.subtracting(failedIDs)", model)
-        self.assertIn("Failed items remain in this tray for retry.", model)
-        self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
+        self.assertIn(
+            "Failed items remain independently retryable; they did not stop the rest of the queue.",
+            model,
+        )
+        self.assertIn("stride(from: 0, to: windowIDs.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
         self.assertIn("isRunningNativePublication = true", model)
         self.assertIn("func deployPublicCatalog()", model)
         self.assertNotIn("Upload equals publication", upload)
         self.assertNotIn("immediate publication", upload)
-        self.assertIn("nativePublicationBatchNumber = batchIndex + 1", model)
-        self.assertIn("nativePublicationBatchCount = batches.count", model)
+        self.assertIn("nativePublicationBatchNumber = batchOrdinal", model)
+        self.assertIn(
+            "nativePublicationBatchCount = NativeUploadQueueContinuation.batchCount(",
+            model,
+        )
         self.assertIn("if model.isRunningNativePublication,", upload)
         self.assertIn(
-            '"Batch \\(model.nativePublicationBatchNumber) of \\(model.nativePublicationBatchCount)"',
+            '" • batch \\(model.nativePublicationBatchNumber) of \\(model.nativePublicationBatchCount)"',
             upload,
         )
         self.assertNotIn(
@@ -1647,10 +1658,9 @@ class NativeCullingParityTest(unittest.TestCase):
         view_model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        self.assertIn(
-            "updateState = .updateAvailable(check.manifest)\n"
-            "                await downloadVerifiedUpdate(manifest: check.manifest)",
+        self.assertRegex(
             view_model,
+            r"updateState = \.updateAvailable\(check\.manifest\)\s+await downloadVerifiedUpdate\(manifest: check\.manifest\)",
         )
         self.assertIn(
             'Button("Install and run new version") {\n'
@@ -2070,7 +2080,10 @@ class NativeCullingParityTest(unittest.TestCase):
                     GeometryReader""",
             grid,
         )
-        self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
+        self.assertIn("repeating: GridItem(", culling)
+        self.assertIn(".fixed(CGFloat(model.cullingGridColumnWidth))", culling)
+        self.assertIn("spacing: CGFloat(CullingGridLayout.spacing)", culling)
+        self.assertNotIn("GridItem(.flexible(minimum: 0)", culling)
         self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
         self.assertIn("model.updateCullingGridWidth", culling)
         self.assertIn("width: CGFloat(model.cullingGridColumnWidth)", culling)

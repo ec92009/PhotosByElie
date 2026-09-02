@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,23 @@ const detailJs = read("photo-detail.js");
 const galleryCardJs = read("gallery-card.js");
 const ownerSessionJs = read("pbe-owner-session.js");
 const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
+
+test("public cards omit the redundant camera badge while keeping provenance badges", () => {
+  const sandbox = {
+    document: { addEventListener() {} },
+    HTMLImageElement: class {},
+    window: {
+      photosByElieMdIcon: (name) => `<svg data-icon="${name}"></svg>`,
+    },
+  };
+  vm.runInNewContext(galleryCardJs, sandbox);
+  const { originBadgeHtml } = sandbox.window.photosByElieGalleryCard;
+
+  assert.equal(originBadgeHtml("camera", "Camera photo"), "");
+  assert.match(originBadgeHtml("ai", "AI image"), /photo-origin-badge is-ai/);
+  assert.match(originBadgeHtml("ai", "AI image"), /data-icon="autoAwesome"/);
+  assert.match(originBadgeHtml("camera", "Video", true), /photo-origin-badge is-video/);
+});
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
   let role = "visitor";

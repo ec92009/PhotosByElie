@@ -366,7 +366,11 @@ class NativeCullingParityTest(unittest.TestCase):
         adapter = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageAppKitAdapters.swift"
         ).read_text(encoding="utf-8")
-        self.assertIn('WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow")', app)
+        self.assertRegex(
+            app,
+            r'WindowFrameAutosaver\(name: (?:"PhotosByElieBackstage\.MainWindow"|BackstageWindowFrameStore\.mainWindowAutosaveName)\)',
+        )
+        self.assertIn('"PhotosByElieBackstage.MainWindow"', app + persistence)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit")', app)
@@ -374,8 +378,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit")', app)
         self.assertIn("navigationSidebarVisible", app)
         self.assertIn("selectedSectionPreferenceKey", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
+        self.assertIn(
+            'static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"',
+            persistence,
+        )
+        self.assertIn(
+            'static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"',
+            persistence,
+        )
         self.assertIn("quickLookFrameAutosaveName", adapter)
         self.assertIn("setFrameUsingName", adapter)
         self.assertIn("setFrameAutosaveName", persistence)
@@ -2109,21 +2121,33 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_culling_preview_is_bounded_and_collapsible(self):
-        source = backstage_ui_source()
-        culling = source.split("struct CullingView", 1)[1].split(
-            "private struct CullingAssetCard", 1
-        )[0]
-        review = source.split("struct ReviewView", 1)[1].split(
-            "private struct ReviewInspector", 1
-        )[0]
-        root = source.split("private struct OverviewView", 1)[0]
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
+        culling_controls = (source_dir / "CullingCanvasControls.swift").read_text(
+            encoding="utf-8"
+        )
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        root = (source_dir / "PhotosByElieBackstageApp.swift").read_text(
+            encoding="utf-8"
+        )
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
+        persistence = (source_dir / "BackstageWindowState.swift").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("var isPreviewPanelVisible: Bool", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
+        self.assertIn(
+            'static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"',
+            persistence,
+        )
+        self.assertIn(
+            'static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"',
+            persistence,
+        )
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn("Collapse the Gallery or Review preview inspector", root)
@@ -2147,7 +2171,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'Button(model.cullingUsesFill ? "Fill" : "Fit")',
         ):
             self.assertIn(persistent_control, culling)
-        self.assertIn('Button("Review picked")', source)
+        self.assertIn('Button("Review picked")', culling_controls)
         self.assertIn("if model.isPreviewPanelVisible", review)
         self.assertIn(".frame(minWidth: 300, idealWidth: 380, maxWidth: 480)", review)
 

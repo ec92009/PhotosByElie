@@ -510,6 +510,10 @@ struct ReviewView: View {
                         Button("Choose another app…") {
                             chooseExternalEditor()
                         }
+                        Divider()
+                        Button("Choose return folder…") {
+                            model.chooseExternalEditReturnDirectory()
+                        }
                     }
                     .disabled(!model.canStartExternalEdit)
                     .backstageHelp("Send one selected original out for a newer rendition, or several ordered originals out for one panorama or composite. Returned work stays in Review.")

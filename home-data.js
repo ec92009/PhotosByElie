@@ -4,7 +4,7 @@ window.photosByElieHomeData = {
     "title": "France",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "france-gallery",
-    "count": 565,
+    "count": 1230,
     "href": "./gallery.html?gallery=france",
     "photos": [
       {
@@ -74,7 +74,7 @@ window.photosByElieHomeData = {
     "title": "USA",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "usa-gallery",
-    "count": 164,
+    "count": 577,
     "href": "./gallery.html?gallery=usa",
     "photos": [
       {
@@ -144,7 +144,7 @@ window.photosByElieHomeData = {
     "title": "Spain",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "spain-gallery",
-    "count": 2261,
+    "count": 2723,
     "href": "./gallery.html?gallery=spain",
     "photos": [
       {
@@ -214,7 +214,7 @@ window.photosByElieHomeData = {
     "title": "Mexico",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "mexico-gallery",
-    "count": 38,
+    "count": 92,
     "href": "./gallery.html?gallery=mexico",
     "photos": [
       {
@@ -284,7 +284,7 @@ window.photosByElieHomeData = {
     "title": "Italy",
     "description": "Saturn and Apple Photos archive selections prepared from Italian sources.",
     "accent": "italy-gallery",
-    "count": 59,
+    "count": 70,
     "href": "./gallery.html?gallery=italy",
     "photos": [
       {
@@ -354,7 +354,7 @@ window.photosByElieHomeData = {
     "title": "Portugal",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "portugal-gallery",
-    "count": 325,
+    "count": 605,
     "href": "./gallery.html?gallery=portugal",
     "photos": [
       {
@@ -424,7 +424,7 @@ window.photosByElieHomeData = {
     "title": "Slovakia",
     "description": "Saturn Lightroom archive selections prepared from the Camera source.",
     "accent": "slovakia-gallery",
-    "count": 2,
+    "count": 6,
     "href": "./gallery.html?gallery=slovakia",
     "photos": [
       {
@@ -454,6 +454,36 @@ window.photosByElieHomeData = {
             "allowed": true,
             "galleryKey": "expo/20190624-1827-16232-feef5b78f4_900.jpg",
             "detailKey": "expo/20190624-1827-16232-feef5b78f4_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "f4ufkhmq33ha4-11b63bf30b",
+        "title": "Graffiti mural underpass in Slovakia",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/f4ufkhmq33ha4-11b63bf30b_900.jpg",
+            "detailKey": "expo/f4ufkhmq33ha4-11b63bf30b_1800.jpg"
+          }
+        }
+      },
+      {
+        "id": "jahtt-5da3764085",
+        "title": "Hviezdoslav Square Fountain, Bratislava",
+        "gallerySrc": "",
+        "imageSrc": "",
+        "media": {
+          "type": "photo",
+          "sourcePolicy": "developed-master",
+          "publicPreview": {
+            "allowed": true,
+            "galleryKey": "expo/jahtt-5da3764085_900.jpg",
+            "detailKey": "expo/jahtt-5da3764085_1800.jpg"
           }
         }
       }

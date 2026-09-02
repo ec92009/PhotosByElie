@@ -7,6 +7,7 @@ PBE is the customer-facing web application and remains a separate release line. 
 ## Invariants
 
 - Use one permanent PBB worktree checked out on `release/backstage`.
+- Keep the generated PBB architecture graph at `graphify-out/` in that permanent worktree, scoped to `native/PhotosByElieBackstage`. Treat it as local ignored analysis, not branch content.
 - Keep exactly one PBB ticket active at a time.
 - Do not create a branch or worktree per PBB ticket.
 - Do not start the next PBB ticket while the current ticket is still being implemented, built, installed, or reviewed.
@@ -40,6 +41,8 @@ Do not make Elie specify routine implementation details. Stop asking once the de
 ### 3. Code on the canonical line
 
 Work directly in the canonical PBB worktree on `release/backstage`. Make small `photosbyelie:` commits and preserve unrelated state.
+
+Use the canonical worktree's Graphify graph for architecture and impact questions before broad source searches, then verify its pointers in source and tests. If the graph is missing or predates the current PBB source, rebuild or update it in this same worktree; do not copy a graph from another branch or create a ticket worktree just to obtain one.
 
 Keep the ticket `In Progress` throughout implementation, compilation, installation, and owner review. Do not move it to `Fixed` merely because source or tests are ready. A failed approach or rejected design is another iteration of the same ticket, not a reason to open a parallel branch or ticket cycle.
 

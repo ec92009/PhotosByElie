@@ -796,8 +796,9 @@ Clock state: running
 | 2026-09-02 | 19:48 CEST | 19:59 CEST | 0:03 | Confirmed RAW-backed filtering and expanded the PBB-158 external-editor entry points across Gallery, Review, Uploads, Metadata, and Quick Look; background implementation, tests, and build work excluded. |
 | 2026-09-02 | 20:02 CEST | 20:03 CEST | 0:01 | Requested a persistent user-selected return folder for finished external edits; background implementation, tests, build, and installation excluded. |
 | 2026-09-02 | 21:09 CEST | 21:11 CEST | 0:01 | Required a fresh release identity for every installable Backstage build and timestamps on every assistant message; background instruction updates, build, and installation excluded. |
+| 2026-09-02 | 22:53 CEST | 23:03 CEST | 0:02 | Required Graphify to remain available on the single-track PBB line and identified the existing Gemini credential; background graph extraction, dependency repair, labeling, and verification excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:43
+Active collaboration time used: 38:45
 Remaining budget: not set

@@ -126,7 +126,7 @@ let galleryCommandBar = null;
 let galleryCommandRegistry = null;
 let syncGalleryCommandBar = () => {};
 const galleryActionLabelsKey = "photosbyelie-gallery-action-labels";
-const selectionLimit = galleryCommandModel.MAX_SELECTION;
+const commandBatchSize = galleryCommandModel.COMMAND_BATCH_SIZE;
 const pageSize = galleryWindowModel.GALLERY_PAGE_SIZE;
 const maxRenderedPhotos = galleryWindowModel.MAX_RENDERED_GALLERY_PHOTOS;
 const densityKey = "photosbyelie-gallery-columns";
@@ -184,7 +184,8 @@ let ownerSuperSearchPromise = null;
 const syncGallerySelectionToolbar = () => {
   if (!gallerySelectionCount) return;
   const count = selectedPhotoIds.size;
-  gallerySelectionCount.textContent = `${count} selected`;
+  const visibleCount = filteredVisiblePhotos().length;
+  gallerySelectionCount.textContent = `${count} selected · ${visibleCount} visible`;
   syncGalleryCommandBar();
 };
 
@@ -473,14 +474,15 @@ try {
   ) {
     pendingGalleryReturnState = payload;
     detailRoundTripNonce = String(payload.navigationNonce);
-    (Array.isArray(payload.selectionIds) ? payload.selectionIds : [])
-      .slice(0, selectionLimit)
-      .forEach((photoId) => selectedPhotoIds.add(String(photoId)));
+    const restoredSelection = galleryCommandModel.restoreVisibleSelection(
+      Array.isArray(payload.selectionIds) ? payload.selectionIds : [],
+      payload.photoIds || payload.selectionIds || [],
+    );
+    restoredSelection.forEach((photoId) => selectedPhotoIds.add(photoId));
     primaryPhotoId = String(payload.primaryPhotoId || payload.photoId || "");
     selectionRecency = (Array.isArray(payload.selectionRecency) ? payload.selectionRecency : [...selectedPhotoIds])
       .map(String)
-      .filter((photoId, index, items) => photoId && items.indexOf(photoId) === index)
-      .slice(-selectionLimit);
+      .filter((photoId, index, items) => photoId && selectedPhotoIds.has(photoId) && items.indexOf(photoId) === index);
     if (payload.filterState && typeof payload.filterState === "object") {
       filterState = normalizeDateFilterState(publicFilterState(payload.filterState));
     }
@@ -1212,10 +1214,6 @@ const toggleGalleryPhotoSelection = (photoId, photos = renderedGalleryPhotos) =>
     selectedPhotoIds.delete(photoId);
     forgetSelectedPhoto(photoId);
   } else {
-    if (selectedPhotoIds.size >= selectionLimit) {
-      setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
-      return false;
-    }
     selectedPhotoIds.add(photoId);
     rememberSelectedPhoto(photoId);
   }
@@ -1241,12 +1239,9 @@ const selectOwnerPhotoFromPointer = (photoId, photos, event = {}) => {
     const start = Math.min(anchorIndex, index);
     const end = Math.max(anchorIndex, index);
     photos.slice(start, end + 1).forEach((photo) => {
-      if (selectedPhotoIds.size < selectionLimit) {
-        selectedPhotoIds.add(photo.id);
-        selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
-      }
+      selectedPhotoIds.add(photo.id);
+      selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
     });
-    if (end - start + 1 > selectionLimit) setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
     rememberSelectedPhoto(photoId);
   } else if (toggle) {
     toggleGalleryPhotoSelection(photoId, photos);
@@ -1423,22 +1418,40 @@ const replacementAfterRemoval = (snapshot, survivingIds) => {
 
 const moveOwnerSelectionToWasteBasket = async (requestedPhotoIds = null) => {
   const photos = filteredVisiblePhotos();
-  const ids = (Array.isArray(requestedPhotoIds) ? requestedPhotoIds : [...selectedPhotoIds])
-    .map(String)
-    .filter(Boolean)
-    .slice(0, selectionLimit);
+  const ids = galleryCommandModel.selectVisibleIds(
+    [],
+    Array.isArray(requestedPhotoIds) ? requestedPhotoIds : [...selectedPhotoIds],
+  );
   if (!ids.length) return { succeeded: [], failed: [] };
   const snapshot = captureSelectionSnapshot(photos);
-  try {
-    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
-    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
-    if (ids.length === 1) await hiddenActions.mark(ids[0]);
-    else await hiddenActions.markMany(ids);
-    lastUndoableOwnerAction = { kind: "waste-basket", ids, snapshot };
-    ids.forEach((photoId) => {
-      selectedPhotoIds.delete(photoId);
-      forgetSelectedPhoto(photoId);
-    });
+  ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
+  const totalBatches = Math.ceil(ids.length / commandBatchSize);
+  setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket in ${totalBatches} batch${totalBatches === 1 ? "" : "es"}...`);
+  const batches = await galleryCommandModel.runSelectionBatches(ids, async (photoIds) => {
+    if (photoIds.length === 1) await hiddenActions.mark(photoIds[0]);
+    else await hiddenActions.markMany(photoIds);
+    return photoIds;
+  }, { batchSize: commandBatchSize });
+  const succeeded = batches
+    .filter((batch) => batch.status === "fulfilled")
+    .flatMap((batch) => batch.photoIds);
+  const failed = batches
+    .filter((batch) => batch.status === "rejected")
+    .flatMap((batch) => batch.photoIds.map((photoId) => ({
+      photoId,
+      reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${batch.reason}`,
+    })));
+  succeeded.forEach((photoId) => {
+    selectionErrors.delete(photoId);
+    selectedPhotoIds.delete(photoId);
+    forgetSelectedPhoto(photoId);
+  });
+  failed.forEach((item) => {
+    selectionErrors.set(item.photoId, item.reason);
+    setGalleryBlockedVisual(item.photoId, "");
+  });
+  lastUndoableOwnerAction = succeeded.length ? { kind: "waste-basket", ids: succeeded, snapshot } : null;
+  if (succeeded.length) {
     const survivingPhotos = filteredVisiblePhotos();
     if (!selectedPhotoIds.size) {
       selectionRecency = [];
@@ -1457,14 +1470,16 @@ const moveOwnerSelectionToWasteBasket = async (requestedPhotoIds = null) => {
       }
     }
     renderGallery();
-    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
-    return { succeeded: ids, failed: [] };
-  } catch (error) {
-    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
-    setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
-    syncGallerySelectionToolbar();
-    return { succeeded: [], failed: ids.map((photoId) => ({ photoId, reason: error?.message || "Could not move photo to Waste Basket." })) };
+  } else {
+    updateSelection({ scroll: false });
   }
+  const failedBatches = batches.filter((batch) => batch.status === "rejected")
+    .map((batch) => `${batch.batchNumber}/${batch.totalBatches}`)
+    .join(", ");
+  setGalleryStatus(failed.length
+    ? `${succeeded.length} succeeded; ${failed.length} failed in batch ${failedBatches} and remain selected.`
+    : `${succeeded.length} photo${succeeded.length === 1 ? "" : "s"} moved to Waste Basket.`);
+  return { succeeded, failed, batches };
 };
 
 const undoLastOwnerCommand = async () => {
@@ -1488,9 +1503,8 @@ const undoLastOwnerCommand = async () => {
   selectionRecency = [];
   const restoredPhotos = filteredVisiblePhotos();
   const restoredPhotoIds = new Set(restoredPhotos.map((photo) => photo.id));
-  undoable.snapshot.selectedIds.forEach((photoId) => {
-    if (restoredPhotoIds.has(photoId) && selectedPhotoIds.size < selectionLimit) selectedPhotoIds.add(photoId);
-  });
+  galleryCommandModel.restoreVisibleSelection(undoable.snapshot.selectedIds, [...restoredPhotoIds])
+    .forEach((photoId) => selectedPhotoIds.add(photoId));
   selectionRecency = undoable.snapshot.selectionRecency.filter((photoId) => selectedPhotoIds.has(photoId));
   primaryPhotoId = selectedPhotoIds.has(undoable.snapshot.primaryPhotoId)
     ? undoable.snapshot.primaryPhotoId
@@ -1575,10 +1589,8 @@ const extendOwnerKeyboardSelection = (photos, destinationIndex) => {
   const start = Math.min(anchorIndex, destinationIndex);
   const end = Math.max(anchorIndex, destinationIndex);
   photos.slice(start, end + 1).forEach((photo) => {
-    if (selectedPhotoIds.size < selectionLimit) {
-      selectedPhotoIds.add(photo.id);
-      selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
-    }
+    selectedPhotoIds.add(photo.id);
+    selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
   });
   const destinationId = photos[destinationIndex]?.id || "";
   if (destinationId) rememberSelectedPhoto(destinationId);
@@ -1729,20 +1741,18 @@ const ensureOwnerSelection = (photos) => {
   if (primaryIndex >= visibleStart && primaryIndex < visibleLimit) selectedIndex = primaryIndex - visibleStart;
 };
 
-const selectAllLoadedPhotos = () => {
+const selectAllVisiblePhotos = () => {
   const before = selectedPhotoIds.size;
-  for (const photo of renderedGalleryPhotos) {
-    if (selectedPhotoIds.size >= selectionLimit) break;
-    if (selectedPhotoIds.has(photo.id)) continue;
-    selectedPhotoIds.add(photo.id);
-    selectionRecency.push(photo.id);
-  }
+  const photos = filteredVisiblePhotos();
+  const selectedIds = galleryCommandModel.selectVisibleIds(
+    [...selectedPhotoIds],
+    photos.map((photo) => photo.id),
+  );
+  selectedPhotoIds.clear();
+  selectedIds.forEach((photoId) => selectedPhotoIds.add(photoId));
+  selectionRecency = galleryCommandModel.selectVisibleIds(selectionRecency, selectedIds);
   if (ownerCullingEnabled && !primaryPhotoId && selectionRecency.length) primaryPhotoId = selectionRecency.at(-1);
-  if (selectedPhotoIds.size >= selectionLimit && renderedGalleryPhotos.length > selectedPhotoIds.size) {
-    setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
-  } else {
-    setGalleryStatus(`${selectedPhotoIds.size - before} loaded photo${selectedPhotoIds.size - before === 1 ? "" : "s"} added to the selection.`);
-  }
+  setGalleryStatus(`${selectedPhotoIds.size - before} visible photo${selectedPhotoIds.size - before === 1 ? "" : "s"} added to the selection.`);
   updateSelection({ scroll: false });
   syncSelectionDetailContext();
 };
@@ -1906,51 +1916,68 @@ const ownerCardPresentation = (photo) => {
 const runOwnerAdapterCommand = async (methodName, { value = null, removes = false, currentPhoto = null } = {}) => {
   const method = ownerAdapterMethod(methodName);
   if (!method) return null;
-  const requestedIds = currentPhoto?.id ? [currentPhoto.id] : [...selectedPhotoIds].slice(0, selectionLimit);
+  const requestedIds = currentPhoto?.id ? [currentPhoto.id] : [...selectedPhotoIds];
   if (!requestedIds.length) return null;
   const snapshot = captureSelectionSnapshot();
-  try {
+  const idempotencyKey = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${methodName}`;
+  const totalBatches = Math.ceil(requestedIds.length / commandBatchSize);
+  setGalleryStatus(`${requestedIds.length} photo${requestedIds.length === 1 ? "" : "s"} updating in ${totalBatches} batch${totalBatches === 1 ? "" : "es"}...`);
+  const batches = await galleryCommandModel.runSelectionBatches(requestedIds, async (photoIds, batch) => {
     const result = await method({
-      photoIds: requestedIds,
-      primaryPhotoId: currentPhoto?.id || primaryPhotoId,
+      photoIds,
+      primaryPhotoId: photoIds.includes(currentPhoto?.id || primaryPhotoId)
+        ? currentPhoto?.id || primaryPhotoId
+        : photoIds[0],
       fixtureId: ownerCommandAdapter.fixtureId || null,
-      idempotencyKey: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${methodName}`,
+      idempotencyKey: `${idempotencyKey}:${batch.batchNumber}/${batch.totalBatches}`,
       value,
     });
-    const normalized = normalizeOwnerCommandResult(result, requestedIds);
-    normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
-    normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
-    applyOwnerCommandState(methodName, value, normalized.succeededItems);
-    if (removes) {
-      normalized.succeeded.forEach((photoId) => {
-        selectedPhotoIds.delete(photoId);
-        forgetSelectedPhoto(photoId);
-      });
-      if (!selectedPhotoIds.size) {
-        const survivors = filteredVisiblePhotos();
-        const replacementId = replacementAfterRemoval(snapshot, new Set(survivors.map((photo) => photo.id)));
-        if (replacementId) {
-          selectedPhotoIds.add(replacementId);
-          rememberSelectedPhoto(replacementId);
-          selectionAnchorPhotoId = replacementId;
-        }
-      }
-      renderGallery();
-    } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
-      renderGallery({ scrollSelection: false });
-    } else {
-      updateSelection({ scroll: false });
+    return normalizeOwnerCommandResult(result, photoIds);
+  }, { batchSize: commandBatchSize });
+  const normalized = { succeeded: [], succeededItems: [], failed: [] };
+  batches.forEach((batch) => {
+    if (batch.status === "rejected") {
+      batch.photoIds.forEach((photoId) => normalized.failed.push({
+        photoId,
+        reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${batch.reason}`,
+      }));
+      return;
     }
-    setGalleryStatus(normalized.failed.length
-      ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed and remain selected.`
-      : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
-    return normalized;
-  } catch (error) {
-    requestedIds.forEach((photoId) => selectionErrors.set(photoId, error?.message || "Owner command failed."));
+    normalized.succeeded.push(...batch.value.succeeded);
+    normalized.succeededItems.push(...batch.value.succeededItems);
+    batch.value.failed.forEach((item) => normalized.failed.push({
+      ...item,
+      reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${item.reason}`,
+    }));
+  });
+  normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
+  normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
+  applyOwnerCommandState(methodName, value, normalized.succeededItems);
+  if (removes) {
+    normalized.succeeded.forEach((photoId) => {
+      selectedPhotoIds.delete(photoId);
+      forgetSelectedPhoto(photoId);
+    });
+    if (!selectedPhotoIds.size) {
+      const survivors = filteredVisiblePhotos();
+      const replacementId = replacementAfterRemoval(snapshot, new Set(survivors.map((photo) => photo.id)));
+      if (replacementId) {
+        selectedPhotoIds.add(replacementId);
+        rememberSelectedPhoto(replacementId);
+        selectionAnchorPhotoId = replacementId;
+      }
+    }
+    renderGallery();
+  } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
+    renderGallery({ scrollSelection: false });
+  } else {
     updateSelection({ scroll: false });
-    setGalleryStatus(error?.message || "Owner command failed.");
-    return { succeeded: [], failed: requestedIds.map((photoId) => ({ photoId, reason: error?.message || "Owner command failed." })) };
   }
+  const failedBatches = [...new Set(normalized.failed.map((item) => item.reason.match(/^Batch ([^:]+):/)?.[1]).filter(Boolean))].join(", ");
+  setGalleryStatus(normalized.failed.length
+    ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed in batch ${failedBatches} and remain selected.`
+    : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
+  return { ...normalized, batches };
 };
 
 const burstCandidateIds = () => {
@@ -1960,7 +1987,7 @@ const burstCandidateIds = () => {
     const result = resolver({ primaryPhotoId, loadedPhotoIds: renderedGalleryPhotos.map((photo) => photo.id) });
     if (!Array.isArray(result)) return null;
     const loadedIds = new Set(renderedGalleryPhotos.map((photo) => photo.id));
-    return [...new Set(result.map(String).filter((photoId) => loadedIds.has(photoId)))].slice(0, selectionLimit);
+    return [...new Set(result.map(String).filter((photoId) => loadedIds.has(photoId)))];
   } catch {
     return null;
   }
@@ -2090,12 +2117,12 @@ const galleryCommands = [
   {
     id: "select-all", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "selection", order: 10,
     label: "Select All", icon: "☑", shortcut: commandShortcut("a", { primary: true }),
-    shortcutLabel: () => `${primaryShortcutLabel()}A`, selectionEffect: "add-loaded", executionScope: "loaded",
+    shortcutLabel: () => `${primaryShortcutLabel()}A`, selectionEffect: "add-visible", executionScope: "visible",
     state: () => ({
-      enabled: renderedGalleryPhotos.some((photo) => !selectedPhotoIds.has(photo.id)) && selectedPhotoIds.size < selectionLimit,
-      disabledReason: selectedPhotoIds.size >= selectionLimit ? `Selection is limited to ${selectionLimit} photos.` : "All loaded photos are selected.",
+      enabled: filteredVisiblePhotos().some((photo) => !selectedPhotoIds.has(photo.id)),
+      disabledReason: "All visible photos are selected.",
     }),
-    execute: selectAllLoadedPhotos,
+    execute: selectAllVisiblePhotos,
   },
   {
     id: "clear-selection", roles: ["visitor"], surfaces: ["gallery"], group: "selection", order: 20,
@@ -2269,7 +2296,8 @@ const galleryCommandContext = () => ({
   selectionCount: selectedPhotoIds.size,
   primaryPhotoId,
   loadedIds: renderedGalleryPhotos.map((photo) => photo.id),
-  selectionLimit,
+  visibleIds: filteredVisiblePhotos().map((photo) => photo.id),
+  commandBatchSize,
 });
 
 const readActionLabelSetting = () => {

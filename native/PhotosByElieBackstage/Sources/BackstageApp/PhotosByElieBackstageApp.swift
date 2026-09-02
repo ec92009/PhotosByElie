@@ -83,6 +83,11 @@ public struct BackstageApplication: App {
                         }
                     }
             }
+            // Keep the navigation sidebar beside the workspace instead of
+            // allowing the automatic style to cover the Gallery during the
+            // show transition. The detail pane then receives a real width
+            // change and its GeometryReader can recompute the grid viewport.
+            .navigationSplitViewStyle(.balanced)
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(
                 name: BackstageWindowFrameStore.mainWindowAutosaveName

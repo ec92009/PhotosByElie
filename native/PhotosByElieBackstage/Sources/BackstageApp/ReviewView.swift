@@ -98,6 +98,18 @@ private enum ReviewQuickLookPresenter {
                         return false
                     }
                     return true
+                },
+                externalEditors: model.availableExternalEditors,
+                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                    ? nil
+                    : "Finish or cancel the current external edit first.",
+                onExternalEdit: { [weak model, weak coordinator] assetID, editor in
+                    coordinator?.dismiss()
+                    model?.requestExternalEdit(with: editor, assetIDs: [assetID])
+                },
+                onChooseExternalEditor: { [weak model, weak coordinator] assetID in
+                    coordinator?.dismiss()
+                    model?.chooseExternalEditor(for: [assetID])
                 }
             )
             model.reviewStatus = "Quick Look opened for the selected Review photo."
@@ -369,6 +381,9 @@ struct ReviewView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(model.reviewItems) { item in
+                                let editorIDs = model.reviewSelection.selectedIDs.contains(item.id)
+                                    ? model.selectedReviewAssetIDs
+                                    : [item.id]
                                 ReviewAssetRow(
                                     item: item,
                                     proposalDraft: model.reviewProposalDrafts[item.id],
@@ -383,6 +398,20 @@ struct ReviewView: View {
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     model.clickReviewItem(item.id, modifiers: NSEvent.modifierFlags)
+                                }
+                                .contextMenu {
+                                    Menu(editorIDs.count > 1 ? "Create with…" : "Edit with…") {
+                                        ForEach(model.availableExternalEditors) { editor in
+                                            Button(editor.name) {
+                                                model.requestExternalEdit(with: editor, assetIDs: editorIDs)
+                                            }
+                                        }
+                                        if !model.availableExternalEditors.isEmpty { Divider() }
+                                        Button("Choose another app…") {
+                                            model.chooseExternalEditor(for: editorIDs)
+                                        }
+                                    }
+                                    .disabled(model.isExternalEditOperationInProgress || model.activeExternalEditJob != nil)
                                 }
                                 .onAppear {
                                     guard !isPreviewMode else { return }
@@ -601,27 +630,7 @@ struct ReviewView: View {
     }
 
     private func chooseExternalEditor() {
-        model.externalEditStatus = "Choose the application that should receive the selected originals."
-        let panel = NSOpenPanel()
-        panel.title = model.selectedReviewAssetIDs.count > 1
-            ? "Choose an app for a panorama or composite"
-            : "Choose an app to edit this photo"
-        panel.prompt = "Choose"
-        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
-        panel.allowedContentTypes = [.application]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else {
-            model.externalEditStatus = "External editor selection cancelled."
-            return
-        }
-        model.requestExternalEdit(with: ExternalEditorProfile(
-            name: FileManager.default.displayName(atPath: url.path)
-                .replacingOccurrences(of: ".app", with: ""),
-            bundleIdentifier: Bundle(url: url)?.bundleIdentifier ?? "",
-            applicationURL: url
-        ))
+        model.chooseExternalEditor(for: model.selectedReviewAssetIDs)
     }
 
     private func chooseExternalEditReturn() {
@@ -678,6 +687,16 @@ struct ReviewView: View {
                 )
             )
             .toggleStyle(.checkbox)
+            Toggle(
+                "RAW backing",
+                isOn: Binding(
+                    get: { model.reviewRawBackingOnly },
+                    set: { model.setReviewRawBackingOnly($0) }
+                )
+            )
+            .toggleStyle(.checkbox)
+            .disabled(model.isRunningReview)
+            .backstageHelp("Show only Review photos whose Apple Photos asset includes a RAW original.")
         }
     }
 }

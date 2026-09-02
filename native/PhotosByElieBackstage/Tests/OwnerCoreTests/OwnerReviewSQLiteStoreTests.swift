@@ -652,6 +652,23 @@ struct OwnerReviewSQLiteStoreTests {
         )
         #expect(videos.items.map(\.id) == ["asset-2"])
 
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+            SET raw_json = json_set(raw_json, '$.resourceFormats', json('["RAW","JPEG"]'))
+            WHERE asset_id = 'asset-1';
+            """
+        )
+        let rawBacked = try store.reviewWindow(
+            fixtureID: "fixture-expo",
+            mode: .full,
+            stateFilters: ["approved"],
+            rawBackingOnly: true
+        )
+        #expect(rawBacked.rawBackingOnly)
+        #expect(rawBacked.items.map(\.id) == ["asset-1"])
+
         let hidden = try store.reviewWindow(
             fixtureID: "fixture-expo",
             mode: .full,

@@ -793,8 +793,9 @@ Clock state: running
 | 2026-08-29 | 11:25 CEST | 11:27 CEST | 0:02 | Confirmed automatic update checking and removal of the manual button while aligning operator documentation with accepted behavior; background documentation, tests, and ticket work excluded. |
 | 2026-08-29 | 12:24 CEST | 12:25 CEST | 0:01 | Authorized direct build 259 installation and accepted installed Gallery Quick Look navigation with automatic selection reveal; background installation, UI probing, and ticket updates excluded. |
 | 2026-08-31 | 22:13 CEST | 22:14 CEST | 0:01 | Authorized coding the local-only Waste Basket Delete Selected repair; background implementation, tests, build, and release work excluded. |
+| 2026-09-02 | 19:48 CEST | 19:59 CEST | 0:03 | Confirmed RAW-backed filtering and expanded the PBB-158 external-editor entry points across Gallery, Review, Uploads, Metadata, and Quick Look; background implementation, tests, and build work excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:38
+Active collaboration time used: 38:41
 Remaining budget: not set

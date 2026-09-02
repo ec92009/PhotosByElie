@@ -899,7 +899,8 @@ struct LifecycleView: View {
                         return false
                     }
                     return true
-                }
+                },
+                externalEditUnavailableReason: "Restore this photo before editing it."
             )
             model.lifecycleStatus = "Quick Look opened for the selected Waste Basket photo."
         }
@@ -2253,6 +2254,18 @@ private struct MetadataGiveBackView: View {
                         model: model,
                         coordinator: quickLook
                     )
+                },
+                externalEditors: model.availableExternalEditors,
+                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                    ? nil
+                    : "Finish or cancel the current external edit first.",
+                onExternalEdit: { currentAssetID, editor in
+                    quickLook.dismiss()
+                    model.requestExternalEdit(with: editor, assetIDs: [currentAssetID])
+                },
+                onChooseExternalEditor: { currentAssetID in
+                    quickLook.dismiss()
+                    model.chooseExternalEditor(for: [currentAssetID])
                 }
             )
             model.metadataReviewStatus = "Quick Look opened for the selected Metadata photo."

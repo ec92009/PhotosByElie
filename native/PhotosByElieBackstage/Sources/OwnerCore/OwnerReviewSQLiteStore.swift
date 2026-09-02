@@ -43,6 +43,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         mode: FixtureReviewMode = .backfill,
         stateFilters: [String]? = ["picked"],
         proposalAvailableOnly: Bool = false,
+        rawBackingOnly: Bool = false,
         mediaFilters: [String] = ["photos", "videos"],
         offset: Int = 0,
         limit: Int = 200,
@@ -138,6 +139,26 @@ public struct OwnerReviewSQLiteStore: Sendable {
                   FROM asset_ai_proposals AS available_proposal
                   WHERE available_proposal.asset_id = asset.asset_id
                     AND available_proposal.status IN ('ready', 'loaded')
+                )
+                """
+            )
+        }
+        if rawBackingOnly {
+            predicates.append(
+                """
+                (
+                  upper(COALESCE(json_extract(asset.raw_json, '$.resourceFormat'), '')) = 'RAW'
+                  OR upper(COALESCE(json_extract(asset.raw_json, '$.preferredResourceFormat'), '')) = 'RAW'
+                  OR EXISTS (
+                    SELECT 1
+                    FROM json_each(COALESCE(json_extract(asset.raw_json, '$.resourceFormats'), '[]')) AS format
+                    WHERE upper(trim(format.value)) = 'RAW'
+                  )
+                  OR EXISTS (
+                    SELECT 1
+                    FROM json_each(COALESCE(json_extract(asset.raw_json, '$.resources'), '[]')) AS resource
+                    WHERE upper(trim(json_extract(resource.value, '$.format'))) = 'RAW'
+                  )
                 )
                 """
             )
@@ -270,6 +291,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             mode: mode,
             reviewStateFilters: outputStates,
             proposalAvailableOnly: proposalAvailableOnly,
+            rawBackingOnly: rawBackingOnly,
             mediaFilters: mediaFilters,
             offset: safeOffset,
             limit: safeLimit,

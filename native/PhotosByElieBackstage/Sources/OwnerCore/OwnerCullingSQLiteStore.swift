@@ -50,6 +50,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
         editorialFilters: [GalleryEditorialFilter] = [],
         deliveryFilters: [GalleryDeliveryFilter] = [],
         sourceFilters: [GallerySourceFilter] = [.available],
+        rawBackingOnly: Bool = false,
         burstsOnly: Bool = false,
         dateFrom: String = "",
         dateTo: String = "",
@@ -307,6 +308,9 @@ public struct OwnerCullingSQLiteStore: Sendable {
             ? Set(cullingBurstRows(rows).compactMap { $0["asset_id"]?.stringValue })
             : []
         let sourceFilteredRows = rows.filter { row in
+            if rawBackingOnly, !cullingHasRAWBacking(row) {
+                return false
+            }
             if burstsOnly,
                !burstAssetIDs.contains(row["asset_id"]?.stringValue ?? "") {
                 return false
@@ -698,6 +702,25 @@ public struct OwnerCullingSQLiteStore: Sendable {
             ])
         }
     }
+}
+
+private func cullingHasRAWBacking(_ row: [String: JSONValue]) -> Bool {
+    let raw = cullingJSONObject(row["raw_json"]?.stringValue ?? "{}")
+    let directFormats = [
+        raw["resourceFormat"]?.stringValue,
+        raw["preferredResourceFormat"]?.stringValue,
+    ]
+    if directFormats.compactMap({ $0 }).contains(where: { $0.caseInsensitiveCompare("RAW") == .orderedSame }) {
+        return true
+    }
+    if raw["resourceFormats"]?.arrayValue?.compactMap(\.stringValue).contains(where: {
+        $0.caseInsensitiveCompare("RAW") == .orderedSame
+    }) == true {
+        return true
+    }
+    return raw["resources"]?.arrayValue?.contains(where: { resource in
+        resource.objectValue?["format"]?.stringValue?.caseInsensitiveCompare("RAW") == .orderedSame
+    }) == true
 }
 
 private func cullingBurstRows(

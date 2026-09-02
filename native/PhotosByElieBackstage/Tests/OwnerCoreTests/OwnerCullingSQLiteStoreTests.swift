@@ -152,6 +152,36 @@ struct OwnerCullingSQLiteStoreTests {
         #expect(combined.summary.universe == 1)
     }
 
+    @Test("Culling RAW filter uses persisted PhotoKit resource formats")
+    func cullingWindowFiltersRAWBackingBeforeSummaries() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("owner-culling-raw-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            UPDATE sidecar_assets
+            SET raw_json = '{"resourceFormats":["RAW","JPEG"],"resources":[{"format":"RAW"}]}'
+            WHERE asset_id = 'asset-1';
+            UPDATE sidecar_assets
+            SET raw_json = '{"resourceFormats":["JPEG"],"resources":[{"format":"JPEG"}]}'
+            WHERE asset_id = 'asset-2';
+            """
+        )
+
+        let window = try OwnerCullingSQLiteStore(databaseURL: databaseURL).cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .allActive,
+            rawBackingOnly: true
+        )
+        #expect(window.items.map(\.id) == ["asset-1"])
+        #expect(window.summary.filtered == 1)
+        #expect(window.summary.universe == 1)
+    }
+
     @Test("Fixture placement stays local and recomputes inherited eligibility")
     func appliesFixtureStateAndUndo() throws {
         let root = FileManager.default.temporaryDirectory

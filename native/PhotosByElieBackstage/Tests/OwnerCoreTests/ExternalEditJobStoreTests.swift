@@ -49,11 +49,25 @@ struct ExternalEditJobStoreTests {
         #expect(try store.activeJob() == nil)
         #expect(try fixture.scalar("SELECT state FROM asset_source_versions WHERE version_id = '\(receipt.sourceVersionID)'") == "candidate")
         #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
+        #expect(try fixture.scalar("SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
         #expect(try fixture.scalar("SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "not-ready")
         #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_lineage WHERE child_source_version_id = '\(receipt.sourceVersionID)'") == "1")
         #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_asset_locks") == "0")
         #expect(FileManager.default.fileExists(atPath: receipt.fileURL.path))
         #expect(FileManager.default.fileExists(atPath: job.workingDirectory.appendingPathComponent("manifest.json").path))
+    }
+
+    @Test("Every screen resolves the same ordered current source inputs")
+    func resolvesCurrentSourcesForSharedUIEntryPoints() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+
+        let sources = try fixture.store.resolveSources(assetIDs: ["asset-2", "asset-1", "asset-2"])
+
+        #expect(sources.map(\.assetID) == ["asset-2", "asset-1"])
+        #expect(sources.map(\.sourceVersionID) == ["source-asset-2", "source-asset-1"])
+        #expect(sources.map(\.photoLibraryIdentifier) == ["asset-2", "asset-1"])
+        #expect(sources.map(\.originalFilename) == ["two.dng", "one.dng"])
     }
 
     @Test("Several selected sources return as one derived asset with ordered lineage")
@@ -196,7 +210,7 @@ private struct Fixture {
       asset_id TEXT PRIMARY KEY, source_anchor TEXT NOT NULL, media_type TEXT,
       filename TEXT, photos_title TEXT, photos_keywords_json TEXT NOT NULL DEFAULT '[]',
       location_keywords_json TEXT NOT NULL DEFAULT '[]', metadata_seed_keywords_json TEXT NOT NULL DEFAULT '[]',
-      raw_json TEXT NOT NULL DEFAULT '{}', indexed_at TEXT, updated_at TEXT
+      raw_json TEXT NOT NULL DEFAULT '{}', missing_at TEXT, indexed_at TEXT, updated_at TEXT
     );
     INSERT INTO sidecar_assets(asset_id, source_anchor, media_type, filename) VALUES
       ('asset-1', 'apple-photos://asset-1', 'photo', 'one.dng'),
@@ -208,6 +222,7 @@ private struct Fixture {
       FOREIGN KEY(asset_id) REFERENCES sidecar_assets(asset_id)
     );
     INSERT INTO sidecar_decisions(asset_id, title) VALUES ('asset-1', 'One'), ('asset-2', 'Two');
+    CREATE TABLE sidecar_tombstones(asset_id TEXT PRIMARY KEY, tombstone_state TEXT NOT NULL);
     CREATE TABLE asset_editorial_state(
       asset_id TEXT PRIMARY KEY, editorial_state TEXT NOT NULL, ai_reasons_json TEXT NOT NULL DEFAULT '[]',
       ai_note TEXT NOT NULL DEFAULT '', ai_attempt_count INTEGER NOT NULL DEFAULT 0,

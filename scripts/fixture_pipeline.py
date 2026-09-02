@@ -1556,6 +1556,7 @@ def fixture_culling_window(
     date_to: str = "",
     megapixel_comparison: str = "",
     megapixel_value: Any = None,
+    raw_backing_only: bool = False,
 ) -> dict[str, Any]:
     """Query one fixture's complete effective universe without materializing ID lists."""
     clean_view = str(view or "undecided").strip().casefold()
@@ -1611,6 +1612,23 @@ def fixture_culling_window(
             """,
             "COALESCE(global_decision.pick_state, '') <> 'hidden'",
         ]
+        if raw_backing_only:
+            predicates.append(
+                """
+                (
+                  upper(COALESCE(json_extract(a.raw_json, '$.resourceFormat'), '')) = 'RAW'
+                  OR upper(COALESCE(json_extract(a.raw_json, '$.preferredResourceFormat'), '')) = 'RAW'
+                  OR EXISTS (
+                    SELECT 1 FROM json_each(COALESCE(json_extract(a.raw_json, '$.resourceFormats'), '[]')) format
+                    WHERE upper(trim(format.value)) = 'RAW'
+                  )
+                  OR EXISTS (
+                    SELECT 1 FROM json_each(COALESCE(json_extract(a.raw_json, '$.resources'), '[]')) resource
+                    WHERE upper(trim(json_extract(resource.value, '$.format'))) = 'RAW'
+                  )
+                )
+                """
+            )
         # Culling is a still-photo source workflow. Snapshot that still-only
         # universe before any interactive status/rating/color/search filter.
         universe_predicates = list(predicates)
@@ -1893,6 +1911,7 @@ def _fixture_review_predicates(
     include_approved: bool = False,
     state_filters: list[str] | None = None,
     proposal_available_only: bool = False,
+    raw_backing_only: bool = False,
     media_filters: list[str] | None = None,
 ) -> tuple[list[str], list[Any]]:
     predicates = [
@@ -1949,6 +1968,23 @@ def _fixture_review_predicates(
               SELECT 1 FROM asset_ai_proposals AS available_proposal
               WHERE available_proposal.asset_id = a.asset_id
                 AND available_proposal.status IN ('ready', 'loaded')
+            )
+            """
+        )
+    if raw_backing_only:
+        predicates.append(
+            """
+            (
+              upper(COALESCE(json_extract(a.raw_json, '$.resourceFormat'), '')) = 'RAW'
+              OR upper(COALESCE(json_extract(a.raw_json, '$.preferredResourceFormat'), '')) = 'RAW'
+              OR EXISTS (
+                SELECT 1 FROM json_each(COALESCE(json_extract(a.raw_json, '$.resourceFormats'), '[]')) format
+                WHERE upper(trim(format.value)) = 'RAW'
+              )
+              OR EXISTS (
+                SELECT 1 FROM json_each(COALESCE(json_extract(a.raw_json, '$.resources'), '[]')) resource
+                WHERE upper(trim(json_extract(resource.value, '$.format'))) = 'RAW'
+              )
             )
             """
         )
@@ -2044,6 +2080,7 @@ def fixture_review_window(
     mode: str = "backfill",
     state_filters: list[str] | None = None,
     proposal_available_only: bool = False,
+    raw_backing_only: bool = False,
     media_filters: list[str] | None = None,
     offset: int = 0,
     limit: int = 200,
@@ -2085,6 +2122,7 @@ def fixture_review_window(
             ),
             state_filters=state_filters,
             proposal_available_only=bool(proposal_available_only),
+            raw_backing_only=bool(raw_backing_only),
             media_filters=media_filters,
         )
         joins = """
@@ -2228,6 +2266,7 @@ def fixture_review_window(
             )
         ),
         "proposalAvailableOnly": bool(proposal_available_only),
+        "rawBackingOnly": bool(raw_backing_only),
         "mediaFilters": list(
             media_filters if media_filters is not None else ["photos"]
         ),

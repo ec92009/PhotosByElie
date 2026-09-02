@@ -63,6 +63,7 @@ struct ReviewHistoryEntry: Identifiable, Sendable {
     var mode: FixtureReviewMode
     var stateFilters: Set<FixtureReviewStateFilter>
     var proposalAvailableOnly: Bool
+    var rawBackingOnly: Bool = false
     var mediaFilters: Set<CullingMediaFilter>
     var search: String
     var offset: Int
@@ -319,6 +320,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var galleryEditorialFilters: Set<GalleryEditorialFilter> = []
     @Published var galleryDeliveryFilters: Set<GalleryDeliveryFilter> = []
     @Published var gallerySourceFilters: Set<GallerySourceFilter> = [.available]
+    @Published var galleryRawBackingOnly = false
     @Published var galleryBurstsOnly = false
     @Published var galleryDateFrom = ""
     @Published var galleryDateTo = ""
@@ -344,6 +346,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewMode: FixtureReviewMode = .full
     @Published var reviewStateFilters: Set<FixtureReviewStateFilter> = [.picked]
     @Published var reviewProposalAvailableOnly = false
+    @Published var reviewRawBackingOnly = false
     @Published var reviewMediaFilters: Set<CullingMediaFilter> = [.photos]
     @Published var reviewSearch = ""
     @Published var reviewWindowOffset = 0
@@ -2746,6 +2749,7 @@ final class BackstageViewModel: ObservableObject {
         galleryEditorialFilters = preset.editorial
         galleryDeliveryFilters = preset.delivery
         gallerySourceFilters = preset.sources
+        galleryRawBackingOnly = false
         galleryBurstsOnly = false
         galleryDateFrom = ""
         galleryDateTo = ""
@@ -2768,6 +2772,7 @@ final class BackstageViewModel: ObservableObject {
         galleryEditorialFilters = preset.editorial
         galleryDeliveryFilters = preset.delivery
         gallerySourceFilters = preset.sources
+        galleryRawBackingOnly = false
         galleryBurstsOnly = false
         galleryDateFrom = ""
         galleryDateTo = ""
@@ -2823,6 +2828,7 @@ final class BackstageViewModel: ObservableObject {
             && galleryEditorialFilters == preset.editorial
             && galleryDeliveryFilters == preset.delivery
             && gallerySourceFilters == preset.sources
+            && !galleryRawBackingOnly
             && !galleryBurstsOnly
             && galleryDateFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && galleryDateTo.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -3198,6 +3204,7 @@ final class BackstageViewModel: ObservableObject {
         galleryEditorialFilters = []
         galleryDeliveryFilters = []
         gallerySourceFilters = Set(GallerySourceFilter.allCases)
+        galleryRawBackingOnly = false
         galleryBurstsOnly = false
         galleryDateFrom = ""
         galleryDateTo = ""
@@ -3497,6 +3504,7 @@ final class BackstageViewModel: ObservableObject {
                 ? nil
                 : galleryMegapixelComparison
             let requestedMegapixelValue = galleryMegapixelThreshold
+            let requestedRawBackingOnly = galleryRawBackingOnly
 
             func requestWindow(offset: Int) async throws -> FixtureCullingWindow {
                 return try await fixtureService.cullingWindow(
@@ -3512,6 +3520,7 @@ final class BackstageViewModel: ObservableObject {
                     editorialFilters: galleryEditorialFilters.sorted(by: { $0.rawValue < $1.rawValue }),
                     deliveryFilters: galleryDeliveryFilters.sorted(by: { $0.rawValue < $1.rawValue }),
                     sourceFilters: gallerySourceFilters.sorted(by: { $0.rawValue < $1.rawValue }),
+                    rawBackingOnly: requestedRawBackingOnly,
                     burstsOnly: galleryBurstsOnly,
                     dateFrom: requestedDateFrom,
                     dateTo: requestedDateTo,
@@ -4357,6 +4366,16 @@ final class BackstageViewModel: ObservableObject {
         Task { await loadFixtureReviewWindow() }
     }
 
+    func setReviewRawBackingOnly(_ enabled: Bool) {
+        preserveCurrentReviewDraft()
+        reviewRawBackingOnly = enabled
+        reviewWindowOffset = 0
+        reviewSelection.clear()
+        clearReviewDraft()
+        reviewStatus = enabled ? "Showing photos with a RAW original…" : "Showing all Review photos…"
+        Task { await loadFixtureReviewWindow() }
+    }
+
     func toggleReviewStateFilter(_ filter: FixtureReviewStateFilter) {
         preserveCurrentReviewDraft()
         if reviewStateFilters.contains(filter) {
@@ -4411,6 +4430,7 @@ final class BackstageViewModel: ObservableObject {
                 mode: reviewMode,
                 stateFilters: reviewStateFilters.map(\.rawValue).sorted(),
                 proposalAvailableOnly: reviewProposalAvailableOnly,
+                rawBackingOnly: reviewRawBackingOnly,
                 mediaFilters: [CullingMediaFilter.photos.rawValue],
                 offset: reviewWindowOffset,
                 limit: reviewWindowLimit,
@@ -4454,6 +4474,7 @@ final class BackstageViewModel: ObservableObject {
             let scope = reviewProposalAvailableOnly
                 ? "\(queueScope.isEmpty ? "No states" : queueScope) with proposals available"
                 : (queueScope.isEmpty ? "No states" : queueScope)
+            let sourceScope = reviewRawBackingOnly ? " with RAW backing" : ""
             let mediaScope: String
             switch reviewMediaFilters {
             case let filters where filters == Set(CullingMediaFilter.selectableCases):
@@ -4465,7 +4486,7 @@ final class BackstageViewModel: ObservableObject {
             default:
                 mediaScope = "items"
             }
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope) • oldest first."
+            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope)\(sourceScope) • oldest first."
             await refreshVisualRepairProposals(for: window.items)
             await refreshAIStatus()
         } catch {
@@ -4664,6 +4685,7 @@ final class BackstageViewModel: ObservableObject {
             mode: reviewMode,
             stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
+            rawBackingOnly: reviewRawBackingOnly,
             mediaFilters: reviewMediaFilters,
             search: reviewSearch,
             offset: reviewWindowOffset,
@@ -4689,6 +4711,7 @@ final class BackstageViewModel: ObservableObject {
                     mode: historyEntry.mode,
                     stateFilters: historyEntry.stateFilters,
                     proposalAvailableOnly: historyEntry.proposalAvailableOnly,
+                    rawBackingOnly: historyEntry.rawBackingOnly,
                     mediaFilters: historyEntry.mediaFilters,
                     search: historyEntry.search,
                     offset: historyEntry.offset,
@@ -4733,6 +4756,7 @@ final class BackstageViewModel: ObservableObject {
             mode: reviewMode,
             stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
+            rawBackingOnly: reviewRawBackingOnly,
             mediaFilters: reviewMediaFilters,
             search: reviewSearch,
             offset: reviewWindowOffset,
@@ -4917,6 +4941,7 @@ final class BackstageViewModel: ObservableObject {
             mode: reviewMode,
             stateFilters: reviewStateFilters,
             proposalAvailableOnly: reviewProposalAvailableOnly,
+            rawBackingOnly: reviewRawBackingOnly,
             mediaFilters: reviewMediaFilters,
             search: reviewSearch,
             offset: reviewWindowOffset,
@@ -4975,6 +5000,7 @@ final class BackstageViewModel: ObservableObject {
                         mode: historyEntry.mode,
                         stateFilters: historyEntry.stateFilters,
                         proposalAvailableOnly: historyEntry.proposalAvailableOnly,
+                        rawBackingOnly: historyEntry.rawBackingOnly,
                         mediaFilters: historyEntry.mediaFilters,
                         search: historyEntry.search,
                         offset: historyEntry.offset,
@@ -5395,6 +5421,7 @@ final class BackstageViewModel: ObservableObject {
                     reviewMode = entry.mode
                     reviewStateFilters = entry.stateFilters
                     reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                    reviewRawBackingOnly = entry.rawBackingOnly
                     reviewMediaFilters = entry.mediaFilters
                     reviewSearch = entry.search
                     reviewWindowOffset = entry.offset
@@ -5466,6 +5493,7 @@ final class BackstageViewModel: ObservableObject {
                     reviewMode = entry.mode
                     reviewStateFilters = entry.stateFilters
                     reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                    reviewRawBackingOnly = entry.rawBackingOnly
                     reviewMediaFilters = [.photos]
                     reviewSearch = entry.search
                     reviewWindowOffset = entry.offset
@@ -5486,6 +5514,7 @@ final class BackstageViewModel: ObservableObject {
                 reviewMode = entry.mode
                 reviewStateFilters = entry.stateFilters
                 reviewProposalAvailableOnly = entry.proposalAvailableOnly
+                reviewRawBackingOnly = entry.rawBackingOnly
                 reviewMediaFilters = [.photos]
                 reviewSearch = entry.search
                 reviewWindowOffset = entry.offset
@@ -5503,6 +5532,7 @@ final class BackstageViewModel: ObservableObject {
                         mode: entry.mode,
                         stateFilters: entry.stateFilters.map(\.rawValue).sorted(),
                         proposalAvailableOnly: entry.proposalAvailableOnly,
+                        rawBackingOnly: entry.rawBackingOnly,
                         mediaFilters: [CullingMediaFilter.photos.rawValue],
                         offset: entry.offset,
                         limit: reviewWindowLimit,
@@ -6010,49 +6040,82 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestExternalEdit(with editor: ExternalEditorProfile) {
+        requestExternalEdit(with: editor, assetIDs: selectedReviewAssetIDs)
+    }
+
+    private func announceExternalEdit(_ message: String) {
+        externalEditStatus = message
+        cullingStatus = message
+        reviewStatus = message
+        nativeUploadStatus = message
+        metadataReviewStatus = message
+    }
+
+    func requestExternalEdit(with editor: ExternalEditorProfile, assetIDs: [String]) {
         guard !isPreparingExternalEdit, !isImportingExternalEdit else {
-            externalEditStatus = "Finish the current external-edit action first."
+            announceExternalEdit("Finish the current external-edit action first.")
             return
         }
-        guard canStartExternalEdit else {
-            externalEditStatus = activeExternalEditJob == nil
-                ? "Select one or more still photos in Review."
-                : "Finish or cancel the current external edit before starting another."
+        let orderedIDs = assetIDs.reduce(into: [String]()) { result, id in
+            if !id.isEmpty, !result.contains(id) { result.append(id) }
+        }
+        guard activeExternalEditJob == nil, !orderedIDs.isEmpty else {
+            announceExternalEdit(activeExternalEditJob == nil
+                ? "Select one or more still photos."
+                : "Finish or cancel the current external edit before starting another.")
             return
         }
-        let items = reviewItems.filter { selectedReviewAssetIDs.contains($0.id) }
         UserDefaults.standard.set(editor.applicationURL.path, forKey: "externalEditor.applicationPath")
         UserDefaults.standard.set(editor.name, forKey: "externalEditor.name")
         isPreparingExternalEdit = true
-        externalEditStatus = items.count == 1
+        announceExternalEdit(orderedIDs.count == 1
             ? "Preparing the original for \(editor.name)…"
-            : "Preparing \(items.count.formatted()) ordered originals for \(editor.name)…"
+            : "Preparing \(orderedIDs.count.formatted()) ordered originals for \(editor.name)…")
         Task { [weak self] in
-            await self?.performExternalEdit(editor: editor, items: items)
+            await self?.performExternalEdit(editor: editor, assetIDs: orderedIDs)
         }
+    }
+
+    func chooseExternalEditor(for assetIDs: [String]) {
+        announceExternalEdit("Choose the application that should receive the selected originals.")
+        let panel = NSOpenPanel()
+        panel.title = assetIDs.count > 1
+            ? "Choose an app for a panorama or composite"
+            : "Choose an app to edit this photo"
+        panel.prompt = "Choose"
+        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
+        panel.allowedContentTypes = [.application]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            announceExternalEdit("External editor selection cancelled.")
+            return
+        }
+        requestExternalEdit(
+            with: ExternalEditorProfile(
+                name: FileManager.default.displayName(atPath: url.path)
+                    .replacingOccurrences(of: ".app", with: ""),
+                bundleIdentifier: Bundle(url: url)?.bundleIdentifier ?? "",
+                applicationURL: url
+            ),
+            assetIDs: assetIDs
+        )
     }
 
     private func performExternalEdit(
         editor: ExternalEditorProfile,
-        items: [FixtureReviewItem]
+        assetIDs: [String]
     ) async {
         defer { isPreparingExternalEdit = false }
         guard let externalEditJobStore else {
-            externalEditStatus = "Owner.sqlite is unavailable for external editing."
+            announceExternalEdit("Owner.sqlite is unavailable for external editing.")
             return
         }
         var job: ExternalEditJob?
         do {
-            let sources = items.enumerated().map { position, item in
-                ExternalEditSource(
-                    position: position,
-                    assetID: item.id,
-                    sourceVersionID: item.sourceVersionID,
-                    photoLibraryIdentifier: item.photoLibraryIdentifier,
-                    originalFilename: item.filename
-                )
-            }
-            let kind: ExternalEditKind = items.count == 1 ? .edit : .create
+            let sources = try externalEditJobStore.resolveSources(assetIDs: assetIDs)
+            let kind: ExternalEditKind = sources.count == 1 ? .edit : .create
             job = try externalEditJobStore.createJob(
                 fixtureID: selectedFixtureID,
                 kind: kind,
@@ -6063,11 +6126,11 @@ final class BackstageViewModel: ObservableObject {
             activeExternalEditJob = job
             guard let job else { throw ExternalEditJobError.jobNotFound }
             var receipts: [PhotoExportReceipt] = []
-            for item in items {
-                externalEditStatus = "Exporting original \(receipts.count + 1) of \(items.count) for \(editor.name)…"
+            for source in sources {
+                announceExternalEdit("Exporting original \(receipts.count + 1) of \(sources.count) for \(editor.name)…")
                 receipts.append(try await exportOriginalForAsset(
-                    forAssetID: item.id,
-                    preferredIdentifier: item.photoLibraryIdentifier,
+                    forAssetID: source.assetID,
+                    preferredIdentifier: source.photoLibraryIdentifier,
                     to: job.inputDirectory,
                     strictMaster: true
                 ))
@@ -6077,16 +6140,16 @@ final class BackstageViewModel: ObservableObject {
                 receipts: receipts,
                 now: Date()
             )
-            externalEditStatus = "Opening \(receipts.count.formatted()) original\(receipts.count == 1 ? "" : "s") in \(editor.name)…"
+            announceExternalEdit("Opening \(receipts.count.formatted()) original\(receipts.count == 1 ? "" : "s") in \(editor.name)…")
             try await openInExternalEditor(
                 receipts.map(\.destination),
                 applicationURL: editor.applicationURL
             )
             let launched = try externalEditJobStore.recordLaunched(jobID: prepared.id, now: Date())
             activeExternalEditJob = launched
-            externalEditStatus = kind == .edit
+            announceExternalEdit(kind == .edit
                 ? "Editing in \(editor.name). Export the finished JPG or TIFF, then choose Return finished file."
-                : "Creating in \(editor.name). Export one finished panorama or composite, then choose Return finished file."
+                : "Creating in \(editor.name). Export one finished panorama or composite, then choose Return finished file.")
         } catch {
             if let job {
                 try? externalEditJobStore.fail(
@@ -6096,7 +6159,7 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
             activeExternalEditJob = nil
-            externalEditStatus = "External edit failed: \(userFacingMessage(for: error))"
+            announceExternalEdit("External edit failed: \(userFacingMessage(for: error))")
         }
     }
 

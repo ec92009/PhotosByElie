@@ -338,6 +338,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     private var shortcutMonitor: Any?
     private var previewIndexObservation: NSKeyValueObservation?
     private var previewPanelObservers: [NSObjectProtocol] = []
+    private var externalEditors: [ExternalEditorProfile] = []
+    private var onExternalEdit: ((String, ExternalEditorProfile) -> Void)?
+    private var onChooseExternalEditor: ((String) -> Void)?
+    private var externalEditUnavailableReason: String?
     private weak var configuredPreviewPanel: QLPreviewPanel?
     private let metadataPanel = NSVisualEffectView()
     private let metadataStack = NSStackView()
@@ -352,7 +356,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         window.isOpaque = false
         window.hasShadow = true
         window.hidesOnDeactivate = false
-        window.ignoresMouseEvents = true
+        window.ignoresMouseEvents = false
         window.isReleasedWhenClosed = false
         window.collectionBehavior = Self.originSpaceCollectionBehavior(
             from: [.fullScreenAuxiliary]
@@ -427,12 +431,20 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         startingAt index: Int = 0,
         metadata: [BackstageQuickLookMetadata] = [],
         presentation candidate: PresentationID,
-        onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil
+        onShortcut: ((BackstageQuickLookShortcut, String) -> Bool)? = nil,
+        externalEditors: [ExternalEditorProfile] = [],
+        externalEditUnavailableReason: String? = nil,
+        onExternalEdit: ((String, ExternalEditorProfile) -> Void)? = nil,
+        onChooseExternalEditor: ((String) -> Void)? = nil
     ) {
         guard isOwnerActive else { return }
         guard isCurrentPresentation(candidate) else { return }
         guard !urls.isEmpty else { return }
         claimSharedPreviewPanelOwnership()
+        self.externalEditors = externalEditors
+        self.externalEditUnavailableReason = externalEditUnavailableReason
+        self.onExternalEdit = onExternalEdit
+        self.onChooseExternalEditor = onChooseExternalEditor
         items = urls.enumerated().map { offset, url in
             PreviewItem(
                 url: url,
@@ -484,6 +496,10 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         }
         configuredPreviewPanel = nil
         items = []
+        externalEditors = []
+        externalEditUnavailableReason = nil
+        onExternalEdit = nil
+        onChooseExternalEditor = nil
         previewIndexObservation = nil
         removePreviewPanelObservers()
         removeShortcutMonitor()
@@ -681,6 +697,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         addMetadataRow("Rating", value: item.rating == 0 ? "Unrated" : String(repeating: "★", count: item.rating))
         addMetadataRow("Color", value: item.color.isEmpty ? "None" : item.color.capitalized)
         addMetadataRow("State", value: item.state.capitalized)
+        addExternalEditorMenu()
         let shortcuts = NSTextField(
             wrappingLabelWithString: item.shortcutHint
         )
@@ -692,10 +709,46 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         }
     }
 
+    private func addExternalEditorMenu() {
+        guard !externalEditors.isEmpty || onChooseExternalEditor != nil || externalEditUnavailableReason != nil else {
+            return
+        }
+        let menu = NSPopUpButton(frame: .zero, pullsDown: true)
+        menu.addItem(withTitle: "Edit with…")
+        menu.item(at: 0)?.isEnabled = false
+        for (index, editor) in externalEditors.enumerated() {
+            menu.addItem(withTitle: editor.name)
+            menu.lastItem?.tag = index + 1
+        }
+        if onChooseExternalEditor != nil {
+            menu.menu?.addItem(.separator())
+            menu.addItem(withTitle: "Choose another app…")
+            menu.lastItem?.tag = -1
+        }
+        menu.target = self
+        menu.action = #selector(selectQuickLookEditor(_:))
+        if let externalEditUnavailableReason {
+            menu.isEnabled = false
+            menu.toolTip = externalEditUnavailableReason
+        }
+        metadataStack.addArrangedSubview(menu)
+    }
+
+    @objc private func selectQuickLookEditor(_ sender: NSPopUpButton) {
+        guard let assetID = currentMetadata?.assetID,
+              let item = sender.selectedItem else { return }
+        if item.tag == -1 {
+            onChooseExternalEditor?(assetID)
+        } else if item.tag > 0, externalEditors.indices.contains(item.tag - 1) {
+            onExternalEdit?(assetID, externalEditors[item.tag - 1])
+        }
+        sender.selectItem(at: 0)
+    }
+
     private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
         let placement = currentMetadataPlacement
         let gap: CGFloat = 8
-        let metadataHeight: CGFloat = 335
+        let metadataHeight: CGFloat = 375
         let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
         var panelFrame = panel.frame
 

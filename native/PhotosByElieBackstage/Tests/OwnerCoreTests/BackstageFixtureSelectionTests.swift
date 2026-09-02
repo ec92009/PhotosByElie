@@ -4168,6 +4168,7 @@ private actor StaticCullingWindowService: LocalFixtureReviewServing, LocalFixtur
         editorialFilters: [GalleryEditorialFilter],
         deliveryFilters: [GalleryDeliveryFilter],
         sourceFilters: [GallerySourceFilter],
+        rawBackingOnly: Bool,
         burstsOnly: Bool,
         dateFrom: String,
         dateTo: String,

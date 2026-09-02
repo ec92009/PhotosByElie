@@ -117,6 +117,7 @@ public enum ExternalEditJobError: LocalizedError, Equatable {
 }
 
 public protocol ExternalEditJobStoring: Sendable {
+    func resolveSources(assetIDs: [String]) throws -> [ExternalEditSource]
     func createJob(
         fixtureID: String,
         kind: ExternalEditKind,
@@ -371,6 +372,20 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
                 }
                 try execute(
                     database,
+                    """
+                    INSERT INTO fixture_asset_decisions(
+                      fixture_id, asset_id, placement_state, eligibility_state,
+                      source, last_action, created_at, updated_at
+                    ) VALUES (?, ?, 'picked', 'active', 'native', 'external-edit-return', ?, ?)
+                    ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
+                      placement_state = 'picked', eligibility_state = 'active',
+                      source = excluded.source, last_action = excluded.last_action,
+                      updated_at = excluded.updated_at
+                    """,
+                    [job.fixtureID, destinationAssetID, timestamp, timestamp]
+                )
+                try execute(
+                    database,
                     "UPDATE asset_source_versions SET state = 'superseded', superseded_at = ? WHERE asset_id = ? AND state = 'candidate'",
                     [timestamp, destinationAssetID]
                 )
@@ -501,6 +516,63 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             whereClause: "state IN ('preparing', 'editing') ORDER BY created_at DESC LIMIT 1",
             bindings: []
         )
+    }
+
+    /// Resolve editor inputs from durable Owner state so every screen can use
+    /// the same exact current-source contract.
+    public func resolveSources(assetIDs: [String]) throws -> [ExternalEditSource] {
+        let orderedIDs = assetIDs.reduce(into: [String]()) { result, id in
+            let clean = id.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty, !result.contains(clean) { result.append(clean) }
+        }
+        guard !orderedIDs.isEmpty else { throw ExternalEditJobError.invalidSources }
+        let database = try openReadable()
+        defer { sqlite3_close_v2(database) }
+
+        var resolved: [ExternalEditSource] = []
+        for (position, assetID) in orderedIDs.enumerated() {
+            var statement: OpaquePointer?
+            let sql = """
+            SELECT COALESCE((
+                     SELECT version_id
+                     FROM asset_source_versions
+                     WHERE asset_id = asset.asset_id AND source_exists = 1
+                     ORDER BY created_at DESC, version_id DESC LIMIT 1
+                   ), '') AS source_version_id,
+                   COALESCE(
+                     NULLIF(json_extract(asset.raw_json, '$.localIdentifier'), ''),
+                     NULLIF(json_extract(asset.raw_json, '$.cloudIdentifier'), ''),
+                     NULLIF(json_extract(asset.raw_json, '$.phCloudIdentifier'), ''),
+                     NULLIF(replace(replace(asset.source_anchor, 'apple-photos://', ''), 'apple-photos-cloud://', ''), ''),
+                     asset.asset_id
+                   ) AS photo_library_identifier,
+                   COALESCE(asset.filename, '') AS filename
+            FROM sidecar_assets AS asset
+            WHERE asset.asset_id = ?
+              AND lower(COALESCE(asset.media_type, 'photo')) != 'video'
+              AND COALESCE(asset.missing_at, '') = ''
+              AND NOT EXISTS (
+                SELECT 1 FROM sidecar_tombstones AS tombstone
+                WHERE tombstone.asset_id = asset.asset_id
+                  AND tombstone.tombstone_state = 'active'
+              )
+            """
+            guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+                  let statement else { throw databaseError(database) }
+            defer { sqlite3_finalize(statement) }
+            bind([assetID], to: statement)
+            guard sqlite3_step(statement) == SQLITE_ROW else {
+                throw ExternalEditJobError.invalidSources
+            }
+            resolved.append(ExternalEditSource(
+                position: position,
+                assetID: assetID,
+                sourceVersionID: text(statement, 0),
+                photoLibraryIdentifier: text(statement, 1),
+                originalFilename: text(statement, 2)
+            ))
+        }
+        return resolved
     }
 
     public func recoverInterruptedPreparation(now: Date = Date()) throws -> Int {

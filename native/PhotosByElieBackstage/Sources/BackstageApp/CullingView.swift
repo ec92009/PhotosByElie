@@ -145,6 +145,18 @@ private enum CullingQuickLookPresenter {
                         return false
                     }
                     return true
+                },
+                externalEditors: model.availableExternalEditors,
+                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                    ? nil
+                    : "Finish or cancel the current external edit first.",
+                onExternalEdit: { [weak model, weak coordinator] assetID, editor in
+                    coordinator?.dismiss()
+                    model?.requestExternalEdit(with: editor, assetIDs: [assetID])
+                },
+                onChooseExternalEditor: { [weak model, weak coordinator] assetID in
+                    coordinator?.dismiss()
+                    model?.chooseExternalEditor(for: [assetID])
                 }
             )
             model.cullingStatus = "Quick Look opened for the selected Gallery photo."
@@ -621,6 +633,9 @@ struct CullingView: View {
                         )
                     )
                 }
+                Divider()
+                Toggle("RAW backing", isOn: $model.galleryRawBackingOnly)
+                    .backstageHelp("Show only photos whose Apple Photos asset includes a RAW original.")
             }
             .accessibilityLabel("Source availability filters")
             Button("Clear filters") { model.clearCullingFilters() }
@@ -636,6 +651,7 @@ struct CullingView: View {
         .onChange(of: model.galleryEditorialFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.galleryDeliveryFilters) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.gallerySourceFilters) { _, _ in model.applyCullingFilters() }
+        .onChange(of: model.galleryRawBackingOnly) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.galleryBurstsOnly) { _, _ in model.applyCullingFilters() }
         .onChange(of: model.galleryDateFrom) { _, _ in model.scheduleCullingSearchRefresh() }
         .onChange(of: model.galleryDateTo) { _, _ in model.scheduleCullingSearchRefresh() }
@@ -770,6 +786,9 @@ struct CullingView: View {
             spacing: CGFloat(CullingGridLayout.spacing)
         ) {
             ForEach(model.visibleCullingAssets) { asset in
+                let editorIDs = model.cullingSelection.selectedIDs.contains(asset.id)
+                    ? model.selectedCullingAssetIDs
+                    : [asset.id]
                 CullingAssetCard(
                     asset: asset,
                     state: model.cullingStates[asset.id],
@@ -800,6 +819,20 @@ struct CullingView: View {
                 .onTapGesture {
                     model.clickCullingAsset(asset.id, modifiers: NSEvent.modifierFlags)
                     Task { await model.loadPreview() }
+                }
+                .contextMenu {
+                    Menu(editorIDs.count > 1 ? "Create with…" : "Edit with…") {
+                        ForEach(model.availableExternalEditors) { editor in
+                            Button(editor.name) {
+                                model.requestExternalEdit(with: editor, assetIDs: editorIDs)
+                            }
+                        }
+                        if !model.availableExternalEditors.isEmpty { Divider() }
+                        Button("Choose another app…") {
+                            model.chooseExternalEditor(for: editorIDs)
+                        }
+                    }
+                    .disabled(model.isExternalEditOperationInProgress || model.activeExternalEditJob != nil)
                 }
                 .modifier(CullingCardVisibilityObserver(
                     model: model, asset: asset, isPreviewMode: isPreviewMode
@@ -1119,6 +1152,7 @@ struct CullingView: View {
             model.galleryEditorialFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.galleryDeliveryFilters.map(\.rawValue).sorted().joined(separator: ","),
             model.gallerySourceFilters.map(\.rawValue).sorted().joined(separator: ","),
+            model.galleryRawBackingOnly ? "raw" : "any-format",
             model.galleryBurstsOnly ? "bursts" : "all-captures",
             model.galleryDateFrom,
             model.galleryDateTo,

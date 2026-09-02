@@ -982,6 +982,7 @@ public struct FixtureReviewWindow: Sendable, Equatable {
     public var mode: FixtureReviewMode
     public var reviewStateFilters: [String]
     public var proposalAvailableOnly: Bool
+    public var rawBackingOnly: Bool
     public var mediaFilters: [String]
     public var offset: Int
     public var limit: Int
@@ -997,6 +998,7 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         mode: FixtureReviewMode,
         reviewStateFilters: [String] = [],
         proposalAvailableOnly: Bool = false,
+        rawBackingOnly: Bool = false,
         mediaFilters: [String] = ["photos", "videos"],
         offset: Int,
         limit: Int,
@@ -1011,6 +1013,7 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         self.mode = mode
         self.reviewStateFilters = reviewStateFilters
         self.proposalAvailableOnly = proposalAvailableOnly
+        self.rawBackingOnly = rawBackingOnly
         self.mediaFilters = mediaFilters
         self.offset = offset
         self.limit = limit
@@ -1029,6 +1032,7 @@ public struct FixtureReviewWindow: Sendable, Equatable {
         ) ?? .backfill
         reviewStateFilters = json["reviewStateFilters"]?.arrayValue?.compactMap(\.stringValue) ?? []
         proposalAvailableOnly = json["proposalAvailableOnly"]?.boolValue ?? false
+        rawBackingOnly = json["rawBackingOnly"]?.boolValue ?? false
         mediaFilters = json["mediaFilters"]?.arrayValue?.compactMap(\.stringValue)
             ?? ["photos", "videos"]
         offset = json["offset"]?.intValue ?? 0
@@ -1400,6 +1404,7 @@ public actor FixtureWorkflowService {
         editorialFilters: [GalleryEditorialFilter] = [],
         deliveryFilters: [GalleryDeliveryFilter] = [],
         sourceFilters: [GallerySourceFilter] = [.available],
+        rawBackingOnly: Bool = false,
         burstsOnly: Bool = false,
         dateFrom: String = "",
         dateTo: String = "",
@@ -1421,6 +1426,7 @@ public actor FixtureWorkflowService {
                editorialFilters: editorialFilters,
                deliveryFilters: deliveryFilters,
                sourceFilters: sourceFilters,
+               rawBackingOnly: rawBackingOnly,
                burstsOnly: burstsOnly,
                dateFrom: dateFrom,
                dateTo: dateTo,
@@ -1442,6 +1448,7 @@ public actor FixtureWorkflowService {
             "editorialFilters": .array(editorialFilters.map { .string($0.rawValue) }),
             "deliveryFilters": .array(deliveryFilters.map { .string($0.rawValue) }),
             "sourceFilters": .array(sourceFilters.map { .string($0.rawValue) }),
+            "rawBackingOnly": .bool(rawBackingOnly),
             "burstsOnly": .bool(burstsOnly),
             "dateFrom": .string(dateFrom),
             "dateTo": .string(dateTo),
@@ -1565,6 +1572,7 @@ public actor FixtureWorkflowService {
         mode: FixtureReviewMode = .backfill,
         stateFilters: [String] = ["picked"],
         proposalAvailableOnly: Bool = false,
+        rawBackingOnly: Bool = false,
         mediaFilters: [String] = ["photos"],
         offset: Int = 0,
         limit: Int = 200,
@@ -1577,6 +1585,7 @@ public actor FixtureWorkflowService {
                mode: mode,
                stateFilters: stateFilters,
                proposalAvailableOnly: proposalAvailableOnly,
+               rawBackingOnly: rawBackingOnly,
                mediaFilters: mediaFilters,
                offset: offset,
                limit: limit,
@@ -1589,6 +1598,7 @@ public actor FixtureWorkflowService {
             "reviewMode": .string(mode.rawValue),
             "reviewStateFilters": .array(stateFilters.map(JSONValue.string)),
             "proposalAvailableOnly": .bool(proposalAvailableOnly),
+            "rawBackingOnly": .bool(rawBackingOnly),
             "mediaFilters": .array(mediaFilters.map(JSONValue.string)),
             "offset": .number(Double(max(0, offset))),
             "limit": .number(Double(max(1, min(500, limit)))),

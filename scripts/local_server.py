@@ -3557,6 +3557,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 date_to=str(manifest.get("dateTo") or ""),
                 megapixel_comparison=str(manifest.get("megapixelComparison") or ""),
                 megapixel_value=manifest.get("megapixelValue"),
+                raw_backing_only=bool(manifest.get("rawBackingOnly") or False),
             ),
         })
     elif mode == "fixture-state-apply":
@@ -3586,6 +3587,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
                 proposal_available_only=bool(
                     manifest.get("proposalAvailableOnly") or False
                 ),
+                raw_backing_only=bool(manifest.get("rawBackingOnly") or False),
                 media_filters=(
                     manifest.get("mediaFilters")
                     if "mediaFilters" in manifest

@@ -798,6 +798,59 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             );
             """
         )
+        try migrateLegacyLineageSchemaIfNeeded(database)
+    }
+
+    /// Early PBB-158 builds created lineage rows against a destination asset.
+    /// Returned edits are versioned, so current lineage belongs to the returned
+    /// source version instead. Upgrade that empty/legacy table in place before
+    /// accepting a return from an edit job created by an earlier build.
+    private func migrateLegacyLineageSchemaIfNeeded(_ database: OpaquePointer) throws {
+        guard try tableExists(database, name: "external_edit_lineage"),
+              try tableHasColumn(database, table: "external_edit_lineage", column: "destination_asset_id"),
+              try !tableHasColumn(database, table: "external_edit_lineage", column: "child_source_version_id") else {
+            return
+        }
+        try transaction(database) {
+            try execScript(
+                database,
+                """
+                ALTER TABLE external_edit_lineage RENAME TO external_edit_lineage_legacy;
+                CREATE TABLE external_edit_lineage (
+                  child_source_version_id TEXT NOT NULL,
+                  parent_position INTEGER NOT NULL,
+                  parent_asset_id TEXT NOT NULL,
+                  parent_source_version_id TEXT NOT NULL DEFAULT '',
+                  job_id TEXT NOT NULL,
+                  created_at TEXT NOT NULL,
+                  PRIMARY KEY(child_source_version_id, parent_position),
+                  FOREIGN KEY(child_source_version_id) REFERENCES asset_source_versions(version_id),
+                  FOREIGN KEY(parent_asset_id) REFERENCES sidecar_assets(asset_id),
+                  FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id)
+                );
+                INSERT OR IGNORE INTO external_edit_lineage(
+                  child_source_version_id, parent_position, parent_asset_id,
+                  parent_source_version_id, job_id, created_at
+                )
+                SELECT
+                  COALESCE(NULLIF(job.returned_source_version_id, ''), returned.source_version_id),
+                  legacy.parent_position, legacy.parent_asset_id,
+                  legacy.parent_source_version_id, legacy.job_id, legacy.created_at
+                FROM external_edit_lineage_legacy AS legacy
+                JOIN external_edit_jobs AS job ON job.job_id = legacy.job_id
+                LEFT JOIN external_edit_returns AS returned ON returned.job_id = legacy.job_id
+                WHERE COALESCE(NULLIF(job.returned_source_version_id, ''), returned.source_version_id) IS NOT NULL
+                  AND COALESCE(NULLIF(job.returned_source_version_id, ''), returned.source_version_id) <> ''
+                  AND EXISTS (
+                    SELECT 1 FROM asset_source_versions AS version
+                    WHERE version.version_id = COALESCE(
+                      NULLIF(job.returned_source_version_id, ''), returned.source_version_id
+                    )
+                  );
+                DROP TABLE external_edit_lineage_legacy;
+                """
+            )
+        }
     }
 
     private func readJob(_ database: OpaquePointer, id: String) throws -> ExternalEditJob? {
@@ -937,6 +990,24 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         ) == SQLITE_OK, let statement else { throw databaseError(database) }
         defer { sqlite3_finalize(statement) }
         bind([name], to: statement)
+        return sqlite3_step(statement) == SQLITE_ROW
+    }
+
+    private func tableHasColumn(
+        _ database: OpaquePointer,
+        table: String,
+        column: String
+    ) throws -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(
+            database,
+            "SELECT 1 FROM pragma_table_info(?) WHERE name = ? LIMIT 1",
+            -1,
+            &statement,
+            nil
+        ) == SQLITE_OK, let statement else { throw databaseError(database) }
+        defer { sqlite3_finalize(statement) }
+        bind([table, column], to: statement)
         return sqlite3_step(statement) == SQLITE_ROW
     }
 

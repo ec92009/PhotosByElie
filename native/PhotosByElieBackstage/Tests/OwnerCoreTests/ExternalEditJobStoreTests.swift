@@ -57,6 +57,43 @@ struct ExternalEditJobStoreTests {
         #expect(FileManager.default.fileExists(atPath: job.workingDirectory.appendingPathComponent("manifest.json").path))
     }
 
+    @Test("A return upgrades the legacy asset-based lineage table")
+    func legacyLineageRoundTrip() throws {
+        let fixture = try Fixture(legacyLineageSchema: true)
+        defer { fixture.remove() }
+        let store = fixture.store
+        var job = try store.createJob(
+            fixtureID: "fixture-expo",
+            kind: .edit,
+            editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")],
+            now: fixture.date
+        )
+        let input = job.inputDirectory.appendingPathComponent("IMG_0001.DNG")
+        try Data("raw-one".utf8).write(to: input)
+        job = try store.recordPrepared(
+            jobID: job.id,
+            receipts: [PhotoExportReceipt(
+                assetID: "photos-1",
+                filename: "IMG_0001.DNG",
+                destination: input,
+                uniformTypeIdentifier: "com.adobe.raw-image",
+                byteCount: 7,
+                checksumSHA256: "source-checksum"
+            )],
+            now: fixture.date
+        )
+        _ = try store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("developed-one".utf8).write(to: returned)
+
+        let receipt = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM pragma_table_info('external_edit_lineage') WHERE name = 'child_source_version_id'") == "1")
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM pragma_table_info('external_edit_lineage') WHERE name = 'destination_asset_id'") == "0")
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_lineage WHERE child_source_version_id = '\(receipt.sourceVersionID)'") == "1")
+    }
+
     @Test("Every screen resolves the same ordered current source inputs")
     func resolvesCurrentSourcesForSharedUIEntryPoints() throws {
         let fixture = try Fixture()
@@ -147,7 +184,7 @@ private struct Fixture {
     let jobsRoot: URL
     let date = Date(timeIntervalSince1970: 1_800_000_000)
 
-    init() throws {
+    init(legacyLineageSchema: Bool = false) throws {
         root = FileManager.default.temporaryDirectory
             .appendingPathComponent("external-edit-\(UUID().uuidString)", isDirectory: true)
         databaseURL = root.appendingPathComponent("Owner.sqlite")
@@ -160,6 +197,11 @@ private struct Fixture {
         defer { sqlite3_close_v2(database) }
         guard sqlite3_exec(database, Self.schema, nil, nil, nil) == SQLITE_OK else {
             throw ExternalEditJobError.database(String(cString: sqlite3_errmsg(database)))
+        }
+        if legacyLineageSchema {
+            guard sqlite3_exec(database, Self.legacyLineageSchema, nil, nil, nil) == SQLITE_OK else {
+                throw ExternalEditJobError.database(String(cString: sqlite3_errmsg(database)))
+            }
         }
     }
 
@@ -263,6 +305,21 @@ private struct Fixture {
       asset_id TEXT PRIMARY KEY, mock_state TEXT NOT NULL, mock_run_id TEXT,
       uploaded_at TEXT, updated_at TEXT,
       FOREIGN KEY(asset_id) REFERENCES sidecar_assets(asset_id)
+    );
+    """
+
+    private static let legacyLineageSchema = """
+    CREATE TABLE external_edit_lineage (
+      destination_asset_id TEXT NOT NULL,
+      parent_position INTEGER NOT NULL,
+      parent_asset_id TEXT NOT NULL,
+      parent_source_version_id TEXT NOT NULL DEFAULT '',
+      job_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(destination_asset_id, parent_position),
+      FOREIGN KEY(destination_asset_id) REFERENCES sidecar_assets(asset_id),
+      FOREIGN KEY(parent_asset_id) REFERENCES sidecar_assets(asset_id),
+      FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id)
     );
     """
 }

@@ -7,6 +7,8 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / "scripts" / "verify_backstage_release_source.zsh"
+BUILD_VERIFIER = ROOT / "scripts" / "verify_backstage_build_source.zsh"
+BUILD_SCRIPT = ROOT / "native" / "PhotosByElieBackstage" / "scripts" / "build-app.zsh"
 CANONICAL_REF = "refs/heads/release/backstage"
 
 
@@ -56,6 +58,20 @@ class BackstageReleaseSourceTest(unittest.TestCase):
             text=True,
         )
 
+    def verify_build(self, revision):
+        return subprocess.run(
+            [
+                str(BUILD_VERIFIER),
+                "--repo",
+                str(self.repo),
+                "--revision",
+                revision,
+            ],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+        )
+
     def add_second_commit(self):
         (self.repo / "release.txt").write_text("second\n", encoding="utf-8")
         self.git("add", "release.txt")
@@ -93,6 +109,38 @@ class BackstageReleaseSourceTest(unittest.TestCase):
                 result = self.verify(self.first, invalid_ref)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("valid full branch ref", result.stderr)
+
+    def test_clean_build_source_passes(self):
+        result = self.verify_build(self.first)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(self.first, result.stdout)
+
+    def test_dirty_tracked_and_untracked_build_sources_fail_closed(self):
+        (self.repo / "release.txt").write_text("dirty\n", encoding="utf-8")
+        tracked = self.verify_build(self.first)
+        self.assertNotEqual(tracked.returncode, 0)
+        self.assertIn("build source is dirty", tracked.stderr)
+
+        self.git("restore", "release.txt")
+        (self.repo / "untracked.swift").write_text("// dirty\n", encoding="utf-8")
+        untracked = self.verify_build(self.first)
+        self.assertNotEqual(untracked.returncode, 0)
+        self.assertIn("build source is dirty", untracked.stderr)
+
+    def test_build_source_rejects_head_drift(self):
+        second = self.add_second_commit()
+        result = self.verify_build(self.first)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("HEAD changed", result.stderr)
+        self.assertNotEqual(second, self.first)
+
+    def test_build_script_guards_before_compile_and_artifact_replacement(self):
+        source = BUILD_SCRIPT.read_text(encoding="utf-8")
+        guard = '"$build_source_verifier" --repo "$repo_root" --revision "$runtime_revision"'
+        guards = [index for index in range(len(source)) if source.startswith(guard, index)]
+        self.assertEqual(len(guards), 2)
+        self.assertLess(guards[0], source.index("swift build"))
+        self.assertLess(guards[1], source.index('if [[ -e "$app" || -L "$app" ]]'))
 
 
 if __name__ == "__main__":

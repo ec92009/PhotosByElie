@@ -96,8 +96,10 @@ worktree, fetch `refs/heads/release/backstage`, inspect its divergence from the
 reviewed commit, and update it with an ordinary non-force push only when the
 existing remote tip is an ancestor of the reviewed commit. Verify the exact
 remote tip with `git ls-remote origin refs/heads/release/backstage`, then build
-and sign from the reviewed commit. Never force-push or rewrite the canonical
-release branch to reconcile divergence. The public PBE web release remains a
+and sign from the reviewed commit. `build-app.zsh` verifies that `HEAD` is that
+recorded commit and the complete worktree is clean both before compilation and
+again before replacing the build-owned app output. Never force-push or rewrite
+the canonical release branch to reconcile divergence. The public PBE web release remains a
 separate release boundary and is not changed by this Backstage process.
 
 After that explicit source promotion and signed build, publish with:

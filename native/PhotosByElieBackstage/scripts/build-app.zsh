@@ -15,9 +15,10 @@ icon_file="${contents}/Resources/Backstage.icns"
 owner_runtime="${contents}/Resources/OwnerRuntime"
 release_metadata="${package_root}/release-metadata.zsh"
 entitlements="${package_root}/Backstage.entitlements"
+build_source_verifier="${repo_root}/scripts/verify_backstage_build_source.zsh"
 
-if [[ ! -r "$release_metadata" ]]; then
-  print -u2 "Missing native release metadata: $release_metadata"
+if [[ ! -r "$release_metadata" || ! -x "$build_source_verifier" ]]; then
+  print -u2 "Native release metadata or build-source provenance tooling is incomplete."
   exit 1
 fi
 source "$release_metadata"
@@ -51,6 +52,9 @@ then
   exit 1
 fi
 
+runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options 'HEAD^{commit}')"
+"$build_source_verifier" --repo "$repo_root" --revision "$runtime_revision"
+
 cd "$package_root"
 
 binary_paths=()
@@ -79,6 +83,10 @@ else
   binary_paths+=("$(swift build -c "$configuration" --show-bin-path)/PhotosByElieBackstage")
 fi
 
+# Source changes racing the compile must fail before a prior build-owned app is
+# replaced. Ignored SwiftPM and dist outputs do not make the worktree dirty.
+"$build_source_verifier" --repo "$repo_root" --revision "$runtime_revision"
+
 if [[ -e "$app" || -L "$app" ]]; then
   if [[ -L "$app" || ! -d "$app" ]]; then
     print -u2 "Refusing to replace an unexpected Backstage dist output: $app"
@@ -104,7 +112,6 @@ if [[ "$configuration" == "release" ]]; then
   fi
 fi
 
-runtime_revision="$(git -C "$repo_root" rev-parse --verify --end-of-options 'HEAD^{commit}')"
 materializer_entry="$(git -C "$repo_root" ls-tree "$runtime_revision" -- scripts/owner_connector_runtime.py)"
 materializer_path="${materializer_entry#*$'\t'}"
 materializer_metadata="${materializer_entry%%$'\t'*}"

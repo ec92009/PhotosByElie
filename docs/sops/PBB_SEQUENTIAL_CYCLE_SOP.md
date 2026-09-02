@@ -21,7 +21,7 @@ A short-lived safety branch is allowed only when an experiment could damage or o
 
 Fresh-read unresolved PBB tickets from YouTrack and select the highest-value actionable ticket. Prefer correctness, data safety, blocked workflows, and operational reliability before polish.
 
-Confirm that no other PBB ticket or worker is active. Mark the selected ticket `Active` using its existing workflow state.
+Confirm that no other PBB ticket or worker is active. Mark the selected ticket `In Progress`.
 
 At cycle start report:
 
@@ -41,7 +41,7 @@ Do not make Elie specify routine implementation details. Stop asking once the de
 
 Work directly in the canonical PBB worktree on `release/backstage`. Make small `photosbyelie:` commits and preserve unrelated state.
 
-Keep the ticket `Active` throughout implementation. A failed approach or rejected design is another iteration of the same ticket, not a reason to open a parallel branch or ticket cycle.
+Keep the ticket `In Progress` throughout implementation, compilation, installation, and owner review. Do not move it to `Fixed` merely because source or tests are ready. A failed approach or rejected design is another iteration of the same ticket, not a reason to open a parallel branch or ticket cycle.
 
 ### 4. Test, compile, and deploy locally
 
@@ -54,12 +54,12 @@ Record the source commit, visible version/build, test result, signature result, 
 Present the exact installed behavior and the shortest useful acceptance exercise. Do not close the ticket merely because tests pass or the app launches.
 
 - If Elie accepts it, proceed to closeout.
-- If Elie rejects it or finds another defect in the intended behavior, keep the ticket `Active`, record the result, and return to clarification or coding.
+- If Elie rejects it or finds another defect in the intended behavior, keep the ticket `In Progress`, record the result, and return to clarification or coding.
 - If the new observation is materially separate from the ticket's intended behavior, keep the current cycle coherent and create or update the separate ticket without starting its implementation.
 
 ### 6. Close, then repeat
 
-After acceptance, independently verify the installed build and ticket evidence. Commit and push the accepted canonical line, add the commit/build/test/acceptance receipt to YouTrack, and move the ticket to its correct terminal state.
+After acceptance, independently verify the installed build and ticket evidence. Commit and push the accepted canonical line, add the commit/build/test/acceptance receipt to YouTrack, and move the ticket to `Verified`.
 
 Fresh-read the closed ticket to confirm the mutation. Only then fresh-read the unresolved PBB queue and select the next ticket.
 

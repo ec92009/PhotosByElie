@@ -1,6 +1,7 @@
 import AppKit
 import OwnerCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The production title and keyword Review workspace and its Canvas-selectable implementation.
 ///
@@ -36,7 +37,7 @@ private enum ReviewQuickLookPresenter {
                 metadata: prepared.map(\.1),
                 presentation: presentationID,
                 onShortcut: { [weak model, weak coordinator] shortcut, assetID in
-                    guard let model, let coordinator, !model.isRunningReview else {
+                    guard let model, let coordinator, !model.isReviewMutationBlocked else {
                         return false
                     }
                     if BackstageQuickLookDecisionRouter.handle(
@@ -468,6 +469,37 @@ struct ReviewView: View {
                     }
                     .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
                     .backstageHelp("Open the selected Review asset in Gallery while preserving its current selection and workflow state.")
+                    Menu(model.selectedReviewAssetIDs.count > 1 ? "Create with…" : "Edit with…") {
+                        ForEach(model.availableExternalEditors) { editor in
+                            Button(editor.name) {
+                                model.requestExternalEdit(with: editor)
+                            }
+                        }
+                        if !model.availableExternalEditors.isEmpty {
+                            Divider()
+                        }
+                        Button("Choose another app…") {
+                            chooseExternalEditor()
+                        }
+                    }
+                    .disabled(!model.canStartExternalEdit)
+                    .backstageHelp("Send one selected original out for a newer rendition, or several ordered originals out for one panorama or composite. Returned work stays in Review.")
+                    if model.activeExternalEditJob != nil {
+                        Button("Return finished file…") {
+                            chooseExternalEditReturn()
+                        }
+                        .disabled(model.isExternalEditOperationInProgress)
+                        .backstageHelp("Choose the finished JPG, TIFF, PNG, or HEIC for the active external edit. Backstage binds it to the exact durable job, not its filename.")
+                        Menu("Edit job") {
+                            Button("Show return folder") {
+                                model.revealExternalEditReturnFolder()
+                            }
+                            Button("Cancel edit job") {
+                                model.requestCancelExternalEdit()
+                            }
+                        }
+                        .disabled(model.isExternalEditOperationInProgress)
+                    }
                     Spacer()
                     Button("Undo") {
                         Task { await model.undoLastReviewAction() }
@@ -487,6 +519,11 @@ struct ReviewView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                    BackstageFeedbackView(
+                        message: model.externalEditStatus,
+                        isWorking: model.isExternalEditOperationInProgress,
+                        autoDismissAfter: model.activeExternalEditJob == nil ? .seconds(5) : nil
+                    )
                     BackstageFeedbackView(
                         message: model.reviewStatus,
                         isWorking: model.isRunningReview
@@ -533,6 +570,20 @@ struct ReviewView: View {
                 )
             }
         }
+        .sheet(
+            item: Binding(
+                get: { model.externalEditReturnReceipt },
+                set: { value in
+                    if value == nil { model.clearExternalEditComparison() }
+                }
+            )
+        ) { receipt in
+            ExternalEditReturnComparisonView(
+                receipt: receipt,
+                sourceImages: model.externalEditSourceImages,
+                returnedImage: model.externalEditReturnedImage
+            )
+        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
@@ -547,6 +598,48 @@ struct ReviewView: View {
                 await model.refreshReviewAIAvailability()
             }
         }
+    }
+
+    private func chooseExternalEditor() {
+        model.externalEditStatus = "Choose the application that should receive the selected originals."
+        let panel = NSOpenPanel()
+        panel.title = model.selectedReviewAssetIDs.count > 1
+            ? "Choose an app for a panorama or composite"
+            : "Choose an app to edit this photo"
+        panel.prompt = "Choose"
+        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
+        panel.allowedContentTypes = [.application]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            model.externalEditStatus = "External editor selection cancelled."
+            return
+        }
+        model.requestExternalEdit(with: ExternalEditorProfile(
+            name: FileManager.default.displayName(atPath: url.path)
+                .replacingOccurrences(of: ".app", with: ""),
+            bundleIdentifier: Bundle(url: url)?.bundleIdentifier ?? "",
+            applicationURL: url
+        ))
+    }
+
+    private func chooseExternalEditReturn() {
+        guard let job = model.activeExternalEditJob else { return }
+        model.externalEditStatus = "Choose the finished file for the active \(job.editor.name) job."
+        let panel = NSOpenPanel()
+        panel.title = "Return finished work to Review"
+        panel.prompt = "Return to Review"
+        panel.directoryURL = job.returnDirectory
+        panel.allowedContentTypes = [.image]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            model.externalEditStatus = "The external edit remains active; no returned file was selected."
+            return
+        }
+        model.requestExternalEditReturn(from: url)
     }
 
     private var reviewHeading: some View {
@@ -586,6 +679,84 @@ struct ReviewView: View {
             )
             .toggleStyle(.checkbox)
         }
+    }
+}
+
+private struct ExternalEditReturnComparisonView: View {
+    @Environment(\.dismiss) private var dismiss
+    let receipt: ExternalEditReturnReceipt
+    let sourceImages: [NSImage]
+    let returnedImage: NSImage?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(receipt.derivedAsset ? "Review derived photo" : "Review newer rendition")
+                .font(.title.bold())
+            Text("The returned file is now a candidate in Review. Nothing was approved or uploaded.")
+                .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 16) {
+                comparisonColumn(title: sourceImages.count > 1 ? "Ordered sources" : "Source") {
+                    if sourceImages.isEmpty {
+                        ContentUnavailableView("Source preview unavailable", systemImage: "photo")
+                    } else {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(sourceImages.enumerated()), id: \.offset) { index, image in
+                                    VStack {
+                                        Image(nsImage: image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(maxWidth: 320, maxHeight: 420)
+                                        if sourceImages.count > 1 {
+                                            Text("Source \(index + 1)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                comparisonColumn(title: "Returned") {
+                    if let returnedImage {
+                        Image(nsImage: returnedImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 520, maxHeight: 520)
+                    } else {
+                        ContentUnavailableView("Returned preview unavailable", systemImage: "photo.badge.exclamationmark")
+                    }
+                }
+            }
+            Divider()
+            HStack {
+                Text(receipt.derivedAsset
+                    ? "Created one new asset with ordered parent lineage."
+                    : "Kept the original asset identity and added a newer source version.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Keep in Review") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(minWidth: 900, minHeight: 620)
+    }
+
+    private func comparisonColumn<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.headline)
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.quaternary.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -987,20 +1158,20 @@ private struct ReviewInspector: View {
                         Button("Approve") {
                             Task { await model.applyReviewAction(.approve) }
                         }
-                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
+                        .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("a", modifiers: [])
                         .backstageHelp("Approve the selected title and keywords and make the assets eligible for Uploads.")
                         Button("Hide") {
                             Task { await model.applyReviewAction(.hide) }
                         }
-                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
+                        .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("h", modifiers: [])
                         .backstageHelp("Hide the selected assets from this fixture without deleting their files.")
                         Button("Waste Basket") {
                             Task { await model.moveReviewSelectionToWasteBasket() }
                         }
                         .disabled(
-                            model.isRunningReview
+                            model.isReviewMutationBlocked
                                 || model.reviewWasteBasketQueueing
                         )
                         .keyboardShortcut("x", modifiers: [])
@@ -1008,7 +1179,7 @@ private struct ReviewInspector: View {
                         Button("Unpick") {
                             Task { await model.unpickReviewSelection() }
                         }
-                        .disabled(model.isRunningReview || model.selectedReviewAssetIDs.isEmpty)
+                        .disabled(model.isReviewMutationBlocked || model.selectedReviewAssetIDs.isEmpty)
                         .keyboardShortcut("u", modifiers: [])
                         .backstageHelp("Clear the fixture pick and return the selected assets to Culling as Undecided.")
                         Button("Needs AI") {

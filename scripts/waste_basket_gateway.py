@@ -791,6 +791,22 @@ def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
     return row is not None
 
 
+def _active_external_edit_assets(
+    connection: sqlite3.Connection,
+    asset_ids: list[str],
+) -> list[str]:
+    if not asset_ids or not _table_exists(connection, "external_edit_asset_locks"):
+        return []
+    placeholders = ",".join("?" for _ in asset_ids)
+    return [
+        str(row["asset_id"])
+        for row in connection.execute(
+            f"SELECT asset_id FROM external_edit_asset_locks WHERE asset_id IN ({placeholders}) ORDER BY asset_id",
+            asset_ids,
+        ).fetchall()
+    ]
+
+
 def _columns(connection: sqlite3.Connection, table: str) -> list[str]:
     return [str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})").fetchall()]
 
@@ -1062,6 +1078,12 @@ def _run_operation(
         if existing is not None:
             connection.rollback()
             return existing
+        if operation == "x":
+            locked_assets = _active_external_edit_assets(connection, asset_ids)
+            if locked_assets:
+                raise WasteBasketError(
+                    "Finish or cancel the active external edit before moving its photo to the Waste Basket"
+                )
         connection.execute(
             """
             INSERT INTO owner_waste_basket_operations

@@ -361,6 +361,13 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
     @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
+    @Published private(set) var activeExternalEditJob: ExternalEditJob?
+    @Published private(set) var externalEditReturnReceipt: ExternalEditReturnReceipt?
+    @Published private(set) var externalEditSourceImages: [NSImage] = []
+    @Published private(set) var externalEditReturnedImage: NSImage?
+    @Published private(set) var isPreparingExternalEdit = false
+    @Published private(set) var isImportingExternalEdit = false
+    @Published var externalEditStatus = "Select Review photos to edit or combine in another app."
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var reviewWasteBasketPendingActionID: String?
@@ -479,6 +486,7 @@ final class BackstageViewModel: ObservableObject {
     private let currentEquipmentCache: (any OwnerCurrentEquipmentCaching)?
     private let equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore?
     private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
+    private let externalEditJobStore: (any ExternalEditJobStoring)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
@@ -559,6 +567,7 @@ final class BackstageViewModel: ObservableObject {
         guard !isAIPassActive,
               !isCancellingAIPass,
               !isUpdateOperationInProgress,
+              !isExternalEditOperationInProgress,
               !isRunningDelivery,
               !isRunningNativePublication,
               !isRunningR2Reconciliation else { return false }
@@ -581,6 +590,7 @@ final class BackstageViewModel: ObservableObject {
     var canPerformBackstageUpdateActions: Bool {
         !isAIPassActive
             && !isCloudWorkflowActive
+            && !isExternalEditOperationInProgress
     }
 
     var isCloudWorkflowActive: Bool {
@@ -589,6 +599,63 @@ final class BackstageViewModel: ObservableObject {
 
     var canStartCloudWorkflow: Bool {
         !isCloudWorkflowActive && !isAIPassActive && !isUpdateOperationInProgress
+            && !isExternalEditOperationInProgress
+    }
+
+    var isExternalEditOperationInProgress: Bool {
+        isPreparingExternalEdit || isImportingExternalEdit
+    }
+
+    var selectedReviewTouchesActiveExternalEdit: Bool {
+        guard let job = activeExternalEditJob else { return false }
+        let activeIDs = Set(job.sources.map(\.assetID))
+        return !activeIDs.isDisjoint(with: selectedReviewAssetIDs)
+    }
+
+    var isReviewMutationBlocked: Bool {
+        isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
+    }
+
+    var canStartExternalEdit: Bool {
+        !isRunningReview
+            && !isExternalEditOperationInProgress
+            && activeExternalEditJob == nil
+            && !selectedReviewAssetIDs.isEmpty
+            && selectedReviewAssetIDs.allSatisfy { id in
+                reviewItems.first(where: { $0.id == id })?.mediaType == "photo"
+            }
+    }
+
+    var availableExternalEditors: [ExternalEditorProfile] {
+        let known = [
+            ("Lightroom Classic", "/Applications/Adobe Lightroom Classic/Adobe Lightroom Classic.app"),
+            ("Pixelmator Pro", "/Applications/Pixelmator Pro.app"),
+            ("Adobe Photoshop", "/Applications/Adobe Photoshop 2026/Adobe Photoshop 2026.app"),
+            ("PaintShop Pro", "/Applications/PaintShop Pro.app"),
+        ]
+        var profiles: [ExternalEditorProfile] = known.compactMap { name, path in
+            guard FileManager.default.fileExists(atPath: path) else { return nil }
+            let url = URL(fileURLWithPath: path, isDirectory: true)
+            return ExternalEditorProfile(
+                name: name,
+                bundleIdentifier: Bundle(url: url)?.bundleIdentifier ?? "",
+                applicationURL: url
+            )
+        }
+        if let rememberedPath = UserDefaults.standard.string(forKey: "externalEditor.applicationPath"),
+           FileManager.default.fileExists(atPath: rememberedPath) {
+            let url = URL(fileURLWithPath: rememberedPath, isDirectory: true)
+            let remembered = ExternalEditorProfile(
+                name: UserDefaults.standard.string(forKey: "externalEditor.name")
+                    ?? url.deletingPathExtension().lastPathComponent,
+                bundleIdentifier: Bundle(url: url)?.bundleIdentifier ?? "",
+                applicationURL: url
+            )
+            if !profiles.contains(where: { $0.applicationURL == remembered.applicationURL }) {
+                profiles.insert(remembered, at: 0)
+            }
+        }
+        return profiles
     }
 
     var canStartPublicCatalogDeployment: Bool {
@@ -611,7 +678,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canMarkReviewSelectionNeedsAI: Bool {
-        !isRunningReview && !selectedReviewAssetIDs.isEmpty && hasReviewAIDraft
+        !isReviewMutationBlocked && !selectedReviewAssetIDs.isEmpty && hasReviewAIDraft
     }
 
     var selectedFixturePath: [FixtureNode] {
@@ -709,6 +776,9 @@ final class BackstageViewModel: ObservableObject {
         equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { OwnerEquipmentBackfillSQLiteStore(databaseURL: $0) },
+        externalEditJobStore: (any ExternalEditJobStoring)? = OwnerReviewDatabaseLocator()
+            .resolve()
+            .map { ExternalEditJobSQLiteStore(databaseURL: $0) },
         customerPhotoLinks: (any CustomerPhotoLinkResolving)? = OwnerReviewDatabaseLocator()
             .resolve()
             .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
@@ -780,8 +850,16 @@ final class BackstageViewModel: ObservableObject {
         self.currentImageSizeCache = currentImageSizeCache
         self.currentEquipmentCache = currentEquipmentCache
         self.equipmentBackfillStore = equipmentBackfillStore
+        self.externalEditJobStore = externalEditJobStore
         self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
+        if let externalEditJobStore {
+            _ = try? externalEditJobStore.recoverInterruptedPreparation(now: Date())
+            self.activeExternalEditJob = try? externalEditJobStore.activeJob()
+            if let job = self.activeExternalEditJob {
+                self.externalEditStatus = "Editing \(job.sources.count.formatted()) photo\(job.sources.count == 1 ? "" : "s") in \(job.editor.name). Export the finished image, then return it to this job."
+            }
+        }
     }
 
     var canViewCustomerPhoto: Bool {
@@ -1168,6 +1246,7 @@ final class BackstageViewModel: ObservableObject {
             || isRunningDelivery
             || isRunningMetadata
             || isRunningNativePublication
+            || isExternalEditOperationInProgress
     }
 
     private func publishFixtureSelection(persist: Bool) {
@@ -3009,7 +3088,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canSelectReviewBurstCandidates: Bool {
-        !isRunningReview
+        !isReviewMutationBlocked
             && !CullingWorkspace.reviewBurstRejectCandidates(in: reviewItems).isEmpty
     }
 
@@ -4563,7 +4642,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func unpickReviewSelection() async {
-        guard !isRunningReview else {
+        guard !isReviewMutationBlocked else {
             reviewStatus = "Finish the current Review action first."
             return
         }
@@ -4632,7 +4711,7 @@ final class BackstageViewModel: ObservableObject {
         removalDirection: OwnerSelectionDirection = .next,
         onTerminal: ((Bool, String?) -> Void)? = nil
     ) async {
-        guard !isRunningReview,
+        guard !isReviewMutationBlocked,
               !reviewWasteBasketQueueing else {
             reviewStatus = reviewWasteBasketQueueing
                 ? "This Review X action is already queued; the Review workspace remains available while it completes."
@@ -4774,7 +4853,7 @@ final class BackstageViewModel: ObservableObject {
         propagate: Bool = false,
         removalDirection: OwnerSelectionDirection = .next
     ) async {
-        guard !isRunningReview else {
+        guard !isReviewMutationBlocked else {
             reviewStatus = "Finish the current Review action first."
             return
         }
@@ -5927,6 +6006,195 @@ final class BackstageViewModel: ObservableObject {
         } catch {
             reviewStatus = userFacingMessage(for: error)
             return []
+        }
+    }
+
+    func requestExternalEdit(with editor: ExternalEditorProfile) {
+        guard !isPreparingExternalEdit, !isImportingExternalEdit else {
+            externalEditStatus = "Finish the current external-edit action first."
+            return
+        }
+        guard canStartExternalEdit else {
+            externalEditStatus = activeExternalEditJob == nil
+                ? "Select one or more still photos in Review."
+                : "Finish or cancel the current external edit before starting another."
+            return
+        }
+        let items = reviewItems.filter { selectedReviewAssetIDs.contains($0.id) }
+        UserDefaults.standard.set(editor.applicationURL.path, forKey: "externalEditor.applicationPath")
+        UserDefaults.standard.set(editor.name, forKey: "externalEditor.name")
+        isPreparingExternalEdit = true
+        externalEditStatus = items.count == 1
+            ? "Preparing the original for \(editor.name)…"
+            : "Preparing \(items.count.formatted()) ordered originals for \(editor.name)…"
+        Task { [weak self] in
+            await self?.performExternalEdit(editor: editor, items: items)
+        }
+    }
+
+    private func performExternalEdit(
+        editor: ExternalEditorProfile,
+        items: [FixtureReviewItem]
+    ) async {
+        defer { isPreparingExternalEdit = false }
+        guard let externalEditJobStore else {
+            externalEditStatus = "Owner.sqlite is unavailable for external editing."
+            return
+        }
+        var job: ExternalEditJob?
+        do {
+            let sources = items.enumerated().map { position, item in
+                ExternalEditSource(
+                    position: position,
+                    assetID: item.id,
+                    sourceVersionID: item.sourceVersionID,
+                    photoLibraryIdentifier: item.photoLibraryIdentifier,
+                    originalFilename: item.filename
+                )
+            }
+            let kind: ExternalEditKind = items.count == 1 ? .edit : .create
+            job = try externalEditJobStore.createJob(
+                fixtureID: selectedFixtureID,
+                kind: kind,
+                editor: editor,
+                sources: sources,
+                now: Date()
+            )
+            activeExternalEditJob = job
+            guard let job else { throw ExternalEditJobError.jobNotFound }
+            var receipts: [PhotoExportReceipt] = []
+            for item in items {
+                externalEditStatus = "Exporting original \(receipts.count + 1) of \(items.count) for \(editor.name)…"
+                receipts.append(try await exportOriginalForAsset(
+                    forAssetID: item.id,
+                    preferredIdentifier: item.photoLibraryIdentifier,
+                    to: job.inputDirectory,
+                    strictMaster: true
+                ))
+            }
+            let prepared = try externalEditJobStore.recordPrepared(
+                jobID: job.id,
+                receipts: receipts,
+                now: Date()
+            )
+            externalEditStatus = "Opening \(receipts.count.formatted()) original\(receipts.count == 1 ? "" : "s") in \(editor.name)…"
+            try await openInExternalEditor(
+                receipts.map(\.destination),
+                applicationURL: editor.applicationURL
+            )
+            let launched = try externalEditJobStore.recordLaunched(jobID: prepared.id, now: Date())
+            activeExternalEditJob = launched
+            externalEditStatus = kind == .edit
+                ? "Editing in \(editor.name). Export the finished JPG or TIFF, then choose Return finished file."
+                : "Creating in \(editor.name). Export one finished panorama or composite, then choose Return finished file."
+        } catch {
+            if let job {
+                try? externalEditJobStore.fail(
+                    jobID: job.id,
+                    message: userFacingMessage(for: error),
+                    now: Date()
+                )
+            }
+            activeExternalEditJob = nil
+            externalEditStatus = "External edit failed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func requestExternalEditReturn(from sourceURL: URL) {
+        guard !isImportingExternalEdit, !isPreparingExternalEdit else {
+            externalEditStatus = "Finish the current external-edit action first."
+            return
+        }
+        guard let job = activeExternalEditJob else {
+            externalEditStatus = "There is no active external edit to receive."
+            return
+        }
+        isImportingExternalEdit = true
+        externalEditStatus = "Verifying and returning the finished file to Review…"
+        Task { [weak self] in
+            await self?.performExternalEditReturn(job: job, sourceURL: sourceURL)
+        }
+    }
+
+    private func performExternalEditReturn(job: ExternalEditJob, sourceURL: URL) async {
+        defer { isImportingExternalEdit = false }
+        guard let externalEditJobStore else {
+            externalEditStatus = "Owner.sqlite is unavailable for external editing."
+            return
+        }
+        do {
+            let store = externalEditJobStore
+            let jobID = job.id
+            let returnDate = Date()
+            let receipt = try await Task.detached(priority: .userInitiated) {
+                try store.acceptReturnedFile(
+                    jobID: jobID,
+                    sourceURL: sourceURL,
+                    now: returnDate
+                )
+            }.value
+            externalEditReturnReceipt = receipt
+            externalEditSourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
+            externalEditReturnedImage = NSImage(contentsOf: receipt.fileURL)
+            activeExternalEditJob = nil
+            externalEditStatus = receipt.derivedAsset
+                ? "Returned one new derived photo with \(job.sources.count.formatted()) ordered parents. It is awaiting final Review."
+                : "Returned a newer rendition of the same photo. It is awaiting final Review."
+            reviewStatus = externalEditStatus
+            await loadFixtureReviewWindow(preferredAssetID: receipt.destinationAssetID)
+        } catch {
+            externalEditStatus = "Return failed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func requestCancelExternalEdit() {
+        guard let job = activeExternalEditJob,
+              !isExternalEditOperationInProgress else { return }
+        isPreparingExternalEdit = true
+        externalEditStatus = "Cancelling the external edit job…"
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.isPreparingExternalEdit = false }
+            do {
+                try self.externalEditJobStore?.cancel(jobID: job.id, now: Date())
+                self.activeExternalEditJob = nil
+                self.externalEditStatus = "External edit cancelled. Prepared working copies remain recoverable."
+            } catch {
+                self.externalEditStatus = "Could not cancel external edit: \(self.userFacingMessage(for: error))"
+            }
+        }
+    }
+
+    func revealExternalEditReturnFolder() {
+        guard let job = activeExternalEditJob else { return }
+        externalEditStatus = "Opened the return folder for \(job.editor.name)."
+        _ = openExternalURL(job.returnDirectory)
+    }
+
+    func clearExternalEditComparison() {
+        externalEditReturnReceipt = nil
+        externalEditSourceImages = []
+        externalEditReturnedImage = nil
+    }
+
+    private func openInExternalEditor(
+        _ fileURLs: [URL],
+        applicationURL: URL
+    ) async throws {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            NSWorkspace.shared.open(
+                fileURLs,
+                withApplicationAt: applicationURL,
+                configuration: configuration
+            ) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
         }
     }
 
@@ -9049,7 +9317,8 @@ final class BackstageViewModel: ObservableObject {
     private func exportOriginalForAsset(
         forAssetID assetID: String,
         preferredIdentifier: String? = nil,
-        to directory: URL
+        to directory: URL,
+        strictMaster: Bool = false
     ) async throws -> PhotoExportReceipt {
         var lastError: Error?
         for identifier in photoLibraryIdentifierCandidates(
@@ -9057,6 +9326,13 @@ final class BackstageViewModel: ObservableObject {
             preferredIdentifier: preferredIdentifier
         ) {
             do {
+                if strictMaster {
+                    return try await photoLibrary.exportOriginalMaster(
+                        localIdentifier: identifier,
+                        to: directory,
+                        allowICloudDownloads: true
+                    )
+                }
                 return try await photoLibrary.exportOriginal(
                     localIdentifier: identifier,
                     to: directory

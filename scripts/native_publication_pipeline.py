@@ -752,18 +752,34 @@ def publish_verified_asset(
             (asset_id,),
         ).fetchone():
             raise ValueError("Waste Basket assets cannot be published")
-        source = conn.execute(
-            """
-            SELECT * FROM asset_source_versions
-            WHERE asset_id = ? AND source_exists = 1
-            ORDER BY
-              CASE state WHEN 'candidate' THEN 0 WHEN 'approved' THEN 1
-                WHEN 'live' THEN 2 ELSE 3 END,
-              created_at DESC
-            LIMIT 1
-            """,
+        delivery = conn.execute(
+            "SELECT source_version_hash FROM asset_delivery_state WHERE asset_id = ?",
             (asset_id,),
         ).fetchone()
+        approved_version_id = str(delivery["source_version_hash"] or "") if delivery else ""
+        source = None
+        if approved_version_id:
+            source = conn.execute(
+                """
+                SELECT * FROM asset_source_versions
+                WHERE asset_id = ? AND version_id = ? AND source_exists = 1
+                  AND state IN ('approved', 'live')
+                LIMIT 1
+                """,
+                (asset_id, approved_version_id),
+            ).fetchone()
+            if source is None:
+                raise ValueError("the exact Review-approved source version is unavailable")
+        else:
+            source = conn.execute(
+                """
+                SELECT * FROM asset_source_versions
+                WHERE asset_id = ? AND source_exists = 1 AND state IN ('approved', 'live')
+                ORDER BY created_at DESC, version_id DESC
+                LIMIT 1
+                """,
+                (asset_id,),
+            ).fetchone()
         if source:
             version_hash = str(source["version_id"])
         else:

@@ -342,6 +342,77 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_source_versions_fingerprints
           ON asset_source_versions(asset_id, metadata_fingerprint, rendered_fingerprint);
 
+        CREATE TABLE IF NOT EXISTS external_edit_jobs (
+          job_id TEXT PRIMARY KEY,
+          fixture_id TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK(kind IN ('edit', 'create')),
+          state TEXT NOT NULL CHECK(state IN ('preparing', 'editing', 'returned', 'cancelled', 'failed')),
+          editor_name TEXT NOT NULL,
+          editor_bundle_id TEXT NOT NULL DEFAULT '',
+          editor_application_path TEXT NOT NULL,
+          working_directory TEXT NOT NULL,
+          destination_asset_id TEXT NOT NULL DEFAULT '',
+          returned_file_path TEXT NOT NULL DEFAULT '',
+          returned_source_version_id TEXT NOT NULL DEFAULT '',
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_external_edit_one_active
+          ON external_edit_jobs((1)) WHERE state IN ('preparing', 'editing');
+
+        CREATE TABLE IF NOT EXISTS external_edit_job_sources (
+          job_id TEXT NOT NULL,
+          position INTEGER NOT NULL,
+          asset_id TEXT NOT NULL,
+          source_version_id TEXT NOT NULL DEFAULT '',
+          photo_library_identifier TEXT NOT NULL,
+          original_filename TEXT NOT NULL DEFAULT '',
+          exported_relative_path TEXT NOT NULL DEFAULT '',
+          checksum_sha256 TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY(job_id, position),
+          FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id) ON DELETE CASCADE,
+          FOREIGN KEY(asset_id) REFERENCES sidecar_assets(asset_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS external_edit_asset_locks (
+          asset_id TEXT PRIMARY KEY,
+          job_id TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('source', 'destination')),
+          acquired_at TEXT NOT NULL,
+          FOREIGN KEY(asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_external_edit_asset_locks_job
+          ON external_edit_asset_locks(job_id, asset_id);
+
+        CREATE TABLE IF NOT EXISTS external_edit_returns (
+          return_id TEXT PRIMARY KEY,
+          job_id TEXT NOT NULL UNIQUE,
+          destination_asset_id TEXT NOT NULL,
+          source_version_id TEXT NOT NULL UNIQUE,
+          file_path TEXT NOT NULL,
+          checksum_sha256 TEXT NOT NULL,
+          byte_count INTEGER NOT NULL CHECK(byte_count > 0),
+          created_at TEXT NOT NULL,
+          FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id),
+          FOREIGN KEY(destination_asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY(source_version_id) REFERENCES asset_source_versions(version_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS external_edit_lineage (
+          child_source_version_id TEXT NOT NULL,
+          parent_position INTEGER NOT NULL,
+          parent_asset_id TEXT NOT NULL,
+          parent_source_version_id TEXT NOT NULL DEFAULT '',
+          job_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY(child_source_version_id, parent_position),
+          FOREIGN KEY(child_source_version_id) REFERENCES asset_source_versions(version_id),
+          FOREIGN KEY(parent_asset_id) REFERENCES sidecar_assets(asset_id),
+          FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id)
+        );
+
         CREATE TABLE IF NOT EXISTS asset_sync_state (
           asset_id TEXT PRIMARY KEY,
           photos_asset_id TEXT NOT NULL DEFAULT '',

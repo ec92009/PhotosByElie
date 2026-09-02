@@ -68,6 +68,23 @@ public struct OwnerReviewSQLiteStore: Sendable {
         )
         let countryCapability = try countryWriteCapability(connection)
         let proposalColumns = try connection.tableColumns("asset_ai_proposals")
+        let sourceVersionsAvailable = !(try connection.tableColumns("asset_source_versions")).isEmpty
+        let sourceVersionSelect = sourceVersionsAvailable
+            ? "COALESCE(latest_source_version.version_id, '') AS source_version_id"
+            : "'' AS source_version_id"
+        let sourceVersionJoin = sourceVersionsAvailable
+            ? """
+              LEFT JOIN asset_source_versions AS latest_source_version
+                ON latest_source_version.version_id = (
+                  SELECT source_version.version_id
+                  FROM asset_source_versions AS source_version
+                  WHERE source_version.asset_id = asset.asset_id
+                    AND source_version.source_exists = 1
+                  ORDER BY source_version.created_at DESC, source_version.version_id DESC
+                  LIMIT 1
+                )
+              """
+            : ""
         let proposalCountrySelect = proposalColumns.contains("proposed_country")
             ? "COALESCE(available_proposal.proposed_country, '') AS proposal_country, COALESCE(available_proposal.country_source, '') AS proposal_country_source"
             : "'' AS proposal_country, '' AS proposal_country_source"
@@ -149,6 +166,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(asset.photos_keywords_json, '[]') AS photos_keywords_json,
                    COALESCE(asset.location_label, '') AS location_label,
                    COALESCE(asset.location_keywords_json, '[]') AS location_keywords_json,
+                   \(sourceVersionSelect),
                    current_decision.placement_state AS placement_state,
                    COALESCE(decision.title, '') AS decision_title,
                    COALESCE(decision.caption, '') AS decision_caption,
@@ -189,6 +207,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
               ON editorial.asset_id = asset.asset_id
             JOIN asset_delivery_state AS delivery
               ON delivery.asset_id = asset.asset_id
+            \(sourceVersionJoin)
             LEFT JOIN asset_ai_proposals AS available_proposal
               ON available_proposal.proposal_id = (
                 SELECT latest_proposal.proposal_id
@@ -308,6 +327,8 @@ public struct OwnerReviewSQLiteStore: Sendable {
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
         let proposalColumns = try connection.tableColumns("asset_ai_proposals")
+        let externalEditLocksAvailable = !(try connection.tableColumns("external_edit_asset_locks")).isEmpty
+        let sourceVersionsAvailable = !(try connection.tableColumns("asset_source_versions")).isEmpty
         let proposedCountrySelect = proposalColumns.contains("proposed_country")
             ? "proposed_country"
             : "'' AS proposed_country"
@@ -330,6 +351,19 @@ public struct OwnerReviewSQLiteStore: Sendable {
             }
             guard !cleanIDs.isEmpty else {
                 throw OwnerReviewSQLiteError.invalid("review action has no eligible targets")
+            }
+
+            if externalEditLocksAvailable {
+                for assetID in cleanIDs {
+                    if try connection.queryOne(
+                        "SELECT asset_id FROM external_edit_asset_locks WHERE asset_id = ?",
+                        bindings: [.string(assetID)]
+                    ) != nil {
+                        throw OwnerReviewSQLiteError.conflict(
+                            "Finish or cancel the active external edit before changing this photo."
+                        )
+                    }
+                }
             }
 
             for assetID in cleanIDs {
@@ -793,15 +827,56 @@ public struct OwnerReviewSQLiteStore: Sendable {
                         """,
                         bindings: [.string(timestamp), .string(timestamp), .string(assetID)]
                     )
-                    try connection.execute(
-                        """
-                        INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                        VALUES (?, 'needs-upload', ?, ?)
-                        ON CONFLICT(asset_id) DO UPDATE SET
-                          delivery_state = 'needs-upload', updated_at = excluded.updated_at
-                        """,
-                        bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                    )
+                    if sourceVersionsAvailable {
+                        try connection.execute(
+                            """
+                            UPDATE asset_source_versions
+                            SET state = 'approved', approved_at = ?, superseded_at = NULL
+                            WHERE version_id = (
+                              SELECT version_id FROM asset_source_versions
+                              WHERE asset_id = ? AND source_exists = 1
+                              ORDER BY created_at DESC, version_id DESC
+                              LIMIT 1
+                            ) AND state = 'candidate'
+                            """,
+                            bindings: [.string(timestamp), .string(assetID)]
+                        )
+                        try connection.execute(
+                            """
+                            INSERT INTO asset_delivery_state (
+                              asset_id, delivery_state, source_version_hash, created_at, updated_at
+                            )
+                            VALUES (
+                              ?, 'needs-upload',
+                              COALESCE((
+                                SELECT version_id FROM asset_source_versions
+                                WHERE asset_id = ? AND source_exists = 1
+                                ORDER BY created_at DESC, version_id DESC
+                                LIMIT 1
+                              ), ''),
+                              ?, ?
+                            )
+                            ON CONFLICT(asset_id) DO UPDATE SET
+                              delivery_state = 'needs-upload',
+                              source_version_hash = excluded.source_version_hash,
+                              updated_at = excluded.updated_at
+                            """,
+                            bindings: [
+                                .string(assetID), .string(assetID),
+                                .string(timestamp), .string(timestamp),
+                            ]
+                        )
+                    } else {
+                        try connection.execute(
+                            """
+                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
+                            VALUES (?, 'needs-upload', ?, ?)
+                            ON CONFLICT(asset_id) DO UPDATE SET
+                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
+                            """,
+                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
+                        )
+                    }
                 }
             }
 
@@ -1124,6 +1199,8 @@ private final class ReviewSQLiteConnection {
         "fixture_asset_decisions",
         "asset_ai_proposals",
         "country_assignments",
+        "asset_source_versions",
+        "external_edit_asset_locks",
     ]
 
     private func bind(_ values: [ReviewSQLiteBinding], to statement: OpaquePointer) throws {
@@ -1705,6 +1782,7 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
     return FixtureReviewItem(
         id: assetID,
         photoLibraryIdentifier: photoLibraryIdentifier,
+        sourceVersionID: row["source_version_id"]?.stringValue ?? "",
         title: title,
         caption: caption,
         keywords: keywords,

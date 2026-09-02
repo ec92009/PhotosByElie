@@ -12,6 +12,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import sqlite3
 import threading
 import time
@@ -2368,6 +2369,16 @@ def _upload_bridge_rows(
             WHERE b.asset_id = m.asset_id AND b.block_state = 'active'
           )
     """
+    external_edit_lock_sql = ""
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'external_edit_asset_locks'"
+    ).fetchone() is not None:
+        external_edit_lock_sql = """
+          AND NOT EXISTS (
+            SELECT 1 FROM external_edit_asset_locks AS edit_lock
+            WHERE edit_lock.asset_id = m.asset_id
+          )
+        """
     rows = conn.execute(
         f"""
         WITH ranked AS (
@@ -2436,6 +2447,7 @@ def _upload_bridge_rows(
               WHERE t.asset_id = m.asset_id AND t.tombstone_state = 'active'
             )
             {blocked_sql}
+            {external_edit_lock_sql}
         )
         SELECT * FROM ranked
         WHERE identity_rank = 1
@@ -2756,6 +2768,13 @@ def _run_backstage_photos_materialize_one(
     allow_icloud_downloads: bool,
     timeout: int = 1800,
 ) -> dict[str, Any]:
+    external = _materialize_external_edit_return(
+        repo_root,
+        asset_id=asset_id,
+        destination=destination,
+    )
+    if external is not None:
+        return external
     try:
         return request_export_original(
             asset_id,
@@ -2765,6 +2784,76 @@ def _run_backstage_photos_materialize_one(
         )
     except BackstagePhotosClientError as error:
         raise RuntimeError(f"Backstage original export failed ({error.code}): {error}") from error
+
+
+def _materialize_external_edit_return(
+    repo_root: Path,
+    *,
+    asset_id: str,
+    destination: Path,
+) -> dict[str, Any] | None:
+    """Prefer the exact latest accepted external rendition over the Photos original."""
+    with connect(repo_root) as conn:
+        table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'external_edit_returns'"
+        ).fetchone()
+        if table is None:
+            return None
+        row = conn.execute(
+            """
+            SELECT returned.file_path, returned.checksum_sha256, returned.byte_count,
+                   source.version_id
+            FROM external_edit_returns AS returned
+            JOIN asset_source_versions AS source
+              ON source.version_id = returned.source_version_id
+             AND source.asset_id = returned.destination_asset_id
+            JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = returned.destination_asset_id
+             AND delivery.source_version_hash = returned.source_version_id
+            WHERE returned.destination_asset_id = ?
+              AND source.source_exists = 1
+              AND source.state IN ('approved', 'live')
+            ORDER BY source.created_at DESC, source.version_id DESC
+            LIMIT 1
+            """,
+            (asset_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    source = Path(str(row["file_path"] or "")).expanduser()
+    if not source.is_file() or source.is_symlink():
+        raise RuntimeError("The accepted external-edit rendition is missing or unsafe.")
+    expected_bytes = int(row["byte_count"] or 0)
+    if expected_bytes <= 0 or source.stat().st_size != expected_bytes:
+        raise RuntimeError("The accepted external-edit rendition size no longer matches its receipt.")
+    digest = hashlib.sha256()
+    with source.open("rb") as reader:
+        while chunk := reader.read(1024 * 1024):
+            digest.update(chunk)
+    checksum = digest.hexdigest()
+    if checksum != str(row["checksum_sha256"] or ""):
+        raise RuntimeError("The accepted external-edit rendition checksum no longer matches its receipt.")
+    destination.mkdir(parents=True, exist_ok=True)
+    destination.chmod(0o700)
+    target = destination / source.name
+    with source.open("rb") as reader, target.open("xb") as writer:
+        shutil.copyfileobj(reader, writer, length=1024 * 1024)
+    target.chmod(0o600)
+    return {
+        "ok": True,
+        "mode": "materialize-external-edit",
+        "materializedCount": 1,
+        "items": [{
+            "status": "materialized",
+            "path": str(target),
+            "filename": source.name,
+            "originalFilename": source.name,
+            "bytes": expected_bytes,
+            "uniformTypeIdentifier": mimetypes.guess_type(source.name)[0] or "application/octet-stream",
+            "checksumSHA256": checksum,
+            "sourceVersionId": str(row["version_id"] or ""),
+        }],
+    }
 
 
 def _first_env(*names: str) -> str:

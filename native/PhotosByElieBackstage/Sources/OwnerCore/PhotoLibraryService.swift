@@ -150,6 +150,11 @@ public protocol PhotoLibraryServing: Sendable {
         to directory: URL,
         allowICloudDownloads: Bool
     ) async throws -> PhotoExportReceipt
+    func exportOriginalMaster(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt
     func metadataReadMany(assetIDs: [String]) async throws -> Data
     func metadataApplyMany(requests: [PhotoMetadataApplyRequest]) async throws -> Data
 }
@@ -207,6 +212,18 @@ public extension PhotoLibraryServing {
         allowICloudDownloads: Bool
     ) async throws -> PhotoExportReceipt {
         try await exportOriginal(localIdentifier: localIdentifier, to: directory)
+    }
+
+    func exportOriginalMaster(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
+        try await exportOriginal(
+            localIdentifier: localIdentifier,
+            to: directory,
+            allowICloudDownloads: allowICloudDownloads
+        )
     }
 
     func metadataReadMany(assetIDs: [String]) async throws -> Data {
@@ -1505,6 +1522,53 @@ public struct PhotoKitLibraryService: PhotoLibraryServing, @unchecked Sendable {
             localIdentifier: localIdentifier,
             to: directory,
             allowICloudDownloads: true
+        )
+    }
+
+    /// Exports the real PhotoKit master for an external editor. Unlike the
+    /// publication-oriented original export, this never substitutes a
+    /// recovered JPEG derivative for an available RAW master.
+    public func exportOriginalMaster(
+        localIdentifier: String,
+        to directory: URL,
+        allowICloudDownloads: Bool
+    ) async throws -> PhotoExportReceipt {
+        try requireAccess()
+        let asset = try asset(localIdentifier)
+        guard let resource = preferredRAWResource(for: asset) ?? preferredOriginalResource(for: asset) else {
+            throw PhotoLibraryError.resourceNotFound(localIdentifier)
+        }
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let destination = uniqueDestination(
+            directory: directory,
+            filename: resource.originalFilename
+        )
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = allowICloudDownloads
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            PHAssetResourceManager.default().writeData(
+                for: resource,
+                toFile: destination,
+                options: options
+            ) { error in
+                if let error {
+                    continuation.resume(throwing: PhotoLibraryError.exportFailed(error.localizedDescription))
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+        let values = try destination.resourceValues(forKeys: [.fileSizeKey])
+        return PhotoExportReceipt(
+            assetID: localIdentifier,
+            filename: resource.originalFilename,
+            destination: destination,
+            uniformTypeIdentifier: resource.uniformTypeIdentifier,
+            byteCount: Int64(values.fileSize ?? 0),
+            checksumSHA256: try sha256(of: destination)
         )
     }
 

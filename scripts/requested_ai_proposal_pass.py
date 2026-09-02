@@ -215,7 +215,17 @@ def _candidate_rows(
     repo_root: Path,
     limit: int | None,
 ) -> list[dict[str, Any]]:
-    sql = """
+    external_edit_lock_sql = ""
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'external_edit_asset_locks'"
+    ).fetchone() is not None:
+        external_edit_lock_sql = """
+          AND NOT EXISTS (
+            SELECT 1 FROM external_edit_asset_locks AS edit_lock
+            WHERE edit_lock.asset_id = editorial.asset_id
+          )
+        """
+    sql = f"""
         SELECT asset.asset_id, asset.filename, asset.captured_at, asset.location_label,
                editorial.ai_reasons_json, editorial.ai_note,
                editorial.ai_attempt_count, editorial.ai_preview_path,
@@ -249,6 +259,7 @@ def _candidate_rows(
             LIMIT 1
           )
         WHERE editorial.editorial_state = 'requesting-ai'
+          {external_edit_lock_sql}
         ORDER BY COALESCE(editorial.requested_at, editorial.updated_at), asset.asset_id
     """
     params: list[Any] = []

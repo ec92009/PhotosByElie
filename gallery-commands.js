@@ -3,8 +3,53 @@
   if (typeof module === "object" && module.exports) module.exports = api;
   if (globalScope) globalScope.photosByElieGalleryCommands = api;
 })(typeof globalThis === "undefined" ? null : globalThis, () => {
-  const MAX_SELECTION = 500;
+  const COMMAND_BATCH_SIZE = 500;
   const GROUP_ORDER = Object.freeze(["filters", "selection", "view", "actions-rating-color", "workflow"]);
+
+  const selectionIds = (values = []) => [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+  )];
+
+  const selectVisibleIds = (selected = [], visible = []) => selectionIds([
+    ...selectionIds(selected),
+    ...selectionIds(visible),
+  ]);
+
+  const restoreVisibleSelection = (selected = [], visible = []) => {
+    const visibleIds = new Set(selectionIds(visible));
+    return selectionIds(selected).filter((photoId) => visibleIds.has(photoId));
+  };
+
+  const chunkSelection = (values = [], batchSize = COMMAND_BATCH_SIZE) => {
+    const ids = selectionIds(values);
+    const size = Math.max(1, Math.floor(Number(batchSize) || COMMAND_BATCH_SIZE));
+    const batches = [];
+    for (let start = 0; start < ids.length; start += size) batches.push(ids.slice(start, start + size));
+    return batches;
+  };
+
+  const runSelectionBatches = async (values = [], dispatch, { batchSize = COMMAND_BATCH_SIZE } = {}) => {
+    if (typeof dispatch !== "function") throw new Error("Selection batch dispatch requires a function.");
+    const chunks = chunkSelection(values, batchSize);
+    const batches = [];
+    for (let batchIndex = 0; batchIndex < chunks.length; batchIndex += 1) {
+      const photoIds = chunks[batchIndex];
+      const metadata = { batchIndex, batchNumber: batchIndex + 1, totalBatches: chunks.length };
+      try {
+        batches.push({ ...metadata, photoIds, status: "fulfilled", value: await dispatch(photoIds, metadata) });
+      } catch (error) {
+        batches.push({
+          ...metadata,
+          photoIds,
+          status: "rejected",
+          reason: error?.message || "Selection batch failed.",
+        });
+      }
+    }
+    return batches;
+  };
 
   const asList = (value) => Array.isArray(value) ? value : value ? [value] : [];
   const resolvedValue = (value, context) => typeof value === "function" ? value(context) : value;
@@ -118,5 +163,14 @@
     return Object.freeze({ command, commandForKeyboard, dispatch, dispatchKeyboard, list });
   };
 
-  return Object.freeze({ GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut });
+  return Object.freeze({
+    COMMAND_BATCH_SIZE,
+    GROUP_ORDER,
+    chunkSelection,
+    createRegistry,
+    matchesKeyboardShortcut,
+    restoreVisibleSelection,
+    runSelectionBatches,
+    selectVisibleIds,
+  });
 });

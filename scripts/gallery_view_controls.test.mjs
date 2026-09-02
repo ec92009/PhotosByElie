@@ -15,7 +15,16 @@ const photosJs = read("photos.js");
 const detailJs = read("photo-detail.js");
 const galleryCardJs = read("gallery-card.js");
 const ownerSessionJs = read("pbe-owner-session.js");
-const { GROUP_ORDER, MAX_SELECTION, createRegistry, matchesKeyboardShortcut } = createRequire(import.meta.url)("../gallery-commands.js");
+const {
+  COMMAND_BATCH_SIZE,
+  GROUP_ORDER,
+  chunkSelection,
+  createRegistry,
+  matchesKeyboardShortcut,
+  restoreVisibleSelection,
+  runSelectionBatches,
+  selectVisibleIds,
+} = createRequire(import.meta.url)("../gallery-commands.js");
 
 test("command registry keeps role gating, stable group order, and disabled positions", () => {
   let role = "visitor";
@@ -33,7 +42,7 @@ test("command registry keeps role gating, stable group order, and disabled posit
   });
 
   assert.deepEqual(GROUP_ORDER, ["filters", "selection", "view", "actions-rating-color", "workflow"]);
-  assert.equal(MAX_SELECTION, 500);
+  assert.equal(COMMAND_BATCH_SIZE, 500);
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview"]);
   assert.equal(registry.command("clear").enabled, false);
   assert.equal(registry.command("clear").disabledReason, "Nothing selected.");
@@ -41,6 +50,41 @@ test("command registry keeps role gating, stable group order, and disabled posit
   role = "owner";
   selected = 1;
   assert.deepEqual(registry.list().map((command) => command.id), ["clear", "preview", "workflow"]);
+});
+
+test("Gallery selection has no 500-photo capacity ceiling", () => {
+  const ids501 = Array.from({ length: 501 }, (_, index) => `photo-${index + 1}`);
+  const ids546 = Array.from({ length: 546 }, (_, index) => `photo-${index + 1}`);
+
+  assert.equal(selectVisibleIds([], ids501).length, 501);
+  assert.deepEqual(selectVisibleIds([], ids546), ids546);
+  const deselected = new Set(selectVisibleIds([], ids546));
+  deselected.delete(ids546[500]);
+  assert.equal(deselected.size, 545);
+  assert.equal(deselected.has(ids546[500]), false);
+  assert.deepEqual(restoreVisibleSelection(ids546, ids546), ids546);
+  assert.deepEqual(restoreVisibleSelection([...deselected], ids546), [...deselected]);
+  assert.deepEqual(restoreVisibleSelection(ids546, ids546.slice(46)), ids546.slice(46));
+  assert.deepEqual(chunkSelection(ids501).map((batch) => batch.length), [500, 1]);
+  assert.deepEqual(chunkSelection(ids546).map((batch) => batch.length), [500, 46]);
+});
+
+test("Gallery bulk dispatch preserves successful chunks and identifies failures", async () => {
+  const ids = Array.from({ length: 546 }, (_, index) => `photo-${index + 1}`);
+  const calls = [];
+  const batches = await runSelectionBatches(ids, async (photoIds, metadata) => {
+    calls.push([...photoIds]);
+    if (metadata.batchNumber === 2) throw new Error("second chunk unavailable");
+    return { succeeded: photoIds };
+  });
+
+  assert.deepEqual(calls.map((batch) => batch.length), [500, 46]);
+  assert.equal(batches[0].status, "fulfilled");
+  assert.deepEqual(batches[0].value.succeeded, ids.slice(0, 500));
+  assert.equal(batches[1].status, "rejected");
+  assert.equal(batches[1].reason, "second chunk unavailable");
+  assert.deepEqual(batches[1].photoIds, ids.slice(500));
+  assert.deepEqual(batches.map(({ batchNumber, totalBatches }) => [batchNumber, totalBatches]), [[1, 2], [2, 2]]);
 });
 
 test("buttons and keyboard dispatch the same command execution path", async () => {
@@ -169,12 +213,16 @@ test("gallery cards bound native Owner preview bursts and retry transient failur
 test("selection, round-trip state, and Quick Look follow the integrated contract", () => {
   assert.match(galleryJs, /data-gallery-select-photo/);
   assert.match(galleryJs, /class="gallery-card-selection"/);
-  assert.match(galleryJs, /const selectionLimit = galleryCommandModel\.MAX_SELECTION/);
+  assert.match(galleryJs, /const commandBatchSize = galleryCommandModel\.COMMAND_BATCH_SIZE/);
+  assert.match(galleryJs, /selectVisibleIds/);
+  assert.match(galleryJs, /runSelectionBatches/);
   assert.match(galleryJs, /id: "clear-selection"[\s\S]*roles: \["visitor"\]/);
   assert.match(galleryJs, /id: "keep-primary"[\s\S]*roles: \["owner"\]/);
   assert.match(galleryJs, /ownerCullingEnabled && selectedPhotoIds\.size === 1/);
   assert.match(galleryJs, /navigationNonce: detailRoundTripNonce/);
   assert.match(galleryJs, /selectionIds: \[\.\.\.selectedPhotoIds\]/);
+  assert.doesNotMatch(galleryJs, /selectionIds:[^\n]+slice\([^\n]*500/);
+  assert.doesNotMatch(galleryJs, /selectionRecency[^\n]+slice\([^\n]*500/);
   assert.match(galleryJs, /const selectedNavigation = selectedItems\.length > 1/);
   assert.match(galleryJs, /wrapNavigation: selectedNavigation/);
   assert.match(galleryJs, /navigationKind: selectedNavigation \? "selected" : "loaded"/);
@@ -182,6 +230,7 @@ test("selection, round-trip state, and Quick Look follow the integrated contract
   assert.match(galleryJs, /commandButton \|\| cardButton/);
   assert.match(galleryJs, /id: "toggle-selection"[\s\S]*shortcut: "s"/);
   assert.match(detailJs, /selectionIds: Array\.isArray\(payload\?\.selectionIds\)/);
+  assert.doesNotMatch(detailJs, /selectionIds:[^\n]+slice\([^\n]*500/);
   assert.match(detailJs, /navigationNonce: payload\?\.navigationNonce/);
   assert.match(photosJs, /data-finder-preview-key-legend/);
   assert.match(photosJs, /data-finder-preview-fit/);

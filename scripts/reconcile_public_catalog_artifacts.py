@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from owner_catalog_projection import project_catalog, projection_snapshot
+from owner_catalog_projection import projection_snapshot, store_projection
 from owner_state_db import DEFAULT_DB as DEFAULT_OWNER_DB
 from public_catalog_policy import public_catalog_policy_snapshot
 
@@ -138,6 +138,62 @@ def _catalog_counts(path: Path, policy: dict[str, Any]) -> dict[str, int]:
     }
 
 
+def _filter_catalog_projection(
+    path: Path,
+    *,
+    eligible_ids: set[str],
+    retired_media_types: set[str],
+) -> dict[str, int]:
+    """Apply Owner publication policy to a projected catalog in place."""
+    conn = sqlite3.connect(path)
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        before = int(conn.execute("SELECT count(*) FROM media_items").fetchone()[0])
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "CREATE TEMP TABLE eligible_media_ids (media_id TEXT PRIMARY KEY) WITHOUT ROWID"
+        )
+        conn.executemany(
+            "INSERT INTO eligible_media_ids(media_id) VALUES (?)",
+            [(media_id,) for media_id in sorted(eligible_ids)],
+        )
+        conn.execute(
+            """
+            DELETE FROM media_items
+            WHERE NOT EXISTS (
+                SELECT 1 FROM eligible_media_ids AS eligible
+                WHERE eligible.media_id = media_items.media_id
+            )
+            OR media_type_id IN (
+                SELECT media_type_id FROM media_types
+                WHERE lower(code) IN ({retired_placeholders})
+            )
+            """.format(
+                retired_placeholders=",".join("?" for _ in retired_media_types) or "NULL"
+            ),
+            tuple(sorted(retired_media_types)),
+        )
+        after = int(conn.execute("SELECT count(*) FROM media_items").fetchone()[0])
+        if before and not after:
+            raise RuntimeError("publication policy would empty the public catalog")
+        if after == before:
+            conn.rollback()
+            return {"before": before, "after": after, "removed": 0}
+        foreign_keys = conn.execute("PRAGMA foreign_key_check").fetchall()
+        if foreign_keys:
+            raise RuntimeError(
+                f"filtered catalog failed foreign_key_check: {foreign_keys[:5]}"
+            )
+        conn.commit()
+        conn.execute("VACUUM")
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"before": before, "after": after, "removed": before - after}
+
+
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, prefix=path.name, suffix=".tmp", delete=False) as handle:
@@ -203,15 +259,71 @@ def reconcile(
                 shutil.copy2(source, target)
                 existing.add(relative)
         try:
-            projection_result = project_catalog(authority_path, catalog_path)
-            result["ownerProjection"] = {
-                **projection_status,
-                **projection_result,
-                "localSha256": projection_result["sha256"],
-                "localMatchesOwner": True,
-            }
+            owner_conn = sqlite3.connect(authority_path)
+            owner_conn.row_factory = sqlite3.Row
+            try:
+                current_projection = projection_snapshot(owner_conn)
+            finally:
+                owner_conn.close()
+            if current_projection is None:
+                raise RuntimeError("Owner public catalog projection has not been initialized")
+
+            candidate_path = temp_root / "policy-filtered-catalog.sqlite"
+            candidate_path.write_bytes(current_projection["payload"])
+            filter_result = _filter_catalog_projection(
+                candidate_path,
+                eligible_ids=set(policy["eligibleMediaIds"]),
+                retired_media_types=set(policy["retiredMediaTypes"]),
+            )
+            if filter_result["after"] != catalog_summary["after"]:
+                raise RuntimeError(
+                    "filtered catalog count does not match the reviewed dry-run summary"
+                )
+            shutil.copy2(candidate_path, catalog_path)
             _write_json_atomic(manifest_path, filtered_manifest)
             result["projectionSteps"] = _refresh_projections(repo_root)
+
+            conn = sqlite3.connect(catalog_path)
+            try:
+                integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+                foreign_keys = conn.execute("PRAGMA foreign_key_check").fetchall()
+                final_count = int(conn.execute("SELECT count(*) FROM media_items").fetchone()[0])
+            finally:
+                conn.close()
+            if integrity != "ok" or foreign_keys:
+                raise RuntimeError(
+                    "reconciled catalog failed integrity checks: "
+                    f"integrity={integrity}, foreign_keys={foreign_keys[:5]}"
+                )
+
+            owner_conn = sqlite3.connect(authority_path)
+            owner_conn.row_factory = sqlite3.Row
+            try:
+                owner_conn.execute("BEGIN IMMEDIATE")
+                stored_projection = store_projection(
+                    owner_conn,
+                    catalog_path.read_bytes(),
+                    source_kind="policy-reconciliation",
+                    expected_sha256=projection_status["approvedSha256"],
+                )
+                owner_conn.commit()
+            except Exception:
+                owner_conn.rollback()
+                raise
+            finally:
+                owner_conn.close()
+            result["ownerProjection"] = {
+                **projection_status,
+                **{
+                    key: value
+                    for key, value in stored_projection.items()
+                    if key != "payload"
+                },
+                "localSha256": stored_projection["sha256"],
+                "localMatchesOwner": True,
+            }
+            result["catalogIntegrity"] = integrity
+            result["catalogFinalCount"] = final_count
         except Exception:
             for relative in protected_paths:
                 current = repo_root / relative
@@ -223,22 +335,11 @@ def reconcile(
                     current.unlink()
             raise
 
-    conn = sqlite3.connect(catalog_path)
-    try:
-        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
-        foreign_keys = conn.execute("PRAGMA foreign_key_check").fetchall()
-        final_count = int(conn.execute("SELECT count(*) FROM media_items").fetchone()[0])
-    finally:
-        conn.close()
-    if integrity != "ok" or foreign_keys:
-        raise RuntimeError(f"reconciled catalog failed integrity checks: integrity={integrity}, foreign_keys={foreign_keys[:5]}")
-    if final_count != projection_status["approvedMediaCount"]:
+    if result["catalogFinalCount"] != result["ownerProjection"]["mediaCount"]:
         raise RuntimeError(
-            f"projected catalog row count {final_count} does not match Owner authority "
-            f"{projection_status['approvedMediaCount']}"
+            f"projected catalog row count {result['catalogFinalCount']} does not match Owner authority "
+            f"{result['ownerProjection']['mediaCount']}"
         )
-    result["catalogIntegrity"] = integrity
-    result["catalogFinalCount"] = final_count
     return result
 
 

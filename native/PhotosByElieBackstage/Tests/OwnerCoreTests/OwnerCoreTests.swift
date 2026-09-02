@@ -38,6 +38,36 @@ private actor RecordingLocalFixtureReviewService: LocalFixtureReviewServing {
 
 @Suite("OwnerCore contract")
 struct OwnerCoreTests {
+    @Test("External edit controls name the exact single source and summarize composites")
+    @MainActor
+    func externalEditControlsNameTheirSources() {
+        let first = ExternalEditSource(
+            position: 0,
+            assetID: "asset-1",
+            photoLibraryIdentifier: "photo-1",
+            originalFilename: "D5H_3422.NEF"
+        )
+        let second = ExternalEditSource(
+            position: 1,
+            assetID: "asset-2",
+            photoLibraryIdentifier: "photo-2",
+            originalFilename: "D5H_3423.NEF"
+        )
+
+        #expect(
+            BackstageViewModel.externalEditLabel(
+                editorName: "Pixelmator Pro",
+                sources: [first]
+            ) == "Pixelmator Pro · D5H_3422.NEF"
+        )
+        #expect(
+            BackstageViewModel.externalEditLabel(
+                editorName: "Pixelmator Pro",
+                sources: [second, first]
+            ) == "Pixelmator Pro · 2 source photos"
+        )
+    }
+
     @Test("PhotoKit cloud identifiers fail closed before native lookup")
     func photoKitCloudIdentifiersFailClosed() {
         let valid = "59647679-9EB0-46ED-9C2B-C98F61B58733:001:AZ69uAIW4v3U2XVypE0h8yYVh8mQ"

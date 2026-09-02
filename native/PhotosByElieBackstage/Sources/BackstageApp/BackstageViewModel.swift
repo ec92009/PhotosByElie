@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import OwnerCore
+import UniformTypeIdentifiers
 
 private enum ActivityRefreshError: Error {
     case timedOut
@@ -627,6 +628,35 @@ final class BackstageViewModel: ObservableObject {
             && selectedReviewAssetIDs.allSatisfy { id in
                 reviewItems.first(where: { $0.id == id })?.mediaType == "photo"
             }
+    }
+
+    var activeExternalEditLabel: String? {
+        guard let job = activeExternalEditJob else { return nil }
+        return Self.externalEditLabel(editorName: job.editor.name, sources: job.sources)
+    }
+
+    static func externalEditLabel(
+        editorName: String,
+        sources: [ExternalEditSource]
+    ) -> String {
+        let filenames = sources.sorted { $0.position < $1.position }
+            .map(\.originalFilename).filter { !$0.isEmpty }
+        let subject = filenames.count == 1
+            ? filenames[0]
+            : "\(filenames.count.formatted()) source photos"
+        return "\(editorName) · \(subject)"
+    }
+
+    var quickLookExternalEditActions: BackstageQuickLookExternalEditActions? {
+        guard let label = activeExternalEditLabel else { return nil }
+        return BackstageQuickLookExternalEditActions(
+            label: label,
+            isBusy: isExternalEditOperationInProgress,
+            returnFinishedFile: { [weak self] in self?.chooseExternalEditReturn() },
+            showReturnFolder: { [weak self] in self?.revealExternalEditReturnFolder() },
+            chooseReturnFolder: { [weak self] in self?.chooseExternalEditReturnDirectory() },
+            cancel: { [weak self] in self?.requestCancelExternalEdit() }
+        )
     }
 
     var availableExternalEditors: [ExternalEditorProfile] {
@@ -6129,6 +6159,27 @@ final class BackstageViewModel: ObservableObject {
         announceExternalEdit("Finished edits will return from \(url.lastPathComponent).")
     }
 
+    func chooseExternalEditReturn() {
+        guard let job = activeExternalEditJob else {
+            announceExternalEdit("There is no active external edit to receive.")
+            return
+        }
+        announceExternalEdit("Choose the finished file for \(activeExternalEditLabel ?? job.editor.name).")
+        let panel = NSOpenPanel()
+        panel.title = "Return finished work to Review"
+        panel.prompt = "Return to Review"
+        panel.directoryURL = externalEditReturnDirectory ?? job.returnDirectory
+        panel.allowedContentTypes = [.image]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            announceExternalEdit("The external edit remains active; no returned file was selected.")
+            return
+        }
+        requestExternalEditReturn(from: url)
+    }
+
     private func performExternalEdit(
         editor: ExternalEditorProfile,
         assetIDs: [String]
@@ -6173,9 +6224,12 @@ final class BackstageViewModel: ObservableObject {
             )
             let launched = try externalEditJobStore.recordLaunched(jobID: prepared.id, now: Date())
             activeExternalEditJob = launched
+            let openedSubject = receipts.count == 1
+                ? receipts[0].filename
+                : "\(receipts.count.formatted()) ordered originals"
             announceExternalEdit(kind == .edit
-                ? "Editing in \(editor.name). Export the finished JPG or TIFF, then choose Return finished file."
-                : "Creating in \(editor.name). Export one finished panorama or composite, then choose Return finished file.")
+                ? "Opened \(openedSubject) in \(editor.name). Export the finished JPG or TIFF, then choose Return finished file."
+                : "Opened \(openedSubject) in \(editor.name). Export one finished panorama or composite, then choose Return finished file.")
         } catch {
             if let job {
                 try? externalEditJobStore.fail(
@@ -6191,15 +6245,15 @@ final class BackstageViewModel: ObservableObject {
 
     func requestExternalEditReturn(from sourceURL: URL) {
         guard !isImportingExternalEdit, !isPreparingExternalEdit else {
-            externalEditStatus = "Finish the current external-edit action first."
+            announceExternalEdit("Finish the current external-edit action first.")
             return
         }
         guard let job = activeExternalEditJob else {
-            externalEditStatus = "There is no active external edit to receive."
+            announceExternalEdit("There is no active external edit to receive.")
             return
         }
         isImportingExternalEdit = true
-        externalEditStatus = "Verifying and returning the finished file to Review…"
+        announceExternalEdit("Verifying and returning the finished file to Review…")
         Task { [weak self] in
             await self?.performExternalEditReturn(job: job, sourceURL: sourceURL)
         }
@@ -6208,7 +6262,7 @@ final class BackstageViewModel: ObservableObject {
     private func performExternalEditReturn(job: ExternalEditJob, sourceURL: URL) async {
         defer { isImportingExternalEdit = false }
         guard let externalEditJobStore else {
-            externalEditStatus = "Owner.sqlite is unavailable for external editing."
+            announceExternalEdit("Owner.sqlite is unavailable for external editing.")
             return
         }
         do {
@@ -6226,13 +6280,12 @@ final class BackstageViewModel: ObservableObject {
             externalEditSourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
             externalEditReturnedImage = NSImage(contentsOf: receipt.fileURL)
             activeExternalEditJob = nil
-            externalEditStatus = receipt.derivedAsset
+            announceExternalEdit(receipt.derivedAsset
                 ? "Returned one new derived photo with \(job.sources.count.formatted()) ordered parents. It is awaiting final Review."
-                : "Returned a newer rendition of the same photo. It is awaiting final Review."
-            reviewStatus = externalEditStatus
+                : "Returned a newer rendition of the same photo. It is awaiting final Review.")
             await loadFixtureReviewWindow(preferredAssetID: receipt.destinationAssetID)
         } catch {
-            externalEditStatus = "Return failed: \(userFacingMessage(for: error))"
+            announceExternalEdit("Return failed: \(userFacingMessage(for: error))")
         }
     }
 
@@ -6240,16 +6293,16 @@ final class BackstageViewModel: ObservableObject {
         guard let job = activeExternalEditJob,
               !isExternalEditOperationInProgress else { return }
         isPreparingExternalEdit = true
-        externalEditStatus = "Cancelling the external edit job…"
+        announceExternalEdit("Cancelling \(activeExternalEditLabel ?? "the external edit job")…")
         Task { [weak self] in
             guard let self else { return }
             defer { self.isPreparingExternalEdit = false }
             do {
                 try self.externalEditJobStore?.cancel(jobID: job.id, now: Date())
                 self.activeExternalEditJob = nil
-                self.externalEditStatus = "External edit cancelled. Prepared working copies remain recoverable."
+                self.announceExternalEdit("External edit cancelled. Prepared working copies remain recoverable.")
             } catch {
-                self.externalEditStatus = "Could not cancel external edit: \(self.userFacingMessage(for: error))"
+                self.announceExternalEdit("Could not cancel external edit: \(self.userFacingMessage(for: error))")
             }
         }
     }

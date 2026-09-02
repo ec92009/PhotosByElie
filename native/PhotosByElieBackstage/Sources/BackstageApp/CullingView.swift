@@ -157,7 +157,8 @@ private enum CullingQuickLookPresenter {
                 onChooseExternalEditor: { [weak model, weak coordinator] assetID in
                     coordinator?.dismiss()
                     model?.chooseExternalEditor(for: [assetID])
-                }
+                },
+                externalEditActions: model.quickLookExternalEditActions
             )
             model.cullingStatus = "Quick Look opened for the selected Gallery photo."
         }

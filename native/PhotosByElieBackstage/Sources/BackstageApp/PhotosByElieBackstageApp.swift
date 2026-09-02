@@ -52,6 +52,33 @@ public struct BackstageApplication: App {
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
                             HStack(spacing: 10) {
+                                if let editLabel = model.activeExternalEditLabel {
+                                    if model.isExternalEditOperationInProgress {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                            .help(model.externalEditStatus)
+                                    }
+                                    Menu {
+                                        Button("Return finished file…") {
+                                            model.chooseExternalEditReturn()
+                                        }
+                                        Button("Show return folder") {
+                                            model.revealExternalEditReturnFolder()
+                                        }
+                                        Button("Choose return folder…") {
+                                            model.chooseExternalEditReturnDirectory()
+                                        }
+                                        Divider()
+                                        Button("Cancel edit job", role: .destructive) {
+                                            model.requestCancelExternalEdit()
+                                        }
+                                    } label: {
+                                        Label(editLabel, systemImage: "paintbrush.pointed")
+                                            .lineLimit(1)
+                                    }
+                                    .disabled(model.isExternalEditOperationInProgress)
+                                    .backstageHelp("Return, locate, reconfigure, or cancel the active external edit from any Backstage workspace.")
+                                }
                                 Text(backstageVersionLabel)
                                     .font(.caption.monospacedDigit().weight(.semibold))
                                     .foregroundStyle(.secondary)
@@ -900,7 +927,8 @@ struct LifecycleView: View {
                     }
                     return true
                 },
-                externalEditUnavailableReason: "Restore this photo before editing it."
+                externalEditUnavailableReason: "Restore this photo before editing it.",
+                externalEditActions: model.quickLookExternalEditActions
             )
             model.lifecycleStatus = "Quick Look opened for the selected Waste Basket photo."
         }
@@ -2266,7 +2294,8 @@ private struct MetadataGiveBackView: View {
                 onChooseExternalEditor: { currentAssetID in
                     quickLook.dismiss()
                     model.chooseExternalEditor(for: [currentAssetID])
-                }
+                },
+                externalEditActions: model.quickLookExternalEditActions
             )
             model.metadataReviewStatus = "Quick Look opened for the selected Metadata photo."
         }

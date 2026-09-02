@@ -542,7 +542,8 @@ struct UploadView: View {
                 onChooseExternalEditor: { assetID in
                     quickLook.dismiss()
                     model.chooseExternalEditor(for: [assetID])
-                }
+                },
+                externalEditActions: model.quickLookExternalEditActions
             )
             model.nativeUploadStatus = "Quick Look opened for the selected Upload photo."
         }

@@ -1,7 +1,6 @@
 import AppKit
 import OwnerCore
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// The production title and keyword Review workspace and its Canvas-selectable implementation.
 ///
@@ -110,7 +109,8 @@ private enum ReviewQuickLookPresenter {
                 onChooseExternalEditor: { [weak model, weak coordinator] assetID in
                     coordinator?.dismiss()
                     model?.chooseExternalEditor(for: [assetID])
-                }
+                },
+                externalEditActions: model.quickLookExternalEditActions
             )
             model.reviewStatus = "Quick Look opened for the selected Review photo."
         }
@@ -519,7 +519,7 @@ struct ReviewView: View {
                     .backstageHelp("Send one selected original out for a newer rendition, or several ordered originals out for one panorama or composite. Returned work stays in Review.")
                     if model.activeExternalEditJob != nil {
                         Button("Return finished file…") {
-                            chooseExternalEditReturn()
+                            model.chooseExternalEditReturn()
                         }
                         .disabled(model.isExternalEditOperationInProgress)
                         .backstageHelp("Choose the finished JPG, TIFF, PNG, or HEIC for the active external edit. Backstage binds it to the exact durable job, not its filename.")
@@ -638,24 +638,6 @@ struct ReviewView: View {
 
     private func chooseExternalEditor() {
         model.chooseExternalEditor(for: model.selectedReviewAssetIDs)
-    }
-
-    private func chooseExternalEditReturn() {
-        guard let job = model.activeExternalEditJob else { return }
-        model.externalEditStatus = "Choose the finished file for the active \(job.editor.name) job."
-        let panel = NSOpenPanel()
-        panel.title = "Return finished work to Review"
-        panel.prompt = "Return to Review"
-        panel.directoryURL = model.externalEditReturnDirectory ?? job.returnDirectory
-        panel.allowedContentTypes = [.image]
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else {
-            model.externalEditStatus = "The external edit remains active; no returned file was selected."
-            return
-        }
-        model.requestExternalEditReturn(from: url)
     }
 
     private var reviewHeading: some View {

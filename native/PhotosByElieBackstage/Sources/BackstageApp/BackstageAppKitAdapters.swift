@@ -317,6 +317,16 @@ final class BackstageSelectionController: ObservableObject {
 }
 
 @MainActor
+struct BackstageQuickLookExternalEditActions {
+    let label: String
+    let isBusy: Bool
+    let returnFinishedFile: () -> Void
+    let showReturnFolder: () -> Void
+    let chooseReturnFolder: () -> Void
+    let cancel: () -> Void
+}
+
+@MainActor
 final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowDelegate, @preconcurrency QLPreviewPanelDataSource {
     private static weak var activeCoordinator: BackstageQuickLookCoordinator?
     private final class PreviewItem: NSObject, QLPreviewItem {
@@ -342,6 +352,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
     private var onExternalEdit: ((String, ExternalEditorProfile) -> Void)?
     private var onChooseExternalEditor: ((String) -> Void)?
     private var externalEditUnavailableReason: String?
+    private var externalEditActions: BackstageQuickLookExternalEditActions?
     private weak var configuredPreviewPanel: QLPreviewPanel?
     private let metadataPanel = NSVisualEffectView()
     private let metadataStack = NSStackView()
@@ -435,7 +446,8 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         externalEditors: [ExternalEditorProfile] = [],
         externalEditUnavailableReason: String? = nil,
         onExternalEdit: ((String, ExternalEditorProfile) -> Void)? = nil,
-        onChooseExternalEditor: ((String) -> Void)? = nil
+        onChooseExternalEditor: ((String) -> Void)? = nil,
+        externalEditActions: BackstageQuickLookExternalEditActions? = nil
     ) {
         guard isOwnerActive else { return }
         guard isCurrentPresentation(candidate) else { return }
@@ -445,6 +457,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         self.externalEditUnavailableReason = externalEditUnavailableReason
         self.onExternalEdit = onExternalEdit
         self.onChooseExternalEditor = onChooseExternalEditor
+        self.externalEditActions = externalEditActions
         items = urls.enumerated().map { offset, url in
             PreviewItem(
                 url: url,
@@ -500,6 +513,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         externalEditUnavailableReason = nil
         onExternalEdit = nil
         onChooseExternalEditor = nil
+        externalEditActions = nil
         previewIndexObservation = nil
         removePreviewPanelObservers()
         removeShortcutMonitor()
@@ -698,6 +712,7 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         addMetadataRow("Color", value: item.color.isEmpty ? "None" : item.color.capitalized)
         addMetadataRow("State", value: item.state.capitalized)
         addExternalEditorMenu()
+        addActiveExternalEditMenu()
         let shortcuts = NSTextField(
             wrappingLabelWithString: item.shortcutHint
         )
@@ -745,10 +760,45 @@ final class BackstageQuickLookCoordinator: NSObject, ObservableObject, NSWindowD
         sender.selectItem(at: 0)
     }
 
+    private func addActiveExternalEditMenu() {
+        guard let actions = externalEditActions else { return }
+        let menu = NSPopUpButton(frame: .zero, pullsDown: true)
+        menu.addItem(withTitle: "Edit job · \(actions.label)")
+        menu.item(at: 0)?.isEnabled = false
+        menu.addItem(withTitle: "Return finished file…")
+        menu.lastItem?.tag = 1
+        menu.addItem(withTitle: "Show return folder")
+        menu.lastItem?.tag = 2
+        menu.addItem(withTitle: "Choose return folder…")
+        menu.lastItem?.tag = 3
+        menu.menu?.addItem(.separator())
+        menu.addItem(withTitle: "Cancel edit job")
+        menu.lastItem?.tag = 4
+        menu.target = self
+        menu.action = #selector(selectQuickLookEditJobAction(_:))
+        menu.isEnabled = !actions.isBusy
+        menu.toolTip = actions.isBusy
+            ? "Finish the current external-edit action first."
+            : "Manage the active external edit without returning to Review."
+        metadataStack.addArrangedSubview(menu)
+    }
+
+    @objc private func selectQuickLookEditJobAction(_ sender: NSPopUpButton) {
+        guard let actions = externalEditActions else { return }
+        switch sender.selectedItem?.tag {
+        case 1: actions.returnFinishedFile()
+        case 2: actions.showReturnFolder()
+        case 3: actions.chooseReturnFolder()
+        case 4: actions.cancel()
+        default: break
+        }
+        sender.selectItem(at: 0)
+    }
+
     private func positionMetadataWindow(relativeTo panel: QLPreviewPanel) {
         let placement = currentMetadataPlacement
         let gap: CGFloat = 8
-        let metadataHeight: CGFloat = 375
+        let metadataHeight: CGFloat = externalEditActions == nil ? 375 : 415
         let metadataWidth: CGFloat = placement == .beside ? 320 : panel.frame.width
         var panelFrame = panel.frame
 

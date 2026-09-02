@@ -661,6 +661,14 @@ final class BackstageViewModel: ObservableObject {
         return profiles
     }
 
+    var externalEditReturnDirectory: URL? {
+        guard let path = UserDefaults.standard.string(forKey: "externalEditor.returnDirectory"),
+              FileManager.default.fileExists(atPath: path) else {
+            return activeExternalEditJob?.returnDirectory
+        }
+        return URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
+    }
+
     var canStartPublicCatalogDeployment: Bool {
         guard let plan = nativeUploadPlan else { return false }
         return canStartCloudWorkflow
@@ -6103,6 +6111,24 @@ final class BackstageViewModel: ObservableObject {
         )
     }
 
+    func chooseExternalEditReturnDirectory() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose where finished edits will be exported"
+        panel.prompt = "Use This Folder"
+        panel.directoryURL = externalEditReturnDirectory
+            ?? FileManager.default.urls(for: .picturesDirectory, in: .userDomainMask).first
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else {
+            announceExternalEdit("Return-folder selection cancelled; the current folder is unchanged.")
+            return
+        }
+        UserDefaults.standard.set(url.standardizedFileURL.path, forKey: "externalEditor.returnDirectory")
+        announceExternalEdit("Finished edits will return from \(url.lastPathComponent).")
+    }
+
     private func performExternalEdit(
         editor: ExternalEditorProfile,
         assetIDs: [String]
@@ -6229,9 +6255,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func revealExternalEditReturnFolder() {
-        guard let job = activeExternalEditJob else { return }
-        externalEditStatus = "Opened the return folder for \(job.editor.name)."
-        _ = openExternalURL(job.returnDirectory)
+        guard let job = activeExternalEditJob,
+              let directory = externalEditReturnDirectory else { return }
+        announceExternalEdit("Opened \(directory.lastPathComponent), the return folder for \(job.editor.name).")
+        _ = openExternalURL(directory)
     }
 
     func clearExternalEditComparison() {

@@ -520,6 +520,9 @@ struct ReviewView: View {
                         .disabled(model.isExternalEditOperationInProgress)
                         .backstageHelp("Choose the finished JPG, TIFF, PNG, or HEIC for the active external edit. Backstage binds it to the exact durable job, not its filename.")
                         Menu("Edit job") {
+                            Button("Choose return folder…") {
+                                model.chooseExternalEditReturnDirectory()
+                            }
                             Button("Show return folder") {
                                 model.revealExternalEditReturnFolder()
                             }
@@ -639,7 +642,7 @@ struct ReviewView: View {
         let panel = NSOpenPanel()
         panel.title = "Return finished work to Review"
         panel.prompt = "Return to Review"
-        panel.directoryURL = job.returnDirectory
+        panel.directoryURL = model.externalEditReturnDirectory ?? job.returnDirectory
         panel.allowedContentTypes = [.image]
         panel.canChooseFiles = true
         panel.canChooseDirectories = false

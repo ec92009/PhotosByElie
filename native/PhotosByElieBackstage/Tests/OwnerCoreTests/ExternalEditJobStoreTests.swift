@@ -55,6 +55,34 @@ struct ExternalEditJobStoreTests {
         #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_asset_locks") == "0")
         #expect(FileManager.default.fileExists(atPath: receipt.fileURL.path))
         #expect(FileManager.default.fileExists(atPath: job.workingDirectory.appendingPathComponent("manifest.json").path))
+        let current = try store.currentReturnedSource(assetID: "asset-1")
+        #expect(current?.sourceVersionID == receipt.sourceVersionID)
+        #expect(current?.fileURL == receipt.fileURL)
+        #expect(current?.byteCount == receipt.byteCount)
+    }
+
+    @Test("A returned file is ignored once a newer source version exists")
+    func staleReturnDoesNotOverrideNewerSource() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let store = fixture.store
+        let job = try store.createJob(
+            fixtureID: "fixture-expo",
+            kind: .edit,
+            editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")],
+            now: fixture.date
+        )
+        _ = try store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("developed-one".utf8).write(to: returned)
+        _ = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        try fixture.execute(
+            "INSERT INTO asset_source_versions(version_id, asset_id, state, created_at) "
+                + "VALUES ('newer-photos-version', 'asset-1', 'candidate', '2030-01-01T00:00:00Z')"
+        )
+
+        #expect(try store.currentReturnedSource(assetID: "asset-1") == nil)
     }
 
     @Test("A return upgrades the legacy asset-based lineage table")
@@ -238,6 +266,16 @@ private struct Fixture {
         defer { sqlite3_finalize(statement) }
         guard sqlite3_step(statement) == SQLITE_ROW else { return "" }
         return sqlite3_column_text(statement, 0).map(String.init(cString:)) ?? String(sqlite3_column_int64(statement, 0))
+    }
+
+    func execute(_ sql: String) throws {
+        var database: OpaquePointer?
+        guard sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK,
+              let database else { throw ExternalEditJobError.databaseUnavailable }
+        defer { sqlite3_close_v2(database) }
+        guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else {
+            throw ExternalEditJobError.database(String(cString: sqlite3_errmsg(database)))
+        }
     }
 
     func remove() {

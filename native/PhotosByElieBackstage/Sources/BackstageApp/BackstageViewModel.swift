@@ -5998,8 +5998,9 @@ final class BackstageViewModel: ObservableObject {
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
             do {
-                let preview = try await photoLibrary.preview(
-                    localIdentifier: item.photoLibraryIdentifier,
+                let preview = try await previewForAsset(
+                    forAssetID: item.id,
+                    preferredIdentifier: item.photoLibraryIdentifier,
                     maxPixelSize: 420
                 )
                 guard let image = NSImage(data: preview.jpegData) else {
@@ -6279,6 +6280,7 @@ final class BackstageViewModel: ObservableObject {
             externalEditReturnReceipt = receipt
             externalEditSourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
             externalEditReturnedImage = NSImage(contentsOf: receipt.fileURL)
+            invalidateCurrentRenditionCaches(for: receipt.destinationAssetID)
             activeExternalEditJob = nil
             announceExternalEdit(receipt.derivedAsset
                 ? "Returned one new derived photo with \(job.sources.count.formatted()) ordered parents. It is awaiting final Review."
@@ -7993,8 +7995,9 @@ final class BackstageViewModel: ObservableObject {
     func loadNativeUploadThumbnail(for item: NativeUploadPlanItem) async {
         guard nativeUploadThumbnails[item.id] == nil else { return }
         do {
-            let preview = try await photoLibrary.preview(
-                localIdentifier: item.photoLibraryIdentifier,
+            let preview = try await previewForAsset(
+                forAssetID: item.id,
+                preferredIdentifier: item.photoLibraryIdentifier,
                 maxPixelSize: 100
             )
             guard let image = NSImage(data: preview.jpegData) else { return }
@@ -9382,11 +9385,58 @@ final class BackstageViewModel: ObservableObject {
         return candidates
     }
 
+    private func returnedEditPreview(
+        forAssetID assetID: String,
+        maxPixelSize: Int
+    ) async throws -> PhotoPreview? {
+        guard let externalEditJobStore else { return nil }
+        return try await Task.detached(priority: .userInitiated) {
+            guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID) else {
+                return nil
+            }
+            let data = try Data(contentsOf: source.fileURL, options: [.mappedIfSafe])
+            return try PhotoPreview.fromLocalImageData(
+                data,
+                assetID: assetID,
+                maxPixelSize: maxPixelSize,
+                currentImageByteCount: source.byteCount
+            )
+        }.value
+    }
+
+    private func invalidateCurrentRenditionCaches(for assetID: String) {
+        reviewThumbnailTasks[assetID]?.cancel()
+        reviewThumbnailTasks[assetID] = nil
+        reviewThumbnails.removeValue(forKey: assetID)
+
+        cullingThumbnailTasks[assetID]?.cancel()
+        cullingThumbnailTasks[assetID] = nil
+        cullingThumbnailTaskTokens[assetID] = nil
+        cullingThumbnailTimeoutTasks[assetID]?.cancel()
+        cullingThumbnailTimeoutTasks[assetID] = nil
+        cullingThumbnails.removeValue(forKey: assetID)
+        cullingBasicThumbnails.removeValue(forKey: assetID)
+
+        lifecycleThumbnailTasks[assetID]?.cancel()
+        lifecycleThumbnailTasks[assetID] = nil
+        lifecycleThumbnails.removeValue(forKey: assetID)
+        nativeUploadThumbnails.removeValue(forKey: assetID)
+        if focusedCullingAssetID == assetID {
+            photoPreview = nil
+        }
+    }
+
     private func previewForAsset(
         forAssetID assetID: String,
         preferredIdentifier: String? = nil,
         maxPixelSize: Int
     ) async throws -> PhotoPreview {
+        if let preview = try await returnedEditPreview(
+            forAssetID: assetID,
+            maxPixelSize: maxPixelSize
+        ) {
+            return preview
+        }
         var lastError: Error?
         for identifier in photoLibraryIdentifierCandidates(
             for: assetID,
@@ -9412,6 +9462,12 @@ final class BackstageViewModel: ObservableObject {
         preferredIdentifier: String? = nil,
         maxPixelSize: Int
     ) async throws -> PhotoPreview {
+        if let preview = try await returnedEditPreview(
+            forAssetID: assetID,
+            maxPixelSize: maxPixelSize
+        ) {
+            return preview
+        }
         var lastError: Error?
         for identifier in photoLibraryIdentifierCandidates(
             for: assetID,
@@ -9437,6 +9493,12 @@ final class BackstageViewModel: ObservableObject {
         preferredIdentifier: String? = nil,
         maxPixelSize: Int
     ) async throws -> PhotoPreview {
+        if let preview = try await returnedEditPreview(
+            forAssetID: assetID,
+            maxPixelSize: maxPixelSize
+        ) {
+            return preview
+        }
         var lastError: Error?
         for identifier in photoLibraryIdentifierCandidates(
             for: assetID,
@@ -9463,6 +9525,33 @@ final class BackstageViewModel: ObservableObject {
         to directory: URL,
         strictMaster: Bool = false
     ) async throws -> PhotoExportReceipt {
+        if let externalEditJobStore,
+           let receipt = try await Task.detached(priority: .userInitiated, operation: {
+               guard let source = try externalEditJobStore.currentReturnedSource(assetID: assetID) else {
+                   return nil as PhotoExportReceipt?
+               }
+               try FileManager.default.createDirectory(
+                   at: directory,
+                   withIntermediateDirectories: true
+               )
+               let filename = "edited-\(source.sourceVersionID.prefix(12)).\(source.fileURL.pathExtension.lowercased())"
+               let destination = directory.appendingPathComponent(filename)
+               if FileManager.default.fileExists(atPath: destination.path) {
+                   try FileManager.default.removeItem(at: destination)
+               }
+               try FileManager.default.copyItem(at: source.fileURL, to: destination)
+               return PhotoExportReceipt(
+                   assetID: assetID,
+                   filename: filename,
+                   destination: destination,
+                   uniformTypeIdentifier: UTType(filenameExtension: destination.pathExtension)?.identifier
+                       ?? UTType.image.identifier,
+                   byteCount: source.byteCount,
+                   checksumSHA256: source.checksumSHA256
+               )
+           }).value {
+            return receipt
+        }
         var lastError: Error?
         for identifier in photoLibraryIdentifierCandidates(
             for: assetID,

@@ -94,6 +94,31 @@ public struct ExternalEditReturnReceipt: Codable, Identifiable, Sendable, Equata
     public var derivedAsset: Bool
 }
 
+/// The exact accepted external-edit file backing an asset's current source
+/// version. UI and export callers use this instead of silently falling back to
+/// the older Apple Photos rendition.
+public struct ExternalEditReturnedSource: Sendable, Equatable {
+    public var assetID: String
+    public var sourceVersionID: String
+    public var fileURL: URL
+    public var checksumSHA256: String
+    public var byteCount: Int64
+
+    public init(
+        assetID: String,
+        sourceVersionID: String,
+        fileURL: URL,
+        checksumSHA256: String,
+        byteCount: Int64
+    ) {
+        self.assetID = assetID
+        self.sourceVersionID = sourceVersionID
+        self.fileURL = fileURL.standardizedFileURL
+        self.checksumSHA256 = checksumSHA256
+        self.byteCount = byteCount
+    }
+}
+
 public enum ExternalEditJobError: LocalizedError, Equatable {
     case databaseUnavailable
     case activeJobExists
@@ -128,10 +153,15 @@ public protocol ExternalEditJobStoring: Sendable {
     func recordPrepared(jobID: String, receipts: [PhotoExportReceipt], now: Date) throws -> ExternalEditJob
     func recordLaunched(jobID: String, now: Date) throws -> ExternalEditJob
     func acceptReturnedFile(jobID: String, sourceURL: URL, now: Date) throws -> ExternalEditReturnReceipt
+    func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource?
     func cancel(jobID: String, now: Date) throws
     func fail(jobID: String, message: String, now: Date) throws
     func activeJob() throws -> ExternalEditJob?
     func recoverInterruptedPreparation(now: Date) throws -> Int
+}
+
+public extension ExternalEditJobStoring {
+    func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? { nil }
 }
 
 public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
@@ -515,6 +545,67 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
             database,
             whereClause: "state IN ('preparing', 'editing') ORDER BY created_at DESC LIMIT 1",
             bindings: []
+        )
+    }
+
+    public func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource? {
+        let assetID = assetID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !assetID.isEmpty else { return nil }
+        let database = try openReadable()
+        defer { sqlite3_close_v2(database) }
+        guard try tableExists(database, name: "external_edit_returns") else { return nil }
+
+        var statement: OpaquePointer?
+        let sql = """
+        SELECT returned.source_version_id, returned.file_path,
+               returned.checksum_sha256, returned.byte_count
+        FROM external_edit_returns AS returned
+        JOIN asset_source_versions AS source
+          ON source.version_id = returned.source_version_id
+         AND source.asset_id = returned.destination_asset_id
+        WHERE returned.destination_asset_id = ?
+          AND source.source_exists = 1
+          AND source.state IN ('candidate', 'approved', 'live')
+          AND source.version_id = (
+            SELECT latest.version_id
+            FROM asset_source_versions AS latest
+            WHERE latest.asset_id = returned.destination_asset_id
+              AND latest.source_exists = 1
+              AND latest.state IN ('candidate', 'approved', 'live')
+            ORDER BY latest.created_at DESC, latest.version_id DESC
+            LIMIT 1
+          )
+        LIMIT 1
+        """
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+              let statement else { throw databaseError(database) }
+        defer { sqlite3_finalize(statement) }
+        bind([assetID], to: statement)
+        guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
+
+        let sourceVersionID = text(statement, 0)
+        let fileURL = URL(fileURLWithPath: text(statement, 1)).standardizedFileURL
+        let checksum = text(statement, 2)
+        let byteCount = sqlite3_column_int64(statement, 3)
+        let values = try? fileURL.resourceValues(
+            forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
+        )
+        let rootPath = jobsRoot.standardizedFileURL.path + "/"
+        guard fileURL.path.hasPrefix(rootPath),
+              fileURL.path.contains("/Return/Accepted/"),
+              values?.isRegularFile == true,
+              values?.isSymbolicLink != true,
+              Int64(values?.fileSize ?? 0) == byteCount,
+              byteCount > 0,
+              try Self.sha256(fileURL) == checksum else {
+            throw ExternalEditJobError.invalidReturnedFile
+        }
+        return ExternalEditReturnedSource(
+            assetID: assetID,
+            sourceVersionID: sourceVersionID,
+            fileURL: fileURL,
+            checksumSHA256: checksum,
+            byteCount: byteCount
         )
     }
 

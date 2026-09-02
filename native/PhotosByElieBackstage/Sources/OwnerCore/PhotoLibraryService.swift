@@ -55,6 +55,22 @@ public struct PhotoPreview: Sendable, Equatable {
     }
 }
 
+public extension PhotoPreview {
+    static func fromLocalImageData(
+        _ data: Data,
+        assetID: String,
+        maxPixelSize: Int,
+        currentImageByteCount: Int64? = nil
+    ) throws -> PhotoPreview {
+        try PhotoKitLibraryService.previewFromImageData(
+            data,
+            localIdentifier: assetID,
+            maxPixelSize: maxPixelSize,
+            currentImageByteCount: currentImageByteCount
+        )
+    }
+}
+
 public struct PhotoExportReceipt: Sendable, Equatable {
     public var assetID: String
     public var filename: String
@@ -62,6 +78,22 @@ public struct PhotoExportReceipt: Sendable, Equatable {
     public var uniformTypeIdentifier: String
     public var byteCount: Int64
     public var checksumSHA256: String
+
+    public init(
+        assetID: String,
+        filename: String,
+        destination: URL,
+        uniformTypeIdentifier: String,
+        byteCount: Int64,
+        checksumSHA256: String
+    ) {
+        self.assetID = assetID
+        self.filename = filename
+        self.destination = destination
+        self.uniformTypeIdentifier = uniformTypeIdentifier
+        self.byteCount = byteCount
+        self.checksumSHA256 = checksumSHA256
+    }
 }
 
 public enum PhotoLibraryError: Error, Sendable, Equatable {

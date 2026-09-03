@@ -45,6 +45,8 @@ struct UploadHeaderView: View {
                     confirmingSelectedPublication = true
                 }
                     .disabled(!model.canStartCloudWorkflow || model.selectedDeliveryIDs.isEmpty)
+                    .accessibilityLabel("Upload selection")
+                    .accessibilityIdentifier("backstage.uploads.primary-selection")
                     .backstageHelp("Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.")
                 if let plan = model.nativeUploadPlan,
                    plan.projectionPendingCount + plan.projectionFailedCount > 0 {

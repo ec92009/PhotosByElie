@@ -83,7 +83,6 @@ on run arguments
     set rowIndex to item 2 of arguments as integer
     tell application "System Events" to tell process processName
         set frontmost to true
-        set sidebarOutline to first outline of first scroll area of first group of first splitter group of first group of window 1
         if rowIndex is less than or equal to 9 then
             keystroke (rowIndex as text) using command down
         else if rowIndex is 10 then
@@ -94,7 +93,10 @@ on run arguments
             keystroke "3" using {command down, option down}
         end if
         repeat 20 times
-            if value of attribute "AXSelected" of row rowIndex of sidebarOutline is true then return true
+            try
+                set sidebarOutline to first outline of first scroll area of first group of first splitter group of first group of window 1
+                if value of attribute "AXSelected" of row rowIndex of sidebarOutline is true then return true
+            end try
             delay 0.1
         end repeat
         return false
@@ -162,8 +164,12 @@ if ! wait_for_text 'Keyboard Select All reached the guarded Gallery handler' 30;
 fi
 print 'PASS keyboard: Command-A reached guarded Gallery Select All'
 
-select_sidebar_row 9 >/dev/null
-if ! wait_for_text 'Upload selection' 30; then
+selected="$(select_sidebar_row 9)"
+if [[ "$selected" != 'true' ]] || ! wait_for_text 'Read-only workspace: Uploads' 50; then
+  print -u2 'FAIL installed accessibility smoke: Uploads could not be reopened for state checks.'
+  exit 1
+fi
+if ! wait_for_text 'Upload selection' 100; then
   print -u2 'FAIL installed accessibility smoke: Uploads did not expose its primary action.'
   exit 1
 fi
@@ -198,7 +204,11 @@ if [[ "$upload_selection_enabled" != 'false' ]]; then
   exit 1
 fi
 
-select_sidebar_row 12 >/dev/null
+selected="$(select_sidebar_row 12)"
+if [[ "$selected" != 'true' ]] || ! wait_for_text 'Read-only workspace: Updates' 50; then
+  print -u2 'FAIL installed accessibility smoke: Updates could not be reopened for state checks.'
+  exit 1
+fi
 if ! wait_for_text 'Failed safely' 30; then
   print -u2 'FAIL installed accessibility smoke: Updates did not expose the safe failure state.'
   exit 1

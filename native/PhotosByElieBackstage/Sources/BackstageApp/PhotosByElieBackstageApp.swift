@@ -114,6 +114,9 @@ public struct BackstageApplication: App {
                         }
                     }
             }
+            // Keep the navigation sidebar beside the workspace so changing its
+            // visibility produces a real detail-width update for Gallery.
+            .navigationSplitViewStyle(.balanced)
             .background(SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit"))
             .background(WindowFrameAutosaver(
                 name: BackstageWindowFrameStore.mainWindowAutosaveName

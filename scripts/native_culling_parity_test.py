@@ -377,6 +377,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn('"PhotosByElieBackstage.MainWindow"', app + persistence)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit")', app)
+        self.assertIn(".navigationSplitViewStyle(.balanced)", app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.CullingSplit")', app)

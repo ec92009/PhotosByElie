@@ -358,8 +358,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewTitle = ""
     @Published var reviewKeywords = ""
     @Published var reviewCountry = ""
-    private var reviewCountrySuggestionSeedAssetID: String?
-    private var reviewCountrySuggestionSeedValue = ""
     @Published var reviewAIReasons: Set<String> = []
     @Published var reviewAINote = ""
     @Published var reviewLastAction: FixtureReviewAction = .approve
@@ -491,14 +489,14 @@ final class BackstageViewModel: ObservableObject {
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
     private var nativeEnrollmentTask: Task<Void, Never>?
     private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
-    private(set) var hasPendingReviewMetadataAutosave = false
-    private var reviewMetadataAutosaveTask: Task<Void, Never>?
-    private var reviewMetadataAutosaveTaskToken: UUID?
-    private var reviewAIStatusRefreshTask: Task<Void, Never>?
+    var hasPendingReviewMetadataAutosave: Bool {
+        reviewWorkflow.hasPendingMetadataAutosave
+    }
     private var equipmentBackfillTask: Task<OwnerEquipmentBackfillReport, Error>?
     // Attempt once per idle/visibility interval, including failures. Completion
     // must advance the queue, not immediately resubmit the same first four IDs.
     private var galleryWorkflow: BackstageGalleryWorkflowState
+    private var reviewWorkflow = BackstageReviewWorkflowState()
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
     private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
@@ -507,19 +505,12 @@ final class BackstageViewModel: ObservableObject {
     private var locallyObservedLifecycleActions: [String: OwnerAction] = [:]
     private var lifecycleRecoverableCount = 0
     private var lifecycleTombstoneCount = 0
-    private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
-    private var reviewWasteBasketPendingActionOrder: [String] = []
     private var lifecycleMonitorTask: Task<Void, Never>?
     private let cullingThumbnailTimeout: Duration
     private let cullingThumbnailUpgradeDelay: Duration
     private let cullingThumbnailBackfillDelay: Duration
     private let currentImageSizeFlushDelay: Duration
     private let activityRefreshTimeout: Duration
-    private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
-    private var reviewWindowRequestSerial = 0
-    private var reviewAIStatusRefreshGeneration = 0
-    private var reviewAIAvailabilityToken = ""
-    private var reviewAIWindowRefreshPending = false
     private let preferences: UserDefaults
     private var fixtureSelectionCoordinator: FixtureSelectionCoordinator
     private static let selectedSectionPreferenceKey =
@@ -1288,7 +1279,7 @@ final class BackstageViewModel: ObservableObject {
 
         preserveCurrentReviewDraft()
         cancelReviewMetadataAutosave()
-        reviewWindowRequestSerial += 1
+        reviewWorkflow.invalidateWindowRequests()
         fixtureReviewWindow = nil
         reviewWindowOffset = 0
         reviewSelection.clear()
@@ -4338,8 +4329,7 @@ final class BackstageViewModel: ObservableObject {
             reviewStatus = "Choose a fixture to load its Review queue."
             return
         }
-        reviewWindowRequestSerial += 1
-        let requestSerial = reviewWindowRequestSerial
+        let requestSerial = reviewWorkflow.beginWindowRequest()
         let preservedSelectedIDs = reviewSelection.selectedIDs
         let preservedAnchorID = reviewSelection.anchorID
         let preservedFocusedID = reviewSelection.focusedID
@@ -4350,7 +4340,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningReview = true
         reviewStatus = "Loading the oldest unresolved picked photos…"
         defer {
-            if requestSerial == reviewWindowRequestSerial {
+            if reviewWorkflow.ownsWindowRequest(requestSerial) {
                 isRunningReview = false
             }
         }
@@ -4367,36 +4357,20 @@ final class BackstageViewModel: ObservableObject {
                 limit: reviewWindowLimit,
                 search: reviewSearch
             )
-            guard requestSerial == reviewWindowRequestSerial, !Task.isCancelled else { return }
+            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             hydrateReviewProposalDrafts(from: window.items)
-            reviewAIWindowRefreshPending = false
+            reviewWorkflow.consumeAIWindowRefresh()
             fixtureReviewWindow = window
             await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
             let orderedIDs = window.items.map(\.id)
-            let replacementID = currentID.flatMap { orderedIDs.contains($0) ? $0 : nil }
-                ?? orderedIDs.first
-            let restoredSelectedIDs = preservedSelectedIDs.intersection(orderedIDs)
-            let selectedIDs: Set<String>
-            if preferredAssetID == nil, !restoredSelectedIDs.isEmpty {
-                selectedIDs = restoredSelectedIDs
-            } else {
-                selectedIDs = Set(replacementID.map { [$0] } ?? [])
-            }
-            let anchorID = preferredAssetID ?? preservedAnchorID
-            let focusID = preferredAssetID ?? preservedFocusedID
-            let restoredAnchorID = anchorID.flatMap {
-                orderedIDs.contains($0) ? $0 : nil
-            } ?? replacementID
-            let restoredFocusedID = focusID.flatMap {
-                orderedIDs.contains($0) ? $0 : nil
-            } ?? replacementID
-            reviewSelection = OwnerSelectionModel(
+            reviewSelection = reviewWorkflow.restoredSelection(
                 orderedIDs: orderedIDs,
-                selectedIDs: selectedIDs,
-                anchorID: restoredAnchorID,
-                focusedID: restoredFocusedID
+                selectedIDs: preservedSelectedIDs,
+                anchorID: preservedAnchorID,
+                focusedID: preservedFocusedID,
+                preferredAssetID: preferredAssetID
             )
-            reviewScrollTargetID = restoredFocusedID
+            reviewScrollTargetID = reviewSelection.focusedID
             syncReviewDraft()
             let queueScope = reviewStateFilters
                 .sorted { $0.rawValue < $1.rawValue }
@@ -4421,7 +4395,7 @@ final class BackstageViewModel: ObservableObject {
             await refreshVisualRepairProposals(for: window.items)
             await refreshAIStatus()
         } catch {
-            guard requestSerial == reviewWindowRequestSerial else { return }
+            guard reviewWorkflow.ownsWindowRequest(requestSerial) else { return }
             if isTransientCancellation(error) {
                 guard retryOnCancellation, !Task.isCancelled else { return }
                 try? await Task.sleep(for: .milliseconds(180))
@@ -4549,20 +4523,12 @@ final class BackstageViewModel: ObservableObject {
 
         preserveCurrentReviewDraft()
         let orderedIDs = items.map(\.id)
-        let candidateIDs = Set(ids)
-        let focusedID = reviewSelection.focusedID.flatMap {
-            candidateIDs.contains($0) ? $0 : nil
-        } ?? ids.first
-        let anchorID = reviewSelection.anchorID.flatMap {
-            candidateIDs.contains($0) ? $0 : nil
-        } ?? ids.first
-        reviewSelection = OwnerSelectionModel(
+        reviewSelection = reviewWorkflow.burstSelection(
             orderedIDs: orderedIDs,
-            selectedIDs: Set(ids),
-            anchorID: anchorID,
-            focusedID: focusedID
+            candidateIDs: ids,
+            current: reviewSelection
         )
-        reviewScrollTargetID = focusedID
+        reviewScrollTargetID = reviewSelection.focusedID
         syncReviewDraft()
         reviewStatus = "Selected \(ids.count) likely duplicate\(ids.count == 1 ? "" : "s") across Review capture-time bursts; each second frame remains unselected. Choose Hide to apply the audited Review action."
     }
@@ -4760,7 +4726,7 @@ final class BackstageViewModel: ObservableObject {
                        ownerError == .timedOut {
                         self.reviewStatus = self.pendingLifecycleActionStatus(
                             "Review X",
-                            action: self.reviewWasteBasketPendingActions[action.id] ?? action,
+                            action: self.reviewWorkflow.wasteBasketPendingActions[action.id] ?? action,
                             availability: "Review remains available; check Activity for the full receipt."
                         )
                     } else {
@@ -4796,8 +4762,7 @@ final class BackstageViewModel: ObservableObject {
 
     func updateReviewCountry(_ value: String) {
         if value != reviewCountry {
-            reviewCountrySuggestionSeedAssetID = nil
-            reviewCountrySuggestionSeedValue = ""
+            reviewWorkflow.clearCountrySuggestionSeed()
         }
         reviewCountry = value
         scheduleReviewMetadataAutosave()
@@ -4837,8 +4802,8 @@ final class BackstageViewModel: ObservableObject {
                 ? reviewTitle
                 : nil
         let currentCountry = focusedReviewItem?.country ?? ""
-        let countrySuggestionIsUntouched = reviewCountrySuggestionSeedAssetID == anchor
-            && reviewCountrySuggestionSeedValue == reviewCountry
+        let countrySuggestionIsUntouched = reviewWorkflow.countrySuggestionSeedAssetID == anchor
+            && reviewWorkflow.countrySuggestionSeedValue == reviewCountry
         let countryDraft = action == .approve && countrySuggestionIsUntouched
             ? reviewCountry
             : approvalDraft?.country ?? reviewCountry
@@ -5165,7 +5130,7 @@ final class BackstageViewModel: ObservableObject {
                 )
             }
             guard let current = existingItems[change.assetID] else { continue }
-            let restored = applyReviewItemUpdate(current, from: change.review)
+            let restored = BackstageReviewWorkflowState.applying(change.review, to: current)
             window.summary.applyWorkflowStageTransition(
                 from: current.workflowStage,
                 to: restored.workflowStage
@@ -5173,88 +5138,11 @@ final class BackstageViewModel: ObservableObject {
         }
         window.items = items.map { current in
             guard let change = changesByID[current.id] else { return current }
-            return applyReviewItemUpdate(current, from: change.review)
+            return BackstageReviewWorkflowState.applying(change.review, to: current)
         }
         fixtureReviewWindow = window
         hydrateReviewProposalDrafts(from: window.items)
         return true
-    }
-
-    private func applyReviewItemUpdate(
-        _ current: FixtureReviewItem,
-        from update: [String: JSONValue]
-    ) -> FixtureReviewItem {
-        var item = current
-        if let value = update["title"]?.stringValue { item.title = value }
-        if let value = update["caption"]?.stringValue { item.caption = value }
-        if let value = update["keywords"]?.arrayValue {
-            item.keywords = value.compactMap(\.stringValue)
-        }
-        if let value = update["rating"]?.intValue { item.rating = value }
-        if let value = update["color"]?.stringValue { item.color = value }
-        if let value = update["placementState"]?.stringValue {
-            item.placementState = value
-        }
-        if let value = update["editorialState"]?.stringValue {
-            item.editorialState = value
-        }
-        if let value = update["aiReasons"]?.arrayValue {
-            item.aiReasons = value.compactMap(\.stringValue)
-        }
-        if let value = update["aiNote"]?.stringValue { item.aiNote = value }
-        if let value = update["aiAttemptCount"]?.intValue {
-            item.aiAttemptCount = value
-        }
-        if let value = update["aiLastError"]?.stringValue {
-            item.aiLastError = value
-        }
-        if let value = update["proposalReady"]?.boolValue {
-            item.proposalReady = value
-        }
-        if let value = update["proposalContextAvailable"]?.boolValue {
-            item.proposalContextAvailable = value
-        }
-        if let value = update["proposalId"]?.stringValue {
-            item.proposalID = value
-        }
-        if let value = update["proposedTitle"]?.stringValue {
-            item.proposedTitle = value
-        }
-        if let value = update["proposedKeywords"]?.arrayValue {
-            item.proposedKeywords = value.compactMap(\.stringValue)
-        }
-        if let value = update["country"]?.stringValue {
-            item.country = value
-        }
-        if let value = update["proposedCountry"]?.stringValue {
-            item.proposedCountry = value
-        }
-        if let value = update["countryProposalSource"]?.stringValue {
-            item.countryProposalSource = value
-        }
-        if let value = update["proposalReason"]?.stringValue {
-            item.proposalReason = value
-        }
-        if let value = update["proposalStatus"]?.stringValue {
-            item.proposalStatus = value
-        }
-        if let value = update["requestedGeneratorModel"]?.stringValue {
-            item.requestedGeneratorModel = value
-        }
-        if let value = update["resolvedModel"]?.stringValue {
-            item.resolvedModel = value
-        }
-        if let value = update["reasoningEffort"]?.stringValue {
-            item.reasoningEffort = value
-        }
-        if let value = update["vision"]?.boolValue { item.vision = value }
-        if let value = update["modelLadder"]?.arrayValue {
-            item.modelLadder = value.compactMap(\.stringValue)
-        }
-        if let value = update["deliveryState"]?.stringValue {
-            item.deliveryState = value
-        }
-        return item
     }
 
     /// Local action retention must honor the same filters as a fresh Owner
@@ -5389,7 +5277,7 @@ final class BackstageViewModel: ObservableObject {
                            ownerError == .timedOut {
                             self.reviewStatus = self.pendingLifecycleActionStatus(
                                 "Review Undo",
-                                action: self.reviewWasteBasketPendingActions[action.id] ?? action,
+                                action: self.reviewWorkflow.wasteBasketPendingActions[action.id] ?? action,
                                 availability: "Review remains available; check Activity for the full receipt."
                             )
                         } else {
@@ -5514,30 +5402,25 @@ final class BackstageViewModel: ObservableObject {
 
     private func beginReviewWasteBasketAction(_ action: OwnerAction) {
         reviewWasteBasketPendingActionIDs.insert(action.id)
-        reviewWasteBasketPendingActions[action.id] = action
-        reviewWasteBasketPendingActionOrder.removeAll { $0 == action.id }
-        reviewWasteBasketPendingActionOrder.append(action.id)
+        reviewWorkflow.beginWasteBasketAction(action)
         refreshLatestReviewWasteBasketAction()
     }
 
     private func updateReviewWasteBasketAction(_ action: OwnerAction) {
         guard reviewWasteBasketPendingActionIDs.contains(action.id) else { return }
-        reviewWasteBasketPendingActions[action.id] = action
+        reviewWorkflow.updateWasteBasketAction(action)
         refreshLatestReviewWasteBasketAction()
     }
 
     private func finishReviewWasteBasketAction(_ actionID: String) {
         reviewWasteBasketPendingActionIDs.remove(actionID)
-        reviewWasteBasketPendingActions.removeValue(forKey: actionID)
-        reviewWasteBasketPendingActionOrder.removeAll { $0 == actionID }
+        reviewWorkflow.finishWasteBasketAction(actionID)
         refreshLatestReviewWasteBasketAction()
     }
 
     private func refreshLatestReviewWasteBasketAction() {
-        reviewWasteBasketPendingActionID = reviewWasteBasketPendingActionOrder.last
-        reviewWasteBasketPendingAction = reviewWasteBasketPendingActionID.flatMap {
-            reviewWasteBasketPendingActions[$0]
-        }
+        reviewWasteBasketPendingAction = reviewWorkflow.latestWasteBasketAction
+        reviewWasteBasketPendingActionID = reviewWasteBasketPendingAction?.id
     }
 
     /// Reinsert same-session Review X items without a full queue reload. The
@@ -5646,14 +5529,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func scheduleReviewAIStatusRefresh() {
-        reviewAIStatusRefreshTask?.cancel()
-        reviewAIStatusRefreshGeneration += 1
-        let generation = reviewAIStatusRefreshGeneration
+        let generation = reviewWorkflow.beginAIStatusRefresh()
         aiProposalStatus = "Refreshing AI status…"
-        reviewAIStatusRefreshTask = Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             await self.refreshAIStatus(forGeneration: generation)
         }
+        reviewWorkflow.installAIStatusRefreshTask(task)
     }
 
     func refreshAIStatus() async {
@@ -5664,11 +5546,11 @@ final class BackstageViewModel: ObservableObject {
         do {
             let status = try await fixtureService.aiStatus()
             guard !Task.isCancelled else { return }
-            if let generation, generation != reviewAIStatusRefreshGeneration {
+            if let generation, !reviewWorkflow.ownsAIStatusRefresh(generation) {
                 return
             }
             fixtureAIStatus = status
-            reviewAIAvailabilityToken = Self.aiAvailabilityToken(for: status)
+            reviewWorkflow.recordAIAvailability(status)
             guard let status = fixtureAIStatus else { return }
             if let run = status.run, status.active {
                 aiProposalStatus = [
@@ -5687,7 +5569,7 @@ final class BackstageViewModel: ObservableObject {
             }
         } catch {
             guard !isTransientCancellation(error) else { return }
-            if let generation, generation != reviewAIStatusRefreshGeneration {
+            if let generation, !reviewWorkflow.ownsAIStatusRefresh(generation) {
                 return
             }
             aiProposalStatus = "AI status unavailable: \(error)"
@@ -5699,31 +5581,22 @@ final class BackstageViewModel: ObservableObject {
     /// frontier changes; clean arrivals hydrate as drafts, while the loader
     /// preserves the current page, selection, focus, and draft text.
     func refreshReviewAIAvailability() async {
-        let previousToken = reviewAIAvailabilityToken
+        let previousToken = reviewWorkflow.aiAvailabilityToken
         await refreshAIStatus()
-        let availabilityChanged = previousToken != reviewAIAvailabilityToken
+        let availabilityChanged = reviewWorkflow.aiAvailabilityChanged(from: previousToken)
         let hasAvailableProposals = readyAIProposalCount > 0
             || (fixtureAIStatus?.run?.proposed ?? 0) > 0
-        guard availabilityChanged || reviewAIWindowRefreshPending else { return }
+        guard availabilityChanged || reviewWorkflow.aiWindowRefreshPending else { return }
         guard hasAvailableProposals,
               !selectedFixtureID.isEmpty,
               fixtureReviewWindow != nil
         else { return }
         guard !isRunningReview else {
-            reviewAIWindowRefreshPending = true
+            reviewWorkflow.deferAIWindowRefresh()
             return
         }
-        reviewAIWindowRefreshPending = false
+        reviewWorkflow.consumeAIWindowRefresh()
         await loadFixtureReviewWindow()
-    }
-
-    private static func aiAvailabilityToken(for status: FixtureAIStatus) -> String {
-        [
-            String(status.ready),
-            status.run?.id ?? "",
-            String(status.run?.proposed ?? 0),
-            status.run?.status ?? "",
-        ].joined(separator: "|")
     }
 
     func runAIProposalPass() async {
@@ -5877,12 +5750,12 @@ final class BackstageViewModel: ObservableObject {
 
     func requestReviewThumbnail(for item: FixtureReviewItem) {
         guard reviewThumbnails[item.id] == nil,
-              reviewThumbnailTasks[item.id] == nil
+              reviewWorkflow.thumbnailTasks[item.id] == nil
         else { return }
-        reviewThumbnailTasks[item.id] = Task { [weak self] in
+        reviewWorkflow.thumbnailTasks[item.id] = Task { [weak self] in
             guard let self else { return }
             await self.loadReviewThumbnail(for: item)
-            self.reviewThumbnailTasks[item.id] = nil
+            self.reviewWorkflow.thumbnailTasks[item.id] = nil
         }
     }
 
@@ -6242,16 +6115,16 @@ final class BackstageViewModel: ObservableObject {
         let draft = reviewProposalDrafts[item.id]
         if let draft {
             reviewCountry = draft.country
-            reviewCountrySuggestionSeedAssetID = nil
-            reviewCountrySuggestionSeedValue = ""
+            reviewWorkflow.clearCountrySuggestionSeed()
         } else if item.country.isEmpty, !item.suggestedCountry.isEmpty {
             reviewCountry = item.suggestedCountry
-            reviewCountrySuggestionSeedAssetID = item.id
-            reviewCountrySuggestionSeedValue = item.suggestedCountry
+            reviewWorkflow.setCountrySuggestionSeed(
+                assetID: item.id,
+                value: item.suggestedCountry
+            )
         } else {
             reviewCountry = item.country
-            reviewCountrySuggestionSeedAssetID = nil
-            reviewCountrySuggestionSeedValue = ""
+            reviewWorkflow.clearCountrySuggestionSeed()
         }
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
@@ -6272,49 +6145,18 @@ final class BackstageViewModel: ObservableObject {
     /// proposal draft; a manual draft remains visible and is surfaced as a
     /// conflict for the explicit replacement action.
     private func hydrateReviewProposalDrafts(from items: [FixtureReviewItem]) {
-        var conflicts = reviewProposalConflictIDs
-        for item in items
-        where item.proposalContextAvailable && !item.proposalID.isEmpty {
-            if let existing = reviewProposalDrafts[item.id] {
-                if existing.proposalID == item.proposalID {
-                    var refreshed = existing
-                    refreshed.proposalStatus = item.proposalStatus
-                    refreshed.requestedGeneratorModel = item.requestedGeneratorModel
-                    refreshed.resolvedModel = item.resolvedModel
-                    refreshed.reasoningEffort = item.reasoningEffort
-                    refreshed.vision = item.vision
-                    reviewProposalDrafts[item.id] = refreshed
-                    conflicts.remove(item.id)
-                    continue
-                }
-                if !existing.isProposal || existing.hasManualEdits {
-                    conflicts.insert(item.id)
-                    continue
-                }
-            }
-            reviewProposalDrafts[item.id] = ReviewMetadataDraft(
-                country: item.proposedCountry.isEmpty ? item.country : item.proposedCountry,
-                title: item.proposedTitle,
-                keywords: item.proposedKeywords,
-                proposalID: item.proposalID,
-                proposalReason: item.proposalReason,
-                proposalStatus: item.proposalStatus,
-                requestedGeneratorModel: item.requestedGeneratorModel,
-                resolvedModel: item.resolvedModel,
-                reasoningEffort: item.reasoningEffort,
-                vision: item.vision
-            )
-            conflicts.remove(item.id)
-        }
-        reviewProposalConflictIDs = conflicts
+        BackstageReviewWorkflowState.hydrateProposalDrafts(
+            from: items,
+            drafts: &reviewProposalDrafts,
+            conflicts: &reviewProposalConflictIDs
+        )
     }
 
     private func clearReviewDraft() {
         reviewTitle = ""
         reviewKeywords = ""
         reviewCountry = ""
-        reviewCountrySuggestionSeedAssetID = nil
-        reviewCountrySuggestionSeedValue = ""
+        reviewWorkflow.clearCountrySuggestionSeed()
         reviewAIReasons = []
         reviewAINote = ""
     }
@@ -6324,10 +6166,11 @@ final class BackstageViewModel: ObservableObject {
         let title = reviewTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let keywords = parsedReviewKeywords()
         let visibleCountry = reviewCountry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let country = reviewCountrySuggestionSeedAssetID == item.id
-            && reviewCountrySuggestionSeedValue == visibleCountry
-            ? item.country
-            : visibleCountry
+        let country = reviewWorkflow.preservedCountry(
+            assetID: item.id,
+            visibleCountry: visibleCountry,
+            storedCountry: item.country
+        )
         if let existing = reviewProposalDrafts[item.id], existing.isProposal {
             reviewProposalDrafts[item.id] = ReviewMetadataDraft(
                 country: country,
@@ -6367,10 +6210,8 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         guard reviewMetadataAutosaveIsNeeded else { return }
-        hasPendingReviewMetadataAutosave = true
-        let taskToken = UUID()
-        reviewMetadataAutosaveTaskToken = taskToken
-        reviewMetadataAutosaveTask = Task { [weak self] in
+        let taskToken = reviewWorkflow.beginMetadataAutosave()
+        let task = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
             guard self.focusedReviewItem?.id == assetID else { return }
@@ -6379,18 +6220,13 @@ final class BackstageViewModel: ObservableObject {
                 return
             }
             await self.saveReviewMetadataIfNeeded()
-            guard self.reviewMetadataAutosaveTaskToken == taskToken else { return }
-            self.reviewMetadataAutosaveTask = nil
-            self.reviewMetadataAutosaveTaskToken = nil
-            self.hasPendingReviewMetadataAutosave = false
+            self.reviewWorkflow.finishMetadataAutosave(taskToken)
         }
+        reviewWorkflow.installMetadataAutosaveTask(task)
     }
 
     private func cancelReviewMetadataAutosave() {
-        reviewMetadataAutosaveTask?.cancel()
-        reviewMetadataAutosaveTask = nil
-        reviewMetadataAutosaveTaskToken = nil
-        hasPendingReviewMetadataAutosave = false
+        reviewWorkflow.cancelMetadataAutosave()
     }
 
     private func saveReviewMetadataIfNeeded() async {
@@ -8481,10 +8317,10 @@ final class BackstageViewModel: ObservableObject {
         // Leave fixture-window reads alone. They own loading flags and may
         // still be between a debounce and the audited query; canceling them
         // here could strand that flag and prevent the drain from completing.
-        reviewAIStatusRefreshTask?.cancel()
+        reviewWorkflow.aiStatusRefreshTask?.cancel()
         equipmentBackfillTask?.cancel()
         cancelCullingThumbnailWork()
-        reviewThumbnailTasks.values.forEach { $0.cancel() }
+        reviewWorkflow.thumbnailTasks.values.forEach { $0.cancel() }
 
         // A delayed Review text edit is durable work even though its network
         // action has not started yet. Flush it synchronously before draining
@@ -9286,8 +9122,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func invalidateCurrentRenditionCaches(for assetID: String) {
-        reviewThumbnailTasks[assetID]?.cancel()
-        reviewThumbnailTasks[assetID] = nil
+        reviewWorkflow.thumbnailTasks[assetID]?.cancel()
+        reviewWorkflow.thumbnailTasks[assetID] = nil
         reviewThumbnails.removeValue(forKey: assetID)
 
         galleryWorkflow.thumbnailTasks[assetID]?.cancel()

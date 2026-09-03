@@ -51,9 +51,6 @@ public struct BackstageApplication: App {
                 .frame(minWidth: 230, idealWidth: 260)
             } detail: {
                 workspaceDetail
-                    .accessibilityIdentifier(
-                        "backstage.workspace.\((model.selection ?? .overview).rawValue)"
-                    )
                     .frame(
                         minWidth: 760,
                         maxWidth: .infinity,

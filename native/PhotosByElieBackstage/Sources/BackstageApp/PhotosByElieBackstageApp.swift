@@ -61,11 +61,11 @@ public struct BackstageApplication: App {
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
                             HStack(spacing: 10) {
-                                if let editLabel = model.activeExternalEditLabel {
+                                if let editLabel = model.externalEdit.activeLabel {
                                     if model.isExternalEditOperationInProgress {
                                         ProgressView()
                                             .controlSize(.small)
-                                            .help(model.externalEditStatus)
+                                            .help(model.externalEdit.status)
                                     }
                                     Menu {
                                         Button("Return finished file…") {
@@ -2368,7 +2368,7 @@ private struct MetadataGiveBackView: View {
                     )
                 },
                 externalEditors: model.availableExternalEditors,
-                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                externalEditUnavailableReason: model.externalEdit.activeJob == nil
                     ? nil
                     : "Finish or cancel the current external edit first.",
                 onExternalEdit: { currentAssetID, editor in

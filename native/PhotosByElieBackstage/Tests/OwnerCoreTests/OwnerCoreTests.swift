@@ -55,13 +55,13 @@ struct OwnerCoreTests {
         )
 
         #expect(
-            BackstageViewModel.externalEditLabel(
+            BackstageExternalEditWorkflowState.label(
                 editorName: "Pixelmator Pro",
                 sources: [first]
             ) == "Pixelmator Pro · D5H_3422.NEF"
         )
         #expect(
-            BackstageViewModel.externalEditLabel(
+            BackstageExternalEditWorkflowState.label(
                 editorName: "Pixelmator Pro",
                 sources: [second, first]
             ) == "Pixelmator Pro · 2 source photos"

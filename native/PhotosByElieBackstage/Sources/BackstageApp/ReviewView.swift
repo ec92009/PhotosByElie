@@ -99,7 +99,7 @@ private enum ReviewQuickLookPresenter {
                     return true
                 },
                 externalEditors: model.availableExternalEditors,
-                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                externalEditUnavailableReason: model.externalEdit.activeJob == nil
                     ? nil
                     : "Finish or cancel the current external edit first.",
                 onExternalEdit: { [weak model, weak coordinator] assetID, editor in
@@ -413,7 +413,7 @@ struct ReviewView: View {
                                         }
                                         .backstageHelp("Choose another installed editor for the selected Review source or sources.")
                                     }
-                                    .disabled(model.isExternalEditOperationInProgress || model.activeExternalEditJob != nil)
+                                    .disabled(model.isExternalEditOperationInProgress || model.externalEdit.activeJob != nil)
                                 }
                                 .onAppear {
                                     guard !isPreviewMode else { return }
@@ -522,7 +522,7 @@ struct ReviewView: View {
                     }
                     .disabled(!model.canStartExternalEdit)
                     .backstageHelp("Send one selected original out for a newer rendition, or several ordered originals out for one panorama or composite. Returned work stays in Review.")
-                    if model.activeExternalEditJob != nil {
+                    if model.externalEdit.activeJob != nil {
                         Button("Return finished file…") {
                             model.chooseExternalEditReturn()
                         }
@@ -565,9 +565,9 @@ struct ReviewView: View {
                         .foregroundStyle(.secondary)
                 }
                     BackstageFeedbackView(
-                        message: model.externalEditStatus,
+                        message: model.externalEdit.status,
                         isWorking: model.isExternalEditOperationInProgress,
-                        autoDismissAfter: model.activeExternalEditJob == nil ? .seconds(5) : nil
+                        autoDismissAfter: model.externalEdit.activeJob == nil ? .seconds(5) : nil
                     )
                     BackstageFeedbackView(
                         message: model.reviewStatus,
@@ -617,7 +617,7 @@ struct ReviewView: View {
         }
         .sheet(
             item: Binding(
-                get: { model.externalEditReturnReceipt },
+                get: { model.externalEdit.returnReceipt },
                 set: { value in
                     if value == nil { model.clearExternalEditComparison() }
                 }
@@ -625,8 +625,8 @@ struct ReviewView: View {
         ) { receipt in
             ExternalEditReturnComparisonView(
                 receipt: receipt,
-                sourceImages: model.externalEditSourceImages,
-                returnedImage: model.externalEditReturnedImage
+                sourceImages: model.externalEdit.sourceImages,
+                returnedImage: model.externalEdit.returnedImage
             )
         }
         .task {

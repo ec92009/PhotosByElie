@@ -532,7 +532,7 @@ struct UploadView: View {
                     return true
                 },
                 externalEditors: model.availableExternalEditors,
-                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                externalEditUnavailableReason: model.externalEdit.activeJob == nil
                     ? nil
                     : "Finish or cancel the current external edit first.",
                 onExternalEdit: { assetID, editor in

@@ -366,35 +366,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
     @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
-    @Published private var externalEditState = BackstageExternalEditWorkflowState()
-    private(set) var activeExternalEditJob: ExternalEditJob? {
-        get { externalEditState.activeJob }
-        set { externalEditState.activeJob = newValue }
-    }
-    private(set) var externalEditReturnReceipt: ExternalEditReturnReceipt? {
-        get { externalEditState.returnReceipt }
-        set { externalEditState.returnReceipt = newValue }
-    }
-    private(set) var externalEditSourceImages: [NSImage] {
-        get { externalEditState.sourceImages }
-        set { externalEditState.sourceImages = newValue }
-    }
-    private(set) var externalEditReturnedImage: NSImage? {
-        get { externalEditState.returnedImage }
-        set { externalEditState.returnedImage = newValue }
-    }
-    private(set) var isPreparingExternalEdit: Bool {
-        get { externalEditState.isPreparing }
-        set { externalEditState.isPreparing = newValue }
-    }
-    private(set) var isImportingExternalEdit: Bool {
-        get { externalEditState.isImporting }
-        set { externalEditState.isImporting = newValue }
-    }
-    private(set) var externalEditStatus: String {
-        get { externalEditState.status }
-        set { externalEditState.status = newValue }
-    }
+    @Published private(set) var externalEdit = BackstageExternalEditWorkflowState()
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var reviewWasteBasketPendingActionID: String?
@@ -630,11 +602,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isExternalEditOperationInProgress: Bool {
-        externalEditState.isOperationInProgress
+        externalEdit.isOperationInProgress
     }
 
     var selectedReviewTouchesActiveExternalEdit: Bool {
-        externalEditState.selectionTouchesActiveJob(selectedReviewAssetIDs)
+        externalEdit.selectionTouchesActiveJob(selectedReviewAssetIDs)
     }
 
     var isReviewMutationBlocked: Bool {
@@ -644,26 +616,15 @@ final class BackstageViewModel: ObservableObject {
     var canStartExternalEdit: Bool {
         !isRunningReview
             && !isExternalEditOperationInProgress
-            && activeExternalEditJob == nil
+            && externalEdit.activeJob == nil
             && !selectedReviewAssetIDs.isEmpty
             && selectedReviewAssetIDs.allSatisfy { id in
                 reviewItems.first(where: { $0.id == id })?.mediaType == "photo"
             }
     }
 
-    var activeExternalEditLabel: String? {
-        externalEditState.activeLabel
-    }
-
-    static func externalEditLabel(
-        editorName: String,
-        sources: [ExternalEditSource]
-    ) -> String {
-        BackstageExternalEditWorkflowState.label(editorName: editorName, sources: sources)
-    }
-
     var quickLookExternalEditActions: BackstageQuickLookExternalEditActions? {
-        guard let label = activeExternalEditLabel else { return nil }
+        guard let label = externalEdit.activeLabel else { return nil }
         return BackstageQuickLookExternalEditActions(
             label: label,
             isBusy: isExternalEditOperationInProgress,
@@ -709,7 +670,7 @@ final class BackstageViewModel: ObservableObject {
     var externalEditReturnDirectory: URL? {
         guard let path = UserDefaults.standard.string(forKey: "externalEditor.returnDirectory"),
               FileManager.default.fileExists(atPath: path) else {
-            return activeExternalEditJob?.returnDirectory
+            return externalEdit.activeJob?.returnDirectory
         }
         return URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
     }
@@ -913,9 +874,9 @@ final class BackstageViewModel: ObservableObject {
         self.openExternalURL = openExternalURL
         if let externalEditJobStore {
             _ = try? externalEditJobStore.recoverInterruptedPreparation(now: Date())
-            self.activeExternalEditJob = try? externalEditJobStore.activeJob()
-            if let job = self.activeExternalEditJob {
-                self.externalEditStatus = "Editing \(job.sources.count.formatted()) photo\(job.sources.count == 1 ? "" : "s") in \(job.editor.name). Export the finished image, then return it to this job."
+            self.externalEdit.activeJob = try? externalEditJobStore.activeJob()
+            if let job = self.externalEdit.activeJob {
+                self.externalEdit.status = "Editing \(job.sources.count.formatted()) photo\(job.sources.count == 1 ? "" : "s") in \(job.editor.name). Export the finished image, then return it to this job."
             }
         }
     }
@@ -6110,7 +6071,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func announceExternalEdit(_ message: String) {
-        externalEditState.announce(message)
+        externalEdit.announce(message)
         cullingStatus = message
         reviewStatus = message
         nativeUploadStatus = message
@@ -6118,22 +6079,22 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestExternalEdit(with editor: ExternalEditorProfile, assetIDs: [String]) {
-        guard !isPreparingExternalEdit, !isImportingExternalEdit else {
+        guard !externalEdit.isPreparing, !externalEdit.isImporting else {
             announceExternalEdit("Finish the current external-edit action first.")
             return
         }
         let orderedIDs = assetIDs.reduce(into: [String]()) { result, id in
             if !id.isEmpty, !result.contains(id) { result.append(id) }
         }
-        guard activeExternalEditJob == nil, !orderedIDs.isEmpty else {
-            announceExternalEdit(activeExternalEditJob == nil
+        guard externalEdit.activeJob == nil, !orderedIDs.isEmpty else {
+            announceExternalEdit(externalEdit.activeJob == nil
                 ? "Select one or more still photos."
                 : "Finish or cancel the current external edit before starting another.")
             return
         }
         UserDefaults.standard.set(editor.applicationURL.path, forKey: "externalEditor.applicationPath")
         UserDefaults.standard.set(editor.name, forKey: "externalEditor.name")
-        isPreparingExternalEdit = true
+        externalEdit.isPreparing = true
         announceExternalEdit(orderedIDs.count == 1
             ? "Preparing the original for \(editor.name)…"
             : "Preparing \(orderedIDs.count.formatted()) ordered originals for \(editor.name)…")
@@ -6188,11 +6149,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func chooseExternalEditReturn() {
-        guard let job = activeExternalEditJob else {
+        guard let job = externalEdit.activeJob else {
             announceExternalEdit("There is no active external edit to receive.")
             return
         }
-        announceExternalEdit("Choose the finished file for \(activeExternalEditLabel ?? job.editor.name).")
+        announceExternalEdit("Choose the finished file for \(externalEdit.activeLabel ?? job.editor.name).")
         let panel = NSOpenPanel()
         panel.title = "Return finished work to Review"
         panel.prompt = "Return to Review"
@@ -6212,7 +6173,7 @@ final class BackstageViewModel: ObservableObject {
         editor: ExternalEditorProfile,
         assetIDs: [String]
     ) async {
-        defer { isPreparingExternalEdit = false }
+        defer { externalEdit.isPreparing = false }
         guard let externalEditJobStore else {
             announceExternalEdit("Owner.sqlite is unavailable for external editing.")
             return
@@ -6228,7 +6189,7 @@ final class BackstageViewModel: ObservableObject {
                 sources: sources,
                 now: Date()
             )
-            activeExternalEditJob = job
+            externalEdit.activeJob = job
             guard let job else { throw ExternalEditJobError.jobNotFound }
             var receipts: [PhotoExportReceipt] = []
             for source in sources {
@@ -6251,7 +6212,7 @@ final class BackstageViewModel: ObservableObject {
                 applicationURL: editor.applicationURL
             )
             let launched = try externalEditJobStore.recordLaunched(jobID: prepared.id, now: Date())
-            activeExternalEditJob = launched
+            externalEdit.activeJob = launched
             let openedSubject = receipts.count == 1
                 ? receipts[0].filename
                 : "\(receipts.count.formatted()) ordered originals"
@@ -6266,21 +6227,21 @@ final class BackstageViewModel: ObservableObject {
                     now: Date()
                 )
             }
-            activeExternalEditJob = nil
+            externalEdit.activeJob = nil
             announceExternalEdit("External edit failed: \(userFacingMessage(for: error))")
         }
     }
 
     func requestExternalEditReturn(from sourceURL: URL) {
-        guard !isImportingExternalEdit, !isPreparingExternalEdit else {
+        guard !externalEdit.isImporting, !externalEdit.isPreparing else {
             announceExternalEdit("Finish the current external-edit action first.")
             return
         }
-        guard let job = activeExternalEditJob else {
+        guard let job = externalEdit.activeJob else {
             announceExternalEdit("There is no active external edit to receive.")
             return
         }
-        isImportingExternalEdit = true
+        externalEdit.isImporting = true
         announceExternalEdit("Verifying and returning the finished file to Review…")
         Task { [weak self] in
             await self?.performExternalEditReturn(job: job, sourceURL: sourceURL)
@@ -6288,7 +6249,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func performExternalEditReturn(job: ExternalEditJob, sourceURL: URL) async {
-        defer { isImportingExternalEdit = false }
+        defer { externalEdit.isImporting = false }
         guard let externalEditJobStore else {
             announceExternalEdit("Owner.sqlite is unavailable for external editing.")
             return
@@ -6304,11 +6265,11 @@ final class BackstageViewModel: ObservableObject {
                     now: returnDate
                 )
             }.value
-            externalEditReturnReceipt = receipt
-            externalEditSourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
-            externalEditReturnedImage = NSImage(contentsOf: receipt.fileURL)
+            externalEdit.returnReceipt = receipt
+            externalEdit.sourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
+            externalEdit.returnedImage = NSImage(contentsOf: receipt.fileURL)
             invalidateCurrentRenditionCaches(for: receipt.destinationAssetID)
-            activeExternalEditJob = nil
+            externalEdit.activeJob = nil
             announceExternalEdit(receipt.derivedAsset
                 ? "Returned one new derived photo with \(job.sources.count.formatted()) ordered parents. It is awaiting final Review."
                 : "Returned a newer rendition of the same photo. It is awaiting final Review.")
@@ -6319,16 +6280,16 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestCancelExternalEdit() {
-        guard let job = activeExternalEditJob,
+        guard let job = externalEdit.activeJob,
               !isExternalEditOperationInProgress else { return }
-        isPreparingExternalEdit = true
-        announceExternalEdit("Cancelling \(activeExternalEditLabel ?? "the external edit job")…")
+        externalEdit.isPreparing = true
+        announceExternalEdit("Cancelling \(externalEdit.activeLabel ?? "the external edit job")…")
         Task { [weak self] in
             guard let self else { return }
-            defer { self.isPreparingExternalEdit = false }
+            defer { self.externalEdit.isPreparing = false }
             do {
                 try self.externalEditJobStore?.cancel(jobID: job.id, now: Date())
-                self.activeExternalEditJob = nil
+                self.externalEdit.activeJob = nil
                 self.announceExternalEdit("External edit cancelled. Prepared working copies remain recoverable.")
             } catch {
                 self.announceExternalEdit("Could not cancel external edit: \(self.userFacingMessage(for: error))")
@@ -6337,14 +6298,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func revealExternalEditReturnFolder() {
-        guard let job = activeExternalEditJob,
+        guard let job = externalEdit.activeJob,
               let directory = externalEditReturnDirectory else { return }
         announceExternalEdit("Opened \(directory.lastPathComponent), the return folder for \(job.editor.name).")
         _ = openExternalURL(directory)
     }
 
     func clearExternalEditComparison() {
-        externalEditState.clearComparison()
+        externalEdit.clearComparison()
     }
 
     private func openInExternalEditor(

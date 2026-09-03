@@ -147,7 +147,7 @@ private enum CullingQuickLookPresenter {
                     return true
                 },
                 externalEditors: model.availableExternalEditors,
-                externalEditUnavailableReason: model.activeExternalEditJob == nil
+                externalEditUnavailableReason: model.externalEdit.activeJob == nil
                     ? nil
                     : "Finish or cancel the current external edit first.",
                 onExternalEdit: { [weak model, weak coordinator] assetID, editor in
@@ -842,7 +842,7 @@ struct CullingView: View {
                             model.chooseExternalEditor(for: editorIDs)
                         }
                     }
-                    .disabled(model.isExternalEditOperationInProgress || model.activeExternalEditJob != nil)
+                    .disabled(model.isExternalEditOperationInProgress || model.externalEdit.activeJob != nil)
                 }
                 .modifier(CullingCardVisibilityObserver(
                     model: model, asset: asset, isPreviewMode: isPreviewMode

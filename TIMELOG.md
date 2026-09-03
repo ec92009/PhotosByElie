@@ -802,8 +802,9 @@ Clock state: running
 | 2026-09-03 | 00:07 CEST | 00:08 CEST | 0:01 | Reported that Review still showed the pre-edit image and requested the visible rendition repair; background diagnosis, coding, tests, build, installation, and UI verification excluded. |
 | 2026-09-03 | 00:17 CEST | 00:18 CEST | 0:01 | Accepted build 302 after confirming the returned Pixelmator rendition replaced the old Review image; background verification and ticket closeout excluded. |
 | 2026-09-03 | 14:22 CEST | 14:23 CEST | 0:01 | Required indefinite preservation of every completed-sale delivery component while allowing later edited renditions; background implementation, tests, release, and installation excluded. |
+| 2026-09-03 | 14:54 CEST | 14:55 CEST | 0:01 | Defined the durable Edit Returns queue with side-by-side comparisons and Keep original, Replace original, and Keep both decisions; background repository and ticket work excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:50
+Active collaboration time used: 38:51
 Remaining budget: not set

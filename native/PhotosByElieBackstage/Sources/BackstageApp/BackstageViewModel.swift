@@ -496,24 +496,9 @@ final class BackstageViewModel: ObservableObject {
     private var reviewMetadataAutosaveTaskToken: UUID?
     private var reviewAIStatusRefreshTask: Task<Void, Never>?
     private var equipmentBackfillTask: Task<OwnerEquipmentBackfillReport, Error>?
-    private var cullingFilterTask: Task<Void, Never>?
-    private var cullingBackfillTask: Task<Void, Never>?
-    private var cullingThumbnailTasks: [String: Task<Void, Never>] = [:]
-    private var cullingThumbnailTaskTokens: [String: UUID] = [:]
-    private var cullingThumbnailTimeoutTasks: [String: Task<Void, Never>] = [:]
-    private var cullingThumbnailUpgradeTasks: [String: Task<Void, Never>] = [:]
-    private var cullingThumbnailUpgradeTaskTokens: [String: UUID] = [:]
     // Attempt once per idle/visibility interval, including failures. Completion
     // must advance the queue, not immediately resubmit the same first four IDs.
-    private var cullingThumbnailUpgradeAttempts = Set<String>()
-    private var cullingBasicThumbnails: [String: NSImage] = [:]
-    private var cullingThumbnailRecency: [String] = []
-    private var cullingThumbnailBackfillTask: Task<Void, Never>?
-    private var cullingThumbnailBackfillTaskToken: UUID?
-    private var pendingCurrentImageByteCounts: [String: Int64] = [:]
-    private var quickLookEquipmentByAssetID: [String: BackstageQuickLookEquipment] = [:]
-    private var currentImageSizeFlushTask: Task<Void, Never>?
-    private var thumbnailPreferredIdentifiers: [String: String] = [:]
+    private var galleryWorkflow: BackstageGalleryWorkflowState
     private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
     private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
     private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
@@ -522,25 +507,15 @@ final class BackstageViewModel: ObservableObject {
     private var locallyObservedLifecycleActions: [String: OwnerAction] = [:]
     private var lifecycleRecoverableCount = 0
     private var lifecycleTombstoneCount = 0
-    private var cullingWasteBasketPendingActions: [String: OwnerAction] = [:]
-    private var cullingWasteBasketPendingActionOrder: [String] = []
     private var reviewWasteBasketPendingActions: [String: OwnerAction] = [:]
     private var reviewWasteBasketPendingActionOrder: [String] = []
-    private var cullingStableWindowIndexes: [String: Int] = [:]
-    private var pendingGalleryRevealIDs: [String] = []
-    private var pendingGalleryRevealSource = ""
     private var lifecycleMonitorTask: Task<Void, Never>?
-    private var cullingVisibleAssetIDs = Set<String>()
-    private var isCullingScrolling = false
-    private var shouldInjectNextCullingThumbnailFailure: Bool
-    private var controlledFailedCullingAssetID: String?
     private let cullingThumbnailTimeout: Duration
     private let cullingThumbnailUpgradeDelay: Duration
     private let cullingThumbnailBackfillDelay: Duration
     private let currentImageSizeFlushDelay: Duration
     private let activityRefreshTimeout: Duration
     private var reviewThumbnailTasks: [String: Task<Void, Never>] = [:]
-    private var cullingWindowRequestSerial = 0
     private var reviewWindowRequestSerial = 0
     private var reviewAIStatusRefreshGeneration = 0
     private var reviewAIAvailabilityToken = ""
@@ -835,12 +810,14 @@ final class BackstageViewModel: ObservableObject {
         self.api = api
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
+        self.galleryWorkflow = BackstageGalleryWorkflowState(
+            injectNextThumbnailFailure: injectNextCullingThumbnailFailure
+        )
         self.cullingThumbnailTimeout = cullingThumbnailTimeout
         self.cullingThumbnailUpgradeDelay = cullingThumbnailUpgradeDelay
         self.cullingThumbnailBackfillDelay = cullingThumbnailBackfillDelay
         self.currentImageSizeFlushDelay = currentImageSizeFlushDelay
         self.activityRefreshTimeout = activityRefreshTimeout
-        self.shouldInjectNextCullingThumbnailFailure = injectNextCullingThumbnailFailure
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
         let runner = OwnerActionRunner(api: api)
@@ -953,10 +930,10 @@ final class BackstageViewModel: ObservableObject {
               byteCount > 0
         else { return }
         currentImageByteCounts[assetID] = byteCount
-        pendingCurrentImageByteCounts[assetID] = byteCount
+        galleryWorkflow.pendingCurrentImageByteCounts[assetID] = byteCount
         if persistPromptly {
-            currentImageSizeFlushTask?.cancel()
-            currentImageSizeFlushTask = nil
+            galleryWorkflow.currentImageSizeFlushTask?.cancel()
+            galleryWorkflow.currentImageSizeFlushTask = nil
             await flushCurrentImageByteCounts()
         } else {
             scheduleCurrentImageSizeFlush()
@@ -964,8 +941,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func scheduleCurrentImageSizeFlush() {
-        guard currentImageSizeFlushTask == nil else { return }
-        currentImageSizeFlushTask = Task { [weak self] in
+        guard galleryWorkflow.currentImageSizeFlushTask == nil else { return }
+        galleryWorkflow.currentImageSizeFlushTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: self.currentImageSizeFlushDelay)
             guard !Task.isCancelled else { return }
@@ -974,16 +951,16 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func flushCurrentImageByteCounts() async {
-        currentImageSizeFlushTask = nil
-        guard let currentImageSizeCache, !pendingCurrentImageByteCounts.isEmpty else { return }
-        let values = pendingCurrentImageByteCounts
-        pendingCurrentImageByteCounts.removeAll()
+        galleryWorkflow.currentImageSizeFlushTask = nil
+        guard let currentImageSizeCache, !galleryWorkflow.pendingCurrentImageByteCounts.isEmpty else { return }
+        let values = galleryWorkflow.pendingCurrentImageByteCounts
+        galleryWorkflow.pendingCurrentImageByteCounts.removeAll()
         do {
             try await Task.detached(priority: .utility) {
                 try currentImageSizeCache.upsert(values, updatedAt: Date())
             }.value
         } catch {
-            pendingCurrentImageByteCounts.merge(values) { current, _ in current }
+            galleryWorkflow.pendingCurrentImageByteCounts.merge(values) { current, _ in current }
         }
     }
 
@@ -1291,9 +1268,9 @@ final class BackstageViewModel: ObservableObject {
         metadataStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped metadata give-back is unavailable."
             : "Run a metadata plan for \(selectedFixtureBreadcrumb)."
-        cullingFilterTask?.cancel()
-        cullingBackfillTask?.cancel()
-        cullingWindowRequestSerial += 1
+        galleryWorkflow.filterTask?.cancel()
+        galleryWorkflow.backfillTask?.cancel()
+        galleryWorkflow.invalidateWindowRequests()
         cancelCullingThumbnailWork()
         cullingPool = nil
         fixtureCullingWindow = nil
@@ -1303,7 +1280,7 @@ final class BackstageViewModel: ObservableObject {
         selectedPhotoIDs = []
         photoPreview = nil
         cullingThumbnails = [:]
-        cullingThumbnailRecency.removeAll()
+        galleryWorkflow.thumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         cullingStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped Culling is unavailable."
@@ -1962,27 +1939,27 @@ final class BackstageViewModel: ObservableObject {
         priority: TaskPriority? = nil
     ) {
         guard !terminationRequested else { return }
-        if cullingThumbnailTasks[assetID]?.isCancelled == true {
-            cullingThumbnailTasks[assetID] = nil
-            cullingThumbnailTaskTokens[assetID] = nil
-            cullingThumbnailTimeoutTasks[assetID]?.cancel()
-            cullingThumbnailTimeoutTasks[assetID] = nil
+        if galleryWorkflow.thumbnailTasks[assetID]?.isCancelled == true {
+            galleryWorkflow.thumbnailTasks[assetID] = nil
+            galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+            galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+            galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
         }
         if let preferredIdentifier = preferredIdentifier?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !preferredIdentifier.isEmpty {
-            thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
+            galleryWorkflow.thumbnailPreferredIdentifiers[assetID] = preferredIdentifier
         }
         guard cullingThumbnails[assetID] == nil,
-              cullingThumbnailTasks[assetID] == nil,
-              !(controlledFailedCullingAssetID == assetID && cullingThumbnailFailures[assetID] != nil)
+              galleryWorkflow.thumbnailTasks[assetID] == nil,
+              !(galleryWorkflow.controlledFailedAssetID == assetID && cullingThumbnailFailures[assetID] != nil)
         else { return }
-        let preferredIdentifier = thumbnailPreferredIdentifiers[assetID]
+        let preferredIdentifier = galleryWorkflow.thumbnailPreferredIdentifiers[assetID]
         let taskToken = UUID()
-        cullingThumbnailTaskTokens[assetID] = taskToken
+        galleryWorkflow.thumbnailTaskTokens[assetID] = taskToken
         let timeout = cullingThumbnailTimeout
-        cullingThumbnailTimeoutTasks[assetID]?.cancel()
-        cullingThumbnailTimeoutTasks[assetID] = Task { [weak self] in
+        galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTimeoutTasks[assetID] = Task { [weak self] in
             do {
                 try await Task.sleep(for: timeout)
             } catch {
@@ -1990,27 +1967,27 @@ final class BackstageViewModel: ObservableObject {
             }
             guard let self,
                   !Task.isCancelled,
-                  self.cullingThumbnailTaskTokens[assetID] == taskToken,
+                  self.galleryWorkflow.thumbnailTaskTokens[assetID] == taskToken,
                   self.cullingThumbnails[assetID] == nil
             else { return }
-            self.cullingThumbnailTasks[assetID]?.cancel()
-            self.cullingThumbnailTasks[assetID] = nil
-            self.cullingThumbnailTaskTokens[assetID] = nil
-            self.cullingThumbnailTimeoutTasks[assetID] = nil
+            self.galleryWorkflow.thumbnailTasks[assetID]?.cancel()
+            self.galleryWorkflow.thumbnailTasks[assetID] = nil
+            self.galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+            self.galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
             self.cullingThumbnailFailures[assetID] = .timedOut
         }
-        cullingThumbnailTasks[assetID] = Task(priority: priority) { [weak self] in
+        galleryWorkflow.thumbnailTasks[assetID] = Task(priority: priority) { [weak self] in
             guard let self else { return }
             defer {
-                if self.cullingThumbnailTaskTokens[assetID] == taskToken {
-                    self.cullingThumbnailTimeoutTasks[assetID]?.cancel()
-                    self.cullingThumbnailTimeoutTasks[assetID] = nil
-                    self.cullingThumbnailTaskTokens[assetID] = nil
-                    self.cullingThumbnailTasks[assetID] = nil
+                if self.galleryWorkflow.thumbnailTaskTokens[assetID] == taskToken {
+                    self.galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+                    self.galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
+                    self.galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+                    self.galleryWorkflow.thumbnailTasks[assetID] = nil
                 }
             }
             guard !Task.isCancelled,
-                  self.cullingThumbnailTaskTokens[assetID] == taskToken else { return }
+                  self.galleryWorkflow.thumbnailTaskTokens[assetID] == taskToken else { return }
             await self.loadThumbnail(
                 for: assetID,
                 preferredIdentifier: preferredIdentifier,
@@ -2111,7 +2088,7 @@ final class BackstageViewModel: ObservableObject {
 
     func cullingAssetDidAppear(_ asset: FixtureAsset) {
         guard !asset.id.isEmpty, !terminationRequested else { return }
-        cullingVisibleAssetIDs.insert(asset.id)
+        galleryWorkflow.visibleAssetIDs.insert(asset.id)
         touchCullingThumbnail(asset.id)
         requestThumbnail(for: asset.id, preferredIdentifier: asset.photoLibraryIdentifier)
         scheduleThumbnailUpgrade(for: asset.id)
@@ -2119,35 +2096,35 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func cullingAssetDidDisappear(_ assetID: String) {
-        cullingVisibleAssetIDs.remove(assetID)
-        cullingThumbnailTasks[assetID]?.cancel()
-        cullingThumbnailTasks.removeValue(forKey: assetID)
-        cullingThumbnailTaskTokens.removeValue(forKey: assetID)
-        cullingThumbnailTimeoutTasks[assetID]?.cancel()
-        cullingThumbnailTimeoutTasks.removeValue(forKey: assetID)
+        galleryWorkflow.visibleAssetIDs.remove(assetID)
+        galleryWorkflow.thumbnailTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTasks.removeValue(forKey: assetID)
+        galleryWorkflow.thumbnailTaskTokens.removeValue(forKey: assetID)
+        galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTimeoutTasks.removeValue(forKey: assetID)
         cancelCullingThumbnailUpgrade(for: assetID)
         // Keep a completed idle high-resolution upgrade in the bounded cache.
         // Only in-flight work is cancelled when a card leaves the viewport;
         // an explicit Gallery/work cancellation can still downgrade it.
-        cullingThumbnailUpgradeAttempts.remove(assetID)
+        galleryWorkflow.thumbnailUpgradeAttempts.remove(assetID)
         scheduleVisibleThumbnailUpgrades()
     }
 
     func cullingScrollPhaseChanged(isScrolling: Bool) {
-        isCullingScrolling = isScrolling
+        galleryWorkflow.isScrolling = isScrolling
         guard !terminationRequested else { return }
         guard !isScrolling else {
-            let tasks = Array(cullingThumbnailUpgradeTasks.values)
-            cullingThumbnailUpgradeTasks.removeAll()
-            cullingThumbnailUpgradeTaskTokens.removeAll()
+            let tasks = Array(galleryWorkflow.thumbnailUpgradeTasks.values)
+            galleryWorkflow.thumbnailUpgradeTasks.removeAll()
+            galleryWorkflow.thumbnailUpgradeTaskTokens.removeAll()
             tasks.forEach { $0.cancel() }
-            cullingThumbnailUpgradeAttempts = Set(cullingBasicThumbnails.keys)
+            galleryWorkflow.thumbnailUpgradeAttempts = Set(galleryWorkflow.basicThumbnails.keys)
             cancelCullingThumbnailBackfill()
             return
         }
         // An idle backfill request may have been cancelled while its card
         // stayed on-screen. Restart the base request without needing a reappear.
-        for assetID in cullingVisibleAssetIDs where cullingThumbnailFailures[assetID] == nil {
+        for assetID in galleryWorkflow.visibleAssetIDs where cullingThumbnailFailures[assetID] == nil {
             requestThumbnail(for: assetID)
         }
         scheduleVisibleThumbnailUpgrades()
@@ -2156,33 +2133,33 @@ final class BackstageViewModel: ObservableObject {
 
     private func scheduleThumbnailUpgrade(for assetID: String) {
         guard !terminationRequested,
-              cullingThumbnailUpgradeTasks[assetID] == nil,
-              !cullingThumbnailUpgradeAttempts.contains(assetID),
-              cullingThumbnailUpgradeTasks.count
+              galleryWorkflow.thumbnailUpgradeTasks[assetID] == nil,
+              !galleryWorkflow.thumbnailUpgradeAttempts.contains(assetID),
+              galleryWorkflow.thumbnailUpgradeTasks.count
                 < Self.cullingThumbnailUpgradeConcurrencyLimit,
-              cullingVisibleAssetIDs.contains(assetID),
-              !isCullingScrolling,
-              cullingBasicThumbnails[assetID] == nil,
+              galleryWorkflow.visibleAssetIDs.contains(assetID),
+              !galleryWorkflow.isScrolling,
+              galleryWorkflow.basicThumbnails[assetID] == nil,
               cullingThumbnails[assetID] != nil
         else { return }
-        cullingThumbnailUpgradeAttempts.insert(assetID)
+        galleryWorkflow.thumbnailUpgradeAttempts.insert(assetID)
         let taskToken = UUID()
-        cullingThumbnailUpgradeTaskTokens[assetID] = taskToken
-        cullingThumbnailUpgradeTasks[assetID] = Task { [weak self] in
+        galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] = taskToken
+        galleryWorkflow.thumbnailUpgradeTasks[assetID] = Task { [weak self] in
             guard let self else { return }
             defer {
-                if self.cullingThumbnailUpgradeTaskTokens[assetID] == taskToken {
-                    self.cullingThumbnailUpgradeTaskTokens[assetID] = nil
-                    self.cullingThumbnailUpgradeTasks[assetID] = nil
+                if self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken {
+                    self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] = nil
+                    self.galleryWorkflow.thumbnailUpgradeTasks[assetID] = nil
                     self.scheduleVisibleThumbnailUpgrades()
                 }
             }
             try? await Task.sleep(for: self.cullingThumbnailUpgradeDelay)
             guard !Task.isCancelled,
-                  self.cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
-                  self.cullingVisibleAssetIDs.contains(assetID),
-                  !self.isCullingScrolling,
-                  self.cullingBasicThumbnails[assetID] == nil,
+                  self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken,
+                  self.galleryWorkflow.visibleAssetIDs.contains(assetID),
+                  !self.galleryWorkflow.isScrolling,
+                  self.galleryWorkflow.basicThumbnails[assetID] == nil,
                   self.cullingThumbnails[assetID] != nil
             else { return }
             await self.upgradeThumbnail(for: assetID, taskToken: taskToken)
@@ -2190,9 +2167,9 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func scheduleVisibleThumbnailUpgrades() {
-        guard !isCullingScrolling else { return }
-        for assetID in cullingVisibleAssetIDs.sorted() {
-            guard cullingThumbnailUpgradeTasks.count
+        guard !galleryWorkflow.isScrolling else { return }
+        for assetID in galleryWorkflow.visibleAssetIDs.sorted() {
+            guard galleryWorkflow.thumbnailUpgradeTasks.count
                 < Self.cullingThumbnailUpgradeConcurrencyLimit
             else { break }
             scheduleThumbnailUpgrade(for: assetID)
@@ -2200,34 +2177,38 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func cancelCullingThumbnailUpgrade(for assetID: String) {
-        cullingThumbnailUpgradeTaskTokens[assetID] = nil
-        cullingThumbnailUpgradeTasks[assetID]?.cancel()
-        cullingThumbnailUpgradeTasks[assetID] = nil
+        galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] = nil
+        galleryWorkflow.thumbnailUpgradeTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailUpgradeTasks[assetID] = nil
     }
 
     private func scheduleCullingThumbnailBackfill() {
-        guard !terminationRequested, !isCullingScrolling,
+        guard !terminationRequested, !galleryWorkflow.isScrolling,
               cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !cullingVisibleAssetIDs.isEmpty,
-              cullingThumbnailBackfillTask == nil else { return }
-        let assets = cullingThumbnailBackfillAssets.filter {
+              !galleryWorkflow.visibleAssetIDs.isEmpty,
+              galleryWorkflow.thumbnailBackfillTask == nil else { return }
+        let assets = galleryWorkflow.thumbnailBackfillAssets(
+            cullingAssets: cullingAssets,
+            libraryItems: libraryItems,
+            limit: Self.cullingThumbnailBackfillAssetLimit
+        ).filter {
             cullingThumbnails[$0.id] == nil && cullingThumbnailFailures[$0.id] == nil
         }
         guard !assets.isEmpty else { return }
         let taskToken = UUID()
-        cullingThumbnailBackfillTaskToken = taskToken
-        cullingThumbnailBackfillTask = Task(priority: .utility) { [weak self] in
+        galleryWorkflow.thumbnailBackfillTaskToken = taskToken
+        galleryWorkflow.thumbnailBackfillTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
             defer {
-                if self.cullingThumbnailBackfillTaskToken == taskToken {
-                    self.cullingThumbnailBackfillTaskToken = nil
-                    self.cullingThumbnailBackfillTask = nil
+                if self.galleryWorkflow.thumbnailBackfillTaskToken == taskToken {
+                    self.galleryWorkflow.thumbnailBackfillTaskToken = nil
+                    self.galleryWorkflow.thumbnailBackfillTask = nil
                 }
             }
             try? await Task.sleep(for: self.cullingThumbnailBackfillDelay)
             guard !Task.isCancelled,
-                  self.cullingThumbnailBackfillTaskToken == taskToken,
-                  !self.isCullingScrolling
+                  self.galleryWorkflow.thumbnailBackfillTaskToken == taskToken,
+                  !self.galleryWorkflow.isScrolling
             else { return }
 
             var nextIndex = 0
@@ -2245,8 +2226,8 @@ final class BackstageViewModel: ObservableObject {
                 }
                 while await group.next() != nil {
                     guard !Task.isCancelled,
-                          self.cullingThumbnailBackfillTaskToken == taskToken,
-                          !self.isCullingScrolling
+                          self.galleryWorkflow.thumbnailBackfillTaskToken == taskToken,
+                          !self.galleryWorkflow.isScrolling
                     else {
                         group.cancelAll()
                         return
@@ -2265,37 +2246,15 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private var cullingThumbnailBackfillAssets: [FixtureAsset] {
-        let currentAssets = cullingAssets
-        let visible = currentAssets.filter { cullingVisibleAssetIDs.contains($0.id) }
-        let remaining = currentAssets.filter { !cullingVisibleAssetIDs.contains($0.id) }
-        let loadedPhotos = libraryItems
-            .filter { !$0.mediaType.lowercased().contains("video") }
-            .map {
-                FixtureAsset(
-                    id: $0.id,
-                    title: "",
-                    filename: $0.filename,
-                    mediaType: $0.mediaType
-                )
-            }
-
-        var seen = Set<String>()
-        let ordered = (visible + remaining + loadedPhotos).filter { asset in
-            !asset.id.isEmpty && seen.insert(asset.id).inserted
-        }
-        return Array(ordered.prefix(Self.cullingThumbnailBackfillAssetLimit))
-    }
-
     private func backfillCullingThumbnail(
         for asset: FixtureAsset,
         taskToken: UUID
     ) async {
-        guard cullingThumbnailBackfillTaskToken == taskToken,
+        guard galleryWorkflow.thumbnailBackfillTaskToken == taskToken,
               !Task.isCancelled,
-              !isCullingScrolling,
+              !galleryWorkflow.isScrolling,
               cullingThumbnails[asset.id] == nil,
-              cullingThumbnailTasks[asset.id] == nil,
+              galleryWorkflow.thumbnailTasks[asset.id] == nil,
               cullingThumbnailFailures[asset.id] == nil
         else { return }
         // Use the same deduplication, timeout and retry path as a visible card.
@@ -2305,7 +2264,7 @@ final class BackstageViewModel: ObservableObject {
             preferredIdentifier: asset.photoLibraryIdentifier,
             priority: .utility
         )
-        guard let task = cullingThumbnailTasks[asset.id] else { return }
+        guard let task = galleryWorkflow.thumbnailTasks[asset.id] else { return }
         await withTaskCancellationHandler {
             await task.value
         } onCancel: {
@@ -2314,28 +2273,28 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func cancelCullingThumbnailBackfill() {
-        cullingThumbnailBackfillTaskToken = nil
-        cullingThumbnailBackfillTask?.cancel()
-        cullingThumbnailBackfillTask = nil
+        galleryWorkflow.thumbnailBackfillTaskToken = nil
+        galleryWorkflow.thumbnailBackfillTask?.cancel()
+        galleryWorkflow.thumbnailBackfillTask = nil
     }
 
     private func upgradeThumbnail(for assetID: String, taskToken: UUID) async {
         for attempt in 0..<3 {
             guard !Task.isCancelled,
-                  cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
-                  cullingVisibleAssetIDs.contains(assetID),
-                  !isCullingScrolling
+                  galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken,
+                  galleryWorkflow.visibleAssetIDs.contains(assetID),
+                  !galleryWorkflow.isScrolling
             else { return }
             do {
                 let preview = try await cullingPreviewForAsset(
                     forAssetID: assetID,
-                    preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
+                    preferredIdentifier: galleryWorkflow.thumbnailPreferredIdentifiers[assetID],
                     maxPixelSize: Self.cullingThumbnailUpgradePixelSize
                 )
                 guard !Task.isCancelled,
-                      cullingThumbnailUpgradeTaskTokens[assetID] == taskToken,
-                      cullingVisibleAssetIDs.contains(assetID),
-                      !isCullingScrolling
+                      galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken,
+                      galleryWorkflow.visibleAssetIDs.contains(assetID),
+                      !galleryWorkflow.isScrolling
                 else { return }
                 guard let image = NSImage(data: preview.jpegData) else {
                     if attempt < 2 {
@@ -2344,12 +2303,12 @@ final class BackstageViewModel: ObservableObject {
                     }
                     return
                 }
-                cullingBasicThumbnails[assetID] = cullingThumbnails[assetID]
+                galleryWorkflow.basicThumbnails[assetID] = cullingThumbnails[assetID]
                 cullingThumbnails[assetID] = image
                 await learnEquipment(
                     from: preview,
                     for: assetID,
-                    preferredIdentifier: thumbnailPreferredIdentifiers[assetID],
+                    preferredIdentifier: galleryWorkflow.thumbnailPreferredIdentifiers[assetID],
                     allowICloudDownloads: false
                 )
                 await learnCurrentImageByteCount(
@@ -2377,14 +2336,14 @@ final class BackstageViewModel: ObservableObject {
         preferRenderedJPEG: Bool = false
     ) async {
         guard cullingThumbnails[assetID] == nil else { return }
-        if shouldInjectNextCullingThumbnailFailure {
-            shouldInjectNextCullingThumbnailFailure = false
-            controlledFailedCullingAssetID = assetID
+        if galleryWorkflow.shouldInjectNextThumbnailFailure {
+            galleryWorkflow.shouldInjectNextThumbnailFailure = false
+            galleryWorkflow.controlledFailedAssetID = assetID
             cullingThumbnailFailures[assetID] = .previewUnavailable
             cullingStatus = "Controlled preview failure ready. Retry this card; no culling decision changed."
             return
         }
-        let preferredIdentifier = preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+        let preferredIdentifier = preferredIdentifier ?? galleryWorkflow.thumbnailPreferredIdentifiers[assetID]
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
@@ -2435,18 +2394,18 @@ final class BackstageViewModel: ObservableObject {
 
     func retryThumbnail(for assetID: String, preferredIdentifier: String? = nil) {
         guard cullingThumbnails[assetID] == nil else { return }
-        if controlledFailedCullingAssetID == assetID {
-            controlledFailedCullingAssetID = nil
+        if galleryWorkflow.controlledFailedAssetID == assetID {
+            galleryWorkflow.controlledFailedAssetID = nil
         }
-        cullingThumbnailTasks[assetID]?.cancel()
-        cullingThumbnailTasks[assetID] = nil
-        cullingThumbnailTaskTokens[assetID] = nil
-        cullingThumbnailTimeoutTasks[assetID]?.cancel()
-        cullingThumbnailTimeoutTasks[assetID] = nil
+        galleryWorkflow.thumbnailTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTasks[assetID] = nil
+        galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+        galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         requestThumbnail(
             for: assetID,
-            preferredIdentifier: preferredIdentifier ?? thumbnailPreferredIdentifiers[assetID]
+            preferredIdentifier: preferredIdentifier ?? galleryWorkflow.thumbnailPreferredIdentifiers[assetID]
         )
     }
 
@@ -2455,86 +2414,66 @@ final class BackstageViewModel: ObservableObject {
         // background replenishment evict a card the user is looking at.
         while cullingThumbnails[assetID] == nil,
               cullingThumbnails.count >= Self.cullingThumbnailBackfillAssetLimit {
-            let oldest = cullingThumbnailRecency.first {
-                cullingThumbnails[$0] != nil && !cullingVisibleAssetIDs.contains($0)
+            let oldest = galleryWorkflow.thumbnailRecency.first {
+                cullingThumbnails[$0] != nil && !galleryWorkflow.visibleAssetIDs.contains($0)
             } ?? cullingThumbnails.keys.sorted().first {
-                !cullingVisibleAssetIDs.contains($0)
+                !galleryWorkflow.visibleAssetIDs.contains($0)
             }
             guard let oldest else { return }
             cullingThumbnails.removeValue(forKey: oldest)
-            cullingThumbnailRecency.removeAll { $0 == oldest }
-            cullingBasicThumbnails.removeValue(forKey: oldest)
-            cullingThumbnailUpgradeAttempts.remove(oldest)
+            galleryWorkflow.thumbnailRecency.removeAll { $0 == oldest }
+            galleryWorkflow.basicThumbnails.removeValue(forKey: oldest)
+            galleryWorkflow.thumbnailUpgradeAttempts.remove(oldest)
         }
         cullingThumbnails[assetID] = image
         touchCullingThumbnail(assetID)
     }
 
     private func touchCullingThumbnail(_ assetID: String) {
-        cullingThumbnailRecency.removeAll { $0 == assetID }
+        galleryWorkflow.thumbnailRecency.removeAll { $0 == assetID }
         if cullingThumbnails[assetID] != nil {
-            cullingThumbnailRecency.append(assetID)
+            galleryWorkflow.thumbnailRecency.append(assetID)
         }
     }
 
     private func restoreBasicCullingThumbnail(for assetID: String) {
-        if let basic = cullingBasicThumbnails.removeValue(forKey: assetID),
+        if let basic = galleryWorkflow.basicThumbnails.removeValue(forKey: assetID),
            cullingThumbnails[assetID] != nil {
             cullingThumbnails[assetID] = basic
         }
     }
 
     private func recoverCullingThumbnail(_ image: NSImage, for assetID: String) {
-        cullingThumbnailTasks[assetID]?.cancel()
-        cullingThumbnailTasks[assetID] = nil
-        cullingThumbnailTaskTokens[assetID] = nil
-        cullingThumbnailTimeoutTasks[assetID]?.cancel()
-        cullingThumbnailTimeoutTasks[assetID] = nil
+        galleryWorkflow.thumbnailTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTasks[assetID] = nil
+        galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+        galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
         cullingThumbnailFailures.removeValue(forKey: assetID)
         // Quick Look can return a 4000px image. Do not retain that full image
         // in a working set sized for 2000 ordinary thumbnails.
-        cacheCullingThumbnail(Self.basicThumbnail(from: image), for: assetID)
-    }
-
-    static func basicThumbnail(from image: NSImage) -> NSImage {
-        let longest = max(image.size.width, image.size.height)
-        guard longest > 180 else { return image }
-        let scale = 180 / longest
-        let width = max(1, Int(image.size.width * scale))
-        let height = max(1, Int(image.size.height * scale))
-        guard let bitmap = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
-            isPlanar: false, colorSpaceName: .deviceRGB,
-            bytesPerRow: 0, bitsPerPixel: 0
-        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return image }
-        let size = NSSize(width: width, height: height)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        context.imageInterpolation = .high
-        image.draw(in: NSRect(origin: .zero, size: size))
-        NSGraphicsContext.restoreGraphicsState()
-        let thumbnail = NSImage(size: size)
-        thumbnail.addRepresentation(bitmap)
-        return thumbnail
+        cacheCullingThumbnail(
+            BackstageGalleryWorkflowState.basicThumbnail(from: image),
+            for: assetID
+        )
     }
 
     func cancelCullingThumbnailWork() {
-        cullingThumbnailTasks.values.forEach { $0.cancel() }
-        cullingThumbnailTasks.removeAll()
-        cullingThumbnailTaskTokens.removeAll()
-        cullingThumbnailTimeoutTasks.values.forEach { $0.cancel() }
-        cullingThumbnailTimeoutTasks.removeAll()
-        cullingThumbnailUpgradeTasks.values.forEach { $0.cancel() }
-        cullingThumbnailUpgradeTasks.removeAll()
-        cullingThumbnailUpgradeTaskTokens.removeAll()
-        for assetID in Array(cullingBasicThumbnails.keys) {
+        galleryWorkflow.thumbnailTasks.values.forEach { $0.cancel() }
+        galleryWorkflow.thumbnailTasks.removeAll()
+        galleryWorkflow.thumbnailTaskTokens.removeAll()
+        galleryWorkflow.thumbnailTimeoutTasks.values.forEach { $0.cancel() }
+        galleryWorkflow.thumbnailTimeoutTasks.removeAll()
+        galleryWorkflow.thumbnailUpgradeTasks.values.forEach { $0.cancel() }
+        galleryWorkflow.thumbnailUpgradeTasks.removeAll()
+        galleryWorkflow.thumbnailUpgradeTaskTokens.removeAll()
+        for assetID in Array(galleryWorkflow.basicThumbnails.keys) {
             restoreBasicCullingThumbnail(for: assetID)
         }
-        cullingThumbnailUpgradeAttempts.removeAll()
+        galleryWorkflow.thumbnailUpgradeAttempts.removeAll()
         cancelCullingThumbnailBackfill()
-        cullingVisibleAssetIDs.removeAll()
-        isCullingScrolling = false
+        galleryWorkflow.visibleAssetIDs.removeAll()
+        galleryWorkflow.isScrolling = false
     }
 
     func exportSelected(to directory: URL) async {
@@ -2761,7 +2700,7 @@ final class BackstageViewModel: ObservableObject {
             return
         }
 
-        let preset = gallerySavedViewPreset(.allAssets)
+        let preset = galleryWorkflow.savedViewPreset(.allAssets)
         cullingPool = nil
         cullingViews = preset.views
         cullingRatingFilters = Set(0...5)
@@ -2777,14 +2716,13 @@ final class BackstageViewModel: ObservableObject {
         galleryMegapixelValue = ""
         cullingSearch = targetID
         cullingWindowOffset = 0
-        pendingGalleryRevealIDs = ids
-        pendingGalleryRevealSource = sourceLabel
+        galleryWorkflow.queueReveal(ids: ids, source: sourceLabel)
         selection = .culling
         await loadFixtureCullingWindow()
     }
 
     func applyGallerySavedView(_ savedView: GallerySavedView) {
-        let preset = gallerySavedViewPreset(savedView)
+        let preset = galleryWorkflow.savedViewPreset(savedView)
         cullingSearch = ""
         cullingViews = preset.views
         cullingRatingFilters = Set(0...5)
@@ -2840,7 +2778,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func matchesGallerySavedView(_ savedView: GallerySavedView) -> Bool {
-        let preset = gallerySavedViewPreset(savedView)
+        let preset = galleryWorkflow.savedViewPreset(savedView)
         return cullingViews == preset.views
             && cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && cullingRatingFilters == Set(0...5)
@@ -2853,36 +2791,6 @@ final class BackstageViewModel: ObservableObject {
             && galleryDateFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && galleryDateTo.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && galleryMegapixelValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private func gallerySavedViewPreset(
-        _ savedView: GallerySavedView
-    ) -> (
-        views: Set<FixtureCullingView>,
-        editorial: Set<GalleryEditorialFilter>,
-        delivery: Set<GalleryDeliveryFilter>,
-        sources: Set<GallerySourceFilter>
-    ) {
-        let allViews = Set(FixtureCullingView.selectableCases)
-        let allSources = Set(GallerySourceFilter.allCases)
-        return switch savedView {
-        case .allAssets:
-            (allViews, [], [], allSources)
-        case .culling:
-            ([.undecided], [], [], [.available])
-        case .reviewQueue:
-            ([.picked], [.needsReview, .aiRequested, .proposalAvailable], [], [.available])
-        case .approved:
-            ([.picked], [.approved], [], [.available])
-        case .uploadQueue:
-            ([.picked], [.approved], [.needsUpload, .uploading, .failed], [.available])
-        case .live:
-            ([.picked], [], [.live], [.available])
-        case .hidden:
-            ([.hidden], [], [], [.available])
-        case .unavailable:
-            (allViews, [], [], [.unavailable])
-        }
     }
 
     @discardableResult
@@ -3177,7 +3085,7 @@ final class BackstageViewModel: ObservableObject {
             clearCullingSelection()
             photoPreview = nil
             cullingStatus = "Applying culling filters…"
-            cullingFilterTask = Task { [weak self] in
+            galleryWorkflow.filterTask = Task { [weak self] in
                 if debounceNanoseconds > 0 {
                     try? await Task.sleep(nanoseconds: debounceNanoseconds)
                 }
@@ -3199,11 +3107,11 @@ final class BackstageViewModel: ObservableObject {
     /// fresh serial, while the current in-memory decision remains authoritative
     /// until the mutation result has been applied.
     private func invalidateCullingWindowLoads() {
-        cullingWindowRequestSerial += 1
-        cullingBackfillTask?.cancel()
-        cullingBackfillTask = nil
-        cullingFilterTask?.cancel()
-        cullingFilterTask = nil
+        galleryWorkflow.invalidateWindowRequests()
+        galleryWorkflow.backfillTask?.cancel()
+        galleryWorkflow.backfillTask = nil
+        galleryWorkflow.filterTask?.cancel()
+        galleryWorkflow.filterTask = nil
         // A fixture filter replaces the entire visible window. Cancel every
         // PhotoKit request owned by that outgoing window before the next
         // SQLite read starts; cancelling only the backfill coordinator leaves
@@ -3464,7 +3372,7 @@ final class BackstageViewModel: ObservableObject {
         photoPreview = nil
         cancelCullingThumbnailWork()
         cullingThumbnails = [:]
-        cullingThumbnailRecency.removeAll()
+        galleryWorkflow.thumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         cullingStatus = "Fixture pool \(fixturePool.id) loaded in immutable snapshot order."
         selection = .culling
@@ -3476,7 +3384,7 @@ final class BackstageViewModel: ObservableObject {
         cullingWindowOffset = 0
         cancelCullingThumbnailWork()
         cullingThumbnails = [:]
-        cullingThumbnailRecency.removeAll()
+        galleryWorkflow.thumbnailRecency.removeAll()
         cullingThumbnailFailures = [:]
         Task { await loadFixtureCullingWindow() }
     }
@@ -3497,10 +3405,9 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         if !preservingVisibleWindow {
-            cullingBackfillTask?.cancel()
+            galleryWorkflow.backfillTask?.cancel()
         }
-        cullingWindowRequestSerial += 1
-        let requestSerial = cullingWindowRequestSerial
+        let requestSerial = galleryWorkflow.beginWindowRequest()
         isLoadingFixtureCulling = true
         if !preservingVisibleWindow {
             fixtureCullingWindow = nil
@@ -3510,7 +3417,7 @@ final class BackstageViewModel: ObservableObject {
             cullingStatus = "Loading the \(cullingViewFilterLabel.lowercased()) fixture window…"
         }
         defer {
-            if requestSerial == cullingWindowRequestSerial {
+            if galleryWorkflow.ownsWindowRequest(requestSerial) {
                 isLoadingFixtureCulling = false
             }
         }
@@ -3555,10 +3462,10 @@ final class BackstageViewModel: ObservableObject {
 
             cullingMediaFilters = [.photos]
             let window = try await requestWindow(offset: requestedOffset)
-            guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }
+            guard galleryWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             fixtureCullingMediaAvailability = window.mediaAvailability
             fixtureCullingWindow = window
-            cullingStableWindowIndexes = Dictionary(
+            galleryWorkflow.stableWindowIndexes = Dictionary(
                 uniqueKeysWithValues: window.items.enumerated().map { index, item in
                     (item.id, window.offset + index)
                 }
@@ -3587,7 +3494,7 @@ final class BackstageViewModel: ObservableObject {
                 }
             }
         } catch {
-            guard requestSerial == cullingWindowRequestSerial else { return }
+            guard galleryWorkflow.ownsWindowRequest(requestSerial) else { return }
             guard !(error is CancellationError), !Task.isCancelled else { return }
             if preservingVisibleWindow {
                 cullingStatus = "Saved. Background backfill delayed: \(userFacingMessage(for: error))"
@@ -3598,8 +3505,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func scheduleFixtureCullingBackfill() {
-        cullingBackfillTask?.cancel()
-        cullingBackfillTask = Task(priority: .utility) { [weak self] in
+        galleryWorkflow.backfillTask?.cancel()
+        galleryWorkflow.backfillTask = Task(priority: .utility) { [weak self] in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
             await self?.loadFixtureCullingWindow(preservingVisibleWindow: true)
@@ -3608,14 +3515,12 @@ final class BackstageViewModel: ObservableObject {
 
     @discardableResult
     private func applyPendingGalleryRevealIfPossible() -> Bool {
-        guard !pendingGalleryRevealIDs.isEmpty else { return false }
+        guard let pendingReveal = galleryWorkflow.takePendingReveal() else { return false }
         let visibleIDs = visibleCullingAssets.map(\.id)
-        let requested = Set(pendingGalleryRevealIDs)
+        let requested = Set(pendingReveal.ids)
         let matched = visibleIDs.filter(requested.contains)
-        let requestedCount = pendingGalleryRevealIDs.count
-        let source = pendingGalleryRevealSource
-        pendingGalleryRevealIDs = []
-        pendingGalleryRevealSource = ""
+        let requestedCount = pendingReveal.ids.count
+        let source = pendingReveal.source
         guard let focusedID = matched.first else {
             cullingStatus = "The selected \(source) asset is not in the current fixture Gallery."
             return true
@@ -4124,8 +4029,8 @@ final class BackstageViewModel: ObservableObject {
         }
         let previousIDs = visibleCullingAssets.map(\.id)
         for (index, id) in previousIDs.enumerated()
-        where cullingStableWindowIndexes[id] == nil {
-            cullingStableWindowIndexes[id] = (fixtureCullingWindow?.offset ?? 0) + index
+        where galleryWorkflow.stableWindowIndexes[id] == nil {
+            galleryWorkflow.stableWindowIndexes[id] = (fixtureCullingWindow?.offset ?? 0) + index
         }
         let focusedID = cullingSelection.focusedID ?? ids.first
         let fixtureID = selectedFixtureID
@@ -4195,7 +4100,7 @@ final class BackstageViewModel: ObservableObject {
                        ownerError == .timedOut {
                         self.cullingStatus = self.pendingLifecycleActionStatus(
                             "Culling X",
-                            action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                            action: self.galleryWorkflow.wasteBasketPendingActions[action.id] ?? action,
                             availability: "Culling remains available; check Activity for the full receipt."
                         )
                     } else {
@@ -6592,7 +6497,7 @@ final class BackstageViewModel: ObservableObject {
         }
         if !entry.wasteBasketMediaIDs.isEmpty {
             if cullingWasteBasketPendingActionIDs.contains(entry.wasteBasketActionID),
-               let pendingAction = cullingWasteBasketPendingActions[entry.wasteBasketActionID] {
+               let pendingAction = galleryWorkflow.wasteBasketPendingActions[entry.wasteBasketActionID] {
                 cullingHistory.removeLast()
                 let restoredLocally = selectedFixtureID == entry.fixtureID
                     && restoreWasteBasketCullingEntryInCurrentWindow(entry)
@@ -6642,7 +6547,7 @@ final class BackstageViewModel: ObservableObject {
                            ownerError == .timedOut {
                             self.cullingStatus = self.pendingLifecycleActionStatus(
                                 "Culling Undo",
-                                action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                                action: self.galleryWorkflow.wasteBasketPendingActions[action.id] ?? action,
                                 availability: "Culling remains available; check Activity for the full receipt."
                             )
                         } else {
@@ -6899,7 +6804,7 @@ final class BackstageViewModel: ObservableObject {
                    ownerError == .timedOut {
                     self.cullingStatus = self.pendingLifecycleActionStatus(
                         "Culling Undo",
-                        action: self.cullingWasteBasketPendingActions[action.id] ?? action,
+                        action: self.galleryWorkflow.wasteBasketPendingActions[action.id] ?? action,
                         availability: "Culling remains available; check Activity for the full receipt."
                     )
                 } else {
@@ -6923,29 +6828,29 @@ final class BackstageViewModel: ObservableObject {
 
     private func beginCullingWasteBasketAction(_ action: OwnerAction) {
         cullingWasteBasketPendingActionIDs.insert(action.id)
-        cullingWasteBasketPendingActions[action.id] = action
-        cullingWasteBasketPendingActionOrder.removeAll { $0 == action.id }
-        cullingWasteBasketPendingActionOrder.append(action.id)
+        galleryWorkflow.wasteBasketPendingActions[action.id] = action
+        galleryWorkflow.wasteBasketPendingActionOrder.removeAll { $0 == action.id }
+        galleryWorkflow.wasteBasketPendingActionOrder.append(action.id)
         refreshLatestCullingWasteBasketAction()
     }
 
     private func updateCullingWasteBasketAction(_ action: OwnerAction) {
         guard cullingWasteBasketPendingActionIDs.contains(action.id) else { return }
-        cullingWasteBasketPendingActions[action.id] = action
+        galleryWorkflow.wasteBasketPendingActions[action.id] = action
         refreshLatestCullingWasteBasketAction()
     }
 
     private func finishCullingWasteBasketAction(_ actionID: String) {
         cullingWasteBasketPendingActionIDs.remove(actionID)
-        cullingWasteBasketPendingActions.removeValue(forKey: actionID)
-        cullingWasteBasketPendingActionOrder.removeAll { $0 == actionID }
+        galleryWorkflow.wasteBasketPendingActions.removeValue(forKey: actionID)
+        galleryWorkflow.wasteBasketPendingActionOrder.removeAll { $0 == actionID }
         refreshLatestCullingWasteBasketAction()
     }
 
     private func refreshLatestCullingWasteBasketAction() {
-        cullingWasteBasketPendingActionID = cullingWasteBasketPendingActionOrder.last
+        cullingWasteBasketPendingActionID = galleryWorkflow.wasteBasketPendingActionOrder.last
         cullingWasteBasketPendingAction = cullingWasteBasketPendingActionID.flatMap {
-            cullingWasteBasketPendingActions[$0]
+            galleryWorkflow.wasteBasketPendingActions[$0]
         }
     }
 
@@ -6964,7 +6869,11 @@ final class BackstageViewModel: ObservableObject {
         }
         let removedIDs = Set(entry.wasteBasketMediaIDs)
         window.items.removeAll { removedIDs.contains($0.id) }
-        adjustCullingSummary(&window, for: entry.cullingItems, delta: -1)
+        BackstageGalleryWorkflowState.adjustSummary(
+            &window,
+            for: entry.cullingItems,
+            delta: -1
+        )
         fixtureCullingWindow = window
         let orderedIDs = visibleCullingAssets.map(\.id)
         var selection = OwnerSelectionModel(
@@ -6997,16 +6906,20 @@ final class BackstageViewModel: ObservableObject {
         }
         items.append(contentsOf: newlyRestoredItems)
         items.sort { left, right in
-            let leftIndex = cullingStableWindowIndexes[left.id]
+            let leftIndex = galleryWorkflow.stableWindowIndexes[left.id]
                 ?? entry.cullingItemIndexes[left.id].map { entry.windowOffset + $0 }
                 ?? .max
-            let rightIndex = cullingStableWindowIndexes[right.id]
+            let rightIndex = galleryWorkflow.stableWindowIndexes[right.id]
                 ?? entry.cullingItemIndexes[right.id].map { entry.windowOffset + $0 }
                 ?? .max
             return leftIndex < rightIndex
         }
         window.items = items
-        adjustCullingSummary(&window, for: newlyRestoredItems, delta: 1)
+        BackstageGalleryWorkflowState.adjustSummary(
+            &window,
+            for: newlyRestoredItems,
+            delta: 1
+        )
         fixtureCullingWindow = window
         let orderedIDs = visibleCullingAssets.map(\.id)
         let selectedIDs = entry.selectedIDs.intersection(orderedIDs)
@@ -7025,26 +6938,6 @@ final class BackstageViewModel: ObservableObject {
         )
         selectedPhotoIDs = cullingSelection.selectedIDs
         return true
-    }
-
-    private func adjustCullingSummary(
-        _ window: inout FixtureCullingWindow,
-        for items: [FixtureAsset],
-        delta: Int
-    ) {
-        guard !items.isEmpty else { return }
-        window.summary.filtered = max(0, window.summary.filtered + (items.count * delta))
-        window.summary.universe = max(0, window.summary.universe + (items.count * delta))
-        for item in items {
-            switch item.placementState {
-            case .undecided:
-                window.summary.undecided = max(0, window.summary.undecided + delta)
-            case .picked:
-                window.summary.picked = max(0, window.summary.picked + delta)
-            case .hidden:
-                window.summary.hidden = max(0, window.summary.hidden + delta)
-            }
-        }
     }
 
     func prepareLifecycleQuickLookURL(for item: LifecycleItem) async -> URL? {
@@ -8085,7 +7978,7 @@ final class BackstageViewModel: ObservableObject {
         lens: String = "",
         focalLength: String = ""
     ) -> BackstageQuickLookEquipment {
-        let learned = quickLookEquipmentByAssetID[assetID]
+        let learned = galleryWorkflow.quickLookEquipmentByAssetID[assetID]
         return BackstageQuickLookEquipment(
             cameraBody: preferredQuickLookEquipmentValue(cameraBody, learned?.cameraBody),
             lens: preferredQuickLookEquipmentValue(lens, learned?.lens),
@@ -8108,7 +8001,7 @@ final class BackstageViewModel: ObservableObject {
             await persistEquipment(previewEquipment, for: assetID)
             return
         }
-        guard quickLookEquipmentByAssetID[assetID]?.displayValue == nil else { return }
+        guard galleryWorkflow.quickLookEquipmentByAssetID[assetID]?.displayValue == nil else { return }
 
         for identifier in photoLibraryIdentifierCandidates(
             for: assetID,
@@ -8139,7 +8032,7 @@ final class BackstageViewModel: ObservableObject {
         for assetID: String
     ) async {
         guard equipment.displayValue != nil else { return }
-        quickLookEquipmentByAssetID[assetID] = equipment
+        galleryWorkflow.quickLookEquipmentByAssetID[assetID] = equipment
         guard let currentEquipmentCache else { return }
         let current = OwnerCurrentEquipment(
             cameraBody: equipment.cameraBody,
@@ -9397,13 +9290,13 @@ final class BackstageViewModel: ObservableObject {
         reviewThumbnailTasks[assetID] = nil
         reviewThumbnails.removeValue(forKey: assetID)
 
-        cullingThumbnailTasks[assetID]?.cancel()
-        cullingThumbnailTasks[assetID] = nil
-        cullingThumbnailTaskTokens[assetID] = nil
-        cullingThumbnailTimeoutTasks[assetID]?.cancel()
-        cullingThumbnailTimeoutTasks[assetID] = nil
+        galleryWorkflow.thumbnailTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTasks[assetID] = nil
+        galleryWorkflow.thumbnailTaskTokens[assetID] = nil
+        galleryWorkflow.thumbnailTimeoutTasks[assetID]?.cancel()
+        galleryWorkflow.thumbnailTimeoutTasks[assetID] = nil
         cullingThumbnails.removeValue(forKey: assetID)
-        cullingBasicThumbnails.removeValue(forKey: assetID)
+        galleryWorkflow.basicThumbnails.removeValue(forKey: assetID)
 
         lifecycleThumbnailTasks[assetID]?.cancel()
         lifecycleThumbnailTasks[assetID] = nil

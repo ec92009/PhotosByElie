@@ -3385,7 +3385,7 @@ struct BackstageFixtureSelectionTests {
             rect.fill()
             return true
         }
-        let thumbnail = BackstageViewModel.basicThumbnail(from: source)
+        let thumbnail = BackstageGalleryWorkflowState.basicThumbnail(from: source)
         #expect(thumbnail.size == NSSize(width: 180, height: 90))
         let bitmap = try #require(thumbnail.representations.first as? NSBitmapImageRep)
         #expect(bitmap.pixelsWide == 180)

@@ -8,7 +8,9 @@ promotion, installation and live Gallery acceptance are still required.
 - The roughly 40–50 actually visible cards get ordinary 180px Photos previews
   first. On macOS 15+, viewport visibility drives work, not LazyVGrid allocation.
 - After scrolling stops, at most four visible cards at a time request 900px
-  upgrades. Each card is attempted once per idle/visibility interval; a completed
+  upgrades. The first idle wave starts immediately, subsequent waves do not
+  repeat an artificial delay, and newly visible cards cancel utility backfill
+  work. Each card is attempted once per idle/visibility interval; a completed
   upgrade is not repeatedly requested. Failed upgrades keep the ordinary image.
 - Resuming scrolling cancels upgrades and the idle backfill. Late cancelled
   completions cannot replace images. A completed high-resolution upgrade stays
@@ -19,8 +21,11 @@ promotion, installation and live Gallery acceptance are still required.
   termination is requested.
 - A utility-priority idle pass replenishes a bounded set of up to 2,000 ordinary
   thumbnails, with visible/window assets ahead of the already-loaded APL items.
-  It does not fetch a new Photos inventory or export originals. Existing cache
-  entries and failures are skipped. Explicit Retry remains available for failures.
+  It waits until every visible card has its ordinary thumbnail and has completed
+  or exhausted its foreground 900px attempt, so it cannot monopolize PhotoKit
+  while the visible grid remains blurry. It does not fetch a new Photos inventory
+  or export originals. Existing cache entries and failures are skipped. Explicit
+  Retry remains available for failures.
 - The cache retains up to 2,000 entries with least-recently-used offscreen
   eviction. Visible cards are protected, and a retained high-resolution card
   carries its ordinary fallback only until an explicit Gallery/work
@@ -52,14 +57,16 @@ cancellation/resume, Gallery exit, timeout/Retry, and bounded Quick Look
 recovery. Tests use fake
 Photos services; they do not prove live PhotoKit timing or installed UI behavior.
 
-Final verification: all 259 tests across 20 suites pass with
-`swift test --package-path native/PhotosByElieBackstage --skip-build --no-parallel`.
+Latest source verification: all 376 tests across 30 suites pass with
+`swift test --package-path native/PhotosByElieBackstage --no-parallel`.
 The concurrent run passed the thumbnail regressions but exceeded an existing
 200ms wall-clock assertion in `BackstagePreviewIPCTests.timeoutReturnsPromptly`
 (283ms observed). That unrelated assertion was not weakened. The 2,000-item
 regression waits for cached results, not merely request starts.
-The unsigned Debug Xcode build also passes, with an arm64-only executable.
-No installed app, signing, publication, Photos or Owner data was changed.
+The current Xcode project target is separately blocked by its pre-existing
+omission of the newer RAW-recovery source types; SwiftPM, which is also the
+release build path, compiles those sources and passes. No installed app,
+signing, publication, Photos or Owner data was changed by this source check.
 
 The macOS 14 compatibility branch still uses appearance-based visibility and
 does not have SwiftUI's macOS 15 scroll-phase/visibility callbacks. Do not claim

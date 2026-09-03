@@ -860,13 +860,7 @@ struct CullingView: View {
     @ViewBuilder
     private var cullingGridOverlay: some View {
         if model.isBlockingFixtureCullingLoad {
-            VStack(spacing: 12) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-                Text("Applying filters…")
-                    .fixedSize(horizontal: true, vertical: false)
-            }
+            CullingFilterProgressView()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if !model.cullingHiddenMatchViews.isEmpty {
             VStack(spacing: 12) {
@@ -1352,6 +1346,42 @@ struct CullingView: View {
 extension FixtureAsset {
     var galleryStateBadges: [String] {
         [workflowStage.label] + (sourceAvailable ? [] : ["Source Unavailable"])
+    }
+}
+
+private struct CullingFilterProgressView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isSpinning = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .stroke(.secondary.opacity(0.22), lineWidth: 4)
+                Circle()
+                    .trim(from: 0.08, to: 0.72)
+                    .stroke(
+                        .secondary,
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+            }
+            .frame(width: 34, height: 34)
+            .rotationEffect(.degrees(isSpinning ? 360 : 0))
+            .animation(
+                reduceMotion
+                    ? nil
+                    : .linear(duration: 0.85).repeatForever(autoreverses: false),
+                value: isSpinning
+            )
+            .accessibilityHidden(true)
+
+            Text("Applying filters…")
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .onAppear { isSpinning = true }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Applying filters")
+        .accessibilityValue("In progress")
     }
 }
 

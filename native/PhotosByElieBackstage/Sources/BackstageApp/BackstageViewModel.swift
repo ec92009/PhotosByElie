@@ -366,13 +366,35 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
     @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
-    @Published private(set) var activeExternalEditJob: ExternalEditJob?
-    @Published private(set) var externalEditReturnReceipt: ExternalEditReturnReceipt?
-    @Published private(set) var externalEditSourceImages: [NSImage] = []
-    @Published private(set) var externalEditReturnedImage: NSImage?
-    @Published private(set) var isPreparingExternalEdit = false
-    @Published private(set) var isImportingExternalEdit = false
-    @Published var externalEditStatus = "Select Review photos to edit or combine in another app."
+    @Published private var externalEditState = BackstageExternalEditWorkflowState()
+    private(set) var activeExternalEditJob: ExternalEditJob? {
+        get { externalEditState.activeJob }
+        set { externalEditState.activeJob = newValue }
+    }
+    private(set) var externalEditReturnReceipt: ExternalEditReturnReceipt? {
+        get { externalEditState.returnReceipt }
+        set { externalEditState.returnReceipt = newValue }
+    }
+    private(set) var externalEditSourceImages: [NSImage] {
+        get { externalEditState.sourceImages }
+        set { externalEditState.sourceImages = newValue }
+    }
+    private(set) var externalEditReturnedImage: NSImage? {
+        get { externalEditState.returnedImage }
+        set { externalEditState.returnedImage = newValue }
+    }
+    private(set) var isPreparingExternalEdit: Bool {
+        get { externalEditState.isPreparing }
+        set { externalEditState.isPreparing = newValue }
+    }
+    private(set) var isImportingExternalEdit: Bool {
+        get { externalEditState.isImporting }
+        set { externalEditState.isImporting = newValue }
+    }
+    private(set) var externalEditStatus: String {
+        get { externalEditState.status }
+        set { externalEditState.status = newValue }
+    }
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var reviewWasteBasketPendingActionID: String?
@@ -608,13 +630,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isExternalEditOperationInProgress: Bool {
-        isPreparingExternalEdit || isImportingExternalEdit
+        externalEditState.isOperationInProgress
     }
 
     var selectedReviewTouchesActiveExternalEdit: Bool {
-        guard let job = activeExternalEditJob else { return false }
-        let activeIDs = Set(job.sources.map(\.assetID))
-        return !activeIDs.isDisjoint(with: selectedReviewAssetIDs)
+        externalEditState.selectionTouchesActiveJob(selectedReviewAssetIDs)
     }
 
     var isReviewMutationBlocked: Bool {
@@ -632,20 +652,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var activeExternalEditLabel: String? {
-        guard let job = activeExternalEditJob else { return nil }
-        return Self.externalEditLabel(editorName: job.editor.name, sources: job.sources)
+        externalEditState.activeLabel
     }
 
     static func externalEditLabel(
         editorName: String,
         sources: [ExternalEditSource]
     ) -> String {
-        let filenames = sources.sorted { $0.position < $1.position }
-            .map(\.originalFilename).filter { !$0.isEmpty }
-        let subject = filenames.count == 1
-            ? filenames[0]
-            : "\(filenames.count.formatted()) source photos"
-        return "\(editorName) · \(subject)"
+        BackstageExternalEditWorkflowState.label(editorName: editorName, sources: sources)
     }
 
     var quickLookExternalEditActions: BackstageQuickLookExternalEditActions? {
@@ -6096,7 +6110,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func announceExternalEdit(_ message: String) {
-        externalEditStatus = message
+        externalEditState.announce(message)
         cullingStatus = message
         reviewStatus = message
         nativeUploadStatus = message
@@ -6330,9 +6344,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func clearExternalEditComparison() {
-        externalEditReturnReceipt = nil
-        externalEditSourceImages = []
-        externalEditReturnedImage = nil
+        externalEditState.clearComparison()
     }
 
     private func openInExternalEditor(

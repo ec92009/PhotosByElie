@@ -10,18 +10,25 @@ public struct BackstageApplication: App {
     private var navigationSidebarVisible = true
 
     public init() {
+        let isReadOnlyAccessibilitySmoke = BackstageAccessibilitySmokeMode.isEnabled()
         // PBB-92: a current Backstage launch is the final authority over any
         // helper left by an older install or rollback. Retirement is
         // recoverable and intentionally does not touch historical archives.
-        do {
-            _ = try RetiredPhotosBridgeService().retireInstalledArtifacts()
-        } catch {
-            NSLog(
-                "PBB-92 could not retire a legacy Photos Bridge artifact: %@",
-                error.localizedDescription
-            )
+        if !isReadOnlyAccessibilitySmoke {
+            do {
+                _ = try RetiredPhotosBridgeService().retireInstalledArtifacts()
+            } catch {
+                NSLog(
+                    "PBB-92 could not retire a legacy Photos Bridge artifact: %@",
+                    error.localizedDescription
+                )
+            }
         }
-        _model = StateObject(wrappedValue: BackstageViewModel())
+        _model = StateObject(
+            wrappedValue: isReadOnlyAccessibilitySmoke
+                ? BackstageAccessibilitySmokeMode.makeModel()
+                : BackstageViewModel()
+        )
     }
 
     public var body: some Scene {
@@ -36,12 +43,17 @@ public struct BackstageApplication: App {
                     List(BackstageViewModel.Section.allCases, selection: $model.selection) { section in
                         Label(section.title, systemImage: icon(for: section))
                             .tag(section)
+                            .accessibilityIdentifier("backstage.sidebar.\(section.rawValue)")
                     }
+                    .accessibilityLabel("Sidebar")
                 }
                 .navigationTitle("Backstage")
                 .frame(minWidth: 230, idealWidth: 260)
             } detail: {
-                detail
+                workspaceDetail
+                    .accessibilityIdentifier(
+                        "backstage.workspace.\((model.selection ?? .overview).rawValue)"
+                    )
                     .frame(
                         minWidth: 760,
                         maxWidth: .infinity,
@@ -123,8 +135,14 @@ public struct BackstageApplication: App {
             ))
             .frame(minWidth: 1_120, minHeight: 720)
             .onAppear { applicationDelegate.attach(model: model) }
-            .task { model.startPreviewIPC() }
-            .task { await model.bootstrapAuthentication() }
+            .task {
+                guard !model.isReadOnlyAccessibilitySmoke else { return }
+                model.startPreviewIPC()
+            }
+            .task {
+                guard !model.isReadOnlyAccessibilitySmoke else { return }
+                await model.bootstrapAuthentication()
+            }
             .onChange(of: model.selectedFixtureID) { oldFixtureID, newFixtureID in
                 guard oldFixtureID != newFixtureID, !newFixtureID.isEmpty else { return }
                 Task { await model.refreshVisibleFixtureSurface() }
@@ -138,7 +156,7 @@ public struct BackstageApplication: App {
                     Task { await model.refreshActions() }
                 }
                 .keyboardShortcut("r")
-                .disabled(model.isRefreshing)
+                .disabled(model.isRefreshing || model.isReadOnlyAccessibilitySmoke)
                 .backstageHelp("Reload the latest audited Owner activity records and their progress states.")
             }
         }
@@ -162,6 +180,23 @@ public struct BackstageApplication: App {
     }
 
     @ViewBuilder
+    private var workspaceDetail: some View {
+        VStack(spacing: 0) {
+            if model.isReadOnlyAccessibilitySmoke {
+                BackstageFeedbackView(
+                    message: "Read-only installed-app accessibility smoke is active.",
+                    isWorking: true
+                )
+                .accessibilityIdentifier("backstage.smoke.busy-state")
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                Divider()
+            }
+            detail
+        }
+    }
+
+    @ViewBuilder
     private var detail: some View {
         switch model.selection ?? .overview {
         case .overview:
@@ -173,15 +208,15 @@ public struct BackstageApplication: App {
         case .access:
             AccessControlView(model: model)
         case .culling:
-            CullingView(model: model)
+            CullingView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
         case .review:
-            ReviewView(model: model)
+            ReviewView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
         case .metadata:
             MetadataGiveBackView(model: model)
         case .wasteBasket:
-            LifecycleView(model: model)
+            LifecycleView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
         case .uploads:
-            UploadView(model: model)
+            UploadView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
         case .delivery:
             DeliverablesView(model: model)
         case .publication:
@@ -243,13 +278,17 @@ private struct BackstageSelectAllCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .textEditing) {
             Button("Select All") {
-                let handledByFocusedControl = NSApp.sendAction(
-                    #selector(NSResponder.selectAll(_:)),
-                    to: nil,
-                    from: nil
-                )
-                if !handledByFocusedControl {
+                if model.isReadOnlyAccessibilitySmoke {
                     model.selectAllCurrentContent()
+                } else {
+                    let handledByFocusedControl = NSApp.sendAction(
+                        #selector(NSResponder.selectAll(_:)),
+                        to: nil,
+                        from: nil
+                    )
+                    if !handledByFocusedControl {
+                        model.selectAllCurrentContent()
+                    }
                 }
             }
             .keyboardShortcut("a", modifiers: .command)

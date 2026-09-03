@@ -190,6 +190,7 @@ final class BackstageViewModel: ObservableObject {
             }
         }
     }
+    let isReadOnlyAccessibilitySmoke: Bool
     @Published var actions: [OwnerAction] = []
     @Published var status = "Not connected"
     @Published private var cullingPreviewPanelVisible: Bool {
@@ -828,10 +829,12 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnailBackfillDelay: Duration = .milliseconds(350),
         currentImageSizeFlushDelay: Duration = .milliseconds(500),
         activityRefreshTimeout: Duration = .seconds(5),
+        isReadOnlyAccessibilitySmoke: Bool = false,
         injectNextCullingThumbnailFailure: Bool = ProcessInfo.processInfo.environment[
             "PBE_CULLING_PREVIEW_FAIL_ONCE"
         ] == "1"
     ) {
+        self.isReadOnlyAccessibilitySmoke = isReadOnlyAccessibilitySmoke
         self.preferences = preferences
         self.updateService = updateService
         self.updateInstaller = updateInstaller
@@ -1387,6 +1390,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func checkForUpdates() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard canPerformBackstageUpdateActions, !isUpdateOperationInProgress else { return }
         let existingVerifiedUpdate: BackstageVerifiedUpdate? = if case let .verified(update) = updateState {
             update
@@ -1505,6 +1509,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func bootstrapAuthentication() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard !isAuthenticating else { return }
         isAuthenticating = true
         authenticationStatus = "Checking this Mac's Keychain session…"
@@ -1566,6 +1571,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func startPreviewIPC() {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         do {
             try previewIPCServer.start()
         } catch {
@@ -1769,6 +1775,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshActions() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard !isRefreshing else { return }
         isRefreshing = true
         activityStatus = "Refreshing audited cloud activity…"
@@ -3396,6 +3403,10 @@ final class BackstageViewModel: ObservableObject {
     /// not currently own keyboard focus. It never expands across unloaded pages.
     @discardableResult
     func selectAllCurrentContent() -> Bool {
+        if isReadOnlyAccessibilitySmoke {
+            cullingStatus = "Keyboard Select All reached the guarded Gallery handler in read-only smoke mode."
+            return true
+        }
         switch currentContentSelectionScope {
         case .fixtureAssets:
             selectedFixtureAssetIDs = Set(fixtureAssets.map(\.id))
@@ -3653,6 +3664,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixtures() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard !isLaunchingPBEOwner else {
             fixtureStatus = "PBE Owner is opening with the captured current fixture; refresh is disabled."
             return
@@ -3952,6 +3964,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadAccess() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard !isRunningAccess else { return }
         isRunningAccess = true
         accessStatus = "Loading people and access groups…"
@@ -7546,6 +7559,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadMetadataModelLadderIfNeeded() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard !hasLoadedMetadataModelLadder, !isLoadingMetadataModelLadder else { return }
         isLoadingMetadataModelLadder = true
         defer { isLoadingMetadataModelLadder = false }
@@ -8927,6 +8941,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func recoverR2ReconciliationRuns() async {
+        guard !isReadOnlyAccessibilitySmoke else { return }
         guard canStartCloudWorkflow else { return }
         isRunningDelivery = true
         isRunningR2Reconciliation = true

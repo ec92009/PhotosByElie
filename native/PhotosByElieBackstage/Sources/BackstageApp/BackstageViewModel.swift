@@ -756,7 +756,7 @@ final class BackstageViewModel: ObservableObject {
             .resolve()
             .map { CustomerPhotoLinkSQLiteStore(databaseURL: $0) },
         cullingThumbnailTimeout: Duration = .seconds(12),
-        cullingThumbnailUpgradeDelay: Duration = .seconds(1),
+        cullingThumbnailUpgradeDelay: Duration = .milliseconds(250),
         cullingThumbnailBackfillDelay: Duration = .milliseconds(350),
         currentImageSizeFlushDelay: Duration = .milliseconds(500),
         activityRefreshTimeout: Duration = .seconds(5),
@@ -2012,7 +2012,13 @@ final class BackstageViewModel: ObservableObject {
 
     func cullingAssetDidAppear(_ asset: FixtureAsset) {
         guard !asset.id.isEmpty, !terminationRequested else { return }
-        galleryWorkflow.visibleAssetIDs.insert(asset.id)
+        let isNewlyVisible = galleryWorkflow.visibleAssetIDs.insert(asset.id).inserted
+        if isNewlyVisible {
+            // Foreground cards always outrank the 2,000-item utility backfill.
+            // Otherwise the backfill can occupy Photos while every card the
+            // user is looking at remains on its 180px placeholder.
+            cancelCullingThumbnailBackfill()
+        }
         touchCullingThumbnail(asset.id)
         requestThumbnail(for: asset.id, preferredIdentifier: asset.photoLibraryIdentifier)
         scheduleThumbnailUpgrade(for: asset.id)
@@ -2031,7 +2037,7 @@ final class BackstageViewModel: ObservableObject {
         // Only in-flight work is cancelled when a card leaves the viewport;
         // an explicit Gallery/work cancellation can still downgrade it.
         galleryWorkflow.thumbnailUpgradeAttempts.remove(assetID)
-        scheduleVisibleThumbnailUpgrades()
+        scheduleVisibleThumbnailUpgrades(after: .zero)
     }
 
     func cullingScrollPhaseChanged(isScrolling: Bool) {
@@ -2051,11 +2057,15 @@ final class BackstageViewModel: ObservableObject {
         for assetID in galleryWorkflow.visibleAssetIDs where cullingThumbnailFailures[assetID] == nil {
             requestThumbnail(for: assetID)
         }
-        scheduleVisibleThumbnailUpgrades()
+        cancelCullingThumbnailBackfill()
+        scheduleVisibleThumbnailUpgrades(after: .zero)
         scheduleCullingThumbnailBackfill()
     }
 
-    private func scheduleThumbnailUpgrade(for assetID: String) {
+    private func scheduleThumbnailUpgrade(
+        for assetID: String,
+        after delay: Duration? = nil
+    ) {
         guard !terminationRequested,
               galleryWorkflow.thumbnailUpgradeTasks[assetID] == nil,
               !galleryWorkflow.thumbnailUpgradeAttempts.contains(assetID),
@@ -2068,6 +2078,7 @@ final class BackstageViewModel: ObservableObject {
         else { return }
         galleryWorkflow.thumbnailUpgradeAttempts.insert(assetID)
         let taskToken = UUID()
+        let delay = delay ?? cullingThumbnailUpgradeDelay
         galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] = taskToken
         galleryWorkflow.thumbnailUpgradeTasks[assetID] = Task { [weak self] in
             guard let self else { return }
@@ -2075,10 +2086,11 @@ final class BackstageViewModel: ObservableObject {
                 if self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken {
                     self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] = nil
                     self.galleryWorkflow.thumbnailUpgradeTasks[assetID] = nil
-                    self.scheduleVisibleThumbnailUpgrades()
+                    self.scheduleVisibleThumbnailUpgrades(after: .zero)
+                    self.scheduleCullingThumbnailBackfill()
                 }
             }
-            try? await Task.sleep(for: self.cullingThumbnailUpgradeDelay)
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled,
                   self.galleryWorkflow.thumbnailUpgradeTaskTokens[assetID] == taskToken,
                   self.galleryWorkflow.visibleAssetIDs.contains(assetID),
@@ -2090,13 +2102,21 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func scheduleVisibleThumbnailUpgrades() {
+    private func scheduleVisibleThumbnailUpgrades(after delay: Duration? = nil) {
         guard !galleryWorkflow.isScrolling else { return }
         for assetID in galleryWorkflow.visibleAssetIDs.sorted() {
             guard galleryWorkflow.thumbnailUpgradeTasks.count
                 < Self.cullingThumbnailUpgradeConcurrencyLimit
             else { break }
-            scheduleThumbnailUpgrade(for: assetID)
+            scheduleThumbnailUpgrade(for: assetID, after: delay)
+        }
+    }
+
+    private var visibleThumbnailWorkIsPending: Bool {
+        galleryWorkflow.visibleAssetIDs.contains { assetID in
+            cullingThumbnails[assetID] == nil
+                || galleryWorkflow.thumbnailUpgradeTasks[assetID] != nil
+                || !galleryWorkflow.thumbnailUpgradeAttempts.contains(assetID)
         }
     }
 
@@ -2110,6 +2130,7 @@ final class BackstageViewModel: ObservableObject {
         guard !terminationRequested, !galleryWorkflow.isScrolling,
               cullingSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !galleryWorkflow.visibleAssetIDs.isEmpty,
+              !visibleThumbnailWorkIsPending,
               galleryWorkflow.thumbnailBackfillTask == nil else { return }
         let assets = galleryWorkflow.thumbnailBackfillAssets(
             cullingAssets: cullingAssets,
@@ -2803,8 +2824,21 @@ final class BackstageViewModel: ObservableObject {
             // filters, counts, ordering, and pagination. Re-evaluating its
             // already-filtered page here can make summary counts disagree with
             // the rendered cards whenever the server matches metadata that is
-            // not duplicated perfectly in the client model.
-            return cullingAssets
+            // not duplicated perfectly in the client model. Apply only the
+            // local placement projection so P/H/U feedback is immediate while
+            // the authoritative write is in flight; a failure restores the
+            // prior state and therefore restores the card.
+            return cullingAssets.filter { asset in
+                let placement = FixturePlacementState(
+                    rawValue: cullingStates[asset.id]?.pickState
+                        ?? asset.placementState.rawValue
+                ) ?? asset.placementState
+                return switch placement {
+                case .undecided: cullingViews.contains(.undecided)
+                case .picked: cullingViews.contains(.picked)
+                case .hidden: cullingViews.contains(.hidden)
+                }
+            }
         }
         let assets = Dictionary(uniqueKeysWithValues: cullingAssets.map { ($0.id, $0) })
         return cullingWorkspace.items.compactMap { assets[$0.id] }

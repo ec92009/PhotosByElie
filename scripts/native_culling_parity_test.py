@@ -445,7 +445,11 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("restoring: selectionBeforeFilter", model)
         self.assertIn("replaceCullingItems(preserving: selectionBeforeLoad)", model)
         self.assertIn("if !model.isBlockingFixtureCullingLoad", ui)
+        self.assertIn("CullingFilterProgressView()", ui)
         self.assertIn('Text("Applying filters…")', ui)
+        self.assertIn("@Environment(\\.accessibilityReduceMotion)", ui)
+        self.assertIn(".repeatForever(autoreverses: false)", ui)
+        self.assertIn('.accessibilityValue("In progress")', ui)
         self.assertIn(".fixedSize(horizontal: true, vertical: false)", ui)
         self.assertIn(".frame(maxWidth: .infinity, maxHeight: .infinity)", ui)
 
@@ -1528,6 +1532,21 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         for slice_ in (filter_slice, decision_slice, placement_slice):
             self.assertIn("invalidateCullingWindowLoads()", slice_)
+
+        self.assertIn("return cullingAssets.filter { asset in", model)
+        self.assertIn("cullingViews.contains(.hidden)", model)
+
+    def test_visible_thumbnail_upgrades_preempt_idle_backfill(self):
+        model = (
+            NATIVE
+            / "Sources"
+            / "BackstageApp"
+            / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("let isNewlyVisible", model)
+        self.assertIn("cancelCullingThumbnailBackfill()", model)
+        self.assertIn("scheduleVisibleThumbnailUpgrades(after: .zero)", model)
+        self.assertIn("!visibleThumbnailWorkIsPending", model)
 
     def test_backstage_release_requires_a_stable_signing_identity(self):
         build_script = (

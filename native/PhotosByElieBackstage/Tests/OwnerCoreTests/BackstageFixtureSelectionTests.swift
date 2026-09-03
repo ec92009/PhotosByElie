@@ -40,7 +40,7 @@ struct BackstageFixtureSelectionTests {
             ".frame(width: previewWidth, height: previewWidth * 3 / 4)"
         ))
         #expect(source.contains(
-            "Image(systemName: \"line.3.horizontal.decrease.circle\")"
+            "CullingFilterProgressView()"
         ))
         #expect(source.contains(
             "Image(systemName: \"photo\")\n                    .font(.title3)"
@@ -2207,7 +2207,7 @@ struct BackstageFixtureSelectionTests {
             "hidden": .number(1),
         ])
         model.fixtureCullingWindow = window
-        model.cullingViews = [.hidden, .picked]
+        model.cullingViews = Set(FixtureCullingView.selectableCases)
         model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
             (
                 item.id,
@@ -2244,6 +2244,71 @@ struct BackstageFixtureSelectionTests {
         #expect(model.fixtureCullingWindow?.summary.picked == 1)
         #expect(model.fixtureCullingWindow?.summary.hidden == 1)
         #expect(await placementService.undoCount() == 1)
+    }
+
+    @Test("H removes a picked card before the fixture writer returns")
+    @MainActor
+    func fixtureHideProjectsImmediately() async throws {
+        let items = (1...2).map { index in
+            FixtureAsset(
+                id: "picked-immediate-\(index)",
+                title: "Picked \(index)",
+                filename: "picked-\(index).jpg",
+                mediaType: "photo",
+                placementState: .picked
+            )
+        }
+        let placementService = RecordingFixturePlacementService(
+            states: Dictionary(uniqueKeysWithValues: items.map { ($0.id, .picked) }),
+            applyDelay: .milliseconds(150)
+        )
+        let fixtureService = FixtureWorkflowService(
+            runner: OwnerActionRunner(
+                api: ReviewLifecycleActionAPI(terminalActions: []),
+                waker: RejectingFixtureSelectionWaker(),
+                pollInterval: .milliseconds(1),
+                timeout: .seconds(1)
+            ),
+            localReviewService: placementService
+        )
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(),
+            fixtureService: fixtureService,
+            workflowRecoveryStore: nil
+        )
+        model.installFixtureTree(
+            fixtureTree,
+            preferredFixtureID: "fixture-expo",
+            persistSelection: false
+        )
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 2, videos: 0)
+        window.items = items
+        window.summary = FixtureCullingSummary(json: [
+            "filtered": .number(2), "universe": .number(2),
+            "undecided": .number(0), "picked": .number(2), "hidden": .number(0),
+        ])
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.picked]
+        model.cullingStates = Dictionary(uniqueKeysWithValues: items.map { item in
+            (item.id, SidecarDecisionState(assetId: item.id, pickState: "picked"))
+        })
+        model.cullingSelection = OwnerSelectionModel(
+            orderedIDs: items.map(\.id),
+            selectedIDs: [items[0].id],
+            anchorID: items[0].id,
+            focusedID: items[0].id
+        )
+
+        let hide = Task { await model.applyPickShortcut(.reject) }
+        for _ in 0..<50 where !model.isApplyingCullingDecision {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        #expect(model.isApplyingCullingDecision)
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
+        #expect(await placementService.applyCount() == 0)
+        #expect(await hide.value)
+        #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
     }
 
     @Test("Culling Waste Basket allows consecutive X and Undo actions")
@@ -3248,7 +3313,7 @@ struct BackstageFixtureSelectionTests {
         let photoLibrary = RecordingPreviewPhotoLibrary()
         let model = BackstageViewModel(
             photoLibrary: photoLibrary,
-            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailUpgradeDelay: .milliseconds(1),
             cullingThumbnailBackfillDelay: .milliseconds(1)
         )
         model.libraryItems = (0..<2_005).map { index in
@@ -3276,7 +3341,11 @@ struct BackstageFixtureSelectionTests {
 
         let requestedPixelSizes = photoLibrary.requestedPixelSizes()
         #expect(requestedPixelSizes.filter { $0 == 180 }.count == 2_000)
-        #expect(requestedPixelSizes.filter { $0 >= 900 }.isEmpty)
+        #expect(requestedPixelSizes.filter { $0 == 900 }.count == 1)
+        #expect(
+            Array(photoLibrary.requestedAssetSizes().prefix(2))
+                == ["asset-apl-backfill-0:180", "asset-apl-backfill-0:900"]
+        )
         #expect(model.cullingThumbnails.count == 2_000)
         #expect(model.cullingThumbnails["asset-apl-backfill-0"] != nil)
         model.cullingScrollPhaseChanged(isScrolling: true)
@@ -3421,7 +3490,7 @@ struct BackstageFixtureSelectionTests {
         let photoLibrary = RecordingPreviewPhotoLibrary()
         let model = BackstageViewModel(
             photoLibrary: photoLibrary,
-            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailUpgradeDelay: .milliseconds(1),
             cullingThumbnailBackfillDelay: .milliseconds(1)
         )
         model.libraryItems = (0..<20).map {
@@ -3431,6 +3500,9 @@ struct BackstageFixtureSelectionTests {
         photoLibrary.setThumbnailDelay(.seconds(60))
         let asset = FixtureAsset(id: "apl-0", title: "", filename: "0.jpg", mediaType: "photo")
         model.cullingAssetDidAppear(asset)
+        for _ in 0..<50 where photoLibrary.requestedIDs(at: 900).isEmpty {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         for _ in 0..<50 where photoLibrary.requestedIDs(at: 180).count < 5 {
             try? await Task.sleep(for: .milliseconds(10))
         }
@@ -3449,7 +3521,7 @@ struct BackstageFixtureSelectionTests {
         }
         #expect(model.cullingThumbnails.count == 20)
         #expect(model.cullingThumbnailFailures.isEmpty)
-        #expect(photoLibrary.requestedIDs(at: 900).isEmpty)
+        #expect(photoLibrary.requestedIDs(at: 900) == [asset.id])
         model.cancelCullingThumbnailWork()
         let count = photoLibrary.requestedPixelSizes().count
         model.cullingScrollPhaseChanged(isScrolling: false)
@@ -3464,7 +3536,7 @@ struct BackstageFixtureSelectionTests {
         let model = BackstageViewModel(
             photoLibrary: photoLibrary,
             cullingThumbnailTimeout: .milliseconds(40),
-            cullingThumbnailUpgradeDelay: .seconds(60),
+            cullingThumbnailUpgradeDelay: .milliseconds(1),
             cullingThumbnailBackfillDelay: .milliseconds(1)
         )
         model.libraryItems = (0..<10).map {
@@ -3473,6 +3545,9 @@ struct BackstageFixtureSelectionTests {
         await model.loadThumbnail(for: "apl-0")
         photoLibrary.setThumbnailDelay(.seconds(60))
         model.cullingAssetDidAppear(FixtureAsset(id: "apl-0", title: "", filename: "0.jpg", mediaType: "photo"))
+        for _ in 0..<50 where photoLibrary.requestedIDs(at: 900).isEmpty {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
         for _ in 0..<100 where model.cullingThumbnailFailures.count < 9 {
             try? await Task.sleep(for: .milliseconds(10))
         }
@@ -4079,9 +4154,15 @@ private actor CapturingReviewService: LocalFixtureReviewServing {
 private actor RecordingFixturePlacementService: LocalFixtureReviewServing, LocalFixtureCullingServing {
     private var states: [String: FixturePlacementState]
     private var recordedUndoCount = 0
+    private var recordedApplyCount = 0
+    private let applyDelay: Duration
 
-    init(states: [String: FixturePlacementState]) {
+    init(
+        states: [String: FixturePlacementState],
+        applyDelay: Duration = .zero
+    ) {
         self.states = states
+        self.applyDelay = applyDelay
     }
 
     func applyReview(manifest: [String: JSONValue]) async throws -> FixtureReviewResult {
@@ -4098,7 +4179,9 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
         assetIDs: [String],
         reason: String
     ) async throws -> [FixtureAssetState]? {
-        assetIDs.map { assetID in
+        try await Task.sleep(for: applyDelay)
+        recordedApplyCount += 1
+        return assetIDs.map { assetID in
             let before = states[assetID] ?? .undecided
             states[assetID] = state
             return fixtureAssetState(
@@ -4127,6 +4210,7 @@ private actor RecordingFixturePlacementService: LocalFixtureReviewServing, Local
     }
 
     func undoCount() -> Int { recordedUndoCount }
+    func applyCount() -> Int { recordedApplyCount }
 
     private func fixtureAssetState(
         fixtureID: String,
@@ -4438,6 +4522,10 @@ private final class RecordingPreviewPhotoLibrary: PhotoLibraryServing, @unchecke
 
     func requestedIDs(at pixelSize: Int) -> [String] {
         lock.withLock { requests.filter { $0.1 == pixelSize }.map(\.0) }
+    }
+
+    func requestedAssetSizes() -> [String] {
+        lock.withLock { requests.map { "\($0.0):\($0.1)" } }
     }
 
     func equipmentMetadataRequests() -> [(String, Bool)] {

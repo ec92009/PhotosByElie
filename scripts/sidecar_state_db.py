@@ -2379,6 +2379,13 @@ def _upload_bridge_rows(
             WHERE edit_lock.asset_id = m.asset_id
           )
         """
+    delivery_source_sql = "'' AS source_version_hash"
+    delivery_join_sql = ""
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'asset_delivery_state'"
+    ).fetchone() is not None:
+        delivery_source_sql = "COALESCE(delivery.source_version_hash, '') AS source_version_hash"
+        delivery_join_sql = "LEFT JOIN asset_delivery_state AS delivery ON delivery.asset_id = m.asset_id"
     rows = conn.execute(
         f"""
         WITH ranked AS (
@@ -2386,6 +2393,7 @@ def _upload_bridge_rows(
                  a.captured_at, a.indexed_at, a.updated_at AS asset_updated_at, a.missing_at,
                  m.uploaded_at, a.location_label, a.location_keywords_json,
                  d.title, d.keywords_json,
+                 {delivery_source_sql},
                  COALESCE(NULLIF(json_extract(a.raw_json, '$.localIdentifier'), ''), a.asset_id)
                    AS photos_identity,
                  CASE
@@ -2417,6 +2425,7 @@ def _upload_bridge_rows(
           FROM sidecar_mock_uploads AS m
           JOIN sidecar_assets AS a ON a.asset_id = m.asset_id
           JOIN sidecar_decisions AS d ON d.asset_id = m.asset_id
+          {delivery_join_sql}
           WHERE m.mock_state = 'active'
             AND (
               (d.pick_state = 'picked' AND d.metadata_state = 'approved')
@@ -2616,10 +2625,11 @@ def _mock_upload_summary(
         )
     ]
     block_summary = _upload_bridge_block_summary(conn, asset_ids=asset_ids)
+    sale_protection = _sale_protection_index(conn)
     planned_key_sets: dict[str, list[dict[str, str]]] = {}
     all_planned_keys: list[dict[str, str]] = []
     for row in rows:
-        _photo_id, keys = _planned_r2_keys(row)
+        _photo_id, keys = _planned_upload_r2_keys(row, sale_protection)
         planned_key_sets[str(row["asset_id"])] = keys
         all_planned_keys.extend(keys)
     current_r2 = _current_r2_objects_for_plan(conn, all_planned_keys)
@@ -2685,8 +2695,9 @@ def upload_bridge_plan(
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
+        sale_protection = _sale_protection_index(conn)
         for row in rows:
-            photo_id, keys = _planned_r2_keys(row)
+            photo_id, keys = _planned_upload_r2_keys(row, sale_protection)
             asset_id = str(row["asset_id"])
             photo_ids[asset_id] = photo_id
             planned_key_sets[asset_id] = keys
@@ -2996,6 +3007,14 @@ def _upload_bridge_execute_r2(
             "backend": selected_backend,
             "existedBeforeUpload": exists,
         }
+        if bool(key.get("saleProtected")):
+            return position, {
+                **base_result,
+                "status": "protected_sale_reference",
+                "timings": {"totalSeconds": round(time.perf_counter() - key_started, 3)},
+                "error": "completed-sale object keys are immutable and cannot be uploaded or replaced",
+                **({"existing": key.get("existing")} if key.get("existing") else {}),
+            }
         if exists and not allow_r2_overwrite:
             return position, {
                 **base_result,
@@ -3196,8 +3215,9 @@ def prepare_upload_bridge_execute_batch(
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
+        sale_protection = _sale_protection_index(conn)
         for row in rows:
-            photo_id, keys = _planned_r2_keys(row)
+            photo_id, keys = _planned_upload_r2_keys(row, sale_protection)
             asset_id = str(row["asset_id"])
             photo_ids[asset_id] = photo_id
             planned_key_sets[asset_id] = keys
@@ -3442,7 +3462,11 @@ def execute_upload_bridge_batch_item(
             from fixture_pipeline import record_r2_upload_results  # noqa: PLC0415
             record_r2_upload_results(repo_root, str(item.get("assetId") or ""), upload_results)
             timings["r2UploadSeconds"] = round(time.perf_counter() - upload_started, 3)
-            failed_uploads = [result for result in upload_results if result.get("status") == "failed"]
+            failed_uploads = [
+                result
+                for result in upload_results
+                if result.get("status") in {"failed", "protected_sale_reference"}
+            ]
             skipped_uploads = [result for result in upload_results if result.get("status") == "skipped_collision"]
             if failed_uploads:
                 upload_status = "failed"
@@ -3687,8 +3711,9 @@ def run_upload_bridge_export_dry_run(
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
+        sale_protection = _sale_protection_index(conn)
         for row in rows:
-            photo_id, keys = _planned_r2_keys(row)
+            photo_id, keys = _planned_upload_r2_keys(row, sale_protection)
             asset_id = str(row["asset_id"])
             photo_ids[asset_id] = photo_id
             planned_key_sets[asset_id] = keys
@@ -5042,11 +5067,16 @@ def sidecar_sync_status(repo_root: Path, limit: int = 80) -> dict[str, Any]:
     }
 
 
-def _planned_r2_keys(row: sqlite3.Row, *, include_private_renders: bool = False) -> tuple[str, list[dict[str, str]]]:
+def _planned_r2_keys(
+    row: sqlite3.Row,
+    *,
+    include_private_renders: bool = False,
+    media_id: str = "",
+) -> tuple[str, list[dict[str, str]]]:
     row_keys = set(row.keys())
     canonical_anchor = row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
     source_anchor = str(canonical_anchor or row["source_anchor"] or f"apple-photos://{row['asset_id']}")
-    photo_id = photo_id_for_source_path(source_anchor)
+    photo_id = str(media_id or photo_id_for_source_path(source_anchor))
     filename = str(row["filename"] or "")
     media_type = str(row["media_type"] or "").casefold()
     is_video = media_type == "video" or Path(filename).suffix.lower() in {".mov", ".mp4", ".m4v"}
@@ -5078,6 +5108,106 @@ def _planned_r2_keys(row: sqlite3.Row, *, include_private_renders: bool = False)
             for product_id in PRIVATE_RENDER_PRODUCTS
         )
     return photo_id, keys
+
+
+def _sale_protection_index(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    """Return immutable sold versions and object keys, grouped by source asset."""
+    if conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'asset_sale_references'"
+    ).fetchone() is None:
+        return {}
+    rows = conn.execute(
+        """
+        SELECT asset_id, source_version_hash, master_key, derivative_keys_json
+        FROM asset_sale_references
+        ORDER BY asset_id, source_version_hash, order_id
+        """
+    ).fetchall()
+    index: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        asset_id = str(row["asset_id"] or "")
+        source_version = str(row["source_version_hash"] or "")
+        keys = [
+            str(row["master_key"] or ""),
+            *[
+                str(value)
+                for value in _read_json_text(row["derivative_keys_json"], [])
+                if str(value)
+            ],
+        ]
+        entry = index.setdefault(
+            asset_id,
+            {"versions": set(), "keys": set(), "mediaIdsByVersion": {}},
+        )
+        entry["versions"].add(source_version)
+        entry["keys"].update(key for key in keys if key)
+        for key in keys:
+            filename = Path(key).name
+            match = re.match(
+                r"^(.+?)(?:_900|_1800)\.jpg$|^(.+?)_short_5s_720p\.mp4$",
+                filename,
+                re.IGNORECASE,
+            )
+            if match:
+                entry["mediaIdsByVersion"].setdefault(
+                    source_version,
+                    next(value for value in match.groups() if value),
+                )
+                break
+    return index
+
+
+def _planned_upload_r2_keys(
+    row: sqlite3.Row,
+    sale_protection: dict[str, dict[str, Any]],
+    *,
+    include_private_renders: bool = False,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Plan an upload without ever targeting a completed-sale object for replacement."""
+    row_keys = set(row.keys())
+    asset_id = str(row["asset_id"] or "")
+    current_source_version = str(
+        row["source_version_hash"] if "source_version_hash" in row_keys else ""
+    )
+    protected = sale_protection.get(asset_id)
+    media_id = ""
+    replacement_for_sold_delivery = False
+    if protected:
+        media_id = str(
+            protected["mediaIdsByVersion"].get(current_source_version, "")
+        )
+        if not media_id and current_source_version not in protected["versions"]:
+            canonical_anchor = row["r2_source_anchor"] if "r2_source_anchor" in row_keys else ""
+            source_anchor = str(
+                canonical_anchor
+                or row["source_anchor"]
+                or f"apple-photos://{asset_id}"
+            )
+            base_media_id = photo_id_for_source_path(source_anchor)
+            version_basis = current_source_version or ":".join(
+                (
+                    asset_id,
+                    str(row["asset_updated_at"] if "asset_updated_at" in row_keys else ""),
+                    str(row["filename"] or ""),
+                )
+            )
+            version_token = hashlib.sha256(version_basis.encode("utf-8")).hexdigest()[:12]
+            media_id = f"{base_media_id}-v{version_token}"
+            replacement_for_sold_delivery = True
+    planned_media_id, keys = _planned_r2_keys(
+        row,
+        include_private_renders=include_private_renders,
+        media_id=media_id,
+    )
+    protected_keys = protected["keys"] if protected else set()
+    return planned_media_id, [
+        {
+            **key,
+            "saleProtected": str(key["key"]) in protected_keys,
+            "replacementForSoldDelivery": replacement_for_sold_delivery,
+        }
+        for key in keys
+    ]
 
 
 def _current_r2_objects_for_plan(conn: sqlite3.Connection, planned_keys: list[dict[str, str]]) -> dict[tuple[str, str], dict[str, Any]]:
@@ -5238,8 +5368,9 @@ def mock_upload(
         planned_key_sets: dict[str, list[dict[str, str]]] = {}
         photo_ids: dict[str, str] = {}
         all_planned_keys: list[dict[str, str]] = []
+        sale_protection = _sale_protection_index(conn)
         for row in rows:
-            photo_id, keys = _planned_r2_keys(row)
+            photo_id, keys = _planned_upload_r2_keys(row, sale_protection)
             photo_ids[str(row["asset_id"])] = photo_id
             planned_key_sets[str(row["asset_id"])] = keys
             all_planned_keys.extend(keys)

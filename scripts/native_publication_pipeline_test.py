@@ -201,6 +201,86 @@ class NativePublicationPipelineTest(unittest.TestCase):
                 "live",
             )
 
+    def test_new_rendition_replaces_catalog_row_but_keeps_sold_delivery_objects(self):
+        record_photos_sync_snapshot(
+            self.root,
+            [{
+                "assetId": "asset-1",
+                "title": "Sold catalog title",
+                "keywords": ["Spain", "Sea"],
+                "renderedFingerprint": "render-sold",
+            }],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, captured_at = '2022-12-10T12:00:00Z', location_label = 'Spain' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                "UPDATE sidecar_decisions SET title = 'Sold catalog title', keywords_json = '[\"Spain\",\"Sea\"]' WHERE asset_id = 'asset-1'"
+            )
+            conn.commit()
+
+        sold_results = verified_public_set("sold-media")
+        first = publish_verified_asset(self.root, "asset-1", sold_results)
+        record_sale_reference(
+            self.root,
+            order_id="order-sold",
+            asset_id="asset-1",
+            source_version_hash=first["sourceVersionHash"],
+            checksum_sha256=sold_results[0]["checksumSha256"],
+            master_key=sold_results[0]["key"],
+            derivative_keys=[item["key"] for item in sold_results[1:]],
+        )
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE asset_source_versions SET state = 'superseded', superseded_at = '2026-09-03T10:00:00Z' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                """
+                INSERT INTO asset_source_versions(
+                  version_id, asset_id, metadata_fingerprint, rendered_fingerprint,
+                  source_exists, state, created_at, approved_at
+                ) VALUES ('source-new', 'asset-1', '', 'render-new', 1, 'approved', ?, ?)
+                """,
+                ("2026-09-03T10:01:00Z", "2026-09-03T10:01:00Z"),
+            )
+            conn.execute(
+                "UPDATE asset_delivery_state SET delivery_state = 'needs-upload', source_version_hash = 'source-new' WHERE asset_id = 'asset-1'"
+            )
+            conn.commit()
+
+        replacement_results = verified_public_set("sold-media-vnew")
+        second = publish_verified_asset(self.root, "asset-1", replacement_results)
+        self.assertEqual(second["sourceVersionHash"], "source-new")
+        catalog = self.root / "assets/catalog/photosbyelie.sqlite"
+        with sqlite3.connect(catalog) as conn:
+            self.assertEqual(
+                conn.execute("SELECT count(*) FROM media_items WHERE media_id = 'sold-media'").fetchone()[0],
+                0,
+            )
+            self.assertEqual(
+                conn.execute("SELECT count(*) FROM media_items WHERE media_id = 'sold-media-vnew'").fetchone()[0],
+                1,
+            )
+        with connect(self.root) as conn:
+            old_objects = conn.execute(
+                """
+                SELECT object_key, lifecycle_state FROM r2_objects
+                WHERE object_key IN (?, ?, ?)
+                ORDER BY object_key
+                """,
+                tuple(item["key"] for item in sold_results),
+            ).fetchall()
+        self.assertEqual(len(old_objects), 3)
+        self.assertTrue(all(row["lifecycle_state"] == "current" for row in old_objects))
+
+        reconciliation = reconcile_r2_objects(
+            self.root,
+            commit=True,
+            now="2036-09-03T10:00:00Z",
+        )
+        self.assertGreaterEqual(reconciliation["protected"], 3)
+
     def test_approved_city_alias_is_recorded_before_catalog_promotion(self):
         record_photos_sync_snapshot(
             self.root,
@@ -638,6 +718,12 @@ class NativePublicationPipelineTest(unittest.TestCase):
             ).fetchone()
             self.assertEqual(sold["lifecycle_state"], "current")
             self.assertEqual(orphan["lifecycle_state"], "deleted_confirmed")
+        with self.assertRaisesRegex(ValueError, "retained without expiry"):
+            reconcile_r2_objects(
+                self.root,
+                commit=True,
+                exceptional_sold_purge=True,
+            )
 
     def test_reconciliation_cancellation_stops_between_objects_and_keeps_receipts(self):
         with connect(self.root) as conn:

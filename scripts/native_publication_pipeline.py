@@ -1407,6 +1407,8 @@ def create_r2_reconciliation_run(
     worker_token: str = "",
     now: str | None = None,
 ) -> dict[str, Any]:
+    if exceptional_sold_purge:
+        raise ValueError("completed-sale objects are retained without expiry and cannot be purged")
     timestamp = now or now_iso()
     run_id = f"r2rec-{uuid.uuid4().hex[:16]}"
     mode = "exceptional-sold-purge" if exceptional_sold_purge else ("commit" if commit else "plan")
@@ -1656,7 +1658,9 @@ def reconcile_r2_objects(
     run_id: str | None = None,
     progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
-    """Two-pass quarantine. Sold keys are immutable absent exceptional workflow."""
+    """Two-pass quarantine. Completed-sale keys are immutable without expiry."""
+    if exceptional_sold_purge:
+        raise ValueError("completed-sale objects are retained without expiry and cannot be purged")
     timestamp = now or now_iso()
     current_time = _parse_timestamp(timestamp)
     mode = "exceptional-sold-purge" if exceptional_sold_purge else ("commit" if commit else "plan")

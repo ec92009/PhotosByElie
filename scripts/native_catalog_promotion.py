@@ -831,6 +831,18 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
             raise CatalogPromotionError(
                 "Owner public catalog projection is not initialized; import the reviewed projection under PBE-173"
             )
+        previous_media_ids = [
+            str(item["media_id"])
+            for item in owner.execute(
+                """
+                SELECT DISTINCT media_id
+                FROM public_catalog_publications
+                WHERE asset_id = ? AND media_id <> '' AND media_id <> ?
+                ORDER BY updated_at DESC, media_id
+                """,
+                (str(row["asset_id"]), media_id),
+            ).fetchall()
+        ]
         path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         staged_path = Path(staged_name)
@@ -873,7 +885,30 @@ def _write_catalog(repo_root: Path, candidate: dict[str, Any]) -> dict[str, Any]
             title = str(row["title"] or row["photos_title"] or Path(str(row["filename"] or media_id)).stem or media_id).strip() or media_id
             location = str(row["location_label"] or collection["title"] or candidate["collection"]).strip()
             existing = catalog.execute("SELECT sort_index FROM media_items WHERE media_id = ?", (media_id,)).fetchone()
-            sort_index = int(existing["sort_index"]) if existing else int(catalog.execute("SELECT COALESCE(MAX(sort_index), -1) + 1 FROM media_items WHERE collection_id = ?", (collection["collection_id"],)).fetchone()[0])
+            replacement_sort_index = None
+            for previous_media_id in previous_media_ids:
+                previous = catalog.execute(
+                    "SELECT sort_index FROM media_items WHERE media_id = ?",
+                    (previous_media_id,),
+                ).fetchone()
+                if previous is not None and replacement_sort_index is None:
+                    replacement_sort_index = int(previous["sort_index"])
+                catalog.execute(
+                    "DELETE FROM media_items WHERE media_id = ?",
+                    (previous_media_id,),
+                )
+            sort_index = (
+                int(existing["sort_index"])
+                if existing
+                else replacement_sort_index
+                if replacement_sort_index is not None
+                else int(
+                    catalog.execute(
+                        "SELECT COALESCE(MAX(sort_index), -1) + 1 FROM media_items WHERE collection_id = ?",
+                        (collection["collection_id"],),
+                    ).fetchone()[0]
+                )
+            )
             catalog.execute(
                 """
                 INSERT INTO media_items (

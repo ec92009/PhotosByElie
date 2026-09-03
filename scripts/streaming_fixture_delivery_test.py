@@ -17,6 +17,11 @@ from fixture_pipeline import (
     set_fixture_asset_state,
 )
 from sidecar_state_db import (
+    _planned_r2_keys,
+    _planned_upload_r2_keys,
+    _sale_protection_index,
+    _upload_bridge_execute_r2,
+    _upload_bridge_rows,
     connect,
     prepare_upload_bridge_execute_batch,
     queue_upload_bridge,
@@ -179,6 +184,91 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
         batch = prepare_upload_bridge_execute_batch(self.root, limit=30)
         self.assertEqual(batch["count"], 1)
         self.assertEqual(batch["items"][0]["assetId"], "asset-1")
+
+    def test_unsold_asset_keeps_stable_object_keys(self):
+        create_fixture(self.root, "Unsold replacement")
+        with connect(self.root) as conn:
+            row = _upload_bridge_rows(conn, asset_ids=["asset-1"])[0]
+            baseline_media_id, baseline = _planned_r2_keys(row)
+            media_id, planned = _planned_upload_r2_keys(row, _sale_protection_index(conn))
+
+        self.assertEqual(media_id, baseline_media_id)
+        self.assertEqual([key["key"] for key in planned], [key["key"] for key in baseline])
+        self.assertTrue(all(not key["saleProtected"] for key in planned))
+        self.assertTrue(all(not key["replacementForSoldDelivery"] for key in planned))
+
+    def test_sold_asset_replacement_uses_distinct_versioned_object_keys(self):
+        create_fixture(self.root, "Sold protection")
+        with connect(self.root) as conn:
+            row = _upload_bridge_rows(conn, asset_ids=["asset-1"])[0]
+            _, baseline = _planned_upload_r2_keys(row, {})
+            sold_keys = [key["key"] for key in baseline]
+            conn.execute(
+                "UPDATE asset_delivery_state SET source_version_hash = 'source-new' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                """
+                INSERT INTO asset_sale_references(
+                  order_id, asset_id, source_version_hash, checksum_sha256,
+                  master_key, derivative_keys_json, recorded_at
+                ) VALUES ('order-1', 'asset-1', 'source-sold', ?, ?, ?, ?)
+                """,
+                ("a" * 64, sold_keys[0], json.dumps(sold_keys[1:]), "2026-09-03T10:00:00Z"),
+            )
+            conn.commit()
+
+        batch = prepare_upload_bridge_execute_batch(
+            self.root,
+            limit=1,
+            asset_ids=["asset-1"],
+        )
+
+        self.assertEqual(batch["count"], 1)
+        item = batch["items"][0]
+        self.assertIn("-v", item["photoId"])
+        self.assertTrue(all(key["replacementForSoldDelivery"] for key in item["plannedKeys"]))
+        self.assertTrue(all(not key["saleProtected"] for key in item["plannedKeys"]))
+        self.assertTrue(set(sold_keys).isdisjoint(key["key"] for key in item["plannedKeys"]))
+
+    def test_exact_sold_object_keys_are_never_put_by_the_upload_bridge(self):
+        create_fixture(self.root, "Sold protection")
+        with connect(self.root) as conn:
+            conn.execute(
+                "UPDATE asset_delivery_state SET source_version_hash = 'source-sold' WHERE asset_id = 'asset-1'"
+            )
+            conn.execute(
+                """
+                INSERT INTO asset_sale_references(
+                  order_id, asset_id, source_version_hash, checksum_sha256,
+                  master_key, derivative_keys_json, recorded_at
+                ) VALUES ('order-1', 'asset-1', 'source-sold', ?, 'masters/asset-1.jpg', ?, ?)
+                """,
+                (
+                    "a" * 64,
+                    json.dumps(["expo/asset-1_900.jpg", "expo/asset-1_1800.jpg"]),
+                    "2026-09-03T10:00:00Z",
+                ),
+            )
+            conn.commit()
+            row = _upload_bridge_rows(conn, asset_ids=["asset-1"])[0]
+            _, planned = _planned_upload_r2_keys(row, _sale_protection_index(conn))
+
+        self.assertTrue(all(key["saleProtected"] for key in planned))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source.jpg"
+            source.write_bytes(b"not-used")
+            results = _upload_bridge_execute_r2(
+                planned_keys=planned,
+                export_path=source,
+                media_type="photo",
+                artifact_root=root / "artifacts",
+                allow_r2_overwrite=True,
+            )
+        self.assertEqual(
+            {result["status"] for result in results},
+            {"protected_sale_reference"},
+        )
 
     def test_verified_item_is_adopted_then_returned_to_photos(self):
         fixture = create_fixture(self.root, "Paris")

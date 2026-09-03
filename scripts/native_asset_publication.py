@@ -24,7 +24,8 @@ from apple_photos_metadata_writer import BackstagePhotosMetadataAdapter, commit_
 from native_catalog_promotion import refresh_public_catalog_artifacts  # noqa: E402
 from native_publication_pipeline import run_upload_batch, upload_run_status  # noqa: E402
 from sidecar_state_db import (  # noqa: E402
-    _planned_r2_keys,
+    _planned_upload_r2_keys,
+    _sale_protection_index,
     _upload_bridge_rows,
     connect as connect_owner,
     execute_upload_bridge_batch_item,
@@ -366,7 +367,7 @@ def _verified_covered_r2_results_from_row(
         legacy_asset_id = r2_source_anchor[len(legacy_prefix):].strip()
         if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
             receipt_asset_ids.append(legacy_asset_id)
-    _, planned_keys = _planned_r2_keys(row)
+    _, planned_keys = _planned_upload_r2_keys(row, _sale_protection_index(conn))
     recovered: list[dict[str, Any]] = []
     for planned in planned_keys:
         bucket = str(planned["bucket"])
@@ -444,6 +445,7 @@ def _catalog_recovery_coverage(
     with connect_owner(repo_root) as conn:
         expected: list[tuple[str, str, str, str, str, str]] = []
         expected_counts: dict[str, int] = {}
+        sale_protection = _sale_protection_index(conn)
         for row in rows:
             asset_id = str(row["asset_id"])
             receipt_asset_ids = [asset_id]
@@ -457,7 +459,7 @@ def _catalog_recovery_coverage(
                 legacy_asset_id = r2_source_anchor[len("apple-photos://"):].strip()
                 if legacy_asset_id and legacy_asset_id not in receipt_asset_ids:
                     receipt_asset_ids.append(legacy_asset_id)
-            _, planned_keys = _planned_r2_keys(row)
+            _, planned_keys = _planned_upload_r2_keys(row, sale_protection)
             expected_counts[asset_id] = len(planned_keys)
             for planned in planned_keys:
                 for receipt_asset_id in receipt_asset_ids:

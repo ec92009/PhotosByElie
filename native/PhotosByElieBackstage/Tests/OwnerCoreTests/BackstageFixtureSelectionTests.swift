@@ -7,7 +7,7 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
-    @Test("Gallery grid owns card width without a layout feedback constraint")
+    @Test("Gallery grid derives cards from and clips to the current viewport")
     func galleryGridDoesNotDoubleConstrainFlexibleColumns() throws {
         let packageRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -18,10 +18,16 @@ struct BackstageFixtureSelectionTests {
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
         #expect(source.contains(
-            ".fixed(CGFloat(model.cullingGridColumnWidth))"
+            "CullingGridLayout.viewport("
         ))
         #expect(source.contains(
-            "width: CGFloat(model.cullingGridColumnWidth)"
+            ".fixed(CGFloat(layout.columnWidth))"
+        ))
+        #expect(source.contains(
+            ".frame(width: CGFloat(layout.width), alignment: .topLeading)"
+        ))
+        #expect(source.contains(
+            "ScrollView(.vertical)"
         ))
         #expect(!source.contains(".flexible(minimum: 0"))
         #expect(source.contains(

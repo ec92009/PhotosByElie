@@ -49,7 +49,12 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
         self.assertIn("guard canStartCloudWorkflow", retry)
         self.assertIn("isRunningDelivery = true", retry)
-        self.assertIn('nativeUploadStatus = "Retrying the same failed upload run…"', retry)
+        self.assertIn("nativeUploadStatus = catalogRecovery", retry)
+        self.assertIn(
+            '? "Retrying the same failed catalog-only run from existing R2 receipts…"',
+            retry,
+        )
+        self.assertIn(': "Retrying the same failed upload run…"', retry)
         self.assertIn("deliveryService.resumeNativeUpload(runID: current.runID)", retry)
         self.assertNotIn("startNativeUpload", retry)
         self.assertIn('Button(model.isRunningNativePublication ? "Retrying…" : "Retry same run")', upload)
@@ -366,7 +371,11 @@ class NativeCullingParityTest(unittest.TestCase):
         adapter = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageAppKitAdapters.swift"
         ).read_text(encoding="utf-8")
-        self.assertIn('WindowFrameAutosaver(name: "PhotosByElieBackstage.MainWindow")', app)
+        self.assertRegex(
+            app,
+            r'WindowFrameAutosaver\(\s*name:\s*(?:"PhotosByElieBackstage\.MainWindow"|BackstageWindowFrameStore\.mainWindowAutosaveName)\s*\)',
+        )
+        self.assertIn('"PhotosByElieBackstage.MainWindow"', app + persistence)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.NavigationSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.FixturesSplit")', app)
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.AccessSplit")', app)
@@ -374,8 +383,16 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn('SplitViewAutosaver(name: "PhotosByElieBackstage.ReviewSplit")', app)
         self.assertIn("navigationSidebarVisible", app)
         self.assertIn("selectedSectionPreferenceKey", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
+        self.assertIn(
+            'static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"',
+            persistence,
+        )
+        self.assertIn(
+            'static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"',
+            persistence,
+        )
         self.assertIn("quickLookFrameAutosaveName", adapter)
         self.assertIn("setFrameUsingName", adapter)
         self.assertIn("setFrameAutosaveName", persistence)
@@ -821,7 +838,7 @@ class NativeCullingParityTest(unittest.TestCase):
             "shown of",
             "not shown",
             "plan.order.label",
-            'Button("Upload these \\(plan.items.count.formatted())…")',
+            '"Upload these \\(plan.items.count.formatted())…"',
             "confirmingVisiblePublication",
             'Button("Upload selection…")',
             'Button(model.isDeployingPublicCatalog ? "Deploying & verifying…" : "Deploy & verify website…")',
@@ -857,18 +874,24 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("func preserveNativeUploadTray(", model)
         self.assertIn("items: retainedItems", model)
         self.assertIn("attemptedIDs.subtracting(failedIDs)", model)
-        self.assertIn("Failed items remain in this tray for retry.", model)
-        self.assertIn("stride(from: 0, to: ids.count, by: 50)", model)
+        self.assertIn(
+            "Failed items remain independently retryable; they did not stop the rest of the queue.",
+            model,
+        )
+        self.assertIn("stride(from: 0, to: windowIDs.count, by: 50)", model)
         self.assertIn("limit: batch.count", model)
         self.assertIn("isRunningNativePublication = true", model)
         self.assertIn("func deployPublicCatalog()", model)
         self.assertNotIn("Upload equals publication", upload)
         self.assertNotIn("immediate publication", upload)
-        self.assertIn("nativePublicationBatchNumber = batchIndex + 1", model)
-        self.assertIn("nativePublicationBatchCount = batches.count", model)
+        self.assertIn("nativePublicationBatchNumber = batchOrdinal", model)
+        self.assertIn(
+            "nativePublicationBatchCount = NativeUploadQueueContinuation.batchCount(",
+            model,
+        )
         self.assertIn("if model.isRunningNativePublication,", upload)
         self.assertIn(
-            '"Batch \\(model.nativePublicationBatchNumber) of \\(model.nativePublicationBatchCount)"',
+            '" • batch \\(model.nativePublicationBatchNumber) of \\(model.nativePublicationBatchCount)"',
             upload,
         )
         self.assertNotIn(
@@ -1306,7 +1329,6 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
 
         self.assertNotIn('Button("Apply")', culling)
-        self.assertNotIn("Menu {", culling)
         self.assertGreaterEqual(culling.count(".toggleStyle(.checkbox)"), 1)
         self.assertNotIn("Text(\"Media\")", culling)
         self.assertNotIn("Text(\"Status\")", culling)
@@ -1635,10 +1657,9 @@ class NativeCullingParityTest(unittest.TestCase):
         view_model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        self.assertIn(
-            "updateState = .updateAvailable(check.manifest)\n"
-            "                await downloadVerifiedUpdate(manifest: check.manifest)",
+        self.assertRegex(
             view_model,
+            r"updateState = \.updateAvailable\(check\.manifest\)\s+await downloadVerifiedUpdate\(manifest: check\.manifest\)",
         )
         self.assertIn(
             'Button("Install and run new version") {\n'
@@ -2049,7 +2070,6 @@ class NativeCullingParityTest(unittest.TestCase):
         )[0]
 
         self.assertIn("GeometryReader { gridGeometry in", culling)
-        self.assertIn(".background {", culling)
         grid = culling.split("ScrollViewReader", 1)[1].split(
             ".frame(minHeight: 120", 1
         )[0]
@@ -2058,10 +2078,15 @@ class NativeCullingParityTest(unittest.TestCase):
                     GeometryReader""",
             grid,
         )
-        self.assertIn("GridItem(.flexible(minimum: 0), spacing: 8)", culling)
+        self.assertIn("CullingGridLayout.viewport(", culling)
+        self.assertIn("repeating: GridItem(", culling)
+        self.assertIn(".fixed(CGFloat(layout.columnWidth))", culling)
+        self.assertIn("spacing: CGFloat(CullingGridLayout.spacing)", culling)
+        self.assertNotIn("GridItem(.flexible(minimum: 0)", culling)
         self.assertNotIn("GridItem(.flexible(minimum: 84)", culling)
         self.assertIn("model.updateCullingGridWidth", culling)
-        self.assertIn("width: CGFloat(model.cullingGridColumnWidth)", culling)
+        self.assertIn("width: CGFloat(layout.width)", culling)
+        self.assertIn("ScrollView(.vertical)", culling)
         self.assertIn(".clipped()", culling)
         self.assertIn("Button(\"−\") { decreaseCullingThumbnailSize() }", culling)
         self.assertIn("Button(\"+\") { increaseCullingThumbnailSize() }", culling)
@@ -2109,21 +2134,33 @@ class NativeCullingParityTest(unittest.TestCase):
         )
 
     def test_culling_preview_is_bounded_and_collapsible(self):
-        source = backstage_ui_source()
-        culling = source.split("struct CullingView", 1)[1].split(
-            "private struct CullingAssetCard", 1
-        )[0]
-        review = source.split("struct ReviewView", 1)[1].split(
-            "private struct ReviewInspector", 1
-        )[0]
-        root = source.split("private struct OverviewView", 1)[0]
+        source_dir = NATIVE / "Sources" / "BackstageApp"
+        culling = (source_dir / "CullingView.swift").read_text(encoding="utf-8")
+        culling_controls = (source_dir / "CullingCanvasControls.swift").read_text(
+            encoding="utf-8"
+        )
+        review = (source_dir / "ReviewView.swift").read_text(encoding="utf-8")
+        root = (source_dir / "PhotosByElieBackstageApp.swift").read_text(
+            encoding="utf-8"
+        )
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
+        persistence = (source_dir / "BackstageWindowState.swift").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("var isPreviewPanelVisible: Bool", model)
-        self.assertIn("cullingPreviewPanelVisibilityPreferenceKey", model)
-        self.assertIn("reviewPreviewPanelVisibilityPreferenceKey", model)
+        self.assertIn("BackstagePanelPreferenceKey.cullingInspectorVisible", model)
+        self.assertIn("BackstagePanelPreferenceKey.reviewInspectorVisible", model)
+        self.assertIn(
+            'static let cullingInspectorVisible = "PhotosByElieBackstage.cullingPreviewPanelVisible"',
+            persistence,
+        )
+        self.assertIn(
+            'static let reviewInspectorVisible = "PhotosByElieBackstage.reviewPreviewPanelVisible"',
+            persistence,
+        )
         self.assertIn('Image(systemName: "sidebar.right")', root)
         self.assertIn('model.selection == .culling || model.selection == .review', root)
         self.assertIn("Collapse the Gallery or Review preview inspector", root)
@@ -2147,7 +2184,7 @@ class NativeCullingParityTest(unittest.TestCase):
             'Button(model.cullingUsesFill ? "Fill" : "Fit")',
         ):
             self.assertIn(persistent_control, culling)
-        self.assertIn('Button("Review picked")', source)
+        self.assertIn('Button("Review picked")', culling_controls)
         self.assertIn("if model.isPreviewPanelVisible", review)
         self.assertIn(".frame(minWidth: 300, idealWidth: 380, maxWidth: 480)", review)
 

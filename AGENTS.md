@@ -36,6 +36,7 @@ Repo-level working preferences for `/Users/ecohen/Dev/PhotosByElie`.
 - Clarify the ticket with Elie before coding when product intent is material, then code, test, compile, sign, install, launch, and present that exact local build for acceptance.
 - Elie's rejection keeps the same ticket `In Progress` and returns it to implementation. Elie's acceptance moves that ticket to `Verified` with commit/build evidence before the next PBB ticket is selected from a fresh YouTrack read.
 - PBE remains a separate web/customer release line. Do not fold PBE source, ticket, deployment, or acceptance work into the PBB cycle.
+- Shared contracts flow from reviewed `origin/main` into the clean canonical PBB line. Follow the shared-sync section of the PBB SOP; never merge PBB wholesale back into PBE or force-push either canonical branch.
 
 ## Versioning
 

@@ -309,6 +309,7 @@ final class WindowFrameAutosaveView: NSView {
             height: height
         )
     }
+
 }
 
 /// Assigns a stable autosave name to the AppKit split view backing HSplitView,

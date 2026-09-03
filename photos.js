@@ -4185,6 +4185,94 @@ const headerUtilityControls = (topbar) => {
   return utilities;
 };
 
+const galleryCheckpointStorageKey = 'photosbyelie-gallery-checkpoints-v1';
+const maxGalleryCheckpoints = 24;
+
+const normalizeGalleryCheckpoint = (checkpoint = {}) => {
+  const collectionKey = String(checkpoint.collectionKey || "").trim().toLowerCase();
+  const photoId = String(checkpoint.photoId || "").trim();
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(collectionKey) || !photoId || photoId.length > 240) return null;
+  const windowStart = Math.max(0, Math.min(1_000_000, Math.floor(Number(checkpoint.windowStart) || 0)));
+  const requestedEnd = Math.max(windowStart + 1, Math.floor(Number(checkpoint.windowEnd) || windowStart + 24));
+  const windowEnd = Math.min(1_000_000, windowStart + Math.min(192, requestedEnd - windowStart));
+  const filterState = checkpoint.filterState && typeof checkpoint.filterState === "object"
+    ? checkpoint.filterState
+    : {};
+  const dateValue = (value) => /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(String(value || "")) ? String(value) : "";
+  const orientation = ["all", "pano", "landscape", "portrait", "square"].includes(String(filterState.orientation || ""))
+    ? String(filterState.orientation)
+    : "all";
+  const sort = ["newest", "oldest", "collection", "title", "megapixels-desc", "megapixels-asc", "price-desc", "price-asc"]
+    .includes(String(filterState.sort || ""))
+    ? String(filterState.sort)
+    : "newest";
+  const updatedAt = new Date(checkpoint.updatedAt || 0);
+  if (!Number.isFinite(updatedAt.getTime())) return null;
+  return {
+    collectionKey,
+    photoId,
+    filterState: {
+      query: String(filterState.query || "").slice(0, 160),
+      orientation,
+      sort,
+      dateFrom: dateValue(filterState.dateFrom),
+      dateTo: dateValue(filterState.dateTo),
+    },
+    windowStart,
+    windowEnd,
+    anchorOffset: Math.max(-10_000, Math.min(10_000, Number(checkpoint.anchorOffset) || 0)),
+    updatedAt: updatedAt.toISOString(),
+  };
+};
+
+const mergeGalleryCheckpoints = (...groups) => {
+  const byCollection = new Map();
+  groups.flat().forEach((candidate) => {
+    const checkpoint = normalizeGalleryCheckpoint(candidate);
+    if (!checkpoint) return;
+    const existing = byCollection.get(checkpoint.collectionKey);
+    if (!existing || Date.parse(checkpoint.updatedAt) >= Date.parse(existing.updatedAt)) {
+      byCollection.set(checkpoint.collectionKey, checkpoint);
+    }
+  });
+  return [...byCollection.values()]
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .slice(0, maxGalleryCheckpoints);
+};
+
+const readGalleryCheckpoints = () => {
+  try {
+    return mergeGalleryCheckpoints(JSON.parse(localStorage.getItem(galleryCheckpointStorageKey) || "[]"));
+  } catch {
+    return [];
+  }
+};
+
+const storeGalleryCheckpoints = (checkpoints, { notify = true } = {}) => {
+  const normalized = mergeGalleryCheckpoints(checkpoints);
+  try {
+    localStorage.setItem(galleryCheckpointStorageKey, JSON.stringify(normalized));
+  } catch {
+    return normalized;
+  }
+  if (notify) {
+    window.dispatchEvent(new CustomEvent("photosbyelie:gallerycheckpointschange", {
+      detail: { checkpoints: normalized },
+    }));
+  }
+  return normalized;
+};
+
+window.photosByElieGalleryCheckpoints = {
+  read: readGalleryCheckpoints,
+  merge(...groups) {
+    return storeGalleryCheckpoints(mergeGalleryCheckpoints(readGalleryCheckpoints(), ...groups));
+  },
+  write(checkpoint) {
+    return storeGalleryCheckpoints(mergeGalleryCheckpoints(readGalleryCheckpoints(), [checkpoint]));
+  },
+};
+
 const accountPreferenceKey = 'photosbyelie-account-preference';
 
 const normalizedAccountWorkerBase = (value) => {
@@ -4253,7 +4341,7 @@ const ensureSiteAccount = () => {
     realEstateClients: [],
     profileLoading: false,
     profileLoaded: false,
-    profile: { liked: [], basket: [], language: "", theme: "" },
+    profile: { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] },
     orders: [],
     sharedGalleryChecked: false,
     sharedGalleryLoading: false,
@@ -4413,7 +4501,7 @@ const ensureSiteAccount = () => {
     }
     state.profileLoading = false;
     state.profileLoaded = false;
-    state.profile = { liked: [], basket: [], language: "", theme: "" };
+    state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
     state.orders = [];
     renderAccountMemory();
     window.dispatchEvent(new CustomEvent("photosbyelie:accountdatacleared"));
@@ -4432,6 +4520,7 @@ const ensureSiteAccount = () => {
     basket: accountStoresAvailable() ? window.photosByElieBasket.read() : (state.profile?.basket || []),
     language: root.dataset.language || localStorage.getItem(activeLanguagePreferenceKey) || localStorage.getItem(languageKey) || "en",
     theme: root.dataset.theme === "dark" ? "dark" : "light",
+    galleryCheckpoints: readGalleryCheckpoints(),
   });
 
   const mergeLikedItems = (...groups) => {
@@ -4599,6 +4688,9 @@ const ensureSiteAccount = () => {
       }
       if (profile.language) setLanguage(profile.language);
       if (profile.theme) setTheme(profile.theme);
+      storeGalleryCheckpoints(
+        mergeGalleryCheckpoints(readGalleryCheckpoints(), profile.galleryCheckpoints || []),
+      );
     } finally {
       applyingAccountProfile = false;
     }
@@ -4637,7 +4729,7 @@ const ensureSiteAccount = () => {
     if (!quiet) setMessage(translate('account.profile_syncing'));
     try {
       let payload = await accountApiFetch("/account/profile");
-      let profile = payload.profile || { liked: [], basket: [], language: "", theme: "" };
+      let profile = payload.profile || { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       if (mergeLocal) {
         if (accountStoresAvailable()) await waitForAccountCatalog();
         const local = readLocalAccountState();
@@ -4646,6 +4738,7 @@ const ensureSiteAccount = () => {
           basket: mergeBasketItems(profile.basket || [], local.basket || []),
           language: profile.language || local.language || "en",
           theme: profile.theme || local.theme || "light",
+          galleryCheckpoints: mergeGalleryCheckpoints(profile.galleryCheckpoints || [], local.galleryCheckpoints || []),
         };
         payload = await accountApiFetch("/account/profile", {
           method: "PUT",
@@ -4749,7 +4842,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [], language: "", theme: "" };
+      state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       state.orders = [];
       state.sharedGalleryChecked = true;
       state.sharedGalleryLoading = false;
@@ -4776,7 +4869,7 @@ const ensureSiteAccount = () => {
       else if (!state.scopedAuthenticated) activateLanguagePreference("");
       if (!state.authenticated) {
         state.profileLoaded = false;
-        state.profile = { liked: [], basket: [], language: "", theme: "" };
+        state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
         state.orders = [];
         state.sharedGalleryChecked = true;
         state.sharedPhotoCount = 0;
@@ -4810,7 +4903,7 @@ const ensureSiteAccount = () => {
       state.tier = "user";
       state.realEstateClients = [];
       state.profileLoaded = false;
-      state.profile = { liked: [], basket: [], language: "", theme: "" };
+      state.profile = { liked: [], basket: [], language: "", theme: "", galleryCheckpoints: [] };
       state.orders = [];
       state.sharedGalleryChecked = true;
       state.sharedGalleryLoading = false;
@@ -4965,6 +5058,7 @@ const ensureSiteAccount = () => {
   window.addEventListener('photosbyelie:themechange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:likedchange', scheduleAccountProfileSave);
   window.addEventListener('photosbyelie:basketchange', scheduleAccountProfileSave);
+  window.addEventListener('photosbyelie:gallerycheckpointschange', scheduleAccountProfileSave);
   window.photosByElieAccount = {
     get state() {
       return {

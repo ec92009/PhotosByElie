@@ -905,6 +905,50 @@ const normalizeAccountBasket = (catalog, incomingItems = []) => {
   }).filter((item) => item.options.length);
 };
 
+const normalizeAccountGalleryCheckpoints = (catalog, incoming = []) => {
+  if (!Array.isArray(incoming)) return [];
+  const byCollection = new Map();
+  incoming.slice(0, 48).forEach((candidate) => {
+    const collectionKey = String(candidate?.collectionKey || "").trim().toLowerCase();
+    const photoId = String(candidate?.photoId || "").trim();
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(collectionKey) || !photoId || photoId.length > 240 || !catalog.photos.has(photoId)) return;
+    const updatedAtDate = new Date(candidate?.updatedAt || 0);
+    if (!Number.isFinite(updatedAtDate.getTime())) return;
+    const windowStart = Math.max(0, Math.min(1_000_000, Math.floor(Number(candidate?.windowStart) || 0)));
+    const requestedEnd = Math.max(windowStart + 1, Math.floor(Number(candidate?.windowEnd) || windowStart + 24));
+    const windowEnd = Math.min(1_000_000, windowStart + Math.min(192, requestedEnd - windowStart));
+    const rawFilter = candidate?.filterState && typeof candidate.filterState === "object" ? candidate.filterState : {};
+    const dateValue = (value) => /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(String(value || "")) ? String(value) : "";
+    const orientation = ["all", "pano", "landscape", "portrait", "square"].includes(String(rawFilter.orientation || ""))
+      ? String(rawFilter.orientation)
+      : "all";
+    const sort = ["newest", "oldest", "collection", "title", "megapixels-desc", "megapixels-asc", "price-desc", "price-asc"]
+      .includes(String(rawFilter.sort || ""))
+      ? String(rawFilter.sort)
+      : "newest";
+    const checkpoint = {
+      collectionKey,
+      photoId,
+      filterState: {
+        query: String(rawFilter.query || "").slice(0, 160),
+        orientation,
+        sort,
+        dateFrom: dateValue(rawFilter.dateFrom),
+        dateTo: dateValue(rawFilter.dateTo),
+      },
+      windowStart,
+      windowEnd,
+      anchorOffset: Math.max(-10_000, Math.min(10_000, Number(candidate?.anchorOffset) || 0)),
+      updatedAt: updatedAtDate.toISOString(),
+    };
+    const existing = byCollection.get(collectionKey);
+    if (!existing || Date.parse(checkpoint.updatedAt) >= Date.parse(existing.updatedAt)) byCollection.set(collectionKey, checkpoint);
+  });
+  return [...byCollection.values()]
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+    .slice(0, 24);
+};
+
 const normalizeAccountProfilePayload = (catalog, payload = {}, existing = {}, email = "", updatedAt = "") => ({
   schema: "photosbyelie.accountProfile.v1",
   email: String(email || existing.email || "").trim().toLowerCase(),
@@ -916,6 +960,10 @@ const normalizeAccountProfilePayload = (catalog, payload = {}, existing = {}, em
   theme: ["light", "dark"].includes(String(payload.theme || existing.theme || "").trim().toLowerCase())
     ? String(payload.theme || existing.theme).trim().toLowerCase()
     : "",
+  galleryCheckpoints: normalizeAccountGalleryCheckpoints(
+    catalog,
+    payload.galleryCheckpoints || existing.galleryCheckpoints || [],
+  ),
   createdAt: existing.createdAt || updatedAt,
   updatedAt,
 });
@@ -1442,11 +1490,13 @@ export const createPhotosByElieWorker = ({
     const visible = new Set(await filterVisibleMediaIds([
       ...(profile?.liked || []).map((item) => item.photoId || item.id || item),
       ...(profile?.basket || []).map((item) => item.photoId || item.id),
+      ...(profile?.galleryCheckpoints || []).map((item) => item.photoId),
     ]));
     return {
       ...profile,
       liked: (profile?.liked || []).filter((item) => visible.has(String(item.photoId || item.id || item))),
       basket: (profile?.basket || []).filter((item) => visible.has(String(item.photoId || item.id))),
+      galleryCheckpoints: (profile?.galleryCheckpoints || []).filter((item) => visible.has(String(item.photoId))),
     };
   };
   const manualRefundReview = async (order, error) => {

@@ -62,16 +62,20 @@ public struct BackstageApplication: App {
                                         Button("Return finished file…") {
                                             model.chooseExternalEditReturn()
                                         }
+                                        .backstageHelp("Choose the finished image that should become the current rendition for this edit job.")
                                         Button("Show return folder") {
                                             model.revealExternalEditReturnFolder()
                                         }
+                                        .backstageHelp("Reveal the configured return folder for the active external edit in Finder.")
                                         Button("Choose return folder…") {
                                             model.chooseExternalEditReturnDirectory()
                                         }
+                                        .backstageHelp("Choose the folder Backstage watches for finished external edits.")
                                         Divider()
                                         Button("Cancel edit job", role: .destructive) {
                                             model.requestCancelExternalEdit()
                                         }
+                                        .backstageHelp("Cancel the active external edit without replacing its current Backstage rendition.")
                                     } label: {
                                         Label(editLabel, systemImage: "paintbrush.pointed")
                                             .lineLimit(1)

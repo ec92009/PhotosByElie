@@ -20,6 +20,7 @@ if (requestedGalleryKey === pbeOwnerGalleryKey) {
 }
 if (typeof window.photosByEliePageReady !== "function") throw new Error("Gallery readiness is unavailable.");
 await window.photosByEliePageReady();
+const galleryWindowModel = await import("./gallery-window.mjs");
 const galleryHrefForKey = (key) => `./gallery.html?gallery=${encodeURIComponent(key)}`;
 const selectionGalleryKey = "selection";
 const selectionGalleryAliases = new Set([selectionGalleryKey, "make-selection", "make-your-selection"]);
@@ -125,17 +126,20 @@ let galleryCommandBar = null;
 let galleryCommandRegistry = null;
 let syncGalleryCommandBar = () => {};
 const galleryActionLabelsKey = "photosbyelie-gallery-action-labels";
-const selectionLimit = galleryCommandModel.MAX_SELECTION;
-const pageSize = 24;
-const showAllChunkSize = pageSize * 4;
-const showAllChunkDelayMs = 16;
+const commandBatchSize = galleryCommandModel.COMMAND_BATCH_SIZE;
+const pageSize = galleryWindowModel.GALLERY_PAGE_SIZE;
+const maxRenderedPhotos = galleryWindowModel.MAX_RENDERED_GALLERY_PHOTOS;
 const densityKey = "photosbyelie-gallery-columns";
 const fitModeKey = "photosbyelie-gallery-fit-mode";
 let renderedGalleryPhotos = [];
+let visibleStart = 0;
 let visibleLimit = pageSize;
+let lessButton = null;
+let lessDoubleButton = null;
+let lessQuadButton = null;
 let moreButton = null;
 let moreDoubleButton = null;
-let showAllButton = null;
+let moreQuadButton = null;
 let showAllRenderToken = 0;
 let paginationAnchorState = null;
 let paginationAnchorObserver = null;
@@ -144,6 +148,11 @@ let paginationAnchorCleanupTimer = 0;
 const filterStateKey = `photosbyelie-gallery-filters-${galleryKey}`;
 const detailSequenceKey = "photosbyelie-detail-sequence";
 const galleryReturnStateKey = "photosbyelie-gallery-return-state";
+let galleryCheckpointWriteTimer = 0;
+let pendingDurableGalleryCheckpoint = null;
+let appliedGalleryCheckpointAt = 0;
+let galleryCheckpointRestoreTimer = 0;
+let galleryCheckpointRestoreActive = false;
 let detailRoundTripNonce = globalThis.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const diversityBucketMinutes = 10;
@@ -175,7 +184,8 @@ let ownerSuperSearchPromise = null;
 const syncGallerySelectionToolbar = () => {
   if (!gallerySelectionCount) return;
   const count = selectedPhotoIds.size;
-  gallerySelectionCount.textContent = `${count} selected`;
+  const visibleCount = filteredVisiblePhotos().length;
+  gallerySelectionCount.textContent = `${count} selected · ${visibleCount} visible`;
   syncGalleryCommandBar();
 };
 
@@ -379,15 +389,13 @@ const commitInlineDatePickerControl = (control) => {
   syncDateFilterUrl(filterState);
   syncFilterControls();
   cancelPaginationSequence();
-  visibleLimit = pageSize;
+  resetGalleryWindow();
   selectedIndex = 0;
   renderGallery({ scrollSelection: false });
   if (normalized.swapped) setGalleryStatus(t("gallery.date_range_swapped"));
 };
 const renderSharedPhotoCard = (options) => window.photosByElieGalleryCard?.renderPhotoCard?.(options) || "";
 const t = (key, replacements = {}) => window.photosByElieI18n?.t?.(key, replacements) || key;
-const seeMoreLabel = (count) => t("home.see_more_count", { count });
-const seeAllLabel = (count) => t("home.see_all_count", { count });
 const localizedCollectionTitle = () => {
   if (isSelectionGallery) return t("gallery.make_selection");
   if (isPanoramaGallery) return t("collection.panoramas");
@@ -410,6 +418,11 @@ const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.phot
 const primaryShortcutLabel = () => /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
   ? "⌘"
   : "Ctrl+";
+
+const resetGalleryWindow = () => {
+  visibleStart = 0;
+  visibleLimit = pageSize;
+};
 
 const readFilterState = () => {
   const params = new URLSearchParams(window.location.search);
@@ -461,14 +474,15 @@ try {
   ) {
     pendingGalleryReturnState = payload;
     detailRoundTripNonce = String(payload.navigationNonce);
-    (Array.isArray(payload.selectionIds) ? payload.selectionIds : [])
-      .slice(0, selectionLimit)
-      .forEach((photoId) => selectedPhotoIds.add(String(photoId)));
+    const restoredSelection = galleryCommandModel.restoreVisibleSelection(
+      Array.isArray(payload.selectionIds) ? payload.selectionIds : [],
+      payload.photoIds || payload.selectionIds || [],
+    );
+    restoredSelection.forEach((photoId) => selectedPhotoIds.add(photoId));
     primaryPhotoId = String(payload.primaryPhotoId || payload.photoId || "");
     selectionRecency = (Array.isArray(payload.selectionRecency) ? payload.selectionRecency : [...selectedPhotoIds])
       .map(String)
-      .filter((photoId, index, items) => photoId && items.indexOf(photoId) === index)
-      .slice(-selectionLimit);
+      .filter((photoId, index, items) => photoId && selectedPhotoIds.has(photoId) && items.indexOf(photoId) === index);
     if (payload.filterState && typeof payload.filterState === "object") {
       filterState = normalizeDateFilterState(publicFilterState(payload.filterState));
     }
@@ -476,6 +490,64 @@ try {
 } catch {
   pendingGalleryReturnState = null;
 }
+
+const explicitGalleryLocation = (() => {
+  const params = new URLSearchParams(window.location.search);
+  const filterState = {};
+  const keys = [];
+  const queryKey = ["q", "search"].find((key) => params.has(key));
+  if (queryKey) {
+    keys.push("query");
+    filterState.query = params.get(queryKey) || "";
+  }
+  const addDate = (stateKey, aliases) => {
+    const queryKey = aliases.find((key) => params.has(key));
+    if (!queryKey) return;
+    keys.push(stateKey);
+    filterState[stateKey] = validDateFilterValue(params.get(queryKey));
+  };
+  addDate("dateFrom", ["dateFrom", "date_from", "from"]);
+  addDate("dateTo", ["dateTo", "date_to", "to"]);
+  return { filterState, keys };
+})();
+
+const durableGalleryCheckpoint = () => (
+  window.photosByElieGalleryCheckpoints?.read?.()
+    ?.find((checkpoint) => checkpoint.collectionKey === galleryKey)
+  || null
+);
+
+const stageDurableGalleryCheckpoint = (checkpoint, { rerender = false } = {}) => {
+  const updatedAt = Date.parse(checkpoint?.updatedAt || 0);
+  if (
+    pendingGalleryReturnState
+    || !galleryWindowModel.checkpointMatchesExplicitFilter({
+      checkpointFilter: checkpoint?.filterState,
+      explicitFilter: explicitGalleryLocation.filterState,
+      explicitKeys: explicitGalleryLocation.keys,
+    })
+    || checkpoint?.collectionKey !== galleryKey
+    || !checkpoint?.photoId
+    || !Number.isFinite(updatedAt)
+    || updatedAt <= appliedGalleryCheckpointAt
+  ) return false;
+  filterState = normalizeDateFilterState(publicFilterState(checkpoint.filterState || {}));
+  visibleStart = Math.max(0, Math.floor(Number(checkpoint.windowStart) || 0));
+  visibleLimit = Math.max(visibleStart + 1, Math.floor(Number(checkpoint.windowEnd) || visibleStart + pageSize));
+  if (visibleLimit - visibleStart > maxRenderedPhotos) visibleStart = visibleLimit - maxRenderedPhotos;
+  pendingDurableGalleryCheckpoint = checkpoint;
+  appliedGalleryCheckpointAt = updatedAt;
+  if (rerender) {
+    seedInlineDatePickerSelections();
+    writeFilterState();
+    syncFilterControls();
+    selectedIndex = 0;
+    renderGallery({ scrollSelection: false });
+  }
+  return true;
+};
+
+stageDurableGalleryCheckpoint(durableGalleryCheckpoint());
 
 seedInlineDatePickerSelections();
 
@@ -489,6 +561,7 @@ const writeFilterState = () => {
 
 const writeDetailSequenceContext = (photos) => {
   try {
+    const anchorCard = checkpointAnchorCard();
     sessionStorage.setItem(detailSequenceKey, JSON.stringify({
       source: "gallery",
       collectionKey: galleryKey,
@@ -499,7 +572,10 @@ const writeDetailSequenceContext = (photos) => {
       selectionRecency,
       navigationNonce: detailRoundTripNonce,
       filterState: publicFilterState(filterState),
-      visibleLimit: visibleLimit >= photos.length ? "all" : visibleLimit,
+      visibleStart,
+      visibleLimit,
+      anchorPhotoId: anchorCard?.dataset.photoId || "",
+      anchorOffset: anchorCard?.getBoundingClientRect().top || 0,
       createdAt: Date.now()
     }));
   } catch {
@@ -507,18 +583,114 @@ const writeDetailSequenceContext = (photos) => {
   }
 };
 
+const checkpointAnchorCard = () => {
+  const cards = [...(galleryRoot?.querySelectorAll("[data-photo-index][data-photo-id]") || [])];
+  if (!cards.length) return null;
+  return cards.reduce((closest, card) => (
+    Math.abs(card.getBoundingClientRect().top) < Math.abs(closest.getBoundingClientRect().top) ? card : closest
+  ));
+};
+
+const persistGalleryCheckpoint = () => {
+  window.clearTimeout(galleryCheckpointWriteTimer);
+  galleryCheckpointWriteTimer = 0;
+  if (galleryCheckpointRestoreActive) return;
+  if (isSelectionGallery || !renderedGalleryPhotos.length) return;
+  const card = checkpointAnchorCard();
+  const photoId = card?.dataset.photoId || renderedGalleryPhotos[0]?.id || "";
+  if (!photoId) return;
+  const checkpoint = {
+    collectionKey: galleryKey,
+    photoId,
+    filterState: publicFilterState(filterState),
+    windowStart: visibleStart,
+    windowEnd: visibleLimit,
+    anchorOffset: card?.getBoundingClientRect().top || 0,
+    updatedAt: new Date().toISOString(),
+  };
+  appliedGalleryCheckpointAt = Date.parse(checkpoint.updatedAt);
+  window.photosByElieGalleryCheckpoints?.write?.(checkpoint);
+};
+
+const queueGalleryCheckpointWrite = () => {
+  window.clearTimeout(galleryCheckpointWriteTimer);
+  if (galleryCheckpointRestoreActive) return;
+  galleryCheckpointWriteTimer = window.setTimeout(persistGalleryCheckpoint, 180);
+};
+
+const restoreDurableGalleryCheckpoint = () => {
+  const checkpoint = pendingDurableGalleryCheckpoint;
+  if (!checkpoint || !galleryRoot) return;
+  pendingDurableGalleryCheckpoint = null;
+  window.clearTimeout(galleryCheckpointWriteTimer);
+  galleryCheckpointWriteTimer = 0;
+  window.clearTimeout(galleryCheckpointRestoreTimer);
+  galleryCheckpointRestoreActive = true;
+  const targetOffset = Number(checkpoint.anchorOffset || 0);
+  const earliestCompletion = Date.now() + 2000;
+  const deadline = Date.now() + 10000;
+  let stablePasses = 0;
+  const settle = () => {
+    const card = [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
+      .find((item) => item.dataset.photoId === checkpoint.photoId);
+    if (!card) {
+      galleryCheckpointRestoreActive = false;
+      queueGalleryCheckpointWrite();
+      return;
+    }
+    const delta = card.getBoundingClientRect().top - targetOffset;
+    if (Math.abs(delta) > 0.5) {
+      stablePasses = 0;
+      window.scrollTo({
+        left: window.scrollX || 0,
+        top: Math.max(0, (window.scrollY || 0) + delta),
+        behavior: "auto",
+      });
+    } else {
+      stablePasses += 1;
+    }
+    const imagesSettled = [...galleryRoot.querySelectorAll("img[data-photo-card-image]")]
+      .every((image) => image.complete);
+    if ((imagesSettled && stablePasses >= 3 && Date.now() >= earliestCompletion) || Date.now() >= deadline) {
+      galleryCheckpointRestoreActive = false;
+      queueGalleryCheckpointWrite();
+      return;
+    }
+    galleryCheckpointRestoreTimer = window.setTimeout(() => {
+      window.requestAnimationFrame(settle);
+    }, 100);
+  };
+  window.requestAnimationFrame(settle);
+};
+
 const restorePendingGalleryReturn = () => {
-  const photoId = pendingGalleryReturnState?.photoId;
+  const returnState = pendingGalleryReturnState;
+  const photoId = returnState?.photoId;
   if (!photoId || !galleryRoot) return;
   pendingGalleryReturnState = null;
   try {
     sessionStorage.removeItem(galleryReturnStateKey);
   } catch {}
-  const card = [...galleryRoot.querySelectorAll("[data-photo-id]")]
+  const card = [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
     .find((item) => item.dataset.photoId === photoId);
   if (!card) return;
   window.requestAnimationFrame(() => {
-    card.scrollIntoView({ block: "center", inline: "nearest" });
+    const anchorCard = returnState?.anchorPhotoId
+      ? [...galleryRoot.querySelectorAll("[data-photo-index][data-photo-id]")]
+        .find((item) => item.dataset.photoId === returnState.anchorPhotoId)
+      : null;
+    if (anchorCard) {
+      const delta = anchorCard.getBoundingClientRect().top - Number(returnState.anchorOffset || 0);
+      if (Math.abs(delta) > 0.5) {
+        window.scrollTo({
+          left: window.scrollX || 0,
+          top: Math.max(0, (window.scrollY || 0) + delta),
+          behavior: "auto",
+        });
+      }
+    } else {
+      card.scrollIntoView({ block: "center", inline: "nearest" });
+    }
     card.querySelector("[data-photo-link]")?.focus?.({ preventScroll: true });
   });
 };
@@ -773,7 +945,7 @@ const ensureGalleryFilterControls = () => {
     syncFilterControls();
     writeFilterState();
     cancelPaginationSequence();
-    visibleLimit = pageSize;
+    resetGalleryWindow();
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
   });
@@ -783,7 +955,7 @@ const ensureGalleryFilterControls = () => {
     syncSearchFilterUrl(filterState);
     syncFilterToggle();
     cancelPaginationSequence();
-    visibleLimit = pageSize;
+    resetGalleryWindow();
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
   });
@@ -794,7 +966,7 @@ const ensureGalleryFilterControls = () => {
     syncDateFilterUrl(filterState);
     syncFilterControls();
     cancelPaginationSequence();
-    visibleLimit = pageSize;
+    resetGalleryWindow();
     selectedIndex = 0;
     renderGallery({ scrollSelection: false });
   });
@@ -802,77 +974,97 @@ const ensureGalleryFilterControls = () => {
 
 const ensureGalleryMoreButton = () => {
   if (moreButton || !galleryRoot) return;
-  const controls = document.createElement("div");
-  controls.className = "gallery-pagination-controls";
+  const backwardControls = document.createElement("div");
+  backwardControls.className = "gallery-pagination-controls gallery-pagination-backward";
+  backwardControls.setAttribute("role", "group");
+  backwardControls.setAttribute("aria-label", "Earlier photos");
+  backwardControls.hidden = true;
+  const forwardControls = document.createElement("div");
+  forwardControls.className = "gallery-pagination-controls gallery-pagination-forward";
+  forwardControls.setAttribute("role", "group");
+  forwardControls.setAttribute("aria-label", "Later photos");
+  forwardControls.hidden = true;
+  const makeWindowButton = ({ count, direction, datasetKey, label }) => {
+    const button = document.createElement("button");
+    button.className = "btn secondary gallery-more-button";
+    button.type = "button";
+    button.dataset[datasetKey] = "";
+    button.textContent = label;
+    button.setAttribute("aria-label", `${direction === "backward" ? "Show previous" : "Show next"} ${count} photos`);
+    button.hidden = true;
+    return button;
+  };
+  lessButton = makeWindowButton({ count: pageSize, direction: "backward", datasetKey: "galleryLess", label: `−${pageSize}` });
+  lessDoubleButton = makeWindowButton({ count: pageSize * 2, direction: "backward", datasetKey: "galleryLessDouble", label: `−${pageSize * 2}` });
+  lessQuadButton = makeWindowButton({ count: pageSize * 4, direction: "backward", datasetKey: "galleryLessQuad", label: `−${pageSize * 4}` });
   moreButton = document.createElement("button");
   moreButton.className = "btn secondary gallery-more-button";
   moreButton.type = "button";
   moreButton.dataset.galleryMore = "";
-  moreButton.textContent = seeMoreLabel(pageSize);
+  moreButton.textContent = `+${pageSize}`;
+  moreButton.setAttribute("aria-label", `Show next ${pageSize} photos`);
   moreButton.hidden = true;
   moreDoubleButton = document.createElement("button");
   moreDoubleButton.className = "btn secondary gallery-more-button";
   moreDoubleButton.type = "button";
   moreDoubleButton.dataset.galleryMoreDouble = "";
-  moreDoubleButton.textContent = seeMoreLabel(pageSize * 2);
+  moreDoubleButton.textContent = `+${pageSize * 2}`;
+  moreDoubleButton.setAttribute("aria-label", `Show next ${pageSize * 2} photos`);
   moreDoubleButton.hidden = true;
-  showAllButton = document.createElement("button");
-  showAllButton.className = "btn secondary gallery-more-button";
-  showAllButton.type = "button";
-  showAllButton.dataset.galleryShowAll = "";
-  showAllButton.textContent = seeAllLabel(pageSize);
-  showAllButton.hidden = true;
-  controls.append(moreButton, moreDoubleButton, showAllButton);
-  galleryRoot.after(controls);
-  moreButton.addEventListener("click", () => {
-    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
+  moreQuadButton = document.createElement("button");
+  moreQuadButton.className = "btn secondary gallery-more-button";
+  moreQuadButton.type = "button";
+  moreQuadButton.dataset.galleryMoreQuad = "";
+  moreQuadButton.textContent = `+${pageSize * 4}`;
+  moreQuadButton.setAttribute("aria-label", `Show next ${pageSize * 4} photos`);
+  moreQuadButton.hidden = true;
+  backwardControls.append(lessQuadButton, lessDoubleButton, lessButton);
+  forwardControls.append(moreButton, moreDoubleButton, moreQuadButton);
+  galleryRoot.before(backwardControls);
+  galleryRoot.after(forwardControls);
+  const moveWindow = (direction, count) => {
+    const photos = filteredVisiblePhotos();
+    const movingBackward = direction === "backward";
+    const nextWindow = galleryWindowModel.moveGalleryWindow({
+      start: visibleStart,
+      end: visibleLimit,
+      total: photos.length,
+      direction,
+      count,
+    });
+    const anchorPhotoId = movingBackward
+      ? photos[nextWindow.start]?.id || ""
+      : photos[visibleLimit]?.id || "";
     showAllRenderToken += 1;
-    if (showAllButton) showAllButton.disabled = false;
-    beginPaginationAnchor(anchorPhotoId);
-    visibleLimit += pageSize;
+    beginPaginationAnchor(anchorPhotoId, {
+      targetTop: movingBackward
+        ? backwardControls.getBoundingClientRect().bottom
+        : forwardControls.getBoundingClientRect().top,
+    });
+    visibleStart = nextWindow.start;
+    visibleLimit = nextWindow.end;
     renderGallery({ scrollSelection: false });
     schedulePaginationAnchorRestore();
-  });
-  moreDoubleButton.addEventListener("click", () => {
-    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
-    showAllRenderToken += 1;
-    if (showAllButton) showAllButton.disabled = false;
-    beginPaginationAnchor(anchorPhotoId);
-    visibleLimit += pageSize * 2;
-    renderGallery({ scrollSelection: false });
-    schedulePaginationAnchorRestore();
-  });
-  showAllButton.addEventListener("click", () => {
-    const anchorPhotoId = paginationPhotoIdAtCurrentLimit();
-    const token = showAllRenderToken + 1;
-    showAllRenderToken = token;
-    setPaginationBusy(true);
-    beginPaginationAnchor(anchorPhotoId, { focusEachRender: true });
-    const addNextChunk = () => {
-      if (token !== showAllRenderToken) return;
-      const total = filteredVisiblePhotos().length;
-      if (visibleLimit >= total) {
-        setPaginationBusy(false);
-        schedulePaginationAnchorRestore();
-        releasePaginationAnchor();
-        return;
-      }
-      visibleLimit = Math.min(total, visibleLimit + showAllChunkSize);
-      renderGallery({ scrollSelection: false });
-      schedulePaginationAnchorRestore();
-      if (visibleLimit < total) window.setTimeout(addNextChunk, showAllChunkDelayMs);
-      else {
-        setPaginationBusy(false);
-        releasePaginationAnchor();
-      }
-    };
-    addNextChunk();
-  });
+    releasePaginationAnchor();
+  };
+  lessButton.addEventListener("click", () => moveWindow("backward", pageSize));
+  lessDoubleButton.addEventListener("click", () => moveWindow("backward", pageSize * 2));
+  lessQuadButton.addEventListener("click", () => moveWindow("backward", pageSize * 4));
+  moreButton.addEventListener("click", () => moveWindow("forward", pageSize));
+  moreDoubleButton.addEventListener("click", () => moveWindow("forward", pageSize * 2));
+  moreQuadButton.addEventListener("click", () => moveWindow("forward", pageSize * 4));
 };
 
 const expandGalleryToIncludeIndex = (index) => {
   if (index < 0) return;
-  visibleLimit = Math.max(visibleLimit, Math.ceil((index + 1) / pageSize) * pageSize);
+  const total = filteredVisiblePhotos().length;
+  if (index < visibleStart) {
+    visibleStart = Math.max(0, Math.floor(index / pageSize) * pageSize);
+    visibleLimit = Math.min(total, visibleStart + maxRenderedPhotos);
+  } else if (index >= visibleLimit) {
+    visibleLimit = Math.min(total, Math.ceil((index + 1) / pageSize) * pageSize);
+    visibleStart = Math.max(0, visibleLimit - maxRenderedPhotos);
+  }
 };
 
 const randomInteger = (max) => {
@@ -1022,10 +1214,6 @@ const toggleGalleryPhotoSelection = (photoId, photos = renderedGalleryPhotos) =>
     selectedPhotoIds.delete(photoId);
     forgetSelectedPhoto(photoId);
   } else {
-    if (selectedPhotoIds.size >= selectionLimit) {
-      setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
-      return false;
-    }
     selectedPhotoIds.add(photoId);
     rememberSelectedPhoto(photoId);
   }
@@ -1051,12 +1239,9 @@ const selectOwnerPhotoFromPointer = (photoId, photos, event = {}) => {
     const start = Math.min(anchorIndex, index);
     const end = Math.max(anchorIndex, index);
     photos.slice(start, end + 1).forEach((photo) => {
-      if (selectedPhotoIds.size < selectionLimit) {
-        selectedPhotoIds.add(photo.id);
-        selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
-      }
+      selectedPhotoIds.add(photo.id);
+      selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
     });
-    if (end - start + 1 > selectionLimit) setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
     rememberSelectedPhoto(photoId);
   } else if (toggle) {
     toggleGalleryPhotoSelection(photoId, photos);
@@ -1087,11 +1272,11 @@ const setGalleryStatus = (message) => {
 };
 
 const setPaginationBusy = (busy) => {
-  const controls = moreButton?.closest(".gallery-pagination-controls");
-  if (!controls) return;
-  controls.toggleAttribute("aria-busy", busy);
-  controls.querySelectorAll("button").forEach((button) => {
-    button.disabled = busy;
+  document.querySelectorAll(".gallery-pagination-controls").forEach((controls) => {
+    controls.toggleAttribute("aria-busy", busy);
+    controls.querySelectorAll("button").forEach((button) => {
+      button.disabled = busy;
+    });
   });
 };
 
@@ -1103,11 +1288,6 @@ const clearPaginationAnchor = () => {
   if (paginationAnchorCleanupTimer) window.clearTimeout(paginationAnchorCleanupTimer);
   paginationAnchorCleanupTimer = 0;
   paginationAnchorState = null;
-};
-
-const paginationPhotoIdAtCurrentLimit = () => {
-  const photos = filteredVisiblePhotos();
-  return photos[visibleLimit]?.id || "";
 };
 
 const paginationAnchorCard = (photoId) => {
@@ -1170,14 +1350,17 @@ const cancelPaginationSequence = () => {
   clearPaginationAnchor();
 };
 
-const beginPaginationAnchor = (photoId, { focusEachRender = false } = {}) => {
+const beginPaginationAnchor = (photoId, { focusEachRender = false, targetTop = null } = {}) => {
   clearPaginationAnchor();
   if (!photoId || !galleryRoot) return null;
-  const controls = moreButton?.closest(".gallery-pagination-controls");
-  if (!controls) return null;
+  const fallbackControls = moreButton?.closest(".gallery-pagination-controls");
+  const resolvedTargetTop = Number.isFinite(Number(targetTop))
+    ? Number(targetTop)
+    : fallbackControls?.getBoundingClientRect().top;
+  if (!Number.isFinite(resolvedTargetTop)) return null;
   paginationAnchorState = {
     photoId,
-    targetTop: controls.getBoundingClientRect().top,
+    targetTop: resolvedTargetTop,
     left: window.scrollX || 0,
     token: showAllRenderToken,
     focusEachRender,
@@ -1216,6 +1399,7 @@ const captureSelectionSnapshot = (photos = filteredVisiblePhotos()) => ({
   direction: selectionDirection,
   orderedIds: photos.map((photo) => photo.id),
   filterState: { ...filterState },
+  visibleStart,
   visibleLimit,
   scrollY: window.scrollY,
 });
@@ -1234,22 +1418,40 @@ const replacementAfterRemoval = (snapshot, survivingIds) => {
 
 const moveOwnerSelectionToWasteBasket = async (requestedPhotoIds = null) => {
   const photos = filteredVisiblePhotos();
-  const ids = (Array.isArray(requestedPhotoIds) ? requestedPhotoIds : [...selectedPhotoIds])
-    .map(String)
-    .filter(Boolean)
-    .slice(0, selectionLimit);
+  const ids = galleryCommandModel.selectVisibleIds(
+    [],
+    Array.isArray(requestedPhotoIds) ? requestedPhotoIds : [...selectedPhotoIds],
+  );
   if (!ids.length) return { succeeded: [], failed: [] };
   const snapshot = captureSelectionSnapshot(photos);
-  try {
-    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
-    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket...`);
-    if (ids.length === 1) await hiddenActions.mark(ids[0]);
-    else await hiddenActions.markMany(ids);
-    lastUndoableOwnerAction = { kind: "waste-basket", ids, snapshot };
-    ids.forEach((photoId) => {
-      selectedPhotoIds.delete(photoId);
-      forgetSelectedPhoto(photoId);
-    });
+  ids.forEach((photoId) => setGalleryBlockedVisual(photoId, "blocking"));
+  const totalBatches = Math.ceil(ids.length / commandBatchSize);
+  setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moving to Waste Basket in ${totalBatches} batch${totalBatches === 1 ? "" : "es"}...`);
+  const batches = await galleryCommandModel.runSelectionBatches(ids, async (photoIds) => {
+    if (photoIds.length === 1) await hiddenActions.mark(photoIds[0]);
+    else await hiddenActions.markMany(photoIds);
+    return photoIds;
+  }, { batchSize: commandBatchSize });
+  const succeeded = batches
+    .filter((batch) => batch.status === "fulfilled")
+    .flatMap((batch) => batch.photoIds);
+  const failed = batches
+    .filter((batch) => batch.status === "rejected")
+    .flatMap((batch) => batch.photoIds.map((photoId) => ({
+      photoId,
+      reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${batch.reason}`,
+    })));
+  succeeded.forEach((photoId) => {
+    selectionErrors.delete(photoId);
+    selectedPhotoIds.delete(photoId);
+    forgetSelectedPhoto(photoId);
+  });
+  failed.forEach((item) => {
+    selectionErrors.set(item.photoId, item.reason);
+    setGalleryBlockedVisual(item.photoId, "");
+  });
+  lastUndoableOwnerAction = succeeded.length ? { kind: "waste-basket", ids: succeeded, snapshot } : null;
+  if (succeeded.length) {
     const survivingPhotos = filteredVisiblePhotos();
     if (!selectedPhotoIds.size) {
       selectionRecency = [];
@@ -1259,21 +1461,25 @@ const moveOwnerSelectionToWasteBasket = async (requestedPhotoIds = null) => {
         selectedPhotoIds.add(replacementId);
         rememberSelectedPhoto(replacementId);
         selectionAnchorPhotoId = replacementId;
-        selectedIndex = survivingPhotos.findIndex((photo) => photo.id === replacementId);
+        const replacementIndex = survivingPhotos.findIndex((photo) => photo.id === replacementId);
+        expandGalleryToIncludeIndex(replacementIndex);
+        selectedIndex = Math.max(0, replacementIndex - visibleStart);
       } else {
         primaryPhotoId = "";
         selectedIndex = 0;
       }
     }
     renderGallery();
-    setGalleryStatus(`${ids.length} photo${ids.length === 1 ? "" : "s"} moved to Waste Basket.`);
-    return { succeeded: ids, failed: [] };
-  } catch (error) {
-    ids.forEach((photoId) => setGalleryBlockedVisual(photoId, ""));
-    setGalleryStatus(error?.message || "Could not move photo to Waste Basket.");
-    syncGallerySelectionToolbar();
-    return { succeeded: [], failed: ids.map((photoId) => ({ photoId, reason: error?.message || "Could not move photo to Waste Basket." })) };
+  } else {
+    updateSelection({ scroll: false });
   }
+  const failedBatches = batches.filter((batch) => batch.status === "rejected")
+    .map((batch) => `${batch.batchNumber}/${batch.totalBatches}`)
+    .join(", ");
+  setGalleryStatus(failed.length
+    ? `${succeeded.length} succeeded; ${failed.length} failed in batch ${failedBatches} and remain selected.`
+    : `${succeeded.length} photo${succeeded.length === 1 ? "" : "s"} moved to Waste Basket.`);
+  return { succeeded, failed, batches };
 };
 
 const undoLastOwnerCommand = async () => {
@@ -1297,9 +1503,8 @@ const undoLastOwnerCommand = async () => {
   selectionRecency = [];
   const restoredPhotos = filteredVisiblePhotos();
   const restoredPhotoIds = new Set(restoredPhotos.map((photo) => photo.id));
-  undoable.snapshot.selectedIds.forEach((photoId) => {
-    if (restoredPhotoIds.has(photoId) && selectedPhotoIds.size < selectionLimit) selectedPhotoIds.add(photoId);
-  });
+  galleryCommandModel.restoreVisibleSelection(undoable.snapshot.selectedIds, [...restoredPhotoIds])
+    .forEach((photoId) => selectedPhotoIds.add(photoId));
   selectionRecency = undoable.snapshot.selectionRecency.filter((photoId) => selectedPhotoIds.has(photoId));
   primaryPhotoId = selectedPhotoIds.has(undoable.snapshot.primaryPhotoId)
     ? undoable.snapshot.primaryPhotoId
@@ -1308,6 +1513,7 @@ const undoLastOwnerCommand = async () => {
     ? undoable.snapshot.anchorPhotoId
     : primaryPhotoId;
   selectionDirection = undoable.snapshot.direction;
+  visibleStart = undoable.snapshot.visibleStart || 0;
   visibleLimit = undoable.snapshot.visibleLimit;
   renderGallery();
   if (!undoneId) {
@@ -1317,8 +1523,8 @@ const undoLastOwnerCommand = async () => {
   const nextPhotos = filteredVisiblePhotos();
   const restoredIndex = nextPhotos.findIndex((photo) => photo.id === primaryPhotoId || photo.id === undoneId);
   if (restoredIndex >= 0) {
-    selectedIndex = restoredIndex;
     expandGalleryToIncludeIndex(restoredIndex);
+    selectedIndex = Math.max(0, restoredIndex - visibleStart);
   }
   updateSelection();
   window.scrollTo({ top: undoable.snapshot.scrollY, behavior: "auto" });
@@ -1335,7 +1541,7 @@ const selectedShortcutPhoto = () => {
   if (!explicitPrimary) return null;
   const index = photos.findIndex((photo) => photo.id === explicitPrimary);
   if (index < 0) return null;
-  if (ownerCullingEnabled) selectedIndex = index;
+  if (ownerCullingEnabled && index >= visibleStart && index < visibleLimit) selectedIndex = index - visibleStart;
   return photos[index];
 };
 
@@ -1376,17 +1582,15 @@ const extendOwnerKeyboardSelection = (photos, destinationIndex) => {
     const [onlySelectedId] = selectedPhotoIds;
     anchorIndex = photos.findIndex((photo) => photo.id === onlySelectedId);
   }
-  if (anchorIndex < 0) anchorIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
+  if (anchorIndex < 0) anchorIndex = Math.max(0, Math.min(visibleStart + selectedIndex, photos.length - 1));
   selectionAnchorPhotoId = photos[anchorIndex]?.id || "";
   selectedPhotoIds.clear();
   selectionRecency = [];
   const start = Math.min(anchorIndex, destinationIndex);
   const end = Math.max(anchorIndex, destinationIndex);
   photos.slice(start, end + 1).forEach((photo) => {
-    if (selectedPhotoIds.size < selectionLimit) {
-      selectedPhotoIds.add(photo.id);
-      selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
-    }
+    selectedPhotoIds.add(photo.id);
+    selectionRecency = selectionRecency.filter((candidate) => candidate !== photo.id).concat(photo.id);
   });
   const destinationId = photos[destinationIndex]?.id || "";
   if (destinationId) rememberSelectedPhoto(destinationId);
@@ -1396,7 +1600,8 @@ const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}
   const photos = filteredVisiblePhotos();
   if (!photos.length) return;
   const step = columnJump ? visibleColumnCount() * delta : delta;
-  const nextIndex = Math.max(0, Math.min(selectedIndex + step, photos.length - 1));
+  const currentIndex = Math.max(0, Math.min(visibleStart + selectedIndex, photos.length - 1));
+  const nextIndex = Math.max(0, Math.min(currentIndex + step, photos.length - 1));
   selectionDirection = delta < 0 ? "backward" : "forward";
   if (extend) {
     extendOwnerKeyboardSelection(photos, nextIndex);
@@ -1410,13 +1615,13 @@ const stepGallerySelection = (delta, columnJump = false, { extend = false } = {}
       selectionAnchorPhotoId = nextId;
     }
   }
-  if (nextIndex >= visibleLimit && visibleLimit < photos.length) {
-    selectedIndex = nextIndex;
+  if (nextIndex < visibleStart || nextIndex >= visibleLimit) {
     expandGalleryToIncludeIndex(nextIndex);
+    selectedIndex = Math.max(0, nextIndex - visibleStart);
     renderGallery();
     return;
   }
-  selectedIndex = nextIndex;
+  selectedIndex = nextIndex - visibleStart;
   updateSelection();
   syncSelectionDetailContext();
 };
@@ -1522,7 +1727,7 @@ const ensureOwnerSelection = (photos) => {
   selectionRecency = selectionRecency.filter((photoId) => selectedPhotoIds.has(photoId));
   if (!ownerCullingEnabled || !photos.length) return;
   if (!selectedPhotoIds.size) {
-    const preferredIndex = Math.max(0, Math.min(selectedIndex, photos.length - 1));
+    const preferredIndex = Math.max(0, Math.min(visibleStart + selectedIndex, photos.length - 1));
     const preferredId = photos[preferredIndex]?.id || photos[0].id;
     selectedPhotoIds.add(preferredId);
     rememberSelectedPhoto(preferredId);
@@ -1533,23 +1738,21 @@ const ensureOwnerSelection = (photos) => {
       || "";
   }
   const primaryIndex = photos.findIndex((photo) => photo.id === primaryPhotoId);
-  if (primaryIndex >= 0) selectedIndex = primaryIndex;
+  if (primaryIndex >= visibleStart && primaryIndex < visibleLimit) selectedIndex = primaryIndex - visibleStart;
 };
 
-const selectAllLoadedPhotos = () => {
+const selectAllVisiblePhotos = () => {
   const before = selectedPhotoIds.size;
-  for (const photo of renderedGalleryPhotos) {
-    if (selectedPhotoIds.size >= selectionLimit) break;
-    if (selectedPhotoIds.has(photo.id)) continue;
-    selectedPhotoIds.add(photo.id);
-    selectionRecency.push(photo.id);
-  }
+  const photos = filteredVisiblePhotos();
+  const selectedIds = galleryCommandModel.selectVisibleIds(
+    [...selectedPhotoIds],
+    photos.map((photo) => photo.id),
+  );
+  selectedPhotoIds.clear();
+  selectedIds.forEach((photoId) => selectedPhotoIds.add(photoId));
+  selectionRecency = galleryCommandModel.selectVisibleIds(selectionRecency, selectedIds);
   if (ownerCullingEnabled && !primaryPhotoId && selectionRecency.length) primaryPhotoId = selectionRecency.at(-1);
-  if (selectedPhotoIds.size >= selectionLimit && renderedGalleryPhotos.length > selectedPhotoIds.size) {
-    setGalleryStatus(`Selection is limited to ${selectionLimit} photos.`);
-  } else {
-    setGalleryStatus(`${selectedPhotoIds.size - before} loaded photo${selectedPhotoIds.size - before === 1 ? "" : "s"} added to the selection.`);
-  }
+  setGalleryStatus(`${selectedPhotoIds.size - before} visible photo${selectedPhotoIds.size - before === 1 ? "" : "s"} added to the selection.`);
   updateSelection({ scroll: false });
   syncSelectionDetailContext();
 };
@@ -1713,51 +1916,68 @@ const ownerCardPresentation = (photo) => {
 const runOwnerAdapterCommand = async (methodName, { value = null, removes = false, currentPhoto = null } = {}) => {
   const method = ownerAdapterMethod(methodName);
   if (!method) return null;
-  const requestedIds = currentPhoto?.id ? [currentPhoto.id] : [...selectedPhotoIds].slice(0, selectionLimit);
+  const requestedIds = currentPhoto?.id ? [currentPhoto.id] : [...selectedPhotoIds];
   if (!requestedIds.length) return null;
   const snapshot = captureSelectionSnapshot();
-  try {
+  const idempotencyKey = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${methodName}`;
+  const totalBatches = Math.ceil(requestedIds.length / commandBatchSize);
+  setGalleryStatus(`${requestedIds.length} photo${requestedIds.length === 1 ? "" : "s"} updating in ${totalBatches} batch${totalBatches === 1 ? "" : "es"}...`);
+  const batches = await galleryCommandModel.runSelectionBatches(requestedIds, async (photoIds, batch) => {
     const result = await method({
-      photoIds: requestedIds,
-      primaryPhotoId: currentPhoto?.id || primaryPhotoId,
+      photoIds,
+      primaryPhotoId: photoIds.includes(currentPhoto?.id || primaryPhotoId)
+        ? currentPhoto?.id || primaryPhotoId
+        : photoIds[0],
       fixtureId: ownerCommandAdapter.fixtureId || null,
-      idempotencyKey: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${methodName}`,
+      idempotencyKey: `${idempotencyKey}:${batch.batchNumber}/${batch.totalBatches}`,
       value,
     });
-    const normalized = normalizeOwnerCommandResult(result, requestedIds);
-    normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
-    normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
-    applyOwnerCommandState(methodName, value, normalized.succeededItems);
-    if (removes) {
-      normalized.succeeded.forEach((photoId) => {
-        selectedPhotoIds.delete(photoId);
-        forgetSelectedPhoto(photoId);
-      });
-      if (!selectedPhotoIds.size) {
-        const survivors = filteredVisiblePhotos();
-        const replacementId = replacementAfterRemoval(snapshot, new Set(survivors.map((photo) => photo.id)));
-        if (replacementId) {
-          selectedPhotoIds.add(replacementId);
-          rememberSelectedPhoto(replacementId);
-          selectionAnchorPhotoId = replacementId;
-        }
-      }
-      renderGallery();
-    } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
-      renderGallery({ scrollSelection: false });
-    } else {
-      updateSelection({ scroll: false });
+    return normalizeOwnerCommandResult(result, photoIds);
+  }, { batchSize: commandBatchSize });
+  const normalized = { succeeded: [], succeededItems: [], failed: [] };
+  batches.forEach((batch) => {
+    if (batch.status === "rejected") {
+      batch.photoIds.forEach((photoId) => normalized.failed.push({
+        photoId,
+        reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${batch.reason}`,
+      }));
+      return;
     }
-    setGalleryStatus(normalized.failed.length
-      ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed and remain selected.`
-      : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
-    return normalized;
-  } catch (error) {
-    requestedIds.forEach((photoId) => selectionErrors.set(photoId, error?.message || "Owner command failed."));
+    normalized.succeeded.push(...batch.value.succeeded);
+    normalized.succeededItems.push(...batch.value.succeededItems);
+    batch.value.failed.forEach((item) => normalized.failed.push({
+      ...item,
+      reason: `Batch ${batch.batchNumber}/${batch.totalBatches}: ${item.reason}`,
+    }));
+  });
+  normalized.failed.forEach((item) => selectionErrors.set(item.photoId, item.reason));
+  normalized.succeeded.forEach((photoId) => selectionErrors.delete(photoId));
+  applyOwnerCommandState(methodName, value, normalized.succeededItems);
+  if (removes) {
+    normalized.succeeded.forEach((photoId) => {
+      selectedPhotoIds.delete(photoId);
+      forgetSelectedPhoto(photoId);
+    });
+    if (!selectedPhotoIds.size) {
+      const survivors = filteredVisiblePhotos();
+      const replacementId = replacementAfterRemoval(snapshot, new Set(survivors.map((photo) => photo.id)));
+      if (replacementId) {
+        selectedPhotoIds.add(replacementId);
+        rememberSelectedPhoto(replacementId);
+        selectionAnchorPhotoId = replacementId;
+      }
+    }
+    renderGallery();
+  } else if (["setRating", "setColor", "review", "unpick"].includes(methodName)) {
+    renderGallery({ scrollSelection: false });
+  } else {
     updateSelection({ scroll: false });
-    setGalleryStatus(error?.message || "Owner command failed.");
-    return { succeeded: [], failed: requestedIds.map((photoId) => ({ photoId, reason: error?.message || "Owner command failed." })) };
   }
+  const failedBatches = [...new Set(normalized.failed.map((item) => item.reason.match(/^Batch ([^:]+):/)?.[1]).filter(Boolean))].join(", ");
+  setGalleryStatus(normalized.failed.length
+    ? `${normalized.succeeded.length} succeeded; ${normalized.failed.length} failed in batch ${failedBatches} and remain selected.`
+    : ownerCommandSuccessStatus(methodName, value, normalized.succeeded.length));
+  return { ...normalized, batches };
 };
 
 const burstCandidateIds = () => {
@@ -1767,7 +1987,7 @@ const burstCandidateIds = () => {
     const result = resolver({ primaryPhotoId, loadedPhotoIds: renderedGalleryPhotos.map((photo) => photo.id) });
     if (!Array.isArray(result)) return null;
     const loadedIds = new Set(renderedGalleryPhotos.map((photo) => photo.id));
-    return [...new Set(result.map(String).filter((photoId) => loadedIds.has(photoId)))].slice(0, selectionLimit);
+    return [...new Set(result.map(String).filter((photoId) => loadedIds.has(photoId)))];
   } catch {
     return null;
   }
@@ -1897,12 +2117,12 @@ const galleryCommands = [
   {
     id: "select-all", roles: ["visitor", "owner"], surfaces: ["gallery"], group: "selection", order: 10,
     label: "Select All", icon: "☑", shortcut: commandShortcut("a", { primary: true }),
-    shortcutLabel: () => `${primaryShortcutLabel()}A`, selectionEffect: "add-loaded", executionScope: "loaded",
+    shortcutLabel: () => `${primaryShortcutLabel()}A`, selectionEffect: "add-visible", executionScope: "visible",
     state: () => ({
-      enabled: renderedGalleryPhotos.some((photo) => !selectedPhotoIds.has(photo.id)) && selectedPhotoIds.size < selectionLimit,
-      disabledReason: selectedPhotoIds.size >= selectionLimit ? `Selection is limited to ${selectionLimit} photos.` : "All loaded photos are selected.",
+      enabled: filteredVisiblePhotos().some((photo) => !selectedPhotoIds.has(photo.id)),
+      disabledReason: "All visible photos are selected.",
     }),
-    execute: selectAllLoadedPhotos,
+    execute: selectAllVisiblePhotos,
   },
   {
     id: "clear-selection", roles: ["visitor"], surfaces: ["gallery"], group: "selection", order: 20,
@@ -2076,7 +2296,8 @@ const galleryCommandContext = () => ({
   selectionCount: selectedPhotoIds.size,
   primaryPhotoId,
   loadedIds: renderedGalleryPhotos.map((photo) => photo.id),
-  selectionLimit,
+  visibleIds: filteredVisiblePhotos().map((photo) => photo.id),
+  commandBatchSize,
 });
 
 const readActionLabelSetting = () => {
@@ -2344,7 +2565,7 @@ const commitOwnerFilterState = (updates) => {
   filterState = { ...filterState, ...updates };
   writeFilterState();
   cancelPaginationSequence();
-  visibleLimit = pageSize;
+  resetGalleryWindow();
   selectedIndex = 0;
   renderGallery({ scrollSelection: false });
 };
@@ -2453,25 +2674,49 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
     renderedGalleryPhotos = [];
     galleryRoot.innerHTML = "";
     applyGalleryPreviewLayout([]);
+    if (lessButton) lessButton.hidden = true;
+    if (lessDoubleButton) lessDoubleButton.hidden = true;
+    if (lessQuadButton) lessQuadButton.hidden = true;
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
-    if (showAllButton) showAllButton.hidden = true;
+    if (moreQuadButton) moreQuadButton.hidden = true;
+    if (lessButton?.closest(".gallery-pagination-controls")) lessButton.closest(".gallery-pagination-controls").hidden = true;
+    if (moreButton?.closest(".gallery-pagination-controls")) moreButton.closest(".gallery-pagination-controls").hidden = true;
     setGalleryStatus("");
     return;
   }
   if (pendingGalleryReturnState?.visibleLimit === "all") {
-    visibleLimit = photos.length;
+    visibleStart = 0;
+    visibleLimit = Math.min(photos.length, maxRenderedPhotos);
   } else if (pendingGalleryReturnState?.visibleLimit) {
     const savedLimit = Number(pendingGalleryReturnState.visibleLimit);
-    if (Number.isFinite(savedLimit) && savedLimit > 0) visibleLimit = Math.max(pageSize, savedLimit);
+    const savedStart = Number(pendingGalleryReturnState.visibleStart || 0);
+    if (Number.isFinite(savedLimit) && savedLimit > 0) {
+      visibleStart = Number.isFinite(savedStart) ? Math.max(0, Math.floor(savedStart)) : 0;
+      visibleLimit = Math.max(visibleStart + 1, Math.floor(savedLimit));
+    }
   }
-  writeDetailSequenceContext(photos);
   const returnPhotoId = pendingGalleryReturnState?.photoId || "";
   const returnIndex = returnPhotoId ? photos.findIndex((photo) => photo.id === returnPhotoId) : -1;
   if (returnIndex >= 0) expandGalleryToIncludeIndex(returnIndex);
-  const visibleSubset = photos.slice(0, visibleLimit);
+  const durableIndex = pendingDurableGalleryCheckpoint?.photoId
+    ? photos.findIndex((photo) => photo.id === pendingDurableGalleryCheckpoint.photoId)
+    : -1;
+  if (pendingDurableGalleryCheckpoint && durableIndex < 0) {
+    pendingDurableGalleryCheckpoint = null;
+    resetGalleryWindow();
+  }
+  const normalizedWindow = galleryWindowModel.normalizeGalleryWindow({
+    start: visibleStart,
+    end: visibleLimit,
+    total: photos.length,
+  });
+  visibleStart = normalizedWindow.start;
+  visibleLimit = normalizedWindow.end;
+  const visibleSubset = photos.slice(visibleStart, visibleLimit);
   renderedGalleryPhotos = visibleSubset;
-  if (returnIndex >= 0) selectedIndex = returnIndex;
+  writeDetailSequenceContext(photos);
+  if (returnIndex >= 0) selectedIndex = returnIndex - visibleStart;
   if (returnPhotoId && returnIndex < 0) clearPendingGalleryReturn();
   if (!photos.length) {
     const filteredOut = allPhotos.length > 0 && activeFilterCount() > 0;
@@ -2498,13 +2743,18 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
       syncDateFilterUrl(filterState);
       syncFilterControls();
       cancelPaginationSequence();
-      visibleLimit = pageSize;
+      resetGalleryWindow();
       selectedIndex = 0;
       renderGallery({ scrollSelection: false });
     });
+    if (lessButton) lessButton.hidden = true;
+    if (lessDoubleButton) lessDoubleButton.hidden = true;
+    if (lessQuadButton) lessQuadButton.hidden = true;
     if (moreButton) moreButton.hidden = true;
     if (moreDoubleButton) moreDoubleButton.hidden = true;
-    if (showAllButton) showAllButton.hidden = true;
+    if (moreQuadButton) moreQuadButton.hidden = true;
+    if (lessButton?.closest(".gallery-pagination-controls")) lessButton.closest(".gallery-pagination-controls").hidden = true;
+    if (moreButton?.closest(".gallery-pagination-controls")) moreButton.closest(".gallery-pagination-controls").hidden = true;
     setGalleryStatus(filteredOut
       ? t("gallery.adjust_filters")
       : "");
@@ -2607,24 +2857,21 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   applyGalleryPreviewLayout();
   updateSelection({ scroll: scrollSelection && returnIndex < 0 });
   if (returnIndex >= 0) restorePendingGalleryReturn();
-  if (moreButton) {
-    const remaining = Math.max(0, photos.length - visibleSubset.length);
-    const hasMore = remaining > 0;
-    moreButton.hidden = !hasMore;
-    moreButton.textContent = seeMoreLabel(Math.min(pageSize, remaining));
-  }
-  if (moreDoubleButton) {
-    const remaining = Math.max(0, photos.length - visibleSubset.length);
-    moreDoubleButton.hidden = remaining <= pageSize;
-    moreDoubleButton.textContent = seeMoreLabel(Math.min(pageSize * 2, remaining));
-  }
-  if (showAllButton) {
-    const remaining = Math.max(0, photos.length - visibleSubset.length);
-    showAllButton.hidden = remaining <= 0;
-    showAllButton.textContent = seeAllLabel(remaining);
-  }
+  restoreDurableGalleryCheckpoint();
+  const hasPrevious = visibleStart > 0;
+  const hasNext = visibleLimit < photos.length;
+  [lessButton, lessDoubleButton, lessQuadButton].forEach((button) => {
+    if (button) button.hidden = !hasPrevious;
+  });
+  [moreButton, moreDoubleButton, moreQuadButton].forEach((button) => {
+    if (button) button.hidden = !hasNext;
+  });
+  const backwardControls = lessButton?.closest(".gallery-pagination-controls");
+  const forwardControls = moreButton?.closest(".gallery-pagination-controls");
+  if (backwardControls) backwardControls.hidden = !hasPrevious;
+  if (forwardControls) forwardControls.hidden = !hasNext;
   syncGallerySelectionToolbar();
-  const paginated = photos.length > visibleSubset.length;
+  const paginated = hasPrevious || hasNext;
   const mediaNoun = photoFilter.statusNoun(filterState, t);
   const filterStatus = activeFilterCount() || paginated
     ? t("gallery.showing_filtered_items", { count: visibleSubset.length, total: photos.length, items: mediaNoun })
@@ -2637,6 +2884,7 @@ const renderGallery = ({ scrollSelection = true } = {}) => {
   } else {
     setGalleryStatus(filterStatus);
   }
+  queueGalleryCheckpointWrite();
 };
 
 if (galleryRoot && gallery) {
@@ -2735,6 +2983,12 @@ if (galleryRoot && gallery) {
   });
   window.addEventListener("photosbyelie:owneractionerror", (event) => {
     setGalleryStatus(event.detail?.message || "Owner action failed.");
+  });
+  window.addEventListener("scroll", queueGalleryCheckpointWrite, { passive: true });
+  window.addEventListener("pagehide", persistGalleryCheckpoint);
+  window.addEventListener("photosbyelie:gallerycheckpointschange", () => {
+    const checkpoint = durableGalleryCheckpoint();
+    if (checkpoint) stageDurableGalleryCheckpoint(checkpoint, { rerender: true });
   });
 
   if (ownerCullingEnabled) {

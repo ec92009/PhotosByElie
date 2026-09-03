@@ -9,7 +9,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from public_catalog_policy import public_catalog_policy_snapshot
-from reconcile_public_catalog_artifacts import filter_expo_manifest
+from reconcile_public_catalog_artifacts import (
+    _filter_catalog_projection,
+    filter_expo_manifest,
+)
 
 
 class PublicCatalogPolicyTest(unittest.TestCase):
@@ -82,6 +85,86 @@ class PublicCatalogPolicyTest(unittest.TestCase):
         self.assertEqual(filtered["photos_count"], 0)
         self.assertEqual(summary["removedBlocked"], 1)
         self.assertEqual(summary["removedRetiredMediaType"], 1)
+
+    def test_catalog_filter_applies_eligibility_and_retirement_to_projection(self):
+        catalog = self.root / "assets/catalog/filter-test.sqlite"
+        conn = sqlite3.connect(catalog)
+        conn.executescript("""
+            PRAGMA foreign_keys = ON;
+            CREATE TABLE media_types (
+              media_type_id INTEGER PRIMARY KEY,
+              code TEXT NOT NULL UNIQUE
+            );
+            CREATE TABLE media_items (
+              media_id TEXT PRIMARY KEY,
+              media_type_id INTEGER NOT NULL REFERENCES media_types(media_type_id)
+            ) WITHOUT ROWID;
+            CREATE TABLE media_assets (
+              media_id TEXT NOT NULL REFERENCES media_items(media_id) ON DELETE CASCADE,
+              asset_type TEXT NOT NULL,
+              PRIMARY KEY (media_id, asset_type)
+            ) WITHOUT ROWID;
+            INSERT INTO media_types VALUES (1, 'photo'), (2, 'video');
+            INSERT INTO media_items VALUES
+              ('keep-photo', 1),
+              ('blocked-photo', 1),
+              ('retired-video', 2);
+            INSERT INTO media_assets VALUES
+              ('keep-photo', 'preview'),
+              ('blocked-photo', 'preview'),
+              ('retired-video', 'preview');
+        """)
+        conn.commit()
+        conn.close()
+
+        summary = _filter_catalog_projection(
+            catalog,
+            eligible_ids={"keep-photo", "retired-video"},
+            retired_media_types={"video"},
+        )
+
+        self.assertEqual(summary, {"before": 3, "after": 1, "removed": 2})
+        with sqlite3.connect(catalog) as conn:
+            self.assertEqual(
+                conn.execute("SELECT media_id FROM media_items").fetchall(),
+                [("keep-photo",)],
+            )
+            self.assertEqual(conn.execute("SELECT count(*) FROM media_assets").fetchone()[0], 1)
+            self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+
+    def test_catalog_filter_keeps_compliant_projection_bytes_unchanged(self):
+        catalog = self.root / "assets/catalog/idempotent-filter-test.sqlite"
+        conn = sqlite3.connect(catalog)
+        conn.executescript("""
+            CREATE TABLE media_types (
+              media_type_id INTEGER PRIMARY KEY,
+              code TEXT NOT NULL UNIQUE
+            );
+            CREATE TABLE media_items (
+              media_id TEXT PRIMARY KEY,
+              media_type_id INTEGER NOT NULL REFERENCES media_types(media_type_id)
+            ) WITHOUT ROWID;
+            CREATE TABLE media_assets (
+              media_id TEXT NOT NULL REFERENCES media_items(media_id) ON DELETE CASCADE,
+              asset_type TEXT NOT NULL,
+              PRIMARY KEY (media_id, asset_type)
+            ) WITHOUT ROWID;
+            INSERT INTO media_types VALUES (1, 'photo');
+            INSERT INTO media_items VALUES ('keep-photo', 1);
+            INSERT INTO media_assets VALUES ('keep-photo', 'preview');
+        """)
+        conn.commit()
+        conn.close()
+        before = catalog.read_bytes()
+
+        summary = _filter_catalog_projection(
+            catalog,
+            eligible_ids={"keep-photo"},
+            retired_media_types={"video"},
+        )
+
+        self.assertEqual(summary, {"before": 1, "after": 1, "removed": 0})
+        self.assertEqual(catalog.read_bytes(), before)
 
     def test_owner_reconciliation_replaces_manifest_as_legacy_authority(self):
         with sqlite3.connect(self.db) as conn:

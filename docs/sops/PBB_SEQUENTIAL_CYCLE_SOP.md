@@ -16,6 +16,19 @@ PBE is the customer-facing web application and remains a separate release line. 
 
 A short-lived safety branch is allowed only when an experiment could damage or obscure the canonical PBB line. Name the reason before creating it, keep it limited to the current ticket, integrate or reject it promptly, and remove it before selecting another ticket.
 
+## Shared PBE/PBB Contract Sync
+
+PBE and PBB share schemas, generated contracts, dependency locks, publication safeguards, and parity tests, but they do not share a release cadence. Synchronize that shared foundation in one direction:
+
+1. Finish and verify PBE work on `main`.
+2. In the clean canonical PBB worktree, merge the reviewed `origin/main` tip into `release/backstage`.
+3. Preserve the newer PBB implementation when an older PBE copy of the same Backstage behavior conflicts; retain PBE changes that expand a genuinely shared contract.
+4. Never merge the PBB release branch wholesale back into PBE. Promote an intentional shared repair to PBE as a separately reviewed PBE change.
+
+Every shared sync must retain the committed `package-lock.json`, use `npm ci`, report `npm audit --audit-level=high`, run the full JavaScript/Python suite, run the complete Swift package suite, and run `npm run validate` as a read-only publication check. It must not deploy PBE, publish a Backstage archive, install an app, rewrite history, or force-push merely to reconcile source.
+
+Before deleting a historical branch or worktree, prove it is clean and account for every commit that is not reachable from the canonical line. Integrate wanted behavior on the current source, keep a documented exception, or preserve a recovery reference. The dirty primary PBE checkout is never reset or cleaned as part of this process.
+
 ## The Cycle
 
 ### 1. Grab one ticket

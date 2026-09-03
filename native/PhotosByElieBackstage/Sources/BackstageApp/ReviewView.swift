@@ -405,11 +405,13 @@ struct ReviewView: View {
                                             Button(editor.name) {
                                                 model.requestExternalEdit(with: editor, assetIDs: editorIDs)
                                             }
+                                            .backstageHelp("Send the selected Review source or sources to this external editor.")
                                         }
                                         if !model.availableExternalEditors.isEmpty { Divider() }
                                         Button("Choose another app…") {
                                             model.chooseExternalEditor(for: editorIDs)
                                         }
+                                        .backstageHelp("Choose another installed editor for the selected Review source or sources.")
                                     }
                                     .disabled(model.isExternalEditOperationInProgress || model.activeExternalEditJob != nil)
                                 }
@@ -503,6 +505,7 @@ struct ReviewView: View {
                             Button(editor.name) {
                                 model.requestExternalEdit(with: editor)
                             }
+                            .backstageHelp("Send the selected Review source or sources to this external editor.")
                         }
                         if !model.availableExternalEditors.isEmpty {
                             Divider()
@@ -510,10 +513,12 @@ struct ReviewView: View {
                         Button("Choose another app…") {
                             chooseExternalEditor()
                         }
+                        .backstageHelp("Choose another installed editor for the selected Review source or sources.")
                         Divider()
                         Button("Choose return folder…") {
                             model.chooseExternalEditReturnDirectory()
                         }
+                        .backstageHelp("Choose the folder Backstage watches for finished external edits.")
                     }
                     .disabled(!model.canStartExternalEdit)
                     .backstageHelp("Send one selected original out for a newer rendition, or several ordered originals out for one panorama or composite. Returned work stays in Review.")
@@ -527,14 +532,18 @@ struct ReviewView: View {
                             Button("Choose return folder…") {
                                 model.chooseExternalEditReturnDirectory()
                             }
+                            .backstageHelp("Choose the folder Backstage watches for this finished edit.")
                             Button("Show return folder") {
                                 model.revealExternalEditReturnFolder()
                             }
+                            .backstageHelp("Reveal the active external edit return folder in Finder.")
                             Button("Cancel edit job") {
                                 model.requestCancelExternalEdit()
                             }
+                            .backstageHelp("Cancel the active external edit without replacing its current Review rendition.")
                         }
                         .disabled(model.isExternalEditOperationInProgress)
+                        .backstageHelp("Manage the active external edit return folder or cancel the job.")
                     }
                     Spacer()
                     Button("Undo") {

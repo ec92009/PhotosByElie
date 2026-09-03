@@ -169,11 +169,7 @@ if [[ "$selected" != 'true' ]] || ! wait_for_text 'Read-only workspace: Uploads'
   print -u2 'FAIL installed accessibility smoke: Uploads could not be reopened for state checks.'
   exit 1
 fi
-if ! wait_for_text 'Upload selection' 100; then
-  print -u2 'FAIL installed accessibility smoke: Uploads did not expose its primary action.'
-  exit 1
-fi
-upload_selection_enabled="$(osascript - "$smoke_process" <<'APPLESCRIPT'
+upload_selection_state="$(osascript - "$smoke_process" <<'APPLESCRIPT'
 on run arguments
     set processName to item 1 of arguments
     tell application "System Events" to tell process processName
@@ -181,15 +177,10 @@ on run arguments
         repeat with candidate in allElements
             try
                 if role of candidate is "AXButton" then
-                    set candidateText to ""
-                    try
-                        set candidateText to name of candidate as text
-                    end try
-                    try
-                        set candidateText to candidateText & " " & (description of candidate as text)
-                    end try
-                    if candidateText contains "Upload selection" then
-                        return enabled of candidate as text
+                    set candidateIdentifier to value of attribute "AXIdentifier" of candidate as text
+                    if candidateIdentifier is "backstage.uploads.primary-selection" then
+                        set candidateName to name of candidate as text
+                        return candidateName & "|" & candidateIdentifier & "|" & (enabled of candidate as text)
                     end if
                 end if
             end try
@@ -199,8 +190,8 @@ on run arguments
 end run
 APPLESCRIPT
 )"
-if [[ "$upload_selection_enabled" != 'false' ]]; then
-  print -u2 "FAIL installed accessibility smoke: Upload selection disabled state was ${upload_selection_enabled}."
+if [[ "$upload_selection_state" != 'Upload selection|backstage.uploads.primary-selection|false' ]]; then
+  print -u2 "FAIL installed accessibility smoke: Upload selection state was ${upload_selection_state}."
   exit 1
 fi
 

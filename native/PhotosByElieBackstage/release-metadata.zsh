@@ -3,7 +3,7 @@
 # release identity.
 
 PBE_BACKSTAGE_BUNDLE_IDENTIFIER="com.photosbyelie.backstage"
-PBE_BACKSTAGE_VERSION="246.10"
-PBE_BACKSTAGE_BUILD="307"
+PBE_BACKSTAGE_VERSION="246.11"
+PBE_BACKSTAGE_BUILD="308"
 PBE_BACKSTAGE_UPDATE_MANIFEST_URL="https://download.photos-by-elie.com/backstage/releases/latest.json"
 PBE_BACKSTAGE_RELEASE_SOURCE_REF="refs/heads/release/backstage"

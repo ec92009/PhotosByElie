@@ -84,9 +84,20 @@ on run arguments
     tell application "System Events" to tell process processName
         set frontmost to true
         set sidebarOutline to first outline of first scroll area of first group of first splitter group of first group of window 1
-        click row rowIndex of sidebarOutline
-        delay 0.1
-        return value of attribute "AXSelected" of row rowIndex of sidebarOutline
+        if rowIndex is less than or equal to 9 then
+            keystroke (rowIndex as text) using command down
+        else if rowIndex is 10 then
+            keystroke "1" using {command down, option down}
+        else if rowIndex is 11 then
+            keystroke "2" using {command down, option down}
+        else
+            keystroke "3" using {command down, option down}
+        end if
+        repeat 20 times
+            if value of attribute "AXSelected" of row rowIndex of sidebarOutline is true then return true
+            delay 0.1
+        end repeat
+        return false
     end tell
 end run
 APPLESCRIPT

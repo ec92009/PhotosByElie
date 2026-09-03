@@ -149,6 +149,7 @@ public struct BackstageApplication: App {
             }
         }
         .commands {
+            BackstageNavigationCommands(model: model)
             BackstageSelectAllCommands(model: model)
             BackstageUndoCommands(model: model)
             CommandMenu("Backstage") {
@@ -274,6 +275,41 @@ struct BackstageSectionCard<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct BackstageNavigationCommands: Commands {
+    @ObservedObject var model: BackstageViewModel
+
+    var body: some Commands {
+        CommandMenu("Navigate") {
+            navigationButton("Overview", section: .overview, key: "1")
+            navigationButton("Activity", section: .activity, key: "2")
+            navigationButton("Fixtures", section: .fixtures, key: "3")
+            navigationButton("People & Access", section: .access, key: "4")
+            navigationButton("Gallery", section: .culling, key: "5")
+            navigationButton("Review", section: .review, key: "6")
+            navigationButton("Metadata", section: .metadata, key: "7")
+            navigationButton("Waste Basket", section: .wasteBasket, key: "8")
+            navigationButton("Uploads", section: .uploads, key: "9")
+            Divider()
+            navigationButton("Client Delivery", section: .delivery, key: "1", modifiers: [.command, .option])
+            navigationButton("Storage Maintenance", section: .publication, key: "2", modifiers: [.command, .option])
+            navigationButton("Updates", section: .updates, key: "3", modifiers: [.command, .option])
+        }
+    }
+
+    private func navigationButton(
+        _ title: String,
+        section: BackstageViewModel.Section,
+        key: KeyEquivalent,
+        modifiers: EventModifiers = .command
+    ) -> some View {
+        Button(title) {
+            model.selection = section
+        }
+        .keyboardShortcut(key, modifiers: modifiers)
+        .backstageHelp("Open the \(title) workspace through the same guarded section selection used by the Sidebar.")
     }
 }
 

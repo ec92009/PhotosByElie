@@ -454,7 +454,6 @@ final class BackstageViewModel: ObservableObject {
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
     @Published var updateState: BackstageUpdateState = .idle
-    private var nativePublicationCancellationRequested = false
     private var didCheckOwnerWorkflowRecovery = false
     private var didStartAutomaticRecentPhotosDiscovery = false
     private var r2ReconciliationCancellationRequested = false
@@ -497,15 +496,7 @@ final class BackstageViewModel: ObservableObject {
     // must advance the queue, not immediately resubmit the same first four IDs.
     private var galleryWorkflow: BackstageGalleryWorkflowState
     private var reviewWorkflow = BackstageReviewWorkflowState()
-    private var lifecycleThumbnailTasks: [String: Task<Void, Never>] = [:]
-    private var lifecycleThumbnailTaskTokens: [String: UUID] = [:]
-    private var lifecycleThumbnailPreferredIdentifiers: [String: String] = [:]
-    private var lifecycleRestorePendingActions: [String: OwnerAction] = [:]
-    private var lifecycleRestorePendingActionOrder: [String] = []
-    private var locallyObservedLifecycleActions: [String: OwnerAction] = [:]
-    private var lifecycleRecoverableCount = 0
-    private var lifecycleTombstoneCount = 0
-    private var lifecycleMonitorTask: Task<Void, Never>?
+    private var lifecycleUploadWorkflow = BackstageLifecycleUploadWorkflowState()
     private let cullingThumbnailTimeout: Duration
     private let cullingThumbnailUpgradeDelay: Duration
     private let cullingThumbnailBackfillDelay: Duration
@@ -1762,33 +1753,14 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func retainLocallyObservedLifecycleAction(_ action: OwnerAction) {
-        locallyObservedLifecycleActions[action.id] = action
+        lifecycleUploadWorkflow.retainLocallyObservedAction(action)
         actions = mergeLocallyObservedLifecycleActions(into: actions)
     }
 
     private func mergeLocallyObservedLifecycleActions(
         into fetched: [OwnerAction]
     ) -> [OwnerAction] {
-        var merged = fetched
-        for local in locallyObservedLifecycleActions.values {
-            if let index = merged.firstIndex(where: { $0.id == local.id }) {
-                let remote = merged[index]
-                let remoteUpdated = remote.updatedAt ?? remote.createdAt ?? Date.distantPast
-                let localUpdated = local.updatedAt ?? local.createdAt ?? Date.distantPast
-                if localUpdated >= remoteUpdated {
-                    merged[index] = local
-                }
-            } else {
-                merged.append(local)
-            }
-        }
-        return merged
-            .sorted {
-                ($0.updatedAt ?? $0.createdAt ?? Date.distantPast)
-                    > ($1.updatedAt ?? $1.createdAt ?? Date.distantPast)
-            }
-            .prefix(50)
-            .map { $0 }
+        lifecycleUploadWorkflow.mergingLocallyObservedActions(into: fetched)
     }
 
     func authorizeAndLoadPhotos() async {
@@ -1991,24 +1963,22 @@ final class BackstageViewModel: ObservableObject {
         for assetID: String,
         preferredIdentifier: String? = nil
     ) {
-        if let preferredIdentifier = preferredIdentifier?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-           !preferredIdentifier.isEmpty {
-            lifecycleThumbnailPreferredIdentifiers[assetID] = preferredIdentifier
-        }
+        lifecycleUploadWorkflow.rememberPreferredIdentifier(
+            preferredIdentifier,
+            for: assetID
+        )
         guard lifecycleThumbnails[assetID] == nil,
-              lifecycleThumbnailTasks[assetID] == nil
+              lifecycleUploadWorkflow.thumbnailTasks[assetID] == nil
         else { return }
-        let preferredIdentifier = lifecycleThumbnailPreferredIdentifiers[assetID]
-        let taskToken = UUID()
-        lifecycleThumbnailTaskTokens[assetID] = taskToken
-        lifecycleThumbnailTasks[assetID] = Task { [weak self] in
+        let preferredIdentifier = lifecycleUploadWorkflow.thumbnailPreferredIdentifiers[assetID]
+        let taskToken = lifecycleUploadWorkflow.beginThumbnailTask(for: assetID)
+        lifecycleUploadWorkflow.thumbnailTasks[assetID] = Task { [weak self] in
             guard let self else { return }
             defer {
-                if self.lifecycleThumbnailTaskTokens[assetID] == taskToken {
-                    self.lifecycleThumbnailTaskTokens[assetID] = nil
-                    self.lifecycleThumbnailTasks[assetID] = nil
-                }
+                self.lifecycleUploadWorkflow.finishThumbnailTask(
+                    for: assetID,
+                    token: taskToken
+                )
             }
             await self.loadLifecycleThumbnail(
                 for: assetID,
@@ -2023,7 +1993,7 @@ final class BackstageViewModel: ObservableObject {
     ) async {
         guard lifecycleThumbnails[assetID] == nil else { return }
         let preferredIdentifier = preferredIdentifier
-            ?? lifecycleThumbnailPreferredIdentifiers[assetID]
+            ?? lifecycleUploadWorkflow.thumbnailPreferredIdentifiers[assetID]
         var lastFailure = CullingThumbnailFailure.previewUnavailable
         for attempt in 0..<3 {
             guard !Task.isCancelled else { return }
@@ -2066,14 +2036,12 @@ final class BackstageViewModel: ObservableObject {
         preferredIdentifier: String? = nil
     ) {
         guard lifecycleThumbnails[assetID] == nil else { return }
-        lifecycleThumbnailTasks[assetID]?.cancel()
-        lifecycleThumbnailTasks[assetID] = nil
-        lifecycleThumbnailTaskTokens[assetID] = nil
+        lifecycleUploadWorkflow.cancelThumbnailTask(for: assetID)
         lifecycleThumbnailFailures.removeValue(forKey: assetID)
         requestLifecycleThumbnail(
             for: assetID,
             preferredIdentifier: preferredIdentifier
-                ?? lifecycleThumbnailPreferredIdentifiers[assetID]
+                ?? lifecycleUploadWorkflow.thumbnailPreferredIdentifiers[assetID]
         )
     }
 
@@ -7332,8 +7300,10 @@ final class BackstageViewModel: ObservableObject {
             let ledger = try await lifecycleService.ledger()
             lifecycleItems = ledger.items
             selectedLifecycleIDs.formIntersection(Set(ledger.items.map(\.id)))
-            lifecycleRecoverableCount = ledger.hiddenCount
-            lifecycleTombstoneCount = ledger.discardedCount
+            lifecycleUploadWorkflow.setLifecycleCounts(
+                recoverable: ledger.hiddenCount,
+                tombstones: ledger.discardedCount
+            )
             refreshLifecycleCountSummary()
             lifecycleStatus = successStatus
                 ?? "\(ledger.hiddenCount) recoverable and \(ledger.discardedCount) active global tombstone item\(ledger.items.count == 1 ? "" : "s")."
@@ -7369,7 +7339,7 @@ final class BackstageViewModel: ObservableObject {
             let removedIDs = Set(ids)
             lifecycleItems.removeAll { removedIDs.contains($0.id) }
             selectedLifecycleIDs.subtract(removedIDs)
-            lifecycleRecoverableCount = max(0, lifecycleRecoverableCount - ids.count)
+            lifecycleUploadWorkflow.adjustRecoverableCount(by: -ids.count)
             refreshLifecycleCountSummary()
             lifecycleStatus = "Queued Put Back for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s") as action \(action.id). The selected row\(ids.count == 1 ? " is" : "s are") removed locally; durable reconciliation continues in the background."
             Task { @MainActor [weak self] in
@@ -7393,7 +7363,8 @@ final class BackstageViewModel: ObservableObject {
                        ownerError == .timedOut {
                         self.lifecycleStatus = self.pendingLifecycleActionStatus(
                             "Put Back",
-                            action: self.lifecycleRestorePendingActions[action.id] ?? action,
+                            action: self.lifecycleUploadWorkflow.restorePendingActions[action.id]
+                                ?? action,
                             availability: "The remaining Waste Basket rows and Quick Look remain available; check Activity for the full receipt."
                         )
                     } else {
@@ -7405,7 +7376,9 @@ final class BackstageViewModel: ObservableObject {
                             self.lifecycleItems.insert(item, at: min(index, self.lifecycleItems.count))
                         }
                         self.selectedLifecycleIDs.formUnion(priorSelection)
-                        self.lifecycleRecoverableCount += selectedItems.count
+                        self.lifecycleUploadWorkflow.adjustRecoverableCount(
+                            by: selectedItems.count
+                        )
                         self.refreshLifecycleCountSummary()
                         self.lifecycleStatus = "Put Back failed; the selected Waste Basket row\(ids.count == 1 ? " was" : "s were") restored locally. \(self.userFacingMessage(for: error))"
                     }
@@ -7419,31 +7392,28 @@ final class BackstageViewModel: ObservableObject {
 
     private func beginLifecycleRestoreAction(_ action: OwnerAction) {
         lifecycleRestorePendingActionIDs.insert(action.id)
-        lifecycleRestorePendingActions[action.id] = action
-        lifecycleRestorePendingActionOrder.removeAll { $0 == action.id }
-        lifecycleRestorePendingActionOrder.append(action.id)
+        lifecycleUploadWorkflow.beginRestoreAction(action)
         refreshLatestLifecycleRestoreAction()
     }
 
     private func updateLifecycleRestoreAction(_ action: OwnerAction) {
         guard lifecycleRestorePendingActionIDs.contains(action.id) else { return }
-        lifecycleRestorePendingActions[action.id] = action
+        lifecycleUploadWorkflow.updateRestoreAction(action)
         refreshLatestLifecycleRestoreAction()
     }
 
     private func finishLifecycleRestoreAction(_ actionID: String) {
         lifecycleRestorePendingActionIDs.remove(actionID)
-        lifecycleRestorePendingActions.removeValue(forKey: actionID)
-        lifecycleRestorePendingActionOrder.removeAll { $0 == actionID }
+        lifecycleUploadWorkflow.finishRestoreAction(actionID)
         refreshLatestLifecycleRestoreAction()
     }
 
     private func refreshLatestLifecycleRestoreAction() {
-        lifecycleRestorePendingActionID = lifecycleRestorePendingActionOrder.last
+        lifecycleRestorePendingActionID = lifecycleUploadWorkflow.latestRestoreActionID
     }
 
     private func refreshLifecycleCountSummary() {
-        lifecycleCountSummary = "\(lifecycleRecoverableCount.formatted()) recoverable • \(lifecycleTombstoneCount.formatted()) active global tombstone\(lifecycleTombstoneCount == 1 ? "" : "s")"
+        lifecycleCountSummary = lifecycleUploadWorkflow.lifecycleCountSummary
     }
 
     func emptyWasteBasket() async {
@@ -7463,7 +7433,7 @@ final class BackstageViewModel: ObservableObject {
         }
         lifecycleQueueing = true
         lifecycleStatus = "Submitting Empty Waste Basket for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Browsing and Quick Look remain available."
-        lifecycleMonitorTask = Task { @MainActor [weak self] in
+        lifecycleUploadWorkflow.monitorTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let action = try await self.lifecycleService.enqueueEmptyWasteBasket(
@@ -7522,7 +7492,7 @@ final class BackstageViewModel: ObservableObject {
                 self.lifecyclePendingAction = nil
                 self.lifecycleStatus = "Empty Waste Basket was not queued. No items changed. \(self.userFacingMessage(for: error))"
             }
-            self.lifecycleMonitorTask = nil
+            self.lifecycleUploadWorkflow.monitorTask = nil
         }
     }
 
@@ -7547,7 +7517,7 @@ final class BackstageViewModel: ObservableObject {
         }
         lifecycleQueueing = true
         lifecycleStatus = "Submitting Delete Selected for \(ids.count.formatted()) item\(ids.count == 1 ? "" : "s")… Browsing and Quick Look remain available."
-        lifecycleMonitorTask = Task { @MainActor [weak self] in
+        lifecycleUploadWorkflow.monitorTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let action = try await self.lifecycleService.enqueueEmptyWasteBasket(
@@ -7598,7 +7568,7 @@ final class BackstageViewModel: ObservableObject {
                 self.lifecyclePendingAction = nil
                 self.lifecycleStatus = "Delete Selected was not queued. No items changed. \(self.userFacingMessage(for: error))"
             }
-            self.lifecycleMonitorTask = nil
+            self.lifecycleUploadWorkflow.monitorTask = nil
         }
     }
 
@@ -8085,14 +8055,14 @@ final class BackstageViewModel: ObservableObject {
         isRunningNativePublication = true
         isRunningCatalogRecovery = true
         isCancellingNativePublication = false
-        nativePublicationCancellationRequested = false
+        lifecycleUploadWorkflow.beginPublication()
         nativeUploadRun = nil
         nativeUploadStatus = "Checking exact checksum-verified R2 receipts for catalog-only recovery…"
         defer {
             isRunningCatalogRecovery = false
             isRunningNativePublication = false
             isCancellingNativePublication = false
-            nativePublicationCancellationRequested = false
+            lifecycleUploadWorkflow.finishPublication()
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
             isRunningDelivery = false
@@ -8114,7 +8084,7 @@ final class BackstageViewModel: ObservableObject {
             nativeUploadStatus = "Recovering \(recovery.recoverableCount.formatted()) catalog entr\(recovery.recoverableCount == 1 ? "y" : "ies") from existing verified R2 receipts; no media upload will run."
 
             while recovery.recoverableCount > 0,
-                  !nativePublicationCancellationRequested {
+                  !lifecycleUploadWorkflow.publicationCancellationRequested {
                 batchOrdinal += 1
                 nativePublicationBatchNumber = batchOrdinal
                 var run = try await deliveryService.startNativeCatalogRecovery(
@@ -8126,7 +8096,8 @@ final class BackstageViewModel: ObservableObject {
                 guard run.requested > 0 else { break }
                 nativeUploadStatus = "Catalog recovery • batch \(batchOrdinal) of \(max(batchOrdinal, nativePublicationBatchCount)) • \(recovered) recovered • \(failed) isolated failures • no R2 upload."
                 while !run.isFinished {
-                    if nativePublicationCancellationRequested, !run.cancelRequested {
+                    if lifecycleUploadWorkflow.publicationCancellationRequested,
+                       !run.cancelRequested {
                         run = try await deliveryService.cancelNativeUpload(runID: run.runID)
                         nativeUploadRun = run
                     }
@@ -8163,7 +8134,7 @@ final class BackstageViewModel: ObservableObject {
             try await refreshNativeUploadPlanAfterContinuousRun(
                 order: nativeUploadPlan?.order ?? .oldest
             )
-            if nativePublicationCancellationRequested {
+            if lifecycleUploadWorkflow.publicationCancellationRequested {
                 nativeUploadStatus = "Stopped catalog recovery safely after \(recovered.formatted()) entries. Existing R2 receipts and completed catalog rows remain intact."
             } else {
                 nativeUploadStatus = "Recovered \(recovered.formatted()) catalog entr\(recovered == 1 ? "y" : "ies") without uploading media."
@@ -8354,7 +8325,7 @@ final class BackstageViewModel: ObservableObject {
         isRunningDelivery = true
         isRunningNativePublication = true
         isCancellingNativePublication = false
-        nativePublicationCancellationRequested = false
+        lifecycleUploadWorkflow.beginPublication()
         nativeUploadStatus = continueThroughEligibleQueue
             ? "Starting continuous upload for \(initialEligibleCount.formatted()) eligible asset\(initialEligibleCount == 1 ? "" : "s")…"
             : "Starting upload for \(ids.count.formatted()) approved asset\(ids.count == 1 ? "" : "s")…"
@@ -8368,7 +8339,7 @@ final class BackstageViewModel: ObservableObject {
             nativePublicationBatchNumber = 0
             nativePublicationBatchCount = 0
             isCancellingNativePublication = false
-            nativePublicationCancellationRequested = false
+            lifecycleUploadWorkflow.finishPublication()
             isRunningDelivery = false
         }
         var totalRequested = 0
@@ -8388,7 +8359,7 @@ final class BackstageViewModel: ObservableObject {
                     Array(windowIDs[$0..<min($0 + 50, windowIDs.count)])
                 }
                 for batch in batches {
-                    if nativePublicationCancellationRequested { break }
+                    if lifecycleUploadWorkflow.publicationCancellationRequested { break }
                     batchOrdinal += 1
                     nativePublicationBatchNumber = batchOrdinal
                     var run = try await deliveryService.startNativeUpload(
@@ -8397,7 +8368,8 @@ final class BackstageViewModel: ObservableObject {
                         concurrency: 4
                     )
                     nativeUploadRun = run
-                    if nativePublicationCancellationRequested, !run.runID.isEmpty {
+                    if lifecycleUploadWorkflow.publicationCancellationRequested,
+                       !run.runID.isEmpty {
                         run = try await deliveryService.cancelNativeUpload(runID: run.runID)
                         nativeUploadRun = run
                     }
@@ -8426,7 +8398,7 @@ final class BackstageViewModel: ObservableObject {
                     if run.status == "cancelled" { break }
                 }
                 guard continueThroughEligibleQueue,
-                      !nativePublicationCancellationRequested else {
+                      !lifecycleUploadWorkflow.publicationCancellationRequested else {
                     break
                 }
                 let nextPlan = try await deliveryService.nativeUploadPlan(
@@ -8444,7 +8416,7 @@ final class BackstageViewModel: ObservableObject {
                 )
                 nativeUploadStatus = "Continuing automatically with the next \(nextIDs.count.formatted()) eligible asset\(nextIDs.count == 1 ? "" : "s") • \(continuation.failedIDs.count) failed and deferred."
             }
-            let skipped = nativePublicationCancellationRequested
+            let skipped = lifecycleUploadWorkflow.publicationCancellationRequested
                 ? 0
                 : max(0, totalScheduled - totalRequested)
             let checksumVerified = totalLive + totalCatalogPending + totalCatalogFailed
@@ -8467,16 +8439,18 @@ final class BackstageViewModel: ObservableObject {
                     failedIDs: continuation.failedIDs
                 )
             }
-            nativeUploadStatus = (nativePublicationCancellationRequested
+            nativeUploadStatus = (lifecycleUploadWorkflow.publicationCancellationRequested
                 ? "Stopped safely after \(totalProcessed) of \(totalScheduled); completed uploads remain verified and all unstarted items remain eligible. "
                 : completion)
                 + (skipped > 0 ? " \(skipped) changed eligibility before publication and were skipped safely." : "")
-                + (nativePublicationCancellationRequested
+                + (lifecycleUploadWorkflow.publicationCancellationRequested
                     ? " Retry resumes from the remaining independently eligible items."
                     : continuation.failedIDs.isEmpty
                     ? " The eligible upload queue is complete."
                     : " Failed items remain independently retryable; they did not stop the rest of the queue.")
-                + (nativePublicationCancellationRequested ? "" : " Give Back completed for approved metadata.")
+                + (lifecycleUploadWorkflow.publicationCancellationRequested
+                    ? ""
+                    : " Give Back completed for approved metadata.")
         } catch {
             if continueThroughEligibleQueue {
                 try? await refreshNativeUploadPlanAfterContinuousRun(order: queueOrder)
@@ -8511,7 +8485,7 @@ final class BackstageViewModel: ObservableObject {
 
     func cancelNativePublication() async {
         guard isRunningNativePublication else { return }
-        nativePublicationCancellationRequested = true
+        lifecycleUploadWorkflow.requestPublicationCancellation()
         isCancellingNativePublication = true
         nativeUploadStatus = "Stopping safely after currently uploading assets finish…"
         guard let runID = nativeUploadRun?.runID, !runID.isEmpty else { return }
@@ -9134,8 +9108,7 @@ final class BackstageViewModel: ObservableObject {
         cullingThumbnails.removeValue(forKey: assetID)
         galleryWorkflow.basicThumbnails.removeValue(forKey: assetID)
 
-        lifecycleThumbnailTasks[assetID]?.cancel()
-        lifecycleThumbnailTasks[assetID] = nil
+        lifecycleUploadWorkflow.cancelThumbnailTask(for: assetID)
         lifecycleThumbnails.removeValue(forKey: assetID)
         nativeUploadThumbnails.removeValue(forKey: assetID)
         if focusedCullingAssetID == assetID {

@@ -453,7 +453,11 @@ final class BackstageViewModel: ObservableObject {
     @Published var deliverableShareLink = ""
     @Published var publicationPlan: FixturePublicationPlan?
     @Published var publicationStatus = "Publication is a separate, explicit public-fixture gate."
-    @Published var updateState: BackstageUpdateState = .idle
+    @Published private var updateWorkflow = BackstageUpdateWorkflowState()
+    var updateState: BackstageUpdateState {
+        get { updateWorkflow.state }
+        set { updateWorkflow.replaceState(newValue) }
+    }
     private var didCheckOwnerWorkflowRecovery = false
     private var didStartAutomaticRecentPhotosDiscovery = false
     private var r2ReconciliationCancellationRequested = false
@@ -535,12 +539,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isUpdateOperationInProgress: Bool {
-        switch updateState {
-        case .checking, .updateAvailable, .downloading, .installing:
-            true
-        case .idle, .current, .verified, .installed, .failed:
-            false
-        }
+        updateWorkflow.isOperationInProgress
     }
 
     var canPerformBackstageUpdateActions: Bool {
@@ -1326,54 +1325,28 @@ final class BackstageViewModel: ObservableObject {
     func checkForUpdates() async {
         guard !isReadOnlyAccessibilitySmoke else { return }
         guard canPerformBackstageUpdateActions, !isUpdateOperationInProgress else { return }
-        let existingVerifiedUpdate: BackstageVerifiedUpdate? = if case let .verified(update) = updateState {
-            update
-        } else {
-            nil
-        }
-        updateState = .checking
+        let existingVerifiedUpdate = updateWorkflow.existingVerifiedUpdate
+        let operationSerial = updateWorkflow.beginCheck()
         do {
             let check = try await updateService.check(current: installedRelease)
-            switch check.availability {
-            case .current:
-                updateState = .current(check.manifest)
-            case .updateAvailable:
-                if let existingVerifiedUpdate,
-                   existingVerifiedUpdate.manifest == check.manifest {
-                    updateState = .verified(existingVerifiedUpdate)
-                } else {
-                    updateState = .updateAvailable(check.manifest)
-                    await downloadVerifiedUpdate(manifest: check.manifest)
-                }
-            case .downgradeRejected:
-                updateState = .failed(
-                    message: BackstageUpdateError.downgradeRejected.localizedDescription,
-                    recovery: BackstageUpdateError.downgradeRejected.recoveryGuidance
-                )
-            case .incompatible:
-                let error = BackstageUpdateError.incompatible(
-                    "The cloud release is not compatible with this Backstage installation or Mac."
-                )
-                updateState = .failed(message: error.localizedDescription, recovery: error.recoveryGuidance)
+            if let manifest = updateWorkflow.resolveCheck(
+                check,
+                existingVerifiedUpdate: existingVerifiedUpdate,
+                serial: operationSerial
+            ) {
+                await downloadVerifiedUpdate(manifest: manifest)
             }
         } catch {
             let updateError = (error as? BackstageUpdateError)
                 ?? BackstageUpdateError.network(error.localizedDescription)
-            updateState = .failed(
-                message: updateError.localizedDescription,
-                recovery: updateError.recoveryGuidance
-            )
+            updateWorkflow.fail(updateError, serial: operationSerial)
         }
     }
 
     var shouldAutomaticallyCheckForUpdates: Bool {
-        guard canPerformBackstageUpdateActions else { return false }
-        return switch updateState {
-        case .idle, .current, .verified, .failed:
-            true
-        case .checking, .updateAvailable, .downloading, .installing, .installed:
-            false
-        }
+        updateWorkflow.shouldAutomaticallyCheck(
+            canPerformActions: canPerformBackstageUpdateActions
+        )
     }
 
     func downloadVerifiedUpdate() async {
@@ -1384,61 +1357,53 @@ final class BackstageViewModel: ObservableObject {
 
     private func downloadVerifiedUpdate(manifest: BackstageReleaseManifest) async {
         guard canPerformBackstageUpdateActions else { return }
-        updateState = .downloading(manifest, receivedBytes: 0, totalBytes: manifest.fileSize)
+        let operationSerial = updateWorkflow.beginDownload(manifest)
         do {
             let verified = try await updateService.downloadAndVerify(
                 current: installedRelease,
                 manifest: manifest
             ) { [weak self] received, total in
                 Task { @MainActor in
-                    guard let self,
-                          case let .downloading(activeManifest, _, _) = self.updateState,
-                          activeManifest == manifest else { return }
-                    self.updateState = .downloading(
-                        manifest,
+                    self?.updateWorkflow.recordDownloadProgress(
+                        manifest: manifest,
                         receivedBytes: received,
-                        totalBytes: total > 0 ? total : manifest.fileSize
+                        totalBytes: total,
+                        serial: operationSerial
                     )
                 }
             }
-            updateState = .verified(verified)
+            updateWorkflow.finishDownload(verified, serial: operationSerial)
         } catch {
             let updateError = (error as? BackstageUpdateError)
                 ?? BackstageUpdateError.downloadFailed(error.localizedDescription)
-            updateState = .failed(
-                message: updateError.localizedDescription,
-                recovery: updateError.recoveryGuidance
-            )
+            updateWorkflow.fail(updateError, serial: operationSerial)
         }
     }
 
     func installAndRunVerifiedUpdate() async {
         guard canPerformBackstageUpdateActions else { return }
-        guard case let .verified(update) = updateState else { return }
-        updateState = .installing(update.manifest)
+        guard let operation = updateWorkflow.beginInstall() else { return }
         do {
             let installer = updateInstaller
             let receipt = try await Task.detached {
-                try installer.install(update)
+                try installer.install(operation.update)
             }.value
-            updateState = .installed(receipt)
+            updateWorkflow.finishInstall(receipt, serial: operation.serial)
             do {
                 try await installedUpdateLauncher.launchAndTerminateCurrentApplication(
                     at: receipt.installedBundleURL
                 )
             } catch {
-                updateState = .failed(
+                updateWorkflow.fail(
                     message: "Backstage \(receipt.manifest.version) (\(receipt.manifest.build)) was installed, but macOS could not start it: \(error.localizedDescription)",
-                    recovery: "Open \(receipt.installedBundleURL.path) directly. The previous signed app remains available in the private rollback directory."
+                    recovery: "Open \(receipt.installedBundleURL.path) directly. The previous signed app remains available in the private rollback directory.",
+                    serial: operation.serial
                 )
             }
         } catch {
             let updateError = (error as? BackstageUpdateError)
                 ?? BackstageUpdateError.installationFailed(error.localizedDescription)
-            updateState = .failed(
-                message: updateError.localizedDescription,
-                recovery: updateError.recoveryGuidance
-            )
+            updateWorkflow.fail(updateError, serial: operation.serial)
         }
     }
 

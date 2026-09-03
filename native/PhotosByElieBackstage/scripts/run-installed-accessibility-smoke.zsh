@@ -167,6 +167,36 @@ if ! wait_for_text 'Upload selection' 30; then
   print -u2 'FAIL installed accessibility smoke: Uploads did not expose its primary action.'
   exit 1
 fi
+upload_selection_enabled="$(osascript - "$smoke_process" <<'APPLESCRIPT'
+on run arguments
+    set processName to item 1 of arguments
+    tell application "System Events" to tell process processName
+        set allElements to entire contents of window 1
+        repeat with candidate in allElements
+            try
+                if role of candidate is "AXButton" then
+                    set candidateText to ""
+                    try
+                        set candidateText to name of candidate as text
+                    end try
+                    try
+                        set candidateText to candidateText & " " & (description of candidate as text)
+                    end try
+                    if candidateText contains "Upload selection" then
+                        return enabled of candidate as text
+                    end if
+                end if
+            end try
+        end repeat
+    end tell
+    return "missing"
+end run
+APPLESCRIPT
+)"
+if [[ "$upload_selection_enabled" != 'false' ]]; then
+  print -u2 "FAIL installed accessibility smoke: Upload selection disabled state was ${upload_selection_enabled}."
+  exit 1
+fi
 
 select_sidebar_row 12 >/dev/null
 if ! wait_for_text 'Failed safely' 30; then

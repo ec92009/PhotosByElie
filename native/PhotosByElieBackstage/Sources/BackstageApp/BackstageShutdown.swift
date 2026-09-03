@@ -134,9 +134,42 @@ final class BackstageApplicationDelegate: NSObject, NSApplicationDelegate {
     private var model: BackstageViewModel?
     private var terminationCoordinator = BackstageTerminationCoordinator()
     private var drainTask: Task<Void, Never>?
+    private var selectAllMonitor: Any?
 
     func attach(model: BackstageViewModel) {
         self.model = model
+        installSelectAllMonitorIfNeeded()
+    }
+
+    /// Route Command-A to the active workspace even when the Sidebar still
+    /// owns keyboard focus after navigation. Text editors retain native Select
+    /// All so search fields and metadata inputs continue to behave normally.
+    private func installSelectAllMonitorIfNeeded() {
+        guard selectAllMonitor == nil else { return }
+        selectAllMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            let shortcutModifiers = event.modifierFlags.intersection([
+                .command,
+                .option,
+                .control,
+                .shift,
+            ])
+            guard shortcutModifiers == .command,
+                  event.charactersIgnoringModifiers?.lowercased() == "a",
+                  let self,
+                  let model = self.model,
+                  model.currentContentSelectionScope != .none,
+                  !Self.isEditingText(NSApp.keyWindow?.firstResponder)
+            else {
+                return event
+            }
+            model.selectAllCurrentContent()
+            return nil
+        }
+    }
+
+    private static func isEditingText(_ responder: NSResponder?) -> Bool {
+        responder is NSTextView || responder is NSTextField
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -181,6 +214,10 @@ final class BackstageApplicationDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         drainTask?.cancel()
         drainTask = nil
+        if let selectAllMonitor {
+            NSEvent.removeMonitor(selectAllMonitor)
+            self.selectAllMonitor = nil
+        }
         model = nil
     }
 }

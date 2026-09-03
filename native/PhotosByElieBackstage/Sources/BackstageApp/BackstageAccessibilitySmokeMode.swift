@@ -43,6 +43,7 @@ enum BackstageAccessibilitySmokeMode {
         model.nativeUploadStatus = "Synthetic empty state. No upload data was requested."
         model.deliveryStatus = "Synthetic empty state. No delivery data was requested."
         model.publicationStatus = "Synthetic empty state. No storage data was requested."
+        model.r2ReconciliationStatus = "Synthetic empty state. No R2 storage data was requested."
         model.updateState = .failed(
             message: "Synthetic failure state for installed accessibility verification.",
             recovery: "No update request was made and no installed app was changed."

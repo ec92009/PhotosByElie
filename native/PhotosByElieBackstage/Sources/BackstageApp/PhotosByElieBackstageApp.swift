@@ -183,11 +183,16 @@ public struct BackstageApplication: App {
     private var workspaceDetail: some View {
         VStack(spacing: 0) {
             if model.isReadOnlyAccessibilitySmoke {
-                BackstageFeedbackView(
-                    message: "Read-only installed-app accessibility smoke is active.",
-                    isWorking: true
-                )
-                .accessibilityIdentifier("backstage.smoke.busy-state")
+                HStack(spacing: 12) {
+                    BackstageFeedbackView(
+                        message: "Read-only installed-app accessibility smoke is active.",
+                        isWorking: true
+                    )
+                    .accessibilityIdentifier("backstage.smoke.busy-state")
+                    Text("Read-only workspace: \((model.selection ?? .overview).title)")
+                        .font(.caption.monospaced())
+                        .accessibilityIdentifier("backstage.smoke.current-workspace")
+                }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 Divider()

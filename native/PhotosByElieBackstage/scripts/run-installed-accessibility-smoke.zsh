@@ -179,8 +179,8 @@ on run arguments
                 if role of candidate is "AXButton" then
                     set candidateIdentifier to value of attribute "AXIdentifier" of candidate as text
                     if candidateIdentifier is "backstage.uploads.primary-selection" then
-                        set candidateName to name of candidate as text
-                        return candidateName & "|" & candidateIdentifier & "|" & (enabled of candidate as text)
+                        set candidateHelp to value of attribute "AXHelp" of candidate as text
+                        return candidateIdentifier & "|" & candidateHelp & "|" & (enabled of candidate as text)
                     end if
                 end if
             end try
@@ -190,7 +190,8 @@ on run arguments
 end run
 APPLESCRIPT
 )"
-if [[ "$upload_selection_state" != 'Upload selection|backstage.uploads.primary-selection|false' ]]; then
+expected_upload_selection_state='backstage.uploads.primary-selection|Review the confirmation for uploading only the selected eligible assets and preparing their catalog entries.|false'
+if [[ "$upload_selection_state" != "$expected_upload_selection_state" ]]; then
   print -u2 "FAIL installed accessibility smoke: Upload selection state was ${upload_selection_state}."
   exit 1
 fi

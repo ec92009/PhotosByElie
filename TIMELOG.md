@@ -794,7 +794,9 @@ Clock state: running
 | 2026-08-29 | 12:24 CEST | 12:25 CEST | 0:01 | Authorized direct build 259 installation and accepted installed Gallery Quick Look navigation with automatic selection reveal; background installation, UI probing, and ticket updates excluded. |
 | 2026-08-31 | 22:13 CEST | 22:14 CEST | 0:01 | Authorized coding the local-only Waste Basket Delete Selected repair; background implementation, tests, build, and release work excluded. |
 
+| 2026-09-04 | 19:16 CEST | 19:17 CEST | 0:01 | Resumed the monitorable PBE preview and requested a working review surface; background coding and checks excluded. |
+
 ## Totals
 
-Active collaboration time used: 38:38
+Active collaboration time used: 38:39
 Remaining budget: not set

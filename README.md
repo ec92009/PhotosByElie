@@ -6,7 +6,9 @@ Static first version of the Photos By Elie site, intended for GitHub Pages at:
 
 ## Version
 
-- Current visible version: `v245.2`
+- Current visible version: `v247.0` (local monitorable preview candidate)
+- Run `npm run preview:monitorable` and open http://127.0.0.1:8099/.
+  See [preview scope and checks](review/monitorable/README.md). Published production remains separate.
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.

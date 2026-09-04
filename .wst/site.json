@@ -1,0 +1,152 @@
+{
+  "manifest_version": "wst.site.v1",
+  "site_id": "photosbyelie",
+  "name": "Photos By Elie",
+  "production_url": "https://photos-by-elie.com/",
+  "ownership_verified": true,
+  "approval_status": "awaiting",
+  "beacon_verified": false,
+  "operational_state": "partial",
+  "monitorability": {
+    "contract_version": "wst.monitorable.v1",
+    "owner_role": "site-owner",
+    "approval_ref": null,
+    "route_scope": [
+      "/",
+      "/gallery.html",
+      "/photo.html",
+      "/basket.html",
+      "/liked.html",
+      "/order.html",
+      "/support.html",
+      "/privacy.html",
+      "/terms.html",
+      "/data-deletion.html",
+      "/campaign.html"
+    ],
+    "surfaces": [
+      {
+        "environment": "development",
+        "url": null,
+        "version": "247.0",
+        "version_url": null,
+        "note": "Run npm run preview:monitorable for a loopback-only storefront with local test counters."
+      },
+      {
+        "environment": "preview",
+        "url": null,
+        "version": "247.0",
+        "version_url": null,
+        "note": "Review candidate is local; no independently published preview URL. All rehearsal events are synthetic preview events."
+      },
+      {
+        "environment": "production",
+        "url": "https://photos-by-elie.com/",
+        "version": "245.2",
+        "version_url": "https://photos-by-elie.com/VERSION",
+        "note": "Last production version observed during WST-22 audit; candidate changes are not deployed."
+      }
+    ],
+    "capabilities": {
+      "browser_traffic": {
+        "state": "planned",
+        "source": "WST browser beacon v1.1.0; exercised against local preview receiver",
+        "freshness_hours": null,
+        "next_action": "Register the approved public origin and privacy scope, then verify central WST receipts."
+      },
+      "edge_traffic": {
+        "state": "not_applicable",
+        "source": null,
+        "freshness_hours": null,
+        "next_action": "GitHub Pages serves the storefront; Cloudflare Worker requests cover a different scope."
+      },
+      "cta": {
+        "state": "planned",
+        "source": "wst-actions.js stable action map; local preview counts",
+        "freshness_hours": null,
+        "next_action": "Activate the shared beacon with the approved release; preserve the IDs across translations."
+      },
+      "conversions": {
+        "state": "planned",
+        "source": "Stripe payment and delivery-readiness state",
+        "freshness_hours": null,
+        "next_action": "Connect read-only accepted-payment and delivery receipts; do not infer sales from checkout clicks."
+      },
+      "health": {
+        "state": "implemented",
+        "source": "Canonical safe GET and VERSION endpoint",
+        "freshness_hours": 24,
+        "next_action": null
+      },
+      "field_vitals": {
+        "state": "planned",
+        "source": null,
+        "freshness_hours": null,
+        "next_action": "Read qualifying field data or add an approved field-vitals source; report insufficient samples until then."
+      },
+      "lab_performance": {
+        "state": "planned",
+        "source": null,
+        "freshness_hours": null,
+        "next_action": "Record route/device performance traces against wst.responsive-performance.v1."
+      }
+    },
+    "cta_ids": [
+      "account_signup",
+      "account_signin",
+      "display_settings",
+      "hero_explore",
+      "hero_scroll",
+      "nav_photos",
+      "gallery_selection",
+      "checkout_start",
+      "download_file",
+      "download_all",
+      "download_archive",
+      "photo_like",
+      "gallery_photo_select",
+      "gallery_photo_like",
+      "resolution_select",
+      "photo_open",
+      "photo_caption_open",
+      "basket_open",
+      "liked_open",
+      "gallery_open",
+      "support_open",
+      "privacy_open",
+      "terms_open",
+      "data_deletion_open",
+      "social_facebook",
+      "social_instagram",
+      "social_pinterest",
+      "country_spain",
+      "country_france",
+      "country_italy",
+      "country_usa",
+      "country_mexico",
+      "country_portugal",
+      "social_collection_open"
+    ],
+    "conversion_receipts": [],
+    "privacy_profile": "wst.event.v1",
+    "consent_authority": "disabled",
+    "collector_url": null,
+    "performance_profile": "wst.responsive-performance.v1",
+    "standards_profile": "elies-websites",
+    "standards_profile_version": "elies-websites.v1",
+    "standards_status": "partial",
+    "standards_evidence": [
+      "Published storefront retains its existing settings, policy routes and fixed bottom-right version pill.",
+      "Local preview serves customer pages with noindex headers, excludes native production analytics and uses synthetic sessionless WST test events."
+    ],
+    "standards_next_action": "Complete mobile/desktop preview inspection and record performance evidence before public activation.",
+    "disable_tracking": "Stop the local preview server to stop test collection. Public WST collection remains disabled; remove its script inclusion if later enabled.",
+    "exceptions": [
+      {
+        "requirement": "Public activation",
+        "reason": "This is a local monitoring rehearsal; production is not instrumented with WST.",
+        "next_action": "Review the candidate, register the approved source and verify its central receipt during rollout."
+      }
+    ]
+  }
+}

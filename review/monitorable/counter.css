@@ -1,0 +1,13 @@
+.wst-preview-banner{position:relative;z-index:110;box-sizing:border-box;height:70px;margin:0;padding:9px 6px;text-align:center;white-space:nowrap;background:#164a3b;color:#fff;font:12px/1.4 system-ui,sans-serif}
+body>.site-header,body>.topbar{top:70px}
+.wst-preview-banner a,.wst-preview-legal a{color:inherit;text-decoration:underline}
+.wst-preview-counter{position:relative;z-index:120;width:max-content;max-width:100%;margin:3px auto 0;color:#fff;text-align:left;white-space:normal;font:12px/1.4 system-ui,sans-serif}
+.wst-preview-counter summary{padding:3px 8px;cursor:pointer;font-weight:650}
+.wst-preview-counter summary span{display:inline;margin-left:6px;font-weight:400}
+.wst-preview-counter-body{position:absolute;top:100%;left:50%;transform:translateX(-50%);width:min(320px,calc(100vw - 24px));border:1px solid #7e998c;border-radius:8px;background:#f5faf7;color:#173c2e;box-shadow:0 4px 20px #0002}
+.wst-preview-counter p{padding:0 10px;margin:8px 0}
+.wst-preview-counter dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:10px;margin:0;max-height:180px;overflow:auto}
+.wst-preview-counter dt{overflow-wrap:anywhere}.wst-preview-counter dd{margin:0}
+.wst-preview-counter summary:focus-visible{outline:3px solid #8ed1ff;outline-offset:2px}
+.wst-preview-legal{padding:24px;max-width:850px;margin:auto;font:13px/1.6 system-ui,sans-serif;color:inherit}
+body{padding-bottom:90px!important}

@@ -63,7 +63,7 @@ export const createCloudflareImagesRenderer = ({
         });
       }
 
-      const response = await images
+      const output = await images
         .input(streamForBytes(sourceBytes))
         .transform({
           width: longEdge,
@@ -74,8 +74,8 @@ export const createCloudflareImagesRenderer = ({
         .output({
           format: "image/jpeg",
           quality,
-        })
-        .response();
+        });
+      const response = await output.response();
 
       if (!response.ok) {
         throw Object.assign(new Error(`Cloudflare Images render failed with HTTP ${response.status}.`), {

@@ -7,6 +7,7 @@ import { createMemoryOwnerEnrollmentHandoffStore } from "./owner-enrollment-hand
 import { createMemorySidecarStateStore } from "./sidecar-state-store.mjs";
 import { canonicalRealEstateGalleryKey } from "./real-estate-gallery-key.mjs";
 import { ownerApiV1Response, resolveOwnerApiV1Route } from "./owner-api-v1.mjs";
+import { createPaidOrderFulfillment } from "./paid-order-fulfillment.mjs";
 
 const ORDER_CURRENCY = "usd";
 const MINIMUM_CHARGE_AMOUNT = 50;
@@ -1499,46 +1500,19 @@ export const createPhotosByElieWorker = ({
       galleryCheckpoints: (profile?.galleryCheckpoints || []).filter((item) => visible.has(String(item.photoId))),
     };
   };
-  const manualRefundReview = async (order, error) => {
-    const updatedAt = now().toISOString();
-    const blocked = {
-      ...order,
-      status: "manual_refund_review",
-      delivery: null,
-      deliveryError: {
-        code: "paid_asset_revoked",
-        message: "Payment was received after an asset became unavailable. Fulfillment is blocked pending manual refund review.",
-        failedAt: updatedAt,
-        lifecycleCode: error?.code || "asset_lifecycle_denied",
-      },
-      updatedAt,
-    };
-    await store.putOrder(blocked);
-    return blocked;
-  };
-
-  const reconcileFulfillmentSettlement = async (order, { throwOnRevocation = false } = {}) => {
-    if (!order || !lifecycleDenyStore?.fulfillmentFor) return order;
-    const settlement = await lifecycleDenyStore.fulfillmentFor(order.id);
-    if (settlement?.state === "blocked_pending_lifecycle") {
-      throw Object.assign(new Error("Paid fulfillment is held behind an armed lifecycle operation."), {
-        status: 409,
-        code: "paid_asset_lifecycle_pending",
-        lifecycleOperationId: settlement.lifecycleOperationId || "",
-      });
-    }
-    if (settlement?.state !== "manual_refund_review") return order;
-    const error = Object.assign(new Error("Paid fulfillment was revoked and requires manual refund review."), {
-      status: 409,
-      code: "paid_asset_revoked",
-      lifecycleOperationId: settlement.lifecycleOperationId || "",
-    });
-    const blocked = order.status === "manual_refund_review"
-      ? order
-      : await manualRefundReview(order, error);
-    if (throwOnRevocation) throw error;
-    return blocked;
-  };
+  const paidOrderFulfillment = createPaidOrderFulfillment({
+    orderStore: store,
+    deliveryRenderer: deliveryClient,
+    lifecycleFence: lifecycleDenyStore || {},
+    email: { sendReady: (...args) => maybeSendReadyEmail(...args) },
+    analytics: { record: recordAnalytics },
+    time: { now },
+    downloadPolicy,
+    applyDownloadPolicy: withDownloadPolicy,
+    mediaIdsForOrder: orderMediaIds,
+  });
+  const reconcileFulfillmentSettlement = paidOrderFulfillment.reconcileOrder;
+  const markOrderPaidAndFulfill = paidOrderFulfillment.fulfillPaidSession;
 
   const recordAnalyticsEvents = async (request) => {
     const payload = await parseJson(request);
@@ -1964,166 +1938,6 @@ export const createPhotosByElieWorker = ({
         url: checkoutSession.url,
       },
     }, 201);
-  };
-
-  const markOrderPaidAndFulfill = async (session) => {
-    const orderId = session.metadata?.order_id || session.client_reference_id;
-    if (!orderId) throw Object.assign(new Error("Stripe session did not include an order id."), { status: 400, code: "missing_order_id" });
-
-    let order = await store.getOrder(orderId);
-    if (!order) throw Object.assign(new Error(`No order exists for ${orderId}.`), { status: 404, code: "unknown_order" });
-
-    if (order.checkoutSessionId !== session.id) {
-      throw Object.assign(new Error("Stripe session does not match the stored order."), { status: 409, code: "checkout_session_mismatch" });
-    }
-    if (session.payment_status !== "paid") {
-      throw Object.assign(new Error("Stripe session is not paid."), { status: 409, code: "payment_not_paid" });
-    }
-    if (Number(session.amount_total) !== Number(order.amountExpected) || String(session.currency).toLowerCase() !== order.currency) {
-      throw Object.assign(new Error("Stripe paid amount/currency does not match the order."), { status: 409, code: "amount_mismatch" });
-    }
-    order = await reconcileFulfillmentSettlement(order, { throwOnRevocation: true });
-
-    let fulfillmentFence;
-    try {
-      fulfillmentFence = await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-prepare");
-    } catch (error) {
-      await manualRefundReview(order, error);
-      throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
-    }
-
-    if (order.status === "ready") return await maybeSendReadyEmail(order);
-
-    const paidAt = now().toISOString();
-    const preparing = {
-      ...order,
-      status: "preparing",
-      amountPaid: Number(session.amount_total),
-      buyerEmail: String(session.customer_details?.email || order.buyerEmail).toLowerCase(),
-      paymentIntentId: session.payment_intent || order.paymentIntentId,
-      paidAt,
-      updatedAt: paidAt,
-    };
-    await store.putOrder(preparing);
-
-    let deliveryResult;
-    try {
-      deliveryResult = await deliveryClient.createDelivery(preparing);
-      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:after-render", fulfillmentFence);
-    } catch (error) {
-      if (["asset_lifecycle_denied", "lifecycle_fence_changed"].includes(error?.code)) {
-        await manualRefundReview(preparing, error);
-        throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
-      }
-      const failedAt = now().toISOString();
-      const failed = {
-        ...preparing,
-        status: "delivery_failed",
-        deliveryError: {
-          code: error?.code || "delivery_failed",
-          message: error?.message || "Delivery could not be generated.",
-          failedAt,
-        },
-        updatedAt: failedAt,
-      };
-      await store.putOrder(failed);
-      throw error;
-    }
-    const readyAt = now().toISOString();
-    const policy = downloadPolicy();
-    const deliveryFiles = Array.isArray(deliveryResult.files)
-      ? deliveryResult.files.map((file) => withDownloadPolicy(file, policy))
-      : [];
-    let ready = {
-      ...preparing,
-      status: "ready",
-      deliveryError: undefined,
-      lifecycleSettlementBound: Boolean(lifecycleDenyStore?.commitFulfillmentReady),
-      delivery: {
-        zipKey: deliveryResult.zipKey,
-        downloadUrl: deliveryResult.downloadUrl,
-        readyAt: deliveryResult.readyAt || readyAt,
-        files: deliveryFiles,
-        items: deliveryResult.items || [],
-      },
-      updatedAt: readyAt,
-    };
-    try {
-      await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-ready-commit", fulfillmentFence);
-      if (lifecycleDenyStore?.commitFulfillmentReady) {
-        await lifecycleDenyStore.commitFulfillmentReady({
-          orderId: order.id,
-          mediaIds: orderMediaIds(order),
-          fence: fulfillmentFence,
-        });
-      }
-    } catch (error) {
-      if (["asset_lifecycle_denied", "lifecycle_fence_changed"].includes(error?.code)) {
-        await manualRefundReview(preparing, error);
-        throw Object.assign(error, { status: 409, code: "paid_asset_revoked" });
-      }
-      throw error;
-    }
-    const readyProjection = ready;
-    const capabilityOrder = ready.lifecycleSettlementBound
-      ? { ...ready, status: "preparing", delivery: null, updatedAt: readyAt }
-      : ready;
-    await store.putOrder(capabilityOrder);
-    ready = await reconcileFulfillmentSettlement(readyProjection, { throwOnRevocation: true });
-    if (deliveryFiles.length) {
-      for (const file of deliveryFiles) {
-        await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
-        if (ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability) {
-          await lifecycleDenyStore.authorizeDownloadCapability({ orderId: ready.id, token: file.token });
-        }
-        await store.putDownload({
-          token: file.token,
-          orderId: ready.id,
-          bucket: file.bucket,
-          objectKey: file.objectKey,
-          filename: file.name,
-          contentType: file.contentType,
-          bytes: file.bytes || 0,
-          photoId: file.photoId,
-          productId: file.productId,
-          canonicalMediaIds: [file.photoId],
-          lifecycleSettlementBound: Boolean(ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability),
-          createdAt: readyAt,
-          expiresAt: file.expiresAt,
-          downloadLimit: file.downloadLimit,
-          downloadCount: 0,
-        });
-      }
-    } else if (deliveryResult.token) {
-      await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
-      if (ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability) {
-        await lifecycleDenyStore.authorizeDownloadCapability({ orderId: ready.id, token: deliveryResult.token });
-      }
-      await store.putDownload({
-        token: deliveryResult.token,
-        orderId: ready.id,
-        zipKey: deliveryResult.zipKey,
-        canonicalMediaIds: orderMediaIds(ready),
-        lifecycleSettlementBound: Boolean(ready.lifecycleSettlementBound && lifecycleDenyStore?.authorizeDownloadCapability),
-        createdAt: readyAt,
-        expiresAt: policy.expiresAt,
-        downloadLimit: policy.downloadLimit,
-        downloadCount: 0,
-      });
-    }
-    ready = await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
-    await store.putOrder(ready);
-    ready = await maybeSendReadyEmail(ready);
-    ready = await reconcileFulfillmentSettlement(ready, { throwOnRevocation: true });
-    await recordAnalytics({
-      event: "payment_completed",
-      checkoutMode: ready.checkoutMode,
-      itemCount: ready.items.length,
-      productCount: ready.items.reduce((sum, item) => sum + (item.products || []).length, 0),
-      amountCents: ready.amountPaid,
-      discountPresent: Boolean(ready.discountCode),
-    });
-    return ready;
   };
 
   const stripeWebhook = async (request) => {

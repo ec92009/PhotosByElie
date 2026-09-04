@@ -2037,6 +2037,7 @@ export const createPhotosByElieWorker = ({
     let ready = {
       ...preparing,
       status: "ready",
+      deliveryError: undefined,
       lifecycleSettlementBound: Boolean(lifecycleDenyStore?.commitFulfillmentReady),
       delivery: {
         zipKey: deliveryResult.zipKey,

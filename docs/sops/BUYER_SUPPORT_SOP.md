@@ -79,7 +79,7 @@ Worker status meanings:
 | `pending_payment` | Order draft exists, no verified paid webhook yet. | Check Stripe before sending anything. |
 | `preparing` | Payment was accepted; delivery is being built. | Wait/retry shortly; escalate if stuck. |
 | `ready` | Delivery exists. | Send the production recovery link. |
-| `delivery_failed` | Payment likely succeeded but delivery failed. | Escalate; do not promise files until the delivery error is fixed. |
+| `delivery_failed` | Payment likely succeeded but delivery failed. | Escalate; do not promise files until the cause is fixed and the guarded recovery below succeeds. |
 | `unknown_order` | Worker has no order by that ID/email. | Search Stripe by session/email; ask customer for receipt if needed. |
 
 ## Order Stats From Worker KV
@@ -292,8 +292,33 @@ Use this table to decide what to do.
 | Order `pending_payment`; Stripe has no matching paid record | Do not send downloads. Ask for Stripe receipt/payment proof. |
 | Order `pending_payment`; Stripe email search finds a different paid PBE order | Send recovery link for the paid order and explain the requested order is pending. |
 | Worker order missing; Stripe paid with PBE metadata | Use Stripe metadata to find/recreate investigation context; escalate before manual delivery. |
-| Worker `delivery_failed`; Stripe paid | Escalate with `deliveryError`; fix delivery before replying with links. |
+| Worker `delivery_failed`; Stripe paid | Escalate with `deliveryError`; fix and deploy the delivery cause, then use the guarded recovery below. |
 | Download expired/limit reached; Worker `ready`; Stripe paid | Refresh/regenerate delivery links if supported, or escalate to owner/manual delivery. |
+
+### Recover A Verified Paid `delivery_failed` Order
+
+Use this path only after the underlying delivery defect is fixed and the corrected
+Worker is verified in production. It retries fulfillment for the existing paid
+Checkout Session; it does not create another Checkout Session or charge.
+
+1. Re-read the Worker order and independently verify the matching live Stripe
+   Checkout Session or PaymentIntent: exact order/session, `paid`/`succeeded`,
+   amount, currency, buyer email, and no refund or dispute.
+2. In Stripe Dashboard, open the matching payment, inspect the original
+   `checkout.session.completed` event, and confirm its failed delivery points to
+   the production Photos By Elie `/stripe-webhook` endpoint.
+3. After explicit Owner approval, choose **Resend** exactly once for that event.
+   Do not edit KV, synthesize a paid event, create another payment, or loop
+   resends while the first recovery is still `preparing`.
+4. Poll the authoritative Worker order until it reaches `ready` or returns to
+   `delivery_failed`. A successful recovery must clear the previous
+   `deliveryError`, create the expected number of delivery files, and preserve
+   the original paid amount and currency.
+5. Reload the production order recovery page and verify every expected file is
+   shown as ready. Exercise one response per file and confirm successful private
+   delivery before sending the buyer the recovery URL.
+6. If the resend fails again or remains `preparing`, stop and escalate with the
+   new terminal state. Do not charge again and do not promise files.
 
 ## Step 4: Send The Right Link
 

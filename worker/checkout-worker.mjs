@@ -1013,7 +1013,7 @@ const publicOrder = (order) => ({
       downloadLimit: Number(file.downloadLimit || 0) || null,
     })),
   } : null,
-  deliveryError: order.deliveryError ? {
+  deliveryError: ["delivery_failed", "manual_refund_review"].includes(order.status) && order.deliveryError ? {
     code: order.deliveryError.code || "delivery_failed",
     message: order.deliveryError.message || "Delivery could not be generated.",
     failedAt: order.deliveryError.failedAt || null,

@@ -3832,6 +3832,98 @@ test("replayed paid webhook clears the prior delivery error after successful rec
   assert.equal(storedOrder.deliveryError, undefined);
 });
 
+test("enrolled Backstage can explicitly refund a paid delivery failure before downloads exist", async () => {
+  const catalog = loadCatalog();
+  const backstage = backstageOwnerFixture();
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const photoId = firstDeliverablePhotoId(catalog);
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    randomUUID,
+    googleOAuthAuth: backstage.googleOAuthAuth,
+    ownerDeviceAuthStore: backstage.ownerDeviceAuthStore,
+    accessUserRegistry: createMemoryAccessUserRegistry([{ email: "owner@example.com", tier: "owner" }]),
+    delivery: {
+      validateOrder: async () => ({ ok: true }),
+      createDelivery: async () => { throw Object.assign(new Error("Synthetic render failure."), { code: "render_failed" }); },
+    },
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const event = stripe.paidEventForSession(checkout.checkout.sessionId);
+  const webhookHeaders = { "x-mock-stripe-signature": stripe.signatureForPayload() };
+  assert.equal((await worker.fetch(jsonRequest("https://worker.test/stripe-webhook", event, webhookHeaders))).status, 500);
+
+  const anonymous = await worker.fetch(new Request(`https://worker.test/api/v1/orders/${checkout.order.id}/refund`));
+  assert.equal(anonymous.status, 401);
+
+  const previewResponse = await worker.fetch(new Request(
+    `https://worker.test/api/v1/orders/${checkout.order.id}/refund`,
+    { headers: backstage.headers },
+  ));
+  assert.equal(previewResponse.status, 200);
+  assert.equal((await previewResponse.json()).refund.eligible, true);
+
+  const refundResponse = await worker.fetch(jsonRequest(
+    `https://worker.test/api/v1/orders/${checkout.order.id}/refund`,
+    {
+      confirmationOrderId: checkout.order.id,
+      reason: "Buyer requested cancellation before files became available.",
+    },
+    backstage.headers,
+  ));
+  assert.equal(refundResponse.status, 200);
+  const refunded = await refundResponse.json();
+  assert.equal(refunded.refund.refundStatus, "succeeded");
+  assert.equal((await store.getOrder(checkout.order.id)).status, "refunded");
+  assert.equal(store._debug.downloads.size, 0);
+
+  const replay = await worker.fetch(jsonRequest("https://worker.test/stripe-webhook", event, webhookHeaders));
+  assert.equal(replay.status, 409);
+  assert.equal((await replay.json()).error.code, "refund_blocks_fulfillment");
+});
+
+test("real Stripe client sends exact refund reconciliation and idempotency requests", async () => {
+  const requests = [];
+  const stripe = createStripeClient({
+    secretKey: "sk_test_photosbyelie",
+    webhookSecret: "whsec_photosbyelie",
+    fetchImpl: async (url, init) => {
+      requests.push({ url: String(url), init });
+      if (String(url).includes("/checkout/sessions/")) {
+        return Response.json({ id: "cs_test", payment_status: "paid" });
+      }
+      if (String(url).includes("/refunds?") ) return Response.json({ object: "list", data: [] });
+      return Response.json({ id: "re_test", status: "pending" });
+    },
+  });
+  await stripe.retrieveCheckoutSession("cs_test");
+  await stripe.listRefunds({ paymentIntentId: "pi_test" });
+  await stripe.createRefund({
+    paymentIntentId: "pi_test",
+    amount: 1600,
+    reason: "requested_by_customer",
+    metadata: { order_id: "PBE-TEST", refund_attempt: "1" },
+    idempotencyKey: "photosbyelie-refund-PBE-TEST-attempt-1",
+  });
+  assert.equal(requests[0].url, "https://api.stripe.com/v1/checkout/sessions/cs_test");
+  assert.equal(requests[0].init.method, "GET");
+  assert.equal(requests[1].url, "https://api.stripe.com/v1/refunds?payment_intent=pi_test&limit=100");
+  const refundParams = new URLSearchParams(requests[2].init.body);
+  assert.equal(refundParams.get("payment_intent"), "pi_test");
+  assert.equal(refundParams.get("amount"), "1600");
+  assert.equal(refundParams.get("reason"), "requested_by_customer");
+  assert.equal(refundParams.get("metadata[order_id]"), "PBE-TEST");
+  assert.equal(requests[2].init.headers["idempotency-key"], "photosbyelie-refund-PBE-TEST-attempt-1");
+});
+
 test("download endpoint returns a mock signed R2 URL and allows repeat downloads", async () => {
   const catalog = loadCatalog();
   const { worker } = testWorker();

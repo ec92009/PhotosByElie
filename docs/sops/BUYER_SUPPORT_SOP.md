@@ -293,7 +293,41 @@ Use this table to decide what to do.
 | Order `pending_payment`; Stripe email search finds a different paid PBE order | Send recovery link for the paid order and explain the requested order is pending. |
 | Worker order missing; Stripe paid with PBE metadata | Use Stripe metadata to find/recreate investigation context; escalate before manual delivery. |
 | Worker `delivery_failed`; Stripe paid | Escalate with `deliveryError`; fix and deploy the delivery cause, then use the guarded recovery below. |
+| Worker `preparing`, `delivery_failed`, or `manual_refund_review`; Stripe paid; no download entitlement issued or used | In enrolled Backstage, use **Buyer support refund**, reconcile the exact order, add the support reason, and obtain explicit Owner confirmation before issuing the full refund. |
+| Worker `ready`, or any download entitlement issued/used | Do not use the pre-delivery refund control. Escalate for a manual policy decision and reconcile in Stripe. |
 | Download expired/limit reached; Worker `ready`; Stripe paid | Refresh/regenerate delivery links if supported, or escalate to owner/manual delivery. |
+
+### Refund A Verified Paid Order Before Delivery
+
+This is an explicit Owner support operation in enrolled Backstage. It never runs
+automatically and it never accepts a browser Google session as operational
+authority.
+
+1. Open **Overview > Buyer support refund** in Backstage.
+2. Enter the exact PBE order ID and choose **Check with Stripe**. This read-only
+   reconciliation verifies the stored Checkout Session, PaymentIntent, paid
+   amount, currency, existing refund state, delivery state, and download
+   entitlement state.
+3. Continue only when Backstage says the order is eligible. Eligibility is
+   limited to a full paid amount in `preparing`, `delivery_failed`, or
+   `manual_refund_review`, with no issued or used download entitlement.
+4. Enter a concise support reason. Choose **Review full refund...**, verify the
+   order ID, full amount/currency, delivery state, and permanent download
+   consequence, then obtain explicit Owner confirmation.
+5. Choose **Issue full refund** once. The Worker first persists `refund_pending`,
+   then calls Stripe with an attempt-stable idempotency key. Do not repeat the
+   action while Stripe reports pending or requires action.
+6. Recheck the order until Backstage reports `succeeded` or `failed`. A succeeded
+   refund permanently prevents fulfillment and download access. A confirmed
+   failed attempt stays visible and may be retried as a new numbered attempt.
+7. If Stripe already shows any partial refund, stop and complete the case in the
+   Stripe Dashboard after manual review; the Backstage control will not risk an
+   over-refund.
+
+Before deploying this control, the Stripe webhook destination must subscribe to
+`refund.created`, `refund.updated`, and `refund.failed` in addition to
+`checkout.session.completed`. A real refund remains a separate explicit Owner
+gate; tests and deployment must not issue one.
 
 ### Recover A Verified Paid `delivery_failed` Order
 

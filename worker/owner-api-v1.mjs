@@ -61,6 +61,10 @@ const dynamicRoutes = [
     destination: (match) => `/api/owner/devices/${match[1]}/revoke`,
   },
   {
+    pattern: /^\/orders\/([^/]+)\/refund$/,
+    destination: (match) => `/api/owner/orders/${match[1]}/refund`,
+  },
+  {
     pattern: /^\/enrollment-handoffs\/([^/]+)\/(claim|cancel)$/,
     destination: (match) => `/api/owner/enrollment-handoffs/${match[1]}/${match[2]}`,
   },

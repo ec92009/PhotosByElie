@@ -33,7 +33,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `POST /checkout/guest` | Buyer chooses guest checkout | Validates selected private R2 files, then creates `pending_payment` order and Stripe Checkout URL |
 | `POST /checkout/account` | Buyer chooses account checkout | Same order flow, tagged as `account` |
 | `POST /purchases/recent` | Basket checks checkout email plus selected photo/product IDs | Scans paid Worker order records and reports whether each item is covered by the 30-day download allowance |
-| `POST /stripe-webhook` | Stripe/mocked Stripe says checkout completed | Verifies payment facts, prepares delivery, marks order `ready` |
+| `POST /stripe-webhook` | Stripe/mocked Stripe reports checkout or refund state | Verifies payment/refund facts, prepares delivery, or applies a monotonic refund receipt |
 | `POST /mock-stripe/pay` | Local mock payment helper | Simulates a paid Stripe event for a Checkout Session |
 | `GET /auth/session` | Browser checks optional Google-backed session | Returns the authenticated email, tier, roles, Admin flag, and Real Estate gallery grants when a direct Google OAuth or legacy Access session exists |
 | `GET /auth/google/login` | Browser starts direct Google OAuth | Redirects to Google with `prompt=select_account`; falls back to `/auth/login` when direct OAuth secrets are not configured |
@@ -53,6 +53,8 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /real-estate/deliverables/:id/view` | Real Estate client opens a completed cloud PDF/video product | Requires the signed session cookie and streams the private output inline |
 | `GET /real-estate/deliverables/:id/download` | Real Estate client downloads a completed cloud PDF/video product | Requires the signed session cookie and streams the private output as an attachment |
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
+| `GET /api/v1/orders/:orderId/refund` | Enrolled Backstage checks a support refund | Reconciles the exact order/session/payment/refund state with Stripe without changing it |
+| `POST /api/v1/orders/:orderId/refund` | Enrolled Backstage confirms a full pre-delivery refund | Requires the exact order ID and a reason, then persists a stable idempotent Stripe refund attempt |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
 `worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
@@ -89,7 +91,7 @@ Live Stripe dashboard state as of 2026-05-22:
 - Account: `acct_1TWCksPuO9o6fOp6`.
 - Successful-payment customer receipts are enabled; refund emails remain off.
 - Branding is saved with `assets/branding/photosbyelie-camera-tripod-logo-512.png`, `assets/branding/photosbyelie-camera-tripod-wordmark.png`, brand color `#5B341E`, and accent color `#D86A3E`.
-- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`; the first-party `https://download.photos-by-elie.com/stripe-webhook` endpoint is also live and can become the Stripe destination after a dashboard update.
+- Webhook destination `we_1TZmoVPuO9o6fOp6JkBENiyV` currently posts `checkout.session.completed` to `https://photosbyelie-checkout-mock.ec92009.workers.dev/stripe-webhook` on Stripe API version `2026-04-22.dahlia`; the first-party `https://download.photos-by-elie.com/stripe-webhook` endpoint is also live and can become the Stripe destination after a dashboard update. Before enabling the Backstage refund workflow in production, explicitly add `refund.created`, `refund.updated`, and `refund.failed` to that destination and verify a signed test event for each supported transition.
 - Live Cloudflare secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are installed outside git. Do not commit or document the secret values.
 - Live proof succeeded with order `PBE-20260522-BA062E956C`: `$8.00` paid, `$7.47` incoming after Stripe fees, order status `ready`, and a private R2 JPEG download of `401,035` bytes.
 

@@ -6,6 +6,8 @@ export const createMockStripeClient = ({
   randomUUID = () => crypto.randomUUID(),
 } = {}) => {
   const sessions = new Map();
+  const refunds = new Map();
+  const refundIdempotency = new Map();
 
   const createCheckoutSession = async ({
     orderId,
@@ -53,6 +55,7 @@ export const createMockStripeClient = ({
       ...overrides,
       payment_status: overrides.payment_status || "paid",
     };
+    sessions.set(checkoutSessionId, paidSession);
     return {
       id: stripeId("evt_mock", randomUUID),
       object: "event",
@@ -60,6 +63,36 @@ export const createMockStripeClient = ({
       created: Math.floor(Date.now() / 1000),
       data: { object: paidSession },
     };
+  };
+
+  const retrieveCheckoutSession = async (sessionId) => {
+    const session = sessions.get(sessionId);
+    if (!session) throw Object.assign(new Error("Stripe Checkout Session was not found."), { code: "stripe_session_not_found" });
+    return { ...session };
+  };
+
+  const listRefunds = async ({ paymentIntentId }) => ({
+    object: "list",
+    data: [...refunds.values()].filter((refund) => refund.payment_intent === paymentIntentId).map((refund) => ({ ...refund })),
+  });
+
+  const createRefund = async ({ paymentIntentId, amount, reason, metadata = {}, idempotencyKey }) => {
+    if (refundIdempotency.has(idempotencyKey)) return { ...refundIdempotency.get(idempotencyKey) };
+    const id = stripeId("re_mock", randomUUID);
+    const refund = {
+      id,
+      object: "refund",
+      payment_intent: paymentIntentId,
+      amount,
+      currency: [...sessions.values()].find((session) => session.payment_intent === paymentIntentId)?.currency || "usd",
+      reason,
+      metadata: { ...metadata },
+      status: "succeeded",
+      created: Math.floor(Date.now() / 1000),
+    };
+    refunds.set(id, refund);
+    refundIdempotency.set(idempotencyKey, refund);
+    return { ...refund };
   };
 
   const signatureForPayload = () => `mock=${webhookSecret}`;
@@ -75,9 +108,12 @@ export const createMockStripeClient = ({
   return {
     provider: "mock-stripe",
     createCheckoutSession,
+    retrieveCheckoutSession,
+    listRefunds,
+    createRefund,
     paidEventForSession,
     signatureForPayload,
     constructEvent,
-    _debug: { sessions },
+    _debug: { sessions, refunds, refundIdempotency },
   };
 };

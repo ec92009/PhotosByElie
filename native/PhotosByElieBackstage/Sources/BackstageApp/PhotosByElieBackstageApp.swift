@@ -387,6 +387,96 @@ private struct OverviewView: View {
                         Text("The selected Mac will lose Owner access. If it is this Mac, its local Keychain credential will also be removed; Set up this Mac can recover it independently.")
                     }
                 }
+                if model.authentication.phase == .authenticated {
+                    BackstageSectionCard("Buyer support refund") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Refund a fully paid order only while delivery is still preparing or failed and no download access has been issued.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            HStack {
+                                TextField("PBE order ID", text: $model.paidOrderRefundOrderID)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Check with Stripe") {
+                                    Task { await model.previewPaidOrderRefund() }
+                                }
+                                .disabled(
+                                    model.isReconcilingPaidOrderRefund
+                                        || model.paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                )
+                                .backstageHelp("Read the authoritative order record and reconcile its payment and refund state with Stripe. This check cannot issue a refund.")
+                            }
+                            BackstageFeedbackView(
+                                message: model.paidOrderRefundStatus,
+                                isWorking: model.isReconcilingPaidOrderRefund
+                            )
+                            if let preview = model.paidOrderRefundPreview {
+                                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
+                                    GridRow {
+                                        Text("Order")
+                                            .foregroundStyle(.secondary)
+                                        Text(preview.orderId)
+                                            .textSelection(.enabled)
+                                    }
+                                    GridRow {
+                                        Text("Full refund")
+                                            .foregroundStyle(.secondary)
+                                        Text(refundAmount(preview.amount, currency: preview.currency))
+                                    }
+                                    GridRow {
+                                        Text("Delivery")
+                                            .foregroundStyle(.secondary)
+                                        Text(preview.deliveryState)
+                                    }
+                                    GridRow {
+                                        Text("Downloads")
+                                            .foregroundStyle(.secondary)
+                                        Text(preview.entitlementState)
+                                    }
+                                    GridRow {
+                                        Text("Stripe refund")
+                                            .foregroundStyle(.secondary)
+                                        Text(preview.refundStatus)
+                                    }
+                                }
+                                Text(preview.consequence)
+                                    .font(.callout.weight(.semibold))
+                                TextField("Required support reason", text: $model.paidOrderRefundReason, axis: .vertical)
+                                    .textFieldStyle(.roundedBorder)
+                                    .lineLimit(2...4)
+                                    .disabled(!preview.eligible || model.isReconcilingPaidOrderRefund)
+                                Button("Review full refund…", role: .destructive) {
+                                    model.requestPaidOrderRefundConfirmation()
+                                }
+                                .disabled(
+                                    !preview.eligible
+                                        || model.isReconcilingPaidOrderRefund
+                                        || model.paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                )
+                                .backstageHelp("Open the final confirmation. The refund is not sent to Stripe until the destructive confirmation is accepted.")
+                            }
+                        }
+                        .padding(6)
+                    }
+                    .confirmationDialog(
+                        "Refund \(model.paidOrderRefundPreview?.orderId ?? "this order") in full?",
+                        isPresented: Binding(
+                            get: { model.isPaidOrderRefundConfirmationPresented },
+                            set: { if !$0 { model.cancelPaidOrderRefundConfirmation() } }
+                        ),
+                        titleVisibility: .visible
+                    ) {
+                        Button("Issue full refund", role: .destructive) {
+                            model.confirmPaidOrderRefund()
+                        }
+                        .backstageHelp("Issue the displayed full Stripe refund exactly once and permanently block this order's delivery and downloads.")
+                        Button("Cancel", role: .cancel) {
+                            model.cancelPaidOrderRefundConfirmation()
+                        }
+                        .backstageHelp("Close this confirmation without contacting Stripe or changing the order.")
+                    } message: {
+                        Text("Stripe will refund \(refundAmount(model.paidOrderRefundPreview?.amount ?? 0, currency: model.paidOrderRefundPreview?.currency ?? "usd")) and Photos By Elie will permanently block delivery and downloads for this order. Reason: \(model.paidOrderRefundReason)")
+                    }
+                }
                 BackstageSectionCard("Native Photos access") {
                     VStack(alignment: .leading, spacing: 10) {
                     LabeledContent("PhotoKit authority", value: "PhotosByElie Backstage")
@@ -410,6 +500,14 @@ private struct OverviewView: View {
     private func abbreviatedDeviceID(_ deviceID: String) -> String {
         guard deviceID.count > 18 else { return deviceID }
         return "\(deviceID.prefix(18))…"
+    }
+
+    private func refundAmount(_ cents: Int, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency.uppercased()
+        return formatter.string(from: NSNumber(value: Double(cents) / 100))
+            ?? "\(currency.uppercased()) \(Double(cents) / 100)"
     }
 
     private func photoAccessLabel(_ access: PhotoLibraryAccess) -> String {

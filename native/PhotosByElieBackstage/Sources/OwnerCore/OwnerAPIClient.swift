@@ -1053,6 +1053,30 @@ public actor OwnerAPIClient {
         return envelope.device
     }
 
+    public func previewPaidOrderRefund(orderId: String) async throws -> PaidOrderRefundPreview {
+        let envelope: PaidOrderRefundEnvelope = try await send(
+            path: "/orders/\(orderId.urlPathEncoded)/refund"
+        )
+        return envelope.refund
+    }
+
+    public func refundPaidOrder(
+        orderId: String,
+        confirmationOrderId: String,
+        reason: String
+    ) async throws -> PaidOrderRefundPreview {
+        let envelope: PaidOrderRefundEnvelope = try await send(
+            path: "/orders/\(orderId.urlPathEncoded)/refund",
+            method: "POST",
+            body: PaidOrderRefundRequest(
+                confirmationOrderId: confirmationOrderId,
+                reason: reason
+            ),
+            idempotencyKey: "photosbyelie-refund-request-\(orderId)"
+        )
+        return envelope.refund
+    }
+
     public func logout() async throws {
         struct Logout: Codable {}
         let _: EmptyResponse = try await send(

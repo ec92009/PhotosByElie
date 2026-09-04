@@ -2418,6 +2418,54 @@ struct OwnerCoreTests {
         #expect(request.value(forHTTPHeaderField: "Idempotency-Key") == "fixture-create-1234")
     }
 
+    @Test("Paid order refund requires the exact confirmation payload and stable request idempotency")
+    func paidOrderRefundRequestContract() async throws {
+        let transport = RecordingTransport(response: """
+        {
+          "refund": {
+            "orderId": "PBE-20260904-REFUND",
+            "amount": 1600,
+            "currency": "usd",
+            "paymentStatus": "paid",
+            "deliveryState": "delivery_failed",
+            "entitlementState": "unavailable",
+            "refundStatus": "succeeded",
+            "refundId": "re_refund",
+            "eligible": false,
+            "ineligibleReason": "This order is already fully refunded.",
+            "consequence": "No refund can be started while this order is in its current state.",
+            "updatedAt": "2026-09-04T20:00:00Z",
+            "failure": null
+          }
+        }
+        """)
+        let client = OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!,
+            transport: transport
+        )
+        await client.setAccessToken("enrolled-device-session")
+
+        let refund = try await client.refundPaidOrder(
+            orderId: "PBE-20260904-REFUND",
+            confirmationOrderId: "PBE-20260904-REFUND",
+            reason: "Buyer requested cancellation before delivery."
+        )
+
+        #expect(refund.refundStatus == "succeeded")
+        let request = try #require(await transport.lastRequest())
+        #expect(request.url?.path == "/api/v1/orders/PBE-20260904-REFUND/refund")
+        #expect(request.httpMethod == "POST")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer enrolled-device-session")
+        #expect(
+            request.value(forHTTPHeaderField: "Idempotency-Key")
+                == "photosbyelie-refund-request-PBE-20260904-REFUND"
+        )
+        let body = try #require(request.httpBody)
+        let payload = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
+        #expect(payload["confirmationOrderId"] == "PBE-20260904-REFUND")
+        #expect(payload["reason"] == "Buyer requested cancellation before delivery.")
+    }
+
     @Test("Inspects read-only Owner SQLite and backs up before migration")
     func databaseGateBackupAndMigration() throws {
         let root = FileManager.default.temporaryDirectory

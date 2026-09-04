@@ -232,6 +232,12 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var ownerDeviceManagementStatus = "Enrolled Macs have not been refreshed."
     @Published private(set) var isRefreshingOwnerDevices = false
     @Published private(set) var pendingOwnerDeviceRevocation: OwnerDevice?
+    @Published var paidOrderRefundOrderID = ""
+    @Published var paidOrderRefundReason = ""
+    @Published private(set) var paidOrderRefundPreview: PaidOrderRefundPreview?
+    @Published private(set) var paidOrderRefundStatus = "Enter an order ID to reconcile it with Stripe before refunding."
+    @Published private(set) var isReconcilingPaidOrderRefund = false
+    @Published private(set) var isPaidOrderRefundConfirmationPresented = false
     @Published var photoAccess: PhotoLibraryAccess
     @Published var libraryItems: [PhotoLibraryItem] = []
     @Published var selectedPhotoIDs: Set<String> = []
@@ -1627,6 +1633,71 @@ final class BackstageViewModel: ObservableObject {
         isRefreshingOwnerDevices = true
         ownerDeviceManagementStatus = "Revoking \(device.name)…"
         Task { await revokeOwnerDevice(device) }
+    }
+
+    func previewPaidOrderRefund() async {
+        let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !orderID.isEmpty else {
+            paidOrderRefundPreview = nil
+            paidOrderRefundStatus = "Enter the exact PBE order ID first."
+            return
+        }
+        isReconcilingPaidOrderRefund = true
+        paidOrderRefundStatus = "Reconciling the order, payment, refund, and download state with Stripe…"
+        defer { isReconcilingPaidOrderRefund = false }
+        do {
+            let preview = try await api.previewPaidOrderRefund(orderId: orderID)
+            paidOrderRefundPreview = preview
+            paidOrderRefundStatus = preview.eligible
+                ? "Verified paid order. No download entitlement has been issued; a full refund is available."
+                : (preview.ineligibleReason ?? "This order is not eligible for a pre-delivery refund.")
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            paidOrderRefundPreview = nil
+            paidOrderRefundStatus = "Refund check failed: \(userFacingMessage(for: error))"
+        }
+    }
+
+    func requestPaidOrderRefundConfirmation() {
+        guard paidOrderRefundPreview?.eligible == true,
+              paidOrderRefundPreview?.orderId == paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines),
+              !paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isPaidOrderRefundConfirmationPresented = true
+    }
+
+    func cancelPaidOrderRefundConfirmation() {
+        isPaidOrderRefundConfirmationPresented = false
+    }
+
+    func confirmPaidOrderRefund() {
+        isPaidOrderRefundConfirmationPresented = false
+        Task { await refundPaidOrder() }
+    }
+
+    private func refundPaidOrder() async {
+        let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let reason = paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard paidOrderRefundPreview?.eligible == true,
+              paidOrderRefundPreview?.orderId == orderID,
+              !reason.isEmpty else { return }
+        isReconcilingPaidOrderRefund = true
+        paidOrderRefundStatus = "Submitting the confirmed full refund to Stripe…"
+        defer { isReconcilingPaidOrderRefund = false }
+        do {
+            let result = try await api.refundPaidOrder(
+                orderId: orderID,
+                confirmationOrderId: orderID,
+                reason: reason
+            )
+            paidOrderRefundPreview = result
+            paidOrderRefundStatus = result.refundStatus == "succeeded"
+                ? "Stripe confirmed the full refund. Delivery and downloads are permanently blocked."
+                : "Refund status: \(result.refundStatus). Refresh this order to reconcile again."
+        } catch {
+            await presentAuthenticationFailureIfNeeded(error)
+            paidOrderRefundStatus = "Refund request failed: \(userFacingMessage(for: error))"
+            await previewPaidOrderRefund()
+        }
     }
 
     private func revokeOwnerDevice(_ device: OwnerDevice) async {

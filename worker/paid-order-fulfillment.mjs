@@ -1,3 +1,5 @@
+import { refundBlocksFulfillment } from "./paid-order-refund.mjs";
+
 const REVOCATION_CODES = new Set(["asset_lifecycle_denied", "lifecycle_fence_changed"]);
 
 export const PAID_ORDER_FULFILLMENT_DEPENDENCIES = Object.freeze([
@@ -67,6 +69,16 @@ export const createPaidOrderFulfillment = ({
   };
 
   const reconcileOrder = async (order, { throwOnRevocation = false } = {}) => {
+    const current = order?.id ? await getOrder(order.id) : order;
+    if (refundBlocksFulfillment(current) || refundBlocksFulfillment(order)) {
+      if (throwOnRevocation) {
+        throw Object.assign(new Error("Paid fulfillment is blocked by a pending or completed refund."), {
+          status: 409,
+          code: "refund_blocks_fulfillment",
+        });
+      }
+      return current || order;
+    }
     if (!order || !lifecycleFence?.fulfillmentFor) return order;
     const settlement = await lifecycleFence.fulfillmentFor(order.id);
     if (settlement?.state === "blocked_pending_lifecycle") {
@@ -173,6 +185,13 @@ export const createPaidOrderFulfillment = ({
     };
 
     try {
+      const beforeReady = await getOrder(order.id);
+      if (refundBlocksFulfillment(beforeReady)) {
+        throw Object.assign(new Error("Paid fulfillment is blocked by a pending or completed refund."), {
+          status: 409,
+          code: "refund_blocks_fulfillment",
+        });
+      }
       await assertLifecycleAllowed(orderMediaIds(order), "fulfillment:before-ready-commit", fulfillmentFence);
       if (lifecycleFence?.commitFulfillmentReady) {
         await lifecycleFence.commitFulfillmentReady({

@@ -2659,7 +2659,7 @@ const createFakeImagesBinding = ({ output = createTestJpeg(32, 24), info = { wid
           call.transforms.push(options);
           return this;
         },
-        output(options = {}) {
+        async output(options = {}) {
           call.output = options;
           return {
             response: () => new Response(output, {

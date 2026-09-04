@@ -42,6 +42,7 @@ test("basket and order ignore public worker overrides but allow localhost overri
     checkoutWorkerBaseUrl: "https://checkout.photos-by-elie.com",
   };
   const basketHelpers = between(sourceFor("basket.js"), "const normalizedWorkerBase", "const escapeText");
+  assert.match(sourceFor("basket.js"), /fetch\(`\$\{checkoutRequestBaseUrl\(path\)\}\$\{path\}`/);
   const orderHelpers = between(sourceFor("order.js"), "const normalizedWorkerBase", "const currentParams");
 
   const publicBasket = pageSandbox({
@@ -49,14 +50,30 @@ test("basket and order ignore public worker overrides but allow localhost overri
     config,
   });
   publicBasket.workerBaseKey = "photosbyelie-worker-base";
-  assert.equal(evaluate(basketHelpers, publicBasket, "workerBaseUrl()"), config.checkoutWorkerBaseUrl);
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, publicBasket, "[workerBaseUrl(), accountCheckoutWorkerBaseUrl(), checkoutRequestBaseUrl('/checkout/guest'), checkoutRequestBaseUrl('/checkout/account')]")),
+    JSON.stringify([config.checkoutWorkerBaseUrl, config.authWorkerBaseUrl, config.checkoutWorkerBaseUrl, config.authWorkerBaseUrl]),
+  );
 
   const localBasket = pageSandbox({
     href: "http://localhost:8000/basket.html?workerBase=http://dev-worker.test:8787",
     config,
   });
   localBasket.workerBaseKey = "photosbyelie-worker-base";
-  assert.equal(evaluate(basketHelpers, localBasket, "workerBaseUrl()"), "http://dev-worker.test:8787");
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, localBasket, "[workerBaseUrl(), accountCheckoutWorkerBaseUrl()]")),
+    JSON.stringify(["http://dev-worker.test:8787", "http://dev-worker.test:8787"]),
+  );
+
+  const splitLocalBasket = pageSandbox({
+    href: "http://localhost:8000/basket.html?workerBase=http://dev-worker.test:8787&authWorkerBase=http://dev-auth.test:8788",
+    config,
+  });
+  splitLocalBasket.workerBaseKey = "photosbyelie-worker-base";
+  assert.equal(
+    JSON.stringify(evaluate(basketHelpers, splitLocalBasket, "[checkoutRequestBaseUrl('/checkout/guest'), checkoutRequestBaseUrl('/checkout/account')]")),
+    JSON.stringify(["http://dev-worker.test:8787", "http://dev-auth.test:8788"]),
+  );
 
   const publicOrder = pageSandbox({
     href: "https://photos-by-elie.com/order.html?workerBase=https://attacker.example&authWorkerBase=https://attacker-auth.example",

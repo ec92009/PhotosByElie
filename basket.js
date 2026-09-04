@@ -103,6 +103,22 @@ const workerBaseUrl = () => {
   if (stored) localStorage.removeItem(workerBaseKey);
   return configured || "http://localhost:8787";
 };
+const accountCheckoutWorkerBaseUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = isLocalPage()
+    ? normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"))
+    : "";
+  if (fromQuery && !isUnsafePublicWorkerBase(fromQuery)) return fromQuery;
+  const configured = normalizedWorkerBase(
+    window.photosByElieMediaConfig?.authWorkerBaseUrl
+      || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl
+      || ""
+  );
+  return configured || workerBaseUrl();
+};
+const checkoutRequestBaseUrl = (path) => path === "/checkout/account"
+  ? accountCheckoutWorkerBaseUrl()
+  : workerBaseUrl();
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -567,7 +583,7 @@ const scheduleRecentPurchaseCheck = () => {
 const checkoutFetch = async (path, options = {}) => {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 25000);
-  const response = await fetch(`${workerBaseUrl()}${path}`, {
+  const response = await fetch(`${checkoutRequestBaseUrl(path)}${path}`, {
     ...options,
     signal: controller.signal,
     headers: {

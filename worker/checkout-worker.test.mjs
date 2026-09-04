@@ -3454,6 +3454,14 @@ test("public paid order exposes capability links but not internal delivery or St
   assert.match(internalOrder.delivery.zipKey, /^deliveries\/photosbyelie-order-PBE-20260507-/);
   assert.ok(internalOrder.checkoutSessionId);
   assert.ok(internalOrder.paymentIntentId);
+  await store.putOrder({
+    ...internalOrder,
+    deliveryError: {
+      code: "legacy_delivery_failed",
+      message: "A recovered legacy order retained its obsolete failure detail.",
+      failedAt: "2026-05-07T11:59:00.000Z",
+    },
+  });
 
   const wrongEmailResponse = await worker.fetch(new Request(`https://worker.test/orders/${paid.order.id}?email=attacker@example.com`));
   assert.equal(wrongEmailResponse.status, 403);
@@ -3466,6 +3474,7 @@ test("public paid order exposes capability links but not internal delivery or St
   assert.equal(lookupResponse.headers.get("cdn-cache-control"), "no-store");
   const lookup = await lookupResponse.json();
   assert.equal(lookup.order.status, "ready");
+  assert.equal(lookup.order.deliveryError, null);
 
   const missingEmailResponse = await worker.fetch(new Request(`https://worker.test/orders/by-session/${checkout.checkout.sessionId}`));
   assert.equal(missingEmailResponse.status, 403);

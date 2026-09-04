@@ -3772,6 +3772,57 @@ test("webhook rejects paid sessions whose amount does not match the order", asyn
   assert.equal(body.error.code, "amount_mismatch");
 });
 
+test("replayed paid webhook clears the prior delivery error after successful recovery", async () => {
+  const catalog = loadCatalog();
+  const randomUUID = deterministicIds();
+  const store = createMemoryStore();
+  const stripe = createMockStripeClient({ randomUUID });
+  const successfulDelivery = createPerFileTestDelivery();
+  const photoId = firstDeliverablePhotoId(catalog);
+  let deliveryCalls = 0;
+  const worker = createPhotosByElieWorker({
+    catalog,
+    store,
+    stripe,
+    randomUUID,
+    delivery: {
+      validateOrder: successfulDelivery.validateOrder,
+      createDelivery: async (order) => {
+        deliveryCalls += 1;
+        if (deliveryCalls === 1) {
+          throw Object.assign(new Error("Synthetic delivery failure."), {
+            code: "synthetic_delivery_failed",
+          });
+        }
+        return successfulDelivery.createDelivery(order);
+      },
+    },
+  });
+  const checkoutResponse = await worker.fetch(jsonRequest("https://worker.test/checkout/guest", {
+    email: "buyer@example.com",
+    items: [{ photoId, options: [{ id: "jpg-1mp" }] }],
+  }));
+  const checkout = await checkoutResponse.json();
+  const event = stripe.paidEventForSession(checkout.checkout.sessionId);
+  const webhookHeaders = { "x-mock-stripe-signature": stripe.signatureForPayload() };
+
+  const failedResponse = await worker.fetch(jsonRequest("https://worker.test/stripe-webhook", event, webhookHeaders));
+  assert.equal(failedResponse.status, 500);
+  const failedOrder = await store.getOrder(checkout.order.id);
+  assert.equal(failedOrder.status, "delivery_failed");
+  assert.equal(failedOrder.deliveryError.code, "synthetic_delivery_failed");
+
+  const recoveredResponse = await worker.fetch(jsonRequest("https://worker.test/stripe-webhook", event, webhookHeaders));
+  assert.equal(recoveredResponse.status, 200);
+  const recovered = await recoveredResponse.json();
+  assert.equal(recovered.order.status, "ready");
+  assert.equal(recovered.order.delivery.files.length, 1);
+  assert.equal(recovered.order.deliveryError, null);
+  const storedOrder = await store.getOrder(checkout.order.id);
+  assert.equal(storedOrder.status, "ready");
+  assert.equal(storedOrder.deliveryError, undefined);
+});
+
 test("download endpoint returns a mock signed R2 URL and allows repeat downloads", async () => {
   const catalog = loadCatalog();
   const { worker } = testWorker();

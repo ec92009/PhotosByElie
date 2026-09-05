@@ -121,7 +121,7 @@ const redirect = (location, status = 302, headers = {}) => new Response(null, {
 });
 
 const redirectWithCookies = (location, cookies = [], status = 302) => {
-  const headers = new Headers({ location });
+  const headers = new Headers({ location, "cache-control": "private, no-store" });
   cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
   return new Response(null, { status, headers });
 };
@@ -2290,46 +2290,73 @@ export const createPhotosByElieWorker = ({
     });
   };
 
+  const googleLoginRedirect = async (request, options) => {
+    const result = await googleOAuthAuth.beginLogin(request, options);
+    return redirectWithCookies(result.url, [result.cookie]);
+  };
+
   const loginAuth = async (request) => {
-    if (googleOAuthAuth?.loginUrlFor) {
-      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+    if (googleOAuthAuth?.beginLogin) {
+      return googleLoginRedirect(request, {
         returnTo: safeAuthReturnUrl(request),
         intent: new URL(request.url).searchParams.get("intent") || "",
         prompt: new URL(request.url).searchParams.get("prompt") || "select_account",
-      }));
+      });
     }
     await accessIdentityFor(request, { required: true });
     return redirect(safeAuthReturnUrl(request));
   };
 
   const loginGoogleAuth = async (request) => {
-    if (!googleOAuthAuth?.loginUrlFor) {
+    if (!googleOAuthAuth?.beginLogin) {
       const legacyUrl = new URL("/auth/login", new URL(request.url).origin);
       for (const [key, value] of new URL(request.url).searchParams.entries()) legacyUrl.searchParams.append(key, value);
       return redirect(legacyUrl.href);
     }
     const url = new URL(request.url);
-    return redirect(await googleOAuthAuth.loginUrlFor(request, {
+    return googleLoginRedirect(request, {
       returnTo: safeAuthReturnUrl(request),
       intent: url.searchParams.get("intent") || "",
       prompt: url.searchParams.get("prompt") || "select_account",
-    }));
+    });
   };
 
   const callbackGoogleAuth = async (request) => {
     if (!googleOAuthAuth?.handleCallback) {
       return credentialedErrorJson(request, 503, "google_auth_unavailable", "Google login is not configured.");
     }
-    const result = await googleOAuthAuth.handleCallback(request);
-    return redirect(result.returnTo, 302, { "set-cookie": result.cookie });
+    try {
+      const result = await googleOAuthAuth.handleCallback(request);
+      return redirectWithCookies(result.returnTo, [result.cookie, result.clearTransactionCookie]);
+    } catch (error) {
+      return credentialedErrorJson(request, error.status || 500, error.code || "worker_error", error.message, undefined,
+        { "set-cookie": googleOAuthAuth.clearTransactionCookie() });
+    }
+  };
+
+  const cancelPendingGoogleLogin = async (request) => {
+    try {
+      await googleOAuthAuth?.cancelLogin?.(request);
+      return null;
+    } catch {
+      const response = credentialedErrorJson(request, 503, "google_logout_transaction_unavailable",
+        "Local login cookies were cleared, but the pending login transaction could not be revoked. Retry sign-out when the service recovers.");
+      for (const cookie of [googleOAuthAuth?.clearCookieFor?.(request), googleOAuthAuth?.clearTransactionCookie?.(), realEstateAuth?.clearCookieFor?.()]) {
+        if (cookie) response.headers.append("set-cookie", cookie);
+      }
+      return response;
+    }
   };
 
   const logoutAuth = async (request) => {
+    const cancellationError = await cancelPendingGoogleLogin(request);
+    if (cancellationError) return cancellationError;
     const baseUrl = new URL(request.url).origin;
     const realEstateCookie = realEstateAuth?.clearCookieFor?.() || "";
     if (googleOAuthAuth?.clearCookieFor) {
       return redirectWithCookies(safeAuthReturnUrl(request), [
         googleOAuthAuth.clearCookieFor(request),
+        googleOAuthAuth.clearTransactionCookie?.(),
         realEstateCookie,
       ]);
     }
@@ -2479,8 +2506,11 @@ export const createPhotosByElieWorker = ({
   };
 
   const logoutOwnerTokens = async (request) => {
+    const cancellationError = await cancelPendingGoogleLogin(request);
+    if (cancellationError) return cancellationError;
     const headers = new Headers(credentialedCorsHeaders(request));
     if (googleOAuthAuth?.clearCookieFor) headers.append("set-cookie", googleOAuthAuth.clearCookieFor(request));
+    if (googleOAuthAuth?.clearTransactionCookie) headers.append("set-cookie", googleOAuthAuth.clearTransactionCookie());
     if (realEstateAuth?.clearCookieFor) headers.append("set-cookie", realEstateAuth.clearCookieFor());
     headers.set("content-type", "application/json; charset=utf-8");
     return new Response(JSON.stringify({ ok: true }), {
@@ -2586,13 +2616,13 @@ export const createPhotosByElieWorker = ({
       ? await googleOAuthAuth.optionalSession(request).catch(() => null)
       : null;
     if (!browserIdentity) {
-      if (!googleOAuthAuth?.loginUrlFor) {
+      if (!googleOAuthAuth?.beginLogin) {
         return enrollmentHTML("Sign-in unavailable", "Google Owner sign-in is not configured.", "", 503);
       }
-      return redirect(await googleOAuthAuth.loginUrlFor(request, {
+      return googleLoginRedirect(request, {
         returnTo: request.url,
         intent: "backstage-enrollment",
-      }));
+      });
     }
     const session = await authSessionFor(request, { requiredRole: "owner" });
     if (session.email !== PBE_OWNER_PROVISIONER_EMAIL

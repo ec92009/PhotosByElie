@@ -55,6 +55,7 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
     }
 
     private let photoJobAuthority: BackstagePhotosJobAuthority
+    private let prepareOwnerSession: BackstagePhotosJobAuthority.SessionCheck
     private let ownerSnapshot: BackstagePhotosJobAuthority.SessionCheck
     private let runtimeRoot: URL?
     private let dataRoot: URL?
@@ -69,12 +70,14 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         pythonExecutable: URL = URL(fileURLWithPath: "/usr/bin/python3"),
         fileManager: FileManager = .default,
         photoJobAuthority: BackstagePhotosJobAuthority = .shared,
+        prepareOwnerSession: BackstagePhotosJobAuthority.SessionCheck? = nil,
         ownerSnapshot: @escaping BackstagePhotosJobAuthority.SessionCheck = {
             await OwnerAuthenticationService(api: OwnerAPIClient()).currentSnapshot()
         }
     ) {
         let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
         self.photoJobAuthority = photoJobAuthority
+        self.prepareOwnerSession = prepareOwnerSession ?? ownerSnapshot
         self.ownerSnapshot = ownerSnapshot
         self.runtimeRoot = runtimeRoot
         self.dataRoot = dataRoot
@@ -189,7 +192,7 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
             let scope = try await BackstagePhotosJobLauncher.plan(action: action, launch: plan)
             if !scope.operations.isEmpty {
                 credential = try await photoJobAuthority.issue(plan: scope,
-                    session: await ownerSnapshot(), checkSession: ownerSnapshot)
+                    session: await prepareOwnerSession(), checkSession: ownerSnapshot)
             }
         }
         do {

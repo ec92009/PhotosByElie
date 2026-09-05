@@ -128,8 +128,14 @@ public actor OwnerAuthenticationService {
     }
 
     private func recoverRejectedSession() async -> Bool {
+        await preparePhotosJobSession().phase == .authenticated
+    }
+
+    /// Renew before issuing a new bounded Photos capability, never while consuming one.
+    public func preparePhotosJobSession() async -> OwnerAuthenticationSnapshot {
+        await installRecoveryHandlerIfNeeded()
         if let recoveryTask {
-            return await recoveryTask.value.phase == .authenticated
+            return await recoveryTask.value
         }
         let task = Task { [weak self] in
             guard let self else {
@@ -140,7 +146,7 @@ public actor OwnerAuthenticationService {
         recoveryTask = task
         let snapshot = await task.value
         recoveryTask = nil
-        return snapshot.phase == .authenticated
+        return snapshot
     }
 
     private func restore(

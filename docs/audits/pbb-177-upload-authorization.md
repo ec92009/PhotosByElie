@@ -12,12 +12,12 @@ The adapter propagates the originating export or upload error before validating 
 
 ## Validation
 
--401 Swift tests/32 suites pass serialized. Parallel runs exposed existing scheduler-sensitive Gallery thumbnail/pending-operation assertions; serialized validation passed without weakening those assertions.
--328 Node and517 Python tests pass, plus50 focused planner/launcher/bridge/connector tests.
--A further real temporary SQLite mixed-batch test exercises the native publication adapter: one verified item plus one authorization failure, then a retry of only the failed item. The original successful receipt remains exactly unchanged.
--Exact-scope planner tests exclude another run and completed items, reject batches over50, bind intended metadata, and give preparation no Photos authority. Existing request signing/replay/expiry/standalone-denial tests remain passing.
--Native tests prove start returns a durable ID before execution completes, terminal item counts wait for give-back, and authorization failures stay actionable.
--Maintainability passes. A new bounded NativeUploadExecutionMonitor owns lifetime/error tracking; only ten net coordinator lines are added to the documented FixtureDeliveryService file ceiling. No function ceiling changes.
+- 401 Swift tests/32 suites pass serialized. Parallel runs exposed existing scheduler-sensitive Gallery thumbnail/pending-operation assertions; serialized validation passed without weakening those assertions.
+- 328 Node and517 Python tests pass, plus50 focused planner/launcher/bridge/connector tests.
+- A further real temporary SQLite mixed-batch test exercises the native publication adapter: one verified item plus one authorization failure, then a retry of only the failed item. The original successful receipt remains exactly unchanged.
+- Exact-scope planner tests exclude another run and completed items, reject batches over50, bind intended metadata, and give preparation no Photos authority. Existing request signing/replay/expiry/standalone-denial tests remain passing.
+- Native tests prove start returns a durable ID before execution completes, terminal item counts wait for give-back, and authorization failures stay actionable.
+- Maintainability passes. A new bounded NativeUploadExecutionMonitor owns lifetime/error tracking; only ten net coordinator lines are added to the documented FixtureDeliveryService file ceiling. No function ceiling changes.
 
 Source/test validation is complete. Signed installed verification and any retry of the owner's original failed set are recorded separately below. No website deployment or archive publication is part of this fix.
 
@@ -38,3 +38,9 @@ Build326 bundles the hash-pinned CPython3.9 arm64 Pillow11.3.0 wheel from PyPI i
 Build326 run `uplrun-49c1d1e08cbe412f` completed25/25 checksum-verified uploads with zero failures. Its exact asset set matched the original failed25; the original17 successful run rows were not part of any retry. Metadata give-back did not complete: all25 sync rows reported that the bounded Photos job authority expired. Upload success is distinct from metadata success and website deployment.
 
 Live inspection also found status and stop actions waiting behind the long-running connector process lock. Build327 adds upload status to the read-only bypass and a separate narrow bypass for the accepted exact-run stop action. Cancellation only flips that run's existing durable flag, retaining action authentication/claiming and SQLite coordination; its conditional update cannot overwrite a concurrently completed run. The existing locked-maintenance test now exercises status and stop alongside the held process lock. Fresh metadata give-back must use a new accepted Backstage job; no capability expiry is extended.
+
+## Final recovery and session freshness
+
+Installed v250.3/build 327 retained strict signing, Owner authentication and Photos authorization. All 25 original failed assets have checksum-verified upload receipts in `uplrun-49c1d1e08cbe412f`. Fresh exact-item Backstage Metadata confirmations recovered all 25 approved metadata writes, each re-read as verified. Read-only Owner.sqlite inspection confirms 25/25 `asset_sync_state` give-back receipts with empty errors. The refreshed RE Uploads screen shows zero needing upload, 78 catalog-preparing and 111 existing Live items. No website deployment occurred.
+
+Two individual metadata attempts encountered a session-expiry boundary and succeeded on the existing failed-only retry. Build 328 renews the enrolled Owner session before issuing a new Photos job capability. Consumption continues to check the current session without renewal; an existing capability keeps its original expiry and exact operation/asset scope. Renewal uses the existing single-flight recovery path and failure remains closed. Tests cover two-second and 800-second remaining sessions, a fresh exchanged credential, and no network renewal during subsequent snapshot checks. All 402 Swift tests in 32 suites pass serialized. The one-line ViewModel dependency injection and separate issuance/consumption initializer closures have narrowly documented maintainability ceilings.

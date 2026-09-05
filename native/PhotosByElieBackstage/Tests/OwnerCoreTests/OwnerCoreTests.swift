@@ -2829,6 +2829,32 @@ struct OwnerCoreTests {
         }
     }
 
+    @Test("New Photos jobs renew valid sessions before capability issuance", arguments: [2.0, 800.0])
+    func photosJobRenewsSession(remaining: TimeInterval) async throws {
+        let session = OwnerCredentialSession(vault: MemoryCredentialVault())
+        try await session.save(OwnerCredentialSet(
+            deviceId: "photos-job-device", deviceCredential: String(repeating: "d", count: 48),
+            accessToken: "old-access", accessExpiresAt: Date().addingTimeInterval(remaining)
+        ))
+        let transport = RoutingTransport(responses: [
+            "/api/v1/auth/tokens": """
+            {"tokenType":"Bearer","accessToken":"fresh-access","expiresIn":900,
+             "accessExpiresAt":"2099-01-01T00:15:00Z"}
+            """
+        ])
+        let service = OwnerAuthenticationService(api: OwnerAPIClient(
+            baseURL: URL(string: "https://example.test/api/v1")!, transport: transport
+        ), session: session)
+        #expect(await service.currentSnapshot().phase == .authenticated)
+        #expect(await transport.requests().isEmpty)
+        let fresh = await service.preparePhotosJobSession()
+        #expect(fresh.phase == .authenticated)
+        #expect(fresh.accessExpiresAt == Date(timeIntervalSince1970: 4_070_909_700))
+        #expect(try await session.load()?.accessToken == "fresh-access")
+        _ = await service.currentSnapshot()
+        #expect(await transport.requests().count == 1)
+    }
+
     @Test("Launch bootstrap re-authenticates the Keychain device credential")
     func credentialBootstrapRefresh() async throws {
         let vault = MemoryCredentialVault()

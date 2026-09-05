@@ -13,8 +13,8 @@
   "files": [
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
-      "nloc": 8833,
-      "reviewNote": "PBB-175: nine lines for Uploaded enum mapping, candidate projection and optimistic count retention; no unrelated ceiling growth."
+      "nloc": 8834,
+      "reviewNote": "PBB-175: nine lines for Uploaded enum mapping, candidate projection and optimistic count retention; no unrelated ceiling growth. PBB-177: one dependency-injection line separates new-job renewal from ongoing authorization checks."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift",
@@ -122,10 +122,11 @@
       "name": "init",
       "start": 747,
       "end": 862,
-      "nloc": 83,
+      "nloc": 84,
       "ccn": 6,
       "parameters": 24,
-      "nesting": 0
+      "nesting": 0,
+      "reviewNote": "PBB-177: one line injects pre-issuance renewal independently of consumption checks."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift::requestThumbnail for assetID : String , preferredIdentifier : String? = nil , preferRenderedJPEG : Bool = false , priority : TaskPriority? = nil",
@@ -1416,15 +1417,16 @@
       "nesting": 3
     },
     {
-      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerActionRunner.swift::init runtimeRoot : URL? = nil , dataRoot : URL? = nil , configURL : URL? = nil , pythonExecutable : URL = URL fileURLWithPath : \"/usr/bin/python3\" , fileManager : FileManager = . default , photoJobAuthority : BackstagePhotosJobAuthority = . shared , ownerSnapshot : @ escaping BackstagePhotosJobAuthority . SessionCheck = { await OwnerAuthenticationService api : OwnerAPIClient . currentSnapshot }",
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerActionRunner.swift::init runtimeRoot : URL? = nil , dataRoot : URL? = nil , configURL : URL? = nil , pythonExecutable : URL = URL fileURLWithPath : \"/usr/bin/python3\" , fileManager : FileManager = . default , photoJobAuthority : BackstagePhotosJobAuthority = . shared , prepareOwnerSession : BackstagePhotosJobAuthority . SessionCheck? = nil , ownerSnapshot : @ escaping BackstagePhotosJobAuthority . SessionCheck = { await OwnerAuthenticationService api : OwnerAPIClient . currentSnapshot }",
       "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerActionRunner.swift",
       "name": "init",
-      "start": 65,
-      "end": 87,
-      "nloc": 23,
+      "start": 66,
+      "end": 90,
+      "nloc": 25,
       "ccn": 1,
-      "parameters": 7,
-      "nesting": 0
+      "parameters": 8,
+      "nesting": 0,
+      "reviewNote": "PBB-177: distinct issuance and consumption session closures prevent renewal during an existing capability. Optional initializer dependency keeps test and other callers compatible."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerActionRunner.swift::init code : \"pbe_owner_connector_roots_missing\" , message : \"Backstage could not resolve its signed Owner runtime and mutable data root.\"",

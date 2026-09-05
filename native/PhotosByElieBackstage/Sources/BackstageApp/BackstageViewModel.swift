@@ -840,6 +840,7 @@ final class BackstageViewModel: ObservableObject {
         self.photoAccess = photoLibrary.authorization()
         let jobAuthentication = self.authenticationService
         let runner = OwnerActionRunner(api: api, waker: OnDemandOwnerActionWaker(
+            prepareOwnerSession: { await jobAuthentication.preparePhotosJobSession() },
             ownerSnapshot: { await jobAuthentication.currentSnapshot() }
         ))
         self.metadataService = MetadataGiveBackService(runner: runner)

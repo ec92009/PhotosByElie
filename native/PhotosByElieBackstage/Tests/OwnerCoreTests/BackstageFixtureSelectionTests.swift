@@ -2085,9 +2085,9 @@ struct BackstageFixtureSelectionTests {
         ])
     }
 
-    @Test("Culling Undo restores locally while X is pending and defers Put Back")
+    @Test("Culling Undo restores locally while X is pending and defers Put Back", arguments: [0, 250])
     @MainActor
-    func cullingWasteBasketImmediateUndoWhileXPending() async throws {
+    func cullingWasteBasketImmediateUndoWhileXPending(holdMilliseconds: Int) async throws {
         let items = (1...2).map { index in
             FixtureAsset(
                 id: "culling-immediate-undo-\(index)",
@@ -2113,18 +2113,20 @@ struct BackstageFixtureSelectionTests {
                 state: .completed,
                 result: ["ok": true]
             ),
-        ], terminalDelay: .milliseconds(200))
+        ], holdsTerminalActions: true)
         let model = cullingWasteBasketModel(
             actionAPI: actionAPI,
             items: items,
             selectedIDs: [items[0].id],
-            focusedID: items[0].id
+            focusedID: items[0].id,
+            completionTimeout: .seconds(10)
         )
 
         await model.moveCullingSelectionToWasteBasket()
-        for _ in 0..<300 where model.cullingHistory.isEmpty {
-            try await Task.sleep(for: .milliseconds(1))
-        }
+        try await waitForLifecycleTestState { !model.cullingHistory.isEmpty }
+        // Intentionally exceed the former mock's 200 ms timer. X must stay
+        // pending until the test releases it, regardless of suite scheduling.
+        try await Task.sleep(for: .milliseconds(holdMilliseconds))
         #expect(model.visibleCullingAssets.map(\.id) == [items[1].id])
         #expect(model.cullingWasteBasketPendingActionIDs == [xActionID])
 
@@ -2137,8 +2139,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingStatus.contains("local Culling grid is restored"))
         #expect(await actionAPI.requests().count == 1)
 
-        for _ in 0..<1_000 where await actionAPI.requests().count < 2 {
-            try await Task.sleep(for: .milliseconds(1))
+        await actionAPI.releaseTerminalAction(xActionID)
+        try await waitForLifecycleTestState {
+            model.cullingWasteBasketPendingActionIDs == [restoreActionID]
         }
         let requests = await actionAPI.requests()
         #expect(requests.map { $0.payload["operation"]?.stringValue } == [
@@ -2148,8 +2151,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingWasteBasketDeferredUndoActionIDs.isEmpty)
         #expect(model.cullingWasteBasketPendingActionIDs == [restoreActionID])
 
-        for _ in 0..<1_000 where !model.cullingWasteBasketPendingActionIDs.isEmpty {
-            try await Task.sleep(for: .milliseconds(1))
+        await actionAPI.releaseTerminalAction(restoreActionID)
+        try await waitForLifecycleTestState {
+            model.cullingWasteBasketPendingActionIDs.isEmpty
         }
         #expect(model.cullingStatus.contains("Restored 1 item from Waste Basket"))
     }
@@ -3800,17 +3804,29 @@ struct BackstageFixtureSelectionTests {
     }
 
     @MainActor
+    private func waitForLifecycleTestState(
+        _ condition: @MainActor () async -> Bool
+    ) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !(await condition()), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try #require(await condition(), "Timed out waiting for the controlled lifecycle transition")
+    }
+
+    @MainActor
     private func cullingWasteBasketModel(
         actionAPI: ReviewLifecycleActionAPI,
         items: [FixtureAsset],
         selectedIDs: Set<String>,
-        focusedID: String
+        focusedID: String,
+        completionTimeout: Duration = .seconds(1)
     ) -> BackstageViewModel {
         let lifecycleService = LifecycleService(runner: OwnerActionRunner(
             api: actionAPI,
             waker: RejectingFixtureSelectionWaker(),
             pollInterval: .milliseconds(1),
-            timeout: .seconds(1)
+            timeout: completionTimeout
         ))
         let model = BackstageViewModel(
             photoLibrary: InertPhotoLibrary(),
@@ -4052,10 +4068,21 @@ private actor ReviewLifecycleActionAPI: OwnerActionServing {
     private var terminalActions: [OwnerAction]
     private var createdRequests: [OwnerActionCreate] = []
     private let terminalDelay: Duration
+    private let holdsTerminalActions: Bool
+    private var releasedTerminalActionIDs: Set<String> = []
 
-    init(terminalActions: [OwnerAction], terminalDelay: Duration = .zero) {
+    init(
+        terminalActions: [OwnerAction],
+        terminalDelay: Duration = .zero,
+        holdsTerminalActions: Bool = false
+    ) {
         self.terminalActions = terminalActions
         self.terminalDelay = terminalDelay
+        self.holdsTerminalActions = holdsTerminalActions
+    }
+
+    func releaseTerminalAction(_ id: String) {
+        releasedTerminalActionIDs.insert(id)
     }
 
     func createAction(
@@ -4081,6 +4108,14 @@ private actor ReviewLifecycleActionAPI: OwnerActionServing {
         }
         guard let action = terminalActions.first(where: { $0.id == id }) else {
             throw URLError(.resourceUnavailable)
+        }
+        if holdsTerminalActions && !releasedTerminalActionIDs.contains(id) {
+            return OwnerAction(
+                id: action.id,
+                actionKind: action.actionKind,
+                target: action.target,
+                state: .queued
+            )
         }
         return action
     }

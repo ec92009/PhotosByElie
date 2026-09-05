@@ -1,4 +1,8 @@
-"""Executable source contract for the native Backstage culling workspace."""
+"""Native UI/adapter wiring checks; Swift tests exercise workflow behavior.
+
+Keep these checks at composition boundaries. Mutable state, scheduling, and
+proposal decisions belong in the executable BackstageUI Swift test suites.
+"""
 
 from pathlib import Path
 import plistlib
@@ -162,12 +166,11 @@ class NativeCullingParityTest(unittest.TestCase):
             'case live = "Live"',
             'case hidden = "Hidden"',
             'case unavailable = "Unavailable"',
-            "case .allAssets:",
-            "case .culling:",
-            "([.undecided], [], [], [.available])",
         ):
             self.assertIn(marker, model)
 
+        # All saved-view filter combinations execute in the Swift integration suite.
+        self.assertIn("galleryWorkflow.savedViewPreset(savedView)", model)
     def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
@@ -184,14 +187,12 @@ class NativeCullingParityTest(unittest.TestCase):
             "CullingThumbnailFailure(error: error)",
             "cullingThumbnailFailures[assetID] = lastFailure",
             "func retryThumbnail(for assetID: String,",
-            "cullingThumbnailUpgradeTasks: [String: Task<Void, Never>]",
-            "cullingVisibleAssetIDs = Set<String>()",
             "func cullingAssetDidAppear(_ asset: FixtureAsset)",
             "func cullingAssetDidDisappear(_ assetID: String)",
             "func cullingScrollPhaseChanged(isScrolling: Bool)",
-            "cullingThumbnailUpgradeDelay: Duration = .seconds(1)",
+            "private let cullingThumbnailUpgradeDelay: Duration",
             '"PBE_CULLING_PREVIEW_FAIL_ONCE"',
-            "Task.sleep(for: self.cullingThumbnailUpgradeDelay)",
+            "Task.sleep(for: delay)",
             "maxPixelSize: Self.cullingThumbnailUpgradePixelSize",
         ):
             self.assertIn(marker, model)
@@ -217,6 +218,9 @@ class NativeCullingParityTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
 
+        # Retry, timeout, upgrade coalescing and scroll cancellation execute in Swift.
+        self.assertIn("galleryWorkflow.thumbnailUpgradeTasks", model)
+        self.assertIn("galleryWorkflow.visibleAssetIDs", model)
     def test_culling_preview_fixture_exposes_stable_failed_thumbnail_retry_state(self):
         preview = (
             NATIVE / "Sources" / "BackstageApp" / "CullingPreview.swift"
@@ -484,12 +488,10 @@ class NativeCullingParityTest(unittest.TestCase):
             / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
         ui = backstage_ui_source()
-        self.assertIn("private var cullingThumbnailTasks:", model)
-        self.assertIn("private var cullingThumbnailTaskTokens:", model)
         self.assertIn("func requestThumbnail(\n        for assetID:", model)
         self.assertIn("for attempt in 0..<3", model)
-        self.assertIn("cullingThumbnailTasks[assetID]?.cancel()", model)
-        self.assertIn("cullingThumbnailTaskTokens.removeValue(forKey: assetID)", model)
+        self.assertIn("galleryWorkflow.thumbnailTasks[assetID]?.cancel()", model)
+        self.assertIn("galleryWorkflow.thumbnailTaskTokens.removeValue(forKey: assetID)", model)
         self.assertIn("model.cullingAssetDidAppear(asset)", ui)
         self.assertIn("model.requestReviewThumbnail(for: item)", ui)
 
@@ -791,7 +793,8 @@ class NativeCullingParityTest(unittest.TestCase):
         review_loader = model.split(
             "func loadFixtureReviewWindow", 1
         )[1].split("func clickReviewItem", 1)[0]
-        self.assertIn("reviewWindowRequestSerial", review_loader)
+        self.assertIn("reviewWorkflow.beginWindowRequest()", review_loader)
+        self.assertIn("reviewWorkflow.ownsWindowRequest(requestSerial)", review_loader)
         self.assertIn("isTransientCancellation(error)", review_loader)
         self.assertNotIn("fixtureReviewWindow = nil", review_loader)
         self.assertIn(
@@ -962,8 +965,8 @@ class NativeCullingParityTest(unittest.TestCase):
             "private func hydrateReviewProposalDrafts(",
             1,
         )[1].split("private func clearReviewDraft()", 1)[0]
-        self.assertIn("item.proposedTitle", hydration)
-        self.assertIn("item.proposedKeywords", hydration)
+        self.assertIn("BackstageReviewWorkflowState.hydrateProposalDrafts(", hydration)
+        # Proposal values and manual-edit conflicts execute in workflow-state tests.
         self.assertNotIn("markAIProposalsLoaded", hydration)
         review = app.split("struct ReviewView", 1)[1].split(
             "private struct ReviewAssetRow", 1
@@ -1356,13 +1359,13 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("asset.placementState == .hidden", card)
         self.assertIn('Image(systemName: "flag.fill")', card)
         self.assertIn("asset.placementState == .picked", card)
-        self.assertIn("cullingFilterTask?.cancel()", model)
-        self.assertIn("cullingWindowRequestSerial", model)
+        self.assertIn("galleryWorkflow.filterTask?.cancel()", model)
+        self.assertIn("galleryWorkflow.beginWindowRequest()", model)
         self.assertIn("let previousStates = ids.map", model)
         self.assertIn("decision.pickState = state.rawValue", model)
         self.assertIn("cullingStates.removeValue(forKey: id)", model)
         self.assertIn(
-            "guard requestSerial == cullingWindowRequestSerial, !Task.isCancelled else { return }",
+            "guard galleryWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }",
             model,
         )
 
@@ -1677,10 +1680,9 @@ class NativeCullingParityTest(unittest.TestCase):
         view_model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
         ).read_text(encoding="utf-8")
-        self.assertRegex(
-            view_model,
-            r"updateState = \.updateAvailable\(check\.manifest\)\s+await downloadVerifiedUpdate\(manifest: check\.manifest\)",
-        )
+        # The extracted state machine is exercised by BackstageUpdateWorkflowStateTests.
+        self.assertIn("if let manifest = updateWorkflow.resolveCheck(", view_model)
+        self.assertIn("await downloadVerifiedUpdate(manifest: manifest)", view_model)
         self.assertIn(
             'Button("Install and run new version") {\n'
             "                Task { await model.installAndRunVerifiedUpdate() }",
@@ -1903,9 +1905,6 @@ class NativeCullingParityTest(unittest.TestCase):
             "@Published private(set) var cullingWasteBasketDeferredUndoActionIDs: Set<String> = []",
             "@Published private(set) var reviewWasteBasketQueueing",
             "@Published private(set) var reviewWasteBasketPendingActionID",
-            "lifecycleMonitorTask: Task<Void, Never>?",
-            "cullingWasteBasketPendingActions: [String: OwnerAction] = [:]",
-            "reviewWasteBasketPendingActions: [String: OwnerAction] = [:]",
             "reviewWasteBasketPendingActionIDs: Set<String> = []",
             "reviewUndoIsBlockedByPendingWasteBasketAction",
             "var selectedRecoverableLifecycleIDs: [String]",
@@ -1955,6 +1954,9 @@ class NativeCullingParityTest(unittest.TestCase):
             self.assertIn(marker, preview)
         self.assertIn("guard !isPreviewMode else { return }", app)
 
+        self.assertIn("lifecycleUploadWorkflow.monitorTask", model)
+        self.assertIn("galleryWorkflow.wasteBasketPendingActions", model)
+        self.assertIn("reviewWorkflow.latestWasteBasketAction", model)
     def test_shared_feedback_surface_is_adopted_by_main_app_status_surfaces(self):
         app = (
             NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
@@ -2224,9 +2226,9 @@ class NativeCullingParityTest(unittest.TestCase):
         app = (source_dir / "PhotosByElieBackstageApp.swift").read_text(
             encoding="utf-8"
         )
-        self.assertIn("CullingView(model: model)", app)
-        self.assertIn("ReviewView(model: model)", app)
-        self.assertIn("UploadView(model: model)", app)
+        self.assertIn("CullingView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)", app)
+        self.assertIn("ReviewView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)", app)
+        self.assertIn("UploadView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)", app)
         self.assertNotIn("MediaLibraryView", app)
         self.assertNotIn("FixtureReviewView", app)
         self.assertNotIn("UploadWorkflowView", app)
@@ -2442,12 +2444,12 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertNotIn('Button("Load proposals")', review)
         self.assertIn("await model.refreshReviewAIAvailability()", review)
         self.assertIn("func refreshReviewAIAvailability()", model)
-        self.assertIn("reviewAIAvailabilityToken", model)
-        self.assertIn("reviewAIWindowRefreshPending", model)
+        self.assertIn("reviewWorkflow.aiAvailabilityToken", model)
+        self.assertIn("reviewWorkflow.consumeAIWindowRefresh()", model)
         self.assertIn("preservedSelectedIDs", loader)
         self.assertIn("preservedFocusedID", loader)
-        self.assertIn("hasManualEdits", hydration)
-        self.assertIn("conflicts.insert(item.id)", hydration)
+        self.assertIn("BackstageReviewWorkflowState.hydrateProposalDrafts(", hydration)
+        # Manual drafts survive newer proposals in executable workflow-state tests.
         self.assertIn("existing.hasManualEdits", preservation)
         self.assertNotIn("markAIProposalsLoaded", hydration)
         self.assertIn('Button("Replace ', review)

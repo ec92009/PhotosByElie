@@ -1,6 +1,8 @@
 # PhotosByElie Backstage native app
 
 SwiftPM remains the release build and command-line test source of truth.
+See [regression contracts](../../docs/architecture/backstage-regression-contracts.md)
+for test ownership, repeat runs, and the separate publication-snapshot gate.
 
 ## Control CLI
 

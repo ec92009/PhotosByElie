@@ -79,4 +79,66 @@ struct BackstageReviewWorkflowStateTests {
         #expect(!state.ownsAIStatusRefresh(first))
         #expect(state.ownsAIStatusRefresh(second))
     }
+
+    @Test("A newer AI proposal cannot overwrite a manually edited Review draft")
+    func proposalHydrationPreservesManualDraft() {
+        var drafts = ["asset-a": ReviewMetadataDraft(
+            title: "My title", keywords: ["My keyword"],
+            proposalID: "old-proposal", hasManualEdits: true
+        )]
+        var conflicts: Set<String> = []
+        let item = proposalItem(id: "new-proposal")
+
+        BackstageReviewWorkflowState.hydrateProposalDrafts(
+            from: [item], drafts: &drafts, conflicts: &conflicts
+        )
+
+        #expect(drafts["asset-a"]?.title == "My title")
+        #expect(drafts["asset-a"]?.keywords == ["My keyword"])
+        #expect(drafts["asset-a"]?.proposalID == "old-proposal")
+        #expect(conflicts == ["asset-a"])
+        #expect(item.title == "Stored title")
+    }
+
+    @Test("Incremental proposals refresh untouched drafts and preserve edits for the same proposal")
+    func proposalHydrationRefreshesOnlyEligibleFields() {
+        var drafts: [String: ReviewMetadataDraft] = [:]
+        var conflicts: Set<String> = []
+        var item = proposalItem(id: "first")
+        BackstageReviewWorkflowState.hydrateProposalDrafts(
+            from: [item], drafts: &drafts, conflicts: &conflicts
+        )
+        #expect(drafts["asset-a"]?.title == "Suggested first")
+        #expect(drafts["asset-a"]?.keywords == ["Suggested keyword"])
+
+        item = proposalItem(id: "second")
+        BackstageReviewWorkflowState.hydrateProposalDrafts(
+            from: [item], drafts: &drafts, conflicts: &conflicts
+        )
+        #expect(drafts["asset-a"]?.title == "Suggested second")
+        #expect(drafts["asset-a"]?.proposalID == "second")
+        #expect(conflicts.isEmpty)
+
+        drafts["asset-a"]?.title = "Owner correction"
+        drafts["asset-a"]?.hasManualEdits = true
+        item.proposalStatus = "superseded"
+        BackstageReviewWorkflowState.hydrateProposalDrafts(
+            from: [item], drafts: &drafts, conflicts: &conflicts
+        )
+        #expect(drafts["asset-a"]?.title == "Owner correction")
+        #expect(drafts["asset-a"]?.hasManualEdits == true)
+        #expect(drafts["asset-a"]?.proposalStatus == "superseded")
+        #expect(conflicts.isEmpty)
+    }
+
+    private func proposalItem(id: String) -> FixtureReviewItem {
+        FixtureReviewItem(
+            id: "asset-a", photoLibraryIdentifier: "synthetic-asset-a",
+            title: "Stored title", keywords: ["Stored keyword"],
+            filename: "synthetic.jpg", capturedAt: "2026-09-05T07:00:00Z",
+            proposalReady: true, proposalContextAvailable: true,
+            proposalID: id, proposedTitle: "Suggested \(id)",
+            proposedKeywords: ["Suggested keyword"], proposalStatus: "ready"
+        )
+    }
 }

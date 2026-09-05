@@ -438,6 +438,27 @@ export const createRealEstateDeliverables = ({
       .filter(Boolean)
   )];
 
+  // The output writer binds bytes to immutable identity; manifests alone confer no access.
+  const mediaIdentityDigest = (record) => sha256Hex(JSON.stringify(canonicalMediaIdsFor(record).sort()));
+
+  const readBoundOutput = async (gallery, record) => {
+    const output = record.outputs?.[record.type] || record.output || {};
+    const key = String(output.key || record.outputKey || "");
+    const expected = outputKeyFor(gallery, record.id, record.type, output.filename, output.contentType);
+    const denied = () => Object.assign(new Error("Product output identity is unverified; regenerate this product."), {
+      status: 409, code: "real_estate_output_identity_unverified",
+    });
+    if (!["pdf", "video", "originals"].includes(record.type) || key !== expected) throw denied();
+    const object = await privateBucket.get(key);
+    if (!object) throw Object.assign(new Error("Real-estate product output is missing from private storage."), {
+      status: 404, code: "missing_real_estate_deliverable_asset",
+    });
+    const metadata = object.customMetadata || {};
+    if (metadata.galleryKey !== gallery.key || metadata.deliverableId !== record.id
+      || metadata.type !== record.type || metadata.mediaIdentityDigest !== await mediaIdentityDigest(record)) throw denied();
+    return { object, output, key };
+  };
+
   const createDeliveryLinks = async (payload = {}) => {
     const gallery = galleryFor(payload);
     authorize(gallery, payload);
@@ -510,23 +531,7 @@ export const createRealEstateDeliverables = ({
 
     for (const record of selected) {
       const canonicalMediaIds = canonicalMediaIdsFor(record);
-      const output = record.outputs?.[record.type] || record.output || {};
-      const objectKey = String(output.key || record.outputKey || "").replace(/^\/+/, "");
-      if (!objectKey) {
-        throw Object.assign(new Error(`${String(record.type || "Product")} is ready but has no private output key.`), {
-          status: 409,
-          code: "real_estate_deliverable_needs_attention",
-          details: { id: record.id },
-        });
-      }
-      const object = await privateBucket.get(objectKey);
-      if (!object) {
-        throw Object.assign(new Error(`${String(record.type || "Product")} is missing from private storage.`), {
-          status: 404,
-          code: "missing_real_estate_deliverable_asset",
-          details: { id: record.id },
-        });
-      }
+      const { object, output, key: objectKey } = await readBoundOutput(gallery, record);
       const token = `relink_${randomUUID().replace(/-/g, "").slice(0, 28)}`;
       const filename = filenameFor(record, output);
       const type = String(record.type || "").toLowerCase();
@@ -544,6 +549,7 @@ export const createRealEstateDeliverables = ({
           productId: `real-estate-${type}`,
           realEstateGalleryKey: gallery.key,
           realEstateDeliverableId: record.id,
+          outputIdentityVersion: 1,
           canonicalMediaIds,
           createdAt,
           expiresAt,
@@ -592,7 +598,36 @@ export const createRealEstateDeliverables = ({
   const putDeliverable = async (payload = {}) => {
     const gallery = galleryFor(payload);
     authorize(gallery, payload);
-    const record = normalizeRecord(gallery, payload.deliverable || {});
+    const incoming = payload.deliverable || {};
+    let record = normalizeRecord(gallery, incoming);
+    const existing = await objectJson(await privateBucket.get(keyFor(gallery, record.id)));
+    const protectedFields = ["output", "outputs", "outputKey", "assemblyJob", "viewUrl", "downloadUrl"];
+    for (const field of protectedFields) {
+      const hints = field === "outputs" ? Object.values(incoming.outputs || {}) : field === "output" ? [incoming.output] : [];
+      const pendingHints = !existing && hints.length > 0 && hints.every((hint) => hint
+        && Object.keys(hint).every((key) => ["filename", "contentType"].includes(key)));
+      const pendingAssembly = !existing && field === "assemblyJob" && incoming.assemblyJob?.status === "pending"
+        && Object.keys(incoming.assemblyJob).every((key) => ["status", "assembler", "submittedAt"].includes(key));
+      if (pendingHints || pendingAssembly) continue;
+      if (incoming[field] != null && incoming[field] !== ""
+        && JSON.stringify(incoming[field]) !== JSON.stringify(existing?.[field])) {
+        throw Object.assign(new Error("Output descriptors must be created by product assembly."), {
+          status: 400, code: "real_estate_output_override_forbidden",
+        });
+      }
+    }
+    if (existing) {
+      // A shelf rename may echo a stale local mirror; never replace assembly authority.
+      if (record.type !== existing.type || JSON.stringify(record.batch) !== JSON.stringify(existing.batch)) {
+        throw Object.assign(new Error("Create a new product for a changed selection."), {
+          status: 409, code: "real_estate_deliverable_identity_conflict",
+        });
+      }
+      record = { ...existing, title: record.title, updatedAt: record.updatedAt };
+    } else if (["pdf", "video", "originals"].includes(record.type)) {
+      record = { ...record, status: "pending", viewUrl: "", downloadUrl: "", output: null, outputs: null, assemblyJob: null };
+    }
+
     const recordWithEmail = {
       ...record,
       deliveryEmail: await sendReadyDeliverableEmail(gallery, record),
@@ -890,6 +925,7 @@ export const createRealEstateDeliverables = ({
         deliverableId: id,
         type,
         assemblyJobId: String(record.assemblyJob?.id || ""),
+        mediaIdentityDigest: await mediaIdentityDigest(record),
       },
     });
     const completedAt = now().toISOString();
@@ -1005,22 +1041,7 @@ export const createRealEstateDeliverables = ({
         details: { status: record.status, failureReason: record.failureReason || "" },
       });
     }
-    const output = record.outputs?.[record.type] || record.output || {};
-    const key = String(output.key || record.outputKey || "").replace(/^\/+/, "");
-    if (!key) {
-      throw Object.assign(new Error("Real-estate product is ready but has no output key."), {
-        status: 409,
-        code: "real_estate_deliverable_needs_attention",
-      });
-    }
-    const object = await privateBucket.get(key);
-    if (!object) {
-      throw Object.assign(new Error("Real-estate product output is missing from private storage."), {
-        status: 404,
-        code: "missing_real_estate_deliverable_asset",
-        details: { key },
-      });
-    }
+    const { object, output } = await readBoundOutput(gallery, record);
     const filename = filenameFor(record, output);
     return {
       record: publicRecordFor(record),
@@ -1031,6 +1052,25 @@ export const createRealEstateDeliverables = ({
         "cache-control": "private, max-age=60",
       },
     };
+  };
+
+  const getDeliveryAsset = async (download) => {
+    if (download.outputIdentityVersion !== 1) throw Object.assign(new Error("Regenerate this legacy product link."), {
+      status: 409, code: "real_estate_output_identity_unverified",
+    });
+    const gallery = galleryFor({ galleryKey: download.realEstateGalleryKey });
+    const type = String(download.productId || "").replace(/^real-estate-/, "");
+    const record = {
+      id: download.realEstateDeliverableId, type,
+      output: { key: download.objectKey, filename: download.filename, contentType: download.contentType },
+      batch: { projects: [{ items: (download.canonicalMediaIds || []).map((photoId) => ({ photoId })) }] },
+    };
+    const { object } = await readBoundOutput(gallery, record);
+    return new Response(object.body, { headers: {
+      "content-type": download.contentType || object.httpMetadata?.contentType || "application/octet-stream",
+      "content-disposition": `attachment; filename="${filenameFor(record, record.output)}"`,
+      "cache-control": "private, no-store",
+    } });
   };
 
   const deleteDeliverable = async (payload = {}) => {
@@ -1208,6 +1248,7 @@ export const createRealEstateDeliverables = ({
     failAssemblyOutput,
     createDeliveryLinks,
     getDeliverableAsset,
+    getDeliveryAsset,
     deleteDeliverable,
     beginCloudAssemblyRender,
     getCloudAssemblyRenderJob,

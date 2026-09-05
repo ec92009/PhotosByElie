@@ -317,45 +317,14 @@ const createLocalRealEstateDeliverables = ({ privateBucket, galleries, store }) 
           continue;
         }
         const bytes = record.type === "pdf" ? pdfBytesForRecord(record) : videoBytesForRecord(record);
-        await privateBucket.put(key, bytes, {
-          httpMetadata: { contentType: output.contentType || (record.type === "pdf" ? "application/pdf" : "video/mp4") },
-          customMetadata: {
-            galleryKey: record.galleryKey,
-            deliverableId: record.id,
-            type: record.type,
-            localRehearsal: "true",
-          },
-        });
-        const readyRecord = {
-          ...record,
-          status: "ready",
-          updatedAt: now,
-          bytes: bytes.byteLength,
-          viewUrl: assetUrlFor(record.id, "view"),
-          downloadUrl: assetUrlFor(record.id, "download"),
-          assemblyJob: {
-            ...(record.assemblyJob || {}),
-            status: "ready",
-            completedAt: now,
-            localRehearsal: true,
-          },
-          deliveryEmail: {
-            status: "not_sent",
-            decision: "local_rehearsal_only",
-            reason: "local_worker_does_not_send_real_estate_email",
-            decidedAt: now,
-          },
-        };
-        await privateBucket.put(deliverableKeyFor(gallery, record.id), new TextEncoder().encode(JSON.stringify(readyRecord, null, 2)), {
-          httpMetadata: { contentType: "application/json; charset=utf-8" },
-          customMetadata: {
-            galleryKey: record.galleryKey,
-            deliverableId: record.id,
-            type: record.type,
-            assemblyJobId: record.assemblyJob?.id || "",
-            status: "ready",
-            localRehearsal: "true",
-          },
+        const readyRecord = await base.completeAssemblyOutput({
+          ...payload,
+          id: record.id,
+          filename: record.filename,
+          contentType: output.contentType || (record.type === "pdf" ? "application/pdf" : "video/mp4"),
+          contentLength: bytes.byteLength,
+          body: bytes,
+          assembler: "local-rehearsal",
         });
         readyDeliverables.push(readyRecord);
       }

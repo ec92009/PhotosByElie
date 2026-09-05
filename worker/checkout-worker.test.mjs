@@ -4670,7 +4670,7 @@ test("real-estate deliverables endpoint saves and lists client products", async 
   assert.equal(wrongPassword.status, 401);
 });
 
-test("real-estate saved PDF and video email failures do not block saved products", async () => {
+test("real-estate saved PDF and video stay pending until output completion", async () => {
   const randomUUID = deterministicIds();
   const privateR2 = createFakeR2();
   const emailClient = createFakeEmailClient({ fail: true });
@@ -4722,16 +4722,11 @@ test("real-estate saved PDF and video email failures do not block saved products
     }, { cookie }));
     assert.equal(saveResponse.status, 201);
     const saved = await saveResponse.json();
-    assert.equal(saved.deliverable.status, "ready");
-    assert.equal(saved.deliverable.deliveryEmail.status, "failed");
-    assert.equal(saved.deliverable.deliveryEmail.error.code, "fake_email_failed");
+    assert.equal(saved.deliverable.status, "pending");
+    assert.equal(saved.deliverable.deliveryEmail.status, "not_sent");
   }
 
-  assert.equal(emailClient.sent.length, 2);
-  assert.match(emailClient.sent[0].text, /Hello Corine/);
-  assert.match(emailClient.sent[0].text, /La Concha 1 Apt 8AB1/);
-  assert.match(emailClient.sent[0].text, /Real Estate shelf/);
-  assert.doesNotMatch(emailClient.sent[0].text, /backup/i);
+  assert.equal(emailClient.sent.length, 0);
 
   const listResponse = await worker.fetch(jsonRequest("https://worker.test/real-estate/deliverables/list", {
     galleryKey: "corine-real-estate",
@@ -4740,7 +4735,7 @@ test("real-estate saved PDF and video email failures do not block saved products
   assert.equal(listResponse.status, 200);
   const listed = await listResponse.json();
   assert.equal(listed.count, 2);
-  assert.equal(listed.deliverables.filter((record) => record.deliveryEmail?.status === "failed").length, 2);
+  assert.equal(listed.deliverables.filter((record) => record.status === "pending").length, 2);
 });
 
 test("real-estate cloud assembly jobs persist status and serve completed assets", async () => {
@@ -5054,15 +5049,17 @@ test("real-estate delivery links deny the full batch before object reads or toke
       type: "pdf",
       status: "ready",
       filename: "denied.pdf",
-      outputs: { pdf: { key: "outputs/denied.pdf", contentType: "application/pdf" } },
       batch: { batchId: "denied-batch", projects: [{ items: [{ photoId: "photo-denied" }] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+  const completed = await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
+  });
   let outputReads = 0;
   const originalGet = privateR2.get;
   privateR2.get = async (key, options) => {
-    if (key === record.outputs.pdf.key) outputReads += 1;
+    if (key === completed.outputs.pdf.key) outputReads += 1;
     return originalGet(key, options);
   };
 
@@ -5102,11 +5099,13 @@ test("real-estate delivery links recheck their lifecycle fence before token pers
       type: "pdf",
       status: "ready",
       filename: "raced.pdf",
-      outputs: { pdf: { key: "outputs/raced.pdf", contentType: "application/pdf" } },
       batch: { batchId: "raced-batch", projects: [{ items: [{ photoId: "photo-raced" }] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"));
+  const completed = await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
+  });
 
   await assert.rejects(deliverables.createDeliveryLinks({
     galleryKey: "corine-real-estate",
@@ -5677,16 +5676,78 @@ test("real-estate delivery links fail closed when their batch has no canonical m
       type: "pdf",
       status: "ready",
       filename: "identityless.pdf",
-      outputs: { pdf: { key: "outputs/identityless.pdf", contentType: "application/pdf" } },
       batch: { batchId: "identityless", projects: [{ items: [] }] },
     },
   });
-  await privateR2.put(record.outputs.pdf.key, new TextEncoder().encode("%PDF"), {
-    httpMetadata: { contentType: "application/pdf" },
+  await deliverables.completeAssemblyOutput({
+    galleryKey: session.galleryKey, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF"), contentType: "application/pdf",
   });
   await assert.rejects(deliverables.createDeliveryLinks({
     galleryKey: "corine-real-estate",
     realEstateSession: session,
     deliverableIds: [record.id],
   }), { code: "lifecycle_identity_unavailable" });
+});
+
+test("real-estate output authorization rejects forged writes and legacy object pointers", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "gallery-a", username: "Client", deliverablesPrefix: "custom/gallery-a/products" };
+  const session = { galleryKey: gallery.key, username: "Client" };
+  const service = createRealEstateDeliverables({ privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed });
+  const payload = { galleryKey: gallery.key, realEstateSession: session };
+  const base = { id: "forged", type: "pdf", status: "ready", batch: { batchId: "test", projects: [{ items: [{ photoId: "visible-unrelated" }] }] } };
+  for (const field of ["output", "outputs", "outputKey"]) {
+    const pointer = { key: "private/unrelated-master.pdf", contentType: "application/pdf" };
+    const record = { ...base, [field]: field === "outputs" ? { pdf: pointer } : field === "outputKey" ? pointer.key : pointer };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: record }), { code: "real_estate_output_override_forbidden" });
+  }
+  const targets = ["private/unrelated-master.pdf", "custom/gallery-b/products/outputs/forged.pdf", "custom/gallery-a/products/outputs/other.pdf", "/custom/gallery-a/products/outputs/forged.pdf"];
+  for (const key of targets) {
+    await bucket.put(key, new TextEncoder().encode("private bytes"));
+    await bucket.put("custom/gallery-a/products/forged.json", new TextEncoder().encode(JSON.stringify({ ...base, outputKey: key })));
+    const originalGet = bucket.get;
+    let targetReads = 0;
+    bucket.get = async (...args) => { if (args[0] === key) targetReads++; return originalGet(...args); };
+    for (const action of ["view", "download", "head"]) {
+      await assert.rejects(service.getDeliverableAsset({ ...payload, id: base.id, action }), { code: "real_estate_output_identity_unverified" });
+    }
+    await assert.rejects(service.createDeliveryLinks({ ...payload, deliverableIds: [base.id] }), { code: "real_estate_output_identity_unverified" });
+    assert.equal(targetReads, 0);
+    bucket.get = originalGet;
+  }
+  assert.equal(store._debug.downloads.size, 0);
+});
+
+test("real-estate completed bytes retain gallery and media identity through rename and record reuse", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "gallery-a", username: "Client", deliverablesPrefix: "custom/gallery-a/products" };
+  const payload = { galleryKey: gallery.key, realEstateSession: { galleryKey: gallery.key, username: "Client" } };
+  const service = createRealEstateDeliverables({ privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed });
+  for (const [type, mime, filename] of [["pdf", "application/pdf", "test.pdf"], ["video", "video/mp4", "test.mp4"], ["video", "video/webm", "test.webm"], ["originals", "application/zip", "test.zip"]]) {
+    const draft = { id: filename, type, batch: { batchId: filename, projects: [{ items: [{ photoId: "actual-media" }] }] } };
+    await service.putDeliverable({ ...payload, deliverable: draft });
+    const ready = await service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: mime, body: new TextEncoder().encode("owned bytes") });
+    const renamed = await service.putDeliverable({ ...payload, deliverable: { ...ready, title: "Renamed" } });
+    assert.equal(renamed.status, "ready");
+    assert.equal((await service.getDeliverableAsset({ ...payload, id: draft.id })).headers["content-type"], mime);
+    const links = await service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] });
+    assert.equal(links.links.length, 1);
+    const token = links.links[0].url.split("/").pop();
+    const capability = await store.getDownload(token);
+    assert.equal((await service.getDeliveryAsset(capability)).status, 200);
+    await assert.rejects(service.getDeliveryAsset({ ...capability, outputIdentityVersion: undefined }), { code: "real_estate_output_identity_unverified" });
+    await assert.rejects(service.getDeliveryAsset({ ...capability, canonicalMediaIds: ["unrelated-visible"] }), { code: "real_estate_output_identity_unverified" });
+    const modifiedBatch = { ...draft.batch, projects: [{ items: [{ photoId: "unrelated-visible" }] }] };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: { ...ready, batch: modifiedBatch } }), { code: "real_estate_deliverable_identity_conflict" });
+    // Model persisted legacy tampering or delete/recreate retaining old output bytes.
+    await bucket.put(`custom/gallery-a/products/${draft.id}.json`, new TextEncoder().encode(JSON.stringify({ ...ready, batch: modifiedBatch })));
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id }), { code: "real_estate_output_identity_unverified" });
+    await assert.rejects(service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] }), { code: "real_estate_output_identity_unverified" });
+    await bucket.put(`custom/gallery-a/products/${draft.id}.json`, new TextEncoder().encode(JSON.stringify(ready)));
+    await bucket.put(ready.outputs[type].key, new TextEncoder().encode("unbound legacy bytes"), { customMetadata: { galleryKey: gallery.key, deliverableId: draft.id, type } });
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id }), { code: "real_estate_output_identity_unverified" });
+  }
 });

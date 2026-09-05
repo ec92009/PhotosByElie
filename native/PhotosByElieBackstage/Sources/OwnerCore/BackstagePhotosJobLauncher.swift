@@ -24,7 +24,7 @@ enum BackstagePhotosJobLauncher {
         }
         var code: SecStaticCode?
         var requirement: SecRequirement?
-        let rule = "anchor apple generic and identifier \"com.photosbyelie.backstage\" and certificate leaf[subject.OU] = \"L9958JSM92\""
+        let rule = "anchor apple generic and identifier \"com.photosbyelie.backstage\" and certificate leaf[subject.OU] = \"CB7FE399AL\""
         guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &code) == errSecSuccess,
               SecRequirementCreateWithString(rule as CFString, [], &requirement) == errSecSuccess,
               let code, let requirement,

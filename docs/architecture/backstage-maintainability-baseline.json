@@ -13,7 +13,7 @@
   "files": [
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
-      "nloc": 8858
+      "nloc": 8824
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift",
@@ -45,11 +45,11 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerCullingSQLiteStore.swift",
-      "nloc": 1039
+      "nloc": 901
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift",
-      "nloc": 1991
+      "nloc": 1579
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift",
@@ -107,7 +107,7 @@
       "name": "set",
       "start": 223,
       "end": 466,
-      "nloc": 241,
+      "nloc": 218,
       "ccn": 2,
       "parameters": 0,
       "nesting": 0
@@ -118,10 +118,10 @@
       "name": "init",
       "start": 747,
       "end": 862,
-      "nloc": 88,
-      "ccn": 8,
+      "nloc": 83,
+      "ccn": 6,
       "parameters": 24,
-      "nesting": 2
+      "nesting": 0
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift::requestThumbnail for assetID : String , preferredIdentifier : String? = nil , preferRenderedJPEG : Bool = false , priority : TaskPriority? = nil",
@@ -1471,8 +1471,8 @@
       "name": "cullingWindow",
       "start": 40,
       "end": 412,
-      "nloc": 369,
-      "ccn": 68,
+      "nloc": 148,
+      "ccn": 25,
       "parameters": 18,
       "nesting": 4
     },
@@ -1702,10 +1702,10 @@
       "name": "applyReview",
       "start": 310,
       "end": 987,
-      "nloc": 662,
-      "ccn": 96,
+      "nloc": 250,
+      "ccn": 43,
       "parameters": 13,
-      "nesting": 19
+      "nesting": 11
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::undoReview operationID : String , actor : String = \"owner\" , now : Date = Date",
@@ -2256,6 +2256,66 @@
       "ccn": 23,
       "parameters": 1,
       "nesting": 0
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/CullingWindowQuery.swift::projectionSQL",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/CullingWindowQuery.swift",
+      "name": "projectionSQL",
+      "start": 109,
+      "end": 204,
+      "nloc": 96,
+      "ccn": 5,
+      "parameters": 0,
+      "nesting": 0,
+      "reviewNote": "PBB-167: 96 NLOC, CCN 5. One SQL SELECT projection kept contiguous to review aliases and identity/equipment fallback together; no writes. Exact ceiling, not a general SQL exemption."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift::apply _ action : FixtureReviewAction , to assetID : String , metadata : ReviewMutationMetadata , activeProposal : [ String : JSONValue ] ? , aiRequest : ReviewMutationAIRequest , anchorAssetID : String",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift",
+      "name": "apply",
+      "start": 15,
+      "end": 38,
+      "nloc": 24,
+      "ccn": 8,
+      "parameters": 6,
+      "nesting": 7,
+      "reviewNote": "PBB-167: ns reports 7 for a flat six-case action switch (24 NLOC, CCN 8); inspected actual control nesting is one. Keep exhaustive enum dispatch together."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift::requestAI _ assetID : String , request : ReviewMutationAIRequest",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift",
+      "name": "requestAI",
+      "start": 134,
+      "end": 191,
+      "nloc": 56,
+      "ccn": 7,
+      "parameters": 2,
+      "nesting": 5,
+      "reviewNote": "PBB-167: ns reports 5 including multiline SQL/bindings; 56 NLOC, CCN 7, no deeply nested control flow. Preserve ordered per-asset request writes in the caller transaction."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift::editMetadata _ assetID : String , metadata : ReviewMutationMetadata",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift",
+      "name": "editMetadata",
+      "start": 232,
+      "end": 290,
+      "nloc": 56,
+      "ccn": 10,
+      "parameters": 2,
+      "nesting": 5,
+      "reviewNote": "PBB-167: ns reports 5 including SQL/bindings; 56 NLOC, CCN 10. Preserve editorial timestamps and proposal acceptance order; field writes already separate."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift::approve _ assetID : String , metadata : ReviewMutationMetadata , activeProposal : [ String : JSONValue ] ? , isAnchor : Bool",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewMutation.swift",
+      "name": "approve",
+      "start": 488,
+      "end": 527,
+      "nloc": 40,
+      "ccn": 3,
+      "parameters": 4,
+      "nesting": 5,
+      "reviewNote": "PBB-167: ns reports 5 including SQL/bindings; 40 NLOC, CCN 3. Coordinates separate metadata, proposal and source/delivery helpers in caller transaction."
     }
   ],
   "excluded": [
@@ -2289,6 +2349,7 @@
     }
   ],
   "reviewNotes": [
-    "Initial PBB-167 ceiling inventory from e3a5690c: existing debt only; no new growth permitted. Bounded extractions and their measured changes are recorded in docs/audits/pbb-167-maintainability.md."
+    "Initial PBB-167 ceiling inventory from e3a5690c: existing debt only; no new growth permitted. Bounded extractions and their measured changes are recorded in docs/audits/pbb-167-maintainability.md.",
+    "PBB-167: Reviewed extraction exceptions are attached to exact new function entries. Existing surviving ceilings ratchet downward; original baseline revision remains the debt provenance."
   ]
 }

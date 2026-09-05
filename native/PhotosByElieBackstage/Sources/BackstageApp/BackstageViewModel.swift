@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import OwnerCore
 import UniformTypeIdentifiers
@@ -232,12 +233,26 @@ final class BackstageViewModel: ObservableObject {
     @Published private(set) var ownerDeviceManagementStatus = "Enrolled Macs have not been refreshed."
     @Published private(set) var isRefreshingOwnerDevices = false
     @Published private(set) var pendingOwnerDeviceRevocation: OwnerDevice?
-    @Published var paidOrderRefundOrderID = ""
-    @Published var paidOrderRefundReason = ""
-    @Published private(set) var paidOrderRefundPreview: PaidOrderRefundPreview?
-    @Published private(set) var paidOrderRefundStatus = "Enter an order ID to reconcile it with Stripe before refunding."
-    @Published private(set) var isReconcilingPaidOrderRefund = false
-    @Published private(set) var isPaidOrderRefundConfirmationPresented = false
+    var paidOrderRefundOrderID: String {
+        get { refundWorkflow.paidOrderRefundOrderID }
+        set { refundWorkflow.paidOrderRefundOrderID = newValue }
+    }
+    var paidOrderRefundReason: String {
+        get { refundWorkflow.paidOrderRefundReason }
+        set { refundWorkflow.paidOrderRefundReason = newValue }
+    }
+    var paidOrderRefundPreview: PaidOrderRefundPreview? {
+        get { refundWorkflow.paidOrderRefundPreview }
+    }
+    var paidOrderRefundStatus: String {
+        get { refundWorkflow.paidOrderRefundStatus }
+    }
+    var isReconcilingPaidOrderRefund: Bool {
+        get { refundWorkflow.isReconcilingPaidOrderRefund }
+    }
+    var isPaidOrderRefundConfirmationPresented: Bool {
+        get { refundWorkflow.isPaidOrderRefundConfirmationPresented }
+    }
     @Published var photoAccess: PhotoLibraryAccess
     @Published var libraryItems: [PhotoLibraryItem] = []
     @Published var selectedPhotoIDs: Set<String> = []
@@ -470,6 +485,8 @@ final class BackstageViewModel: ObservableObject {
     private var terminationRequested = false
     private var aiPassMonitoringDetached = false
 
+    private let refundWorkflow: BackstageRefundWorkflow
+    private var refundObservation: AnyCancellable?
     let api: OwnerAPIClient
     let authenticationService: OwnerAuthenticationService
     let photoLibrary: any PhotoLibraryServing
@@ -808,6 +825,7 @@ final class BackstageViewModel: ObservableObject {
                 ? legacyPreviewVisibility
                 : preferences.bool(forKey: BackstagePanelPreferenceKey.reviewInspectorVisible)
         self.api = api
+        self.refundWorkflow = BackstageRefundWorkflow(api: api)
         self.authenticationService = authenticationService ?? OwnerAuthenticationService(api: api)
         self.photoLibrary = photoLibrary
         self.galleryWorkflow = BackstageGalleryWorkflowState(
@@ -852,12 +870,28 @@ final class BackstageViewModel: ObservableObject {
         self.externalEditJobStore = externalEditJobStore
         self.customerPhotoLinks = customerPhotoLinks
         self.openExternalURL = openExternalURL
+        restoreExternalEditJob()
+        bindRefundWorkflow()
+    }
+
+    private func restoreExternalEditJob() {
         if let externalEditJobStore {
             _ = try? externalEditJobStore.recoverInterruptedPreparation(now: Date())
             self.externalEdit.activeJob = try? externalEditJobStore.activeJob()
             if let job = self.externalEdit.activeJob {
                 self.externalEdit.status = "Editing \(job.sources.count.formatted()) photo\(job.sources.count == 1 ? "" : "s") in \(job.editor.name). Export the finished image, then return it to this job."
             }
+        }
+    }
+
+    private func bindRefundWorkflow() {
+        refundWorkflow.recoverFailure = { [weak self] error in
+            guard let self else { return error.localizedDescription }
+            await self.presentAuthenticationFailureIfNeeded(error)
+            return self.userFacingMessage(for: error)
+        }
+        refundObservation = refundWorkflow.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
         }
     }
 
@@ -1652,95 +1686,26 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func startPaidOrderRefundPreview() {
-        guard let orderID = beginPaidOrderRefundPreview() else { return }
-        Task { await reconcilePaidOrderRefund(orderID: orderID) }
+        guard !isUpdateOperationInProgress else { return }
+        refundWorkflow.startPaidOrderRefundPreview()
     }
 
     func previewPaidOrderRefund() async {
-        guard let orderID = beginPaidOrderRefundPreview() else { return }
-        await reconcilePaidOrderRefund(orderID: orderID)
-    }
-
-    private func beginPaidOrderRefundPreview() -> String? {
-        guard !isReconcilingPaidOrderRefund, !isUpdateOperationInProgress else { return nil }
-        let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !orderID.isEmpty else {
-            paidOrderRefundPreview = nil
-            paidOrderRefundStatus = "Enter the exact PBE order ID first."
-            return nil
-        }
-        isReconcilingPaidOrderRefund = true
-        isPaidOrderRefundConfirmationPresented = false
-        paidOrderRefundPreview = nil
-        paidOrderRefundStatus = "Reconciling the order, payment, refund, and download state with Stripe…"
-        return orderID
-    }
-
-    private func reconcilePaidOrderRefund(orderID: String) async {
-        defer { isReconcilingPaidOrderRefund = false }
-        do {
-            let preview = try await api.previewPaidOrderRefund(orderId: orderID)
-            guard paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines) == orderID else {
-                paidOrderRefundStatus = "Order changed. Check the new order before continuing."
-                return
-            }
-            paidOrderRefundPreview = preview
-            paidOrderRefundStatus = preview.eligible
-                ? "Verified paid order. No download entitlement has been issued; a full refund is available."
-                : (preview.ineligibleReason ?? "This order is not eligible for a pre-delivery refund.")
-        } catch {
-            await presentAuthenticationFailureIfNeeded(error)
-            paidOrderRefundPreview = nil
-            paidOrderRefundStatus = "Refund check failed: \(userFacingMessage(for: error))"
-        }
+        guard !isUpdateOperationInProgress else { return }
+        await refundWorkflow.previewPaidOrderRefund()
     }
 
     func requestPaidOrderRefundConfirmation() {
-        guard !isReconcilingPaidOrderRefund,
-              paidOrderRefundPreview?.eligible == true,
-              paidOrderRefundPreview?.orderId == paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines),
-              !paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isPaidOrderRefundConfirmationPresented = true
+        refundWorkflow.requestPaidOrderRefundConfirmation()
     }
 
     func cancelPaidOrderRefundConfirmation() {
-        isPaidOrderRefundConfirmationPresented = false
+        refundWorkflow.cancelPaidOrderRefundConfirmation()
     }
 
     func confirmPaidOrderRefund() {
-        guard isPaidOrderRefundConfirmationPresented, !isReconcilingPaidOrderRefund, !isUpdateOperationInProgress else { return }
-        let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
-        let reason = paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard paidOrderRefundPreview?.eligible == true,
-              paidOrderRefundPreview?.orderId == orderID, !reason.isEmpty else { return }
-        isPaidOrderRefundConfirmationPresented = false
-        isReconcilingPaidOrderRefund = true
-        paidOrderRefundStatus = "Submitting the confirmed full refund to Stripe…"
-        Task { await refundPaidOrder(orderID: orderID, reason: reason) }
-    }
-
-    private func refundPaidOrder(orderID: String, reason: String) async {
-        defer { isReconcilingPaidOrderRefund = false }
-        do {
-            let result = try await api.refundPaidOrder(
-                orderId: orderID,
-                confirmationOrderId: orderID,
-                reason: reason
-            )
-            guard paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines) == orderID else {
-                paidOrderRefundPreview = nil
-                paidOrderRefundStatus = "Refund response received for \(orderID). Check the selected order separately."
-                return
-            }
-            paidOrderRefundPreview = result
-            paidOrderRefundStatus = result.refundStatus == "succeeded"
-                ? "Stripe confirmed the full refund. Delivery and downloads are permanently blocked."
-                : "Refund status: \(result.refundStatus). Refresh this order to reconcile again."
-        } catch {
-            await presentAuthenticationFailureIfNeeded(error)
-            paidOrderRefundPreview = nil
-            paidOrderRefundStatus = "Refund request failed: \(userFacingMessage(for: error)). Check with Stripe before retrying."
-        }
+        guard !isUpdateOperationInProgress else { return }
+        refundWorkflow.confirmPaidOrderRefund()
     }
 
     private func revokeOwnerDevice(_ device: OwnerDevice) async {

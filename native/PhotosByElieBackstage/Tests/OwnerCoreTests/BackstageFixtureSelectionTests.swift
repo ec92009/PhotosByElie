@@ -125,6 +125,7 @@ struct BackstageFixtureSelectionTests {
         let observation = model.objectWillChange.sink { observedChanges += 1 }
         defer { observation.cancel() }
         model.paidOrderRefundOrderID = "order-a"
+        observedChanges = 0
         model.startPaidOrderRefundPreview()
         #expect(model.isReconcilingPaidOrderRefund)
         #expect(observedChanges > 0)

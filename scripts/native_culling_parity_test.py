@@ -240,6 +240,7 @@ class NativeCullingParityTest(unittest.TestCase):
         store = (
             NATIVE / "Sources" / "OwnerCore" / "OwnerCullingSQLiteStore.swift"
         ).read_text(encoding="utf-8")
+        query = (NATIVE / "Sources" / "OwnerCore" / "CullingWindowQuery.swift").read_text(encoding="utf-8")
         for marker in (
             "needsUnavailableIdentityFallback",
             "exact_identity_cloud_fallbacks",
@@ -248,9 +249,9 @@ class NativeCullingParityTest(unittest.TestCase):
             "exact_identity_cloud_fallback",
             "!sourceAvailable && !exactIdentityCloudFallback.isEmpty",
         ):
-            self.assertIn(marker, store)
-        fallback_cte = store.split("let exactIdentityCTE", 1)[1].split(
-            "let exactIdentitySelection", 1
+            self.assertIn(marker, store + query)
+        fallback_cte = query.split("private var exactIdentityCTE", 1)[1].split(
+            "private func projectionSQL", 1
         )[0]
         self.assertNotIn("filename", fallback_cte)
 

@@ -463,442 +463,24 @@ public struct OwnerReviewSQLiteStore: Sendable {
             let cleanAINote = aiNote.trimmingCharacters(in: .whitespacesAndNewlines)
             var pendingPlacements: [(assetID: String, state: String, eligibility: String)] = []
 
+            let mutation = ReviewMutationContext(
+                connection: connection, fixtureID: fixtureID, timestamp: timestamp,
+                actor: actor, sourceVersionsAvailable: sourceVersionsAvailable,
+                beforeReview: beforeReview
+            )
+            let metadata = ReviewMutationMetadata(
+                explicitTitle: explicitTitle, explicitKeywords: explicitKeywords,
+                explicitCountry: explicitCountry, sourceTitle: sourceTitle,
+                sourceKeywords: sourceKeywords, sourceCountry: sourceCountry
+            )
+            let aiRequest = ReviewMutationAIRequest(reasons: cleanAIReasons, note: cleanAINote)
             for assetID in cleanIDs {
-                if action == .hide {
-                    let existingPlacement = try connection.queryOne(
-                        """
-                        SELECT placement_state, eligibility_state
-                        FROM fixture_asset_decisions
-                        WHERE fixture_id = ? AND asset_id = ?
-                        """,
-                        bindings: [.string(fixtureID), .string(assetID)]
-                    )
-                    let beforePlacement = existingPlacement?["placement_state"]?.stringValue ?? "undecided"
-                    let beforeEligibility = existingPlacement?["eligibility_state"]?.stringValue ?? "active"
-                    try connection.execute(
-                        """
-                        INSERT INTO fixture_asset_decisions (
-                          fixture_id, asset_id, placement_state, eligibility_state,
-                          source, last_action, created_at, updated_at
-                        ) VALUES (?, ?, 'hidden', 'dormant', 'native', 'review-hidden', ?, ?)
-                        ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
-                          placement_state = 'hidden',
-                          source = 'native',
-                          last_action = 'review-hidden',
-                          updated_at = excluded.updated_at
-                        """,
-                        bindings: [
-                            .string(fixtureID), .string(assetID),
-                            .string(timestamp), .string(timestamp),
-                        ]
-                    )
-                    pendingPlacements.append((assetID, beforePlacement, beforeEligibility))
-
-                    try connection.execute(
-                        """
-                        UPDATE asset_ai_proposals
-                        SET status = 'superseded', decided_at = ?
-                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                        """,
-                        bindings: [.string(timestamp), .string(assetID)]
-                    )
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
-                            requested_at = NULL, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [.string(timestamp), .string(assetID)]
-                    )
-                } else if action == .returnToReview {
-                    let editorial = try connection.queryOne(
-                        "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = ?",
-                        bindings: [.string(assetID)]
-                    )
-                    guard editorial?["editorial_state"]?.stringValue == "approved" else {
-                        throw OwnerReviewSQLiteError.invalid("asset is not approved: \(assetID)")
-                    }
-                    let delivery = try connection.queryOne(
-                        "SELECT delivery_state FROM asset_delivery_state WHERE asset_id = ?",
-                        bindings: [.string(assetID)]
-                    )
-                    let preservesLiveRendition = delivery?["delivery_state"]?.stringValue == "live"
-                    try connection.execute(
-                        """
-                        UPDATE sidecar_decisions
-                        SET metadata_state = 'unreviewed', last_action = 'return-to-review',
-                            updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [.string(timestamp), .string(assetID)]
-                    )
-                    if !preservesLiveRendition {
-                        try connection.execute(
-                            """
-                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                            VALUES (?, 'not-ready', ?, ?)
-                            ON CONFLICT(asset_id) DO UPDATE SET
-                              delivery_state = 'not-ready', updated_at = excluded.updated_at
-                            """,
-                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                        )
-                    }
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
-                            requested_at = NULL, approved_at = NULL, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [.string(timestamp), .string(assetID)]
-                    )
-                } else if action == .requestAI {
-                    let existingPlacement = try connection.queryOne(
-                        """
-                        SELECT placement_state, eligibility_state
-                        FROM fixture_asset_decisions
-                        WHERE fixture_id = ? AND asset_id = ?
-                        """,
-                        bindings: [.string(fixtureID), .string(assetID)]
-                    )
-                    let beforePlacement = existingPlacement?["placement_state"]?.stringValue ?? "undecided"
-                    let beforeEligibility = existingPlacement?["eligibility_state"]?.stringValue ?? "active"
-                    try connection.execute(
-                        """
-                        INSERT INTO fixture_asset_decisions (
-                          fixture_id, asset_id, placement_state, eligibility_state,
-                          source, last_action, created_at, updated_at
-                        ) VALUES (?, ?, 'picked', 'dormant', 'native', 'review-picked', ?, ?)
-                        ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
-                          placement_state = 'picked',
-                          source = 'native',
-                          last_action = 'review-picked',
-                          updated_at = excluded.updated_at
-                        """,
-                        bindings: [
-                            .string(fixtureID), .string(assetID),
-                            .string(timestamp), .string(timestamp),
-                        ]
-                    )
-                    pendingPlacements.append((assetID, beforePlacement, beforeEligibility))
-
-                    try connection.execute(
-                        """
-                        UPDATE asset_ai_proposals
-                        SET status = 'superseded', decided_at = ?
-                        WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                        """,
-                        bindings: [.string(timestamp), .string(assetID)]
-                    )
-                    let hasAIRequest = !cleanAIReasons.isEmpty || !cleanAINote.isEmpty
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
-                            requested_at = ?, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [
-                            .string(hasAIRequest ? "requesting-ai" : "unreviewed"),
-                            .string(try encodeJSON(.array(cleanAIReasons.map(JSONValue.string)))),
-                            .string(hasAIRequest ? cleanAINote : ""),
-                            hasAIRequest ? .string(timestamp) : .null,
-                            .string(timestamp), .string(assetID),
-                        ]
-                    )
-                } else if action == .editMetadata {
-                    let previousReview = beforeReview[assetID]?.objectValue ?? [:]
-                    var afterState = previousReview["editorialState"]?.stringValue ?? "unreviewed"
-                    let previousReasons = previousReview["aiReasons"] ?? .array([])
-                    let previousNote = previousReview["aiNote"]?.stringValue ?? ""
-                    let previousEditorial = try connection.queryOne(
-                        "SELECT approved_at FROM asset_editorial_state WHERE asset_id = ?",
-                        bindings: [.string(assetID)]
-                    ) ?? [:]
-
-                    if let explicitTitle {
-                        try connection.execute(
-                            """
-                            UPDATE sidecar_decisions
-                            SET title = ?, last_action = 'metadata', updated_at = ?
-                            WHERE asset_id = ?
-                            """,
-                            bindings: [.string(explicitTitle), .string(timestamp), .string(assetID)]
-                        )
-                    }
-                    if let explicitKeywords {
-                        try connection.execute(
-                            """
-                            UPDATE sidecar_decisions
-                            SET keywords_json = ?, last_action = 'metadata', updated_at = ?
-                            WHERE asset_id = ?
-                            """,
-                            bindings: [
-                                .string(try encodeJSON(.array(explicitKeywords))),
-                                .string(timestamp), .string(assetID),
-                            ]
-                        )
-                    }
-                    if let explicitCountry {
-                        try setCountry(
-                            connection,
-                            assetID: assetID,
-                            country: explicitCountry,
-                            actor: actor,
-                            timestamp: timestamp
-                        )
-                    }
-
-                    if afterState == "approved" {
-                        try connection.execute(
-                            """
-                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                            VALUES (?, 'needs-upload', ?, ?)
-                            ON CONFLICT(asset_id) DO UPDATE SET
-                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
-                            """,
-                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                        )
-                    } else if afterState == "proposed" {
-                        afterState = "unreviewed"
-                        try connection.execute(
-                            """
-                            UPDATE asset_ai_proposals
-                            SET status = 'accepted', decided_at = ?
-                            WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                            """,
-                            bindings: [.string(timestamp), .string(assetID)]
-                        )
-                    }
-
-                    let approvedAt: ReviewSQLiteBinding
-                    if afterState == "approved" {
-                        approvedAt = .string(timestamp)
-                    } else if let previousApprovedAt = previousEditorial["approved_at"]?.stringValue {
-                        approvedAt = .string(previousApprovedAt)
-                    } else {
-                        approvedAt = .null
-                    }
-                    let requestedAt: ReviewSQLiteBinding = afterState == "requesting-ai"
-                        ? .string(timestamp)
-                        : .null
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
-                            requested_at = ?, approved_at = ?, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [
-                            .string(afterState), .string(try encodeJSON(previousReasons)),
-                            .string(previousNote), requestedAt, approvedAt,
-                            .string(timestamp), .string(assetID),
-                        ]
-                    )
-                } else if action == .propagateCountry || action == .propagateTitle || action == .propagateKeywords {
-                    let previousReview = beforeReview[assetID]?.objectValue ?? [:]
-                    let previousReasons = previousReview["aiReasons"] ?? .array([])
-                    let previousNote = previousReview["aiNote"]?.stringValue ?? ""
-                    let previousEditorial = try connection.queryOne(
-                        "SELECT approved_at FROM asset_editorial_state WHERE asset_id = ?",
-                        bindings: [.string(assetID)]
-                    ) ?? [:]
-                    let afterState = previousReview["editorialState"]?.stringValue ?? "unreviewed"
-
-                    if action == .propagateCountry {
-                        try setCountry(
-                            connection,
-                            assetID: assetID,
-                            country: sourceCountry,
-                            actor: actor,
-                            timestamp: timestamp
-                        )
-                    } else if action == .propagateTitle {
-                        try connection.execute(
-                            """
-                            UPDATE sidecar_decisions
-                            SET title = ?, last_action = 'metadata', updated_at = ?
-                            WHERE asset_id = ?
-                            """,
-                            bindings: [.string(sourceTitle), .string(timestamp), .string(assetID)]
-                        )
-                    } else {
-                        try connection.execute(
-                            """
-                            UPDATE sidecar_decisions
-                            SET keywords_json = ?, last_action = 'metadata', updated_at = ?
-                            WHERE asset_id = ?
-                            """,
-                            bindings: [
-                                .string(try encodeJSON(sourceKeywords)),
-                                .string(timestamp), .string(assetID),
-                            ]
-                        )
-                    }
-                    if afterState == "approved" {
-                        try connection.execute(
-                            """
-                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                            VALUES (?, 'needs-upload', ?, ?)
-                            ON CONFLICT(asset_id) DO UPDATE SET
-                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
-                            """,
-                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                        )
-                    }
-                    let approvedAt: ReviewSQLiteBinding
-                    if afterState == "approved" {
-                        approvedAt = .string(timestamp)
-                    } else if let previousApprovedAt = previousEditorial["approved_at"]?.stringValue {
-                        approvedAt = .string(previousApprovedAt)
-                    } else {
-                        approvedAt = .null
-                    }
-                    let requestedAt: ReviewSQLiteBinding = afterState == "requesting-ai"
-                        ? .string(timestamp)
-                        : .null
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = ?, ai_reasons_json = ?, ai_note = ?,
-                            requested_at = ?, approved_at = ?, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [
-                            .string(afterState), .string(try encodeJSON(previousReasons)),
-                            .string(previousNote), requestedAt, approvedAt,
-                            .string(timestamp), .string(assetID),
-                        ]
-                    )
-                } else {
-                    let decision = try connection.queryOne(
-                        "SELECT title, keywords_json FROM sidecar_decisions WHERE asset_id = ?",
-                        bindings: [.string(assetID)]
-                    ) ?? [:]
-                    let activeProposal = activeProposals[assetID]
-                    let approvedTitle: String
-                    if assetID == cleanAnchor, let explicitTitle {
-                        approvedTitle = explicitTitle
-                    } else if let activeProposal {
-                        approvedTitle = activeProposal["proposed_title"]?.stringValue ?? ""
-                    } else {
-                        approvedTitle = decision["title"]?.stringValue ?? ""
-                    }
-                    let approvedKeywords: JSONValue
-                    if assetID == cleanAnchor, let explicitKeywords {
-                        approvedKeywords = .array(explicitKeywords)
-                    } else if let activeProposal {
-                        approvedKeywords = jsonArray(activeProposal["proposed_keywords_json"])
-                    } else {
-                        approvedKeywords = jsonArray(decision["keywords_json"])
-                    }
-                    let approvedCountry: String?
-                    if assetID == cleanAnchor, let explicitCountry {
-                        approvedCountry = explicitCountry
-                    } else {
-                        let proposed = activeProposal?["proposed_country"]?.stringValue ?? ""
-                        approvedCountry = proposed.isEmpty ? nil : proposed
-                    }
-                    try connection.execute(
-                        """
-                        UPDATE sidecar_decisions
-                        SET metadata_state = 'approved', title = ?, keywords_json = ?,
-                            last_action = 'approve', updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [
-                            .string(approvedTitle), .string(try encodeJSON(approvedKeywords)),
-                            .string(timestamp), .string(assetID),
-                        ]
-                    )
-                    if let approvedCountry {
-                        try setCountry(
-                            connection,
-                            assetID: assetID,
-                            country: approvedCountry,
-                            actor: actor,
-                            timestamp: timestamp
-                        )
-                    }
-                    if let activeProposalID = activeProposal?["proposal_id"]?.stringValue {
-                        try connection.execute(
-                            """
-                            UPDATE asset_ai_proposals
-                            SET status = 'accepted', decided_at = ?
-                            WHERE proposal_id = ?
-                            """,
-                            bindings: [.string(timestamp), .string(activeProposalID)]
-                        )
-                        try connection.execute(
-                            """
-                            UPDATE asset_ai_proposals
-                            SET status = 'superseded', decided_at = ?
-                            WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                              AND proposal_id != ?
-                            """,
-                            bindings: [.string(timestamp), .string(assetID), .string(activeProposalID)]
-                        )
-                    }
-                    try connection.execute(
-                        """
-                        UPDATE asset_editorial_state
-                        SET editorial_state = 'approved', ai_reasons_json = '[]', ai_note = '',
-                            requested_at = NULL, approved_at = ?, updated_at = ?
-                        WHERE asset_id = ?
-                        """,
-                        bindings: [.string(timestamp), .string(timestamp), .string(assetID)]
-                    )
-                    if sourceVersionsAvailable {
-                        try connection.execute(
-                            """
-                            UPDATE asset_source_versions
-                            SET state = 'approved', approved_at = ?, superseded_at = NULL
-                            WHERE version_id = (
-                              SELECT version_id FROM asset_source_versions
-                              WHERE asset_id = ? AND source_exists = 1
-                              ORDER BY created_at DESC, version_id DESC
-                              LIMIT 1
-                            ) AND state = 'candidate'
-                            """,
-                            bindings: [.string(timestamp), .string(assetID)]
-                        )
-                        try connection.execute(
-                            """
-                            INSERT INTO asset_delivery_state (
-                              asset_id, delivery_state, source_version_hash, created_at, updated_at
-                            )
-                            VALUES (
-                              ?, 'needs-upload',
-                              COALESCE((
-                                SELECT version_id FROM asset_source_versions
-                                WHERE asset_id = ? AND source_exists = 1
-                                ORDER BY created_at DESC, version_id DESC
-                                LIMIT 1
-                              ), ''),
-                              ?, ?
-                            )
-                            ON CONFLICT(asset_id) DO UPDATE SET
-                              delivery_state = 'needs-upload',
-                              source_version_hash = excluded.source_version_hash,
-                              updated_at = excluded.updated_at
-                            """,
-                            bindings: [
-                                .string(assetID), .string(assetID),
-                                .string(timestamp), .string(timestamp),
-                            ]
-                        )
-                    } else {
-                        try connection.execute(
-                            """
-                            INSERT INTO asset_delivery_state (asset_id, delivery_state, created_at, updated_at)
-                            VALUES (?, 'needs-upload', ?, ?)
-                            ON CONFLICT(asset_id) DO UPDATE SET
-                              delivery_state = 'needs-upload', updated_at = excluded.updated_at
-                            """,
-                            bindings: [.string(assetID), .string(timestamp), .string(timestamp)]
-                        )
-                    }
+                if let placement = try mutation.apply(
+                    action, to: assetID, metadata: metadata,
+                    activeProposal: activeProposals[assetID], aiRequest: aiRequest,
+                    anchorAssetID: cleanAnchor
+                ) {
+                    pendingPlacements.append(placement)
                 }
             }
 
@@ -967,9 +549,9 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 bindings: [
                     .string(operationID), .string(fixtureID), .string(action.rawValue),
                     .string(cleanAnchor), .number(shouldPropagate ? 1 : 0),
-                    .string(try encodeJSON(.array(cleanIDs.map { .string($0) }))),
-                    .string(try encodeJSON(.array(beforeSnapshots))),
-                    .string(try encodeJSON(.array(afterSnapshots))),
+                    .string(try encodeReviewJSON(.array(cleanIDs.map { .string($0) }))),
+                    .string(try encodeReviewJSON(.array(beforeSnapshots))),
+                    .string(try encodeReviewJSON(.array(afterSnapshots))),
                     .string(actor), .string(timestamp),
                 ]
             )
@@ -1098,14 +680,14 @@ public struct OwnerReviewSQLiteStore: Sendable {
     }
 }
 
-private enum ReviewSQLiteBinding {
+enum ReviewSQLiteBinding {
     case string(String)
     case number(Double)
     case bool(Bool)
     case null
 }
 
-private final class ReviewSQLiteConnection {
+final class ReviewSQLiteConnection {
     private let database: OpaquePointer
 
     init(databaseURL: URL, busyTimeoutMilliseconds: Int32) throws {
@@ -1276,7 +858,7 @@ private func binding(_ value: JSONValue) throws -> ReviewSQLiteBinding {
     case let .number(value): .number(value)
     case let .bool(value): .bool(value)
     case .null: .null
-    case .object, .array: .string(try encodeJSON(value))
+    case .object, .array: .string(try encodeReviewJSON(value))
     }
 }
 
@@ -1293,7 +875,7 @@ private func eventID(prefix: String) -> String {
     "\(prefix)-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(16))"
 }
 
-private func encodeJSON(_ value: JSONValue) throws -> String {
+func encodeReviewJSON(_ value: JSONValue) throws -> String {
     let data = try JSONEncoder().encode(value)
     guard let string = String(data: data, encoding: .utf8) else {
         throw OwnerReviewSQLiteError.invalid("could not encode Review JSON")
@@ -1529,7 +1111,7 @@ private func locationCountryEvidence(
     return ("", "")
 }
 
-private func setCountry(
+func setReviewCountry(
     _ connection: ReviewSQLiteConnection,
     assetID: String,
     country: String,
@@ -1606,7 +1188,7 @@ private func snapshot(
     ])
 }
 
-private func jsonArray(_ value: JSONValue?) -> JSONValue {
+func reviewJSONArray(_ value: JSONValue?) -> JSONValue {
     guard let text = value?.stringValue,
           let data = text.data(using: .utf8),
           let decoded = try? JSONDecoder().decode(JSONValue.self, from: data),
@@ -1627,8 +1209,8 @@ private func effectiveMetadata(
     )
     let title = decision["title"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     let fallbackTitle = asset?["photos_title"]?.stringValue ?? ""
-    let keywords = jsonArray(decision["keywords_json"])
-    let fallbackKeywords = jsonArray(asset?["photos_keywords_json"])
+    let keywords = reviewJSONArray(decision["keywords_json"])
+    let fallbackKeywords = reviewJSONArray(asset?["photos_keywords_json"])
     let hasKeywords = keywords.arrayValue?.isEmpty == false
     return (title.isEmpty ? fallbackTitle : title, hasKeywords ? keywords : fallbackKeywords)
 }
@@ -1723,7 +1305,7 @@ private func reviewState(
         "color": decision["color"] ?? .string(""),
         "placementState": fixtureDecision["placement_state"] ?? .string("undecided"),
         "editorialState": editorial["editorial_state"] ?? .string("unreviewed"),
-        "aiReasons": jsonArray(editorial["ai_reasons_json"]),
+        "aiReasons": reviewJSONArray(editorial["ai_reasons_json"]),
         "aiNote": editorial["ai_note"] ?? .string(""),
         "aiAttemptCount": editorial["ai_attempt_count"] ?? .number(0),
         "aiLastError": editorial["ai_last_error"] ?? .string(""),
@@ -1731,7 +1313,7 @@ private func reviewState(
         "proposalContextAvailable": .bool(proposal != nil),
         "proposalId": proposal?["proposal_id"] ?? .string(""),
         "proposedTitle": proposal?["proposed_title"] ?? .string(""),
-        "proposedKeywords": jsonArray(proposal?["proposed_keywords_json"]),
+        "proposedKeywords": reviewJSONArray(proposal?["proposed_keywords_json"]),
         "proposedCountry": proposal?["proposed_country"] ?? .string(""),
         "countryProposalSource": proposal?["country_source"] ?? .string(""),
         "proposalReason": proposal?["reason"] ?? .string(""),
@@ -1740,7 +1322,7 @@ private func reviewState(
         "resolvedModel": proposal?["resolved_model"] ?? proposal?["generator_model"] ?? .string(""),
         "reasoningEffort": proposal?["reasoning_effort"] ?? .string(""),
         "vision": .bool(proposalVision),
-        "modelLadder": jsonArray(proposal?["model_ladder"]),
+        "modelLadder": reviewJSONArray(proposal?["model_ladder"]),
         "deliveryState": delivery["delivery_state"] ?? .string("not-ready"),
         "country": .string(country),
     ])
@@ -1760,8 +1342,8 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
     let assetID = row["asset_id"]?.stringValue ?? ""
     let decisionTitle = row["decision_title"]?.stringValue ?? ""
     let photosTitle = row["photos_title"]?.stringValue ?? ""
-    let decisionKeywords = jsonArray(row["decision_keywords_json"])
-    let photosKeywords = jsonArray(row["photos_keywords_json"])
+    let decisionKeywords = reviewJSONArray(row["decision_keywords_json"])
+    let photosKeywords = reviewJSONArray(row["photos_keywords_json"])
     let keywordValue = decisionKeywords.arrayValue?.isEmpty == false
         ? decisionKeywords
         : photosKeywords
@@ -1771,10 +1353,10 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
     let proposalVision = row["proposal_vision"]?.boolValue
         ?? ((row["proposal_vision"]?.intValue ?? 0) == 1)
     let raw = reviewWindowObject(row["raw_json"])
-    let aiReasons = jsonArray(row["ai_reasons_json"]).arrayValue?.compactMap(\.stringValue) ?? []
-    let proposedKeywords = jsonArray(row["proposal_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
-    let modelLadder = jsonArray(row["proposal_model_ladder"]).arrayValue?.compactMap(\.stringValue) ?? []
-    let locationKeywords = jsonArray(row["location_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let aiReasons = reviewJSONArray(row["ai_reasons_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let proposedKeywords = reviewJSONArray(row["proposal_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let modelLadder = reviewJSONArray(row["proposal_model_ladder"]).arrayValue?.compactMap(\.stringValue) ?? []
+    let locationKeywords = reviewJSONArray(row["location_keywords_json"]).arrayValue?.compactMap(\.stringValue) ?? []
     let photoLibraryIdentifier = reviewWindowPhotoLibraryIdentifier(
         sourceAnchor: row["source_anchor"]?.stringValue ?? "",
         raw: raw,
@@ -1966,7 +1548,7 @@ private func insertEditorialEvent(
         bindings: [
             .string(eventID(prefix: "aee")), .string(assetID), .string(fixtureID),
             .string(action), .string(resolvedBefore), .string(resolvedAfter),
-            .string(try encodeJSON(before)), .string(try encodeJSON(after)),
+            .string(try encodeReviewJSON(before)), .string(try encodeReviewJSON(after)),
             .string(actor), .string(timestamp),
         ]
     )

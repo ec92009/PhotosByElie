@@ -31,6 +31,11 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
 try:
+    from .local_http_security import LocalHttpSecurityMixin
+except ImportError:
+    from local_http_security import LocalHttpSecurityMixin
+
+try:
     from .backstage_photos_client import BackstagePhotosClientError, request_preview
 except ImportError:
     from backstage_photos_client import BackstagePhotosClientError, request_preview  # type: ignore
@@ -982,7 +987,7 @@ def retry_hosted_lifecycle_projection(repo_root: Path, session: dict, payload: d
     return _normalized_hosted_lifecycle_result(repo_root, updated)
 
 
-class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
+class PhotosByElieLocalHandler(LocalHttpSecurityMixin, SimpleHTTPRequestHandler):
     server_version = "PhotosByElieLocal/1.0"
 
     def translate_path(self, path: str) -> str:
@@ -1070,6 +1075,17 @@ class PhotosByElieLocalHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
+        # Only the existing authenticated protocol remains reachable over HTTP.
+        if path not in {
+            PBE_OWNER_HOST_BOOTSTRAP_PATH, PBE_OWNER_SESSION_START_PATH,
+            PBE_OWNER_BROWSER_BOOTSTRAP_PATH, PBE_OWNER_SESSION_HEARTBEAT_PATH,
+            PBE_OWNER_SESSION_CLOSE_PATH, PBE_OWNER_ACTION_PATH,
+            PBE_OWNER_PROJECTION_RETRY_PATH,
+        }:
+            self._send_json(HTTPStatus.FORBIDDEN, {
+                "ok": False, "error": "Legacy Owner HTTP mutations are disabled; use Backstage.",
+            })
+            return
         if path == OWNER_LOGIN_PATH:
             self._handle_owner_login()
             return
@@ -4695,9 +4711,9 @@ def main() -> int:
     print(f"Serving Photos By Elie at http://{url_host}:{server.server_port}/")
     print(f"Live photo action endpoint: {PHOTO_ACTION_PATH}")
     print(f"Real Estate owner endpoint: {REAL_ESTATE_OWNER_PATH}")
-    print("Owner helper endpoints are enabled on loopback without a password.")
+    print("Legacy Owner HTTP mutations are disabled; authenticated Backstage protocol only.")
     if args.allow_lan_owner:
-        print("Owner helper endpoints are enabled for private LAN clients without a password.")
+        print("LAN preview is enabled; legacy Owner HTTP mutations remain disabled.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

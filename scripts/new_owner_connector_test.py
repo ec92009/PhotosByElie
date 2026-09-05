@@ -733,7 +733,10 @@ class UploadRegistrationScopeTest(unittest.TestCase):
                     "scripts.new_owner_connector.execute_action",
                     return_value={"fixtures": []},
                 ):
-                    self.assertEqual(process_direct_action(config, FakeClient(), "owner-action-tree"), 1)
+                    for mode in ("fixture-tree-list", "asset-upload-run-status", "asset-upload-run-cancel"):
+                        client = FakeClient()
+                        client.record["payload"]["manifest"] = {"mode": mode, "runId": "uplrun-test"}
+                        self.assertEqual(process_direct_action(config, client, "owner-action-tree"), 1)
 
     def test_empty_upload_does_not_run_global_registration(self):
         with patch("scripts.new_owner_connector._run_repo_json", return_value={"status": "done", "items": []}) as run:

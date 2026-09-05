@@ -85,6 +85,7 @@ ACTION_WAKE_ACTIVE: set[str] = set()
 READ_ONLY_FIXTURE_MODES = {
     "asset-catalog-recovery-plan",
     "asset-upload-plan",
+    "asset-upload-run-status",
     "fixture-access-effective",
     "fixture-ai-proposals-ready",
     "fixture-ai-status",
@@ -2415,10 +2416,19 @@ def _connector_process_lock(config: ConnectorConfig, *, wait_seconds: float = 0.
         handle.close()
 
 
+def _action_is_upload_stop(action: dict) -> bool:
+    """A stop only flips one durable run flag; it must not wait for that run."""
+    payload = action.get("payload") or {}
+    manifest = payload.get("manifest") or {}
+    return (action.get("type") == "sidecar-culling-review"
+            and manifest.get("mode") == "asset-upload-run-cancel"
+            and bool(str(manifest.get("runId") or "").strip()))
+
+
 def process_direct_action(config: ConnectorConfig, client: WorkerClient, action_id: str) -> int:
     """Execute one woken action, allowing read-only work beside maintenance."""
     action = client.action(action_id)
-    if _action_is_read_only(action):
+    if _action_is_read_only(action) or _action_is_upload_stop(action):
         _action, did_process = process_exact_action(config, client, action_id, local_wake=True)
         return int(did_process)
 

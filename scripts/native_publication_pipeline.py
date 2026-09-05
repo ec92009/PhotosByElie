@@ -1305,9 +1305,9 @@ def request_upload_run_cancel(repo_root: Path, run_id: str) -> dict[str, Any]:
                 SET cancel_requested = 1, status = ?,
                     completed_at = CASE WHEN ? = 'cancelled' THEN ? ELSE completed_at END,
                     updated_at = ?
-                WHERE run_id = ?
+                WHERE run_id = ? AND status = ?
                 """,
-                (terminal_status, terminal_status, timestamp, timestamp, run_id),
+                (terminal_status, terminal_status, timestamp, timestamp, run_id, status),
             )
             conn.commit()
     return upload_run_status(repo_root, run_id)

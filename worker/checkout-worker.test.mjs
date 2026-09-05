@@ -9,6 +9,7 @@ import { createAnalyticsStore } from "./analytics-store.mjs";
 import { createCatalogIndex, createPhotosByElieWorker } from "./checkout-worker.mjs";
 import { createCloudflareMediaVideoTranscoder } from "./cloudflare-media-video-transcoder.mjs";
 import deployedWorker, { realEstateGalleriesFor } from "./deployed-worker.mjs";
+import { createMemoryGoogleOAuthTransactionStore } from "./google-oauth-transaction-store.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createLocalZipDelivery } from "./local-zip-delivery.mjs";
 import { createMemoryStore } from "./memory-store.mjs";
@@ -268,6 +269,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   let tokenExchangeSeen = false;
   const auth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -287,6 +289,7 @@ test("Google OAuth auth requests account choice and stores a signed session cook
       assert.equal(idToken, "verified-id-token");
       assert.equal(context.clientId, "google-client-id");
       return {
+        nonce: context.nonce,
         email: "ec92009@gmail.com",
         provider: "google-oauth",
         expiresAt: "2026-06-21T13:00:00.000Z",
@@ -295,10 +298,11 @@ test("Google OAuth auth requests account choice and stores a signed session cook
     },
   });
 
-  const loginUrl = new URL(await auth.loginUrlFor(new Request("https://worker.test/auth/google/login"), {
+  const login = await auth.beginLogin(new Request("https://worker.test/auth/google/login"), {
     returnTo: "https://photos-by-elie.com/?account=1",
     intent: "signin",
-  }));
+  });
+  const loginUrl = new URL(login.url);
   assert.equal(loginUrl.origin, "https://accounts.google.com");
   assert.equal(loginUrl.pathname, "/o/oauth2/v2/auth");
   assert.equal(loginUrl.searchParams.get("client_id"), "google-client-id");
@@ -308,7 +312,8 @@ test("Google OAuth auth requests account choice and stores a signed session cook
   assert.equal(loginUrl.searchParams.get("prompt"), "select_account");
 
   const callback = await auth.handleCallback(new Request(
-    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(loginUrl.searchParams.get("state"))}`
+    `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(loginUrl.searchParams.get("state"))}`,
+    { headers: { cookie: login.cookie.split(";")[0] } }
   ));
   assert.equal(tokenExchangeSeen, true);
   assert.equal(callback.returnTo, "https://photos-by-elie.com/?account=1");
@@ -1150,7 +1155,7 @@ test("native Mac enrollment handoff is short-lived, browser-authorized, bound an
   const googleOAuthAuth = {
     optionalSession: async () => activeIdentity,
     requireSession: async () => activeIdentity,
-    loginUrlFor: async (_request, { returnTo }) => `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`,
+    beginLogin: async (_request, { returnTo }) => ({ url: `https://accounts.example.test/select?returnTo=${encodeURIComponent(returnTo)}`, cookie: "test=bound" }),
     issueSessionToken: async (identity) => `access-${identity.deviceId}`,
   };
   const worker = createPhotosByElieWorker({
@@ -1300,6 +1305,7 @@ test("PBE Owner sessions require Backstage, freeze fixture identities, close and
   const now = () => currentNow;
   const ownerDeviceAuthStore = createMemoryOwnerDeviceAuthStore({ now });
   const googleOAuthAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client",
     clientSecret: "google-secret",
     sessionSecret: "test-session-secret",
@@ -2338,6 +2344,7 @@ test("real-estate Owner bypass requires Backstage while explicit Google client g
 test("direct Google OAuth session feeds account roles, RE login, and logout", async () => {
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   const googleAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -2346,7 +2353,8 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
       status: 200,
       headers: { "content-type": "application/json" },
     }),
-    verifyIdToken: async () => ({
+    verifyIdToken: async (_token, { nonce }) => ({
+      nonce,
       email: "corine@example.com",
       provider: "google-oauth",
       expiresAt: "2026-06-21T13:00:00.000Z",
@@ -2388,7 +2396,7 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
 
   const callbackResponse = await worker.fetch(new Request(
     `https://worker.test/auth/google/callback?code=oauth-code&state=${encodeURIComponent(googleLoginUrl.searchParams.get("state"))}`,
-    { headers: { origin: "https://photos-by-elie.com" } }
+    { headers: { origin: "https://photos-by-elie.com", cookie: loginResponse.headers.get("set-cookie").split(";")[0] } }
   ));
   assert.equal(callbackResponse.status, 302);
   assert.equal(callbackResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
@@ -2421,17 +2429,19 @@ test("direct Google OAuth session feeds account roles, RE login, and logout", as
   assert.equal(logoutResponse.status, 302);
   assert.equal(logoutResponse.headers.get("location"), "https://photos-by-elie.com/?account=1");
   const logoutCookies = logoutResponse.headers.getSetCookie();
-  assert.equal(logoutCookies.length, 2);
+  assert.equal(logoutCookies.length, 3);
   assert.match(logoutCookies[0], /^pbe_google_session=; Max-Age=0/);
   assert.match(logoutCookies[0], /SameSite=None/);
   assert.match(logoutCookies[0], /Secure/);
-  assert.match(logoutCookies[1], /^pbe_re_session=; Max-Age=0/);
-  assert.match(logoutCookies[1], /Path=\/real-estate/);
+  assert.match(logoutCookies[1], /^__Host-pbe_google_transaction=; Max-Age=0/);
+  assert.match(logoutCookies[2], /^pbe_re_session=; Max-Age=0/);
+  assert.match(logoutCookies[2], /Path=\/real-estate/);
 });
 
 test("direct Google OAuth rejects local and Tailscale provisioning origins", async () => {
   const now = () => new Date("2026-06-21T12:00:00.000Z");
   const googleAuth = createGoogleOAuthAuth({
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
     clientId: "google-client-id",
     clientSecret: "google-client-secret",
     sessionSecret: "google-session-secret",
@@ -5827,5 +5837,55 @@ test("local HTTP server binds loopback and never bypasses Worker download author
   } finally {
     await new Promise((resolve) => server.close(resolve));
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Google login routes carry binding cookies and callback failures clear them without sessions", async () => {
+  let exchanges = 0;
+  const googleOAuthAuth = createGoogleOAuthAuth({
+    clientId: "client", clientSecret: "secret", sessionSecret: "session-secret",
+    transactionStore: createMemoryGoogleOAuthTransactionStore(),
+    fetcher: async () => { exchanges++; return Response.json({ id_token: "token" }); },
+    verifyIdToken: async (_token, { nonce }) => ({ email: "buyer@example.test", nonce }),
+  });
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), googleOAuthAuth });
+  for (const path of ["/auth/login", "/auth/google/login"]) {
+    const login = await worker.fetch(new Request(`https://worker.test${path}`));
+    assert.equal(login.status, 302);
+    assert.match(login.headers.get("cache-control"), /no-store/);
+    const cookie = login.headers.getSetCookie()[0];
+    assert.match(cookie, /^__Host-pbe_google_transaction=/);
+    assert.match(cookie, /HttpOnly; SameSite=Lax; Secure/);
+    const state = new URL(login.headers.get("location")).searchParams.get("state");
+    const callbackURL = `https://worker.test/auth/google/callback?code=code&state=${encodeURIComponent(state)}`;
+    const wrong = await worker.fetch(new Request(callbackURL));
+    assert.equal(wrong.status, 401);
+    assert.match(wrong.headers.getSetCookie()[0], /^__Host-pbe_google_transaction=; Max-Age=0/);
+    assert.equal(exchanges, 0);
+    const logout = await worker.fetch(new Request("https://worker.test/auth/logout", { headers: { cookie: cookie.split(";")[0] } }));
+    assert.equal(logout.status, 302);
+    const stale = await worker.fetch(new Request(callbackURL, { headers: { cookie: cookie.split(";")[0] } }));
+    assert.equal(stale.status, 401);
+    assert.equal((await stale.json()).error.code, "google_oauth_transaction_used");
+    assert.equal(exchanges, 0);
+  }
+});
+
+test("logout clears sessions even when pending OAuth transaction cancellation fails", async () => {
+  const googleOAuthAuth = createGoogleOAuthAuth({
+    clientId: "client", clientSecret: "secret", sessionSecret: "session-secret",
+    transactionStore: { cancel: async () => { throw new Error("D1 unavailable"); } },
+  });
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), googleOAuthAuth,
+    realEstateAuth: { clearCookieFor: () => "pbe_re_session=; Max-Age=0; Path=/real-estate" } });
+  for (const [method, path] of [["GET", "/auth/logout"], ["POST", "/owner/auth/logout"]]) {
+    const response = await worker.fetch(new Request(`https://worker.test${path}`, {
+      method, headers: { cookie: "__Host-pbe_google_transaction=" + "A".repeat(43) },
+    }));
+    assert.equal(response.status, 503);
+    const cookies = response.headers.getSetCookie();
+    for (const name of ["pbe_google_session", "__Host-pbe_google_transaction", "pbe_re_session"]) {
+      assert.ok(cookies.some(cookie => cookie.startsWith(name + "=; Max-Age=0")), name);
+    }
   }
 });

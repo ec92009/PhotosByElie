@@ -182,6 +182,38 @@ test("replaying the same paid session recovers delivery_failed to ready without 
   assert.equal(analytics.filter((event) => event.event === "payment_completed").length, 1);
 });
 
+test("a refund started during rendering prevents download capability publication", async () => {
+  let releaseDelivery;
+  const deliveryReady = new Promise((resolve) => { releaseDelivery = resolve; });
+  const { fulfillment, orders, downloads } = harness({
+    delivery: {
+      createDelivery: async () => {
+        await deliveryReady;
+        return {
+          files: [{ token: "dl_must_not_publish", photoId: "001-photo", productId: "jpg-3mp" }],
+          items: [],
+        };
+      },
+    },
+  });
+  const inFlight = fulfillment.fulfillPaidSession(paidSession());
+  await new Promise((resolve) => setImmediate(resolve));
+  const preparing = orders.get("PBE-TEST-ORDER");
+  orders.set(preparing.id, {
+    ...preparing,
+    status: "refund_pending",
+    refund: { status: "pending", deliveryState: "preparing" },
+  });
+  releaseDelivery();
+
+  await assert.rejects(
+    () => inFlight,
+    (error) => error.code === "refund_blocks_fulfillment" && error.status === 409,
+  );
+  assert.equal(downloads.length, 0);
+  assert.equal(orders.get("PBE-TEST-ORDER").status, "refund_pending");
+});
+
 test("revenue module stays within its explicit dependency and transport boundaries", () => {
   assert.deepEqual(PAID_ORDER_FULFILLMENT_DEPENDENCIES, [
     "orderStore",

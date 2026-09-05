@@ -54,8 +54,8 @@ the process has no local status server and exits after its bounded drain. If
 Backstage is closed or the child is unavailable, the durable Worker action
 remains queued for the next explicit Backstage launch.
 
-Python/browser/connector maintenance invokes the authenticated Backstage IPC
-surface for both batch reads and batch writes. The signed Backstage app owns
+Connector maintenance invokes the Backstage IPC surface for batch reads and
+batch writes; this implementation route does not restore browser Owner controls. The signed Backstage app owns
 the stable Photos permission identity, preserves unrelated keywords, returns
 per-item before/after values, and records an Apple Photos receipt only after a
 re-read verifies title, caption, and managed keywords. Failed item IDs remain

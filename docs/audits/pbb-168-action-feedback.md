@@ -299,3 +299,17 @@ Build 318 (`d6dff2b2`) was signed, installed through the production Backstage in
 That inspection found the Review count receipt appeared before visual-draft/AI status loading finished. The follow-up names cached-size, visual-draft and AI-status steps and publishes the count only after completion; generation checks prevent an older final receipt from replacing a newer refresh. A held-action regression reproduces the ordering and checks the newer receipt remains intact. The final candidate is build 319.
 
 Graphify was refreshed in the same canonical worktree (4,711 nodes; 16,238 edges), with a backup of the prior root graph. Its parser reports partial extraction in five Swift files; successful Swift compilation, source inspection and tests are the authority for those files.
+
+## Final installed receipt
+
+- Source: `695544601e957d0b5e4eea42f07c4c463ff9f07b`, pushed to `release/backstage`.
+- App: **v249.5 / build 319**, `/Applications/PhotosByElie Backstage.app`.
+- Signature: Apple Development: Elie Cohen (L9958JSM92); strict deep verification passed.
+- Embedded runtime: 203 files; manifest SHA-256 `6263a366bd0c17a4d90d6e18a6802e1cc6f7ad5f31ad368343bd00676a0b324d`.
+- Tests: 390 Swift / 31 suites; 328 Node and 509 Python in the full repository run, then all 71 affected native parity tests after the Review follow-up.
+- Production installer retained build 318 at `~/Library/Application Support/PhotosByElie/Backstage/Rollback/PhotosByElie Backstage-v249.4-build-318-B0FB4A0C-A414-4D0D-B135-4BCF185E6FCF.app`.
+- Fresh `release verify`: okay, 319, Owner authenticated, Photos authorized.
+- Installed UI: Review busy state visibly and accessibly named visual-draft and AI-status stages; its ordered feedback remained present beyond three seconds. Search, Refresh and mutation controls were disabled during loading and restored on completion. The source regression separately verifies the exact terminal count and rejection of an older completion. Empty Metadata save produced immediate local validation without submitting an edit.
+- Limitation: representative installed paths and automated held/failure/stale tests were used; no live refund, destructive lifecycle action, media write or production deployment was performed. The locally generated ZIP/manifest was not published to the update channel.
+
+The canonical worktree is retained for the next sequential PBB ticket; no ticket branch, secondary worktree or active worker was created for PBB-168.

@@ -61,6 +61,12 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 
 ## Public Checkout
 
+Before every ordinary Worker release, Wrangler runs
+`npm run worker:release-check`. This mocked commerce gate protects accepted
+checkout, fulfillment, refund and browser-origin contracts before upload.
+See [Worker release compatibility](../docs/architecture/worker-release-compatibility.md)
+for required capabilities, source provenance and the separate deployment gate.
+
 `worker/deployed-worker.mjs` is the Cloudflare Worker entrypoint for public checkout. It uses durable Cloudflare bindings:
 
 - `ORDERS_KV` stores orders, Checkout Session indexes, download tokens, and first-party analytics keys under `pbe:analytics:*` unless an `ANALYTICS_KV` binding is supplied. Recent-purchase allowance checks use these Worker order records as the purchase/download history source.

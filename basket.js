@@ -10,6 +10,8 @@ const formatMoney = (value) => {
   }).format(amount);
 };
 const CHECKOUT_MINIMUM_CENTS = 50;
+const CHECKOUT_PROGRESS_DELAY_MS = 3000;
+const CHECKOUT_TIMEOUT_MS = 25000;
 const centsFor = (value) => Math.round((Number(value) || 0) * 100);
 const dollarsForCents = (value) => Number(value || 0) / 100;
 const checkoutMinimumAdjustment = (total) => {
@@ -69,6 +71,9 @@ let recentPurchaseMeta = null;
 let recentPurchaseRequestKey = "";
 let recentPurchaseTimer = null;
 let recentPurchaseAbort = null;
+let checkoutRequestActive = false;
+let checkoutProgressTimer = null;
+let checkoutProgressMessage = "";
 
 const normalizedWorkerBase = (value) => String(value || "").replace(/\/+$/, "");
 const isLocalPage = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
@@ -103,6 +108,22 @@ const workerBaseUrl = () => {
   if (stored) localStorage.removeItem(workerBaseKey);
   return configured || "http://localhost:8787";
 };
+const accountCheckoutWorkerBaseUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = isLocalPage()
+    ? normalizedWorkerBase(params.get("authWorkerBase") || params.get("workerBase"))
+    : "";
+  if (fromQuery && !isUnsafePublicWorkerBase(fromQuery)) return fromQuery;
+  const configured = normalizedWorkerBase(
+    window.photosByElieMediaConfig?.authWorkerBaseUrl
+      || window.photosByElieMediaConfig?.checkoutWorkerBaseUrl
+      || ""
+  );
+  return configured || workerBaseUrl();
+};
+const checkoutRequestBaseUrl = (path) => path === "/checkout/account"
+  ? accountCheckoutWorkerBaseUrl()
+  : workerBaseUrl();
 
 const escapeText = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
@@ -564,10 +585,10 @@ const scheduleRecentPurchaseCheck = () => {
   }, 350);
 };
 
-const checkoutFetch = async (path, options = {}) => {
+const checkoutFetch = async (path, options = {}, timeoutMs = CHECKOUT_TIMEOUT_MS) => {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 25000);
-  const response = await fetch(`${workerBaseUrl()}${path}`, {
+  const timeout = window.setTimeout(() => controller.abort(), Math.max(1, timeoutMs));
+  const response = await fetch(`${checkoutRequestBaseUrl(path)}${path}`, {
     ...options,
     signal: controller.signal,
     headers: {
@@ -576,7 +597,7 @@ const checkoutFetch = async (path, options = {}) => {
     },
   }).catch((error) => {
     if (error?.name === "AbortError") {
-      throw new Error("Checkout is taking too long. Please try again; no payment has started yet.");
+      throw checkoutTimeoutError();
     }
     throw new Error("Checkout could not reach the payment server. Please refresh this page and try again; no payment has started yet.");
   }).finally(() => {
@@ -650,6 +671,71 @@ const setBasketStatus = (message, { checkout = false, title = t("order.checkout"
   `;
 };
 
+const checkoutMutationControls = () => [
+  checkoutGuest,
+  checkoutEmail,
+  discountCodeInput,
+  ...document.querySelectorAll([
+    "[data-remove-item]",
+    "[data-basket-resolution]",
+    "[data-basket-print-step]",
+    "[data-basket-print-quantity]",
+    "[data-basket-print-frame]",
+  ].join(",")),
+].filter(Boolean);
+
+const syncCheckoutInterlocks = () => {
+  checkoutMutationControls().forEach((control) => {
+    if (checkoutRequestActive) {
+      if (!control.hasAttribute("data-checkout-disabled-before")) {
+        control.dataset.checkoutDisabledBefore = control.disabled ? "true" : "false";
+      }
+      control.disabled = true;
+      return;
+    }
+    if (!control.hasAttribute("data-checkout-disabled-before")) return;
+    control.disabled = control.dataset.checkoutDisabledBefore === "true";
+    delete control.dataset.checkoutDisabledBefore;
+  });
+};
+
+const setCheckoutProgress = (message) => {
+  checkoutProgressMessage = message;
+  setBasketStatus(message, { checkout: true });
+};
+
+const setCheckoutRequestActive = (active) => {
+  checkoutRequestActive = active;
+  orderIntent?.setAttribute("aria-busy", active ? "true" : "false");
+  window.clearTimeout(checkoutProgressTimer);
+  checkoutProgressTimer = null;
+  if (active) {
+    checkoutProgressTimer = window.setTimeout(() => {
+      if (!checkoutRequestActive) return;
+      setBasketStatus(t("basket.checkout_still_working", { step: checkoutProgressMessage }), { checkout: true });
+    }, CHECKOUT_PROGRESS_DELAY_MS);
+  }
+  syncCheckoutInterlocks();
+};
+
+const checkoutTimeoutError = () => new Error("Checkout is taking too long. Please try again; no payment has started yet.");
+
+const withCheckoutDeadline = async (promise, deadline) => {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) throw checkoutTimeoutError();
+  let timer = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => reject(checkoutTimeoutError()), remaining);
+      }),
+    ]);
+  } finally {
+    window.clearTimeout(timer);
+  }
+};
+
 const syncEmbeddedBrowserWarning = () => {
   const embedded = window.photosByElieEmbeddedBrowser;
   if (!embeddedWarning || !embedded?.detected) return;
@@ -675,7 +761,10 @@ const syncCheckoutControls = () => {
 };
 
 checkoutGuest?.addEventListener("click", async () => {
-  checkoutGuest.disabled = true;
+  if (checkoutRequestActive) return;
+  const checkoutDeadline = Date.now() + CHECKOUT_TIMEOUT_MS;
+  setCheckoutProgress(t("basket.checkout_started"));
+  setCheckoutRequestActive(true);
   try {
     const accountEmail = signedInAccountEmail();
     if (checkoutEmail && accountEmail && !checkoutEmail.value) checkoutEmail.value = accountEmail;
@@ -687,8 +776,8 @@ checkoutGuest?.addEventListener("click", async () => {
     }
     const discountCode = String(discountCodeInput?.value || "").trim();
     if (!deliveryAvailabilityLoaded) {
-      setBasketStatus(t("basket.checking_delivery"), { checkout: true });
-      await ensureDeliveryAvailabilityLoaded();
+      setCheckoutProgress(t("basket.checking_delivery"));
+      await withCheckoutDeadline(ensureDeliveryAvailabilityLoaded(), checkoutDeadline);
     }
     const beforeAvailabilityPrune = JSON.stringify(basketStore.read());
     const prunedItems = pruneUnavailableBasketSelections(basketStore.write(basketStore.read()));
@@ -702,7 +791,11 @@ checkoutGuest?.addEventListener("click", async () => {
       setBasketStatus(t("basket.checkout_needs_asset"), { checkout: true });
       return;
     }
-    const allowance = await checkRecentPurchases({ force: true, rerender: true });
+    setCheckoutProgress(t("basket.checking_purchases"));
+    const allowance = await withCheckoutDeadline(
+      checkRecentPurchases({ force: true, rerender: true }),
+      checkoutDeadline,
+    );
     const coveredCount = (allowance?.items || []).filter((item) => item.covered).length;
     if (coveredCount) {
       setBasketStatus(t("basket.allowance_review_checkout", {
@@ -712,7 +805,7 @@ checkoutGuest?.addEventListener("click", async () => {
       }), { checkout: true, title: t("basket.allowance_summary_label", { days: allowance?.allowanceDays || recentPurchaseMeta?.allowanceDays || 30 }) });
       return;
     }
-    setBasketStatus(t("basket.creating_checkout"), { checkout: true });
+    setCheckoutProgress(t("basket.creating_checkout"));
     const accountCheckout = Boolean(accountEmail);
     const body = await checkoutFetch(accountCheckout ? "/checkout/account" : "/checkout/guest", {
       method: "POST",
@@ -723,7 +816,7 @@ checkoutGuest?.addEventListener("click", async () => {
         expectedSubtotalAmount: basketDigitalSubtotalCents(),
         ...(discountCode ? { discountCode } : {}),
       }),
-    });
+    }, checkoutDeadline - Date.now());
     setCheckoutState({
       email,
       discountCode,
@@ -751,7 +844,7 @@ checkoutGuest?.addEventListener("click", async () => {
     }
     setBasketStatus(error?.message || "Checkout could not start.", { checkout: true });
   } finally {
-    checkoutGuest.disabled = false;
+    setCheckoutRequestActive(false);
   }
 });
 
@@ -1021,6 +1114,7 @@ const renderBasket = () => {
       syncItemOptions(itemIndex);
     });
   });
+  syncCheckoutInterlocks();
 };
 
 renderBasket();

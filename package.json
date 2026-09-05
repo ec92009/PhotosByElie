@@ -28,7 +28,8 @@
     "etsy:api-check": "node scripts/etsy_api_check.mjs",
     "etsy:collect-keys": "bash scripts/etsy_collect_keys.sh",
     "etsy:outlet": "node scripts/etsy_outlet.mjs",
-    "etsy:oauth": "node scripts/etsy_oauth.mjs"
+    "etsy:oauth": "node scripts/etsy_oauth.mjs",
+    "worker:release-check": "node --test worker/checkout-worker.test.mjs worker/paid-order-fulfillment.test.mjs worker/paid-order-refund.test.mjs worker/owner-api-v1.test.mjs scripts/public_worker_origin_policy.test.mjs"
   },
   "dependencies": {
     "@cloudflare/playwright": "^1.3.0",

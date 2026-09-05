@@ -167,7 +167,12 @@ python3 scripts/local_server.py 8000
 ```
 
 The dedicated `/__photosbyelie/pbe-owner/*` endpoints are compatibility code
-and are not linked or started by the normal app. GitHub Pages never gets those
+and are not linked or started by the normal app. Unauthenticated legacy POST
+routes and Sidecar library-indexing GET are disabled. Both Python helpers
+validate exact local Host authorities for every verb and serve only explicit
+public static files; private Owner data and directory listings are denied.
+Use Backstage for mutations. Historical browser procedures below are archival.
+GitHub Pages never gets those
 endpoints; the published site remains static and customer-only.
 
 Loopback origin alone is not Owner authorization. A normal browser or Google login cannot use the PBE Owner endpoints, and the generic photo-action endpoint rejects hosted-gallery authority claims. Backstage keeps its device credential in macOS Keychain and the Worker session token in memory. The browser receives only a single-use opaque handoff, removes it immediately, and exchanges it for an HttpOnly, session-only loopback cookie.

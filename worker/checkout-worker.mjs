@@ -2171,6 +2171,9 @@ export const createPhotosByElieWorker = ({
     const downloadRecord = await store.getDownload(token);
     if (!downloadRecord) return noStore(errorJson(404, "unknown_download", "Download link was not found."));
     const order = downloadRecord.orderId ? await store.getOrder(downloadRecord.orderId) : null;
+    if (order?.refund) {
+      return noStore(errorJson(410, "order_refunded", "This order's download access was stopped by its refund workflow."));
+    }
     if (downloadRecord.orderId && downloadRecord.lifecycleSettlementBound && lifecycleDenyStore?.assertDownloadCapability) {
       await lifecycleDenyStore.assertDownloadCapability({ orderId: downloadRecord.orderId, token });
     }

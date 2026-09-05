@@ -74,6 +74,29 @@ class BackstagePhotosJobsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "expired"):
             jobs.envelope(b"{}")
 
+    def test_upload_plan_is_exact_bounded_and_excludes_completed_items(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            database = root / "assets/owner-actions/Owner.sqlite"
+            database.parent.mkdir(parents=True)
+            with sqlite3.connect(database) as conn:
+                conn.executescript("""CREATE TABLE sidecar_assets(asset_id TEXT, raw_json TEXT);
+                    CREATE TABLE asset_upload_run_items(run_id TEXT,asset_id TEXT,status TEXT);
+                    INSERT INTO sidecar_assets VALUES ('one','{"localIdentifier":"photos-one"}'),('two','{}'),('other','{}');
+                    INSERT INTO asset_upload_run_items VALUES ('run-1','one','queued'),('run-1','two','verified'),('run-other','other','queued');""")
+            action = {"actionKind": "sidecar-culling-review", "payload": {"manifest": {"mode": "asset-upload-run-start", "runId": "run-1"}}}
+            with patch("apple_photos_metadata_writer.writeback_plan", return_value={"items": [{"photosAssetId": "photos-one", "tombstoned": False, "title": "Title", "caption": "", "keywords": ["beach"], "managedKeywords": ["PBE:Approved"]}]}):
+                planned = jobs.plan(root, action)
+            self.assertEqual(planned["assetIDs"], ["one", "photos-one"])
+            self.assertEqual(planned["operations"], ["photos.export-original", "photos.metadata-read-many", "photos.metadata-apply-many"])
+            self.assertEqual(planned["writes"][0]["title"], "Title")
+            action["payload"]["manifest"]["prepareOnly"] = True
+            self.assertEqual(jobs.plan(root, action)["operations"], [])
+            action["payload"]["manifest"] = {"mode": "asset-upload-run-start", "assetIds": [str(i) for i in range(51)]}
+            with self.assertRaisesRegex(ValueError, "1–50"):
+                jobs.plan(root, action)
+
     def test_planner_limits_ai_and_delivery_to_named_fixture_assets(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

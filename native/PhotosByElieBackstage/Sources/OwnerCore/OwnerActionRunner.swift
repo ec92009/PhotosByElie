@@ -335,6 +335,15 @@ public actor OwnerActionRunner {
         accelerationTasks.removeValue(forKey: actionID)
     }
 
+    /// Inspect an enqueued action, including a sealed Photos-job launch failure.
+    public func currentAction(id: String) async throws -> OwnerAction {
+        let action = try await api.getAction(id: id)
+        if [.queued, .claimed, .running].contains(action.state), let failure = photosJobFailures[id] {
+            throw OwnerActionRunError.failed(failure)
+        }
+        return action
+    }
+
     public func awaitCompletion(
         of queued: OwnerAction,
         completionTimeout: Duration? = nil,

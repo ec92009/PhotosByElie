@@ -125,6 +125,34 @@ def plan(root: Path, action: dict) -> dict:
         targets = ai_preview_targets(root, [row["asset_id"] for row in rows])
         result.update(operations=["photos.preview"],
                       assetIDs=sorted({item["photoLibraryIdentifier"] for item in targets}), maxPixel=1600)
+    elif kind == "sidecar-culling-review" and mode in {"asset-upload-run-start", "asset-upload-run-resume"}:
+        if manifest.get("prepareOnly") or str(manifest.get("runId") or "").startswith("catrec-"):
+            return result
+        run_id = str(manifest.get("runId") or "")
+        if run_id:
+            rows = _rows(root, """SELECT a.asset_id,a.raw_json FROM sidecar_assets a
+                JOIN asset_upload_run_items i ON i.asset_id=a.asset_id
+                WHERE i.run_id=? AND i.status IN ('queued','uploading','failed')""", (run_id,))
+        else:
+            ids = list(dict.fromkeys(manifest.get("assetIds") or []))
+            if not 1 <= len(ids) <= 50:
+                raise ValueError("Upload Photos authority requires an exact batch of 1–50 assets")
+            placeholders = ",".join("?" for _ in ids)
+            rows = _rows(root, f"SELECT asset_id,raw_json FROM sidecar_assets WHERE asset_id IN ({placeholders})", ids)
+        if not rows:
+            return result
+        if len(rows) > 50:
+            raise ValueError("Upload Photos authority exceeds the 50-asset batch limit")
+        from apple_photos_metadata_writer import writeback_plan
+        planned = writeback_plan(root, "", [row["asset_id"] for row in rows])
+        result.update(operations=["photos.export-original", "photos.metadata-read-many", "photos.metadata-apply-many"],
+                      assetIDs=sorted(set(_photos_ids(rows)) | {str(row["asset_id"]) for row in rows}))
+        for item in planned["items"]:
+            if item["tombstoned"]:
+                result["preserveMetadataIDs"].append(item["photosAssetId"])
+            else:
+                result["writes"].append(dict(assetId=item["photosAssetId"], title=item["title"], caption=item["caption"],
+                    keywords=item["keywords"], managedKeywords=item["managedKeywords"]))
     elif kind == "sidecar-upload-publish" and payload.get("workflow") in {"fixture-delivery", "fixture-publication"}:
         ids = payload.get("assetIds") or []
         if not 1 <= len(ids) <= 24 or not payload.get("fixtureId"):

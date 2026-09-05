@@ -13,6 +13,7 @@ enum BackstagePhotosJobLauncher {
             || (action.actionKind == "sidecar-culling-review" && [
                 "photos-sync-run", "photos-sync-run-start", "fixture-photos-writeback-plan",
                 "fixture-photos-writeback-commit", "fixture-ai-pass-start",
+                "asset-upload-run-start", "asset-upload-run-resume",
             ].contains(mode))
     }
 

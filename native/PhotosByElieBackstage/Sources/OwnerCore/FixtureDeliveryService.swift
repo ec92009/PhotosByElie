@@ -415,6 +415,7 @@ public actor FixtureDeliveryService {
     private let runner: OwnerActionRunner
     private let connectorID: String
     private let sourceStore: OwnerAssetSourceSQLiteStore?
+    private let nativeExecutionMonitor: NativeUploadExecutionMonitor
 
     public init(
         runner: OwnerActionRunner,
@@ -422,6 +423,7 @@ public actor FixtureDeliveryService {
         nativeDatabaseURL: URL? = OwnerReviewDatabaseLocator().resolve()
     ) {
         self.runner = runner
+        self.nativeExecutionMonitor = NativeUploadExecutionMonitor(runner: runner)
         self.connectorID = connectorID
         self.sourceStore = nativeDatabaseURL.map {
             OwnerAssetSourceSQLiteStore(databaseURL: $0)
@@ -476,12 +478,15 @@ public actor FixtureDeliveryService {
             mode: "asset-upload-run-start",
             fixtureID: "",
             extra: [
+                "prepareOnly": .bool(true),
                 "assetIds": .array(clean(assetIDs).map(JSONValue.string)),
                 "limit": .number(Double(limit)),
                 "concurrency": .number(Double(concurrency)),
             ]
         )
-        return try decodeNativeUploadRun(action)
+        let run = try decodeNativeUploadRun(action)
+        if run.requested > 0 { try await enqueueNativeExecution(runID: run.runID, mode: "asset-upload-run-start") }
+        return run
     }
 
     public func nativeCatalogRecoveryPlan(
@@ -600,7 +605,7 @@ public actor FixtureDeliveryService {
             fixtureID: "",
             extra: ["runId": .string(cleanRunID)]
         )
-        return try decodeNativeUploadRun(action)
+        return try await nativeExecutionMonitor.status(decodeNativeUploadRun(action))
     }
 
     public func recoverNativeUploadRuns() async throws -> NativeUploadRecoveryReport {
@@ -653,11 +658,17 @@ public actor FixtureDeliveryService {
     }
 
     public func resumeNativeUpload(runID: String) async throws -> NativeUploadRun {
-        let action = try await runAction(
-            mode: "asset-upload-run-resume",
-            runID: runID
-        )
-        return try decodeNativeUploadRun(action)
+        if runID.hasPrefix("catrec-") {
+            return try decodeNativeUploadRun(await runAction(mode: "asset-upload-run-resume", runID: runID))
+        }
+        try await enqueueNativeExecution(runID: runID, mode: "asset-upload-run-resume")
+        return try await nativeUploadStatus(runID: runID)
+    }
+
+    private func enqueueNativeExecution(runID: String, mode: String) async throws {
+        let action = try await fixtureAction(mode: mode, fixtureID: "",
+            extra: ["runId": .string(runID)], enqueue: true)
+        await nativeExecutionMonitor.record(runID: runID, actionID: action.id)
     }
 
     public func startR2Reconciliation(commit: Bool = false) async throws -> R2ReconciliationReport {
@@ -1025,13 +1036,13 @@ public actor FixtureDeliveryService {
     private func fixtureAction(
         mode: String,
         fixtureID: String,
-        extra: [String: JSONValue] = [:]
+        extra: [String: JSONValue] = [:],
+        enqueue: Bool = false
     ) async throws -> OwnerAction {
         var manifest = extra
         manifest["mode"] = .string(mode)
         manifest["fixtureId"] = .string(fixtureID)
-        return try await runner.submit(
-            OwnerActionCreate(
+        let request = OwnerActionCreate(
                 actionKind: "sidecar-culling-review",
                 target: connectorID,
                 payload: [
@@ -1040,10 +1051,10 @@ public actor FixtureDeliveryService {
                     "requestedConnector": .string(connectorID),
                     "queuedAt": .string(ISO8601DateFormatter().string(from: Date())),
                 ]
-            ),
-            idempotencyKey: ["native-delivery", mode, fixtureID, UUID().uuidString]
-                .joined(separator: ":")
-        )
+            )
+        let key = ["native-delivery", mode, fixtureID, UUID().uuidString].joined(separator: ":")
+        return try await enqueue ? runner.enqueue(request, idempotencyKey: key)
+            : runner.submit(request, idempotencyKey: key)
     }
 
     private func adoption(

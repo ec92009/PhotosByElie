@@ -806,6 +806,19 @@ class FixtureConnectorTest(unittest.TestCase):
             self.assertTrue(run["started"])
             start.assert_called_once_with(root, run["runId"])
 
+            with patch.object(local_server, "_start_native_publication_run", return_value={"started": True}) as execute:
+                prepared = local_server.new_owner_connector_result(root, action("asset-upload-run-start", assetIds=["asset-1"], prepareOnly=True))
+                execute.assert_not_called()
+                prepared_id = prepared["result"]["uploadRun"]["runId"]
+                with connect(root) as connection:
+                    count_before = connection.execute("SELECT count(*) FROM asset_upload_runs").fetchone()[0]
+                resumed = local_server.new_owner_connector_result(root, action("asset-upload-run-start", runId=prepared_id))
+                execute.assert_called_once_with(root, prepared_id)
+                self.assertEqual(resumed["result"]["uploadRun"]["runId"], prepared_id)
+                with connect(root) as connection:
+                    self.assertEqual(connection.execute("SELECT count(*) FROM asset_upload_runs").fetchone()[0], count_before)
+
+
             status = local_server.new_owner_connector_result(
                 root,
                 action("asset-upload-run-status", runId=run["runId"]),

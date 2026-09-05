@@ -797,6 +797,21 @@ def execute_catalog_recovery_run(repo_root: Path, run_id: str) -> dict[str, Any]
     return completed
 
 
+def upload_results_from_bridge(executed: dict[str, Any]) -> list[dict[str, Any]]:
+    """Preserve the originating export/upload failure before receipt validation."""
+    rows = executed.get("items") or []
+    row = rows[0] if rows and isinstance(rows[0], dict) else {}
+    export = row.get("export") or {}
+    upload = row.get("upload") or {}
+    if not executed.get("ok") or row.get("status") in {"export_failed", "upload_failed"}:
+        message = export.get("error") or upload.get("error") or executed.get("error")
+        raise RuntimeError(str(message or "Upload Bridge failed without an export or upload receipt."))
+    results = upload.get("keys") or []
+    if not results:
+        raise RuntimeError("Upload Bridge returned no checksum receipts; no asset was marked uploaded.")
+    return list(results)
+
+
 def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, Any]:
     # The launcher has already claimed this exact run as `running`. Reset only
     # retryable item state while preserving that durable single-flight claim.
@@ -857,8 +872,7 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
                 item=item,
             )
         )
-        row = (executed.get("items") or [{}])[0]
-        return list((row.get("upload") or {}).get("keys") or [])
+        return upload_results_from_bridge(executed)
 
     completed = retry_sqlite_lock(lambda: run_upload_batch(repo_root, run_id, upload))
     catalog_items = [

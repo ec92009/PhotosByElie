@@ -5347,7 +5347,8 @@ struct OwnerCoreTests {
                 ],
             ]
         )
-        let api = ScriptedOwnerActionAPI(completed: [eligibility, started, status, catalogDeployment, reconciliation, photosSync])
+        let execution = OwnerAction(id: "owner-action-upload-execution", actionKind: "sidecar-culling-review", target: "max", state: .completed)
+        let api = ScriptedOwnerActionAPI(completed: [eligibility, started, execution, status, catalogDeployment, reconciliation, photosSync])
         let service = FixtureDeliveryService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -5403,11 +5404,13 @@ struct OwnerCoreTests {
         #expect(requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-plan")
         #expect(requests[0].payload["manifest"]?.objectValue?["fixtureId"]?.stringValue == "fixture-expo")
         #expect(requests[1].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-start")
-        #expect(requests[2].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
-        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "public-catalog-deploy")
-        #expect(requests[4].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
-        #expect(requests[5].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
-        #expect(requests[5].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
+        #expect(requests[1].payload["manifest"]?.objectValue?["prepareOnly"]?.boolValue == true)
+        #expect(requests[2].payload["manifest"]?.objectValue?["runId"]?.stringValue == "uplrun-1")
+        #expect(requests[3].payload["manifest"]?.objectValue?["mode"]?.stringValue == "asset-upload-run-status")
+        #expect(requests[4].payload["manifest"]?.objectValue?["mode"]?.stringValue == "public-catalog-deploy")
+        #expect(requests[5].payload["manifest"]?.objectValue?["mode"]?.stringValue == "r2-reconciliation-plan")
+        #expect(requests[6].payload["manifest"]?.objectValue?["mode"]?.stringValue == "photos-sync-run")
+        #expect(requests[6].payload["manifest"]?.objectValue?["limit"]?.intValue == 25)
     }
 
     @Test("Native long-running publication operations expose checkpointed cancellation")
@@ -5572,7 +5575,7 @@ struct OwnerCoreTests {
                 "lastError": "database is locked",
             ]]
         )
-        let api = ScriptedOwnerActionAPI(completed: [recovery, response])
+        let api = ScriptedOwnerActionAPI(completed: [recovery, response, response])
         let service = FixtureDeliveryService(runner: OwnerActionRunner(
             api: api,
             waker: UnavailableWaker(),
@@ -5591,7 +5594,7 @@ struct OwnerCoreTests {
         #expect(run.status == "running")
         #expect(run.lastError == "database is locked")
         let requests = await api.requests()
-        #expect(requests.count == 2)
+        #expect(requests.count == 3)
         #expect(
             requests[0].payload["manifest"]?.objectValue?["mode"]?.stringValue
                 == "asset-upload-run-recover"
@@ -6929,6 +6932,7 @@ private actor ScriptedOwnerActionAPI: OwnerActionServing {
         created.append(action)
         keys.append(idempotencyKey)
         let index = created.count - 1
+        guard completed.indices.contains(index) else { throw URLError(.badServerResponse) }
         let terminal = completed[index]
         return OwnerActionEnvelope(
             action: OwnerAction(

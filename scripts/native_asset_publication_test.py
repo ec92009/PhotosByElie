@@ -9,6 +9,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fixture_pipeline
 from native_asset_publication import (
+    upload_results_from_bridge,
     create_catalog_recovery_run,
     claim_upload_run_start,
     execute_catalog_recovery_run,
@@ -21,6 +22,25 @@ from native_asset_publication import (
 
 
 class NativeAssetPublicationTest(unittest.TestCase):
+    def test_bridge_export_failure_keeps_original_authorization_error(self):
+        error = "Backstage original export failed (photos_job_authorization_required): Restart the upload in Backstage."
+        with self.assertRaisesRegex(RuntimeError, "photos_job_authorization_required"):
+            upload_results_from_bridge({"ok": False, "items": [{"status": "export_failed", "export": {"error": error}, "upload": {"keys": []}}]})
+        with self.assertRaisesRegex(RuntimeError, "network timeout"):
+            upload_results_from_bridge({"ok": False, "items": [{"status": "upload_failed", "upload": {"error": "network timeout", "keys": []}}]})
+        receipt = {"status": "uploaded", "remoteVerified": True, "checksumSha256": "abc", "remoteChecksumSha256": "abc"}
+        self.assertEqual(upload_results_from_bridge({"ok": True, "items": [{"status": "uploaded", "upload": {"keys": [receipt]}}]}), [receipt])
+        with self.assertRaisesRegex(RuntimeError, "no checksum receipts"):
+            upload_results_from_bridge({"ok": True, "items": []})
+
+    def test_native_upload_execution_retains_parent_job_and_never_detaches(self):
+        import local_server
+        with patch("local_server.claim_upload_run_start", return_value={"claimed": True}), patch("native_asset_publication.execute_native_publication_run", return_value={"status": "completed"}) as execute, patch("local_server.subprocess.Popen") as detached:
+            result = local_server._start_native_publication_run(Path("/tmp/synthetic"), "run-1")
+        execute.assert_called_once_with(Path("/tmp/synthetic"), "run-1")
+        detached.assert_not_called()
+        self.assertEqual(result["status"], "completed")
+
     def test_verified_receipts_must_match_current_source_version(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "Owner.sqlite"
@@ -66,7 +86,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
             with (
                 patch("native_asset_publication.connect_owner", side_effect=open_database),
                 patch("native_asset_publication._upload_bridge_rows", return_value=[bridge_row]),
-                patch("native_asset_publication._planned_r2_keys", return_value=planned),
+                patch("native_asset_publication._planned_upload_r2_keys", return_value=planned),
             ):
                 self.assertEqual(
                     verified_covered_r2_results(
@@ -504,7 +524,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                 patch("native_asset_publication.connect_owner", side_effect=open_database),
                 patch("native_asset_publication._upload_bridge_rows", return_value=[{"asset_id": "asset-1"}]),
                 patch(
-                    "native_asset_publication._planned_r2_keys",
+                    "native_asset_publication._planned_upload_r2_keys",
                     return_value=(
                         "photo-1",
                         [
@@ -569,7 +589,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                 patch("native_asset_publication.connect_owner", side_effect=open_database),
                 patch("native_asset_publication._upload_bridge_rows", return_value=[bridge_row]),
                 patch(
-                    "native_asset_publication._planned_r2_keys",
+                    "native_asset_publication._planned_upload_r2_keys",
                     return_value=(
                         "legacy-photo-1",
                         [
@@ -633,7 +653,7 @@ class NativeAssetPublicationTest(unittest.TestCase):
                     ],
                 ),
                 patch(
-                    "native_asset_publication._planned_r2_keys",
+                    "native_asset_publication._planned_upload_r2_keys",
                     return_value=(
                         "legacy-photo-1",
                         [

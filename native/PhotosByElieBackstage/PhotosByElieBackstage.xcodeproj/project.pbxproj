@@ -147,6 +147,7 @@
 		DCC7524B29EC9972A5902902 /* CullingWindowQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822A6AD99EB6EFC7E6E8CD3F /* CullingWindowQuery.swift */; };
 		55534B2014A8A2BFD6D1DAB6 /* BackstageRefundWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C686CA06FA29193E5AB150 /* BackstageRefundWorkflow.swift */; };
 		7AA25181599CA048F58AC159 /* FixtureAIProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */; };
+		ED40F521599B43E6BC558431 /* NativeUploadExecutionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -328,6 +329,7 @@
 		822A6AD99EB6EFC7E6E8CD3F /* CullingWindowQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CullingWindowQuery.swift; sourceTree = "<group>"; };
 		A5C686CA06FA29193E5AB150 /* BackstageRefundWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackstageRefundWorkflow.swift; sourceTree = "<group>"; };
 		03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureAIProgress.swift; sourceTree = "<group>"; };
+		A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadExecutionMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -512,6 +514,7 @@
 				3F0015B40E489F6580192040 /* FixtureSelectionCoordinator.swift */,
 				928CCF85EB6344B14978ECFB /* FixtureWorkflowService.swift */,
 				03215C4729D03531F8F12B5E /* FixtureAIProgress.swift */,
+				A18575AC5BBF4F1DA797BE5F /* NativeUploadExecutionMonitor.swift */,
 				EE3BC18102E9204DF9E7E65A /* KeychainVault.swift */,
 				3907D64FDE0EF5F4D9B012F9 /* LifecycleService.swift */,
 				67FD2E316641B2E1B630A901 /* LocalFixtureReviewService.swift */,
@@ -780,6 +783,7 @@
 				798A5B9602ABA38C607F5AC1 /* FixtureSelectionCoordinator.swift in Sources */,
 				1DC5B1F0D74089B35C517977 /* FixtureWorkflowService.swift in Sources */,
 				7AA25181599CA048F58AC159 /* FixtureAIProgress.swift in Sources */,
+				ED40F521599B43E6BC558431 /* NativeUploadExecutionMonitor.swift in Sources */,
 				475CAEFFE818A0B4C6115337 /* KeychainVault.swift in Sources */,
 				CE890E5906913FF1CEAB3B1A /* LifecycleService.swift in Sources */,
 				16DFF34B8B829850A2E846AA /* LocalFixtureReviewService.swift in Sources */,

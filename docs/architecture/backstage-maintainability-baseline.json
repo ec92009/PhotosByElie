@@ -34,7 +34,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureDeliveryService.swift",
-      "nloc": 1011
+      "nloc": 1021,
+      "reviewNote": "PBB-177: ten net coordinator lines for prepare/enqueue/status phases. Execution lifetime/error tracking is isolated in NativeUploadExecutionMonitor; no function ceiling raised."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift",

@@ -3,6 +3,7 @@ import unittest
 import shutil
 import sqlite3
 import threading
+from unittest.mock import patch
 from pathlib import Path
 import sys
 
@@ -96,6 +97,37 @@ class NativePublicationPipelineTest(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_app_owned_upload_preserves_original_failure_and_retries_only_failed_asset(self):
+        from native_asset_publication import execute_native_publication_run
+        with connect(self.root) as conn:
+            conn.execute("UPDATE sidecar_assets SET pixel_width = 2400, pixel_height = 1600, captured_at = '2022-12-10T12:00:00Z', location_label = 'Spain'")
+            conn.execute("UPDATE sidecar_decisions SET title = 'Synthetic coast', keywords_json = '[\"Spain\",\"Sea\"]'")
+            conn.commit()
+        run = create_upload_run(self.root, ["asset-1", "asset-2"], concurrency=2)
+        retrying = False
+        exported = []
+        def bridge_item(_root, **kwargs):
+            asset = kwargs["item"]["assetId"]
+            exported.append(asset)
+            if asset == "asset-2" and not retrying:
+                return {"ok": False, "items": [{"status": "export_failed", "export": {"error": "photos_job_authorization_required"}, "upload": {"keys": []}}]}
+            return {"ok": True, "items": [{"status": "uploaded", "upload": {"keys": verified_public_set(asset)}}]}
+        with patch("native_asset_publication.queue_upload_bridge"), patch("native_asset_publication.prepare_upload_bridge_execute_batch", return_value={"items": [{"assetId": "asset-1"}, {"assetId": "asset-2"}]}), patch("native_asset_publication.execute_upload_bridge_batch_item", side_effect=bridge_item), patch("native_asset_publication.refresh_public_catalog_artifacts", return_value={"ok": True}), patch("native_asset_publication.commit_writeback", return_value={"ok": True, "failedCount": 0}):
+            first = execute_native_publication_run(self.root, run["runId"])
+            self.assertEqual(first["failed"], 1, first["items"])
+            failed = next(item for item in first["items"] if item["asset_id"] == "asset-2")
+            self.assertEqual(failed["error_text"], "photos_job_authorization_required")
+            successful = next(item for item in first["items"] if item["asset_id"] == "asset-1")
+            self.assertEqual(successful["status"], "verified")
+            retrying = True
+            exported.clear()
+            retry = create_upload_run(self.root, ["asset-2"])
+            second = execute_native_publication_run(self.root, retry["runId"])
+            self.assertEqual(second["failed"], 0)
+            self.assertEqual(exported, ["asset-2"])
+            preserved = next(item for item in upload_run_status(self.root, run["runId"])["items"] if item["asset_id"] == "asset-1")
+            self.assertEqual(preserved, successful)
 
     def test_metadata_change_preserves_approval_and_appearance_returns_to_review(self):
         baseline = [

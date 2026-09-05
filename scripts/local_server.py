@@ -3420,6 +3420,20 @@ def _start_native_publication_run(
             "attached": bool(claim.get("attached")),
             "reason": "The existing upload worker is already running.",
         }
+    if not catalog_recovery:
+        # Stay in the sealed, app-owned Photos job. A detached child loses the
+        # capability as soon as its launch action exits. The app enqueues this
+        # execution action and polls the already-created durable run separately.
+        from native_asset_publication import execute_native_publication_run
+        try:
+            completed = execute_native_publication_run(repo_root, run_id)
+            giveback = completed.get("photosGiveBack") or {}
+            if giveback.get("ok") is False or int(giveback.get("failedCount") or 0):
+                raise RuntimeError("Upload receipts are saved, but Apple Photos metadata give-back failed. Retry Give Back from Metadata.")
+            return {"started": True, "status": completed.get("status", "completed")}
+        except Exception as error:
+            retry_native_publication_lock(lambda: record_upload_run_failure(repo_root, run_id, str(error)))
+            raise
     log_root = repo_root / ".review-logs" / "native-publication-runs"
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"{run_id}.log"
@@ -3795,21 +3809,21 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
         })
     elif mode == "asset-upload-run-start":
-        upload_run = create_native_upload_run(
-            repo_root,
-            manifest.get("assetIds") or [],
-            limit=int(manifest.get("limit") or 50),
-            concurrency=int(manifest.get("concurrency") or 4),
+        existing_run_id = str(manifest.get("runId") or "")
+        upload_run = (
+            native_upload_run_status(repo_root, existing_run_id) if existing_run_id
+            else create_native_upload_run(
+                repo_root, manifest.get("assetIds") or [],
+                limit=int(manifest.get("limit") or 50),
+                concurrency=int(manifest.get("concurrency") or 4),
+            )
         )
         background = (
             _start_native_publication_run(repo_root, str(upload_run["runId"]))
-            if int(upload_run.get("count") or 0)
-            else {"started": False, "reason": "No approved assets need upload."}
+            if not manifest.get("prepareOnly") and int(upload_run.get("requested", upload_run.get("count", 0)) or 0)
+            else {"started": False, "reason": "Run prepared; execution is a separate app-owned action."}
         )
-        result.update({
-            "readOnly": False,
-            "uploadRun": {**upload_run, **background},
-        })
+        result.update({"readOnly": False, "uploadRun": {**upload_run, **background}})
     elif mode == "asset-catalog-recovery-plan":
         result.update({
             "readOnly": True,
@@ -3864,7 +3878,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             background = _start_native_publication_run(
                 repo_root,
                 run_id,
-                retry_failed=True,
+                retry_failed=native_upload_run_status(repo_root, run_id).get("status") != "queued",
             )
         result.update({
             "readOnly": False,

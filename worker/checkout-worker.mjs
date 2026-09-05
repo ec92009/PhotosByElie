@@ -2092,7 +2092,12 @@ export const createPhotosByElieWorker = ({
       return noStore(errorJson(429, "download_limit_reached", "This download link has reached its download limit. Contact Photos By Elie for help with the order."));
     }
     let response;
-    if (typeof deliveryClient.getDownloadResponse === "function") {
+    if (downloadRecord.realEstateDeliverableId) {
+      if (typeof realEstateDeliverables?.getDeliveryAsset !== "function") {
+        return noStore(errorJson(503, "real_estate_delivery_links_unavailable", "Product output verification is unavailable."));
+      }
+      response = await realEstateDeliverables.getDeliveryAsset(downloadRecord);
+    } else if (typeof deliveryClient.getDownloadResponse === "function") {
       response = await deliveryClient.getDownloadResponse(downloadRecord);
     } else {
       response = json({

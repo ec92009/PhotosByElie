@@ -1,7 +1,7 @@
 # Backstage update contract
 
 PBE-134 defines the safe local update boundary for the private macOS Backstage
-operator app. The update path is deliberately separate from the public Owner
+operator app. The update path is deliberately separate from the public customer
 gallery, Backstage's PhotoKit write-back, fixture state, and `Owner.sqlite`.
 
 PBB-92 makes Backstage and its embedded PhotoKit capability one release unit.

@@ -2,7 +2,10 @@
 
 PhotosByElie Backstage is the private macOS workspace for organizing,
 reviewing, uploading, delivering, and publishing Photos By Elie media.
-The public website and client galleries remain separate.
+The public website and client galleries remain customer-facing. Browser Owner
+review/import/mutation workspaces are retired, including on localhost. The
+unlinked `owner.html` page is retained only for restricted credential enrollment
+and recovery; it is not a normal Owner workspace.
 
 Backstage is currently installed on Max at:
 
@@ -462,11 +465,11 @@ title/keyword proposal-review surface. The final Metadata section writes approve
 Apple Photos through Backstage's native PhotoKit services.
 
 Backstage is the only normal-release Photos authority; there is no second
-operator application or helper to install. On **Overview**, the **Signed Photos
-helper** card reports the bundled helper compatibility and authorization state.
-Use **Check helper** after an upgrade or permissions change. Backstage blocks
-culling and metadata give-back while its own signed helper is stale, missing,
-or unauthorized.
+operator application or helper to install. On **Overview**, the **Native Photos
+access** card reports authorization. Use **Allow Photos** or **Refresh Photos
+access** after a permissions change. The read-only `release verify` control
+command checks installed release metadata; a healthy release does not by itself
+prove Photos permission or a successful metadata write.
 
 ### Edit metadata
 
@@ -626,9 +629,10 @@ receipt, and leaves the remaining objects for a fresh reconciliation run.
 
 ## Activity and troubleshooting
 
-Use **Activity** first when an operation appears slow or stuck. Backstage
-actions are durable: if the local connector does not wake immediately, it can
-claim the same action through its polling fallback.
+Use **Activity** first when an operation appears slow or stuck. Actions that use
+the Worker keep a durable action receipt; Backstage wakes its bundled connector
+for an explicit action. Do not assume a retired continuous poller will complete
+an unattended action. Native SQLite operations report their own state and receipt.
 
 ### Enrollment required
 
@@ -640,9 +644,10 @@ restricted one-time-code fallback only while the native route is unavailable.
 
 Choose **Allow Photos**. If macOS no longer prompts, open **System Settings →
 Privacy & Security → Photos** and grant Full Access to **PhotosByElie
-Backstage**, then return to the app and choose **Refresh**. The Overview helper
-card must report **Compatible** and
-**authorized** before culling or metadata give-back.
+Backstage**, then return to **Overview → Native Photos access** and choose
+**Refresh Photos access**. Confirm authorization before culling or metadata
+give-back; the command `scripts/backstage-control.zsh photos health --pretty`
+provides a read-only readiness receipt.
 
 ### Photos indexed, but an item is absent
 
@@ -654,18 +659,23 @@ calculate its disk size.
 
 ### An action stays queued
 
-1. Check **Activity**.
-2. Refresh the session from **Overview**.
-3. In the browser Owner page, check Max connector health.
-4. Leave the action in place rather than submitting duplicates; the durable
-   poller can still complete it.
+1. Check **Activity** for the exact action and its last progress or error.
+2. Refresh authentication/readiness in **Overview**. If needed, run
+   `scripts/backstage-control.zsh health --pretty` and preserve its receipt.
+3. Keep the action ID and inspect the on-demand connector failure before
+   retrying. A queued action is not evidence that a connector is running.
+4. Use the workflow's supported retry/recovery path once its cause is resolved;
+   do not submit duplicates or edit action rows by hand. Browser Owner connector
+   controls and a continuous polling daemon are not the normal recovery path.
 
 ### Something looks unsafe or ambiguous
 
 Stop before confirming. Preview or reload the relevant plan, verify the
-fixture and item counts, and inspect **Activity**. The browser Owner remains
-available for authentication, enrollment, connector health, access review,
-and audit, but Backstage is the active mutation workspace.
+fixture and item counts, and inspect **Activity**. Authentication setup may open
+a browser account-picker handoff; complete it and return to Backstage. The
+restricted `owner.html` fallback remains for credential enrollment/recovery
+only. Perform workflow review, connector diagnosis and action auditing through
+Backstage and its supported read-only control commands.
 
 Browser Owner and the retired Sidecar pages do not launch PhotoKit work.
 Ordinary operation exposes only Backstage as the operator app; legacy browser
@@ -674,8 +684,12 @@ import routes fail closed with `410 Backstage required`.
 ## Safety summary
 
 - `Owner.sqlite` remains the private Owner source of truth.
-- Normal Backstage mutations pass through the Worker audit ledger and the Max
-  connector; the app does not directly edit business rows.
+- Native workflow stores read and write private `Owner.sqlite` through their
+  domain services. Operations delegated to the Worker use its durable action
+  ledger and the enrolled connector. Do not treat either route as universal.
+- Plain `assets/catalog/photosbyelie.sqlite` is the public projection; Owner
+  data and compatibility exports are not substitutes for the deployable catalog.
+- Enrolled Backstage credentials are stored in macOS Keychain on that Mac.
 - Photos writes use Backstage's signed native PhotoKit services and are verified
   by re-reading.
 - Upload, delivery, publication, deployment, and client messaging are separate

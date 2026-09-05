@@ -21,6 +21,11 @@ from urllib.parse import parse_qs, unquote, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+try:
+    from .local_http_security import LocalHttpSecurityMixin
+except ImportError:
+    from local_http_security import LocalHttpSecurityMixin
+
 from backstage_photos_client import (
     BackstagePhotosClientError,
     request_library_index,
@@ -750,7 +755,7 @@ def _overlay_cloud_decisions(repo_root: Path, payload: dict) -> dict:
     return payload
 
 
-class SidecarHandler(SimpleHTTPRequestHandler):
+class SidecarHandler(LocalHttpSecurityMixin, SimpleHTTPRequestHandler):
     server_version = "PhotosByElieSidecar/0.1"
 
     def do_GET(self) -> None:
@@ -768,7 +773,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self._handle_index_window()
             return
         if path == SIDECAR_LIBRARY_PATH:
-            self._handle_library()
+            self._send_json(HTTPStatus.FORBIDDEN, {
+                "ok": False, "error": "Legacy library indexing is disabled; use Backstage.",
+            })
             return
         if path.startswith(SIDECAR_PREVIEW_PATH):
             self._handle_preview(path)
@@ -794,32 +801,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self) -> None:
-        path = self.path.split("?", 1)[0]
-        if path == SIDECAR_DECISION_PATH:
-            self._handle_decision()
-            return
-        if path == SIDECAR_DECISIONS_PATH:
-            self._handle_decisions()
-            return
-        if path == SIDECAR_EMPTY_WASTEBASKET_PATH:
-            self._handle_empty_wastebasket()
-            return
-        if path in {SIDECAR_MOCK_UPLOAD_PATH, SIDECAR_UPLOAD_BRIDGE_PATH}:
-            self._handle_upload_bridge()
-            return
-        if path == SIDECAR_UPLOAD_BRIDGE_EXECUTE_PATH:
-            self._handle_upload_bridge_execute()
-            return
-        if path == SIDECAR_UPLOAD_BRIDGE_CANCEL_PATH:
-            self._handle_upload_bridge_cancel()
-            return
-        if path == SIDECAR_INDEX_REFRESH_PATH:
-            self._handle_index_refresh()
-            return
-        if path == SIDECAR_AI_PROPOSE_PATH:
-            self._handle_ai_propose()
-            return
-        self.send_error(HTTPStatus.NOT_FOUND)
+        self._send_json(HTTPStatus.FORBIDDEN, {
+            "ok": False, "error": "Legacy Sidecar HTTP mutations are disabled; use Backstage.",
+        })
 
     def end_headers(self) -> None:
         path = self.path.split("?", 1)[0]

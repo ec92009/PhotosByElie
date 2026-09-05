@@ -13,8 +13,8 @@
   "files": [
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
-      "nloc": 8834,
-      "reviewNote": "PBB-175: nine lines for Uploaded enum mapping, candidate projection and optimistic count retention; no unrelated ceiling growth. PBB-177: one dependency-injection line separates new-job renewal from ongoing authorization checks."
+      "nloc": 8839,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift",
@@ -26,7 +26,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/ReviewView.swift",
-      "nloc": 1301
+      "nloc": 1306,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditJobStore.swift",
@@ -39,8 +40,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift",
-      "nloc": 1791,
-      "reviewNote": "PBB-175: Uploaded enum labels and decoded summary count add six declarative lines."
+      "nloc": 1797,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift",
@@ -52,8 +53,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift",
-      "nloc": 1583,
-      "reviewNote": "PBB-175: inclusive Uploaded predicate; status switch extracted from reviewWindow, with three net lines."
+      "nloc": 1589,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift",
@@ -101,9 +102,10 @@
       "start": 172,
       "end": 219,
       "nloc": 48,
-      "ccn": 55,
+      "ccn": 57,
       "parameters": 2,
-      "nesting": 1
+      "nesting": 1,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift::set",
@@ -244,10 +246,11 @@
       "name": "applyReviewAction",
       "start": 4875,
       "end": 5049,
-      "nloc": 171,
-      "ccn": 44,
+      "nloc": 172,
+      "ccn": 46,
       "parameters": 3,
-      "nesting": 4
+      "nesting": 4,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift::retainReviewResultInCurrentWindow _ result : FixtureReviewResult , action : FixtureReviewAction",
@@ -1175,15 +1178,16 @@
       "nesting": 2
     },
     {
-      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::init id : String , photoLibraryIdentifier : String , sourceVersionID : String = \"\" , title : String , caption : String = \"\" , keywords : [ String ] , country : String = \"\" , suggestedCountry : String = \"\" , countrySuggestionSource : String = \"\" , filename : String , mediaType : String = \"photo\" , capturedAt : String , pixelWidth : Int = 0 , pixelHeight : Int = 0 , originalByteCount : Int64 = 0 , rating : Int = 0 , color : String = \"\" , placementState : String = \"picked\" , editorialState : String = \"unreviewed\" , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , aiAttemptCount : Int = 0 , aiLastError : String = \"\" , proposalReady : Bool = false , proposalContextAvailable : Bool = false , proposalID : String = \"\" , proposedTitle : String = \"\" , proposedKeywords : [ String ] = [ ] , proposedCountry : String = \"\" , countryProposalSource : String = \"\" , proposalReason : String = \"\" , proposalStatus : String = \"\" , requestedGeneratorModel : String = \"\" , resolvedModel : String = \"\" , reasoningEffort : String = \"\" , vision : Bool = false , modelLadder : [ String ] = [ ] , deliveryState : String = \"not-ready\" , locationLabel : String = \"\" , locationKeywords : [ String ] = [ ] , cameraBody : String = \"\" , lens : String = \"\" , focalLength : String = \"\"",
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::init id : String , photoLibraryIdentifier : String , sourceVersionID : String = \"\" , title : String , caption : String = \"\" , keywords : [ String ] , country : String = \"\" , suggestedCountry : String = \"\" , countrySuggestionSource : String = \"\" , filename : String , mediaType : String = \"photo\" , capturedAt : String , pixelWidth : Int = 0 , pixelHeight : Int = 0 , originalByteCount : Int64 = 0 , rating : Int = 0 , color : String = \"\" , placementState : String = \"picked\" , editorialState : String = \"unreviewed\" , visualAIRequest : [ String : JSONValue ] = [ : ] , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , aiAttemptCount : Int = 0 , aiLastError : String = \"\" , proposalReady : Bool = false , proposalContextAvailable : Bool = false , proposalID : String = \"\" , proposedTitle : String = \"\" , proposedKeywords : [ String ] = [ ] , proposedCountry : String = \"\" , countryProposalSource : String = \"\" , proposalReason : String = \"\" , proposalStatus : String = \"\" , requestedGeneratorModel : String = \"\" , resolvedModel : String = \"\" , reasoningEffort : String = \"\" , vision : Bool = false , modelLadder : [ String ] = [ ] , deliveryState : String = \"not-ready\" , locationLabel : String = \"\" , locationKeywords : [ String ] = [ ] , cameraBody : String = \"\" , lens : String = \"\" , focalLength : String = \"\"",
       "file": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift",
       "name": "init",
-      "start": 751,
-      "end": 839,
-      "nloc": 89,
+      "start": 758,
+      "end": 848,
+      "nloc": 91,
       "ccn": 1,
-      "parameters": 43,
-      "nesting": 0
+      "parameters": 44,
+      "nesting": 0,
+      "reviewNote": "PBB-173: one optional visual request field in existing Review DTO/transport; schema and persistence use bounded helpers."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::init json : [ String : JSONValue ]",
@@ -1192,9 +1196,10 @@
       "start": 841,
       "end": 886,
       "nloc": 46,
-      "ccn": 44,
+      "ccn": 45,
       "parameters": 1,
-      "nesting": 0
+      "nesting": 0,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::init total : Int , unreviewed : Int , requestingAI : Int , proposed : Int , approved : Int , hidden : Int = 0 , countryMissing : Int = 0",
@@ -1274,15 +1279,16 @@
       "nesting": 2
     },
     {
-      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::applyReview _ action : FixtureReviewAction , fixtureID : String , assetIDs : [ String ] , anchorAssetID : String , propagate : Bool = false , title : String? = nil , keywords : [ String ] ? = nil , country : String? = nil , proposalID : String? = nil , aiReasons : [ String ] = [ ] , aiNote : String = \"\"",
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::applyReview _ action : FixtureReviewAction , fixtureID : String , assetIDs : [ String ] , anchorAssetID : String , propagate : Bool = false , title : String? = nil , keywords : [ String ] ? = nil , country : String? = nil , proposalID : String? = nil , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , visualAIReasons : [ String ] = [ ]",
       "file": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift",
       "name": "applyReview",
-      "start": 1612,
-      "end": 1656,
-      "nloc": 45,
+      "start": 1622,
+      "end": 1668,
+      "nloc": 47,
       "ccn": 8,
-      "parameters": 11,
-      "nesting": 2
+      "parameters": 12,
+      "nesting": 2,
+      "reviewNote": "PBB-173: one optional visual request field in existing Review DTO/transport; schema and persistence use bounded helpers."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift::configure fixtureID : String , populationMode : String , candidateSource : [ String : JSONValue ] , savedRule : [ String : JSONValue ] , policy : FixturePolicyOverrides , templateKey : String , reason : String",
@@ -1370,7 +1376,8 @@
       "nloc": 28,
       "ccn": 2,
       "parameters": 1,
-      "nesting": 11
+      "nesting": 12,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/MetadataGiveBackService.swift::decodeReport from action : OwnerAction , fixtureID : String , dryRun : Bool",
@@ -1701,19 +1708,20 @@
       "nloc": 262,
       "ccn": 24,
       "parameters": 9,
-      "nesting": 6,
-      "reviewNote": "PBB-174: one added SQL predicate enforces the existing global Exclude visibility contract. File ceiling1580 and reviewWindow262 NLOC; no added control flow or responsibility. Keep conjuncts separate for reviewability; do not widen unrelated ceilings."
+      "nesting": 7,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
-      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::applyReview _ action : FixtureReviewAction , fixtureID : String , assetIDs : [ String ] , anchorAssetID : String = \"\" , propagate : Bool = false , title : String? = nil , keywords : [ String ] ? = nil , country : String? = nil , proposalID : String? = nil , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , actor : String = \"owner\" , now : Date = Date",
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::applyReview _ action : FixtureReviewAction , fixtureID : String , assetIDs : [ String ] , anchorAssetID : String = \"\" , propagate : Bool = false , title : String? = nil , keywords : [ String ] ? = nil , country : String? = nil , proposalID : String? = nil , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , visualAIReasons : [ String ] = [ ] , actor : String = \"owner\" , now : Date = Date",
       "file": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift",
       "name": "applyReview",
-      "start": 310,
-      "end": 987,
-      "nloc": 250,
+      "start": 302,
+      "end": 563,
+      "nloc": 252,
       "ccn": 43,
-      "parameters": 13,
-      "nesting": 11
+      "parameters": 14,
+      "nesting": 11,
+      "reviewNote": "PBB-173: one optional visual request field in existing Review DTO/transport; schema and persistence use bounded helpers."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::undoReview operationID : String , actor : String = \"owner\" , now : Date = Date",
@@ -1754,10 +1762,11 @@
       "name": "reviewState",
       "start": 1680,
       "end": 1747,
-      "nloc": 68,
+      "nloc": 69,
       "ccn": 5,
       "parameters": 3,
-      "nesting": 7
+      "nesting": 7,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::reviewWindowItem _ row : [ String : JSONValue ]",
@@ -1765,10 +1774,11 @@
       "name": "reviewWindowItem",
       "start": 1759,
       "end": 1843,
-      "nloc": 85,
+      "nloc": 86,
       "ccn": 36,
       "parameters": 1,
-      "nesting": 0
+      "nesting": 0,
+      "reviewNote": "PBB-173: visual request field projection, independent scope handling and saved-state UI. No unrelated ceiling changes."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::recomputeFixtureEligibility _ connection : ReviewSQLiteConnection",

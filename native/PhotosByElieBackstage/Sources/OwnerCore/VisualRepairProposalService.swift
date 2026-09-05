@@ -363,3 +363,16 @@ public actor VisualRepairProposalService {
         return result
     }
 }
+
+public extension FixtureReviewItem {
+    var visualAIReasons: [String] {
+        guard visualAIRequest["sourceVersionId"]?.stringValue == sourceVersionID else { return [] }
+        return visualAIRequest["reasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
+    }
+
+    var reviewStatusLabel: String {
+        guard !visualAIReasons.isEmpty else { return workflowStage.label }
+        return editorialState == "requesting-ai" ? "Visual + title/keyword AI requested" : "Visual AI requested"
+    }
+
+}

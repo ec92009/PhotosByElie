@@ -10,6 +10,18 @@ struct ReviewMutationContext {
     let sourceVersionsAvailable: Bool
     let beforeReview: [String: JSONValue]
 
+    static func prepareSchema(_ connection: ReviewSQLiteConnection) throws {
+        if !(try connection.tableColumns("asset_editorial_state")).contains("visual_ai_request_json") {
+            try connection.execute("ALTER TABLE asset_editorial_state ADD COLUMN visual_ai_request_json TEXT NOT NULL DEFAULT '{}'")
+        }
+    }
+
+    static func visualRequestSelect(_ connection: ReviewSQLiteConnection) throws -> String {
+        try connection.tableColumns("asset_editorial_state").contains("visual_ai_request_json")
+            ? "COALESCE(editorial.visual_ai_request_json, '{}') AS visual_ai_request_json"
+            : "'{}' AS visual_ai_request_json"
+    }
+
     typealias Placement = (assetID: String, state: String, eligibility: String)
 
     func apply(
@@ -20,6 +32,9 @@ struct ReviewMutationContext {
         aiRequest: ReviewMutationAIRequest,
         anchorAssetID: String
     ) throws -> Placement? {
+        if action == .approve || action == .hide {
+            try connection.execute("UPDATE asset_editorial_state SET visual_ai_request_json = '{}' WHERE asset_id = ?", bindings: [.string(assetID)])
+        }
         switch action {
         case .hide:
             return try hide(assetID)
@@ -130,9 +145,36 @@ struct ReviewMutationContext {
         )
     }
 
+    private func writeVisualRequest(_ assetID: String, reasons: [String]) throws {
+        let visualReasons = Set(reasons)
+        guard visualReasons.allSatisfy({ VisualRepairDefectCategory(rawValue: $0) != nil }) else {
+            throw OwnerReviewSQLiteError.invalid("unknown visual AI reason")
+        }
+        var visualRequest: [String: JSONValue] = [:]
+        if !visualReasons.isEmpty {
+            let version = sourceVersionsAvailable ? try connection.queryOne(
+                "SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1",
+                bindings: [.string(assetID)]
+            )?["version_id"]?.stringValue ?? "" : ""
+            visualRequest = ["reasons": .array(visualReasons.sorted().map(JSONValue.string)),
+                             "sourceVersionId": .string(version), "requestedAt": .string(timestamp),
+                             "status": .string("awaiting-generator")]
+        }
+        try connection.execute(
+            "UPDATE asset_editorial_state SET visual_ai_request_json = ?, updated_at = ? WHERE asset_id = ?",
+            bindings: [.string(try encodeReviewJSON(.object(visualRequest))), .string(timestamp), .string(assetID)]
+        )
+    }
+
+    private func revokeApprovalForVisualRequest(_ assetID: String) throws {
+        try connection.execute(
+            "UPDATE asset_editorial_state SET editorial_state = CASE WHEN editorial_state = 'approved' THEN 'unreviewed' ELSE editorial_state END, approved_at = NULL, updated_at = ? WHERE asset_id = ?",
+            bindings: [.string(timestamp), .string(assetID)]
+        )
+    }
+
     private func requestAI(_ assetID: String, request: ReviewMutationAIRequest) throws -> Placement {
-        let cleanAIReasons = request.reasons
-        let cleanAINote = request.note
+        try writeVisualRequest(assetID, reasons: request.visualReasons)
         let existingPlacement = try connection.queryOne(
             """
             SELECT placement_state, eligibility_state
@@ -161,6 +203,11 @@ struct ReviewMutationContext {
             ]
         )
 
+        if request.isVisualOnly {
+            try revokeApprovalForVisualRequest(assetID)
+            return (assetID, beforePlacement, beforeEligibility)
+        }
+
         try connection.execute(
             """
             UPDATE asset_ai_proposals
@@ -169,7 +216,7 @@ struct ReviewMutationContext {
             """,
             bindings: [.string(timestamp), .string(assetID)]
         )
-        let hasAIRequest = !cleanAIReasons.isEmpty || !cleanAINote.isEmpty
+        let hasAIRequest = !request.reasons.isEmpty || !request.note.isEmpty
         try connection.execute(
             """
             UPDATE asset_editorial_state
@@ -179,8 +226,8 @@ struct ReviewMutationContext {
             """,
             bindings: [
                 .string(hasAIRequest ? "requesting-ai" : "unreviewed"),
-                .string(try encodeReviewJSON(.array(cleanAIReasons.map(JSONValue.string)))),
-                .string(hasAIRequest ? cleanAINote : ""),
+                .string(try encodeReviewJSON(.array(request.reasons.map(JSONValue.string)))),
+                .string(hasAIRequest ? request.note : ""),
                 hasAIRequest ? .string(timestamp) : .null,
                 .string(timestamp), .string(assetID),
             ]
@@ -538,4 +585,6 @@ struct ReviewMutationMetadata {
 struct ReviewMutationAIRequest {
     let reasons: [String]
     let note: String
+    var visualReasons: [String] = []
+    var isVisualOnly: Bool { !visualReasons.isEmpty && reasons.isEmpty && note.isEmpty }
 }

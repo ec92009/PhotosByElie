@@ -731,6 +731,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
     public var color: String
     public var placementState: String
     public var editorialState: String
+    public var visualAIRequest: [String: JSONValue]
     public var aiReasons: [String]
     public var aiNote: String
     public var aiAttemptCount: Int
@@ -774,6 +775,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         color: String = "",
         placementState: String = "picked",
         editorialState: String = "unreviewed",
+        visualAIRequest: [String: JSONValue] = [:],
         aiReasons: [String] = [],
         aiNote: String = "",
         aiAttemptCount: Int = 0,
@@ -820,6 +822,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         self.color = color
         self.placementState = placementState
         self.editorialState = editorialState
+        self.visualAIRequest = visualAIRequest
         self.aiReasons = aiReasons
         self.aiNote = aiNote
         self.aiAttemptCount = aiAttemptCount
@@ -866,6 +869,7 @@ public struct FixtureReviewItem: Identifiable, Sendable, Equatable {
         color = json["color"]?.stringValue ?? ""
         placementState = json["placementState"]?.stringValue ?? "picked"
         editorialState = json["editorialState"]?.stringValue ?? "unreviewed"
+        visualAIRequest = json["visualAIRequest"]?.objectValue ?? [:]
         aiReasons = json["aiReasons"]?.arrayValue?.compactMap(\.stringValue) ?? []
         aiNote = json["aiNote"]?.stringValue ?? ""
         aiAttemptCount = json["aiAttemptCount"]?.intValue ?? 0
@@ -1626,7 +1630,8 @@ public actor FixtureWorkflowService {
         country: String? = nil,
         proposalID: String? = nil,
         aiReasons: [String] = [],
-        aiNote: String = ""
+        aiNote: String = "",
+        visualAIReasons: [String] = []
     ) async throws -> FixtureReviewResult {
         var extra: [String: JSONValue] = [
             "fixtureId": .string(fixtureID),
@@ -1636,6 +1641,7 @@ public actor FixtureWorkflowService {
             "propagate": .bool(propagate),
             "aiReasons": .array(aiReasons.map(JSONValue.string)),
             "aiNote": .string(aiNote),
+            "visualAIReasons": .array(visualAIReasons.map(JSONValue.string)),
         ]
         if let title {
             extra["title"] = .string(title)

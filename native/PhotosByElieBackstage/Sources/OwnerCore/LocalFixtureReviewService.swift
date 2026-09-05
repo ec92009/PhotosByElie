@@ -222,6 +222,7 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
         let proposalID = try optionalString("proposalId", from: payload)
         let aiReasons = try optionalStringArray("aiReasons", from: payload) ?? []
         let aiNote = try optionalString("aiNote", from: payload) ?? ""
+        let visualReasons = try optionalStringArray("visualAIReasons", from: payload) ?? []
         let propagate = payload["propagate"]?.boolValue ?? false
         return try nativeStore().applyReview(
             action,
@@ -234,7 +235,8 @@ public struct LocalFixtureReviewService: LocalFixtureReviewServing, LocalFixture
             country: country,
             proposalID: proposalID,
             aiReasons: aiReasons,
-            aiNote: aiNote
+            aiNote: aiNote,
+            visualAIReasons: visualReasons
         )
     }
 

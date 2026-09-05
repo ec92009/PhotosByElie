@@ -681,9 +681,12 @@ final class BackstageViewModel: ObservableObject {
         isPhotosMaintenanceActive || isRunningMetadataReview || isRunningMetadata
     }
 
+    var hasReviewMetadataAIDraft: Bool {
+        !reviewAIReasons.isEmpty || !reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var hasReviewAIDraft: Bool {
-        !reviewAIReasons.isEmpty
-            || !reviewAINote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !visualRepairDefectCategories.isEmpty || hasReviewMetadataAIDraft
     }
 
     var canMarkReviewSelectionNeedsAI: Bool {
@@ -4944,7 +4947,8 @@ final class BackstageViewModel: ObservableObject {
                 country: approvalCountry,
                 proposalID: approvalProposalID,
                 aiReasons: action == .requestAI ? Array(reviewAIReasons).sorted() : [],
-                aiNote: action == .requestAI ? reviewAINote : ""
+                aiNote: action == .requestAI ? reviewAINote : "",
+                visualAIReasons: action == .requestAI ? visualRepairDefectCategories.map(\.rawValue).sorted() : []
             )
             if action == .approve || action == .hide {
                 reviewAIReasons = []
@@ -4955,7 +4959,7 @@ final class BackstageViewModel: ObservableObject {
                     reviewProposalDrafts.removeValue(forKey: $0)
                     reviewProposalConflictIDs.remove($0)
                 }
-            } else if action == .requestAI {
+            } else if action == .requestAI && hasReviewMetadataAIDraft {
                 ids.forEach {
                     guard var draft = reviewProposalDrafts[$0], draft.isProposal else {
                         return
@@ -5108,20 +5112,20 @@ final class BackstageViewModel: ObservableObject {
             }
             switch action {
             case .approve:
+                item.visualAIRequest = [:]
                 item.editorialState = "approved"
                 item.deliveryState = "needs-upload"
                 item.aiReasons = []
                 item.aiNote = ""
                 item.proposalReady = false
             case .hide:
+                item.visualAIRequest = [:]
                 item.placementState = "hidden"
                 item.aiReasons = []
                 item.aiNote = ""
                 item.proposalReady = false
             case .requestAI:
-                item.deliveryState = "not-ready"
-                item.proposalReady = false
-                item.proposalStatus = "superseded"
+                item = BackstageReviewWorkflowState.applying(after, to: item)
             case .returnToReview:
                 item.editorialState = "unreviewed"
                 item.deliveryState = "not-ready"
@@ -6216,10 +6220,11 @@ final class BackstageViewModel: ObservableObject {
         }
         reviewTitle = draft?.title ?? item.title
         reviewKeywords = (draft?.keywords ?? item.keywords).joined(separator: ", ")
+        visualRepairDefectCategories = Set(item.visualAIReasons.compactMap(VisualRepairDefectCategory.init(rawValue:)))
         let hasActiveAIRequest = item.editorialState == "requesting-ai"
         reviewAIReasons = hasActiveAIRequest ? Set(item.aiReasons) : []
         reviewAINote = hasActiveAIRequest ? item.aiNote : ""
-        if hasActiveAIRequest {
+        if hasActiveAIRequest || !item.visualAIReasons.isEmpty {
             reviewLastAction = .requestAI
         } else if item.placementState == "hidden" {
             reviewLastAction = .hide
@@ -6241,6 +6246,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func clearReviewDraft() {
+        visualRepairDefectCategories = []
         reviewTitle = ""
         reviewKeywords = ""
         reviewCountry = ""

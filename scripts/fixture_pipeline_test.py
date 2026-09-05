@@ -190,6 +190,17 @@ class FixturePipelineTest(unittest.TestCase):
             )
             connection.commit()
 
+    def test_visual_only_request_does_not_queue_metadata_and_undo_restores(self):
+        root = create_fixture(self.root, "Visual", fixture_id="visual")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1"], "picked")
+        result = apply_fixture_review_action(self.root, "visual", ["asset-1"], "request-ai", visual_ai_reasons=["contrast"])
+        item = fixture_review_window(self.root, "visual")["items"][0]
+        self.assertEqual(item["visualAIRequest"]["reasons"], ["contrast"])
+        self.assertEqual(item["editorialState"], "unreviewed")
+        self.assertEqual(item["aiReasons"], [])
+        undo_fixture_review_action(self.root, result["operationId"])
+        self.assertEqual(fixture_review_window(self.root, "visual")["items"][0]["visualAIRequest"], {})
+
     def test_country_review_is_peer_metadata_but_writes_fail_closed_until_identity_receipt(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(

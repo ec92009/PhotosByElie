@@ -5,6 +5,35 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Visual-only and combined requests persist independently and undo atomically", arguments: [false, true])
+    func visualRequestScopes(combined: Bool) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("visual-request-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let db = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: db)
+        let store = OwnerReviewSQLiteStore(databaseURL: db)
+        let result = try store.applyReview(.requestAI, fixtureID: "fixture-expo", assetIDs: ["asset-1", "asset-2"],
+            aiReasons: combined ? ["location"] : [], visualAIReasons: ["contrast", "lighting-exposure", "contrast"])
+        #expect(result.changes.count == 2)
+        #expect(try scalar(db, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == (combined ? "superseded" : "ready"))
+        let reopened = try OwnerReviewSQLiteStore(databaseURL: db).reviewWindow(fixtureID: "fixture-expo", stateFilters: ["picked"])
+        #expect(reopened.items.count == 2)
+        for item in reopened.items {
+            #expect(item.visualAIReasons == ["contrast", "lighting-exposure"])
+            #expect(item.aiReasons == (combined ? ["location"] : []))
+            #expect(item.editorialState == (combined ? "requesting-ai" : "unreviewed"))
+            #expect(item.reviewStatusLabel == (combined ? "Visual + title/keyword AI requested" : "Visual AI requested"))
+        }
+        #expect(reopened.summary.requestingAI == (combined ? 2 : 0))
+        var newVersion = try #require(reopened.items.first)
+        newVersion.sourceVersionID = "replacement-source"
+        #expect(newVersion.visualAIReasons.isEmpty)
+        _ = try store.undoReview(operationID: result.operationID)
+        #expect(try scalar(db, "SELECT visual_ai_request_json FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "{}")
+        #expect(try scalar(db, "SELECT status FROM asset_ai_proposals WHERE proposal_id = 'proposal-1'") == "ready")
+    }
+
     @Test("Uploaded Review status includes hidden live photos without duplicates or cross-fixture leakage")
     func uploadedReviewStatus() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-uploaded-\(UUID())")

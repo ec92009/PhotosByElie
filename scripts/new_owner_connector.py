@@ -754,6 +754,7 @@ def _local_review_action_result(repo_root: Path, payload: dict) -> dict:
                 country=payload.get("country") if "country" in payload else None,
                 proposal_id=str(payload.get("proposalId") or ""),
                 ai_reasons=payload.get("aiReasons") or [],
+                visual_ai_reasons=payload.get("visualAIReasons") or [],
                 ai_note=str(payload.get("aiNote") or ""),
                 actor="owner-backstage",
             )

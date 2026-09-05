@@ -7,6 +7,36 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Visual-only AI enablement clears on selection change and combines with metadata")
+    @MainActor
+    func visualOnlyAIEnablement() {
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary(), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil, equipmentBackfillStore: nil, customerPhotoLinks: nil)
+        let items = ["a", "b"].map { FixtureReviewItem(id: $0, photoLibraryIdentifier: $0, title: $0, keywords: [], filename: "\($0).jpg", capturedAt: "") }
+        model.fixtureReviewWindow = FixtureReviewWindow(fixtureID: "fixture-expo", mode: .full,
+            offset: 0, limit: 200, nextOffset: 0, hasNext: false,
+            summary: FixtureReviewSummary(total: 2, unreviewed: 2, requestingAI: 0, proposed: 0, approved: 0), items: items)
+        model.reviewSelection = OwnerSelectionModel(orderedIDs: ["a", "b"], selectedIDs: ["a", "b"], anchorID: "a", focusedID: "a")
+        #expect(!model.hasReviewAIDraft)
+        model.toggleVisualRepairCategory(.contrast)
+        #expect(model.hasReviewAIDraft)
+        #expect(model.canMarkReviewSelectionNeedsAI)
+        #expect(model.reviewAIReasons.isEmpty)
+        model.reviewAIReasons = ["location"]
+        model.toggleVisualRepairCategory(.contrast)
+        #expect(model.hasReviewAIDraft)
+        model.reviewAIReasons = []
+        #expect(!model.hasReviewAIDraft)
+        model.toggleVisualRepairCategory(.lightingExposure)
+        model.clickReviewItem("b", modifiers: [])
+        #expect(model.visualRepairDefectCategories.isEmpty)
+        #expect(!model.hasReviewAIDraft)
+        model.toggleVisualRepairCategory(.lightingExposure)
+        model.clearReviewSelection()
+        #expect(model.visualRepairDefectCategories.isEmpty)
+        #expect(!model.canMarkReviewSelectionNeedsAI)
+    }
+
     @Test("Review keeps the actual remaining step visible and ignores an older terminal refresh")
     @MainActor
     func reviewRefreshProgressAndStaleReceipt() async throws {

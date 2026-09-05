@@ -805,6 +805,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(asset_editorial_state)").fetchall()
     }
+    if "visual_ai_request_json" not in editorial_columns:
+        conn.execute("ALTER TABLE asset_editorial_state ADD COLUMN visual_ai_request_json TEXT NOT NULL DEFAULT '{}'")
     if "ai_preview_path" not in editorial_columns:
         conn.execute(
             "ALTER TABLE asset_editorial_state ADD COLUMN ai_preview_path TEXT NOT NULL DEFAULT ''"
@@ -2066,6 +2068,7 @@ def _review_item(row: sqlite3.Row) -> dict[str, Any]:
         "color": str(row["color"] or ""),
         "placementState": str(row["placement_state"] or "picked"),
         "editorialState": str(row["editorial_state"] or "unreviewed"),
+        "visualAIRequest": _read_json(row["visual_ai_request_json"], {}),
         "aiReasons": _read_json(row["ai_reasons_json"], []),
         "aiNote": str(row["ai_note"] or ""),
         "aiAttemptCount": int(row["ai_attempt_count"] or 0),
@@ -2215,7 +2218,7 @@ def fixture_review_window(
                    COALESCE(decision.color, '') color,
                    editorial.editorial_state, editorial.ai_reasons_json, editorial.ai_note,
                    editorial.ai_attempt_count, editorial.ai_last_error,
-                   editorial.ai_preview_path,
+                   editorial.ai_preview_path, editorial.visual_ai_request_json,
                    available_proposal.proposal_id,
                    available_proposal.proposed_title proposal_title,
                    available_proposal.proposed_keywords_json proposal_keywords_json,
@@ -2581,6 +2584,7 @@ def _review_item_update_from_snapshot(
         "color": str(decision.get("color") or ""),
         "placementState": str(fixture_decision.get("placement_state") or "picked"),
         "editorialState": str(editorial.get("editorial_state") or "unreviewed"),
+        "visualAIRequest": _read_json(editorial.get("visual_ai_request_json"), {}),
         "aiReasons": _read_json(editorial.get("ai_reasons_json"), []),
         "aiNote": str(editorial.get("ai_note") or ""),
         "aiAttemptCount": int(editorial.get("ai_attempt_count") or 0),
@@ -2734,9 +2738,13 @@ def apply_fixture_review_action(
     proposal_id: str | None = None,
     ai_reasons: Iterable[Any] | None = None,
     ai_note: str = "",
+    visual_ai_reasons: Iterable[str] = (),
     actor: str = "owner",
 ) -> dict[str, Any]:
     """Apply one audited Review action, including server-side shoot propagation."""
+    visual_reasons = sorted(set(visual_ai_reasons))
+    if not set(visual_reasons).issubset({"lighting-exposure", "contrast", "white-balance-color", "perspective-geometry", "distracting-items"}):
+        raise ValueError("unknown visual AI reason")
     clean_action = str(action or "").strip().casefold()
     if clean_action not in REVIEW_ACTIONS:
         raise ValueError("unsupported fixture review action")
@@ -2878,6 +2886,13 @@ def apply_fixture_review_action(
             after_reasons = before["aiReasons"]
             after_note = before["aiNote"]
 
+            if clean_action in {"request-ai", "approve", "hide"}:
+                visual_request = {}
+                if clean_action == "request-ai" and visual_reasons:
+                    version = conn.execute("SELECT version_id FROM asset_source_versions WHERE asset_id = ? AND source_exists = 1 ORDER BY created_at DESC, version_id DESC LIMIT 1", (asset_id,)).fetchone()
+                    visual_request = {"reasons": visual_reasons, "sourceVersionId": str(version[0]) if version else "", "requestedAt": timestamp, "status": "awaiting-generator"}
+                conn.execute("UPDATE asset_editorial_state SET visual_ai_request_json = ? WHERE asset_id = ?", (_json(visual_request), asset_id))
+
             if clean_action == "hide":
                 _set_fixture_review_placement(
                     conn,
@@ -2971,17 +2986,16 @@ def apply_fixture_review_action(
                 _set_delivery_state(conn, asset_id, "not-ready", timestamp)
             elif clean_action == "request-ai":
                 has_ai_request = bool(reasons or note)
-                after_state = "requesting-ai" if has_ai_request else "unreviewed"
-                after_reasons = reasons
-                after_note = note if has_ai_request else ""
-                conn.execute(
-                    """
-                    UPDATE asset_ai_proposals
-                    SET status = 'superseded', decided_at = ?
-                    WHERE asset_id = ? AND status IN ('ready', 'loaded')
-                    """,
-                    (timestamp, asset_id),
-                )
+                if has_ai_request or not visual_reasons:
+                    after_state = "requesting-ai" if has_ai_request else "unreviewed"
+                    after_reasons = reasons
+                    after_note = note if has_ai_request else ""
+                    conn.execute(
+                        "UPDATE asset_ai_proposals SET status = 'superseded', decided_at = ? WHERE asset_id = ? AND status IN ('ready', 'loaded')",
+                        (timestamp, asset_id),
+                    )
+                elif after_state == "approved":
+                    after_state = "unreviewed"
                 _set_fixture_review_placement(
                     conn,
                     fixture_id,
@@ -3055,6 +3069,9 @@ def apply_fixture_review_action(
                 else before_editorial["approved_at"]
             )
             requested_at = timestamp if after_state == "requesting-ai" else None
+            if clean_action == "request-ai" and visual_reasons and not (reasons or note):
+                approved_at = None
+                requested_at = before_editorial["requested_at"]
             if clean_action == "approve" and active_proposals[asset_id]:
                 accepted_proposal_id = str(active_proposals[asset_id]["proposal_id"])
                 conn.execute(

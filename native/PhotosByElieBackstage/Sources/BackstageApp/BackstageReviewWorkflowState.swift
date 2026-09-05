@@ -188,6 +188,7 @@ struct BackstageReviewWorkflowState {
         if let value = update["aiReasons"]?.arrayValue {
             item.aiReasons = value.compactMap(\.stringValue)
         }
+        if let value = update["visualAIRequest"]?.objectValue { item.visualAIRequest = value }
         if let value = update["aiNote"]?.stringValue { item.aiNote = value }
         if let value = update["aiAttemptCount"]?.intValue { item.aiAttemptCount = value }
         if let value = update["aiLastError"]?.stringValue { item.aiLastError = value }

@@ -1,13 +1,9 @@
 import Foundation
 import SQLite3
 
-/// The first native parity slice for the latency-sensitive Review path.
-///
-/// This store is deliberately not wired into Backstage yet. It mirrors the
-/// existing Python Hide/Undo transaction against a copied Owner.sqlite so the
-/// migration can be verified before the live service changes process
-/// boundaries. The database remains the source of truth; no JSON IPC or
-/// connector process is involved here.
+/// Native Review transactions and read-only windows over canonical Owner SQLite.
+/// LocalFixtureReviewService uses this store; copied-database parity tests verify
+/// metadata, placement, independent AI request scopes and atomic Undo.
 public enum OwnerReviewSQLiteError: Error, Equatable, LocalizedError {
     case unavailable(String)
     case invalid(String)
@@ -67,6 +63,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             databaseURL: databaseURL,
             busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
+        let visualRequestSelect = try ReviewMutationContext.visualRequestSelect(connection)
         let countryCapability = try countryWriteCapability(connection)
         let proposalColumns = try connection.tableColumns("asset_ai_proposals")
         let sourceVersionsAvailable = !(try connection.tableColumns("asset_source_versions")).isEmpty
@@ -185,6 +182,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                    COALESCE(decision.rating, 0) AS rating,
                    COALESCE(decision.color, '') AS color,
                    editorial.editorial_state AS editorial_state,
+                   \(visualRequestSelect),
                    COALESCE(editorial.ai_reasons_json, '[]') AS ai_reasons_json,
                    COALESCE(editorial.ai_note, '') AS ai_note,
                    COALESCE(editorial.ai_attempt_count, 0) AS ai_attempt_count,
@@ -309,6 +307,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         proposalID: String? = nil,
         aiReasons: [String] = [],
         aiNote: String = "",
+        visualAIReasons: [String] = [],
         actor: String = "owner",
         now: Date = Date()
     ) throws -> FixtureReviewResult {
@@ -346,6 +345,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             : "'' AS proposed_country"
 
         return try connection.transaction {
+            try ReviewMutationContext.prepareSchema(connection)
             guard try connection.queryOne(
                 "SELECT fixture_id FROM fixtures WHERE fixture_id = ? AND archived_at IS NULL",
                 bindings: [.string(fixtureID)]
@@ -463,7 +463,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 explicitCountry: explicitCountry, sourceTitle: sourceTitle,
                 sourceKeywords: sourceKeywords, sourceCountry: sourceCountry
             )
-            let aiRequest = ReviewMutationAIRequest(reasons: cleanAIReasons, note: cleanAINote)
+            let aiRequest = ReviewMutationAIRequest(reasons: cleanAIReasons, note: cleanAINote, visualReasons: visualAIReasons)
             for assetID in cleanIDs {
                 if let placement = try mutation.apply(
                     action, to: assetID, metadata: metadata,
@@ -1295,6 +1295,7 @@ private func reviewState(
         "color": decision["color"] ?? .string(""),
         "placementState": fixtureDecision["placement_state"] ?? .string("undecided"),
         "editorialState": editorial["editorial_state"] ?? .string("unreviewed"),
+        "visualAIRequest": .object(reviewWindowObject(editorial["visual_ai_request_json"])),
         "aiReasons": reviewJSONArray(editorial["ai_reasons_json"]),
         "aiNote": editorial["ai_note"] ?? .string(""),
         "aiAttemptCount": editorial["ai_attempt_count"] ?? .number(0),
@@ -1390,6 +1391,7 @@ private func reviewWindowItem(_ row: [String: JSONValue]) -> FixtureReviewItem {
         color: color,
         placementState: placementState,
         editorialState: editorialState,
+        visualAIRequest: reviewWindowObject(row["visual_ai_request_json"]),
         aiReasons: aiReasons,
         aiNote: aiNote,
         aiAttemptCount: aiAttemptCount,

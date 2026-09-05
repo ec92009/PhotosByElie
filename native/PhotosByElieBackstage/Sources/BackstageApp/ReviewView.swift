@@ -224,7 +224,7 @@ private enum ReviewQuickLookPresenter {
             ),
             rating: item.rating,
             color: item.color,
-            state: item.workflowStage.label,
+            state: item.reviewStatusLabel,
             shortcutHint: "Shortcuts: ←/→/↑/↓ navigate • ⌘A select all shown • A approve • H hide • X Waste Basket • U unpick • \(BackstageQuickLookDecisionRouter.shortcutHint) • ⌘Z undo"
         )
     }
@@ -296,7 +296,7 @@ struct ReviewView: View {
                     FlowLayout(spacing: 10) {
                         Text("\(summary.total.formatted()) matching")
                         Text("\(summary.unreviewed.formatted()) awaiting Review")
-                        Text("\(summary.requestingAI.formatted()) AI requested")
+                        Text("\(summary.requestingAI.formatted()) title/keyword AI requested")
                         Text("\(summary.proposed.formatted()) proposal ready")
                         if model.reviewMode == .full {
                             Text("\(summary.approved.formatted()) approved")
@@ -844,7 +844,7 @@ private struct ReviewAssetRow: View {
                     )
                 }
                 HStack {
-                    Text(item.workflowStage.label)
+                    Text(item.reviewStatusLabel)
                     if item.workflowStage == .aiRequested {
                         Text("• \(item.aiReasons.count) reason\(item.aiReasons.count == 1 ? "" : "s")")
                     }
@@ -1253,7 +1253,7 @@ private struct ReviewInspector: View {
                         .foregroundStyle(.secondary)
                     if model.isREReviewScope {
                         Divider()
-                        Text("Visual repair drafts")
+                        Text("Visual AI rework")
                             .font(.headline)
                         FlowLayout(spacing: 6) {
                             ForEach(VisualRepairDefectCategory.allCases) { category in
@@ -1271,6 +1271,11 @@ private struct ReviewInspector: View {
                                 .tint(model.visualRepairDefectCategories.contains(category) ? .orange : nil)
                                 .backstageHelp("Select the \(category.label) defect category for a future visual repair draft.")
                             }
+                        }
+                        if !item.visualAIReasons.isEmpty {
+                            Text("Visual request saved. Waiting for a configured visual generator.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                         if let proposal = model.reviewVisualProposals[item.id] {
                             let hasRenderedProposal = proposal.derivedAvailable

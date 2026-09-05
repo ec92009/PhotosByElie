@@ -70,6 +70,26 @@ class StreamingFixtureDeliveryTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_explicit_retry_includes_only_scoped_export_failures_without_clearing_blocks(self):
+        from sidecar_state_db import _record_upload_bridge_export_block
+        with connect(self.root) as conn:
+            for asset_id in ("asset-1", "asset-2"):
+                _record_upload_bridge_export_block(conn, asset_id, "export_failed", "Photos job failed", "2026-09-05T19:00:00Z")
+            conn.commit()
+            self.assertEqual(_upload_bridge_rows(conn), [])
+            self.assertEqual(_upload_bridge_rows(conn, retry_export_failures=True), [])
+        batch = prepare_upload_bridge_execute_batch(
+            self.root, asset_ids=["asset-1"], retry_export_failures=True,
+        )
+        self.assertEqual([item["assetId"] for item in batch["items"]], ["asset-1"])
+        with connect(self.root) as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM sidecar_upload_bridge_asset_blocks WHERE block_state = 'active'").fetchone()[0], 2)
+            conn.execute("UPDATE sidecar_decisions SET title = '' WHERE asset_id = 'asset-2'")
+            self.assertEqual(_upload_bridge_rows(conn, asset_ids=["asset-2"], retry_export_failures=True), [])
+            conn.execute("UPDATE sidecar_decisions SET title = 'Paris two' WHERE asset_id = 'asset-2'")
+            conn.execute("UPDATE sidecar_upload_bridge_asset_blocks SET block_reason = 'manual-hold' WHERE asset_id = 'asset-2'")
+            self.assertEqual(_upload_bridge_rows(conn, asset_ids=["asset-2"], retry_export_failures=True), [])
+
     def test_batch_plan_can_be_restricted_to_fixture_pool_assets(self):
         batch = prepare_upload_bridge_execute_batch(self.root, limit=30, asset_ids=["asset-2"])
         self.assertEqual(batch["count"], 1)

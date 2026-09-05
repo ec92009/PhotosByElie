@@ -837,6 +837,7 @@ def execute_native_publication_run(repo_root: Path, run_id: str) -> dict[str, An
     bridge = retry_sqlite_lock(
         lambda: prepare_upload_bridge_execute_batch(
             repo_root,
+            retry_export_failures=True,
             limit=len(asset_ids),
             asset_ids=asset_ids,
             fixture_authorized_asset_ids=asset_ids,

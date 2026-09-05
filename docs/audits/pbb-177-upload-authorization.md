@@ -20,3 +20,9 @@ The adapter propagates the originating export or upload error before validating 
 -Maintainability passes. A new bounded NativeUploadExecutionMonitor owns lifetime/error tracking; only ten net coordinator lines are added to the documented FixtureDeliveryService file ceiling. No function ceiling changes.
 
 Source/test validation is complete. Signed installed verification and any retry of the owner's original failed set are recorded separately below. No website deployment or archive publication is part of this fix.
+
+## Installed retry and persistent export blocks
+
+Signed v250.0/build324 was installed with a retained build322 rollback. Strict signing, Owner authentication, and Photos access passed. A read-only snapshot comparison confirmed the loaded25 assets exactly matched the original failed set. The bounded Upload selection retry `uplrun-6601d44e10c54053` completed25/25 failed with no uploaded items: the bridge excluded all25 because the original export failures left active export blocks. No Photos export or R2 upload was attempted by that retry.
+
+The follow-up allows explicit, nonempty, asset-scoped native retries to revisit export-failure blocks. Unscoped/ordinary queue planning still excludes blocks; other block reasons and metadata readiness still apply. Blocks retain their history and are cleared only by the existing successful export path. Scoped filtering precedes the planner limit. A read-only backup of Owner.sqlite evaluated in memory changes the planned set from zero to exactly the original25, with no live database mutation.54 focused tests pass, including block retention, no unscoped bypass, metadata readiness and other block reasons.

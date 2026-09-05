@@ -2350,6 +2350,7 @@ def _upload_bridge_rows(
     limit: int | None = None,
     *,
     include_blocked: bool = False,
+    retry_export_failures: bool = False,
     asset_ids: Iterable[str] | None = None,
     fixture_authorized_asset_ids: Iterable[str] | None = None,
 ) -> list[sqlite3.Row]:
@@ -2363,10 +2364,12 @@ def _upload_bridge_rows(
     if limit is not None and scoped_ids is None:
         limit_sql = "LIMIT ?"
         params = (max(1, min(int(limit or 500), 5000)),)
-    blocked_sql = "" if include_blocked else """
+    retry_block_sql = "AND b.block_reason <> 'export_failed'" if retry_export_failures and scoped_ids else ""
+    blocked_sql = "" if include_blocked else f"""
           AND NOT EXISTS (
             SELECT 1 FROM sidecar_upload_bridge_asset_blocks AS b
             WHERE b.asset_id = m.asset_id AND b.block_state = 'active'
+              {retry_block_sql}
           )
     """
     external_edit_lock_sql = ""
@@ -3133,6 +3136,7 @@ def prepare_upload_bridge_execute_batch(
     limit: int = 500,
     spool_root: Path | None = None,
     allow_r2_overwrite: bool = False,
+    retry_export_failures: bool = False,
     asset_ids: Iterable[str] | None = None,
     exclude_asset_ids: Iterable[str] | None = None,
     fixture_authorized_asset_ids: Iterable[str] | None = None,
@@ -3164,6 +3168,8 @@ def prepare_upload_bridge_execute_batch(
         rows = _upload_bridge_rows(
             conn,
             scan_limit,
+            asset_ids=included_asset_ids,
+            retry_export_failures=retry_export_failures,
             fixture_authorized_asset_ids=fixture_authorized_asset_ids,
         )
         if included_asset_ids is not None:

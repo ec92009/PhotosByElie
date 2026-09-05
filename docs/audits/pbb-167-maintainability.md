@@ -46,3 +46,11 @@ The root view model remains substantial debt. This ticket establishes repeatable
 392 Swift tests in 31 suites pass, including the pre-extraction rollback/paging contracts, refund observation, delayed duplicate/stale/failure paths, lifecycle/update/upload, edit-return and sold-source protections. All 328 Node checks pass. The 509-test Python run found one source-location assertion after Culling SQL moved; it was updated to inspect the extracted query while preserving unique-identity and no-filename requirements, then the Culling parity suite was rerun. Xcode source membership includes all three new files and the project file validates. No live refund or photo edit was performed.
 
 Signed release target: v249.6 build320. Installed evidence is recorded after replacement and UI inspection.
+
+## Installed receipt
+
+Installed v249.6 build320 from source `814bdf9528b0dac2f84748ec4a559b9951e49ade`; strict signature passes with Apple Development Elie Cohen / L9958JSM92. Bundled runtime: 204 files, manifest SHA-256 `92237c28719a716663da0b072f56efb72b19ace515d6a69b67c995d2a8153047`. Existing build319 quit normally; installer retained its rollback bundle. Release verification reports Owner authenticated and Photos authorized.
+
+Native AX inspection confirms build320, Review's loaded queue and progress/completion controls, restored active external-edit job, and Gallery's first 200 results with coherent full-scope summary and next-page control. Overview refund input enabled Check with Stripe immediately when text was entered and disabled it after clearing; the check/refund buttons were never submitted. Tests cover actual refund async paths on inert transports. No Review/Culling decisions, real refunds, external-return completion or cloud archive publication were performed. The app's normal background discovery/AI status was observed without canceling it. Review was restored after inspection.
+
+Canonical worktree clean after source commit; no ticket worktree created. Code graph refreshed locally (4,766 nodes, 16,417 edges); five pre-existing parser limitations remain, with Swift compilation/tests authoritative.

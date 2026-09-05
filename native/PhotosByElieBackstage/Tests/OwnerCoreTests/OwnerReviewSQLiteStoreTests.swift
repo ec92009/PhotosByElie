@@ -5,6 +5,43 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Excluded Review photos stay absent after refresh and relaunch until restored")
+    func excludedReviewItemsStayExcluded() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-exclude-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo").items.count == 2)
+        // Exact global visibility state written by the recoverable Waste Basket gateway.
+        try execute(databaseURL, "UPDATE sidecar_decisions SET pick_state = 'hidden', last_action = 'waste-basket-x' WHERE asset_id = 'asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo").items.map(\.id) == ["asset-2"])
+        try execute(databaseURL, "INSERT OR IGNORE INTO sidecar_decisions(asset_id) VALUES ('asset-2'); UPDATE sidecar_decisions SET pick_state = 'hidden', last_action = 'waste-basket-x' WHERE asset_id = 'asset-2'")
+        let reopened = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        let excluded = try reopened.reviewWindow(fixtureID: "fixture-expo", mode: .full, stateFilters: ["picked", "approved", "hidden"])
+        #expect(excluded.items.isEmpty)
+        #expect(excluded.summary.total == 0)
+        #expect(try scalar(databaseURL, "SELECT COUNT(*) FROM sidecar_assets") == "2")
+        try execute(databaseURL, "UPDATE sidecar_decisions SET pick_state = 'undecided', last_action = 'waste-basket-restore' WHERE asset_id = 'asset-1'")
+        #expect(try OwnerReviewSQLiteStore(databaseURL: databaseURL).reviewWindow(fixtureID: "fixture-expo").items.map(\.id) == ["asset-1"])
+    }
+
+    @Test("Fixture Hide remains discoverable independently of global Exclude")
+    func fixtureHideIsDistinctFromExclude() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-hide-exclude-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        _ = try store.applyReview(.hide, fixtureID: "fixture-expo", assetIDs: ["asset-1"])
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["hidden"]).items.map(\.id) == ["asset-1"])
+        #expect(try scalar(databaseURL, "SELECT pick_state FROM sidecar_decisions WHERE asset_id = 'asset-1'") == "undecided")
+        try execute(databaseURL, "UPDATE sidecar_decisions SET pick_state = 'hidden', last_action = 'waste-basket-x' WHERE asset_id = 'asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["hidden"]).items.isEmpty)
+    }
+
     @Test("A later invalid Review target rolls back earlier asset changes and the audit operation")
     func laterTargetFailureRollsBackWholeReview() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-atomic-\(UUID())")

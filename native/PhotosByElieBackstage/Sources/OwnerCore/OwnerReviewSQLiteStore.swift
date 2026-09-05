@@ -98,6 +98,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
         }
 
         var predicates = [
+            "COALESCE(decision.pick_state, '') <> 'hidden'",
             "(asset.missing_at IS NULL OR asset.missing_at = '')",
             """
             NOT EXISTS (

@@ -2621,9 +2621,9 @@ struct BackstageFixtureSelectionTests {
         #expect(model.cullingStatus.contains("local Culling grid was restored"))
     }
 
-    @Test("Review Waste Basket X records a same-session Undo restore")
+    @Test("Review Waste Basket X records single and multiple selection Undo", arguments: [false, true])
     @MainActor
-    func reviewWasteBasketXRecordsUndoRestore() async throws {
+    func reviewWasteBasketXRecordsUndoRestore(multiple: Bool) async throws {
         let first = FixtureReviewItem(
             id: "review-first",
             photoLibraryIdentifier: "photos-review-first",
@@ -2693,18 +2693,19 @@ struct BackstageFixtureSelectionTests {
         )
         model.reviewSelection = OwnerSelectionModel(
             orderedIDs: [first.id, second.id],
-            selectedIDs: [first.id],
+            selectedIDs: multiple ? [first.id, second.id] : [first.id],
             anchorID: first.id,
             focusedID: first.id
         )
 
+        let requestedIDs = multiple ? [first.id, second.id] : [first.id]
         await model.moveReviewSelectionToWasteBasket()
         for _ in 0..<200 where model.reviewHistory.isEmpty {
             try await Task.sleep(for: .milliseconds(1))
         }
 
-        #expect(model.reviewHistory.last?.wasteBasketMediaIDs == [first.id])
-        #expect(model.reviewItems.map(\.id) == [second.id])
+        #expect(Set(model.reviewHistory.last?.wasteBasketMediaIDs ?? []) == Set(requestedIDs))
+        #expect(model.reviewItems.map(\.id) == (multiple ? [] : [second.id]))
         #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-x")
         for _ in 0..<200 where model.reviewWasteBasketPendingActionID != nil {
             try await Task.sleep(for: .milliseconds(1))
@@ -2714,12 +2715,12 @@ struct BackstageFixtureSelectionTests {
 
         #expect(model.reviewHistory.isEmpty)
         #expect(model.reviewItems.map(\.id) == [first.id, second.id])
-        #expect(model.reviewSelection.selectedIDs == [first.id])
+        #expect(model.reviewSelection.selectedIDs == Set(requestedIDs))
         #expect(model.reviewWasteBasketPendingActionID == "owner-action-review-restore")
         for _ in 0..<200 where model.reviewWasteBasketPendingActionID != nil {
             try await Task.sleep(for: .milliseconds(1))
         }
-        #expect(model.reviewStatus.contains("Restored 1 item from Waste Basket"))
+        #expect(model.reviewStatus.contains("Restored \(requestedIDs.count) item"))
         let requests = await actionAPI.requests()
         #expect(requests.map { $0.payload["operation"]?.stringValue } == [
             "waste-basket-x",

@@ -49,7 +49,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift",
-      "nloc": 1579
+      "nloc": 1580,
+      "reviewNote": "PBB-174: one added SQL predicate enforces the existing global Exclude visibility contract. File ceiling1580 and reviewWindow262 NLOC; no added control flow or responsibility. Keep conjuncts separate for reviewability; do not widen unrelated ceilings."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift",
@@ -1691,10 +1692,11 @@
       "name": "reviewWindow",
       "start": 41,
       "end": 305,
-      "nloc": 261,
+      "nloc": 262,
       "ccn": 24,
       "parameters": 9,
-      "nesting": 6
+      "nesting": 6,
+      "reviewNote": "PBB-174: one added SQL predicate enforces the existing global Exclude visibility contract. File ceiling1580 and reviewWindow262 NLOC; no added control flow or responsibility. Keep conjuncts separate for reviewability; do not widen unrelated ceilings."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift::applyReview _ action : FixtureReviewAction , fixtureID : String , assetIDs : [ String ] , anchorAssetID : String = \"\" , propagate : Bool = false , title : String? = nil , keywords : [ String ] ? = nil , country : String? = nil , proposalID : String? = nil , aiReasons : [ String ] = [ ] , aiNote : String = \"\" , actor : String = \"owner\" , now : Date = Date",

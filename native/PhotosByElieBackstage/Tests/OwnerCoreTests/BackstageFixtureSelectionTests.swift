@@ -7,6 +7,127 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Duplicate fixture helpers cannot clear the original operation's busy latch")
+    @MainActor
+    func duplicateFixtureHelpersPreserveBusyState() async {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil,
+            equipmentBackfillStore: nil, externalEditJobStore: nil, customerPhotoLinks: nil
+        )
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        model.isSearchingFixtureAssets = true
+        await model.searchFixtureAssets()
+        #expect(model.isSearchingFixtureAssets)
+        model.isSearchingFixtureAssets = false
+        model.isReloadingFixturePools = true
+        await model.loadFixturePools()
+        #expect(model.isReloadingFixturePools)
+        model.isReloadingFixturePools = false
+        model.isOpeningFixturePool = true
+        await model.openSelectedFixturePool()
+        #expect(model.isOpeningFixturePool)
+    }
+
+    @Test("Photos maintenance conflicts are symmetric and unrelated refund checks stay available")
+    @MainActor
+    func photosMaintenanceInterlocks() async {
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), workflowRecoveryStore: nil,
+            currentImageSizeCache: nil, currentEquipmentCache: nil,
+            equipmentBackfillStore: nil, externalEditJobStore: nil, customerPhotoLinks: nil
+        )
+        #expect(model.canStartPhotosMaintenance)
+        let competingFlags: [ReferenceWritableKeyPath<BackstageViewModel, Bool>] = [
+            \.isSyncingPhotos, \.isBackfillingEquipment, \.isRunningDelivery,
+            \.isRunningNativePublication, \.isRunningMetadata, \.isRunningFixture,
+            \.isApplyingCullingDecision, \.isRunningReview, \.isRunningR2Reconciliation,
+            \.isRunningLifecycle, \.isLoadingPhotos, \.isReconcilingPhotosIndex,
+        ]
+        for flag in competingFlags {
+            model[keyPath: flag] = true
+            #expect(!model.canStartPhotosMaintenance)
+            model[keyPath: flag] = false
+            #expect(model.canStartPhotosMaintenance)
+        }
+        for flag in [\BackstageViewModel.isSyncingPhotos, \.isBackfillingEquipment] {
+            model[keyPath: flag] = true
+            #expect(!model.canStartCloudWorkflow)
+            #expect(!model.canPerformBackstageUpdateActions)
+            #expect(model.isReviewMutationBlocked)
+            #expect(model.isPhotoLibraryOperationInProgress)
+            #expect(model.isMetadataReviewOperationInProgress)
+            #expect(!model.isReconcilingPaidOrderRefund)
+            await model.retryMetadataFailures()
+            await model.syncPhotosIncrementally()
+            #expect(!model.isRunningMetadata)
+            model[keyPath: flag] = false
+            #expect(model.canStartCloudWorkflow)
+        }
+    }
+
+    @Test("Refund work acknowledges synchronously, suppresses duplicates, and rejects stale results")
+    @MainActor
+    func refundActionInterlocks() async throws {
+        let transport = DelayedRefundTransport()
+        let api = OwnerAPIClient(baseURL: URL(string: "https://example.test/api/v1")!, transport: transport)
+        let model = BackstageViewModel(
+            api: api, photoLibrary: InertPhotoLibrary(),
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            currentEquipmentCache: nil, equipmentBackfillStore: nil,
+            externalEditJobStore: nil, customerPhotoLinks: nil
+        )
+        model.paidOrderRefundOrderID = "order-a"
+        model.startPaidOrderRefundPreview()
+        #expect(model.isReconcilingPaidOrderRefund)
+        #expect(model.shutdownWorkState.activeReasons.contains("payment refund reconciliation"))
+        #expect(!model.canPerformBackstageUpdateActions)
+        model.startPaidOrderRefundPreview()
+        await transport.waitForRequest()
+        #expect(await transport.count == 1)
+        model.paidOrderRefundOrderID = "order-b"
+        await transport.complete(orderID: "order-a")
+        while model.isReconcilingPaidOrderRefund { await Task.yield() }
+        #expect(model.paidOrderRefundPreview == nil)
+        #expect(model.paidOrderRefundStatus.contains("Order changed"))
+
+        model.startPaidOrderRefundPreview()
+        await transport.waitForRequest()
+        await transport.complete(orderID: "order-b")
+        while model.isReconcilingPaidOrderRefund { await Task.yield() }
+        #expect(model.paidOrderRefundPreview?.orderId == "order-b")
+        model.paidOrderRefundReason = "requested by customer"
+        model.requestPaidOrderRefundConfirmation()
+        model.cancelPaidOrderRefundConfirmation()
+        model.confirmPaidOrderRefund()
+        #expect(!model.isReconcilingPaidOrderRefund)
+        #expect(await transport.count == 2)
+        model.requestPaidOrderRefundConfirmation()
+        model.confirmPaidOrderRefund()
+        #expect(model.isReconcilingPaidOrderRefund)
+        #expect(!model.isPaidOrderRefundConfirmationPresented)
+        model.confirmPaidOrderRefund()
+        model.startPaidOrderRefundPreview()
+        model.paidOrderRefundReason = "different reason"
+        await transport.waitForRequest()
+        #expect(await transport.count == 3)
+        let request = try #require(await transport.lastRequest)
+        let body = try #require(request.httpBody)
+        #expect(String(decoding: body, as: UTF8.self).contains("requested by customer"))
+        #expect(request.httpMethod == "POST")
+        await transport.fail()
+        while model.isReconcilingPaidOrderRefund { await Task.yield() }
+        #expect(model.paidOrderRefundPreview == nil)
+        #expect(model.paidOrderRefundStatus.contains("Check with Stripe"))
+        model.requestPaidOrderRefundConfirmation()
+        #expect(!model.isPaidOrderRefundConfirmationPresented)
+        model.startPaidOrderRefundPreview()
+        await transport.waitForRequest()
+        await transport.complete(orderID: "order-b")
+        while model.isReconcilingPaidOrderRefund { await Task.yield() }
+        #expect(model.paidOrderRefundPreview?.eligible == true)
+    }
+
     @Test("Gallery grid derives cards from and clips to the current viewport")
     func galleryGridDoesNotDoubleConstrainFlexibleColumns() throws {
         let packageRoot = URL(fileURLWithPath: #filePath)
@@ -4843,5 +4964,40 @@ private final class RefreshPhotoLibrary: PhotoLibraryServing, @unchecked Sendabl
 
     func exportOriginal(localIdentifier: String, to directory: URL) async throws -> PhotoExportReceipt {
         throw PhotoLibraryError.assetNotFound(localIdentifier)
+    }
+}
+
+private actor DelayedRefundTransport: OwnerAPITransport {
+    private var pending: CheckedContinuation<(Data, HTTPURLResponse), Error>?
+    private(set) var count = 0
+    private(set) var lastRequest: URLRequest?
+
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        count += 1
+        lastRequest = request
+        return try await withCheckedThrowingContinuation { pending = $0 }
+    }
+
+    func waitForRequest() async {
+        while pending == nil { await Task.yield() }
+    }
+
+    func complete(orderID: String) {
+        let payload: [String: Any] = ["ok": true, "refund": [
+            "orderId": orderID, "amount": 100, "currency": "eur",
+            "paymentStatus": "paid", "deliveryState": "pending", "entitlementState": "none",
+            "refundStatus": "none", "eligible": true, "consequence": "Full refund"
+        ]]
+        let data = try! JSONSerialization.data(withJSONObject: payload)
+        let response = HTTPURLResponse(url: lastRequest!.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        let continuation = pending
+        pending = nil
+        continuation?.resume(returning: (data, response))
+    }
+
+    func fail() {
+        let continuation = pending
+        pending = nil
+        continuation?.resume(throwing: URLError(.timedOut))
     }
 }

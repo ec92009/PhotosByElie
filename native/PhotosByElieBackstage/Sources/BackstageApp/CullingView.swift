@@ -951,21 +951,21 @@ struct CullingView: View {
                 Task { await model.applyPickShortcut(.pick) }
             }
             .frame(height: CullingCompactControlMetrics.height)
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .disabled(model.isPhotosMaintenanceActive || model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
             .accessibilityLabel("P Pick selected items")
             .backstageHelp("Instantly pick the explicit selection in the current fixture. The existing audited fixture writer reports affected, skipped, and failed items.")
             Button("H Hide") {
                 Task { await model.applyPickShortcut(.reject) }
             }
             .frame(height: CullingCompactControlMetrics.height)
-            .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+            .disabled(model.isPhotosMaintenanceActive || model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
             .accessibilityLabel("H Hide selected items")
             .backstageHelp("Instantly hide the explicit selection from the current fixture. This remains fixture-local and reversible with session Undo.")
             Button("U \(model.cullingClearDecisionLabel)") {
                 Task { await model.applyPickShortcut(.unpick) }
             }
             .frame(height: CullingCompactControlMetrics.height)
-            .disabled(!model.canClearCullingDecision || model.isApplyingCullingDecision)
+            .disabled(model.isPhotosMaintenanceActive || !model.canClearCullingDecision || model.isApplyingCullingDecision)
             .accessibilityLabel("U \(model.cullingClearDecisionLabel) selected items")
             .accessibilityValue(
                 model.cullingSelection.selectedIDs.isEmpty
@@ -1033,7 +1033,7 @@ struct CullingView: View {
             ))
         }
         .buttonStyle(.plain)
-        .disabled(model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
+        .disabled(model.isPhotosMaintenanceActive || model.cullingSelection.selectedIDs.isEmpty || model.isApplyingCullingDecision)
         .accessibilityLabel("Assign \(color.label) color")
         .accessibilityValue(isSelected
             ? "Applied to every selected asset; press again to clear."
@@ -1071,7 +1071,7 @@ struct CullingView: View {
                 .foregroundStyle(.secondary)
             Button("Undo") { Task { await model.undoLastCullingDecision() } }
                 .keyboardShortcut("z", modifiers: .command)
-                .disabled(model.cullingHistory.isEmpty || model.isApplyingCullingDecision)
+                .disabled(model.isPhotosMaintenanceActive || model.cullingHistory.isEmpty || model.isApplyingCullingDecision)
                 .backstageHelp("Reverse the most recent Culling change made during this Backstage session.")
             cullingHistoryLabel
             Spacer()

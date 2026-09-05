@@ -29,7 +29,7 @@ struct UploadHeaderView: View {
                             await model.loadNativeUploadPlan(order: nextOrder)
                         }
                     }
-                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .disabled(model.isPhotosMaintenanceActive || model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                     .backstageHelp(plan.order == .recent
                         ? "Return to the oldest-first upload queue. Recent approvals remain eligible and are not changed by this view switch."
                         : "Load the newest approved items first so recent Review approvals can be found without changing the oldest-first upload queue.")
@@ -38,7 +38,7 @@ struct UploadHeaderView: View {
                     Button("Load next 200") {
                         Task { await model.loadNativeUploadPlan() }
                     }
-                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .disabled(model.isPhotosMaintenanceActive || model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                     .backstageHelp("Load the next eligible batch of up to 200 approved assets after the current upload tray is complete.")
                 }
                 Button("Upload selection…") {

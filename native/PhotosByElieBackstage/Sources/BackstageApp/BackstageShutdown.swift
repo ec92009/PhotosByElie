@@ -37,6 +37,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
     var isBackfillingEquipment = false
     var isRunningR2Reconciliation = false
     var isSavingMetadataModelLadder = false
+    var isReconcilingPaidOrderRefund = false
 
     var activeReasons: [String] {
         var reasons: [String] = []
@@ -67,6 +68,7 @@ struct BackstageShutdownWorkState: Equatable, Sendable {
         if isBackfillingEquipment { reasons.append("camera equipment backfill") }
         if isRunningR2Reconciliation { reasons.append("R2 reconciliation") }
         if isSavingMetadataModelLadder { reasons.append("AI model settings save") }
+        if isReconcilingPaidOrderRefund { reasons.append("payment refund reconciliation") }
         return reasons
     }
 
@@ -114,7 +116,8 @@ extension BackstageViewModel {
             isSyncingPhotos: isSyncingPhotos,
             isBackfillingEquipment: isBackfillingEquipment,
             isRunningR2Reconciliation: isRunningR2Reconciliation,
-            isSavingMetadataModelLadder: isSavingMetadataModelLadder
+            isSavingMetadataModelLadder: isSavingMetadataModelLadder,
+            isReconcilingPaidOrderRefund: isReconcilingPaidOrderRefund
         )
     }
 

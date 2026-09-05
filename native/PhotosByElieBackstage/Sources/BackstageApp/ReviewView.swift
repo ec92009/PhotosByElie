@@ -528,7 +528,7 @@ struct ReviewView: View {
                         Button("Return finished file…") {
                             model.chooseExternalEditReturn()
                         }
-                        .disabled(model.isExternalEditOperationInProgress)
+                        .disabled(!model.canReceiveExternalEditReturn)
                         .backstageHelp("Choose the finished JPG, TIFF, PNG, or HEIC for the active external edit. Backstage binds it to the exact durable job, not its filename.")
                         Menu("Edit job") {
                             Button("Choose return folder…") {

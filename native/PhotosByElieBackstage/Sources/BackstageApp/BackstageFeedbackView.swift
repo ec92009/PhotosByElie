@@ -21,17 +21,27 @@ struct BackstageFeedbackView: View {
                             .tint(.white)
                             .accessibilityHidden(true)
                     }
-                    Text(message)
-                        .font(.caption)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        if isWorking {
+                            Text("1. Started")
+                                .font(.caption2)
+                            Text("2. \(message)")
+                                .font(.caption)
+                            Text("3. Waiting for the result")
+                                .font(.caption2)
+                        } else {
+                            Text(message)
+                                .font(.caption)
+                        }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .foregroundStyle(Color.white)
                 .background(Color.black, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(isWorking ? "Working. \(message)" : message)
+                .accessibilityLabel(isWorking ? "Started. Current step: \(message). Remaining: wait for the result." : message)
                 .accessibilityValue(isWorking ? "In progress" : "Ready")
             }
         }

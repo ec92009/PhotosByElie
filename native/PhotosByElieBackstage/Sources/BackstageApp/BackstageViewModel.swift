@@ -533,7 +533,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canRunAIProposalPass: Bool {
-        guard !isAIPassActive,
+        guard !isPhotosMaintenanceActive,
+              !isAIPassActive,
               !isCancellingAIPass,
               !isUpdateOperationInProgress,
               !isExternalEditOperationInProgress,
@@ -552,7 +553,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canPerformBackstageUpdateActions: Bool {
-        !isAIPassActive
+        !isReconcilingPaidOrderRefund && !isPhotosMaintenanceActive
+            && !isAIPassActive
             && !isCloudWorkflowActive
             && !isExternalEditOperationInProgress
     }
@@ -562,7 +564,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canStartCloudWorkflow: Bool {
-        !isCloudWorkflowActive && !isAIPassActive && !isUpdateOperationInProgress
+        !isPhotosMaintenanceActive && !isCloudWorkflowActive && !isAIPassActive && !isUpdateOperationInProgress
             && !isExternalEditOperationInProgress
     }
 
@@ -575,11 +577,19 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isReviewMutationBlocked: Bool {
-        isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
+        isPhotosMaintenanceActive || isRunningReview || isExternalEditOperationInProgress || selectedReviewTouchesActiveExternalEdit
+    }
+
+    var canReceiveExternalEditReturn: Bool {
+        externalEdit.activeJob != nil && !isExternalEditOperationInProgress
+            && !isPhotosMaintenanceActive && !isCloudWorkflowActive
+            && !isAIPassActive && !isUpdateOperationInProgress
     }
 
     var canStartExternalEdit: Bool {
-        !isRunningReview
+        !isCloudWorkflowActive && !isAIPassActive && !isUpdateOperationInProgress
+            && !isPhotosMaintenanceActive
+            && !isRunningReview
             && !isExternalEditOperationInProgress
             && externalEdit.activeJob == nil
             && !selectedReviewAssetIDs.isEmpty
@@ -647,11 +657,11 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isPhotoLibraryOperationInProgress: Bool {
-        isAuthorizingPhotos || isLoadingPhotos || isReconcilingPhotosIndex
+        isPhotosMaintenanceActive || isAuthorizingPhotos || isLoadingPhotos || isReconcilingPhotosIndex
     }
 
     var isMetadataReviewOperationInProgress: Bool {
-        isRunningMetadataReview || isRunningMetadata
+        isPhotosMaintenanceActive || isRunningMetadataReview || isRunningMetadata
     }
 
     var hasReviewAIDraft: Bool {
@@ -672,7 +682,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var isFixtureChooserDisabled: Bool {
-        fixtureSelectionCoordinator.chooserDisabled
+        isPhotosMaintenanceActive || fixtureSelectionCoordinator.chooserDisabled
             || fixtureSelectionOperationInFlight
             || isLaunchingPBEOwner
     }
@@ -1229,7 +1239,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private var fixtureSelectionOperationInFlight: Bool {
-        isRunningFixture
+        isPhotosMaintenanceActive || isLoadingFixturePolicy || isRunningFixture
             || isApplyingCullingDecision
             || isRunningReview
             || isRunningDelivery
@@ -1641,18 +1651,39 @@ final class BackstageViewModel: ObservableObject {
         Task { await revokeOwnerDevice(device) }
     }
 
+    func startPaidOrderRefundPreview() {
+        guard let orderID = beginPaidOrderRefundPreview() else { return }
+        Task { await reconcilePaidOrderRefund(orderID: orderID) }
+    }
+
     func previewPaidOrderRefund() async {
+        guard let orderID = beginPaidOrderRefundPreview() else { return }
+        await reconcilePaidOrderRefund(orderID: orderID)
+    }
+
+    private func beginPaidOrderRefundPreview() -> String? {
+        guard !isReconcilingPaidOrderRefund, !isUpdateOperationInProgress else { return nil }
         let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !orderID.isEmpty else {
             paidOrderRefundPreview = nil
             paidOrderRefundStatus = "Enter the exact PBE order ID first."
-            return
+            return nil
         }
         isReconcilingPaidOrderRefund = true
+        isPaidOrderRefundConfirmationPresented = false
+        paidOrderRefundPreview = nil
         paidOrderRefundStatus = "Reconciling the order, payment, refund, and download state with Stripe…"
+        return orderID
+    }
+
+    private func reconcilePaidOrderRefund(orderID: String) async {
         defer { isReconcilingPaidOrderRefund = false }
         do {
             let preview = try await api.previewPaidOrderRefund(orderId: orderID)
+            guard paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines) == orderID else {
+                paidOrderRefundStatus = "Order changed. Check the new order before continuing."
+                return
+            }
             paidOrderRefundPreview = preview
             paidOrderRefundStatus = preview.eligible
                 ? "Verified paid order. No download entitlement has been issued; a full refund is available."
@@ -1665,7 +1696,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestPaidOrderRefundConfirmation() {
-        guard paidOrderRefundPreview?.eligible == true,
+        guard !isReconcilingPaidOrderRefund,
+              paidOrderRefundPreview?.eligible == true,
               paidOrderRefundPreview?.orderId == paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines),
               !paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         isPaidOrderRefundConfirmationPresented = true
@@ -1676,18 +1708,18 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func confirmPaidOrderRefund() {
-        isPaidOrderRefundConfirmationPresented = false
-        Task { await refundPaidOrder() }
-    }
-
-    private func refundPaidOrder() async {
+        guard isPaidOrderRefundConfirmationPresented, !isReconcilingPaidOrderRefund, !isUpdateOperationInProgress else { return }
         let orderID = paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines)
         let reason = paidOrderRefundReason.trimmingCharacters(in: .whitespacesAndNewlines)
         guard paidOrderRefundPreview?.eligible == true,
-              paidOrderRefundPreview?.orderId == orderID,
-              !reason.isEmpty else { return }
+              paidOrderRefundPreview?.orderId == orderID, !reason.isEmpty else { return }
+        isPaidOrderRefundConfirmationPresented = false
         isReconcilingPaidOrderRefund = true
         paidOrderRefundStatus = "Submitting the confirmed full refund to Stripe…"
+        Task { await refundPaidOrder(orderID: orderID, reason: reason) }
+    }
+
+    private func refundPaidOrder(orderID: String, reason: String) async {
         defer { isReconcilingPaidOrderRefund = false }
         do {
             let result = try await api.refundPaidOrder(
@@ -1695,14 +1727,19 @@ final class BackstageViewModel: ObservableObject {
                 confirmationOrderId: orderID,
                 reason: reason
             )
+            guard paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines) == orderID else {
+                paidOrderRefundPreview = nil
+                paidOrderRefundStatus = "Refund response received for \(orderID). Check the selected order separately."
+                return
+            }
             paidOrderRefundPreview = result
             paidOrderRefundStatus = result.refundStatus == "succeeded"
                 ? "Stripe confirmed the full refund. Delivery and downloads are permanently blocked."
                 : "Refund status: \(result.refundStatus). Refresh this order to reconcile again."
         } catch {
             await presentAuthenticationFailureIfNeeded(error)
-            paidOrderRefundStatus = "Refund request failed: \(userFacingMessage(for: error))"
-            await previewPaidOrderRefund()
+            paidOrderRefundPreview = nil
+            paidOrderRefundStatus = "Refund request failed: \(userFacingMessage(for: error)). Check with Stripe before retrying."
         }
     }
 
@@ -1815,7 +1852,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func refreshPhotos(allowDuringReconciliation: Bool = false) async {
-        guard !isLoadingPhotos,
+        guard !isPhotosMaintenanceActive, !isLoadingPhotos,
               !isAuthorizingPhotos,
               allowDuringReconciliation || !isReconcilingPhotosIndex else { return }
         photoAccess = photoLibrary.authorization()
@@ -1834,7 +1871,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func reconcilePhotosLibraryIndex() async {
-        guard !isReconcilingPhotosIndex else { return }
+        guard !isReconcilingPhotosIndex, !isPhotosMaintenanceActive else { return }
         isReconcilingPhotosIndex = true
         photoStatus = "Reconciling the complete Photos library with Owner…"
         defer { isReconcilingPhotosIndex = false }
@@ -1885,7 +1922,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func reconcileRecentPhotosIndex() async {
-        guard !isReconcilingPhotosIndex else { return }
+        guard !isReconcilingPhotosIndex, !isPhotosMaintenanceActive else { return }
         guard [.authorized, .limited].contains(photoAccess) else { return }
         isReconcilingPhotosIndex = true
         photoStatus = "Synchronizing recent Photos with the Owner index…"
@@ -2557,6 +2594,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func retryMetadataFailures() async {
+        guard !isMetadataReviewOperationInProgress else { return }
         guard let metadataReport else { return }
         guard fixtureScopedActionsAllowed else {
             metadataStatus = "Current fixture unavailable; metadata give-back stayed closed."
@@ -2950,7 +2988,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canReturnCullingSelectionToReview: Bool {
-        !selectedFixtureID.isEmpty
+        !isPhotosMaintenanceActive && !selectedFixtureID.isEmpty
             && cullingPool == nil
             && !isApplyingCullingDecision
             && !cullingReturnToReviewEligibleIDs.isEmpty
@@ -3634,11 +3672,13 @@ final class BackstageViewModel: ObservableObject {
             fixtureStatus = "Enter a fixture name."
             return
         }
+        let parentID = atRoot ? nil : selectedFixtureID
+        let template = fixtureTemplate
         await fixtureOperation {
             let loadedFixtures = try await fixtureService.create(
                 name: name,
-                parentID: atRoot ? nil : selectedFixtureID,
-                templateKey: fixtureTemplate
+                parentID: parentID,
+                templateKey: template
             )
             installFixtureTree(loadedFixtures)
             fixtureName = ""
@@ -3648,8 +3688,10 @@ final class BackstageViewModel: ObservableObject {
 
     func renameFixture() async {
         guard !selectedFixtureID.isEmpty, !fixtureName.isEmpty else { return }
+        let fixtureID = selectedFixtureID
+        let name = fixtureName
         await fixtureOperation {
-            let loadedFixtures = try await fixtureService.rename(id: selectedFixtureID, name: fixtureName)
+            let loadedFixtures = try await fixtureService.rename(id: fixtureID, name: name)
             installFixtureTree(loadedFixtures)
             fixtureStatus = "Fixture renamed; its stable ID and relationships were preserved."
         }
@@ -3668,6 +3710,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func searchFixtureAssets() async {
+        guard !isSearchingFixtureAssets, !isRunningFixture, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             fixtureStatus = "Choose a fixture before searching."
             return
@@ -3702,6 +3745,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadFixturePools() async {
+        guard !isReloadingFixturePools, !isRunningFixture, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             fixturePools = []
             selectedFixturePoolID = ""
@@ -3803,6 +3847,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func openSelectedFixturePool() async {
+        guard !isOpeningFixturePool, !isRunningFixture, !isPhotosMaintenanceActive else { return }
         let poolID = selectedFixturePoolID
         guard !poolID.isEmpty else {
             fixtureStatus = "Choose a saved snapshot."
@@ -3915,12 +3960,13 @@ final class BackstageViewModel: ObservableObject {
             accessStatus = "Enter a valid email address."
             return
         }
+        let person = AccessPerson(
+            email: email,
+            displayName: personName,
+            groupIds: Array(personGroupIDs).sorted()
+        )
         await accessOperation {
-            _ = try await accessService.save(person: AccessPerson(
-                email: email,
-                displayName: personName,
-                groupIds: Array(personGroupIDs).sorted()
-            ))
+            _ = try await accessService.save(person: person)
             accessState = try await accessService.load()
             selectPerson(email)
             accessStatus = "Person and inherited group access saved."
@@ -3928,9 +3974,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func disablePerson() async {
-        guard !selectedPersonID.isEmpty else { return }
+        let personID = selectedPersonID
+        guard !personID.isEmpty else { return }
         await accessOperation {
-            _ = try await accessService.disable(personID: selectedPersonID)
+            _ = try await accessService.disable(personID: personID)
             accessState = try await accessService.load()
             accessStatus = "Person disabled; audit history was preserved."
         }
@@ -3943,14 +3990,15 @@ final class BackstageViewModel: ObservableObject {
             accessStatus = "Enter a stable group ID and label."
             return
         }
+        let group = AccessGroup(
+            id: id,
+            label: name,
+            kind: groupKind,
+            galleryKind: groupKind == "real_estate" ? "real_estate" : "event",
+            fixture: groupKind == "fixture"
+        )
         await accessOperation {
-            _ = try await accessService.save(group: AccessGroup(
-                id: id,
-                label: name,
-                kind: groupKind,
-                galleryKind: groupKind == "real_estate" ? "real_estate" : "event",
-                fixture: groupKind == "fixture"
-            ))
+            _ = try await accessService.save(group: group)
             accessState = try await accessService.load()
             accessStatus = "Group and policy defaults saved."
         }
@@ -4052,7 +4100,7 @@ final class BackstageViewModel: ObservableObject {
         removalDirection: OwnerSelectionDirection = .next,
         onTerminal: ((Bool, String?) -> Void)? = nil
     ) async {
-        guard !isApplyingCullingDecision,
+        guard !isApplyingCullingDecision, !isPhotosMaintenanceActive,
               !cullingWasteBasketQueueing else {
             cullingStatus = cullingWasteBasketQueueing
                 ? "This Culling X action is already queued; the Culling workspace remains available while it completes."
@@ -4174,7 +4222,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func returnCullingSelectionToReview() async {
-        guard !isApplyingCullingDecision else { return }
+        guard !isApplyingCullingDecision, !isPhotosMaintenanceActive else { return }
         let eligibleIDs = cullingReturnToReviewEligibleIDs
         let skippedCount = cullingReturnToReviewSkippedCount
         let liveCount = cullingReturnToReviewLiveCount
@@ -4500,7 +4548,7 @@ final class BackstageViewModel: ObservableObject {
         _ decision: VisualRepairDecision,
         for assetID: String
     ) async {
-        guard !isRunningReview else {
+        guard !isReviewMutationBlocked else {
             visualRepairStatus = "Finish the current Review action first."
             return
         }
@@ -5256,6 +5304,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func undoLastReviewAction() async {
+        guard !isPhotosMaintenanceActive, !isRunningReview else { return }
         guard !reviewWasteBasketQueueing else {
             reviewStatus = "Finish queueing the current Waste Basket action before undoing it."
             return
@@ -5646,9 +5695,13 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func runAIProposalPass(trigger: String = "manual") async {
-        guard !isRunningAIPass else { return }
+        guard !isRunningAIPass, !isPhotosMaintenanceActive else { return }
         guard !isUpdateOperationInProgress else {
             aiProposalStatus = "Finish the Backstage update before starting an AI pass."
+            return
+        }
+        guard !isCloudWorkflowActive, !isExternalEditOperationInProgress else {
+            aiProposalStatus = "Finish the current cloud or external-edit workflow before starting an AI pass."
             return
         }
         isRunningAIPass = true
@@ -5903,7 +5956,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestExternalEdit(with editor: ExternalEditorProfile, assetIDs: [String]) {
-        guard !externalEdit.isPreparing, !externalEdit.isImporting else {
+        guard !isPhotosMaintenanceActive, !isCloudWorkflowActive, !isAIPassActive, !isUpdateOperationInProgress,
+              !externalEdit.isPreparing, !externalEdit.isImporting else {
             announceExternalEdit("Finish the current external-edit action first.")
             return
         }
@@ -5973,6 +6027,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func chooseExternalEditReturn() {
+        guard canReceiveExternalEditReturn else {
+            announceExternalEdit("Finish the current operation before receiving an external edit.")
+            return
+        }
         guard let job = externalEdit.activeJob else {
             announceExternalEdit("There is no active external edit to receive.")
             return
@@ -6057,7 +6115,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func requestExternalEditReturn(from sourceURL: URL) {
-        guard !externalEdit.isImporting, !externalEdit.isPreparing else {
+        guard !isPhotosMaintenanceActive, !isCloudWorkflowActive, !isAIPassActive, !isUpdateOperationInProgress,
+              !externalEdit.isImporting, !externalEdit.isPreparing else {
             announceExternalEdit("Finish the current external-edit action first.")
             return
         }
@@ -6261,7 +6320,7 @@ final class BackstageViewModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
             guard self.focusedReviewItem?.id == assetID else { return }
-            if self.isRunningReview {
+            if self.isReviewMutationBlocked {
                 self.scheduleReviewMetadataAutosave()
                 return
             }
@@ -6373,6 +6432,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func undoLastCullingDecision() async {
+        guard !isPhotosMaintenanceActive, !cullingWasteBasketQueueing else { return }
         guard let entry = cullingHistory.last else {
             cullingStatus = "Nothing to undo in this Backstage session."
             return
@@ -6562,7 +6622,8 @@ final class BackstageViewModel: ObservableObject {
     }
 
     var canUndoCurrentSection: Bool {
-        switch selection ?? .overview {
+        guard !isPhotosMaintenanceActive else { return false }
+        return switch selection ?? .overview {
         case .culling:
             !cullingHistory.isEmpty
         case .review:
@@ -6948,6 +7009,9 @@ final class BackstageViewModel: ObservableObject {
         _ decisions: [SidecarDecision],
         label: String
     ) async -> Bool {
+        guard !isApplyingCullingDecision, !isPhotosMaintenanceActive else { return false }
+        isApplyingCullingDecision = true
+        defer { isApplyingCullingDecision = false }
         guard await preparePhotosMutation() else {
             cullingStatus = photosMutationReadinessMessage()
             return false
@@ -6956,12 +7020,10 @@ final class BackstageViewModel: ObservableObject {
             invalidateCullingWindowLoads()
         }
         let selectedBefore = cullingSelection.selectedIDs
-        isApplyingCullingDecision = true
         cullingCancellationRequested = false
         cullingDecisionProgress = 0
         cullingDecisionTotal = decisions.count
         cullingStatus = "Applying \(label.lowercased()) to \(decisions.count.formatted()) items…"
-        defer { isApplyingCullingDecision = false }
         do {
             var changes: [SidecarDecisionChange] = []
             for start in stride(from: 0, to: decisions.count, by: 200) {
@@ -7370,7 +7432,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadLifecycle(successStatus: String? = nil) async {
-        guard !isRunningLifecycle else { return }
+        guard !isRunningLifecycle, !isPhotosMaintenanceActive else { return }
         isRunningLifecycle = true
         lifecycleStatus = "Loading the private lifecycle ledger…"
         defer { isRunningLifecycle = false }
@@ -7391,7 +7453,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func restoreLifecycleSelection() async {
-        guard !isRunningLifecycle, !lifecycleRestoreQueueing else {
+        guard !isPhotosMaintenanceActive, !isRunningLifecycle, !lifecycleRestoreQueueing else {
             lifecycleStatus = lifecycleRestoreQueueing
                 ? "This Put Back action is already being queued; the Waste Basket remains available."
                 : "Finish the current Waste Basket refresh first."
@@ -7495,7 +7557,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func emptyWasteBasket() async {
-        guard !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
+        guard !isPhotosMaintenanceActive, !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
             lifecycleStatus = lifecycleQueueing || lifecyclePendingActionID != nil
                 ? "A Waste Basket action is already queued; browsing and Quick Look remain available while it completes."
                 : "Finish the current Waste Basket action first."
@@ -7582,7 +7644,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func emptyWasteBasketSelection() async {
-        guard !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
+        guard !isPhotosMaintenanceActive, !isRunningLifecycle, !lifecycleQueueing, lifecyclePendingActionID == nil else {
             lifecycleStatus = lifecycleQueueing || lifecyclePendingActionID != nil
                 ? "A Waste Basket action is already queued; browsing and Quick Look remain available while it completes."
                 : "Finish the current Waste Basket action first."
@@ -7651,7 +7713,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadDeliveryPlan() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             deliveryStatus = "Choose a fixture first."
             return
@@ -7674,7 +7736,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadNativeUploadPlan(order requestedOrder: NativeUploadPlanOrder? = nil) async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             nativeUploadPlan = nil
             nativeUploadStatus = "Choose a fixture to load its approved publication queue."
@@ -7938,7 +8000,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func returnSelectedUploadsToReview() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         let ids = Array(selectedDeliveryIDs).sorted()
         guard !selectedFixtureID.isEmpty, let anchor = ids.first else {
             nativeUploadStatus = "Select one or more approved items first."
@@ -7989,7 +8051,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func hideSelectedUploads() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         let ids = Array(selectedDeliveryIDs).sorted()
         guard !selectedFixtureID.isEmpty, let anchor = ids.first else {
             nativeUploadStatus = "Select one or more approved items first."
@@ -8040,7 +8102,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadUploadHealth() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             uploadRecoveryStatus = "Choose a fixture first."
             return
@@ -8067,7 +8129,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func runUploadAdoption(commit: Bool) async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty, !uploadRunID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             uploadRecoveryStatus = "Choose a fixture and enter an Upload Bridge run ID."
             return
@@ -8234,7 +8296,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func syncPhotosIncrementally(limit: Int = 25) async {
-        guard !isSyncingPhotos else { return }
+        guard !isSyncingPhotos, !isBackfillingEquipment, photosMaintenanceConflict == nil else {
+            photosSyncStatus = "Finish the current Photos or Owner workflow before synchronizing."
+            return
+        }
         guard authentication.phase == .authenticated else { return }
         isSyncingPhotos = true
         photosSyncStatus = "Starting a bounded Apple Photos synchronization pass…"
@@ -8264,7 +8329,7 @@ final class BackstageViewModel: ObservableObject {
         retryUnavailableAndFailed: Bool = false
     ) async {
         guard !isBackfillingEquipment else { return }
-        if let conflict = equipmentBackfillConflict {
+        if let conflict = photosMaintenanceConflict {
             equipmentBackfillStatus = "Finish or stop \(conflict) before starting the camera equipment backfill."
             return
         }
@@ -8331,10 +8396,23 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private var equipmentBackfillConflict: String? {
+    var isPhotosMaintenanceActive: Bool { isSyncingPhotos || isBackfillingEquipment }
+
+    var canStartPhotosMaintenance: Bool {
+        !isPhotosMaintenanceActive && photosMaintenanceConflict == nil
+    }
+
+    private var photosMaintenanceConflict: String? {
+        if isBackfillingEquipment { return "camera equipment backfill" }
+        if isUpdateOperationInProgress { return "the Backstage update" }
+        if isAIPassActive { return "AI proposals" }
+        if isExternalEditOperationInProgress { return "the external edit" }
+        if isAuthorizingPhotos || isLoadingPhotos || isReconcilingPhotosIndex { return "Photos indexing" }
+        if isRunningLifecycle { return "Waste Basket work" }
+        if hasPendingReviewMetadataAutosave { return "the pending Review metadata save" }
         if isSyncingPhotos { return "Apple Photos sync" }
         if isRunningNativePublication || isRunningDelivery { return "publication or delivery work" }
-        if isRunningMetadata { return "metadata work" }
+        if isRunningMetadata || isRunningMetadataReview { return "metadata work" }
         if isRunningFixture || isApplyingCullingDecision || isRunningReview {
             return "fixture or review work"
         }
@@ -8811,7 +8889,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func deliver(ids: [String]) async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty, !ids.isEmpty else {
             deliveryStatus = "Choose a fixture and one or more approved items."
             return
@@ -8849,7 +8927,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadDeliverables() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             deliveryStatus = "Choose a fixture first."
             return
@@ -8866,7 +8944,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func linkDeliverable() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         let link = deliverableShareLink.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !selectedFixtureID.isEmpty, URL(string: link) != nil else {
             deliveryStatus = "Choose a fixture and enter a complete share URL."
@@ -8889,7 +8967,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func loadPublicationPlan() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard !selectedFixtureID.isEmpty else {
             publicationStatus = "Choose a public fixture first."
             return
@@ -8910,7 +8988,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func publishEligible() async {
-        guard !isRunningDelivery else { return }
+        guard !isRunningDelivery, !isPhotosMaintenanceActive else { return }
         guard let publicationPlan, !publicationPlan.eligibleIDs.isEmpty else {
             publicationStatus = "Run the publication preview and select eligible assets first."
             return
@@ -8932,8 +9010,10 @@ final class BackstageViewModel: ObservableObject {
     }
 
     private func fixtureOperation(_ operation: () async throws -> Void) async {
-        guard !isRunningFixture else {
-            fixtureStatus = "Finish the current fixture operation first."
+        guard !isRunningFixture, !isPhotosMaintenanceActive else {
+            fixtureStatus = isPhotosMaintenanceActive
+                ? "Finish Photos maintenance before changing the fixture."
+                : "Finish the current fixture operation first."
             return
         }
         isRunningFixture = true

@@ -32,7 +32,7 @@ struct ReviewTitleKeywordEditor: View {
                     }
                     .pickerStyle(.menu)
                     .disabled(
-                        model.isRunningReview
+                        model.isReviewMutationBlocked
                             || model.fixtureReviewWindow?.countryWriteEnabled != true
                     )
                     Button {
@@ -41,7 +41,7 @@ struct ReviewTitleKeywordEditor: View {
                         Image(systemName: "arrow.down")
                     }
                     .disabled(
-                        model.isRunningReview
+                        model.isReviewMutationBlocked
                             || model.fixtureReviewWindow?.countryWriteEnabled != true
                     )
                     .accessibilityLabel("Propagate country through the active two-hour shoot scope")
@@ -84,12 +84,13 @@ struct ReviewTitleKeywordEditor: View {
                     axis: .vertical
                 )
                 .textFieldStyle(.roundedBorder)
+                .disabled(model.isPhotosMaintenanceActive)
                 Button {
                     Task { await model.propagateReviewTitle() }
                 } label: {
                     Image(systemName: "arrow.down")
                 }
-                .disabled(model.isRunningReview)
+                .disabled(model.isReviewMutationBlocked)
                 .backstageHelp("Copy the current title to the other selected Review items using the active propagation scope.")
             }
             HStack(alignment: .top, spacing: 8) {
@@ -102,13 +103,14 @@ struct ReviewTitleKeywordEditor: View {
                     axis: .vertical
                 )
                 .textFieldStyle(.roundedBorder)
+                .disabled(model.isPhotosMaintenanceActive)
                 .lineLimit(3...7)
                 Button {
                     Task { await model.propagateReviewKeywords() }
                 } label: {
                     Image(systemName: "arrow.down")
                 }
-                .disabled(model.isRunningReview)
+                .disabled(model.isReviewMutationBlocked)
                 .backstageHelp("Copy the current keywords to the other selected Review items using the active propagation scope.")
             }
         }

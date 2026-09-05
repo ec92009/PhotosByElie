@@ -1790,7 +1790,7 @@ class NativeCullingParityTest(unittest.TestCase):
         self.assertIn("await model.refreshPhotosAndRecentIndex()", culling)
         self.assertIn("await model.discoverRecentPhotosAtStartupIfNeeded()", culling)
         self.assertIn("struct BackstageFeedbackView: View", feedback)
-        self.assertIn('.accessibilityLabel(isWorking ? "Working. ', feedback)
+        self.assertIn('.accessibilityLabel(isWorking ? "Started. Current step: ', feedback)
         self.assertIn("BackstageFeedbackView(", culling)
         self.assertIn(
             "isWorking: model.isLoadingPhotos || model.isReconcilingPhotosIndex",
@@ -1798,7 +1798,7 @@ class NativeCullingParityTest(unittest.TestCase):
         )
         self.assertIn('photoStatus = "Refreshing Photos previews…"', model_source)
         self.assertIn(
-            "guard !isLoadingPhotos,\n"
+            "guard !isPhotosMaintenanceActive, !isLoadingPhotos,\n"
             "              !isAuthorizingPhotos,\n"
             "              allowDuringReconciliation || !isReconcilingPhotosIndex else { return }",
             model_source,

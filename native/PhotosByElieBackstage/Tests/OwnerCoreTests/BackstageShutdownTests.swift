@@ -21,6 +21,7 @@ struct BackstageShutdownTests {
             { $0.isRunningNativePublication = true },
             { $0.isSyncingPhotos = true },
             { $0.isBackfillingEquipment = true },
+            { $0.isReconcilingPaidOrderRefund = true },
         ]
 
         for check in checks {

@@ -71,6 +71,7 @@ public struct BackstageApplication: App {
                                         Button("Return finished file…") {
                                             model.chooseExternalEditReturn()
                                         }
+                                        .disabled(!model.canReceiveExternalEditReturn)
                                         .backstageHelp("Choose the finished image that should become the current rendition for this edit job.")
                                         Button("Show return folder") {
                                             model.revealExternalEditReturnFolder()
@@ -539,11 +540,12 @@ private struct OverviewView: View {
                             HStack {
                                 TextField("PBE order ID", text: $model.paidOrderRefundOrderID)
                                     .textFieldStyle(.roundedBorder)
+                                    .disabled(model.isReconcilingPaidOrderRefund || model.isUpdateOperationInProgress || model.isPaidOrderRefundConfirmationPresented)
                                 Button("Check with Stripe") {
-                                    Task { await model.previewPaidOrderRefund() }
+                                    model.startPaidOrderRefundPreview()
                                 }
                                 .disabled(
-                                    model.isReconcilingPaidOrderRefund
+                                    model.isReconcilingPaidOrderRefund || model.isUpdateOperationInProgress
                                         || model.paidOrderRefundOrderID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                 )
                                 .backstageHelp("Read the authoritative order record and reconcile its payment and refund state with Stripe. This check cannot issue a refund.")
@@ -585,6 +587,7 @@ private struct OverviewView: View {
                                     .font(.callout.weight(.semibold))
                                 TextField("Required support reason", text: $model.paidOrderRefundReason, axis: .vertical)
                                     .textFieldStyle(.roundedBorder)
+                                    .disabled(model.isReconcilingPaidOrderRefund || model.isUpdateOperationInProgress || model.isPaidOrderRefundConfirmationPresented)
                                     .lineLimit(2...4)
                                     .disabled(!preview.eligible || model.isReconcilingPaidOrderRefund)
                                 Button("Review full refund…", role: .destructive) {
@@ -836,7 +839,7 @@ private struct DeliverablesView: View {
                 }
                 Spacer()
                 Button("Load") { Task { await model.loadDeliverables() } }
-                    .disabled(model.isRunningDelivery || model.selectedFixtureID.isEmpty)
+                    .disabled(model.isPhotosMaintenanceActive || model.isRunningDelivery || model.selectedFixtureID.isEmpty)
                     .backstageHelp("Load the selected fixture's existing PDF, video, originals, and share-link delivery records.")
             }
             Text("Record completed PDF, video, or originals packages and their authenticated share links. This workspace does not upload website photos or message a client.")
@@ -1232,11 +1235,11 @@ struct LifecycleView: View {
                 }
                 Spacer()
                 Button("Refresh") { Task { await model.loadLifecycle() } }
-                    .disabled(model.isRunningLifecycle || isPreviewMode)
+                    .disabled(model.isPhotosMaintenanceActive || model.isRunningLifecycle || isPreviewMode)
                     .backstageHelp("Reload the private lifecycle ledger and current Waste Basket contents.")
                 Button("Put back") { Task { await model.restoreLifecycleSelection() } }
                     .disabled(
-                        model.isRunningLifecycle
+                        model.isPhotosMaintenanceActive || model.isRunningLifecycle
                             || model.lifecycleQueueing
                             || model.lifecycleRestoreQueueing
                             || model.selectedRecoverableLifecycleIDs.isEmpty
@@ -1245,7 +1248,7 @@ struct LifecycleView: View {
                     .backstageHelp("Restore the selected recoverable items from the Waste Basket to their previous visible state.")
                 Button("Delete Selected", role: .destructive) { confirmingDeleteSelected = true }
                     .disabled(
-                        model.isRunningLifecycle
+                        model.isPhotosMaintenanceActive || model.isRunningLifecycle
                             || model.lifecycleQueueing
                             || model.lifecycleRestoreQueueing
                             || model.lifecycleRestorePendingActionID != nil
@@ -1256,7 +1259,7 @@ struct LifecycleView: View {
                     .backstageHelp("Review the explicit confirmation for changing only the selected recoverable items into global tombstones; active tombstones and unselected items are untouched.")
                 Button("Empty Waste Basket", role: .destructive) { confirmingEmpty = true }
                     .disabled(
-                        model.isRunningLifecycle
+                        model.isPhotosMaintenanceActive || model.isRunningLifecycle
                             || model.lifecycleQueueing
                             || model.lifecycleRestoreQueueing
                             || model.lifecycleRestorePendingActionID != nil
@@ -1370,7 +1373,7 @@ struct LifecycleView: View {
                     Button("Quick Look") {
                         openQuickLook(for: item)
                     }
-                    .disabled(model.isRunningLifecycle || isPreviewMode)
+                    .disabled(model.isPhotosMaintenanceActive || model.isRunningLifecycle || isPreviewMode)
                     .backstageHelp("Open this Waste Basket item in private read-only Quick Look without changing lifecycle state.")
                 }
                 .width(100)
@@ -1603,7 +1606,7 @@ private struct FixtureWorkflowView: View {
                         Button("Create root") {
                             Task { await model.createFixture(atRoot: true) }
                         }
-                        .disabled(model.fixtureName.isEmpty || model.isRunningFixture)
+                        .disabled(model.isPhotosMaintenanceActive || model.fixtureName.isEmpty || model.isRunningFixture)
                         .backstageHelp("Create a new top-level fixture using the entered name and optional template.")
                         Button("Rename") { Task { await model.renameFixture() } }
                             .disabled(
@@ -1613,7 +1616,7 @@ private struct FixtureWorkflowView: View {
                             )
                             .backstageHelp("Rename the selected fixture to the value entered in the name field.")
                         Button("Archive / reopen") { Task { await model.toggleFixtureArchive() } }
-                            .disabled(model.selectedFixtureID.isEmpty || model.isRunningFixture)
+                            .disabled(model.isPhotosMaintenanceActive || model.selectedFixtureID.isEmpty || model.isRunningFixture)
                             .backstageHelp("Toggle the selected fixture between archived and active without deleting its history.")
                     }
                 }
@@ -1624,7 +1627,7 @@ private struct FixtureWorkflowView: View {
                     HStack {
                         TextField("Title, keyword, file, camera…", text: $model.fixtureSearch)
                         Button("Search") { Task { await model.searchFixtureAssets() } }
-                            .disabled(model.selectedFixtureID.isEmpty || model.isRunningFixture)
+                            .disabled(model.isPhotosMaintenanceActive || model.selectedFixtureID.isEmpty || model.isRunningFixture)
                             .backstageHelp("Search Owner for assets matching the entered title, keyword, filename, camera, or other indexed detail.")
                     }
                     Table(model.fixtureAssets, selection: $model.selectedFixtureAssetIDs) {
@@ -1818,7 +1821,7 @@ private struct FixtureWorkflowView: View {
                                         Button("Review placements") {
                                             Task { await model.loadFixturePlacements() }
                                         }
-                                        .disabled(model.selectedFixtureAssetIDs.isEmpty || model.isRunningFixture)
+                                        .disabled(model.isPhotosMaintenanceActive || model.selectedFixtureAssetIDs.isEmpty || model.isRunningFixture)
                                         .backstageHelp("Load the active and removed fixture relationships for the selected assets.")
                                     }
                                 }
@@ -1832,7 +1835,7 @@ private struct FixtureWorkflowView: View {
                                                 Button(fixture.name) {
                                                     Task { await model.movePlacement(placement.id, to: fixture.id) }
                                                 }
-                                                .disabled(model.isRunningFixture)
+                                                .disabled(model.isPhotosMaintenanceActive || model.isRunningFixture)
                                                 .backstageHelp("Move this asset's placement from \(placement.breadcrumbLabel) to \(fixture.name).")
                                             }
                                         }
@@ -1841,7 +1844,7 @@ private struct FixtureWorkflowView: View {
                                         Button(placement.isActive ? "Remove" : "Restore") {
                                             Task { await model.togglePlacement(placement) }
                                         }
-                                        .disabled(model.isRunningFixture)
+                                        .disabled(model.isPhotosMaintenanceActive || model.isRunningFixture)
                                         .backstageHelp(placement.isActive
                                             ? "Remove this reversible fixture placement without deleting the asset or its other relationships."
                                             : "Restore this previously removed fixture placement.")
@@ -1876,7 +1879,7 @@ private struct FixtureWorkflowView: View {
                                             Button(model.isReloadingFixturePools ? "Reloading…" : "Reload snapshots") {
                                                 Task { await model.loadFixturePools() }
                                             }
-                                            .disabled(model.isRunningFixtureSnapshotOperation)
+                                            .disabled(model.isPhotosMaintenanceActive || model.isRunningFixtureSnapshotOperation)
                                             .backstageHelp("Reload the selected fixture's saved immutable Culling snapshots.")
                                             Button(model.isOpeningFixturePool ? "Opening…" : "Open selected in Gallery") {
                                                 Task { await model.openSelectedFixturePool() }
@@ -1912,7 +1915,7 @@ private struct FixtureWorkflowView: View {
                                         Button(model.isOpeningFixturePool ? "Opening…" : "Open in Gallery") {
                                             Task { await model.openSelectedFixturePool() }
                                         }
-                                        .disabled(model.isRunningFixtureSnapshotOperation)
+                                        .disabled(model.isPhotosMaintenanceActive || model.isRunningFixtureSnapshotOperation)
                                         .backstageHelp("Open this selected snapshot as the active immutable Culling pool.")
                                         if model.isOpeningFixturePool {
                                             ProgressView()
@@ -2116,7 +2119,7 @@ private struct MetadataGiveBackView: View {
                     Button("Sync now") {
                         Task { await model.syncPhotosIncrementally() }
                     }
-                    .disabled(model.isSyncingPhotos)
+                    .disabled(!model.canStartPhotosMaintenance)
                     .backstageHelp("Run one bounded incremental Photos synchronization now and classify metadata, appearance, missing, and returned changes.")
                     if model.isSyncingPhotos {
                         ProgressView().controlSize(.small)
@@ -2145,7 +2148,7 @@ private struct MetadataGiveBackView: View {
                     Button(model.equipmentBackfillReport?.remaining ?? 0 > 0 ? "Resume backfill" : "Start backfill") {
                         Task { await model.backfillPhotoEquipment() }
                     }
-                    .disabled(model.isBackfillingEquipment)
+                    .disabled(!model.canStartPhotosMaintenance)
                     .backstageHelp("Continue through repeated 25-photo checkpoints until the equipment backfill finishes or you choose Stop safely.")
                     if model.isBackfillingEquipment {
                         Button("Stop safely") {
@@ -2163,6 +2166,7 @@ private struct MetadataGiveBackView: View {
                                 )
                             }
                         }
+                        .disabled(!model.canStartPhotosMaintenance)
                         .backstageHelp("Requeue photos that were unavailable or failed in earlier equipment passes, then process the next 25.")
                     }
                     BackstageFeedbackView(
@@ -2230,7 +2234,7 @@ private struct MetadataGiveBackView: View {
                     .disabled(model.isMetadataReviewOperationInProgress)
                     .backstageHelp("Replace the canonical metadata keyword blacklist with the normalized terms entered here.")
                 }
-                BackstageFeedbackView(message: model.metadataReviewStatus)
+                BackstageFeedbackView(message: model.metadataReviewStatus, isWorking: model.isRunningMetadataReview)
             }
             Section("OpenAI title & keyword proposal ladder") {
                 Text("Add as many ordered rungs as needed. Each attempt advances through the saved order; every rung always receives a bounded JPEG preview.")

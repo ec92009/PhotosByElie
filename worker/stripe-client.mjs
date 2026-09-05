@@ -163,6 +163,46 @@ export const createStripeClient = ({
     return body;
   };
 
+  const stripeRequest = async (path, { method = "GET", params, idempotencyKey } = {}) => {
+    const headers = { "authorization": `Basic ${encodeBasicAuth(secretKey)}` };
+    if (params) headers["content-type"] = "application/x-www-form-urlencoded";
+    if (idempotencyKey) headers["idempotency-key"] = idempotencyKey;
+    if (apiVersion) headers["stripe-version"] = apiVersion;
+    const response = await fetchImpl(`${apiBase}${path}`, {
+      method,
+      headers,
+      ...(params ? { body: params.toString() } : {}),
+    });
+    const text = await response.text();
+    let body = {};
+    try { body = text ? JSON.parse(text) : {}; } catch { body = {}; }
+    if (!response.ok) {
+      throw Object.assign(new Error(body?.error?.message || `Stripe request failed with HTTP ${response.status}.`), {
+        status: 502,
+        code: "stripe_request_failed",
+        details: {
+          stripeStatus: response.status,
+          stripeCode: body?.error?.code || null,
+          stripeType: body?.error?.type || null,
+        },
+      });
+    }
+    return body;
+  };
+
+  const retrieveCheckoutSession = (sessionId) => stripeRequest(`/checkout/sessions/${encodeURIComponent(sessionId)}`);
+
+  const listRefunds = ({ paymentIntentId }) => stripeRequest(`/refunds?payment_intent=${encodeURIComponent(paymentIntentId)}&limit=100`);
+
+  const createRefund = async ({ paymentIntentId, amount, reason, metadata = {}, idempotencyKey }) => {
+    const params = new URLSearchParams();
+    appendParam(params, "payment_intent", paymentIntentId);
+    appendParam(params, "amount", amount);
+    appendParam(params, "reason", reason);
+    appendMetadata(params, "metadata", metadata);
+    return stripeRequest("/refunds", { method: "POST", params, idempotencyKey });
+  };
+
   const constructEvent = async (request) => {
     const signatureHeader = request.headers.get("stripe-signature");
     if (!signatureHeader) throw new Error("Missing Stripe-Signature header.");
@@ -182,6 +222,9 @@ export const createStripeClient = ({
   return {
     provider: "stripe",
     createCheckoutSession,
+    retrieveCheckoutSession,
+    listRefunds,
+    createRefund,
     constructEvent,
   };
 };

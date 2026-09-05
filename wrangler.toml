@@ -4,6 +4,11 @@ compatibility_date = "2026-07-10"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+# Fail before bundling/upload if an accepted commerce contract has regressed.
+[build]
+command = "npm run worker:release-check"
+watch_dir = ["worker", "scripts/public_worker_origin_policy.test.mjs", "basket.js", "order.js"]
+
 [vars]
 PUBLIC_SITE_URL = "https://photos-by-elie.com"
 MOCK_STRIPE_ENABLED = "true"

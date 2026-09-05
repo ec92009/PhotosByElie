@@ -74,12 +74,12 @@ const seedReadyPdf = async (deliverables, bucket) => {
   const record = await deliverables.putDeliverable({
     galleryKey: gallery.key,
     realEstateSession: session,
-    deliverable: readyPdf,
+    deliverable: { ...readyPdf, outputs: null },
   });
-  await bucket.put(readyPdf.outputs.pdf.key, new TextEncoder().encode("%PDF-local-rehearsal"), {
-    httpMetadata: { contentType: "application/pdf" },
+  return deliverables.completeAssemblyOutput({
+    galleryKey: gallery.key, realEstateSession: session, id: record.id,
+    body: new TextEncoder().encode("%PDF-local-rehearsal"), contentType: "application/pdf",
   });
-  return record;
 };
 
 test("local Real Estate rehearsal creates links with a deterministic guard while the base stays fail-closed", async () => {

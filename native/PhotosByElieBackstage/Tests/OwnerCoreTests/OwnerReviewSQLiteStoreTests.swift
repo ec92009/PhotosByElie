@@ -5,6 +5,24 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("A later invalid Review target rolls back earlier asset changes and the audit operation")
+    func laterTargetFailureRollsBackWholeReview() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-atomic-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        _ = try store.applyReview(.approve, fixtureID: "fixture-expo", assetIDs: ["asset-1"])
+        let before = try Data(contentsOf: databaseURL)
+        #expect(throws: OwnerReviewSQLiteError.self) {
+            try store.applyReview(.returnToReview, fixtureID: "fixture-expo", assetIDs: ["asset-1", "asset-2"])
+        }
+        #expect(try scalar(databaseURL, "SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try scalar(databaseURL, "SELECT COUNT(*) FROM fixture_review_operations") == "1")
+        #expect(try Data(contentsOf: databaseURL) == before)
+    }
+
     @Test("Country remains locked before PBE-154 and gains native assignment propagation and Undo after receipt")
     func countryGatePropagationAndUndo() throws {
         let root = FileManager.default.temporaryDirectory

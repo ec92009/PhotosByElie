@@ -121,9 +121,13 @@ struct BackstageFixtureSelectionTests {
             currentEquipmentCache: nil, equipmentBackfillStore: nil,
             externalEditJobStore: nil, customerPhotoLinks: nil
         )
+        var observedChanges = 0
+        let observation = model.objectWillChange.sink { observedChanges += 1 }
+        defer { observation.cancel() }
         model.paidOrderRefundOrderID = "order-a"
         model.startPaidOrderRefundPreview()
         #expect(model.isReconcilingPaidOrderRefund)
+        #expect(observedChanges > 0)
         #expect(model.shutdownWorkState.activeReasons.contains("payment refund reconciliation"))
         #expect(!model.canPerformBackstageUpdateActions)
         model.startPaidOrderRefundPreview()

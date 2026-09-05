@@ -5,6 +5,31 @@ import Testing
 
 @Suite("Owner Culling SQLite parity")
 struct OwnerCullingSQLiteStoreTests {
+    @Test("Bounded Culling pages preserve complete summaries and never modify SQLite")
+    func cullingPagesAreStableReadOnlySlices() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("culling-pages-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        let before = try Data(contentsOf: databaseURL)
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+        let all = try store.cullingWindow(fixtureID: "fixture-expo", view: .allActive, sourceFilters: [])
+        var paged: [String] = []
+        for offset in 0..<all.items.count {
+            let page = try store.cullingWindow(fixtureID: "fixture-expo", view: .allActive, offset: offset, limit: 1, sourceFilters: [])
+            paged += page.items.map(\.id)
+            #expect(page.summary == all.summary)
+        }
+        #expect(!all.items.isEmpty)
+        #expect(paged == all.items.map(\.id))
+        let beyond = try store.cullingWindow(fixtureID: "fixture-expo", view: .allActive, offset: 10000, limit: 1, sourceFilters: [])
+        #expect(beyond.items.isEmpty)
+        #expect(!beyond.hasNext)
+        #expect(beyond.summary == all.summary)
+        #expect(try Data(contentsOf: databaseURL) == before)
+    }
+
     @Test("Canonical workflow stage gives fixture hiding sole precedence")
     func canonicalWorkflowStageHasOneVisibleWinner() {
         #expect(AssetWorkflowStage.resolve(

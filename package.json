@@ -29,7 +29,8 @@
     "etsy:collect-keys": "bash scripts/etsy_collect_keys.sh",
     "etsy:outlet": "node scripts/etsy_outlet.mjs",
     "etsy:oauth": "node scripts/etsy_oauth.mjs",
-    "worker:release-check": "node --test worker/checkout-worker.test.mjs worker/paid-order-fulfillment.test.mjs worker/paid-order-refund.test.mjs worker/owner-api-v1.test.mjs scripts/public_worker_origin_policy.test.mjs"
+    "worker:release-check": "node --test worker/checkout-worker.test.mjs worker/paid-order-fulfillment.test.mjs worker/paid-order-refund.test.mjs worker/owner-api-v1.test.mjs scripts/public_worker_origin_policy.test.mjs",
+    "audit:backstage": "uv run scripts/backstage_maintainability.py --check docs/architecture/backstage-maintainability-baseline.json"
   },
   "dependencies": {
     "@cloudflare/playwright": "^1.3.0",

@@ -50,6 +50,21 @@ const contentTypeFor = (type, filename = "") => {
   return "application/octet-stream";
 };
 
+const passiveContentType = (type, value) => {
+  const mime = String(value || "").split(";")[0].trim().toLowerCase();
+  const allowed = { pdf: ["application/pdf"], video: ["video/mp4", "video/webm"], originals: ["application/zip"] };
+  if (!allowed[type]?.includes(mime)) throw Object.assign(new Error("Product output has an unsupported content type."), {
+    status: 415, code: "invalid_real_estate_assembly_content_type",
+    details: { expected: allowed[type] || [], received: mime },
+  });
+  return mime;
+};
+
+const passiveResponseHeaders = {
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "sandbox allow-same-origin; script-src 'none'; base-uri 'none'; form-action 'none'",
+};
+
 const safeFilename = (value, fallback = "output.bin") => {
   const filename = String(value || "")
     .split(/[\\/]/)
@@ -456,7 +471,9 @@ export const createRealEstateDeliverables = ({
     const metadata = object.customMetadata || {};
     if (metadata.galleryKey !== gallery.key || metadata.deliverableId !== record.id
       || metadata.type !== record.type || metadata.mediaIdentityDigest !== await mediaIdentityDigest(record)) throw denied();
-    return { object, output, key };
+    const contentType = passiveContentType(record.type,
+      object.httpMetadata?.contentType || output.contentType || contentTypeFor(record.type, key));
+    return { object, output, key, contentType };
   };
 
   const createDeliveryLinks = async (payload = {}) => {
@@ -531,11 +548,10 @@ export const createRealEstateDeliverables = ({
 
     for (const record of selected) {
       const canonicalMediaIds = canonicalMediaIdsFor(record);
-      const { object, output, key: objectKey } = await readBoundOutput(gallery, record);
+      const { object, output, key: objectKey, contentType } = await readBoundOutput(gallery, record);
       const token = `relink_${randomUUID().replace(/-/g, "").slice(0, 28)}`;
       const filename = filenameFor(record, output);
       const type = String(record.type || "").toLowerCase();
-      const contentType = output.contentType || object.httpMetadata?.contentType || contentTypeFor(type, filename);
       const bytes = Number(record.bytes || object.size || 0) || 0;
       pendingLinks.push({
         download: {
@@ -888,19 +904,7 @@ export const createRealEstateDeliverables = ({
     }
     const fallbackFilename = `${gallery.key}-${record.batch?.batchId || record.id}-${type === "pdf" ? "project.pdf" : type === "video" ? "slideshow.mp4" : "originals.zip"}`;
     const filename = safeFilename(payload.filename, fallbackFilename);
-    let contentType = String(payload.contentType || contentTypeFor(type, filename)).split(";")[0].trim().toLowerCase();
-    const validContentType = type === "pdf"
-      ? contentType === "application/pdf"
-      : type === "video"
-        ? contentType.startsWith("video/")
-        : contentType === "application/zip";
-    if (!validContentType) {
-      throw Object.assign(new Error(`The uploaded ${type} has an invalid content type.`), {
-        status: 415,
-        code: "invalid_real_estate_assembly_content_type",
-        details: { expected: type === "pdf" ? "application/pdf" : type === "video" ? "video/*" : "application/zip", received: contentType },
-      });
-    }
+    let contentType = passiveContentType(type, payload.contentType || contentTypeFor(type, filename));
 
     let outputBody = payload.body;
     let outputFilename = filename;
@@ -914,7 +918,7 @@ export const createRealEstateDeliverables = ({
         height: portrait ? 1024 : 720,
       });
       outputBody = transformed?.body || outputBody;
-      contentType = String(transformed?.contentType || "video/mp4").split(";")[0].trim().toLowerCase();
+      contentType = passiveContentType(type, transformed?.contentType || "video/mp4");
       outputFilename = safeFilename(transformed?.filename || outputFilename.replace(/\.[^.]+$/i, ".mp4"), `${record.id}.mp4`);
     }
     const outputKey = outputKeyFor(gallery, id, type, outputFilename, contentType);
@@ -1041,14 +1045,15 @@ export const createRealEstateDeliverables = ({
         details: { status: record.status, failureReason: record.failureReason || "" },
       });
     }
-    const { object, output } = await readBoundOutput(gallery, record);
+    const { object, output, contentType } = await readBoundOutput(gallery, record);
     const filename = filenameFor(record, output);
     return {
       record: publicRecordFor(record),
       object,
       headers: {
-        "content-type": output.contentType || object.httpMetadata?.contentType || contentTypeFor(record.type, filename),
-        "content-disposition": `${action === "view" ? "inline" : "attachment"}; filename="${filename}"`,
+        ...passiveResponseHeaders,
+        "content-type": contentType,
+        "content-disposition": `${action === "view" && record.type !== "originals" ? "inline" : "attachment"}; filename="${filename}"`,
         "cache-control": "private, max-age=60",
       },
     };
@@ -1065,9 +1070,10 @@ export const createRealEstateDeliverables = ({
       output: { key: download.objectKey, filename: download.filename, contentType: download.contentType },
       batch: { projects: [{ items: (download.canonicalMediaIds || []).map((photoId) => ({ photoId })) }] },
     };
-    const { object } = await readBoundOutput(gallery, record);
+    const { object, contentType } = await readBoundOutput(gallery, record);
     return new Response(object.body, { headers: {
-      "content-type": download.contentType || object.httpMetadata?.contentType || "application/octet-stream",
+      ...passiveResponseHeaders,
+      "content-type": contentType,
       "content-disposition": `attachment; filename="${filenameFor(record, record.output)}"`,
       "cache-control": "private, no-store",
     } });

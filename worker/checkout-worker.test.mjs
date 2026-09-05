@@ -5889,3 +5889,40 @@ test("logout clears sessions even when pending OAuth transaction cancellation fa
     }
   }
 });
+
+test("deliverable views enforce passive MIME and sandbox active-looking bytes", async () => {
+  const bucket = createFakeR2();
+  const store = createMemoryStore();
+  const gallery = { key: "passive-gallery", username: "Client" };
+  const payload = { galleryKey: gallery.key, realEstateSession: { galleryKey: gallery.key, username: "Client" } };
+  const options = { privateBucket: bucket, store, galleries: [gallery], assertAssetsAllowed: allowLifecycleFor().assertAllowed };
+  const service = createRealEstateDeliverables(options);
+  const body = new TextEncoder().encode("<!doctype html><script>fetch('/account/profile',{method:'POST'})</script>");
+  for (const [type, mime, filename] of [["pdf", "application/pdf", "test.pdf"], ["video", "video/mp4", "test.mp4"], ["video", "video/webm", "test.webm"], ["originals", "application/zip", "test.zip"]]) {
+    const draft = { id: filename, type, batch: { batchId: filename, projects: [{ items: [{ photoId: "visible-media" }] }] } };
+    await assert.rejects(service.putDeliverable({ ...payload, deliverable: { ...draft, status: "ready", output: { key: "self.json", contentType: "text/html" } } }), { code: "real_estate_output_override_forbidden" });
+    await service.putDeliverable({ ...payload, deliverable: draft });
+    for (const bad of ["text/html", "application/xhtml+xml", "image/svg+xml", "video/html", "video/svg+xml"]) {
+      await assert.rejects(service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: bad, body }), { code: "invalid_real_estate_assembly_content_type" });
+    }
+    const ready = await service.completeAssemblyOutput({ ...payload, id: draft.id, filename, contentType: mime, body });
+    for (const action of ["view", "head", "download"]) {
+      const asset = await service.getDeliverableAsset({ ...payload, id: draft.id, action });
+      assert.equal(asset.headers["content-type"], mime);
+      assert.equal(asset.headers["x-content-type-options"], "nosniff");
+      assert.equal(asset.headers["content-security-policy"], "sandbox allow-same-origin; script-src 'none'; base-uri 'none'; form-action 'none'");
+      assert.match(asset.headers["content-disposition"], new RegExp("^" + (action === "view" && type !== "originals" ? "inline" : "attachment")));
+    }
+    const links = await service.createDeliveryLinks({ ...payload, deliverableIds: [draft.id] });
+    const capability = await store.getDownload(links.links[0].url.split("/").pop());
+    const response = await service.getDeliveryAsset(capability);
+    assert.equal(response.headers.get("content-type"), mime);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    const object = await bucket.get(ready.outputs[type].key);
+    await bucket.put(ready.outputs[type].key, body, { httpMetadata: { contentType: "text/html" }, customMetadata: object.customMetadata });
+    await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id, action: "view" }), { code: "invalid_real_estate_assembly_content_type" });
+    await assert.rejects(service.getDeliveryAsset(capability), { code: "invalid_real_estate_assembly_content_type" });
+  }
+  const transcoded = createRealEstateDeliverables({ ...options, videoTranscoder: { toMp4: async () => ({ body, contentType: "text/html", filename: "active.html" }) } });
+  await assert.rejects(transcoded.completeAssemblyOutput({ ...payload, id: "test.mp4", filename: "test.mp4", contentType: "video/mp4", body }), { code: "invalid_real_estate_assembly_content_type" });
+});

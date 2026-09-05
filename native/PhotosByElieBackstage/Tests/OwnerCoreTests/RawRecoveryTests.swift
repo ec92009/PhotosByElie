@@ -166,7 +166,7 @@ struct RawRecoveryTests {
         #expect(library.recoveryCalls.isEmpty)
     }
 
-    @Test("Control CLI exposes read-only planning and one bounded private sample")
+    @Test("Control CLI cannot use Photos authority for standalone RAW recovery")
     func controlCLIIsBoundedAndReviewGated() async throws {
         let plan = RawRecoveryPlan(
             checkedAt: "2026-08-29T13:00:00Z",
@@ -216,89 +216,23 @@ struct RawRecoveryTests {
             photoLibrary: library
         )
 
-        let planOutput = RawRecoveryLockedOutput()
-        let planExit = await BackstageControlCLI.run(
-            arguments: ["photos", "raw-recovery", "plan", "--sample-limit", "1"],
-            service: service,
-            output: { planOutput.append($0) }
-        )
-        #expect(planExit == 0)
-        let decodedPlan = try JSONDecoder().decode(
-            RawRecoveryPlan.self,
-            from: Data(try #require(planOutput.values.last).utf8)
-        )
-        #expect(decodedPlan == plan)
+        for arguments in [
+            ["photos", "raw-recovery", "plan", "--sample-limit", "1"],
+            ["photos", "raw-recovery", "sample", "--asset-id", "raw-local-1"],
+            ["photos", "raw-recovery", "batch", "start"],
+            ["photos", "raw-recovery", "batch", "resume"],
+            ["photos", "raw-recovery", "batch", "index"],
+        ] {
+            let captured = RawRecoveryLockedOutput()
+            let exitCode = await BackstageControlCLI.run(arguments: arguments, service: service,
+                output: { captured.append($0) })
+            #expect(exitCode == 2)
+            let text = try #require(captured.values.last)
+            let payload = try #require(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+            #expect((payload["error"] as? [String: Any])?["code"] as? String == "photos_job_authorization_required")
+        }
+        #expect(library.lastSampleBounds == nil)
 
-        let sampleOutput = RawRecoveryLockedOutput()
-        let sampleExit = await BackstageControlCLI.run(
-            arguments: [
-                "photos", "raw-recovery", "sample",
-                "--asset-id", "raw-local-1",
-                "--max-pixel", "6000",
-                "--minimum-megapixels", "1",
-            ],
-            service: service,
-            output: { sampleOutput.append($0) }
-        )
-        #expect(sampleExit == 0)
-        let decodedReceipt = try JSONDecoder().decode(
-            RawRecoveryReceipt.self,
-            from: Data(try #require(sampleOutput.values.last).utf8)
-        )
-        #expect(decodedReceipt == receipt)
-        #expect(decodedReceipt.requiresReview)
-        #expect(decodedReceipt.workflowState == "needs-review")
-        #expect(decodedReceipt.technicalEligibility == "candidate-after-review")
-        #expect(library.lastSampleBounds == .init(assetID: "raw-local-1", maxPixel: 6_000, minimumPixels: 1_000_000))
-
-        let batchRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("raw-cli-batch-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: batchRoot) }
-        let batchOutput = RawRecoveryLockedOutput()
-        let batchExit = await BackstageControlCLI.run(
-            arguments: [
-                "photos", "raw-recovery", "batch", "start",
-                "--destination", batchRoot.path,
-                "--max-items", "1",
-                "--reserve-gb", "1",
-            ],
-            service: service,
-            output: { batchOutput.append($0) }
-        )
-        #expect(batchExit == 0)
-        let decodedBatch = try JSONDecoder().decode(
-            RawRecoveryBatchResult.self,
-            from: Data(try #require(batchOutput.values.last).utf8)
-        )
-        #expect(decodedBatch.state == .completed)
-        #expect(decodedBatch.queued == 1)
-        #expect(decodedBatch.generated == 1)
-
-        let indexOutput = RawRecoveryLockedOutput()
-        let indexExit = await BackstageControlCLI.run(
-            arguments: [
-                "photos", "raw-recovery", "batch", "index",
-                "--destination", batchRoot.path,
-            ],
-            service: service,
-            output: { indexOutput.append($0) }
-        )
-        #expect(indexExit == 0)
-        let indexText = try #require(indexOutput.values.last)
-        let indexPayload = try #require(
-            JSONSerialization.jsonObject(
-                with: Data(indexText.utf8)
-            ) as? [String: Any]
-        )
-        #expect(indexPayload["mode"] as? String == "exact-completed-batch-index")
-        #expect(indexPayload["indexedCount"] as? Int == 1)
-
-        let invalidExit = await BackstageControlCLI.run(
-            arguments: ["photos", "raw-recovery", "sample", "--asset-id", "raw-local-1", "--max-pixel", "9000"],
-            service: service,
-            output: { _ in }
-        )
-        #expect(invalidExit == 64)
     }
 }
 

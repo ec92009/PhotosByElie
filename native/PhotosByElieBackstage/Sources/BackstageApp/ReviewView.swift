@@ -341,6 +341,8 @@ struct ReviewView: View {
                         .backstageHelp("Request cancellation of the AI proposal pass currently in progress.")
                     }
                 }
+                Toggle("Nightly AI at 02:00 (Madrid)", isOn: $model.nightlyAIJobsEnabled)
+                    .backstageHelp("Run requested AI work once nightly while Backstage is open and signed in. Off until enabled. Missed runs wait for the next night or Run AI pass now.")
                 BackstageFeedbackView(
                     message: model.aiProposalStatus,
                     isWorking: model.isRunningAIPass || model.fixtureAIStatus?.active == true

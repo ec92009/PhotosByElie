@@ -12,6 +12,11 @@ extension OwnerAPIClient: OwnerActionServing {}
 
 public protocol OwnerActionWaking: Sendable {
     func wake(actionID: String) async throws -> OwnerAction?
+    func wake(action: OwnerAction) async throws -> OwnerAction?
+}
+
+extension OwnerActionWaking {
+    public func wake(action: OwnerAction) async throws -> OwnerAction? { try await wake(actionID: action.id) }
 }
 
 private final class OnDemandOwnerActionFileManager: @unchecked Sendable {
@@ -49,6 +54,8 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         }
     }
 
+    private let photoJobAuthority: BackstagePhotosJobAuthority
+    private let ownerSnapshot: BackstagePhotosJobAuthority.SessionCheck
     private let runtimeRoot: URL?
     private let dataRoot: URL?
     private let configURL: URL
@@ -60,9 +67,15 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         dataRoot: URL? = nil,
         configURL: URL? = nil,
         pythonExecutable: URL = URL(fileURLWithPath: "/usr/bin/python3"),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        photoJobAuthority: BackstagePhotosJobAuthority = .shared,
+        ownerSnapshot: @escaping BackstagePhotosJobAuthority.SessionCheck = {
+            await OwnerAuthenticationService(api: OwnerAPIClient()).currentSnapshot()
+        }
     ) {
         let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        self.photoJobAuthority = photoJobAuthority
+        self.ownerSnapshot = ownerSnapshot
         self.runtimeRoot = runtimeRoot
         self.dataRoot = dataRoot
         self.configURL = configURL ?? home.appendingPathComponent(
@@ -133,6 +146,14 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
     }
 
     public func wake(actionID: String) async throws -> OwnerAction? {
+        try await wake(actionID: actionID, acceptedAction: nil)
+    }
+
+    public func wake(action: OwnerAction) async throws -> OwnerAction? {
+        try await wake(actionID: action.id, acceptedAction: action)
+    }
+
+    private func wake(actionID: String, acceptedAction: OwnerAction?) async throws -> OwnerAction? {
         guard actionID.hasPrefix("owner-action-"), actionID.count <= 96 else {
             throw OwnerActionRunError.invalidActionID
         }
@@ -163,32 +184,55 @@ public struct OnDemandOwnerActionWaker: OwnerActionWaking {
         )
         _ = try PBEOwnerCheckoutIdentity.verified(repositoryRoot: plan.runtimeRoot)
 
-        let process = Process()
-        process.executableURL = plan.pythonExecutable
-        process.arguments = [
-            "-E", "-B",
-            plan.scriptURL.path,
-            "--config", plan.configURL.path,
-            "--once",
-            "--action-id", actionID,
-        ]
-        process.currentDirectoryURL = plan.dataRoot
-        var environment = ProcessInfo.processInfo.environment
-        for key in environment.keys where key.hasPrefix("PYTHON") {
-            environment.removeValue(forKey: key)
+        var credential: BackstagePhotosJobCredential?
+        if let action = acceptedAction, BackstagePhotosJobLauncher.requiresPhotos(action) {
+            let scope = try await BackstagePhotosJobLauncher.plan(action: action, launch: plan)
+            if !scope.operations.isEmpty {
+                credential = try await photoJobAuthority.issue(plan: scope,
+                    session: await ownerSnapshot(), checkSession: ownerSnapshot)
+            }
         }
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        environment["PBE_CONNECTOR_RUNTIME_ROOT"] = plan.runtimeRoot.path
-        environment["PBE_REPO_ROOT"] = plan.dataRoot.path
-        environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
-        process.environment = environment
-        process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
-        process.standardError = FileHandle(forWritingAtPath: "/dev/null")
-        let terminationStatus = try await Self.runAndAwaitTermination(process)
-        guard terminationStatus == 0 else {
-            throw OwnerActionRunError.failed(
-                "The on-demand Owner connector exited with status \(terminationStatus)."
-            )
+        do {
+            let process = Process()
+            process.executableURL = plan.pythonExecutable
+            process.arguments = [
+                "-I", "-S", "-B", "-c", BackstagePhotosJobLauncher.bootstrap,
+                plan.runtimeRoot.appendingPathComponent("scripts").path, plan.scriptURL.path,
+                "--config", plan.configURL.path,
+                "--once",
+                "--action-id", actionID,
+            ]
+            process.currentDirectoryURL = plan.dataRoot
+            var environment = ProcessInfo.processInfo.environment
+            for key in environment.keys where key.hasPrefix("PYTHON") || key.hasPrefix("PBE_PHOTOS_JOB") {
+                environment.removeValue(forKey: key)
+            }
+            environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            environment["PBE_CONNECTOR_RUNTIME_ROOT"] = plan.runtimeRoot.path
+            environment["PBE_REPO_ROOT"] = plan.dataRoot.path
+            environment["PBE_ON_DEMAND_OWNER_CONNECTOR"] = "1"
+            let credentialPipe = Pipe()
+            if let credential {
+                environment["PBE_PHOTOS_JOB_STDIN"] = "1"
+                process.standardInput = credentialPipe
+                var data = try JSONEncoder().encode(credential)
+                data.append(0x0a)
+                try credentialPipe.fileHandleForWriting.write(contentsOf: data)
+                try credentialPipe.fileHandleForWriting.close()
+            } else { process.standardInput = FileHandle.nullDevice }
+            process.environment = environment
+            process.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
+            process.standardError = FileHandle(forWritingAtPath: "/dev/null")
+            let terminationStatus = try await Self.runAndAwaitTermination(process)
+            if let credential { await photoJobAuthority.revoke(credential.jobID) }
+            guard terminationStatus == 0 else {
+                throw OwnerActionRunError.failed(
+                    "The on-demand Owner connector exited with status \(terminationStatus)."
+                )
+            }
+        } catch {
+            if let credential { await photoJobAuthority.revoke(credential.jobID) }
+            throw error
         }
         return nil
     }
@@ -223,6 +267,7 @@ public actor OwnerActionRunner {
     private let timeout: Duration
     private let clock = ContinuousClock()
     private var accelerationTasks: [String: Task<Void, Never>] = [:]
+    private var photosJobFailures: [String: String] = [:]
 
     public init(
         api: any OwnerActionServing,
@@ -263,17 +308,27 @@ public actor OwnerActionRunner {
     /// Retain each one-shot wake until it exits. PBE Owner's native action
     /// bridge uses this path without a separate terminal monitor.
     public func accelerate(_ action: OwnerAction) {
-        guard accelerationTasks[action.id] == nil else { return }
+        guard accelerationTasks[action.id] == nil, photosJobFailures[action.id] == nil else { return }
         let waker = self.waker
         let actionID = action.id
-        let task = Task.detached(priority: .utility) {
-            _ = try? await waker.wake(actionID: actionID)
+        let task = Task.detached(priority: .utility) { [weak self] in
+            do { _ = try await waker.wake(action: action) }
+            catch {
+                if BackstagePhotosJobLauncher.requiresPhotos(action) {
+                    await self?.recordPhotosJobFailure(actionID, message: error.localizedDescription)
+                }
+            }
         }
         accelerationTasks[actionID] = task
         Task { [weak self] in
             await task.value
             await self?.finishAcceleration(actionID)
         }
+    }
+
+    private func recordPhotosJobFailure(_ actionID: String, message: String) {
+        if photosJobFailures.count >= 1000 { photosJobFailures.removeAll() }
+        photosJobFailures[actionID] = message
     }
 
     private func finishAcceleration(_ actionID: String) {
@@ -308,6 +363,9 @@ public actor OwnerActionRunner {
                 throw OwnerActionRunError.cancelled
             case .queued, .claimed, .running:
                 break
+            }
+            if let failure = photosJobFailures[action.id] {
+                throw OwnerActionRunError.failed(failure)
             }
             guard clock.now < deadline else {
                 throw OwnerActionRunError.timedOut

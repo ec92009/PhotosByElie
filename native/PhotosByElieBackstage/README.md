@@ -4,6 +4,10 @@ SwiftPM remains the release build and command-line test source of truth.
 See [regression contracts](../../docs/architecture/backstage-regression-contracts.md)
 for test ownership, repeat runs, and the separate publication-snapshot gate.
 
+See [Photos helper jobs](../../docs/architecture/backstage-photos-jobs.md) for
+Backstage-owned helper authority, retired standalone IPC access and the explicit
+nightly AI setting.
+
 ## Control CLI
 
 The release executable has a non-UI control mode for supported remote checks:

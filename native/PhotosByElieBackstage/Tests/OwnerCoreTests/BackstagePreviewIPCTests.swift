@@ -299,6 +299,7 @@ struct BackstagePreviewIPCTests {
         let descriptorURL = root.appendingPathComponent("photos-preview-ipc.json")
         defer { try? FileManager.default.removeItem(at: root) }
 
+        let authority = BackstagePhotosJobAuthority()
         let server = BackstagePreviewIPCServer(
             photoLibrary: PreviewIPCTestLibrary(
                 outcome: .success(PhotoPreview(
@@ -310,8 +311,9 @@ struct BackstagePreviewIPCTests {
             ),
             configuration: BackstagePreviewIPCServerConfiguration(
                 descriptorURL: descriptorURL,
-                connectionTimeout: 0.2
-            )
+                connectionTimeout: 2
+            ),
+            jobAuthority: authority
         )
         try server.start()
         defer { server.stop() }
@@ -340,8 +342,32 @@ struct BackstagePreviewIPCTests {
             "maxPixel": 900,
         ]
         let transportData = try JSONSerialization.data(withJSONObject: transportRequest)
-        let responseData = try await Task.detached {
+        let deniedData = try await Task.detached {
             try socketRoundTrip(descriptor: descriptor, requestData: transportData)
+        }.value
+        let denial = try #require(JSONSerialization.jsonObject(with: deniedData) as? [String: Any])
+        #expect(denial["code"] as? String == "photos_job_authorization_required")
+        for operation in ["photos.library-index", "photos.export-original", "photos.metadata-read-many", "photos.metadata-apply-many", "photos.identity-map"] {
+            var attempt = transportRequest
+            attempt["operation"] = operation
+            attempt["limit"] = 1; attempt["offset"] = 0
+            attempt["requests"] = [["assetId": "asset-transport"]]
+            attempt["localIdentifiers"] = ["asset-transport"]
+            let attemptData = try JSONSerialization.data(withJSONObject: attempt)
+            let denied = try await Task.detached {
+                try socketRoundTrip(descriptor: descriptor, requestData: attemptData)
+            }.value
+            let payload = try #require(JSONSerialization.jsonObject(with: denied) as? [String: Any])
+            #expect(payload["code"] as? String == "photos_job_authorization_required")
+        }
+        let session = OwnerAuthenticationSnapshot(phase: .authenticated, deviceId: "test",
+            accessExpiresAt: Date().addingTimeInterval(300))
+        let credential = try await authority.issue(
+            plan: .init(operations: ["photos.preview"], assetIDs: ["asset-transport"]),
+            session: session, checkSession: { session })
+        let signedData = try signedPhotosJobRequest(transportData, credential: credential)
+        let responseData = try await Task.detached {
+            try socketRoundTrip(descriptor: descriptor, requestData: signedData)
         }.value
         let transportResponse = try #require(
             JSONSerialization.jsonObject(with: responseData) as? [String: Any]

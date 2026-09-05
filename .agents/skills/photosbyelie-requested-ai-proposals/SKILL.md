@@ -18,13 +18,15 @@ Generate bounded, auditable title and keyword drafts without changing canonical 
      --status
    ```
 
-3. Start or attach to the durable pass:
+3. Start or attach through Backstage **Run AI pass now**, or enable Review's
+   **Nightly AI at 02:00 (Madrid)** setting for app-managed scheduling. Backstage
+   must be open and signed in. The schedule defaults off and missed runs wait;
+   do not create a duplicate external scheduled task. Backstage prepares missing
+   previews under its bounded Photos job authority, then starts the detached
+   proposal engine with prepared asset IDs and no Photos authority.
 
-   ```bash
-   python3 scripts/requested_ai_proposal_pass.py \
-     --repo-root /Users/ecohen/MDev/PhotosByElie \
-     --trigger scheduled
-   ```
+   Direct invocation of the old proposal script is not a replacement for this
+   app-owned Photos preparation path. The `--status` command remains read-only.
 
 4. Report the final `requested`, `processed`, `proposed`, `skipped`, `failed`, and `remaining` counts.
 5. Leave failed items in Requesting AI. The next manual or scheduled pass retries them.

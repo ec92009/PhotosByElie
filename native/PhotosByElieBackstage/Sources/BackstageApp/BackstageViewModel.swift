@@ -496,6 +496,9 @@ final class BackstageViewModel: ObservableObject {
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
+    var nightlyAIJobsEnabled = UserDefaults.standard.bool(forKey: BackstageAIJobSchedule.enabledKey) {
+        didSet { UserDefaults.standard.set(nightlyAIJobsEnabled, forKey: BackstageAIJobSchedule.enabledKey) }
+    }
     private var nativeEnrollmentTask: Task<Void, Never>?
     private var nativeEnrollmentHandoff: OwnerEnrollmentHandoff?
     var hasPendingReviewMetadataAutosave: Bool {
@@ -807,7 +810,10 @@ final class BackstageViewModel: ObservableObject {
         self.activityRefreshTimeout = activityRefreshTimeout
         self.previewIPCServer = BackstagePreviewIPCServer(photoLibrary: photoLibrary)
         self.photoAccess = photoLibrary.authorization()
-        let runner = OwnerActionRunner(api: api)
+        let jobAuthentication = self.authenticationService
+        let runner = OwnerActionRunner(api: api, waker: OnDemandOwnerActionWaker(
+            ownerSnapshot: { await jobAuthentication.currentSnapshot() }
+        ))
         self.metadataService = MetadataGiveBackService(runner: runner)
         self.fixtureService = fixtureService ?? FixtureWorkflowService(
             runner: runner,
@@ -1705,7 +1711,8 @@ final class BackstageViewModel: ObservableObject {
         do {
             _ = try await api.revokeOwnerDevice(id: device.id)
             if authentication.deviceId == device.id {
-                authentication = try await authenticationService.signOut()
+                await BackstagePhotosJobAuthority.shared.revokeAll()
+            authentication = try await authenticationService.signOut()
                 enrolledOwnerDevices = []
                 ownerDeviceManagementStatus = "This Mac was revoked and its local Keychain credential was removed."
                 authenticationStatus = "This Mac was revoked. Choose Set up this Mac to enroll it again."
@@ -1730,6 +1737,7 @@ final class BackstageViewModel: ObservableObject {
             await endPBEOwnerSession(reason: "PBE Owner closed before sign-out.")
         }
         do {
+            await BackstagePhotosJobAuthority.shared.revokeAll()
             authentication = try await authenticationService.signOut()
             actions = []
             fixtures = []
@@ -5637,7 +5645,7 @@ final class BackstageViewModel: ObservableObject {
         await loadFixtureReviewWindow()
     }
 
-    func runAIProposalPass() async {
+    func runAIProposalPass(trigger: String = "manual") async {
         guard !isRunningAIPass else { return }
         guard !isUpdateOperationInProgress else {
             aiProposalStatus = "Finish the Backstage update before starting an AI pass."
@@ -5654,7 +5662,7 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         do {
-            fixtureAIStatus = try await fixtureService.startAIPass()
+            fixtureAIStatus = try await fixtureService.startAIPass(trigger: trigger)
             repeat {
                 try await Task.sleep(for: .seconds(2))
                 guard !aiPassMonitoringDetached else { return }

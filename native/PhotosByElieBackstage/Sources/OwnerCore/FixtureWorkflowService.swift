@@ -1692,8 +1692,8 @@ public actor FixtureWorkflowService {
         return result["aiProposals"]?.objectValue?["count"]?.intValue ?? 0
     }
 
-    public func startAIPass() async throws -> FixtureAIStatus {
-        _ = try await run("fixture-ai-pass-start", extra: [:])
+    public func startAIPass(trigger: String = "manual") async throws -> FixtureAIStatus {
+        _ = try await run("fixture-ai-pass-start", extra: ["trigger": .string(trigger)])
         return try await aiStatus()
     }
 

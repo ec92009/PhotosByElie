@@ -30,6 +30,7 @@ import time
 from typing import Any
 import uuid
 from contextlib import contextmanager
+import backstage_photos_job
 from urllib.parse import parse_qs, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -1763,16 +1764,24 @@ def _run_repo_json(config: ConnectorConfig, arguments: list[str], timeout: int =
     runtime_arguments = list(arguments)
     if len(runtime_arguments) > 1 and runtime_arguments[1].startswith("scripts/"):
         runtime_arguments[1] = str(_runtime_file(config, runtime_arguments[1]))
-    command = "cd " + shlex.quote(str(config.repo_root)) + " && " + " ".join(
-        shlex.quote(item) for item in runtime_arguments
-    )
+    private_input = backstage_photos_job.credential_input()
+    environment = _sidecar_helper_env(config)
+    if private_input is not None:
+        if len(runtime_arguments) < 2 or Path(runtime_arguments[1]).parent != config.code_root / "scripts":
+            raise RuntimeError("Photos authority can only reach a sealed runtime child")
+        environment["PBE_PHOTOS_JOB_STDIN"] = "1"
+        bootstrap = (
+            "import runpy,sys;sys.path.insert(0,sys.argv[1]);"
+            "import backstage_photos_job;backstage_photos_job.initialize();"
+            "sys.argv=sys.argv[2:];runpy.run_path(sys.argv[0],run_name='__main__')"
+        )
+        command = [sys.executable, "-I", "-S", "-B", "-c", bootstrap,
+                   str(config.code_root / "scripts"), *runtime_arguments[1:]]
+    else:
+        command = runtime_arguments
     completed = subprocess.run(
-        ["/bin/zsh", "-lic", command],
-        text=True,
-        capture_output=True,
-        timeout=timeout,
-        check=False,
-        env=_sidecar_helper_env(config),
+        command, cwd=config.repo_root, text=True, capture_output=True,
+        input=private_input, timeout=timeout, check=False, env=environment,
     )
     output = (completed.stdout or "").strip()
     if completed.returncode != 0:
@@ -2519,6 +2528,7 @@ def main() -> int:
     # launchd starts with a deliberately small PATH. Keep the normal local
     # toolchain discoverable to child Sidecar and maintenance processes.
     os.environ["PATH"] = _sidecar_helper_env()["PATH"]
+    backstage_photos_job.initialize()
     config = load_config(args.config.expanduser())
     if args.status:
         print(

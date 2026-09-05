@@ -373,6 +373,7 @@ def run_requested_ai_pass(
     repo_root: Path,
     *,
     trigger: str = "manual",
+    prepared_asset_ids: list[str] | None = None,
     limit: int | None = None,
     proposer: ProposalFunction = codex_proposer,
     preview_preparer: PreviewPreparer = capture_requested_ai_previews,
@@ -396,6 +397,9 @@ def run_requested_ai_pass(
                 "status": str(active["status"]),
             }
         candidates = _candidate_rows(conn, repo_root, limit)
+    if prepared_asset_ids is not None:
+        allowed_ids = set(prepared_asset_ids)
+        candidates = [item for item in candidates if item["assetId"] in allowed_ids]
     model_ladder = title_keyword_model_ladder(repo_root)
     preview_receipt = {
         "requested": 0,
@@ -407,7 +411,7 @@ def run_requested_ai_pass(
         for item in candidates
         if not Path(item["previewPath"]).is_file()
     ]
-    if missing_preview_ids:
+    if missing_preview_ids and prepared_asset_ids is None:
         preview_receipt = preview_preparer(repo_root, missing_preview_ids)
         with _runtime_connection(repo_root) as conn:
             candidates = _candidate_rows(conn, repo_root, limit)
@@ -649,7 +653,16 @@ def main() -> int:
     parser.add_argument("--trigger", choices=("scheduled", "manual"), default="manual")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--status", action="store_true")
+    parser.add_argument("--prepared-assets-stdin", action="store_true")
     args = parser.parse_args()
+    prepared = None
+    if args.prepared_assets_stdin:
+        raw = sys.stdin.buffer.read(16_000_001)
+        if len(raw) > 16_000_000:
+            raise ValueError("Prepared AI job is too large")
+        prepared = json.loads(raw)
+        if not isinstance(prepared, list) or any(not isinstance(item, str) for item in prepared):
+            raise ValueError("Prepared AI assets must be an ID list")
 
     if args.status:
         print(json.dumps(
@@ -672,6 +685,7 @@ def main() -> int:
     result = run_requested_ai_pass(
         args.repo_root,
         trigger=args.trigger,
+        prepared_asset_ids=prepared,
         limit=args.limit,
         progress=emit,
     )

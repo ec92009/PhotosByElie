@@ -3322,10 +3322,20 @@ def _start_photos_sync_run(repo_root: Path, limit: int = 25) -> dict:
     return {**_photos_sync_run_status(repo_root, run_id), "started": True}
 
 
-def _start_requested_ai_pass(repo_root: Path) -> dict:
+def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
+    if trigger not in {"manual", "scheduled"}:
+        raise ValueError("AI pass trigger is invalid")
     status = ai_run_status(repo_root)
     if status.get("active"):
         return {**status, "attached": True, "started": False}
+    # Prepare requested Photos bytes while the app-owned connector still holds
+    # its bounded capability. The detached proposal engine gets no capability.
+    from requested_ai_proposal_pass import _candidate_rows, _runtime_connection
+    from requested_ai_previews import capture_requested_ai_previews
+    with _runtime_connection(repo_root) as connection:
+        candidates = _candidate_rows(connection, repo_root, None)
+    capture_requested_ai_previews(repo_root, [item["assetId"] for item in candidates
+                                            if not Path(item["previewPath"]).is_file()])
     log_root = repo_root / ".review-logs" / "requested-ai-runs"
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"manual-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
@@ -3338,14 +3348,18 @@ def _start_requested_ai_pass(repo_root: Path) -> dict:
                 "--repo-root",
                 str(repo_root),
                 "--trigger",
-                "manual",
+                trigger,
+                "--prepared-assets-stdin",
             ],
             cwd=repo_root,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.PIPE,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+        assert process.stdin is not None
+        process.stdin.write(json.dumps([item["assetId"] for item in candidates]).encode())
+        process.stdin.close()
     finally:
         log_handle.close()
     return {
@@ -3681,7 +3695,7 @@ def _new_owner_fixture_pipeline_result(repo_root: Path, action: dict, connector_
             ),
         })
     elif mode == "fixture-ai-pass-start":
-        result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root)})
+        result.update({"readOnly": False, "ai": _start_requested_ai_pass(repo_root, str(manifest.get("trigger") or "manual"))})
     elif mode == "fixture-ai-pass-cancel":
         result.update({"readOnly": False, "ai": request_ai_run_cancel(repo_root)})
     elif mode == "photos-sync-snapshot":

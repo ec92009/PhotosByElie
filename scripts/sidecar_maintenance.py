@@ -569,6 +569,11 @@ def photos_index_sync(args: argparse.Namespace) -> int:
         policy = photos_discovery_window(repo_root)
         mode = "incremental"
         date_from = str(policy["dateFrom"])
+    import backstage_photos_job
+    authority = backstage_photos_job.credential()
+    if authority is not None:
+        date_from, date_to = authority["dateFrom"], authority["dateTo"]
+        policy.update(dateFrom=date_from, dateTo=date_to)
     _run_index_job(
         repo_root,
         job_id,

@@ -62,6 +62,7 @@ public enum BackstagePreviewIPCServerError: Error, LocalizedError {
 public final class BackstagePreviewIPCServer: @unchecked Sendable {
     private let configuration: BackstagePreviewIPCServerConfiguration
     private let photoLibrary: any PhotoLibraryServing
+    private let jobAuthority: BackstagePhotosJobAuthority
     private let queue = DispatchQueue(label: "com.photosbyelie.backstage.preview-ipc")
     private let stateLock = NSLock()
     private var listener: NWListener?
@@ -69,10 +70,12 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
 
     public init(
         photoLibrary: any PhotoLibraryServing,
-        configuration: BackstagePreviewIPCServerConfiguration = BackstagePreviewIPCServerConfiguration()
+        configuration: BackstagePreviewIPCServerConfiguration = BackstagePreviewIPCServerConfiguration(),
+        jobAuthority: BackstagePhotosJobAuthority = .shared
     ) {
         self.photoLibrary = photoLibrary
         self.configuration = configuration
+        self.jobAuthority = jobAuthority
     }
 
     deinit {
@@ -176,7 +179,7 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
                 return
             }
             let length = Int(header.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) })
-            guard length > 0, length <= self.configuration.limits.maximumRequestBytes else {
+            guard length > 0, length <= 24_000 else {
                 deadline.disarm()
                 connection.cancel()
                 return
@@ -195,7 +198,13 @@ public final class BackstagePreviewIPCServer: @unchecked Sendable {
                     exportDirectory: self.configuration.exportDirectory
                 )
                 Task {
-                    let response = await processor.process(requestData)
+                    let response: Data
+                    if let authorized = await self.jobAuthority.consume(requestData) {
+                        response = await processor.process(authorized)
+                        await self.jobAuthority.recordResponse(envelopeData: requestData, requestData: authorized, response: response)
+                    } else {
+                        response = Data(#"{"ok":false,"requestId":"","code":"photos_job_authorization_required","error":"Start this Photos job from Backstage; descriptor possession is not authority."}"#.utf8)
+                    }
                     self.queue.async {
                         self.send(response, on: connection, deadline: deadline)
                     }

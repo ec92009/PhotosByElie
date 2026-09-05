@@ -491,13 +491,8 @@ public enum BackstageControlCLI {
     private static let usage = """
     Usage:
       backstage-control [health|doctor|release verify|photos health|photos authorize] [--pretty]
-      backstage-control photos raw-recovery plan [--sample-limit <0-32>] [--pretty]
-      backstage-control photos raw-recovery sample --asset-id <Photos-local-ID> [--max-pixel <256-8192>] [--minimum-megapixels <1-100>] [--pretty]
-      backstage-control photos raw-recovery batch start [--destination <absolute-directory>] [--max-items <1-2000>] [--max-pixel <256-8192>] [--minimum-megapixels <1-100>] [--reserve-gb <1-100>] [--pretty]
-      backstage-control photos raw-recovery batch resume [--destination <absolute-directory>] [--max-items <1-2000>] [--pretty]
       backstage-control photos raw-recovery batch status [--destination <absolute-directory>] [--pretty]
       backstage-control photos raw-recovery batch cancel [--destination <absolute-directory>] [--pretty]
-      backstage-control photos raw-recovery batch index [--destination <absolute-directory>] [--pretty]
       backstage-control real-estate originals preflight --gallery <gallery-key> --items-file <items.json> [--pretty]
 
     Commands return JSON on stdout. Exit codes: 0 ready, 1 internal error,
@@ -552,29 +547,14 @@ public enum BackstageControlCLI {
             output(encode(health, pretty: pretty))
             return health.ok ? 0 : 2
         }
-        if Array(tokens.prefix(3)) == ["photos", "raw-recovery", "plan"] {
-            return await emitRawRecoveryPlan(
-                arguments: Array(tokens.dropFirst(3)),
-                pretty: pretty,
-                service: service,
-                output: output
-            )
-        }
-        if Array(tokens.prefix(3)) == ["photos", "raw-recovery", "sample"] {
-            return await emitRawRecoverySample(
-                arguments: Array(tokens.dropFirst(3)),
-                pretty: pretty,
-                service: service,
-                output: output
-            )
-        }
-        if Array(tokens.prefix(3)) == ["photos", "raw-recovery", "batch"] {
-            return await emitRawRecoveryBatch(
-                arguments: Array(tokens.dropFirst(3)),
-                pretty: pretty,
-                service: service,
-                output: output
-            )
+        if Array(tokens.prefix(2)) == ["photos", "raw-recovery"] {
+            if tokens.count >= 4, tokens[2] == "batch", ["status", "cancel"].contains(tokens[3]) {
+                return await emitRawRecoveryBatch(arguments: Array(tokens.dropFirst(3)),
+                    pretty: pretty, service: service, output: output)
+            }
+            return emitError(code: "photos_job_authorization_required",
+                message: "Standalone RAW recovery no longer has Photos authority. Start supported Photos jobs from Backstage.",
+                pretty: pretty, exitCode: 2, output: output)
         }
         if Array(tokens.prefix(3)) == ["real-estate", "originals", "preflight"] {
             return await emitRealEstateOriginalsPreflight(
@@ -611,133 +591,6 @@ public enum BackstageControlCLI {
         let health = await service.health(command: command)
         output(encode(health, pretty: pretty))
         return health.ok ? 0 : 2
-    }
-
-    private static func emitRawRecoveryPlan(
-        arguments: [String],
-        pretty: Bool,
-        service: BackstageControlService,
-        output: @escaping @Sendable (String) -> Void
-    ) async -> Int32 {
-        var sampleLimit = 8
-        var index = 0
-        while index < arguments.count {
-            guard arguments[index] == "--sample-limit",
-                  index + 1 < arguments.count,
-                  let value = Int(arguments[index + 1]),
-                  (0...32).contains(value) else {
-                return emitError(
-                    code: "invalid_arguments",
-                    message: "RAW recovery plan accepts only --sample-limit from 0 to 32.",
-                    pretty: pretty,
-                    exitCode: 64,
-                    output: output
-                )
-            }
-            sampleLimit = value
-            index += 2
-        }
-        do {
-            let plan = try await service.rawRecoveryPlan(sampleLimit: sampleLimit)
-            output(encode(plan, pretty: pretty))
-            return plan.ok ? 0 : 2
-        } catch {
-            return emitError(
-                code: "raw_recovery_plan_failed",
-                message: error.localizedDescription,
-                pretty: pretty,
-                exitCode: 1,
-                output: output
-            )
-        }
-    }
-
-    private static func emitRawRecoverySample(
-        arguments: [String],
-        pretty: Bool,
-        service: BackstageControlService,
-        output: @escaping @Sendable (String) -> Void
-    ) async -> Int32 {
-        var assetID: String?
-        var maxPixel = 8_192
-        var minimumMegapixels = 1
-        var index = 0
-        while index < arguments.count {
-            let argument = arguments[index]
-            guard ["--asset-id", "--max-pixel", "--minimum-megapixels"].contains(argument),
-                  index + 1 < arguments.count else {
-                return emitError(
-                    code: "invalid_arguments",
-                    message: "RAW recovery sample requires --asset-id and supports bounded pixel options.",
-                    pretty: pretty,
-                    exitCode: 64,
-                    output: output
-                )
-            }
-            let value = arguments[index + 1]
-            switch argument {
-            case "--asset-id":
-                guard assetID == nil, !value.isEmpty, value.utf8.count <= 2_048 else {
-                    return emitError(
-                        code: "invalid_arguments",
-                        message: "--asset-id must be one non-empty Photos local identifier.",
-                        pretty: pretty,
-                        exitCode: 64,
-                        output: output
-                    )
-                }
-                assetID = value
-            case "--max-pixel":
-                guard let parsed = Int(value), (256...8_192).contains(parsed) else {
-                    return emitError(
-                        code: "invalid_arguments",
-                        message: "--max-pixel must be between 256 and 8192.",
-                        pretty: pretty,
-                        exitCode: 64,
-                        output: output
-                    )
-                }
-                maxPixel = parsed
-            default:
-                guard let parsed = Int(value), (1...100).contains(parsed) else {
-                    return emitError(
-                        code: "invalid_arguments",
-                        message: "--minimum-megapixels must be between 1 and 100.",
-                        pretty: pretty,
-                        exitCode: 64,
-                        output: output
-                    )
-                }
-                minimumMegapixels = parsed
-            }
-            index += 2
-        }
-        guard let assetID else {
-            return emitError(
-                code: "invalid_arguments",
-                message: "RAW recovery sample requires --asset-id.",
-                pretty: pretty,
-                exitCode: 64,
-                output: output
-            )
-        }
-        do {
-            let receipt = try await service.recoverRawJPEGSample(
-                localIdentifier: assetID,
-                maxPixelSize: maxPixel,
-                minimumPixels: minimumMegapixels * 1_000_000
-            )
-            output(encode(receipt, pretty: pretty))
-            return receipt.ok ? 0 : 2
-        } catch {
-            return emitError(
-                code: "raw_recovery_sample_failed",
-                message: error.localizedDescription,
-                pretty: pretty,
-                exitCode: 1,
-                output: output
-            )
-        }
     }
 
     private static func emitRawRecoveryBatch(

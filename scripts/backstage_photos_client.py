@@ -18,6 +18,8 @@ import time
 import unicodedata
 import uuid
 
+import backstage_photos_job
+
 
 SCHEMA_VERSION = 1
 OPERATION = "photos.preview"
@@ -550,6 +552,10 @@ def _send_request(request: dict, descriptor: dict, timeout: float, *, operation_
             f"The Backstage {operation_label.lower()} request is too large.",
         )
 
+    try:
+        request_data = backstage_photos_job.envelope(request_data)
+    except ValueError as error:
+        raise BackstagePhotosClientError("photos_job_authorization_required", str(error)) from error
     deadline = time.monotonic() + timeout
     try:
         with socket.create_connection(
@@ -564,7 +570,15 @@ def _send_request(request: dict, descriptor: dict, timeout: float, *, operation_
                     "response_oversized",
                     f"The Backstage {operation_label.lower()} response exceeds the allowed size.",
                 )
-            return _read_exact(connection, response_length, deadline)
+            response_data = _read_exact(connection, response_length, deadline)
+            try:
+                denial = json.loads(response_data)
+            except (ValueError, UnicodeDecodeError):
+                denial = None
+            if isinstance(denial, dict) and denial.get("code") == "photos_job_authorization_required" and denial.get("ok") is False:
+                raise BackstagePhotosClientError("photos_job_authorization_required",
+                    "Start this Photos job from Backstage; standalone Photos helper access is retired.")
+            return response_data
     except BackstagePhotosClientError:
         raise
     except (ConnectionError, OSError, TimeoutError) as error:

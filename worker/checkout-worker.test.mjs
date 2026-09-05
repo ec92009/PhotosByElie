@@ -4057,6 +4057,32 @@ test("local ZIP delivery creates a real ZIP from a developed source", async () =
   assert.ok(zip.includes(Buffer.from(`${photoId}-jpg-1mp.jpg`)));
   assert.ok(!zip.includes(Buffer.from(`${photoId}/${photoId}-jpg-1mp.jpg`)));
 
+  const token = paid.order.delivery.downloadUrl.split("/").pop();
+  const url = `https://worker.test/download/${token}`;
+  const response = await worker.fetch(new Request(url));
+  assert.equal(response.status, 200);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), zip);
+  assert.match(response.headers.get("cache-control"), /no-store/);
+  const capability = await store.getDownload(token);
+  assert.equal(capability.downloadCount, 1);
+  assert.equal((await worker.fetch(new Request("https://worker.test/download/unknown"))).status, 404);
+  await store.putDownload({ ...capability, expiresAt: "2020-01-01T00:00:00Z" });
+  assert.equal((await worker.fetch(new Request(url))).status, 410);
+  await store.putDownload({ ...capability, downloadLimit: 1 });
+  assert.equal((await worker.fetch(new Request(url))).status, 429);
+  await store.putDownload(capability);
+  await store.updateOrder(paid.order.id, (order) => ({ ...order, refund: { status: "pending" } }));
+  assert.equal((await worker.fetch(new Request(url))).status, 410);
+  await store.updateOrder(paid.order.id, (order) => ({ ...order, refund: null }));
+  fs.unlinkSync(internalOrder.delivery.zipKey);
+  assert.equal((await worker.fetch(new Request(url))).status, 404);
+  assert.equal((await store.getDownload(token)).downloadCount, 1);
+  for (const id of [paid.order.id, "x%2f..%2f..%2foutside", "x%252f..%252foutside"]) {
+    for (const method of ["GET", "HEAD"]) {
+      assert.equal((await worker.fetch(new Request(`https://worker.test/download-order/${id}`, { method }))).status, 404);
+    }
+  }
+
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.rmSync(sourceRoot, { recursive: true, force: true });
 });
@@ -5749,5 +5775,57 @@ test("real-estate completed bytes retain gallery and media identity through rena
     await bucket.put(`custom/gallery-a/products/${draft.id}.json`, new TextEncoder().encode(JSON.stringify(ready)));
     await bucket.put(ready.outputs[type].key, new TextEncoder().encode("unbound legacy bytes"), { customMetadata: { galleryKey: gallery.key, deliverableId: draft.id, type } });
     await assert.rejects(service.getDeliverableAsset({ ...payload, id: draft.id }), { code: "real_estate_output_identity_unverified" });
+  }
+});
+
+
+test("local ZIP adapter confines paths and rejects escaping symlinks", async () => {
+  const root = fs.mkdtempSync("/tmp/pbe-local-confinement-");
+  const outputDir = `${root}/alternate-deliveries`;
+  fs.mkdirSync(outputDir);
+  const orderId = "PBE-20260905-AABBCCDDEE";
+  const zipKey = `${outputDir}/photosbyelie-order-${orderId}.zip`;
+  const outside = `${root}/outside.zip`;
+  fs.writeFileSync(outside, "private fixture");
+  const adapter = createLocalZipDelivery({ outputDir });
+  try {
+    for (const id of ["x/../../outside", "x%2f..%2foutside", "PBE-20260905-AABBCCDDEE/..", "", "../outside"]) {
+      await assert.rejects(adapter.getDownloadResponse({ orderId: id, zipKey: outside }), { code: "invalid_local_order_id" });
+    }
+    assert.equal((await adapter.getDownloadResponse({ orderId, zipKey: outside })).status, 403);
+    fs.symlinkSync(outside, zipKey);
+    assert.equal((await adapter.getDownloadResponse({ orderId, zipKey })).status, 403);
+    fs.unlinkSync(zipKey);
+    fs.writeFileSync(zipKey, "PK-owned-fixture");
+    const good = await adapter.getDownloadResponse({ orderId, zipKey });
+    assert.equal(good.status, 200);
+    assert.equal(await good.text(), "PK-owned-fixture");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("local HTTP server binds loopback and never bypasses Worker download authorization", async () => {
+  const http = await import("node:http");
+  const path = await import("node:path");
+  const root = fs.mkdtempSync("/tmp/pbe-local-http-");
+  fs.mkdirSync(`${root}/deliveries`);
+  fs.writeFileSync(`${root}/outside.zip`, "private-test-fixture");
+  fs.writeFileSync(`${root}/deliveries/photosbyelie-order-PBE-20260905-AABBCCDDEE.zip`, "order-test-fixture");
+  const source = fs.readFileSync(new URL("./local-server.mjs", import.meta.url), "utf8");
+  const worker = createPhotosByElieWorker({ catalog: loadCatalog(), store: createMemoryStore() });
+  const start = new Function("http", "fs", "path", "repoRoot", "port", "worker", "stripe", "realEstateGalleries", "console",
+    `${source.slice(source.indexOf("const toWebRequest ="))}\nreturn server;`);
+  const server = start(http, fs, path, root, 0, worker, null, [], { log() {} });
+  try {
+    if (!server.listening) await new Promise((resolve, reject) => { server.once("listening", resolve); server.once("error", reject); });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    for (const method of ["GET", "HEAD"]) {
+      for (const route of ["/download-order/PBE-20260905-AABBCCDDEE", "/download-order/x%2f..%2f..%2foutside", "/download-order/x%252f..%252foutside", "/download/unknown"]) {
+        assert.equal((await fetch(`${origin}${route}`, { method })).status, 404, `${method} ${route}`);
+      }
+    }
+    assert.equal(server.address().address, "127.0.0.1");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

@@ -7,6 +7,7 @@ import { createKvStore } from "./kv-store.mjs";
 import { createD1LifecycleDenyStore } from "./lifecycle-deny-store.mjs";
 import { createMockStripeClient } from "./mock-stripe.mjs";
 import { isNonRevocablePublicAsset } from "./non-revocable-public-assets.mjs";
+import { createD1GoogleOAuthTransactionStore } from "./google-oauth-transaction-store.mjs";
 import { createGoogleOAuthAuth } from "./google-oauth-auth.mjs";
 import { createKvOwnerActionStore } from "./owner-action-store.mjs";
 import { createKvOwnerDeviceAuthStore } from "./owner-device-auth-store.mjs";
@@ -87,6 +88,7 @@ const ownerAccessAuthFor = (env = {}) => {
 const googleOAuthAuthFor = (env = {}) => {
   if (!env.GOOGLE_OAUTH_CLIENT_ID || !env.GOOGLE_OAUTH_CLIENT_SECRET || !env.GOOGLE_OAUTH_SESSION_SECRET) return null;
   return createGoogleOAuthAuth({
+    transactionStore: env.ACCESS_DB ? createD1GoogleOAuthTransactionStore({ database: env.ACCESS_DB }) : null,
     clientId: env.GOOGLE_OAUTH_CLIENT_ID,
     clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     sessionSecret: env.GOOGLE_OAUTH_SESSION_SECRET,

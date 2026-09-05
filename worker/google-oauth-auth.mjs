@@ -4,6 +4,9 @@ const DEFAULT_COOKIE_NAME = "pbe_google_session";
 const DEFAULT_SCOPE = "openid email profile";
 const DEFAULT_SESSION_SECONDS = 7 * 24 * 60 * 60;
 const DEFAULT_STATE_SECONDS = 10 * 60;
+const TRANSACTION_COOKIE = "__Host-pbe_google_transaction";
+const randomToken = () => b64urlEncode(crypto.getRandomValues(new Uint8Array(32)));
+const digest = async (value) => b64urlEncode(new Uint8Array(await crypto.subtle.digest("SHA-256", textBytes(value))));
 const DEFAULT_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 const textEncoder = new TextEncoder();
@@ -138,7 +141,7 @@ const claimAudienceMatches = (claim, expected) => {
   return audiences.includes(expected);
 };
 
-const defaultVerifyIdToken = async ({ idToken, clientId, certs, now }) => {
+const defaultVerifyIdToken = async ({ idToken, clientId, certs, now, nonce }) => {
   const parts = String(idToken || "").split(".");
   if (parts.length !== 3) throw responseError(401, "google_id_token_missing", "Google did not return a usable ID token.");
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
@@ -165,12 +168,16 @@ const defaultVerifyIdToken = async ({ idToken, clientId, certs, now }) => {
   if (!claimAudienceMatches(claims.aud, clientId)) {
     throw responseError(401, "google_id_token_bad_audience", "Google ID token audience did not match.");
   }
+  if (!nonce || !timingSafeEqual(claims.nonce, nonce)) {
+    throw responseError(401, "google_oauth_nonce_mismatch", "Google login nonce did not match.");
+  }
   const email = String(claims.email || "").trim().toLowerCase();
   if (!email || claims.email_verified !== true) {
     throw responseError(401, "google_email_unverified", "Google did not return a verified email address.");
   }
   return {
     email,
+    nonce: claims.nonce,
     provider: "google-oauth",
     expiresAt: new Date(Number(claims.exp) * 1000).toISOString(),
     sessionSeconds: Math.max(0, Number(claims.exp) - nowSeconds),
@@ -190,6 +197,7 @@ export const createGoogleOAuthAuth = ({
   now = () => new Date(),
   cookieName = DEFAULT_COOKIE_NAME,
   verifyIdToken = null,
+  transactionStore = null,
 } = {}) => {
   const cleanClientId = String(clientId || "").trim();
   const cleanClientSecret = String(clientSecret || "").trim();
@@ -217,9 +225,10 @@ export const createGoogleOAuthAuth = ({
     return certsPromise;
   };
 
-  const buildState = async (request, { returnTo = "", intent = "" } = {}) => {
+  const buildState = async (request, { returnTo = "", intent = "", transactionId, binding, nonce } = {}) => {
     const issuedAt = now();
     return encodeSignedJson(cleanSessionSecret, {
+      transactionId, binding, nonce,
       returnTo: String(returnTo || new URL(request.url).origin),
       intent: String(intent || ""),
       redirectUri: redirectUriFor(request),
@@ -241,23 +250,37 @@ export const createGoogleOAuthAuth = ({
     return state;
   };
 
-  const loginUrlFor = async (request, { returnTo = "", intent = "" } = {}) => {
+  const clearTransactionCookie = () => `${TRANSACTION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax; Secure`;
+
+  const beginLogin = async (request, { returnTo = "", intent = "" } = {}) => {
+    if (new URL(request.url).protocol !== "https:" || !transactionStore) {
+      throw responseError(503, "google_oauth_transaction_unavailable", "Secure Google login transactions are unavailable.");
+    }
+    const verifier = randomToken();
+    const binding = await digest(verifier);
+    const transactionId = randomToken();
+    const nonce = randomToken();
+    await transactionStore.put({ id: transactionId, binding, expiresAt: Math.floor(now().getTime() / 1000) + stateTtlSeconds });
     const url = new URL(authUrl);
     url.searchParams.set("client_id", cleanClientId);
     url.searchParams.set("redirect_uri", redirectUriFor(request));
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", DEFAULT_SCOPE);
-    url.searchParams.set("state", await buildState(request, { returnTo, intent }));
+    url.searchParams.set("state", await buildState(request, { returnTo, intent, transactionId, binding, nonce }));
     // This Worker is the account-picker entrypoint. Do not let a caller
     // downgrade the flow to prompt=none or silently reuse another account.
     url.searchParams.set("prompt", "select_account");
     url.searchParams.set("access_type", "online");
-    return url.href;
+    url.searchParams.set("code_challenge", binding);
+    url.searchParams.set("code_challenge_method", "S256");
+    url.searchParams.set("nonce", nonce);
+    return { url: url.href, cookie: `${TRANSACTION_COOKIE}=${verifier}; Max-Age=${stateTtlSeconds}; Path=/; HttpOnly; SameSite=Lax; Secure` };
   };
 
-  const exchangeCode = async (request, code) => {
+  const exchangeCode = async (request, code, verifier) => {
     const body = new URLSearchParams();
     body.set("code", code);
+    body.set("code_verifier", verifier);
     body.set("client_id", cleanClientId);
     body.set("client_secret", cleanClientSecret);
     body.set("redirect_uri", redirectUriFor(request));
@@ -275,11 +298,13 @@ export const createGoogleOAuthAuth = ({
     return payload;
   };
 
-  const verifyToken = async (idToken) => {
+  const verifyToken = async (idToken, nonce) => {
     if (typeof verifyIdToken === "function") {
-      return verifyIdToken(idToken, { clientId: cleanClientId, now, certs });
+      const identity = await verifyIdToken(idToken, { clientId: cleanClientId, now, certs, nonce });
+      if (!nonce || !timingSafeEqual(identity?.nonce, nonce)) throw responseError(401, "google_oauth_nonce_mismatch", "Google login nonce did not match.");
+      return identity;
     }
-    return defaultVerifyIdToken({ idToken, clientId: cleanClientId, certs, now });
+    return defaultVerifyIdToken({ idToken, clientId: cleanClientId, certs, now, nonce });
   };
 
   const sessionCookieSecurity = (request) => {
@@ -337,21 +362,39 @@ export const createGoogleOAuthAuth = ({
     return session;
   };
 
+  const transactionVerifier = (request) => {
+    const cookies = (request.headers.get("cookie") || "").split(";").map(part => part.trim()).filter(part => part.startsWith(`${TRANSACTION_COOKIE}=`));
+    return cookies.length === 1 ? cookies[0].slice(TRANSACTION_COOKIE.length + 1) : "";
+  };
+  const cancelLogin = async (request) => {
+    const verifier = transactionVerifier(request);
+    if (/^[A-Za-z0-9_-]{43}$/.test(verifier) && transactionStore) await transactionStore.cancel(await digest(verifier));
+  };
+
   const handleCallback = async (request) => {
     const url = new URL(request.url);
+    const state = await decodeState(url.searchParams.get("state") || "", request);
+    const verifier = transactionVerifier(request);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(verifier) || !state.transactionId || !state.nonce
+        || !timingSafeEqual(await digest(verifier), state.binding)) {
+      throw responseError(401, "google_oauth_browser_mismatch", "Google login must finish in the browser where it started.");
+    }
+    if (!transactionStore || !await transactionStore.consume({ id: state.transactionId, binding: state.binding, nowSeconds: Math.floor(now().getTime() / 1000) })) {
+      throw responseError(401, "google_oauth_transaction_used", "Google login transaction expired or was already used.");
+    }
     if (url.searchParams.get("error")) {
-      throw responseError(401, "google_oauth_denied", url.searchParams.get("error_description") || "Google login was not completed.");
+      throw responseError(401, "google_oauth_denied", "Google login was not completed.");
     }
     const code = url.searchParams.get("code") || "";
-    const state = await decodeState(url.searchParams.get("state") || "", request);
     if (!code) throw responseError(400, "google_oauth_missing_code", "Google login callback did not include a code.");
-    const tokenPayload = await exchangeCode(request, code);
-    const identity = await verifyToken(tokenPayload.id_token);
+    const tokenPayload = await exchangeCode(request, code, verifier);
+    const identity = await verifyToken(tokenPayload.id_token, state.nonce);
     const sessionToken = await sessionTokenFor(identity);
     const cookie = cookieForToken(sessionToken, request);
     return {
       identity,
       cookie,
+      clearTransactionCookie: clearTransactionCookie(),
       sessionToken,
       returnTo: state.returnTo || new URL(request.url).origin,
     };
@@ -359,7 +402,9 @@ export const createGoogleOAuthAuth = ({
 
   return {
     provider: "google-oauth",
-    loginUrlFor,
+    beginLogin,
+    clearTransactionCookie,
+    cancelLogin,
     handleCallback,
     issueSessionToken: sessionTokenFor,
     optionalSession,

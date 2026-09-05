@@ -13,3 +13,7 @@ Maintainability keeps visual SQL/schema handling in bounded helpers and the visu
 The full Node/Python run passes 328 Node and 520 Python tests; the final fixture rerun passes 58. A 404-test native run passed before the final focus-change assertion. The final full native run passed the request-scope checks but hit the existing five-second 2,000-thumbnail backfill deadline under heavy machine load (1,570 thumbnails completed); its unchanged isolated rerun is recorded below. No timeout or assertion was weakened.
 
 The unchanged thumbnail test passed in isolation (6.679 seconds). Final validation therefore covers all 404 native tests, with the timing failure and isolated pass retained; 328 Node, 520 Python and the final 58-test fixture run pass. Maintainability and whitespace checks pass.
+
+## Installed verification
+
+Signed v250.5/build 329 from `1ca93f0e9be729c60f09aa8cf885db0934b984eb` is installed and launched. Strict signature, Owner authentication and Photos access pass; build 328 is retained as rollback. In RE Review, selecting Contrast alone enabled Needs AI; clearing it disabled the action. Visual + Incorrect title enabled it; clearing only the visual reason left metadata-only enabled; clearing the metadata reason disabled it again. No Needs AI submission or generator action was clicked. Original Picked-only filtering was restored and the app returned to Uploads. Build-time isolated 900/1800px preview smoke passed. The local update archive was not published.

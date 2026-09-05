@@ -5,6 +5,39 @@ import Testing
 
 @Suite("Owner Culling SQLite parity")
 struct OwnerCullingSQLiteStoreTests {
+    @Test("Uploaded Gallery status is inclusive, paged, read only, and fixture scoped")
+    func uploadedGalleryStatus() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("culling-uploaded-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(databaseURL, "INSERT INTO asset_delivery_state(asset_id, delivery_state) VALUES ('asset-1', 'needs-upload'), ('asset-2', 'live')")
+        let before = try Data(contentsOf: databaseURL)
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+        let uploaded = try store.cullingWindow(fixtureID: "fixture-expo", views: [.uploaded], sourceFilters: [])
+        #expect(uploaded.items.map(\.id) == ["asset-2"])
+        #expect(uploaded.summary.filtered == 1)
+        #expect(uploaded.summary.universe == 2)
+        #expect(uploaded.summary.uploaded == 1)
+        let combined = try store.cullingWindow(fixtureID: "fixture-expo", views: [.uploaded, .picked], limit: 1, sourceFilters: [])
+        #expect(combined.items.count == 1)
+        #expect(combined.summary.filtered == 2)
+        #expect(combined.hasNext)
+        let overlap = try store.cullingWindow(fixtureID: "fixture-expo", views: [.uploaded, .hidden], sourceFilters: [])
+        #expect(overlap.items.map(\.id) == ["asset-2"])
+        #expect(overlap.summary.filtered == 1)
+        let child = try store.cullingWindow(fixtureID: "fixture-child", views: [.uploaded], sourceFilters: [])
+        #expect(child.items.isEmpty)
+        #expect(child.summary.uploaded == 0)
+        #expect(try Data(contentsOf: databaseURL) == before)
+        var liveCandidate = CullingCandidate(id: "live", filename: "live.jpg", mediaType: "photo")
+        liveCandidate.isUploaded = true
+        let other = CullingCandidate(id: "other", filename: "other.jpg", mediaType: "photo")
+        let local = CullingWorkspace.evaluate([liveCandidate, other], query: CullingQuery(pick: [.uploaded]))
+        #expect(local.items.map(\.id) == ["live"])
+    }
+
     @Test("Bounded Culling pages preserve complete summaries and never modify SQLite")
     func cullingPagesAreStableReadOnlySlices() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("culling-pages-\(UUID())")

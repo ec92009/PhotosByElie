@@ -1380,6 +1380,33 @@ class FixturePipelineTest(unittest.TestCase):
         self.assertEqual(empty["summary"]["total"], 0)
         self.assertEqual(empty["items"], [])
 
+    def test_uploaded_status_is_inclusive_and_fixture_scoped(self):
+        root = create_fixture(self.root, "Root", fixture_id="root")
+        set_fixture_asset_state(self.root, root["fixtureId"], ["asset-1", "asset-2"], "picked")
+        child = create_fixture(self.root, "Child", parent_fixture_id=root["fixtureId"], fixture_id="child")
+        set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "hidden")
+        set_fixture_asset_state(self.root, child["fixtureId"], ["asset-2"], "picked")
+        with connect(self.root) as connection:
+            connection.execute("UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id IN ('asset-1', 'asset-3')")
+            connection.commit()
+        for filters, expected in [(["uploaded"], {"asset-1"}),
+                                  (["uploaded", "picked"], {"asset-1", "asset-2"}),
+                                  (["uploaded", "hidden"], {"asset-1"})]:
+            gallery = fixture_culling_window(self.root, child["fixtureId"], views=filters)
+            self.assertEqual({item["assetId"] for item in gallery["items"]}, expected)
+            self.assertEqual(gallery["summary"]["filtered"], len(expected))
+            self.assertEqual(gallery["summary"]["universe"], 2)
+            self.assertEqual(gallery["summary"]["uploaded"], 1)
+            review = fixture_review_window(self.root, child["fixtureId"], state_filters=filters)
+            self.assertEqual({item["assetId"] for item in review["items"]}, expected)
+            self.assertEqual(review["summary"]["total"], len(expected))
+        set_fixture_asset_state(self.root, child["fixtureId"], ["asset-1"], "undecided")
+        unpicked_live = fixture_review_window(self.root, child["fixtureId"], state_filters=["uploaded"])
+        self.assertEqual([item["assetId"] for item in unpicked_live["items"]], ["asset-1"])
+        with connect(self.root) as connection:
+            self.assertEqual(connection.execute("SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'").fetchone()[0], "live")
+            self.assertEqual(connection.execute("SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'child' AND asset_id = 'asset-1'").fetchone()[0], "undecided")
+
     def test_review_state_filters_are_independent_and_server_backed(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(

@@ -35,7 +35,7 @@ DESTINATIONS = {"r2", "apple_photos", "archive"}
 FIXTURE_PLACEMENT_STATES = {"undecided", "picked", "hidden"}
 FIXTURE_ELIGIBILITY_STATES = {"active", "dormant"}
 FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
-CULLING_VIEWS = {"undecided", "picked", "hidden", "all-active"}
+CULLING_VIEWS = {"undecided", "picked", "hidden", "uploaded", "all-active"}
 EDITORIAL_STATES = {"unreviewed", "requesting-ai", "proposed", "approved"}
 DELIVERY_STATES = {"not-ready", "needs-upload", "uploading", "live", "failed"}
 REVIEW_MODES = {"backfill", "full"}
@@ -1561,11 +1561,11 @@ def fixture_culling_window(
     """Query one fixture's complete effective universe without materializing ID lists."""
     clean_view = str(view or "undecided").strip().casefold()
     if clean_view not in CULLING_VIEWS:
-        raise ValueError("culling view must be undecided, picked, hidden, or all-active")
+        raise ValueError("culling view must be undecided, picked, hidden, uploaded, or all-active")
     clean_views = {
         str(value or "").strip().casefold()
         for value in (views or [])
-        if str(value or "").strip().casefold() in {"undecided", "picked", "hidden"}
+        if str(value or "").strip().casefold() in {"undecided", "picked", "hidden", "uploaded"}
     }
     if not clean_views:
         clean_views = (
@@ -1715,6 +1715,8 @@ def fixture_culling_window(
              AND current_decision.fixture_id = ?
             LEFT JOIN sidecar_decisions AS global_decision
               ON global_decision.asset_id = a.asset_id
+            LEFT JOIN asset_delivery_state AS delivery
+              ON delivery.asset_id = a.asset_id
         """
         universe_media = conn.execute(
             f"""
@@ -1734,7 +1736,8 @@ def fixture_culling_window(
                    sum(CASE WHEN COALESCE(current_decision.placement_state, 'undecided') = 'undecided'
                             THEN 1 ELSE 0 END) undecided,
                    sum(CASE WHEN current_decision.placement_state = 'picked' THEN 1 ELSE 0 END) picked,
-                   sum(CASE WHEN current_decision.placement_state = 'hidden' THEN 1 ELSE 0 END) hidden
+                   sum(CASE WHEN current_decision.placement_state = 'hidden' THEN 1 ELSE 0 END) hidden,
+                   sum(CASE WHEN delivery.delivery_state = 'live' THEN 1 ELSE 0 END) uploaded
             FROM {from_sql}
             WHERE {base_where_sql}
             """,
@@ -1742,12 +1745,18 @@ def fixture_culling_window(
         ).fetchone()
         view_predicates = list(predicates)
         view_params = list(params)
-        if clean_views != {"undecided", "picked", "hidden"}:
-            placeholders = ",".join("?" for _ in clean_views)
-            view_predicates.append(
-                f"COALESCE(current_decision.placement_state, 'undecided') IN ({placeholders})"
-            )
-            view_params.extend(sorted(clean_views))
+        if not {"undecided", "picked", "hidden"}.issubset(clean_views):
+            placements = sorted(clean_views - {"uploaded"})
+            status_predicates = []
+            if placements:
+                placeholders = ",".join("?" for _ in placements)
+                status_predicates.append(
+                    f"COALESCE(current_decision.placement_state, 'undecided') IN ({placeholders})"
+                )
+                view_params.extend(placements)
+            if "uploaded" in clean_views:
+                status_predicates.append("delivery.delivery_state = 'live'")
+            view_predicates.append("(" + " OR ".join(status_predicates) + ")")
         view_where_sql = " AND ".join(view_predicates)
         filtered_total = conn.execute(
             f"SELECT count(*) FROM {from_sql} WHERE {view_where_sql}",
@@ -1786,6 +1795,7 @@ def fixture_culling_window(
                    COALESCE(current_decision.eligibility_state, 'active') eligibility_state,
                    COALESCE(global_decision.rating, 0) rating,
                    COALESCE(global_decision.color, '') color,
+                   COALESCE(delivery.delivery_state, 'not-ready') delivery_state,
                    COALESCE(global_decision.metadata_state, 'unreviewed') editorial_state,
                    CASE
                      WHEN COALESCE(global_decision.metadata_state, 'unreviewed') <> 'unreviewed'
@@ -1818,6 +1828,7 @@ def fixture_culling_window(
             "rating": int(row["rating"] or 0),
             "color": str(row["color"] or ""),
             "editorialState": str(row["editorial_state"]),
+            "deliveryState": str(row["delivery_state"]),
             "keywords": _read_json(row["keywords_json"], []),
         })
     total = int(filtered_total or 0)
@@ -1835,6 +1846,7 @@ def fixture_culling_window(
         "summary": {
             "filtered": total,
             "universe": int(summary["total"] or 0),
+            "uploaded": int(summary["uploaded"] or 0),
             "undecided": int(summary["undecided"] or 0),
             "picked": int(summary["picked"] or 0),
             "hidden": int(summary["hidden"] or 0),
@@ -1876,9 +1888,11 @@ def _fixture_review_from_sql(
     fixture: sqlite3.Row,
     *,
     include_hidden: bool = False,
+    include_uploaded: bool = False,
 ) -> tuple[str, list[Any]]:
     placement_predicate = (
-        "IN ('picked', 'hidden')" if include_hidden else "= 'picked'"
+        "IN ('picked', 'hidden', 'undecided')" if include_uploaded
+        else "IN ('picked', 'hidden')" if include_hidden else "= 'picked'"
     )
     if fixture["parent_fixture_id"]:
         return (
@@ -1932,7 +1946,7 @@ def _fixture_review_predicates(
         selected_states = {
             str(value or "").strip().casefold()
             for value in state_filters
-        } & {"picked", "approved", "hidden"}
+        } & {"picked", "approved", "hidden", "uploaded"}
         state_predicates: list[str] = []
         if "picked" in selected_states:
             state_predicates.append(
@@ -1952,6 +1966,8 @@ def _fixture_review_predicates(
                 )
                 """
             )
+        if "uploaded" in selected_states:
+            state_predicates.append("delivery.delivery_state = 'live'")
         if "hidden" in selected_states:
             state_predicates.append(
                 "current_decision.placement_state = 'hidden'"
@@ -2106,11 +2122,12 @@ def fixture_review_window(
         selected_states = {
             str(value or "").strip().casefold()
             for value in (state_filters or [])
-        } & {"picked", "approved", "hidden"}
+        } & {"picked", "approved", "hidden", "uploaded"}
         from_sql, base_params = _fixture_review_from_sql(
             fixture,
+            include_uploaded="uploaded" in selected_states,
             include_hidden=(
-                "hidden" in selected_states
+                bool(selected_states & {"hidden", "uploaded"})
                 if state_filters is not None
                 else clean_mode == "full"
             ),

@@ -156,23 +156,12 @@ public struct OwnerCullingSQLiteStore: Sendable {
         )
         let viewRows = filteredRows.filter {
             effectiveViews.contains($0["placement_state"]?.stringValue ?? "undecided")
+                || (effectiveViews.contains("uploaded") && $0["delivery_state"]?.stringValue == "live")
         }
         let pageStart = min(safeOffset, viewRows.count)
         let pageEnd = min(viewRows.count, pageStart + safeLimit)
         let page = Array(viewRows[pageStart..<pageEnd])
-        let summary = FixtureCullingSummary(json: [
-            "filtered": .number(Double(viewRows.count)),
-            "universe": .number(Double(filteredRows.count)),
-            "undecided": .number(Double(filteredRows.filter {
-                ($0["placement_state"]?.stringValue ?? "undecided") == "undecided"
-            }.count)),
-            "picked": .number(Double(filteredRows.filter {
-                ($0["placement_state"]?.stringValue ?? "") == "picked"
-            }.count)),
-            "hidden": .number(Double(filteredRows.filter {
-                ($0["placement_state"]?.stringValue ?? "") == "hidden"
-            }.count)),
-        ])
+        let summary = cullingSummary(rows: filteredRows, visibleCount: viewRows.count)
         let outputView = effectiveViews.count == 1
             ? (FixtureCullingView(rawValue: effectiveViews.first ?? "") ?? .allActive).rawValue
             : FixtureCullingView.allActive.rawValue
@@ -646,6 +635,7 @@ private func summaryJSON(_ summary: FixtureCullingSummary) -> [String: JSONValue
         "undecided": .number(Double(summary.undecided)),
         "picked": .number(Double(summary.picked)),
         "hidden": .number(Double(summary.hidden)),
+        "uploaded": .number(Double(summary.uploaded)),
     ]
 }
 
@@ -974,4 +964,23 @@ private struct CullingSelectionFilter {
         }
         return true
     }
+}
+
+private func cullingSummary(rows: [[String: JSONValue]], visibleCount: Int) -> FixtureCullingSummary {
+    return FixtureCullingSummary(json: [
+        "filtered": .number(Double(visibleCount)),
+        "universe": .number(Double(rows.count)),
+        "undecided": .number(Double(rows.filter {
+            ($0["placement_state"]?.stringValue ?? "undecided") == "undecided"
+        }.count)),
+        "picked": .number(Double(rows.filter {
+            ($0["placement_state"]?.stringValue ?? "") == "picked"
+        }.count)),
+        "uploaded": .number(Double(rows.filter {
+            $0["delivery_state"]?.stringValue == "live"
+        }.count)),
+        "hidden": .number(Double(rows.filter {
+            ($0["placement_state"]?.stringValue ?? "") == "hidden"
+        }.count)),
+    ])
 }

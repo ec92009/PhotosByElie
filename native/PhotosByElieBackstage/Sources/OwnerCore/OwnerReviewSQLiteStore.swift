@@ -60,7 +60,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             ? (mode == .full ? ["picked", "approved", "hidden"] : ["picked"])
             : selectedStates
         let includeApproved = stateFilters != nil || mode == .full
-        let includeHidden = effectiveStates.contains("hidden")
+        let includeHidden = effectiveStates.contains("hidden") || effectiveStates.contains("uploaded")
         let selectedMedia = Set(mediaFilters.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
             .intersection(["photos", "videos"])
         let connection = try ReviewSQLiteConnection(
@@ -108,7 +108,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
                 AND tombstone.tombstone_state = 'active'
             )
             """,
-            "current_decision.placement_state IN ('picked'\(includeHidden ? ", 'hidden'" : ""))",
+            effectiveStates.contains("uploaded") ? "1 = 1" : "current_decision.placement_state IN ('picked'\(includeHidden ? ", 'hidden'" : ""))",
         ]
         let bindings: [ReviewSQLiteBinding] = [.string(cleanFixtureID)]
 
@@ -116,18 +116,7 @@ public struct OwnerReviewSQLiteStore: Sendable {
             predicates.append("editorial.editorial_state != 'approved'")
         }
         if stateFilters != nil {
-            let statePredicates = effectiveStates.compactMap { state -> String? in
-                switch state {
-                case "picked":
-                    return "(current_decision.placement_state = 'picked' AND editorial.editorial_state != 'approved')"
-                case "approved":
-                    return "(current_decision.placement_state = 'picked' AND editorial.editorial_state = 'approved')"
-                case "hidden":
-                    return "current_decision.placement_state = 'hidden'"
-                default:
-                    return nil
-                }
-            }
+            let statePredicates = effectiveStates.compactMap(reviewStatusPredicate)
             predicates.append(
                 statePredicates.isEmpty ? "0 = 1" : "(" + statePredicates.joined(separator: " OR ") + ")"
             )
@@ -1665,4 +1654,19 @@ private func timing(started: Date) -> JSONValue {
     .object(["localTransaction": .object([
         "durationMs": .number(max(0, Date().timeIntervalSince(started) * 1_000)),
     ])])
+}
+
+private func reviewStatusPredicate(_ state: String) -> String? {
+    switch state {
+    case "picked":
+        return "(current_decision.placement_state = 'picked' AND editorial.editorial_state != 'approved')"
+    case "approved":
+        return "(current_decision.placement_state = 'picked' AND editorial.editorial_state = 'approved')"
+    case "uploaded":
+        return "delivery.delivery_state = 'live'"
+    case "hidden":
+        return "current_decision.placement_state = 'hidden'"
+    default:
+        return nil
+    }
 }

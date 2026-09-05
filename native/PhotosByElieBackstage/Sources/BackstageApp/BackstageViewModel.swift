@@ -2628,6 +2628,7 @@ final class BackstageViewModel: ObservableObject {
                 case .undecided: .undecided
                 case .picked: .picked
                 case .hidden: .rejected
+                case .uploaded: .uploaded
                 case .allActive: .undecided
                 }
             }),
@@ -2695,6 +2696,7 @@ final class BackstageViewModel: ObservableObject {
         case .undecided: cullingWorkspace.summary.undecided
         case .picked: cullingWorkspace.summary.picked
         case .hidden: cullingWorkspace.summary.rejected
+        case .uploaded: fixtureCullingWindow?.summary.uploaded ?? cullingAssets.filter { $0.deliveryState == "live" }.count
         case .allActive: cullingWorkspace.summary.total
         }
     }
@@ -2835,7 +2837,7 @@ final class BackstageViewModel: ObservableObject {
         if cullingPool == nil, hasCurrentCullingFixture, let window = fixtureCullingWindow {
             return CullingWorkspaceResult(
                 items: window.items.map { asset in
-                    CullingCandidate(
+                    var candidate = CullingCandidate(
                         id: asset.id,
                         title: asset.title,
                         filename: asset.filename,
@@ -2848,6 +2850,8 @@ final class BackstageViewModel: ObservableObject {
                         pixelHeight: asset.pixelHeight,
                         decision: cullingStates[asset.id]
                     )
+                    candidate.isUploaded = asset.deliveryState == "live"
+                    return candidate
                 },
                 summary: CullingSummary(
                     total: window.summary.universe,
@@ -2880,7 +2884,7 @@ final class BackstageViewModel: ObservableObject {
         }
         return CullingWorkspace.evaluate(
             cullingAssets.map { asset in
-                CullingCandidate(
+                var candidate = CullingCandidate(
                     id: asset.id,
                     title: asset.title,
                     filename: asset.filename,
@@ -2893,6 +2897,8 @@ final class BackstageViewModel: ObservableObject {
                     pixelHeight: asset.pixelHeight,
                     decision: cullingStates[asset.id]
                 )
+                candidate.isUploaded = asset.deliveryState == "live"
+                return candidate
             },
             query: cullingQuery,
             offset: cullingWindowOffset,
@@ -2911,6 +2917,7 @@ final class BackstageViewModel: ObservableObject {
             // the authoritative write is in flight; a failure restores the
             // prior state and therefore restores the card.
             return cullingAssets.filter { asset in
+                if cullingViews.contains(.uploaded), asset.deliveryState == "live" { return true }
                 let placement = FixturePlacementState(
                     rawValue: cullingStates[asset.id]?.pickState
                         ?? asset.placementState.rawValue
@@ -5230,7 +5237,8 @@ final class BackstageViewModel: ObservableObject {
         } else {
             state = .picked
         }
-        guard reviewStateFilters.contains(state) else { return false }
+        guard reviewStateFilters.contains(state)
+            || (reviewStateFilters.contains(.uploaded) && item.deliveryState == "live") else { return false }
         guard retainingConsumedProposal || !reviewProposalAvailableOnly || item.proposalReady else {
             return false
         }
@@ -7192,7 +7200,8 @@ final class BackstageViewModel: ObservableObject {
             adjustFixturePlacementSummary(
                 &window.summary,
                 from: before,
-                to: after
+                to: after,
+                isUploaded: window.items[index].deliveryState == "live"
             )
             window.items[index].placementState = after
         }
@@ -7202,7 +7211,8 @@ final class BackstageViewModel: ObservableObject {
     private func adjustFixturePlacementSummary(
         _ summary: inout FixtureCullingSummary,
         from before: FixturePlacementState,
-        to after: FixturePlacementState
+        to after: FixturePlacementState,
+        isUploaded: Bool
     ) {
         func adjust(_ state: FixturePlacementState, by delta: Int) {
             switch state {
@@ -7224,8 +7234,9 @@ final class BackstageViewModel: ObservableObject {
             case .hidden: cullingViews.contains(.hidden)
             }
         }
-        let beforeIncluded = isIncluded(before)
-        let afterIncluded = isIncluded(after)
+        let uploadedIncluded = isUploaded && cullingViews.contains(.uploaded)
+        let beforeIncluded = uploadedIncluded || isIncluded(before)
+        let afterIncluded = uploadedIncluded || isIncluded(after)
         if beforeIncluded != afterIncluded {
             summary.filtered = max(0, summary.filtered + (afterIncluded ? 1 : -1))
         }

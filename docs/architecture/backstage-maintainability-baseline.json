@@ -13,7 +13,8 @@
   "files": [
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
-      "nloc": 8824
+      "nloc": 8833,
+      "reviewNote": "PBB-175: nine lines for Uploaded enum mapping, candidate projection and optimistic count retention; no unrelated ceiling growth."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/CullingView.swift",
@@ -37,7 +38,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/FixtureWorkflowService.swift",
-      "nloc": 1785
+      "nloc": 1791,
+      "reviewNote": "PBB-175: Uploaded enum labels and decoded summary count add six declarative lines."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerAPIClient.swift",
@@ -49,8 +51,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/OwnerReviewSQLiteStore.swift",
-      "nloc": 1580,
-      "reviewNote": "PBB-174: one added SQL predicate enforces the existing global Exclude visibility contract. File ceiling1580 and reviewWindow262 NLOC; no added control flow or responsibility. Keep conjuncts separate for reviewability; do not widen unrelated ceilings."
+      "nloc": 1583,
+      "reviewNote": "PBB-175: inclusive Uploaded predicate; status switch extracted from reviewWindow, with three net lines."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/PhotoLibraryService.swift",
@@ -956,9 +958,10 @@
       "start": 381,
       "end": 433,
       "nloc": 50,
-      "ccn": 20,
+      "ccn": 22,
       "parameters": 0,
-      "nesting": 2
+      "nesting": 2,
+      "reviewNote": "PBB-175: Lizard labels matches(candidate:query:) as init. Inclusive Uploaded OR adds two decisions; 51 NLOC, nesting 2. Existing predicate pipeline remains cohesive."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/OwnerCore/CustomerPhotoLinkSQLiteStore.swift::resolve assetID : String , fixtureID : String",

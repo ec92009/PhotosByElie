@@ -1222,6 +1222,24 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySavedViewLabel == "Custom")
     }
 
+    @Test("Uploaded Gallery projection retains a live photo across local placement changes")
+    @MainActor
+    func uploadedGalleryProjection() {
+        let live = FixtureAsset(id: "live", title: "Live photo", filename: "live.jpg", mediaType: "photo", placementState: .picked, deliveryState: "live")
+        let model = BackstageViewModel(photoLibrary: InertPhotoLibrary())
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        var window = cullingWindow(fixtureID: "fixture-expo", photos: 1, videos: 0)
+        window.items = [live]
+        window.summary.uploaded = 1
+        model.fixtureCullingWindow = window
+        model.cullingViews = [.uploaded]
+        #expect(model.visibleCullingAssets.map(\.id) == ["live"])
+        model.cullingStates = ["live": SidecarDecisionState(assetId: "live", pickState: "hidden")]
+        #expect(model.visibleCullingAssets.map(\.id) == ["live"])
+        #expect(model.cullingMatchCount(for: .uploaded) == 1)
+        #expect(model.cullingWorkspace.items.first?.isUploaded == true)
+    }
+
     @Test("Native Gallery renders the authoritative server window without a second filter")
     @MainActor
     func nativeGalleryRendersAuthoritativeServerWindow() {

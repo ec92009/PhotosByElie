@@ -5,6 +5,33 @@ import Testing
 
 @Suite("Owner Review SQLite parity")
 struct OwnerReviewSQLiteStoreTests {
+    @Test("Uploaded Review status includes hidden live photos without duplicates or cross-fixture leakage")
+    func uploadedReviewStatus() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-uploaded-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(databaseURL, "UPDATE asset_delivery_state SET delivery_state = 'live' WHERE asset_id = 'asset-1'; UPDATE fixture_asset_decisions SET placement_state = 'hidden' WHERE asset_id = 'asset-1'; INSERT INTO fixtures(fixture_id) VALUES ('other-fixture')")
+        let before = try Data(contentsOf: databaseURL)
+        let store = OwnerReviewSQLiteStore(databaseURL: databaseURL)
+        let uploaded = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"])
+        #expect(uploaded.items.map(\.id) == ["asset-1"])
+        #expect(uploaded.summary.total == 1)
+        let combined = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded", "picked"])
+        #expect(Set(combined.items.map(\.id)) == ["asset-1", "asset-2"])
+        #expect(combined.summary.total == 2)
+        let overlap = try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded", "hidden"])
+        #expect(overlap.items.map(\.id) == ["asset-1"])
+        #expect(overlap.summary.total == 1)
+        #expect(try store.reviewWindow(fixtureID: "other-fixture", stateFilters: ["uploaded"]).items.isEmpty)
+        #expect(try Data(contentsOf: databaseURL) == before)
+        try execute(databaseURL, "UPDATE fixture_asset_decisions SET placement_state = 'undecided' WHERE asset_id = 'asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.map(\.id) == ["asset-1"])
+        try execute(databaseURL, "UPDATE sidecar_decisions SET pick_state = 'hidden' WHERE asset_id = 'asset-1'")
+        #expect(try store.reviewWindow(fixtureID: "fixture-expo", stateFilters: ["uploaded"]).items.isEmpty)
+    }
+
     @Test("Excluded Review photos stay absent after refresh and relaunch until restored")
     func excludedReviewItemsStayExcluded() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("review-exclude-\(UUID())")

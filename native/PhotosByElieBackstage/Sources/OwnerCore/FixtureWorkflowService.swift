@@ -532,6 +532,7 @@ public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
     case undecided
     case hidden
     case picked
+    case uploaded
     case allActive = "all-active"
 
     public var label: String {
@@ -539,11 +540,12 @@ public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
         case .undecided: "Undecided"
         case .hidden: "Hidden"
         case .picked: "Picked"
+        case .uploaded: "Uploaded"
         case .allActive: "All Active"
         }
     }
 
-    public static var selectableCases: [Self] { [.undecided, .picked, .hidden] }
+    public static var selectableCases: [Self] { [.undecided, .picked, .hidden, .uploaded] }
 }
 
 public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Identifiable {
@@ -596,6 +598,7 @@ public struct FixtureCullingSummary: Sendable, Equatable {
     public var undecided: Int
     public var picked: Int
     public var hidden: Int
+    public var uploaded: Int
 
     init(json: [String: JSONValue]) {
         filtered = json["filtered"]?.intValue ?? 0
@@ -603,6 +606,7 @@ public struct FixtureCullingSummary: Sendable, Equatable {
         undecided = json["undecided"]?.intValue ?? 0
         picked = json["picked"]?.intValue ?? 0
         hidden = json["hidden"]?.intValue ?? 0
+        uploaded = json["uploaded"]?.intValue ?? 0
     }
 }
 
@@ -691,6 +695,7 @@ public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, I
     case picked
     case approved
     case hidden
+    case uploaded
 
     public var id: String { rawValue }
 
@@ -699,6 +704,7 @@ public enum FixtureReviewStateFilter: String, Codable, Sendable, CaseIterable, I
         case .picked: "Picked"
         case .approved: "Approved"
         case .hidden: "Hidden"
+        case .uploaded: "Uploaded"
         }
     }
 }

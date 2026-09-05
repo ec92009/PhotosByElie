@@ -101,6 +101,7 @@ public enum CullingPickFilter: String, CaseIterable, Sendable {
     case undecided
     case picked
     case rejected
+    case uploaded
 
     public var label: String {
         switch self {
@@ -108,10 +109,11 @@ public enum CullingPickFilter: String, CaseIterable, Sendable {
         case .undecided: "Undecided"
         case .picked: "Picked"
         case .rejected: "Rejected"
+        case .uploaded: "Uploaded"
         }
     }
 
-    public static var selectableCases: [Self] { [.undecided, .picked, .rejected] }
+    public static var selectableCases: [Self] { [.undecided, .picked, .rejected, .uploaded] }
 }
 
 public enum CullingColorFilter: String, CaseIterable, Sendable {
@@ -211,6 +213,7 @@ public struct CullingCandidate: Identifiable, Sendable, Equatable {
     public var capturedAt: String
     public var pixelWidth: Int
     public var pixelHeight: Int
+    public var isUploaded = false
     public var decision: SidecarDecisionState
 
     public init(
@@ -423,7 +426,8 @@ public enum CullingWorkspace {
         let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos
         guard query.media.contains(mediaFilter) else { return false }
         let pickFilter = normalizedPick(candidate.decision.pickState)
-        guard query.pick.contains(pickFilter) else { return false }
+        guard query.pick.contains(pickFilter)
+            || (query.pick.contains(.uploaded) && candidate.isUploaded) else { return false }
         guard query.ratings.contains(candidate.decision.rating) else { return false }
         let colorFilter = CullingColorFilter(
             rawValue: candidate.decision.color.isEmpty ? "none" : candidate.decision.color

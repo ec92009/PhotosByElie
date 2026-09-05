@@ -55,7 +55,7 @@ All routes also work under `/api`, for example `/api/checkout/guest`.
 | `GET /orders/:orderId?email=...` | Buyer checks delivery state | Returns order status when email matches |
 | `GET /download/:token` | Buyer clicks download | Streams the private delivery file or returns a mock signed R2 URL in mock mode |
 
-`worker/local-server.mjs` also provides `GET /download-order/:orderId` for local-only mock testing. It serves the generated ZIP directly from `deliveries/` by order ID, which keeps downloads working after the in-memory mock Worker state has been restarted.
+`worker/local-server.mjs` binds to loopback and serves local ZIPs only through the shared `/download/:token` authorization, expiry, lifecycle and download-limit checks. Order-ID fallback downloads are retired. After restarting the in-memory mock Worker, run a new mock checkout to obtain a valid delivery capability; existing ZIP files on disk do not grant download access.
 
 ## Public Checkout
 

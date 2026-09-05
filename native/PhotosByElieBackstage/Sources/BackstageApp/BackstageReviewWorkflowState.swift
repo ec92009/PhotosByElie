@@ -11,6 +11,7 @@ import OwnerCore
 struct BackstageReviewWorkflowState {
     var thumbnailTasks: [String: Task<Void, Never>] = [:]
     var metadataAutosaveTask: Task<Void, Never>?
+    var aiPassStartFailure: String?
     var aiStatusRefreshTask: Task<Void, Never>?
 
     var countrySuggestionSeedAssetID: String?
@@ -165,6 +166,7 @@ struct BackstageReviewWorkflowState {
             String(status.ready),
             status.run?.id ?? "",
             String(status.run?.proposed ?? 0),
+            String(status.run?.failed ?? 0),
             status.run?.status ?? "",
         ].joined(separator: "|")
     }

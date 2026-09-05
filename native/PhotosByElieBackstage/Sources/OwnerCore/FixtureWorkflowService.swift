@@ -1693,8 +1693,8 @@ public actor FixtureWorkflowService {
     }
 
     public func startAIPass(trigger: String = "manual") async throws -> FixtureAIStatus {
-        _ = try await run("fixture-ai-pass-start", extra: ["trigger": .string(trigger)])
-        return try await aiStatus()
+        let result = try await run("fixture-ai-pass-start", extra: ["trigger": .string(trigger)])
+        return try FixtureAIStatus.claimedStartResult(result)
     }
 
     public func cancelAIPass() async throws -> FixtureAIStatus {

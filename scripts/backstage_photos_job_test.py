@@ -114,6 +114,124 @@ class BackstagePhotosJobsTest(unittest.TestCase):
             self.assertIn("ANCHOR-A", planned["assetIDs"])
             self.assertNotIn("asset-1", planned["assetIDs"])
 
+    def test_startup_crash_persists_retryable_per_item_failure(self):
+        from requested_ai_proposal_pass import wait_for_ai_worker_claim, record_ai_start_failure
+        from fixture_pipeline import ai_run_status, now_iso
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            started = now_iso()
+            child = subprocess.Popen([sys.executable, "-c", "raise SystemExit(7)"])
+            with self.assertRaisesRegex(RuntimeError, "exited before claiming") as failure:
+                wait_for_ai_worker_claim(root, child, started_after=started)
+            receipt = record_ai_start_failure(root, ["asset-1", "asset-2"], "manual", str(failure.exception))
+            self.assertFalse(receipt["active"])
+            self.assertEqual(receipt["run"]["failed"], 2)
+            self.assertEqual(ai_run_status(root)["run"]["status"], "failed")
+            with sidecar_state_db.connect(root) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_editorial_state WHERE editorial_state='requesting-ai' AND ai_last_error <> ''").fetchone()[0], 2)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_run_items WHERE status='failed'").fetchone()[0], 2)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_proposals").fetchone()[0], 0)
+
+    def test_startup_timeout_stops_only_its_unclaimed_child(self):
+        from requested_ai_proposal_pass import wait_for_ai_worker_claim
+        from fixture_pipeline import now_iso
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+            try:
+                with self.assertRaisesRegex(RuntimeError, "did not claim"):
+                    wait_for_ai_worker_claim(root, child, started_after=now_iso(), timeout=0)
+                self.assertIsNotNone(child.poll())
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait()
+
+    def test_manual_and_scheduled_workers_claim_only_one_run(self):
+        from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+        from threading import Barrier, Event
+        from requested_ai_proposal_pass import run_requested_ai_pass
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            barrier, release = Barrier(2), Event()
+            calls = []
+            def prepare(*args):
+                barrier.wait(timeout=10)
+                return {}
+            def propose(item):
+                calls.append(item["assetId"])
+                if not release.wait(timeout=10):
+                    raise RuntimeError("synthetic claim test timed out")
+                return {"title":"Synthetic proposal", "keywords":["synthetic"], "confidence":"high", "reason":"test", "needs_owner_context":False}
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(run_requested_ai_pass, root, trigger=trigger, proposer=propose, preview_preparer=prepare)
+                           for trigger in ["manual", "scheduled"]]
+                try:
+                    done, _ = wait(futures, timeout=10, return_when=FIRST_COMPLETED)
+                    self.assertEqual(len(done), 1)
+                    self.assertTrue(next(iter(done)).result()["attached"])
+                finally:
+                    release.set()
+                results = [future.result(timeout=10) for future in futures]
+            self.assertEqual(sum(bool(row["attached"]) for row in results), 1)
+            self.assertEqual(sorted(calls), ["asset-1", "asset-2"])
+            with sidecar_state_db.connect(root) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_runs").fetchone()[0], 1)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_ai_proposals").fetchone()[0], 2)
+
+    def test_launcher_waits_for_a_real_empty_worker_receipt(self):
+        from fixture_pipeline import connect
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            connect(root).close()
+            receipt = local_server._start_requested_ai_pass(root)
+            self.assertTrue(receipt["started"])
+            self.assertTrue(receipt["run"]["runId"])
+            self.assertEqual(receipt["run"]["requested"], 0)
+            self.assertEqual(receipt["run"]["status"], "completed")
+
+    def test_unavailable_proposer_persists_failures_without_changing_metadata(self):
+        from fixture_pipeline import record_ai_preview, ai_run_status
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            for asset_id in ["asset-1", "asset-2"]:
+                preview = root / (asset_id + ".jpg")
+                preview.write_bytes(JPEG)
+                record_ai_preview(root, asset_id, preview)
+            with sidecar_state_db.connect(root) as conn:
+                before = [tuple(r) for r in conn.execute("SELECT asset_id, title, keywords_json FROM sidecar_decisions ORDER BY asset_id")]
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("requested_ai_proposal_pass.py")),
+                 "--repo-root", temp, "--prepared-assets-stdin"],
+                input='["asset-1","asset-2"]', text=True, capture_output=True, timeout=30,
+                env={"PATH":"/usr/bin:/bin", "PBE_REQUESTED_AI_CODEX_BIN":str(root / "unavailable-proposer")},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            receipt = json.loads(result.stdout.splitlines()[-1])
+            self.assertEqual(receipt["failed"], 2)
+            self.assertEqual(receipt["proposed"], 0)
+            self.assertEqual(ai_run_status(root)["run"]["status"], "completed-with-errors")
+            with sidecar_state_db.connect(root) as conn:
+                self.assertEqual([tuple(r) for r in conn.execute("SELECT asset_id, title, keywords_json FROM sidecar_decisions ORDER BY asset_id")], before)
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM asset_editorial_state WHERE editorial_state='requesting-ai' AND ai_last_error LIKE '%unavailable-proposer%'").fetchone()[0], 2)
+
+    def test_prepared_ai_cli_claims_and_finishes_an_empty_synthetic_batch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("requested_ai_proposal_pass.py")),
+                 "--repo-root", temp, "--prepared-assets-stdin"],
+                input="[]", text=True, capture_output=True, timeout=30,
+                env={"PATH": "/usr/bin:/bin:/usr/sbin:/sbin"},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            receipt = json.loads(result.stdout.splitlines()[-1])
+            self.assertEqual(receipt["requested"], 0)
+            self.assertEqual(receipt["status"], "completed")
+
     def test_ai_prepares_before_detach_and_passes_ids_without_photos_credential(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -138,7 +256,7 @@ class BackstagePhotosJobsTest(unittest.TestCase):
                 self.assertIn("--prepared-assets-stdin", args[0])
                 return child
             jobs._CREDENTIAL = self.capability
-            with patch("requested_ai_previews.capture_requested_ai_previews", side_effect=prepare), patch("local_server.subprocess.Popen", side_effect=launch):
+            with patch("requested_ai_previews.capture_requested_ai_previews", side_effect=prepare), patch("local_server.subprocess.Popen", side_effect=launch), patch("requested_ai_proposal_pass.wait_for_ai_worker_claim", return_value={"active": True}):
                 receipt = local_server._start_requested_ai_pass(root, "scheduled")
             self.assertTrue(receipt["started"])
             self.assertEqual(set(json.loads(child.stdin.payload)), {"asset-1", "asset-2"})

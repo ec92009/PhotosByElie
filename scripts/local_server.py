@@ -3346,7 +3346,9 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
         return {**status, "attached": True, "started": False}
     # Prepare requested Photos bytes while the app-owned connector still holds
     # its bounded capability. The detached proposal engine gets no capability.
-    from requested_ai_proposal_pass import _candidate_rows, _runtime_connection
+    from requested_ai_proposal_pass import (
+        _candidate_rows, _runtime_connection, wait_for_ai_worker_claim, record_ai_start_failure,
+    )
     from requested_ai_previews import capture_requested_ai_previews
     with _runtime_connection(repo_root) as connection:
         candidates = _candidate_rows(connection, repo_root, None)
@@ -3356,6 +3358,7 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
     log_root.mkdir(parents=True, exist_ok=True)
     log_path = log_root / f"manual-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
     log_handle = log_path.open("ab")
+    started_after = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
         process = subprocess.Popen(
             [
@@ -3374,14 +3377,23 @@ def _start_requested_ai_pass(repo_root: Path, trigger: str = "manual") -> dict:
             start_new_session=True,
         )
         assert process.stdin is not None
-        process.stdin.write(json.dumps([item["assetId"] for item in candidates]).encode())
-        process.stdin.close()
+        with process.stdin:
+            process.stdin.write(json.dumps([item["assetId"] for item in candidates]).encode())
+        claimed_status = wait_for_ai_worker_claim(repo_root, process, started_after=started_after)
+    except Exception as error:
+        # Preserve a visible, retryable failure even if the child crashed before
+        # it could create its own durable run. Never copy private child logs.
+        message = f"AI pass startup failed: {error}"
+        failure = record_ai_start_failure(repo_root, [item["assetId"] for item in candidates], trigger, message)
+        if failure.get("active"):
+            return {**failure, "attached": True, "started": False}
+        raise RuntimeError(message) from error
     finally:
         log_handle.close()
     return {
+        **claimed_status,
         "ok": True,
-        "active": True,
-        "attached": False,
+        "attached": bool(claimed_status.get("attached")),
         "started": True,
         "pid": process.pid,
         "logPath": str(log_path),

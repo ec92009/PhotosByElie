@@ -2318,6 +2318,18 @@
       "parameters": 4,
       "nesting": 5,
       "reviewNote": "PBB-167: ns reports 5 including SQL/bindings; 40 NLOC, CCN 3. Coordinates separate metadata, proposal and source/delivery helpers in caller transaction."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift::runAIProposalPass trigger : String = \"manual\"",
+      "file": "native/PhotosByElieBackstage/Sources/BackstageApp/BackstageViewModel.swift",
+      "name": "runAIProposalPass",
+      "start": 5660,
+      "end": 5701,
+      "nloc": 41,
+      "ccn": 10,
+      "parameters": 1,
+      "nesting": 5,
+      "reviewNote": "PBB-176: parser ns5 counts sequential guard/do/while/catch structures; actual control nesting is at most two. Keep bounded start/monitor/error coordination together. Other metric ceilings remain unchanged."
     }
   ],
   "excluded": [

@@ -792,6 +792,56 @@ struct BackstageFixtureSelectionTests {
         #expect(recovery.contains("/Applications/PhotosByElie Backstage.app"))
     }
 
+    @Test("Manual AI startup failure remains actionable after background status refresh")
+    @MainActor
+    func aiStartupFailureSurvivesRefresh() async throws {
+        let api = FailingAIStartAPI()
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: api, waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1), timeout: .seconds(1)
+        ))
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), fixtureService: service,
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            currentEquipmentCache: nil, equipmentBackfillStore: nil,
+            externalEditJobStore: nil, customerPhotoLinks: nil
+        )
+        await model.runAIProposalPass()
+        #expect(!model.isRunningAIPass)
+        #expect(model.aiProposalStatus.contains("synthetic worker startup failure"))
+        let failure = model.aiProposalStatus
+        await model.refreshAIStatus()
+        #expect(model.aiProposalStatus == failure)
+        #expect(model.canRunAIProposalPass)
+        #expect(await api.startCount == 1)
+        await model.runAIProposalPass()
+        #expect(await api.startCount == 2)
+    }
+
+    @Test("AI progress distinguishes preparation, durable failures and valid claims")
+    func aiProgressReceipts() throws {
+        let queued = FixtureAIStatus(json: ["requested": .number(25)])
+        #expect(queued.progressMessage(starting: true).contains("waiting for the AI worker to claim"))
+        #expect(!queued.progressMessage(starting: true).contains("nightly"))
+        let failed = FixtureAIStatus(json: ["requested": .number(25), "run": .object([
+            "runId": .string("synthetic-run"), "status": .string("failed"),
+            "failed": .number(25), "lastError": .string("AI worker exited before claiming")
+        ])])
+        #expect(failed.progressMessage().contains("AI worker exited before claiming"))
+        #expect(failed.progressMessage().contains("Retry"))
+        #expect(throws: APIErrorEnvelope.self) { try FixtureAIStatus.claimedStartResult(["ai": .object(["active": .bool(true)])]) }
+        var workflow = BackstageReviewWorkflowState()
+        workflow.recordAIAvailability(queued)
+        let oldToken = workflow.aiAvailabilityToken
+        workflow.recordAIAvailability(failed)
+        #expect(workflow.aiAvailabilityChanged(from: oldToken))
+        let valid = try FixtureAIStatus.claimedStartResult(["ai": .object([
+            "active": .bool(true), "run": .object(["runId": .string("claimed"), "status": .string("running")])
+        ])])
+        #expect(valid.active)
+        #expect(valid.run?.id == "claimed")
+    }
+
     @Test("AI pass latches before its first status refresh and rejects a duplicate start")
     @MainActor
     func aiPassStartLatchesImmediately() async throws {
@@ -4214,6 +4264,22 @@ private struct RejectingFixtureSelectionWaker: OwnerActionWaking {
     func wake(actionID: String) async throws -> OwnerAction? {
         throw CancellationError()
     }
+}
+
+private actor FailingAIStartAPI: OwnerActionServing {
+    private(set) var startCount = 0
+    func createAction(_ request: OwnerActionCreate, idempotencyKey: String) async throws -> OwnerActionEnvelope {
+        let mode = request.payload["manifest"]?.objectValue?["mode"]?.stringValue ?? ""
+        if mode == "fixture-ai-pass-start" {
+            startCount += 1
+            throw OwnerActionRunError.failed("synthetic worker startup failure; check installation and retry")
+        }
+        return OwnerActionEnvelope(action: OwnerAction(
+            id: "synthetic-ai-status", actionKind: request.actionKind, target: request.target,
+            state: .completed, result: ["ai": .object(["requested": .number(25), "active": .bool(false)])]
+        ))
+    }
+    func getAction(id: String) async throws -> OwnerAction { throw CancellationError() }
 }
 
 private actor BlockingAIActionAPI: OwnerActionServing {

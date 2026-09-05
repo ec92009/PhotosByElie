@@ -1,0 +1,13 @@
+# PBB-176 manual AI pass startup and receipts
+
+The prepared-input CLI path read `sys.stdin` without importing `sys`. A real empty synthetic batch reproduced the startup crash; four recent local launcher logs matched that exact NameError. The launcher returned started immediately after Popen, and the native service discarded that receipt and read generic queue status. Background polling could then overwrite the failure/start message with waiting text.
+
+The runner imports sys. The launcher waits up to30seconds for the child to own a durable run, detects early exit, and stops an unclaimed child on timeout. Startup failures persist a failed run and per-item errors while keeping the requests retryable; private child log contents are not copied into the receipt. Native start requires a durable run ID. Preparation, processing, terminal errors and cancellation have distinct messages; startup errors survive polling, and durable worker errors survive relaunch. Failure-count changes also trigger Review row/inspector refresh. The manual monitor leaves the arrival frontier for the Review refresh loop to consume.
+
+The worker rechecks and claims under one BEGIN IMMEDIATE transaction after preparation, then refreshes eligibility within exactly the prepared scope. A competing manual/nightly worker attaches instead of processing the same queue. Existing dead-worker recovery and cooperative cancellation remain in place. Preview capture stays in the app-owned bounded PhotoKit job; the detached child receives only prepared asset IDs through stdin and no capability secret.
+
+Validation uses temporary synthetic databases, inert transports, empty real subprocesses and test JPEG bytes. Coverage includes the original CLI crash, real launch acknowledgment, early subprocess exit, bounded timeout, failure persistence/retry, unavailable proposer, simultaneous manual/nightly claims, successful proposal persistence, orphan recovery, cancellation, polling, missing run receipts and duplicate UI admission. No real private source media is processed. Installed Codex CLI help was checked read-only for the existing execution flags; no model call was made.
+
+328 Node and515Python tests pass. Native final validation and signed installed322 receipt are recorded below. The maintainability gate passes with one exact ns5 parser exception for a coordinator whose actual control nesting is at most two; other ceilings are unchanged.
+
+Final native validation:396 tests in31 suites pass. Xcode project membership and maintainability check pass. Source scope is canonical Backstage plus its bundled connector runtime; no Worker deployment or private-media run is part of verification.

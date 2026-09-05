@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
+import time
 import tempfile
 import uuid
 from typing import Any
@@ -63,6 +65,66 @@ def _runtime_connection(repo_root: Path):
         raise
     finally:
         connection.close()
+
+
+def wait_for_ai_worker_claim(repo_root: Path, process: subprocess.Popen, *, started_after: str, timeout: float = 30) -> dict[str, Any]:
+    """Require durable ownership before acknowledging a detached worker."""
+    deadline = time.monotonic() + timeout
+    while True:
+        with _runtime_connection(repo_root) as conn:
+            claimed = conn.execute(
+                "SELECT run_id FROM asset_ai_runs WHERE owner_pid = ? AND created_at >= ? LIMIT 1",
+                (process.pid, started_after),
+            ).fetchone()
+        if claimed:
+            return ai_run_status(repo_root)
+        code = process.poll()
+        if code is not None:
+            status = ai_run_status(repo_root)
+            if code == 0 and status.get("active"):
+                return {**status, "attached": True}
+            raise RuntimeError(f"AI worker exited before claiming the requested queue (exit {code}). Check the AI runner installation and retry.")
+        if time.monotonic() >= deadline:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            raise RuntimeError("AI worker did not claim the queue within 30 seconds and was stopped. Check Owner database availability and retry.")
+        time.sleep(0.1)
+
+
+def record_ai_start_failure(repo_root: Path, asset_ids: list[str], trigger: str, message: str) -> dict[str, Any]:
+    """Persist startup failures without changing requests, metadata or media."""
+    with _runtime_connection(repo_root) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if _active_run(conn):
+            conn.rollback()
+            return ai_run_status(repo_root)
+        ids = [asset_id for asset_id in dict.fromkeys(asset_ids) if conn.execute(
+            "SELECT 1 FROM asset_editorial_state WHERE asset_id = ? AND editorial_state = 'requesting-ai'",
+            (asset_id,),
+        ).fetchone()]
+        run_id, timestamp = f"airun-{uuid.uuid4().hex[:16]}", now_iso()
+        conn.execute(
+            """INSERT INTO asset_ai_runs
+               (run_id, trigger, status, requested_count, processed_count, failed_count,
+                last_error, started_at, completed_at, created_at, updated_at)
+               VALUES (?, ?, 'failed', ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, trigger, len(ids), len(ids), len(ids), message, timestamp, timestamp, timestamp, timestamp),
+        )
+        conn.executemany(
+            """INSERT INTO asset_ai_run_items (run_id, asset_id, status, error_text, completed_at)
+               VALUES (?, ?, 'failed', ?, ?)""",
+            [(run_id, asset_id, message, timestamp) for asset_id in ids],
+        )
+        conn.executemany(
+            "UPDATE asset_editorial_state SET ai_last_error = ?, updated_at = ? WHERE asset_id = ? AND editorial_state = 'requesting-ai'",
+            [(message, timestamp, asset_id) for asset_id in ids],
+        )
+        conn.commit()
+    return ai_run_status(repo_root)
 
 
 def _json(value: Any) -> str:
@@ -415,11 +477,23 @@ def run_requested_ai_pass(
         preview_receipt = preview_preparer(repo_root, missing_preview_ids)
         with _runtime_connection(repo_root) as conn:
             candidates = _candidate_rows(conn, repo_root, limit)
-    for item in candidates:
-        rung = model_ladder[min(max(0, int(item["attempt"]) - 1), len(model_ladder) - 1)]
-        item["requestedModel"] = rung["model"]
-        item["requestedEffort"] = rung["effort"]
     with _runtime_connection(repo_root) as conn:
+        # Preview preparation may race with another manual/nightly trigger.
+        # Recheck and claim under the same writer lock, not only before preparation.
+        conn.execute("BEGIN IMMEDIATE")
+        active = _active_run(conn)
+        if active:
+            return {"ok": True, "attached": True, "runId": str(active["run_id"]), "status": str(active["status"])}
+        # Refresh eligibility under the claim lock, while retaining exactly the
+        # prepared capability scope. A just-completed competing run may have
+        # already fulfilled requests from our earlier candidate snapshot.
+        prepared_scope = {item["assetId"] for item in candidates}
+        candidates = [item for item in _candidate_rows(conn, repo_root, limit)
+                      if item["assetId"] in prepared_scope]
+        for item in candidates:
+            rung = model_ladder[min(max(0, int(item["attempt"]) - 1), len(model_ladder) - 1)]
+            item["requestedModel"] = rung["model"]
+            item["requestedEffort"] = rung["effort"]
         run_id = f"airun-{uuid.uuid4().hex[:16]}"
         timestamp = now_iso()
         conn.execute(

@@ -5621,22 +5621,10 @@ final class BackstageViewModel: ObservableObject {
             }
             fixtureAIStatus = status
             reviewWorkflow.recordAIAvailability(status)
-            guard let status = fixtureAIStatus else { return }
-            if let run = status.run, status.active {
-                aiProposalStatus = [
-                    "\(run.processed.formatted()) of \(run.requested.formatted()) processed",
-                    "\(run.proposed.formatted()) proposed",
-                    "\(run.failed.formatted()) failed",
-                    "\(run.remaining.formatted()) remaining",
-                    "\(Int(run.elapsedSeconds).formatted())s elapsed",
-                ].joined(separator: " • ")
-            } else if status.ready > 0 {
-                aiProposalStatus = "\(status.ready.formatted()) new proposal\(status.ready == 1 ? "" : "s") ready."
-            } else if status.requested > 0 {
-                aiProposalStatus = "\(status.requested.formatted()) requested item\(status.requested == 1 ? "" : "s") waiting for the next AI pass."
-            } else {
-                aiProposalStatus = "No requested AI work is waiting."
-            }
+            if status.active { reviewWorkflow.aiPassStartFailure = nil }
+            aiProposalStatus = status.progressMessage(
+                starting: isRunningAIPass, startupFailure: reviewWorkflow.aiPassStartFailure
+            )
         } catch {
             guard !isTransientCancellation(error) else { return }
             if let generation, !reviewWorkflow.ownsAIStatusRefresh(generation) {
@@ -5654,10 +5642,11 @@ final class BackstageViewModel: ObservableObject {
         let previousToken = reviewWorkflow.aiAvailabilityToken
         await refreshAIStatus()
         let availabilityChanged = reviewWorkflow.aiAvailabilityChanged(from: previousToken)
-        let hasAvailableProposals = readyAIProposalCount > 0
+        let hasAvailableResults = readyAIProposalCount > 0
             || (fixtureAIStatus?.run?.proposed ?? 0) > 0
+            || (fixtureAIStatus?.run?.failed ?? 0) > 0
         guard availabilityChanged || reviewWorkflow.aiWindowRefreshPending else { return }
-        guard hasAvailableProposals,
+        guard hasAvailableResults,
               !selectedFixtureID.isEmpty,
               fixtureReviewWindow != nil
         else { return }
@@ -5680,27 +5669,37 @@ final class BackstageViewModel: ObservableObject {
             return
         }
         isRunningAIPass = true
+        reviewWorkflow.aiPassStartFailure = nil
         aiPassMonitoringDetached = false
         aiProposalStatus = "Starting or attaching to the requested AI pass…"
         defer { isRunningAIPass = false }
 
-        await refreshAIStatus()
-        guard (fixtureAIStatus?.requested ?? 0) > 0 else {
-            aiProposalStatus = "No requested AI work is waiting."
-            return
-        }
         do {
+            fixtureAIStatus = try await fixtureService.aiStatus()
+            guard (fixtureAIStatus?.requested ?? 0) > 0 || fixtureAIStatus?.active == true else {
+                aiProposalStatus = "No requested AI work is waiting."
+                return
+            }
+            aiProposalStatus = "Preparing requested previews and waiting for the AI worker to claim the queue…"
             fixtureAIStatus = try await fixtureService.startAIPass(trigger: trigger)
-            repeat {
+            aiProposalStatus = fixtureAIStatus?.progressMessage() ?? "Checking AI run receipt…"
+            while fixtureAIStatus?.active == true {
                 try await Task.sleep(for: .seconds(2))
                 guard !aiPassMonitoringDetached else { return }
-                fixtureAIStatus = try await fixtureService.aiStatus()
-                await refreshAIStatus()
-            } while fixtureAIStatus?.active == true
-            await loadFixtureReviewWindow(preferredAssetID: reviewSelection.focusedID)
+                let status = try await fixtureService.aiStatus()
+                fixtureAIStatus = status
+                // Leave the arrival frontier for the Review refresh loop to consume.
+                aiProposalStatus = status.progressMessage()
+            }
         } catch {
-            aiProposalStatus = "AI pass failed to start: \(error)"
+            let message = isTransientCancellation(error)
+                ? "AI pass monitoring stopped. Refresh status before starting another run."
+                : "AI pass failed: \(userFacingMessage(for: error))"
+            reviewWorkflow.aiPassStartFailure = message
+            aiProposalStatus = message
         }
+        guard !Task.isCancelled else { return }
+        await loadFixtureReviewWindow(preferredAssetID: reviewSelection.focusedID)
     }
 
     /// Stop only Backstage's progress monitor after the durable AI worker has

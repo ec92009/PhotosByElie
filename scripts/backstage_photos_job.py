@@ -8,6 +8,7 @@ capability over a different anonymous pipe. Nothing secret is saved to disk.
 from __future__ import annotations
 
 import base64
+from contextlib import closing
 import hashlib
 import hmac
 import json
@@ -63,7 +64,11 @@ def envelope(request_data: bytes) -> bytes:
 
 def _rows(root: Path, sql: str, params=()) -> list[sqlite3.Row]:
     db = root / "assets/owner-actions/Owner.sqlite"
-    with sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True) as conn:
+    # Open an existing database with WAL sidecar creation available. SQLite's
+    # macOS VFS can reject a fresh WAL database in mode=ro before its sidecars
+    # exist. query_only keeps the scope query unable to mutate Owner records.
+    with closing(sqlite3.connect(db.resolve().as_uri() + "?mode=rw", uri=True)) as conn:
+        conn.execute("PRAGMA query_only = ON")
         conn.row_factory = sqlite3.Row
         return conn.execute(sql, params).fetchall()
 

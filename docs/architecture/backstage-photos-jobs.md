@@ -1,6 +1,6 @@
 # Backstage Photos helper jobs
 
-PBB-170 changes the local helper boundary in Backstage v249.1 build 315.
+PBB-170 changes the local helper boundary in Backstage v249.2 build 316.
 The loopback descriptor is transport information, not permission to use Photos.
 A script launched independently cannot enumerate the library, fetch previews,
 export originals, resolve identities or change Photos metadata through that IPC.

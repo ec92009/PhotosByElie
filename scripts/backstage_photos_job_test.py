@@ -87,6 +87,21 @@ class BackstagePhotosJobsTest(unittest.TestCase):
             self.assertEqual(delivery["assetIDs"], ["asset-1"])
             self.assertEqual(jobs.plan(root, {"actionKind":"sidecar-upload-publish"})["operations"], [])
 
+    def test_scope_query_opens_fresh_wal_database_without_allowing_writes(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            preview_fixtures.RequestedAIPreviewsTest()._requesting_fixture(root)
+            self.assertEqual(len(jobs._rows(root, "SELECT asset_id FROM sidecar_assets")), 2)
+            with self.assertRaises(sqlite3.OperationalError):
+                jobs._rows(root, "UPDATE sidecar_assets SET filename='changed'")
+            result = subprocess.run([sys.executable, "-I", "-S", "-B", "-c",
+                "import sys,runpy;sys.path.insert(0,sys.argv[1]);sys.argv=sys.argv[2:];runpy.run_path(sys.argv[0],run_name='__main__')",
+                str(Path(__file__).resolve().parent), str(Path(__file__).with_name("backstage_photos_job.py")), str(root)],
+                input=json.dumps({"actionKind":"sidecar-culling-review", "payload":{"manifest":{"mode":"fixture-ai-pass-start"}}}),
+                text=True,capture_output=True,env={"PATH":"/usr/bin:/bin:/usr/sbin:/sbin"},check=True)
+            self.assertEqual(set(json.loads(result.stdout)["assetIDs"]), {"asset-1", "asset-2"})
+
     def test_ai_plan_uses_the_same_divergent_identity_as_preview_preparation(self):
         from fixture_pipeline import ai_preview_targets
         with tempfile.TemporaryDirectory() as temp:

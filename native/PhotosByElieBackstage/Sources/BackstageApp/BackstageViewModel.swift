@@ -4436,6 +4436,9 @@ final class BackstageViewModel: ObservableObject {
         defer {
             if reviewWorkflow.ownsWindowRequest(requestSerial) {
                 isRunningReview = false
+                if Task.isCancelled {
+                    reviewStatus = "Review refresh cancelled. Refresh to try again."
+                }
             }
         }
         do {
@@ -4455,7 +4458,9 @@ final class BackstageViewModel: ObservableObject {
             hydrateReviewProposalDrafts(from: window.items)
             reviewWorkflow.consumeAIWindowRefresh()
             fixtureReviewWindow = window
+            reviewStatus = "Review items loaded. Reading cached image sizes…"
             await hydrateCurrentImageByteCounts(for: window.items.map(\.id))
+            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
             let orderedIDs = window.items.map(\.id)
             reviewSelection = reviewWorkflow.restoredSelection(
                 orderedIDs: orderedIDs,
@@ -4485,9 +4490,14 @@ final class BackstageViewModel: ObservableObject {
             default:
                 mediaScope = "items"
             }
-            reviewStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope)\(sourceScope) • oldest first."
+            let completedStatus = "\(window.summary.total.formatted()) \(scope) \(mediaScope)\(sourceScope) • oldest first."
+            reviewStatus = "Review items loaded. Checking visual repair drafts…"
             await refreshVisualRepairProposals(for: window.items)
+            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
+            reviewStatus = "Review items and visual drafts loaded. Checking AI status…"
             await refreshAIStatus()
+            guard reviewWorkflow.ownsWindowRequest(requestSerial), !Task.isCancelled else { return }
+            reviewStatus = completedStatus
         } catch {
             guard reviewWorkflow.ownsWindowRequest(requestSerial) else { return }
             if isTransientCancellation(error) {

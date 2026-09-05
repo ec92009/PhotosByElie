@@ -291,3 +291,11 @@ Each row is a source declaration to inspect together with its containing workflo
 ## Source checks
 
 389 Swift tests in 31 suites passed. The repository suite passed 328 Node tests and 508/509 Python tests; its one source-text parity test had two intentionally changed expectations. After updating those expectations, all 71 tests in that parity module passed. The complete suite is rerun against this candidate before installation. No live payment, Photos mutation, or cloud publication was used as test data.
+
+## Installed iteration
+
+Build 318 (`d6dff2b2`) was signed, installed through the production Backstage installer, launched and inspected. The previous app required **Wait and Quit** for a Review update; it drained normally. Installed AX showed the new ordered busy feedback, re-enabled Review controls after completion, and immediate local Metadata validation with no edit submitted. The installation has a retained build-317 rollback.
+
+That inspection found the Review count receipt appeared before visual-draft/AI status loading finished. The follow-up names cached-size, visual-draft and AI-status steps and publishes the count only after completion; generation checks prevent an older final receipt from replacing a newer refresh. A held-action regression reproduces the ordering and checks the newer receipt remains intact. The final candidate is build 319.
+
+Graphify was refreshed in the same canonical worktree (4,711 nodes; 16,238 edges), with a backup of the prior root graph. Its parser reports partial extraction in five Swift files; successful Swift compilation, source inspection and tests are the authority for those files.

@@ -7,6 +7,50 @@ import Testing
 
 @Suite("Backstage fixture scope integration")
 struct BackstageFixtureSelectionTests {
+    @Test("Review keeps the actual remaining step visible and ignores an older terminal refresh")
+    @MainActor
+    func reviewRefreshProgressAndStaleReceipt() async throws {
+        let terminal = (1...4).map { index in
+            OwnerAction(
+                id: "review-progress-\(index)", actionKind: "sidecar-culling-review", target: "max",
+                state: .completed,
+                result: index.isMultiple(of: 2)
+                    ? ["ai": .object(["active": false, "requested": 0])]
+                    : ["reviewWindow": .object([
+                        "fixtureId": "fixture-expo", "items": .array([]),
+                        "summary": .object(["total": .number(Double(index))])
+                    ])]
+            )
+        }
+        let actionAPI = ReviewLifecycleActionAPI(terminalActions: terminal, holdsTerminalActions: true)
+        for id in ["review-progress-1", "review-progress-3", "review-progress-4"] {
+            await actionAPI.releaseTerminalAction(id)
+        }
+        let service = FixtureWorkflowService(runner: OwnerActionRunner(
+            api: actionAPI, waker: RejectingFixtureSelectionWaker(),
+            pollInterval: .milliseconds(1), timeout: .seconds(5)
+        ), localReviewService: nil)
+        let model = BackstageViewModel(
+            photoLibrary: InertPhotoLibrary(), fixtureService: service,
+            workflowRecoveryStore: nil, currentImageSizeCache: nil,
+            currentEquipmentCache: nil, equipmentBackfillStore: nil,
+            externalEditJobStore: nil, customerPhotoLinks: nil
+        )
+        model.installFixtureTree(fixtureTree, preferredFixtureID: "fixture-expo", persistSelection: false)
+        let old = Task { await model.loadFixtureReviewWindow() }
+        for _ in 0..<1000 where await actionAPI.requests().count < 2 { try await Task.sleep(for: .milliseconds(1)) }
+        #expect(model.isRunningReview)
+        #expect(model.reviewStatus == "Review items and visual drafts loaded. Checking AI status…")
+        await model.loadFixtureReviewWindow()
+        let latestReceipt = model.reviewStatus
+        #expect(!model.isRunningReview)
+        #expect(latestReceipt.hasPrefix("3 "))
+        await actionAPI.releaseTerminalAction("review-progress-2")
+        await old.value
+        #expect(model.reviewStatus == latestReceipt)
+        #expect(!model.isRunningReview)
+    }
+
     @Test("Duplicate fixture helpers cannot clear the original operation's busy latch")
     @MainActor
     func duplicateFixtureHelpersPreserveBusyState() async {

@@ -141,9 +141,7 @@ const isLocalWorker = () => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/
 
 const downloadHrefFor = (order) => {
   if (!order.delivery?.downloadUrl) return "";
-  return isLocalWorker()
-    ? `${workerBaseUrl()}/download-order/${encodeURIComponent(order.id)}`
-    : `${workerBaseUrl()}${order.delivery.downloadUrl}`;
+  return `${workerBaseUrl()}${order.delivery.downloadUrl}`;
 };
 
 const deliveryFileHref = (file) => file?.downloadUrl ? `${workerBaseUrl()}${file.downloadUrl}` : "";

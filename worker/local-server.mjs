@@ -404,55 +404,8 @@ const readBody = (req) => new Promise((resolve, reject) => {
   req.on("error", reject);
 });
 
-const serveLocalDownload = async (req, res) => {
-  const pathname = new URL(req.url, `http://localhost:${port}`).pathname;
-  if (!["GET", "HEAD"].includes(req.method || "GET")) return false;
-  const orderMatch = pathname.match(/^\/download-order\/([^/]+)$/);
-  if (orderMatch) {
-    const orderId = decodeURIComponent(orderMatch[1]);
-    const zipPath = path.join(repoRoot, "deliveries", `photosbyelie-order-${orderId}.zip`);
-    if (!fs.existsSync(zipPath)) return false;
-    const filename = path.basename(zipPath);
-    res.writeHead(200, {
-      "access-control-allow-origin": "*",
-      "content-type": "application/zip",
-      "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-      "content-length": fs.statSync(zipPath).size,
-    });
-    if (req.method === "HEAD") {
-      res.end();
-      return true;
-    }
-    fs.createReadStream(zipPath).pipe(res);
-    return true;
-  }
-
-  const match = pathname.match(/^\/download\/([^/]+)$/);
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const download = await worker.store.getDownload(token);
-  if (!download || !path.isAbsolute(download.zipKey)) return false;
-  if (!fs.existsSync(download.zipKey)) return false;
-
-  await worker.store.recordDownload(token, new Date().toISOString());
-  const filename = path.basename(download.zipKey);
-  res.writeHead(200, {
-    "access-control-allow-origin": "*",
-    "content-type": "application/zip",
-    "content-disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
-    "content-length": fs.statSync(download.zipKey).size,
-  });
-  if (req.method === "HEAD") {
-    res.end();
-    return true;
-  }
-  fs.createReadStream(download.zipKey).pipe(res);
-  return true;
-};
-
 const server = http.createServer(async (req, res) => {
   try {
-    if (await serveLocalDownload(req, res)) return;
     const body = await readBody(req);
     const response = await worker.fetch(toWebRequest(req, body.length ? body : undefined));
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
@@ -468,7 +421,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
+server.listen(port, "127.0.0.1", () => {
   console.log(`PhotosByElie local ${stripe ? "Stripe" : "mock"} Worker listening on http://localhost:${port}`);
   console.log(`Delivery ZIPs will be written under ${path.resolve(repoRoot, process.env.PBE_DELIVERY_OUTPUT_DIR || "deliveries")}`);
   if (realEstateGalleries.length) {

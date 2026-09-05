@@ -139,6 +139,14 @@ python3 "$materializer_temporary" materialize \
 rm -f -- "$materializer_temporary"
 trap - EXIT HUP INT TERM
 
+# Install only the hash-pinned wheel from this exact release commit. This path
+# is sealed by the app signature and is the isolated Photos job's only package
+# dependency directory; no user Python environment is used at execution time.
+uv pip install --python /usr/bin/python3 --target "${contents}/Resources/PythonDependencies" \
+  --no-deps --link-mode copy --require-hashes -r "${owner_runtime}/scripts/backstage-python-requirements.txt"
+/usr/bin/python3 -I -S -B -c 'import runpy,sys;sys.path.insert(0,sys.argv[1]);runpy.run_path(sys.argv[1]+"/backstage_runtime_smoke.py",run_name="__main__")' \
+  "${owner_runtime}/scripts"
+
 rm -rf "$iconset"
 mkdir -p "$iconset"
 for spec in \

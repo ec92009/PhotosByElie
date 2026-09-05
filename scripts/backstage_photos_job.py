@@ -18,6 +18,14 @@ import sqlite3
 import sys
 import time
 
+# Only the fixed, app-sealed dependency directory is added. Isolated jobs never
+# load user site-packages or environment-supplied Python paths.
+_BUNDLED_DEPENDENCIES = Path(__file__).resolve().parents[2] / "PythonDependencies"
+if (Path(__file__).resolve().parents[1].name == "OwnerRuntime"
+        and _BUNDLED_DEPENDENCIES.parent.name == "Resources"
+        and _BUNDLED_DEPENDENCIES.is_dir()):
+    sys.path.append(str(_BUNDLED_DEPENDENCIES))
+
 _CREDENTIAL: dict | None = None
 
 

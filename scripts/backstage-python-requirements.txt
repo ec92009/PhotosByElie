@@ -1,0 +1,3 @@
+# CPython 3.9 arm64 dependency for the signed isolated Photos runtime.
+# PyPI release: https://pypi.org/project/pillow/11.3.0/
+pillow @ https://files.pythonhosted.org/packages/b5/a9/5749930caf674695867eb56a581e78eb5f524b7583ff10b01b6e5048acb3/pillow-11.3.0-cp39-cp39-macosx_11_0_arm64.whl --hash=sha256:7aee118e30a4cf54fdd873bd3a29de51e29105ab11f9aad8c32123f58c8f8081

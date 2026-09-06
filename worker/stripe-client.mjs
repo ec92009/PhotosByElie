@@ -192,6 +192,12 @@ export const createStripeClient = ({
 
   const retrieveCheckoutSession = (sessionId) => stripeRequest(`/checkout/sessions/${encodeURIComponent(sessionId)}`);
 
+  const listPaymentIntents = ({ startingAfter = "", limit = 100 } = {}) => {
+    const params = new URLSearchParams({ limit: String(Math.max(1, Math.min(100, Number(limit) || 100))) });
+    appendParam(params, "starting_after", startingAfter);
+    return stripeRequest(`/payment_intents?${params}`);
+  };
+
   const listRefunds = ({ paymentIntentId }) => stripeRequest(`/refunds?payment_intent=${encodeURIComponent(paymentIntentId)}&limit=100`);
 
   const createRefund = async ({ paymentIntentId, amount, reason, metadata = {}, idempotencyKey }) => {
@@ -223,6 +229,7 @@ export const createStripeClient = ({
     provider: "stripe",
     createCheckoutSession,
     retrieveCheckoutSession,
+    listPaymentIntents,
     listRefunds,
     createRefund,
     constructEvent,

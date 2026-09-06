@@ -35,11 +35,11 @@
       discover: "Discover", selectedWork: "Selected work",
       introTitle: "Photography that lets a place breathe.",
       introBody: "Travel, architecture, coastlines, and lived-in spaces—observed patiently and presented without getting between you and the image.",
-      usageEyebrow: "From discovery to use", usageTitle: "Find the image. Know what you can do with it.",
-      usageIntro: "Country, region, city, year, and a photographer's note provide useful provenance while sensitive exact coordinates remain private.",
+      usageEyebrow: "From discovery to use", usageTitle: "Browse at your leisure.",
+      usageIntro: "Or seek the photo you need based on geography, time, keywords, or a photographer's note.",
       wallArtTitle: "Wall art",
-      licensingTitle: "Personal, editorial, or commercial",
-      provenanceTitle: "Location",
+      licensingTitle: "Browse online",
+      provenanceTitle: "Prints and books",
       usageAction: "Explore photographs",
       series: "Series", others: "Others…", france: "France", usa: "USA", spain: "Spain", mexico: "Mexico",
       italy: "Italy", portugal: "Portugal", slovakia: "Slovakia",
@@ -88,9 +88,10 @@
       altSpain: "A sweeping panorama of Plaza de España in Seville",
       altItaly: "The Arno river in Florence",
       altSlovakia: "Hviezdoslav Square and its fountains in Bratislava",
-      altWallArt: "A framed Notre-Dame photograph displayed above a sofa",
+      altWallArt: "A large framed Notre-Dame photograph above a light wood credenza",
+      altBrowse: "An operator viewed from behind using a dark-mode photo browser displaying the Del Mar Dog Beach sunset",
       altLicensing: "One beach photograph shown as a print, editorial spread, and commercial display",
-      altProvenance: "A photography catalog card showing country, region, city, year, and a private location marker"
+      altProvenance: "An open photobook and a framed beach photograph on a desk"
     },
     fr: {
       productionPageTitle: "Photos By Elie | Photographie de voyage et art mural",
@@ -101,11 +102,11 @@
       discover: "Découvrir", selectedWork: "Sélection",
       introTitle: "Des photographies qui laissent respirer les lieux.",
       introBody: "Voyages, architecture, littoraux et lieux habités — observés avec patience et présentés sans s’interposer entre vous et l’image.",
-      usageEyebrow: "De la découverte à l’usage", usageTitle: "Trouvez l’image. Sachez ce que vous pouvez en faire.",
-      usageIntro: "Pays, région, ville, année et note du photographe précisent la provenance, tandis que les coordonnées exactes sensibles restent confidentielles.",
+      usageEyebrow: "De la découverte à l’usage", usageTitle: "Parcourez à votre rythme.",
+      usageIntro: "Ou trouvez la photo qu’il vous faut par lieu, époque, mots-clés ou grâce à la note du photographe.",
       wallArtTitle: "Art mural",
-      licensingTitle: "Usage personnel, éditorial ou commercial",
-      provenanceTitle: "Lieu",
+      licensingTitle: "Parcourir en ligne",
+      provenanceTitle: "Tirages et livres",
       usageAction: "Explorer les photographies",
       series: "Série", others: "Autres…", france: "France", usa: "États-Unis", spain: "Espagne", mexico: "Mexique",
       italy: "Italie", portugal: "Portugal", slovakia: "Slovaquie",
@@ -154,9 +155,10 @@
       altSpain: "Large panorama de la Plaza de España à Séville",
       altItaly: "L’Arno à Florence",
       altSlovakia: "La place Hviezdoslav et ses fontaines à Bratislava",
-      altWallArt: "Une photographie encadrée de Notre-Dame exposée au-dessus d’un canapé",
+      altWallArt: "Une grande photographie encadrée de Notre-Dame au-dessus d’un buffet en bois clair",
+      altBrowse: "Une personne vue de dos utilise un navigateur photo en mode sombre affichant le coucher de soleil de Del Mar",
       altLicensing: "Une photographie de plage présentée en tirage, dans une revue et sur un support commercial",
-      altProvenance: "Une fiche de catalogue photographique indiquant le pays, la région, la ville, l’année et un repère de lieu privé"
+      altProvenance: "Un livre photo ouvert et une photographie encadrée sur un bureau"
     },
     es: {
       productionPageTitle: "Photos By Elie | Fotografía de viajes y arte mural",
@@ -167,11 +169,11 @@
       discover: "Descubrir", selectedWork: "Selección",
       introTitle: "Fotografía que deja respirar cada lugar.",
       introBody: "Viajes, arquitectura, costas y espacios vividos — observados con paciencia y presentados sin interponerse entre tú y la imagen.",
-      usageEyebrow: "Del descubrimiento al uso", usageTitle: "Encuentra la imagen. Descubre lo que puedes hacer con ella.",
-      usageIntro: "El país, la región, la ciudad, el año y una nota del fotógrafo aportan un contexto útil, mientras las coordenadas exactas sensibles siguen siendo privadas.",
+      usageEyebrow: "Del descubrimiento al uso", usageTitle: "Explora a tu ritmo.",
+      usageIntro: "O busca la foto que necesitas por geografía, época, palabras clave o la nota del fotógrafo.",
       wallArtTitle: "Arte mural",
-      licensingTitle: "Uso personal, editorial o comercial",
-      provenanceTitle: "Ubicación",
+      licensingTitle: "Explorar en línea",
+      provenanceTitle: "Copias y libros",
       usageAction: "Explorar fotografías",
       series: "Serie", others: "Otras…", france: "Francia", usa: "EE. UU.", spain: "España", mexico: "México",
       italy: "Italia", portugal: "Portugal", slovakia: "Eslovaquia",
@@ -220,9 +222,10 @@
       altSpain: "Amplio panorama de la Plaza de España en Sevilla",
       altItaly: "El río Arno en Florencia",
       altSlovakia: "La plaza Hviezdoslav y sus fuentes en Bratislava",
-      altWallArt: "Una fotografía enmarcada de Notre-Dame expuesta sobre un sofá",
+      altWallArt: "Una gran fotografía enmarcada de Notre-Dame sobre una credenza de madera clara",
+      altBrowse: "Una persona vista de espaldas usa un navegador de fotos en modo oscuro que muestra el atardecer de Del Mar",
       altLicensing: "Una fotografía de playa presentada como impresión, reportaje editorial y anuncio comercial",
-      altProvenance: "Una ficha de catálogo fotográfico con país, región, ciudad, año y un marcador de ubicación privada"
+      altProvenance: "Un fotolibro abierto y una fotografía enmarcada sobre un escritorio"
     }
   };
 

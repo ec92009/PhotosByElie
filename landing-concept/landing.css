@@ -456,10 +456,11 @@ input { font: inherit; }
 
 .usage-guide-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 20px;
   margin-top: clamp(2.4rem, 5vw, 4.5rem);
   background: transparent;
+  align-items: stretch;
 }
 
 .usage-guide-grid article {
@@ -468,29 +469,45 @@ input { font: inherit; }
   border: 1px solid var(--line);
   background: var(--paper-soft);
 }
+
+.usage-guide-feature { aspect-ratio: 1; }
+
+.usage-guide-stack {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-height: 0;
+}
+
+.usage-guide-stack article { min-height: 0; }
+
 .usage-guide-visual {
   position: relative;
   margin: 0;
   overflow: hidden;
-  aspect-ratio: 3 / 2;
+  height: 100%;
   background: color-mix(in srgb, var(--paper-soft) 72%, var(--ink));
 }
 .usage-guide-visual::after {
   position: absolute;
   inset: 0;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(to bottom, transparent 72%, rgba(27, 27, 24, 0.07));
+  background: linear-gradient(to top, rgba(17, 17, 15, 0.8), transparent 44%);
   content: "";
   pointer-events: none;
 }
 .usage-guide-visual img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.usage-guide-card-copy { min-height: 128px; padding: clamp(1.4rem, 2.5vw, 2.25rem); }
-.usage-guide-grid h3 {
-  margin: 0;
+.usage-guide-visual figcaption {
+  position: absolute;
+  right: clamp(1rem, 2.2vw, 2rem);
+  bottom: clamp(1rem, 2.2vw, 2rem);
+  left: clamp(1rem, 2.2vw, 2rem);
+  z-index: 1;
+  color: #fffdf6;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.45rem, 2vw, 1.85rem);
+  font-size: clamp(1.2rem, 2.4vw, 2.35rem);
   font-weight: 500;
-  line-height: 1.08;
+  line-height: 1;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.62);
 }
 .usage-guide-action { display: inline-flex; margin-top: 1.5rem; padding: 0.8rem 1rem; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; font-weight: 720; }
 .usage-guide-action:hover,.usage-guide-action:focus-visible { background: var(--accent); color: #11110f; }
@@ -540,13 +557,13 @@ input { font: inherit; }
 .story-card::after {
   content: "";
   position: absolute;
-  inset: 28% 0 0;
+  inset: 18% 0 0;
   z-index: 1;
   background: linear-gradient(
     to bottom,
-    rgba(4, 5, 4, 0.04) 0%,
-    rgba(4, 5, 4, 0.62) 52%,
-    rgba(4, 5, 4, 0.88) 100%
+    rgba(4, 5, 4, 0.1) 0%,
+    rgba(4, 5, 4, 0.74) 52%,
+    rgba(4, 5, 4, 0.94) 100%
   );
 }
 
@@ -559,6 +576,10 @@ input { font: inherit; }
   inset: auto 2rem 2rem;
   display: grid;
   gap: 0.35rem;
+  padding: 0.72rem 1rem 0.82rem;
+  margin: -0.72rem -1rem -0.82rem;
+  background: linear-gradient(90deg, rgba(4, 5, 4, 0.54), rgba(4, 5, 4, 0.24) 76%, transparent);
+  border-radius: 0.25rem;
   transition: transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -993,6 +1014,8 @@ input { font: inherit; }
   .scroll-cue { bottom: 2rem; }
   .intro-grid { grid-template-columns: 1fr; }
   .usage-guide-heading,.usage-guide-grid { grid-template-columns: 1fr; }
+  .usage-guide-stack { grid-template-rows: none; }
+  .usage-guide-stack article { aspect-ratio: 1; }
   .explore-menu { width: 100%; }
   .country-links {
     width: calc(100vw - 2rem);

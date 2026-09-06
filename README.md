@@ -33,7 +33,7 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v249.11`
+- Current visible version: `v249.12`
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.

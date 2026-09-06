@@ -272,8 +272,8 @@ input { font: inherit; }
   display: inline-grid;
   align-items: center;
   min-height: 50px;
-  width: min(100%, 760px);
-  max-width: min(100%, 760px);
+  width: max-content;
+  max-width: 100%;
 }
 
 .explore-button {
@@ -282,7 +282,7 @@ input { font: inherit; }
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  width: 100%;
+  width: max-content;
   min-width: 0;
   padding: 0.8rem 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -295,33 +295,6 @@ input { font: inherit; }
   cursor: pointer;
   transform-origin: left center;
   transition: opacity 240ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.social-campaign-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  width: 100%;
-  max-width: 760px;
-  margin-top: 0.65rem;
-  padding: 0.8rem 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 999px;
-  background: rgba(10, 10, 9, calc(var(--glass-alpha) * 0.68));
-  color: var(--ink);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  font-weight: 720;
-  text-decoration: none;
-  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-
-.social-campaign-link:hover,
-.social-campaign-link:focus-visible {
-  border-color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
 }
 
 .country-links {

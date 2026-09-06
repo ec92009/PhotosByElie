@@ -282,7 +282,8 @@ input { font: inherit; }
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  min-width: 13rem;
+  width: 100%;
+  min-width: 0;
   padding: 0.8rem 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 999px;
@@ -301,9 +302,8 @@ input { font: inherit; }
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  min-width: 13rem;
-  max-width: 100%;
-  width: min(100%, 760px);
+  width: 100%;
+  max-width: 760px;
   margin-top: 0.65rem;
   padding: 0.8rem 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -329,7 +329,8 @@ input { font: inherit; }
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  max-width: min(760px, calc(100vw - 2.4rem));
+  width: 100%;
+  max-width: 100%;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;

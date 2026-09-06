@@ -64,7 +64,7 @@ test("landing French and Spanish copy covers all visible and accessible strings"
   assert.deepEqual(Object.keys(translations.fr).sort(), Object.keys(translations.en).sort());
   assert.deepEqual(Object.keys(translations.es).sort(), Object.keys(translations.en).sort());
   assert.match(translations.fr.introBody, /habités/);
-  assert.match(translations.es.usageIntro, /geograf/);
+  assert.match(translations.es.usageIntro, /lugar/);
   assert.match(js, /\[data-i18n-aria-label\]/);
   assert.match(js, /\[data-i18n-alt\]/);
   assert.equal((productionHtml.match(/data-title-i18n=/g) || []).length, 6);
@@ -324,9 +324,10 @@ test("the production landing opens on the Louvre and presents the browse/use blo
   assert.match(productionHtml, /class="usage-guide-stack"/);
   assert.doesNotMatch(productionHtml, /data-i18n="(?:wallArtBody|licensingBody|provenanceBody)"/);
   assert.match(js, /usageTitle: "Browse at your leisure\."/);
-  assert.match(js, /usageIntro: "Or seek the photo you need based on geography, time, keywords, or a photographer's note\."/);
-  assert.match(js, /licensingTitle: "Browse online"/);
-  assert.match(js, /provenanceTitle: "Prints and books"/);
+  assert.match(js, /usageIntro: "Find the image that fits by place, time, keywords, or the photographer’s own note\."/);
+  assert.match(js, /wallArtTitle: "Enjoy it"/);
+  assert.match(js, /licensingTitle: "Work with it"/);
+  assert.match(js, /provenanceTitle: "Remember it"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
   assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 20px/);

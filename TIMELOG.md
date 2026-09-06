@@ -794,8 +794,9 @@ Clock state: running
 | 2026-08-29 | 12:24 CEST | 12:25 CEST | 0:01 | Authorized direct build 259 installation and accepted installed Gallery Quick Look navigation with automatic selection reveal; background installation, UI probing, and ticket updates excluded. |
 | 2026-08-31 | 22:13 CEST | 22:14 CEST | 0:01 | Authorized coding the local-only Waste Basket Delete Selected repair; background implementation, tests, build, and release work excluded. |
 | 2026-09-06 | 22:08 CEST | 22:16 CEST | 0:02 | Refined the landing wall-art environment against the supplied reference, tightened the chair crop, and verified the usage-guide release candidate; background image generation and test runtime excluded. |
+| 2026-09-06 | 22:26 CEST | 22:28 CEST | 0:01 | Refined the usage-guide labels and search sentence across the three site languages; background test and release runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:40
+Active collaboration time used: 38:41
 Remaining budget: not set

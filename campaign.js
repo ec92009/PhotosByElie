@@ -1,5 +1,9 @@
 (async () => {
-  await window.photosByElieCatalogReady;
+  if (!new URLSearchParams(location.search).has("c")) return;
+  try { await window.photosByElieCatalogReady; } catch {
+    document.querySelector('[data-campaign-description]').textContent = 'This collection is unavailable. Please reload to try again.';
+    return;
+  }
   const $ = (selector) => document.querySelector(selector);
   const escapeHtml = (value) => window.photosByElieGalleryCard?.escapeHtml?.(value) || String(value || "");
   const collections = window.photosByElieData || {};
@@ -48,9 +52,8 @@
 
   const photoHref = (id) => versionedHref(`./photo.html?id=${encodeURIComponent(id)}&fit=fill&columns=3`);
 
-  const entriesForIds = (ids) => (ids || [])
-    .map((id) => photoIndex.get(id))
-    .filter(Boolean);
+  const rules = window.photosByElieCampaignCollection;
+  const entriesForIds = (ids) => rules.entries(ids, photoIndex);
 
   const renderEntries = (container, entries) => {
     if (!container) return;
@@ -218,6 +221,7 @@
     const response = await fetch(`./assets/campaigns/${safeCampaignId}.json${scriptVersion ? `?v=${encodeURIComponent(scriptVersion)}` : ""}`);
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
+    if (!rules.publicCampaign(campaign)) throw new Error("This collection is unavailable.");
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;
     if (els.title) els.title.textContent = campaign.title || "Photos By Elie";
     if (els.nav) els.nav.href = `./campaign.html?c=${encodeURIComponent(safeCampaignId)}`;
@@ -225,8 +229,10 @@
     if (els.description) els.description.textContent = campaign.description || "";
     if (els.relatedTitle) els.relatedTitle.textContent = campaign.relatedTitle || "More from the archive";
     if (els.searchInput && campaign.searchPlaceholder) els.searchInput.placeholder = campaign.searchPlaceholder;
-    primaryEntries = entriesForIds(campaign.primaryPhotoIds || []);
-    relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);
+    primaryEntries = entriesForIds(rules.memberIds(campaign));
+    relatedEntries = [];
+    els.related.closest("section").hidden = true;
+    if (!primaryEntries.length) els.description.textContent = "No public photographs are currently available in this collection.";
     const heroEntry = photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]);
     const heroImage = campaign.imageUrl || (heroEntry && (window.photosByElieMediaUrl?.(heroEntry.photo, "detail") || window.photosByElieMediaUrl?.(heroEntry.photo, "gallery"))) || window.photosByElieSeo?.defaultImage;
     const campaignUrl = window.photosByElieSeo?.pageUrl?.("/campaign.html", { c: safeCampaignId });

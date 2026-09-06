@@ -1,0 +1,7 @@
+# PBE-198 — Permanent All campaigns gallery
+
+The permanent destination is https://photos-by-elie.com/campaign.html. Existing `?c=` links retain their campaign detail routes. Public membership is the deduplicated union of primary, hero and related IDs, filtered through the lifecycle-authorized public catalog and public-preview availability. Empty collections are omitted. Explicit private/draft/unpublished/archived campaigns are excluded. Four-image CSS composites use existing watermarked previews; no private media or parallel campaign records are introduced.
+
+The existing social package finalizer rebuilds the campaign index, now including complete member IDs. Desktop uses a maximum of two cards per row; widths up to 700px use one. Homepage navigation and the sitemap include the directory; campaign details link back to it. Network, catalog rejection and empty results have visible status messages.
+
+Validation: 62 targeted tests passed, including complete membership for all 173 source manifests and exclusion/deduplication cases. Publish validation passed against the canonical read-only Owner authority. Browser checked 170 currently eligible collections, desktop two columns, 390px mobile one column with no overflow, San Diego Zoo five photos, and Del Mar eight photos with return link. The plain static localhost server cannot serve the existing local media proxy or authenticated session endpoint; production media verification is recorded separately after deployment.

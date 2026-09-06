@@ -8,9 +8,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "landing-concept", "index.html"), "utf8");
 const productionHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const socialHtml = fs.readFileSync(path.join(root, "social.html"), "utf8");
 const productionVersion = fs.readFileSync(path.join(root, "VERSION"), "utf8").trim();
 const css = fs.readFileSync(path.join(root, "landing-concept", "landing.css"), "utf8");
 const js = fs.readFileSync(path.join(root, "landing-concept", "landing.js"), "utf8");
+const campaignsJs = fs.readFileSync(path.join(root, "campaigns.js"), "utf8");
+const campaignsCss = fs.readFileSync(path.join(root, "campaigns.css"), "utf8");
 
 const translationMatch = js.match(/const translations = (\{[\s\S]*?\n  \});\n\n  const activeLanguage/);
 assert.ok(translationMatch, "landing translations object is readable");
@@ -300,12 +303,28 @@ test("the production landing restores the latest social shelf in the open grid s
     "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
   ];
   assert.deepEqual(socialRoutes, expectedSocialRoutes);
+  assert.match(socialShelf, new RegExp(`class="social-shelf-all" href="\\./social\\.html\\?v=${productionVersion}"`));
+  assert.match(productionHtml, new RegExp(`class="social-campaign-link" href="\\./social\\.html\\?v=${productionVersion}"`));
+  assert.match(productionHtml, /data-i18n="socialCampaigns"/);
   assert.match(productionHtml, /data-i18n="latestSocial"/);
   assert.doesNotMatch(socialShelf, /<img|latestSocialTitle/);
   assert.match(js, /latestSocial: "Latest social"/);
   assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);
   assert.match(css, /\.social-shelf \{[\s\S]*?overflow: hidden/);
   assert.match(css, /\[data-theme="day"\] \.social-shelf/);
+});
+
+test("the social campaigns page filters the shared campaign directory", () => {
+  assert.match(socialHtml, /<title>Social campaigns \| Photos By Elie<\/title>/);
+  assert.match(socialHtml, /rel="canonical" href="https:\/\/photos-by-elie\.com\/social\.html"/);
+  assert.match(socialHtml, /data-campaign-sources="facebook,instagram,threads,pinterest"/);
+  assert.match(socialHtml, /data-directory-title="Social campaigns"/);
+  assert.match(socialHtml, /data-directory-noun="social collections"/);
+  assert.match(socialHtml, new RegExp(`campaigns\.js\\?v=${productionVersion}`));
+  assert.match(campaignsJs, /sourceFilter/);
+  assert.match(campaignsJs, /campaign\.source/);
+  assert.match(campaignsJs, /data-directory-title/);
+  assert.match(campaignsCss, /campaign-directory-meta/);
 });
 
 test("the production landing opens on the Louvre and presents the browse/use block", () => {
@@ -330,8 +349,10 @@ test("the production landing opens on the Louvre and presents the browse/use blo
   assert.match(js, /provenanceTitle: "Remember it"/);
   assert.match(js, /usageAction: "Explore photographs"/);
   assert.match(css, /\.usage-guide-grid/);
-  assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 20px/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?gap: 3px/);
+  assert.match(css, /\.usage-guide-grid \{[\s\S]*?background: #3d3c35/);
   assert.match(css, /\.usage-guide-visual/);
+  assert.match(css, /\.usage-guide-visual::after[\s\S]*?linear-gradient\(90deg[\s\S]*?transparent 50%/);
   assert.match(css, /\.usage-guide-grid \{[\s\S]*?grid-template-columns: minmax\(0, 2fr\) minmax\(0, 1fr\)/);
   assert.match(css, /\[data-theme="day"\] \.usage-guide/);
 });

@@ -11,6 +11,7 @@
 .campaign-composite[data-frames="3"] img:first-child { grid-row: span 2; }
 .campaign-directory-caption { padding: 1.25rem; }
 .campaign-directory-caption h2 { font-size: clamp(1.25rem, 2vw, 1.7rem); margin: 0 0 .6rem; }
+.campaign-directory-meta { margin: 0 0 .55rem !important; color: #756b5f; font-size: .7rem; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
 .campaign-directory-caption p { margin: 0; }
 [data-campaign-detail][hidden], [data-all-campaigns][hidden] { display: none !important; }
 @media (max-width: 700px) { .campaign-directory { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
@@ -20,4 +21,5 @@ body.all-campaigns main.shell { width: min(1480px, calc(100% - 48px)); }
 body.all-campaigns .campaign-directory-card { background: #fffdf8; }
 html[data-theme="dark"] body.all-campaigns { background: #191a19; }
 html[data-theme="dark"] .all-campaigns .campaign-directory-card { background: #252624; }
+html[data-theme="dark"] .all-campaigns .campaign-directory-meta { color: #bcb4a8; }
 @media (max-width: 700px) { body.all-campaigns main.shell { width: calc(100% - 32px); } }

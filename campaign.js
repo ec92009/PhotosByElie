@@ -54,9 +54,121 @@
 
   const rules = window.photosByElieCampaignCollection;
   const entriesForIds = (ids) => rules.entries(ids, photoIndex);
+  const likedStore = window.photosByElieLiked;
+  const selectedPhotoIds = new Set();
+  const t = (key, fallback) => {
+    const translated = window.photosByElieI18n?.t?.(key);
+    return translated && translated !== key ? translated : fallback;
+  };
+  const likedPhotoIds = () => new Set(likedStore?.read?.().map((item) => item.photoId) || []);
+
+  const actionHtmlFor = (photo, likedIds) => {
+    const isLiked = likedIds.has(photo.id);
+    const isSelected = selectedPhotoIds.has(photo.id);
+    return `
+      <div class="gallery-card-selection">
+        <button
+          class="gallery-action-toggle gallery-select-toggle${isSelected ? " is-selected" : ""}"
+          type="button"
+          data-gallery-select-photo
+          data-photo-id="${escapeHtml(photo.id)}"
+          aria-label="${isSelected ? "Remove from selection" : "Add to selection"}"
+          aria-pressed="${isSelected ? "true" : "false"}"
+        >${isSelected ? "✓" : "+"}</button>
+      </div>
+      ${likedStore ? `
+        <div class="gallery-card-actions">
+          <button
+            class="gallery-action-toggle gallery-like-toggle${isLiked ? " is-liked" : ""}"
+            type="button"
+            data-gallery-like
+            data-photo-id="${escapeHtml(photo.id)}"
+            aria-label="${escapeHtml(t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo", isLiked ? "Unlike this photo" : "Like this photo"))}"
+            aria-pressed="${isLiked ? "true" : "false"}"
+          >${window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>"}</button>
+        </div>
+      ` : ""}
+    `;
+  };
+
+  const syncCampaignLikeButtons = () => {
+    const likedIds = likedPhotoIds();
+    document.querySelectorAll("[data-gallery-like]").forEach((button) => {
+      const isLiked = likedIds.has(button.dataset.photoId);
+      button.classList.toggle("is-liked", isLiked);
+      button.setAttribute("aria-pressed", String(isLiked));
+      button.setAttribute("aria-label", t(isLiked ? "a11y.unlike_photo" : "a11y.like_photo", isLiked ? "Unlike this photo" : "Like this photo"));
+      button.innerHTML = window.photosByElieMdIcon?.(isLiked ? "favorite" : "favoriteBorder") || "<span aria-hidden=\"true\"></span>";
+    });
+  };
+
+  const syncCampaignSelection = () => {
+    document.querySelectorAll("[data-gallery-select-photo]").forEach((button) => {
+      const isSelected = selectedPhotoIds.has(button.dataset.photoId);
+      button.classList.toggle("is-selected", isSelected);
+      button.setAttribute("aria-pressed", String(isSelected));
+      button.setAttribute("aria-label", isSelected ? "Remove from selection" : "Add to selection");
+      button.textContent = isSelected ? "✓" : "+";
+    });
+    document.querySelectorAll(".mock-photo-card[data-photo-id]").forEach((card) => {
+      card.classList.toggle("is-batch-selected", selectedPhotoIds.has(card.dataset.photoId));
+    });
+  };
+
+  const bindCardActions = (container, entries) => {
+    container?.querySelectorAll("[data-gallery-select-photo]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const photoId = button.dataset.photoId;
+        if (!photoId) return;
+        if (selectedPhotoIds.has(photoId)) selectedPhotoIds.delete(photoId);
+        else selectedPhotoIds.add(photoId);
+        syncCampaignSelection();
+      });
+    });
+    container?.querySelectorAll("[data-gallery-like]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const photoId = button.dataset.photoId;
+        if (!photoId || !likedStore) return;
+        if (likedStore.has?.(photoId)) likedStore.remove(photoId);
+        else likedStore.add(photoId);
+        syncCampaignLikeButtons();
+      });
+    });
+    container?.querySelectorAll("[data-photo-index]").forEach((card) => {
+      const index = Number(card.dataset.photoIndex || 0);
+      const entry = entries?.[index];
+      if (!entry?.photo?.id) return;
+      const openPreview = (event) => {
+        if (event?.target?.closest?.("button")) return;
+        event?.preventDefault?.();
+        openCampaignQuickLook(container, entries, index, card.querySelector("[data-photo-link], [data-photo-caption]"));
+      };
+      card.addEventListener("dblclick", openPreview);
+      card.querySelectorAll("[data-photo-link], [data-photo-caption]").forEach((link) => {
+        link.addEventListener("keydown", (event) => {
+          if (event.key !== " ") return;
+          openPreview(event);
+        });
+      });
+      card.addEventListener("contextmenu", (event) => {
+        if (event.target?.closest?.("button")) return;
+        window.photosByElieShowMediaContextMenu?.(entry.photo, event, {
+          owner: false,
+          previewItems: entries.map((item) => item.photo),
+          previewIndex: index,
+          onOpenDetail: () => window.location.assign(card.dataset.photoHref || photoHref(entry.photo.id)),
+        });
+      });
+    });
+  };
 
   const renderEntries = (container, entries) => {
     if (!container) return;
+    const likedIds = likedPhotoIds();
     const cards = (entries || []).map((entry, index) => {
       if (!entry) return "";
       return window.photosByElieGalleryCard.renderPhotoCard({
@@ -65,9 +177,13 @@
         href: photoHref(entry.photo.id),
         collectionKey: entry.collectionKey,
         collectionAccent: entry.collectionAccent,
+        actionHtml: actionHtmlFor(entry.photo, likedIds),
       });
     }).filter(Boolean);
     container.innerHTML = cards.join("");
+    bindCardActions(container, entries);
+    syncCampaignSelection();
+    syncCampaignLikeButtons();
   };
 
   const renderCards = (container, ids) => {
@@ -92,6 +208,61 @@
   const primaryLayout = createLayoutController(els.primary, () => primaryEntries.map((entry) => entry.photo));
   const relatedLayout = createLayoutController(els.related, () => relatedEntries.map((entry) => entry.photo));
   const searchLayout = createLayoutController(els.searchResults, () => searchEntries.map((entry) => entry.photo));
+
+  const layoutForContainer = (container) => container === els.primary
+    ? primaryLayout
+    : container === els.searchResults ? searchLayout : relatedLayout;
+
+  const openCampaignQuickLook = (container, entries, index, focusTarget) => {
+    const entry = entries?.[index];
+    if (!entry?.photo?.id || typeof window.photosByElieOpenFinderPreview !== "function") return false;
+    const items = entries.map((item) => item.photo).filter((photo) => photo?.id);
+    const itemIndex = Math.max(0, items.findIndex((photo) => photo.id === entry.photo.id));
+    const layout = layoutForContainer(container);
+    window.photosByElieOpenFinderPreview(entry.photo, {
+      items,
+      index: itemIndex,
+      wrapNavigation: true,
+      navigationKind: "loaded",
+      navigationColumns: layout?.preferredDensityColumns?.() || 1,
+      quickLookCommands: (photo) => [
+        {
+          id: "toggle-selection",
+          label: selectedPhotoIds.has(photo?.id) ? "Deselect" : "Select",
+          shortcutLabel: "S",
+          selectionEffect: "toggle-current",
+        },
+        ...(likedStore ? [{
+          id: "like",
+          label: likedStore.has?.(photo?.id) ? "Unlike" : "Like",
+          shortcutLabel: "L",
+          selectionEffect: "preserve",
+        }] : []),
+      ],
+      dispatchQuickLookCommand: (commandId, photo) => {
+        if (!photo?.id) return null;
+        if (commandId === "toggle-selection") {
+          if (selectedPhotoIds.has(photo.id)) selectedPhotoIds.delete(photo.id);
+          else selectedPhotoIds.add(photo.id);
+          syncCampaignSelection();
+          return { value: { succeeded: [photo.id] } };
+        }
+        if (commandId === "like" && likedStore) {
+          if (likedStore.has?.(photo.id)) likedStore.remove(photo.id);
+          else likedStore.add(photo.id);
+          syncCampaignLikeButtons();
+          return { value: { succeeded: [photo.id] } };
+        }
+        return null;
+      },
+      restoreFocus: (targetPhoto) => {
+        const card = [...(container?.querySelectorAll?.("[data-photo-id]") || [])]
+          .find((candidate) => candidate.dataset.photoId === targetPhoto?.id);
+        (card?.querySelector("[data-photo-link], [data-photo-caption]") || focusTarget)?.focus?.({ preventScroll: true });
+      },
+    });
+    return true;
+  };
 
   const applyCampaignDensity = () => {
     layoutControllers.forEach((controller, index) => {
@@ -267,6 +438,8 @@
     const ok = await embedded?.copyText?.(embedded.externalUrl);
     els.copyBrowserLink.textContent = ok ? "Copied" : "Copy failed";
   });
+
+  window.addEventListener("photosbyelie:likedchange", syncCampaignLikeButtons);
 
   loadCampaign().catch((error) => {
     if (els.description) els.description.textContent = error.message || "This collection is unavailable.";

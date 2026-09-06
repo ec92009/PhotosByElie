@@ -2045,6 +2045,7 @@ const openGalleryPreview = () => {
     index,
     wrapNavigation: selectedNavigation,
     navigationKind: selectedNavigation ? "selected" : "loaded",
+    navigationColumns: galleryLayout.preferredDensityColumns(),
     quickLookCommands: (photo) => galleryCommandRegistry?.list({ context: quickLookContext(photo) })
       .filter((command) => command.quickLookLegend && command.enabled)
       .map((command) => ({

@@ -51,6 +51,7 @@ function campaignDate(campaign) {
 function campaignItem(campaign, stat, photoIndex, mediaConfig) {
   const heroId = campaign.heroPhotoId || campaign.primaryPhotoIds?.[0] || "";
   const heroEntry = photoIndex.get(heroId);
+  const photoIds = campaignRules.memberIds(campaign);
   const previewIds = [
     heroId,
     ...(campaign.primaryPhotoIds || []),
@@ -72,7 +73,8 @@ function campaignItem(campaign, stat, photoIndex, mediaConfig) {
     imageUrl: publicPreviewUrl(heroEntry?.photo, mediaConfig) || previewImageUrls[0] || "",
     imageAlt: heroEntry?.photo?.title || campaign.title || campaign.id,
     previewImageUrls,
-    photoIds: campaignRules.memberIds(campaign),
+    photoIds,
+    compositePhotoIds: campaignRules.compositePhotoIds(campaign),
     primaryPhotoCount: Array.isArray(campaign.primaryPhotoIds) ? campaign.primaryPhotoIds.length : 0,
     relatedPhotoCount: Array.isArray(campaign.relatedPhotoIds) ? campaign.relatedPhotoIds.length : 0,
     mtimeMs: Math.round(stat.mtimeMs),

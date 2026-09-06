@@ -11,7 +11,7 @@
   const version = new URL(document.currentScript.src).searchParams.get('v');
 
   /** Build a linked composite from lifecycle-authorized, public watermarked previews. */
-  const cardFor = (campaign, entries) => {
+  const cardFor = (campaign, entries, compositeEntries = entries) => {
     const card = document.createElement('a');
     card.className = 'campaign-directory-card';
     card.href = `./campaign.html?c=${encodeURIComponent(campaign.id)}`;
@@ -19,7 +19,7 @@
     composite.className = 'campaign-composite';
     composite.setAttribute('role', 'img');
     composite.setAttribute('aria-label', `Photographic composite: ${campaign.title}`);
-    const frames = entries.slice(0, 4);
+    const frames = compositeEntries.slice(0, 4);
     composite.dataset.frames = frames.length;
     for (const { photo } of frames) {
       const img = document.createElement('img');
@@ -55,7 +55,8 @@
     for (const campaign of payload.campaigns) {
       if (!rules.publicCampaign(campaign)) continue;
       const entries = rules.entries(campaign.photoIds, index);
-      if (entries.length) grid.append(cardFor(campaign, entries));
+      const compositeEntries = rules.entries(campaign.compositePhotoIds || campaign.photoIds, index);
+      if (entries.length) grid.append(cardFor(campaign, entries, compositeEntries.length ? compositeEntries : entries));
     }
     status.textContent = grid.children.length ? `${grid.children.length} collections to explore` : 'No public campaigns are available yet.';
   };

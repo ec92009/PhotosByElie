@@ -484,9 +484,10 @@
     if (els.description) els.description.textContent = campaign.description || "";
     if (els.relatedTitle) els.relatedTitle.textContent = campaign.relatedTitle || "More from the archive";
     if (els.searchInput && campaign.searchPlaceholder) els.searchInput.placeholder = campaign.searchPlaceholder;
-    primaryEntries = entriesForIds(rules.memberIds(campaign));
-    relatedEntries = [];
-    els.related.closest("section").hidden = true;
+    primaryEntries = entriesForIds(campaign.primaryPhotoIds || []);
+    relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);
+    const relatedSection = els.related?.closest("section");
+    if (relatedSection) relatedSection.hidden = relatedEntries.length === 0;
     if (!primaryEntries.length) els.description.textContent = "No public photographs are currently available in this collection.";
     const heroEntry = photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]);
     const heroImage = campaign.imageUrl || (heroEntry && (window.photosByElieMediaUrl?.(heroEntry.photo, "detail") || window.photosByElieMediaUrl?.(heroEntry.photo, "gallery"))) || window.photosByElieSeo?.defaultImage;

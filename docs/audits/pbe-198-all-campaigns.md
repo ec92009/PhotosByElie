@@ -23,3 +23,7 @@ Campaign detail also handles Space at the page level: when focus is on the page 
 ## Space shortcut receipt — 6 September 2026, 18:18 CEST
 
 The campaign detail keyboard path is cache-busted as v249.5. With page-body focus on the Albert Kahn detail route, Space stayed at the current scroll position and opened the first visible card in Quick Look; native card controls remain available to their own Space activation.
+
+## Related section receipt — 6 September 2026, 21:31 CEST
+
+Campaign details keep the primary photographs in “All photographs” and render each manifest's related public previews in the “You might also like” section. The section is hidden only when a campaign has no related public previews, preventing an empty panel while preserving the related gallery for campaigns that provide it. The public site cache-bust is v249.6.

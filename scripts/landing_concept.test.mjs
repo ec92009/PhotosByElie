@@ -305,6 +305,7 @@ test("the production landing restores the latest social shelf in the open grid s
   assert.deepEqual(socialRoutes, expectedSocialRoutes);
   assert.match(socialShelf, new RegExp(`class="social-shelf-all" href="\\./social\\.html\\?v=${productionVersion}"`));
   assert.match(productionHtml, new RegExp(`class="social-campaign-link" href="\\./social\\.html\\?v=${productionVersion}"`));
+  assert.match(productionHtml, /id="country-links"[\s\S]*class="social-campaign-link" href="\.\/social\.html/);
   assert.match(productionHtml, /data-i18n="socialCampaigns"/);
   assert.match(productionHtml, /data-i18n="latestSocial"/);
   assert.doesNotMatch(socialShelf, /<img|latestSocialTitle/);
@@ -312,6 +313,8 @@ test("the production landing restores the latest social shelf in the open grid s
   assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);
   assert.match(css, /\.social-shelf \{[\s\S]*?overflow: hidden/);
   assert.match(css, /\[data-theme="day"\] \.social-shelf/);
+  assert.match(css, /\.explore-menu \{[\s\S]*?width: max-content[\s\S]*?max-width: 100%/);
+  assert.doesNotMatch(css, /\.social-campaign-link \{/);
 });
 
 test("the social campaigns page filters the shared campaign directory", () => {

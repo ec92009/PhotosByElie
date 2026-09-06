@@ -49,3 +49,7 @@ The usage-guide captions now frame the three paths as “Enjoy it,” “Work wi
 The usage guide now runs full width like the country-photo grid, with a deliberate three-pixel seam between the large wall-art feature and the two stacked supporting visuals. Its left-to-right scrim reaches full transparency at 50% of each image, keeping captions readable while letting the photography carry the right side. The hero now places a same-width “Social campaigns” pill beneath “Explore the collection,” and the latest-social shelf repeats that route for visitors who continue down the page.
 
 `social.html` is a dedicated, campaign-backed directory filtered to Facebook, Instagram, Threads, and Pinterest sources. It renders only lifecycle-authorized catalog previews, reports the filtered count, and excludes Etsy campaigns. Local browser verification at v249.11 found 119 social collections, two desktop columns, no Etsy entries, aligned hero pills, and a full-bleed usage grid. The sitemap and active cache-busters use v249.11. Full npm tests passed (303 Node tests, 489 Python tests); publish validation passed against the reviewed Owner.sqlite snapshot.
+
+## Hero navigation receipt — 6 September 2026, 23:10 CEST
+
+The homepage now treats “Social campaigns” as one more destination in the expandable country picker. It uses the same compact country-pill treatment and sits with the geographic destinations, so the hero has one clear action instead of a separate full-width social control. The menu remains content-sized and responsive, with the public cache-bust advanced to v249.12.

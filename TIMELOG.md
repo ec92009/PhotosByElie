@@ -796,8 +796,9 @@ Clock state: running
 | 2026-09-06 | 22:08 CEST | 22:16 CEST | 0:02 | Refined the landing wall-art environment against the supplied reference, tightened the chair crop, and verified the usage-guide release candidate; background image generation and test runtime excluded. |
 | 2026-09-06 | 22:26 CEST | 22:28 CEST | 0:01 | Refined the usage-guide labels and search sentence across the three site languages; background test and release runtime excluded. |
 | 2026-09-06 | 22:37 CEST | 22:51 CEST | 0:04 | Refined the usage-guide separation and hero CTA sizing, and reviewed the social-campaign directory direction; background implementation and test runtime excluded. |
+| 2026-09-06 | 23:09 CEST | 23:11 CEST | 0:01 | Folded the social-campaign route into the expandable country picker after the pill-width review; background tests and release runtime excluded. |
 
 ## Totals
 
-Active collaboration time used: 38:45
+Active collaboration time used: 38:46
 Remaining budget: not set

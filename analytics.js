@@ -1,4 +1,22 @@
 (() => {
+  // WST replaces native browser analytics on the approved public storefront.
+  // Never create sessions or send storefront events from private/local previews.
+  const storefrontPaths = new Set(['/', '/index.html', '/gallery.html', '/photo.html', '/basket.html', '/liked.html', '/order.html', '/campaign.html', '/support.html', '/privacy.html', '/terms.html', '/data-deletion.html']);
+  if (storefrontPaths.has(window.location.pathname)) {
+    window.photosByElieAnalytics = { enabled: () => false, track: () => {} };
+    if (window.location.origin !== 'https://photos-by-elie.com' || window.photosByElieMonitoringPreview
+      || navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+    const actions = document.createElement('script');
+    actions.src = '/wst-actions.js?v=249.0';
+    actions.onload = () => {
+      const beacon = document.createElement('script');
+      beacon.src = '/wst-beacon.js?v=249.0';
+      Object.assign(beacon.dataset, { wstEnabled: 'true', wstEndpoint: 'https://web-signals-collector.ec92009.workers.dev/v1/events', wstSite: 'photosbyelie', wstEnvironment: 'production', wstSessionless: 'true', wstConsent: 'not_required' });
+      document.body.append(beacon);
+    };
+    document.body.append(actions);
+    return;
+  }
   const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
   const OWNER_PATHS = /\/(?:owner|owner-review)\.html$/i;
   const CALLBACK_PATHS = /\/(?:etsy|instagram)-callback\.html$/i;

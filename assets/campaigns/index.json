@@ -1,9 +1,37 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-07-14T03:14:15.430Z",
+  "generated_at": "2026-09-06T14:15:00.560Z",
   "campaign_count": 173,
   "campaigns": [
+    {
+      "id": "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
+      "source": "Pinterest",
+      "title": "San Diego Zoo Wildlife Portraits",
+      "description": "A 5-photo San Diego Zoo Wildlife Portraits edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
+      "date": "2026-07-14",
+      "href": "./campaign.html?c=pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20161106-1558-00800-edit-9d8f5a9260_900.jpg",
+      "imageAlt": "Monkey Portrait at the Zoo",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20161106-1558-00800-edit-9d8f5a9260_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20161106-1622-27069-edit-0a10c13eb6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20160221-1420-01300-23ee766e22_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20161106-1606-28008-8c99b39494_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20161106-1557-28005-3d1ee36f82_900.jpg"
+      ],
+      "photoIds": [
+        "20161106-1558-00800-edit-9d8f5a9260",
+        "20161106-1622-27069-edit-0a10c13eb6",
+        "20160221-1420-01300-23ee766e22",
+        "20161106-1606-28008-8c99b39494",
+        "20161106-1557-28005-3d1ee36f82"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1788639423772
+    },
     {
       "id": "instagram-fuengirola-moon-mediterranean-2026-07-14",
       "source": "Instagram",
@@ -24,30 +52,19 @@
         "https://download.photos-by-elie.com/media/expo/img-2449-d8e7e22ab8_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-2437-230b62851d_900.jpg"
       ],
+      "photoIds": [
+        "img-2438-769d2c55da",
+        "img-2448-d30fa46324",
+        "img-2439-acda9a345e",
+        "img-2450-18dd778c3d",
+        "img-2445-86fcda40d1",
+        "img-2436-914f008c28",
+        "img-2449-d8e7e22ab8",
+        "img-2437-230b62851d"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998855296
-    },
-    {
-      "id": "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
-      "source": "Pinterest",
-      "title": "San Diego Zoo Wildlife Portraits",
-      "description": "A 5-photo San Diego Zoo Wildlife Portraits edit prepared for Pinterest with public Photos By Elie previews and a first-party browsing destination.",
-      "date": "2026-07-14",
-      "href": "./campaign.html?c=pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20161106-1558-00800-edit-9d8f5a9260_900.jpg",
-      "imageAlt": "Monkey Portrait at the Zoo",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20161106-1558-00800-edit-9d8f5a9260_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20161106-1622-27069-edit-0a10c13eb6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20160221-1420-01300-23ee766e22_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20161106-1606-28008-8c99b39494_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20161106-1557-28005-3d1ee36f82_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998855296
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-del-mar-dog-beach-sunset-2026-07-14",
@@ -69,9 +86,19 @@
         "https://download.photos-by-elie.com/media/expo/20180130-1817-00065-477cf9a0c8_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180130-1826-00076-d2dfbc75f1_900.jpg"
       ],
+      "photoIds": [
+        "20180130-1830-10861-hdr-f722e85795",
+        "20180130-1815-00062-b5ef84fe92",
+        "20180130-1809-00057-5d56be5106",
+        "20180130-1828-00077-81e9efc0b4",
+        "20180130-1807-00056-ce796ea795",
+        "20180130-1822-00073-359af05134",
+        "20180130-1817-00065-477cf9a0c8",
+        "20180130-1826-00076-d2dfbc75f1"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998855295
+      "mtimeMs": 1788639423757
     },
     {
       "id": "pinterest-lisbon-ancient-art-museum-light-2026-07-13",
@@ -90,9 +117,16 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1615-00727-dddf36cc6a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1605-00724-c27b7d6b75_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1617-00730-5ef53e0579",
+        "20180520-1627-00732-0df4ba1830",
+        "20180520-1559-00722-c5fc561a78",
+        "20180520-1615-00727-dddf36cc6a",
+        "20180520-1605-00724-c27b7d6b75"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101667
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-paris-carnavalet-rooms-color-2026-07-13",
@@ -114,9 +148,19 @@
         "https://download.photos-by-elie.com/media/expo/20221219-165844-03479-31cf914707_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20221219-165356-03462-304e23d1ae_900.jpg"
       ],
+      "photoIds": [
+        "20221219-155607-00136-8c488a1ba6",
+        "20221219-152540-00086-db2db72da2",
+        "20221219-155553-00134-9dd02882be",
+        "20221219-165333-03460-a83d1b36e7",
+        "20221219-170201-03493-21090b7b47",
+        "20221219-155621-00137-8131743c8d",
+        "20221219-165844-03479-31cf914707",
+        "20221219-165356-03462-304e23d1ae"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423764
     },
     {
       "id": "facebook-malaga-aerial-city-light-2026-07-13",
@@ -136,9 +180,17 @@
         "https://download.photos-by-elie.com/media/expo/001-908c4a86a2_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-6951fdf3ff_900.jpg"
       ],
+      "photoIds": [
+        "001-16030596db",
+        "001-d18ed98cff",
+        "001-a92aa83248",
+        "001-3ca918ad9a",
+        "001-908c4a86a2",
+        "001-6951fdf3ff"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "pinterest-alhaurin-sunset-hill-light-2026-07-12",
@@ -157,9 +209,16 @@
         "https://download.photos-by-elie.com/media/expo/img-1984-6af71ecaa1_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1985-ae65a693ca_900.jpg"
       ],
+      "photoIds": [
+        "img-1981-eeff6a8f2a",
+        "img-1982-f8478730f4",
+        "img-1983-29681bde15",
+        "img-1984-6af71ecaa1",
+        "img-1985-ae65a693ca"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101664
+      "mtimeMs": 1788639423767
     },
     {
       "id": "instagram-malaga-automobile-museum-chrome-color-2026-07-12",
@@ -181,9 +240,19 @@
         "https://download.photos-by-elie.com/media/expo/20230812-163606-00058-1d11a7ab6c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230812-163654-00061-50f5bb9a1a_900.jpg"
       ],
+      "photoIds": [
+        "20230812-163103-00031-782f0675d2",
+        "20230812-163122-00033-282b232c20",
+        "20230812-163307-00041-f0ce7b4ca4",
+        "20230812-163409-00047-d8b9755685",
+        "20230812-163509-00051-39f47ea46e",
+        "20230812-163554-00056-338afc55d1",
+        "20230812-163606-00058-1d11a7ab6c",
+        "20230812-163654-00061-50f5bb9a1a"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101662
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-setenil-rock-streets-white-stone-2026-07-12",
@@ -205,9 +274,19 @@
         "https://download.photos-by-elie.com/media/expo/20230806-153503-00170-3441608fe6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230806-153505-00171-2cc9e07bc6_900.jpg"
       ],
+      "photoIds": [
+        "20230806-153055-00157-ca94c00662",
+        "20230806-153217-00158-4ae53ae586",
+        "20230806-153218-00159-c3db4d8be2",
+        "20230806-153446-00163-ebb8c976af",
+        "20230806-153451-00164-ebd7e5284e",
+        "20230806-153456-00166-ba1a5b2c69",
+        "20230806-153503-00170-3441608fe6",
+        "20230806-153505-00171-2cc9e07bc6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101655
+      "mtimeMs": 1788639423760
     },
     {
       "id": "pinterest-lisbon-carmo-convent-ruins-2026-07-11",
@@ -226,9 +305,16 @@
         "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220519-150855-04494-23ca28ef26_900.jpg"
       ],
+      "photoIds": [
+        "20220519-150002-04473-673b0d617b",
+        "20220519-144910-04396-092ac31b87",
+        "20220519-145011-04398-926891f8aa",
+        "20220519-145733-04458-46544e9a62",
+        "20220519-150855-04494-23ca28ef26"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101668
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-valencia-cathedral-stone-detail-2026-07-11",
@@ -247,9 +333,16 @@
         "https://download.photos-by-elie.com/media/expo/img-1546-7416feac97_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1545-fbf260c171_900.jpg"
       ],
+      "photoIds": [
+        "img-1549-471a28324d",
+        "img-1548-bb4fc6c71a",
+        "img-1547-d92a870c4f",
+        "img-1546-7416feac97",
+        "img-1545-fbf260c171"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101664
+      "mtimeMs": 1788639423767
     },
     {
       "id": "facebook-toulouse-cloisters-brick-light-2026-07-11",
@@ -269,9 +362,17 @@
         "https://download.photos-by-elie.com/media/expo/20180524-1746-00940-636b34659d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20111106-0808-28027-8a497c25e6_900.jpg"
       ],
+      "photoIds": [
+        "20111102-1226-07867-136188a2c1",
+        "20180524-1746-00941-72deedae61",
+        "20111106-0808-27995-c4cfb5f5c1",
+        "20111102-1227-05325-ab56a019a3",
+        "20180524-1746-00940-636b34659d",
+        "20111106-0808-28027-8a497c25e6"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101657
+      "mtimeMs": 1788639423760
     },
     {
       "id": "pinterest-nerja-caves-stone-forms-2026-07-10",
@@ -282,7 +383,7 @@
       "href": "./campaign.html?c=pinterest-nerja-caves-stone-forms-2026-07-10",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-caves-stone-forms-2026-07-10",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/001-06519dafd6_900.jpg",
-      "imageAlt": "Nerja Caves, Spain",
+      "imageAlt": "Inside Nerja Caves, Andalusia, Spain",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/001-06519dafd6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-3f183d6653_900.jpg",
@@ -290,9 +391,16 @@
         "https://download.photos-by-elie.com/media/expo/001-9743f1d030_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-37515ebd6a_900.jpg"
       ],
+      "photoIds": [
+        "001-06519dafd6",
+        "001-3f183d6653",
+        "001-9018ca506d",
+        "001-9743f1d030",
+        "001-37515ebd6a"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101668
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-seville-plaza-de-espana-canal-light-2026-07-10",
@@ -314,9 +422,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1296-57d10180dd_900.jpg"
       ],
+      "photoIds": [
+        "img-1305-2d00c82f12",
+        "img-1285-7dc1335b5a",
+        "img-1299-258452f505",
+        "img-1295-8edea483ea",
+        "img-1306-db5384a1f4",
+        "img-1307-5123942639",
+        "img-1291-8ca48ed8d2",
+        "img-1296-57d10180dd"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423766
     },
     {
       "id": "facebook-paris-arts-metiers-machines-2026-07-10",
@@ -338,9 +456,19 @@
         "https://download.photos-by-elie.com/media/expo/img-6139-e2745c4578_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6165-d78c3ee7a2_900.jpg"
       ],
+      "photoIds": [
+        "img-6160-6ac795aa36",
+        "img-6133-e429588b87",
+        "img-6166-5a9df33eea",
+        "img-6124-efcc2f493a",
+        "img-6142-e69ca026c7",
+        "img-6174-8674aea1e3",
+        "img-6139-e2745c4578",
+        "img-6165-d78c3ee7a2"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423758
     },
     {
       "id": "pinterest-pisa-cathedral-marble-facade-2026-07-09",
@@ -359,9 +487,16 @@
         "https://download.photos-by-elie.com/media/expo/001-b782c03bb8_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-ca3691704b_900.jpg"
       ],
+      "photoIds": [
+        "001-b726a850c3",
+        "001-9648366ec4",
+        "001-862e1c98fe",
+        "001-b782c03bb8",
+        "001-ca3691704b"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101670
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-cordoba-mezquita-arches-light-2026-07-09",
@@ -383,9 +518,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1415-a0898b65fc_900.jpg"
       ],
+      "photoIds": [
+        "img-1412-dde0e52bcb",
+        "img-1395-81cbfcb7d3",
+        "img-1404-b704ed7a17",
+        "img-1402-4c2c98e288",
+        "img-1413-96ea2c869f",
+        "img-1396-aa0d5786b9",
+        "img-1408-94456ca4fc",
+        "img-1415-a0898b65fc"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-benalmadena-seaport-evening-color-2026-07-09",
@@ -396,7 +541,7 @@
       "href": "./campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-benalmadena-seaport-evening-color-2026-07-09",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
-      "imageAlt": "Benalmadena Seaport",
+      "imageAlt": "Benalmadena Seaport Marina",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/001-0cd1b0212f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-9661a2006b_900.jpg",
@@ -407,9 +552,19 @@
         "https://download.photos-by-elie.com/media/expo/001-378ec96d03_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-27058dd9a8_900.jpg"
       ],
+      "photoIds": [
+        "001-0cd1b0212f",
+        "001-9661a2006b",
+        "001-283d863371",
+        "001-2ed4134f4d",
+        "001-d3e8e491c6",
+        "001-f917ca47a2",
+        "001-378ec96d03",
+        "001-27058dd9a8"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "pinterest-gibraltar-rock-mediterranean-light-2026-07-08",
@@ -428,9 +583,16 @@
         "https://download.photos-by-elie.com/media/expo/img-5688-774fc51bff_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5689-7b0f2b33e9_900.jpg"
       ],
+      "photoIds": [
+        "img-5668-7d7e86442a",
+        "img-5669-31d9551dd4",
+        "img-5687-46f0da658f",
+        "img-5688-774fc51bff",
+        "img-5689-7b0f2b33e9"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101666
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-madrid-royal-palace-courtyard-light-2026-07-08",
@@ -441,7 +603,7 @@
       "href": "./campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-madrid-royal-palace-courtyard-light-2026-07-08",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/001-04c0fcd857_900.jpg",
-      "imageAlt": "2025 Royal Palace of Madrid",
+      "imageAlt": "Ornate Throne Room, Royal Palace of Madrid",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/001-04c0fcd857_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-0b6ab2f8be_900.jpg",
@@ -452,9 +614,19 @@
         "https://download.photos-by-elie.com/media/expo/001-1eba116bbb_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-226869a854_900.jpg"
       ],
+      "photoIds": [
+        "001-04c0fcd857",
+        "001-0b6ab2f8be",
+        "001-0bf694676e",
+        "001-179edea53d",
+        "001-17a7556444",
+        "001-1e287a5428",
+        "001-1eba116bbb",
+        "001-226869a854"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101660
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-ronda-white-town-gorge-light-2026-07-08",
@@ -476,9 +648,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1047-3f423c66d0_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1048-a88e4bbbed_900.jpg"
       ],
+      "photoIds": [
+        "img-1041-ebc7a0b91d",
+        "img-1042-e2da70c37c",
+        "img-1043-3857110b84",
+        "img-1044-6c1c81f667",
+        "img-1045-f0bb5afd06",
+        "img-1046-0a291f3f6b",
+        "img-1047-3f423c66d0",
+        "img-1048-a88e4bbbed"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423760
     },
     {
       "id": "pinterest-cadiz-market-color-texture-2026-07-07",
@@ -497,9 +679,16 @@
         "https://download.photos-by-elie.com/media/expo/001-f51c0636a6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-5568261699_900.jpg"
       ],
+      "photoIds": [
+        "001-fa0132915e",
+        "001-e18586e43a",
+        "001-892f629bd3",
+        "001-f51c0636a6",
+        "001-5568261699"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-malaga-cathedral-stone-evening-light-2026-07-07",
@@ -521,9 +710,19 @@
         "https://download.photos-by-elie.com/media/expo/20230114-181547-00428-4fb30050f9_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230114-180428-00386-62856747d9_900.jpg"
       ],
+      "photoIds": [
+        "20230114-175822-00362-53f4f4392d",
+        "20230114-174510-00263-bc6d9079dc",
+        "20230114-181205-00398-d80c8bf052",
+        "20230114-180227-00379-a98d79e688",
+        "20230114-174413-00260-dddd096678",
+        "20230114-175734-00347-5e527cf383",
+        "20230114-181547-00428-4fb30050f9",
+        "20230114-180428-00386-62856747d9"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101662
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-granada-alhambra-stone-garden-light-2026-07-07",
@@ -545,9 +744,19 @@
         "https://download.photos-by-elie.com/media/expo/20240517-125945-00132-184f74fe7f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240517-130955-00175-b625512444_900.jpg"
       ],
+      "photoIds": [
+        "20240517-130956-00181-42a303612d",
+        "20240517-140442-00257-f6a38f120c",
+        "20240517-125930-00125-137437c51a",
+        "20240517-131111-00200-6e2208059a",
+        "20240517-132315-00237-5f02a48498",
+        "20240517-131226-00205-75b5c79943",
+        "20240517-125945-00132-184f74fe7f",
+        "20240517-130955-00175-b625512444"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423757
     },
     {
       "id": "pinterest-boulogne-musee-annees-30-interiors-2026-07-06",
@@ -558,7 +767,7 @@
       "href": "./campaign.html?c=pinterest-boulogne-musee-annees-30-interiors-2026-07-06",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-boulogne-musee-annees-30-interiors-2026-07-06",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/001-7ab802eeb0_900.jpg",
-      "imageAlt": "2024 Musée des Années 30",
+      "imageAlt": "Musée des Années 30, Boulogne-Billancourt Interior with Art Deco Seating",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/001-7ab802eeb0_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-2a39863eb6_900.jpg",
@@ -566,9 +775,16 @@
         "https://download.photos-by-elie.com/media/expo/001-9c23efbf92_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-bafec446e9_900.jpg"
       ],
+      "photoIds": [
+        "001-7ab802eeb0",
+        "001-2a39863eb6",
+        "001-7c7539eaad",
+        "001-9c23efbf92",
+        "001-bafec446e9"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-benalmadena-aquarium-blue-glass-2026-07-06",
@@ -579,7 +795,7 @@
       "href": "./campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=instagram-benalmadena-aquarium-blue-glass-2026-07-06",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/001-290943e906_900.jpg",
-      "imageAlt": "Benalmadena Aquarium",
+      "imageAlt": "Squid at Benalmadena Aquarium",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/001-290943e906_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-593a782238_900.jpg",
@@ -590,9 +806,19 @@
         "https://download.photos-by-elie.com/media/expo/001-2920508b41_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-dfb749e73f_900.jpg"
       ],
+      "photoIds": [
+        "001-290943e906",
+        "001-593a782238",
+        "001-27108463a4",
+        "001-0f609a32b7",
+        "001-05ae3676bc",
+        "001-ed0a23624b",
+        "001-2920508b41",
+        "001-dfb749e73f"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101658
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-paris-musee-dorsay-gallery-light-2026-07-06",
@@ -602,21 +828,29 @@
       "date": "2026-07-06",
       "href": "./campaign.html?c=facebook-paris-musee-dorsay-gallery-light-2026-07-06",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=facebook-paris-musee-dorsay-gallery-light-2026-07-06",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-553cd48f4c_900.jpg",
-      "imageAlt": "2026 Paris Musee D'Orsay",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/001-064ce7f9ff_900.jpg",
+      "imageAlt": "Paris Musee d'Orsay Gallery Light",
       "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/001-553cd48f4c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-064ce7f9ff_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-5cfe9dc8c5_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/001-7c3993e7a1_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-578055d7e9_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-424542638a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-07cd6cc63a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/001-d88c458382_900.jpg"
       ],
+      "photoIds": [
+        "001-553cd48f4c",
+        "001-064ce7f9ff",
+        "001-5cfe9dc8c5",
+        "001-7c3993e7a1",
+        "001-578055d7e9",
+        "001-424542638a",
+        "001-07cd6cc63a",
+        "001-d88c458382"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "pinterest-carlsbad-garden-coast-light-2026-07-05",
@@ -635,9 +869,16 @@
         "https://download.photos-by-elie.com/media/expo/20180712-1827-16605-457c78af75_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180217-1828-00091-1-9ddb0e40d8_900.jpg"
       ],
+      "photoIds": [
+        "20140907-1911-06385-5f3a5197a2",
+        "20180813-0936-18935-ff4ebcc12a",
+        "20180712-1827-16407-476b03451a",
+        "20180712-1827-16605-457c78af75",
+        "20180217-1828-00091-1-9ddb0e40d8"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-valencia-aquarium-blue-forms-2026-07-05",
@@ -659,9 +900,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1562-dd0da6eba6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1560-bc652b01c9_900.jpg"
       ],
+      "photoIds": [
+        "img-1566-4571418d2f",
+        "img-1567-c3eb2cb23a",
+        "img-1572-f014372b0b",
+        "img-1564-6fad310ac7",
+        "img-1569-a4f19d878c",
+        "img-1565-76c631a44a",
+        "img-1562-dd0da6eba6",
+        "img-1560-bc652b01c9"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101664
+      "mtimeMs": 1788639423767
     },
     {
       "id": "facebook-cascais-castle-stone-sea-2026-07-05",
@@ -683,9 +934,19 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1908-00582-ce14d231bb_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1909-00583-cbdb3185f0_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1943-00586-774731a7a1",
+        "20180518-1900-00580-35bb6f1333",
+        "20180518-1913-00585-250cb95ac6",
+        "20180518-1856-00576-9b3565b612",
+        "20180518-1907-00581-fd6a59f062",
+        "20180518-1857-00578-94deb09cb0",
+        "20180518-1908-00582-ce14d231bb",
+        "20180518-1909-00583-cbdb3185f0"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423757
     },
     {
       "id": "pinterest-nerja-mediterranean-beach-blues-2026-07-03",
@@ -696,7 +957,7 @@
       "href": "./campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-nerja-mediterranean-beach-blues-2026-07-03",
       "imageUrl": "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
-      "imageAlt": "Nerja, beach",
+      "imageAlt": "La Jolla Cove, San Diego",
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/20180421-1533-13173-45d10d758d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180421-1537-12617-c2d492125d_900.jpg",
@@ -704,9 +965,16 @@
         "https://download.photos-by-elie.com/media/expo/20180421-1533-11883-ffd69b01d5_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180421-1536-12740-41ca079ecc_900.jpg"
       ],
+      "photoIds": [
+        "20180421-1533-13173-45d10d758d",
+        "20180421-1537-12617-c2d492125d",
+        "20180421-1535-11896-ead94a86da",
+        "20180421-1533-11883-ffd69b01d5",
+        "20180421-1536-12740-41ca079ecc"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101668
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-bilbao-guggenheim-metal-curves-2026-07-03",
@@ -728,9 +996,19 @@
         "https://download.photos-by-elie.com/media/expo/20180515-1617-00427-c6e399f26c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180515-2054-00449-5e6e92acf2_900.jpg"
       ],
+      "photoIds": [
+        "20180515-1634-00438-383c90b340",
+        "20180515-1617-00426-96dc06c36e",
+        "20180515-1510-00398-b6b2dcafad",
+        "20180515-1641-00445-ee15db60e2",
+        "20180515-1608-00420-95ca51dd01",
+        "20180515-1630-00436-1b277ba8a9",
+        "20180515-1617-00427-c6e399f26c",
+        "20180515-2054-00449-5e6e92acf2"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-pisa-marble-tower-light-2026-07-03",
@@ -750,9 +1028,17 @@
         "https://download.photos-by-elie.com/media/expo/img-1204-1d710fba81_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1207-5079ff3336_900.jpg"
       ],
+      "photoIds": [
+        "img-1198-bb563d6235",
+        "img-1212-96505e7356",
+        "img-1219-570b09bebb",
+        "img-1218-fe487846d6",
+        "img-1204-1d710fba81",
+        "img-1207-5079ff3336"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "pinterest-del-mar-beach-sunset-layers-2026-07-02",
@@ -771,9 +1057,16 @@
         "https://download.photos-by-elie.com/media/expo/20180130-1811-00060-1-a085d7d522_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180130-1815-00062-b5ef84fe92_900.jpg"
       ],
+      "photoIds": [
+        "20180130-1807-00056-ce796ea795",
+        "20180130-1809-00057-5d56be5106",
+        "20180130-1810-00058-16dcf3e4ea",
+        "20180130-1811-00060-1-a085d7d522",
+        "20180130-1815-00062-b5ef84fe92"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-seville-cathedral-golden-stone-2026-07-02",
@@ -795,9 +1088,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1316-e7917d1295_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1318-00395678a4_900.jpg"
       ],
+      "photoIds": [
+        "img-1315-3d319b8fdb",
+        "img-1317-06e4d01f50",
+        "img-1319-3cd3714815",
+        "img-1320-415d5fa2c8",
+        "img-1321-4c1ec8fc95",
+        "img-1322-79081c04e0",
+        "img-1316-e7917d1295",
+        "img-1318-00395678a4"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423766
     },
     {
       "id": "facebook-cascais-atlantic-shore-color-2026-07-02",
@@ -819,9 +1122,19 @@
         "https://download.photos-by-elie.com/media/expo/20180517-2135-00492-564b88a104_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180517-2139-00498-3f6caeaf91_900.jpg"
       ],
+      "photoIds": [
+        "20180517-2126-00483-f23ed1e1e2",
+        "20180517-2127-00484-cec825a469",
+        "20180517-2132-00488-18ec1fa871",
+        "20180517-2134-00489-a3c2036451",
+        "20180517-2134-00490-dc7a915651",
+        "20180517-2135-00491-f90f6d821a",
+        "20180517-2135-00492-564b88a104",
+        "20180517-2139-00498-3f6caeaf91"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423757
     },
     {
       "id": "pinterest-albi-tarn-old-town-light-2026-07-01",
@@ -840,9 +1153,16 @@
         "https://download.photos-by-elie.com/media/expo/20180525-1441-00952-0be82ccc8d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180525-1442-00953-93073461ca_900.jpg"
       ],
+      "photoIds": [
+        "20180525-1419-00943-554228f741",
+        "20180525-1443-00956-a9e61b8dde",
+        "20180525-1420-00944-6079776b41",
+        "20180525-1441-00952-0be82ccc8d",
+        "20180525-1442-00953-93073461ca"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101664
+      "mtimeMs": 1788639423767
     },
     {
       "id": "instagram-san-gimignano-tower-stone-2026-07-01",
@@ -862,9 +1182,17 @@
         "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1177-ed6ca580f8_900.jpg"
       ],
+      "photoIds": [
+        "img-1184-adad54985d",
+        "img-1180-fe3d9faa8d",
+        "img-1179-73dc1ce59c",
+        "img-1182-5aa2cfd683",
+        "img-1181-a12bca4639",
+        "img-1177-ed6ca580f8"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423765
     },
     {
       "id": "facebook-paris-arts-et-metiers-machines-2026-07-01",
@@ -886,9 +1214,19 @@
         "https://download.photos-by-elie.com/media/expo/img-6139-e2745c4578_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6129-fd1f9cc55f_900.jpg"
       ],
+      "photoIds": [
+        "img-6160-6ac795aa36",
+        "img-6133-e429588b87",
+        "img-6166-5a9df33eea",
+        "img-6124-efcc2f493a",
+        "img-6142-e69ca026c7",
+        "img-6174-8674aea1e3",
+        "img-6139-e2745c4578",
+        "img-6129-fd1f9cc55f"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423758
     },
     {
       "id": "pinterest-puerto-vallarta-marina-tropical-color-2026-06-30",
@@ -907,9 +1245,16 @@
         "https://download.photos-by-elie.com/media/expo/img-5045-4a6704c7ac_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5009-c1c087846c_900.jpg"
       ],
+      "photoIds": [
+        "img-5011-3219c0b170",
+        "img-4962-20fc5febfe",
+        "img-5038-94eafad832",
+        "img-5045-4a6704c7ac",
+        "img-5009-c1c087846c"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101670
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-sintra-moorish-castle-wall-paths-2026-06-30",
@@ -931,9 +1276,19 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1408-00521-560ec85707_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1447-00534-8d73c77f95_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1359-00513-759c490e7d",
+        "20180518-1423-00531-54ae327384",
+        "20180518-1340-00504-13096677a9",
+        "20180518-1503-00541-62669e193f",
+        "20180518-1522-00564-8ed80527e5",
+        "20180518-1455-00538-42841411e1",
+        "20180518-1408-00521-560ec85707",
+        "20180518-1447-00534-8d73c77f95"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423766
     },
     {
       "id": "facebook-paris-carnavalet-interior-color-2026-06-30",
@@ -955,9 +1310,19 @@
         "https://download.photos-by-elie.com/media/expo/20221219-165844-03479-31cf914707_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20221219-165356-03462-304e23d1ae_900.jpg"
       ],
+      "photoIds": [
+        "20221219-155607-00136-8c488a1ba6",
+        "20221219-152540-00086-db2db72da2",
+        "20221219-155553-00134-9dd02882be",
+        "20221219-165333-03460-a83d1b36e7",
+        "20221219-170201-03493-21090b7b47",
+        "20221219-155621-00137-8131743c8d",
+        "20221219-165844-03479-31cf914707",
+        "20221219-165356-03462-304e23d1ae"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "pinterest-la-jolla-coastal-blue-details-2026-06-21",
@@ -976,9 +1341,16 @@
         "https://download.photos-by-elie.com/media/expo/20180421-1313-12291-8e3ec8452a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180421-1314-12535-0e5de0d6d0_900.jpg"
       ],
+      "photoIds": [
+        "20180421-1315-12105-b5fb72a520",
+        "20180421-1314-12194-9720f6f4fc",
+        "20180421-1313-12169-c895ce5df7",
+        "20180421-1313-12291-8e3ec8452a",
+        "20180421-1314-12535-0e5de0d6d0"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101666
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-cordoba-mezquita-arches-shadow-2026-06-21",
@@ -1000,9 +1372,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1408-94456ca4fc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1415-a0898b65fc_900.jpg"
       ],
+      "photoIds": [
+        "img-1412-dde0e52bcb",
+        "img-1395-81cbfcb7d3",
+        "img-1404-b704ed7a17",
+        "img-1402-4c2c98e288",
+        "img-1413-96ea2c869f",
+        "img-1396-aa0d5786b9",
+        "img-1408-94456ca4fc",
+        "img-1415-a0898b65fc"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-lisbon-jeronimos-monastery-carved-stone-2026-06-21",
@@ -1024,9 +1406,19 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1346-00618-d2b7edc2d4_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1346-00619-fc41df1f05_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1357-00624-c81f59de01",
+        "20180519-1303-00590-5a73dfed14",
+        "20180519-1337-00615-a2dda38e79",
+        "20180519-1418-00629-8386a780e8",
+        "20180519-1323-00609-8acf5ae002",
+        "20180519-1317-00594-407fa2a7b2",
+        "20180519-1346-00618-d2b7edc2d4",
+        "20180519-1346-00619-fc41df1f05"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "pinterest-oceanside-harbor-pelican-light-2026-06-19",
@@ -1045,9 +1437,16 @@
         "https://download.photos-by-elie.com/media/expo/20180505-1818-00242-09c3a7cdc4_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180505-1822-00245-6bb3eed50a_900.jpg"
       ],
+      "photoIds": [
+        "20180505-1820-00243-439436be32",
+        "20180420-1916-00220-eb332943fa",
+        "20180505-1815-00241-6a3a8e332e",
+        "20180505-1818-00242-09c3a7cdc4",
+        "20180505-1822-00245-6bb3eed50a"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101668
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-basque-country-street-light-2026-06-19",
@@ -1069,9 +1468,19 @@
         "https://download.photos-by-elie.com/media/expo/20220511-101037-04339-de0f00382f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180523-1158-00910-5757c7b525_900.jpg"
       ],
+      "photoIds": [
+        "20180523-1253-00923-9853f3d6a1",
+        "20180523-1158-00908-c83ee908b8",
+        "20220510-193610-00741-246e0e684e",
+        "20180523-1054-00904-0d99c36c72",
+        "20180523-1210-00918-3e378ecfd5",
+        "20180523-1158-00907-6ce2b12655",
+        "20220511-101037-04339-de0f00382f",
+        "20180523-1158-00910-5757c7b525"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101658
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-cabo-corrientes-pacific-color-2026-06-19",
@@ -1093,9 +1502,19 @@
         "https://download.photos-by-elie.com/media/expo/img-5038-94eafad832_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5045-4a6704c7ac_900.jpg"
       ],
+      "photoIds": [
+        "img-4984-81c472e7ae",
+        "img-4983-d9ebed4c68",
+        "img-4991-627e0825c6",
+        "img-4992-692d25fcd3",
+        "img-4993-660cb44d72",
+        "img-4962-20fc5febfe",
+        "img-5038-94eafad832",
+        "img-5045-4a6704c7ac"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-oceanside-harbor-wall-art-2026-06-19",
@@ -1114,9 +1533,16 @@
         "https://download.photos-by-elie.com/media/expo/20180505-1818-00242-09c3a7cdc4_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180505-1822-00245-6bb3eed50a_900.jpg"
       ],
+      "photoIds": [
+        "20180505-1820-00243-439436be32",
+        "20180420-1916-00220-eb332943fa",
+        "20180505-1815-00241-6a3a8e332e",
+        "20180505-1818-00242-09c3a7cdc4",
+        "20180505-1822-00245-6bb3eed50a"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-basque-country-street-wall-art-2026-06-19",
@@ -1138,9 +1564,19 @@
         "https://download.photos-by-elie.com/media/expo/20220511-101037-04339-de0f00382f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180523-1158-00910-5757c7b525_900.jpg"
       ],
+      "photoIds": [
+        "20180523-1253-00923-9853f3d6a1",
+        "20180523-1158-00908-c83ee908b8",
+        "20220510-193610-00741-246e0e684e",
+        "20180523-1054-00904-0d99c36c72",
+        "20180523-1210-00918-3e378ecfd5",
+        "20180523-1158-00907-6ce2b12655",
+        "20220511-101037-04339-de0f00382f",
+        "20180523-1158-00910-5757c7b525"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "etsy-cabo-corrientes-wall-art-2026-06-19",
@@ -1162,9 +1598,19 @@
         "https://download.photos-by-elie.com/media/expo/img-5038-94eafad832_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5045-4a6704c7ac_900.jpg"
       ],
+      "photoIds": [
+        "img-4984-81c472e7ae",
+        "img-4983-d9ebed4c68",
+        "img-4991-627e0825c6",
+        "img-4992-692d25fcd3",
+        "img-4993-660cb44d72",
+        "img-4962-20fc5febfe",
+        "img-5038-94eafad832",
+        "img-5045-4a6704c7ac"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "pinterest-estepa-chocolate-museum-color-2026-06-18",
@@ -1183,9 +1629,16 @@
         "https://download.photos-by-elie.com/media/expo/20240308-125931-00227-697e5c0278_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240308-125937-00229-179e49e125_900.jpg"
       ],
+      "photoIds": [
+        "img-5358-bd4d6e2f06",
+        "20240308-125735-00219-e46fc0ee45",
+        "20240308-125916-00223-b4400dc4f0",
+        "20240308-125931-00227-697e5c0278",
+        "20240308-125937-00229-179e49e125"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-madrid-imprenta-type-patterns-2026-06-18",
@@ -1207,9 +1660,19 @@
         "https://download.photos-by-elie.com/media/expo/20180522-1042-00817-442053ee3d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180522-1043-00818-26094a4b97_900.jpg"
       ],
+      "photoIds": [
+        "20180522-1053-00829-6b0491a51f",
+        "20180522-1047-00822-a87196398e",
+        "20180522-1052-00827-35836a2a52",
+        "20180522-1047-00824-e31889ddcd",
+        "20180522-1042-00816-596de76b2b",
+        "20180522-1044-00819-c52a428a92",
+        "20180522-1042-00817-442053ee3d",
+        "20180522-1043-00818-26094a4b97"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101660
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-granada-alhambra-tile-light-2026-06-18",
@@ -1231,9 +1694,19 @@
         "https://download.photos-by-elie.com/media/expo/20240517-130602-00153-30d3e33c68_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240517-132621-00251-bb146fc20e_900.jpg"
       ],
+      "photoIds": [
+        "20240517-130956-00181-42a303612d",
+        "20240517-125930-00125-137437c51a",
+        "20240517-131111-00200-6e2208059a",
+        "20240517-131226-00205-75b5c79943",
+        "20240517-130955-00175-b625512444",
+        "20240517-131412-00222-a1ab6808eb",
+        "20240517-130602-00153-30d3e33c68",
+        "20240517-132621-00251-bb146fc20e"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-madrid-imprenta-wall-art-2026-06-18",
@@ -1255,30 +1728,19 @@
         "https://download.photos-by-elie.com/media/expo/20180522-1042-00817-442053ee3d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180522-1043-00818-26094a4b97_900.jpg"
       ],
+      "photoIds": [
+        "20180522-1053-00829-6b0491a51f",
+        "20180522-1047-00822-a87196398e",
+        "20180522-1052-00827-35836a2a52",
+        "20180522-1047-00824-e31889ddcd",
+        "20180522-1042-00816-596de76b2b",
+        "20180522-1044-00819-c52a428a92",
+        "20180522-1042-00817-442053ee3d",
+        "20180522-1043-00818-26094a4b97"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101646
-    },
-    {
-      "id": "etsy-estepa-chocolate-wall-art-2026-06-18",
-      "source": "Etsy",
-      "title": "Estepa Chocolate Museum Wall Art",
-      "description": "A curated Estepa Chocolate Museum edit with warm color, craft detail, and editorial still-life atmosphere for wall-art browsing.",
-      "date": "2026-06-18",
-      "href": "./campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
-      "imageAlt": "Estepa, Spain, Chocolate Museum",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125735-00219-e46fc0ee45_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125916-00223-b4400dc4f0_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125931-00227-697e5c0278_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20240308-125937-00229-179e49e125_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-granada-alhambra-wall-art-2026-06-18",
@@ -1300,9 +1762,47 @@
         "https://download.photos-by-elie.com/media/expo/20240517-130602-00153-30d3e33c68_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240517-132621-00251-bb146fc20e_900.jpg"
       ],
+      "photoIds": [
+        "20240517-130956-00181-42a303612d",
+        "20240517-125930-00125-137437c51a",
+        "20240517-131111-00200-6e2208059a",
+        "20240517-131226-00205-75b5c79943",
+        "20240517-130955-00175-b625512444",
+        "20240517-131412-00222-a1ab6808eb",
+        "20240517-130602-00153-30d3e33c68",
+        "20240517-132621-00251-bb146fc20e"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423752
+    },
+    {
+      "id": "etsy-estepa-chocolate-wall-art-2026-06-18",
+      "source": "Etsy",
+      "title": "Estepa Chocolate Museum Wall Art",
+      "description": "A curated Estepa Chocolate Museum edit with warm color, craft detail, and editorial still-life atmosphere for wall-art browsing.",
+      "date": "2026-06-18",
+      "href": "./campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-estepa-chocolate-wall-art-2026-06-18",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
+      "imageAlt": "Estepa, Spain, Chocolate Museum",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-5358-bd4d6e2f06_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125735-00219-e46fc0ee45_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125916-00223-b4400dc4f0_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125931-00227-697e5c0278_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20240308-125937-00229-179e49e125_900.jpg"
+      ],
+      "photoIds": [
+        "img-5358-bd4d6e2f06",
+        "20240308-125735-00219-e46fc0ee45",
+        "20240308-125916-00223-b4400dc4f0",
+        "20240308-125931-00227-697e5c0278",
+        "20240308-125937-00229-179e49e125"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1788639423751
     },
     {
       "id": "pinterest-del-mar-sunset-shoreline-2026-06-17",
@@ -1321,9 +1821,16 @@
         "https://download.photos-by-elie.com/media/expo/20180130-1809-00057-5d56be5106_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180130-1817-00064-419e83e6e6_900.jpg"
       ],
+      "photoIds": [
+        "20180130-1807-00056-ce796ea795",
+        "20180130-1810-00058-16dcf3e4ea",
+        "20180130-1813-00061-f38fd1051d",
+        "20180130-1809-00057-5d56be5106",
+        "20180130-1817-00064-419e83e6e6"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-albert-kahn-garden-reflections-2026-06-17",
@@ -1345,9 +1852,19 @@
         "https://download.photos-by-elie.com/media/expo/img-6002-6c95124a5e_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5989-bda06bc8e5_900.jpg"
       ],
+      "photoIds": [
+        "img-5980-f2327928c5",
+        "img-6038-8baf672836",
+        "img-6003-5d126c7054",
+        "img-5984-7982536318",
+        "img-6013-8c5a42c27f",
+        "img-5983-1bcdb41de5",
+        "img-6002-6c95124a5e",
+        "img-5989-bda06bc8e5"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101658
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-malaga-costa-brava-shore-color-2026-06-17",
@@ -1368,9 +1885,19 @@
         "https://download.photos-by-elie.com/media/expo/20230114-173851-00187-d73277a034_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230114-173829-00178-ca96c1dc0d_900.jpg"
       ],
+      "photoIds": [
+        "20230114-173528-00159-69387d86f2",
+        "20230114-173804-00177-cc841735ca",
+        "20230114-173844-00183-7554a48e59",
+        "20230114-173530-00161-16a0cc328e",
+        "20230114-173905-00195-d19261654e",
+        "20230114-173239-00157-6bdbe07481",
+        "20230114-173851-00187-d73277a034",
+        "20230114-173829-00178-ca96c1dc0d"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-malaga-costa-brava-shore-wall-art-2026-06-17",
@@ -1391,9 +1918,19 @@
         "https://download.photos-by-elie.com/media/expo/20230114-173851-00187-d73277a034_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230114-173829-00178-ca96c1dc0d_900.jpg"
       ],
+      "photoIds": [
+        "20230114-173528-00159-69387d86f2",
+        "20230114-173804-00177-cc841735ca",
+        "20230114-173844-00183-7554a48e59",
+        "20230114-173530-00161-16a0cc328e",
+        "20230114-173905-00195-d19261654e",
+        "20230114-173239-00157-6bdbe07481",
+        "20230114-173851-00187-d73277a034",
+        "20230114-173829-00178-ca96c1dc0d"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-del-mar-sunset-wall-art-2026-06-17",
@@ -1412,9 +1949,16 @@
         "https://download.photos-by-elie.com/media/expo/20180130-1809-00057-5d56be5106_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180130-1817-00064-419e83e6e6_900.jpg"
       ],
+      "photoIds": [
+        "20180130-1807-00056-ce796ea795",
+        "20180130-1810-00058-16dcf3e4ea",
+        "20180130-1813-00061-f38fd1051d",
+        "20180130-1809-00057-5d56be5106",
+        "20180130-1817-00064-419e83e6e6"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "etsy-albert-kahn-garden-wall-art-2026-06-17",
@@ -1436,9 +1980,19 @@
         "https://download.photos-by-elie.com/media/expo/img-6002-6c95124a5e_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5989-bda06bc8e5_900.jpg"
       ],
+      "photoIds": [
+        "img-5980-f2327928c5",
+        "img-6038-8baf672836",
+        "img-6003-5d126c7054",
+        "img-5984-7982536318",
+        "img-6013-8c5a42c27f",
+        "img-5983-1bcdb41de5",
+        "img-6002-6c95124a5e",
+        "img-5989-bda06bc8e5"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101644
+      "mtimeMs": 1788639423750
     },
     {
       "id": "pinterest-paris-invalides-church-light-2026-06-16",
@@ -1456,9 +2010,16 @@
         "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
       ],
+      "photoIds": [
+        "20220506-060627-03224-86e5202fb1",
+        "20220506-141127-03238-6a809a3d2d",
+        "20220506-145942-03357-6183b42671",
+        "20220506-045942-03172-b368612e02",
+        "20220506-060627-03223-2c5e854c02"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101669
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-lisbon-ajuda-palace-rooms-2026-06-16",
@@ -1480,9 +2041,19 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1709-00670-4d47eae233_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1640-00640-621d63bf96_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1651-00652-7df7aaac7d",
+        "20180519-1641-00641-2ec3697723",
+        "20180519-1718-00680-87e901dfa6",
+        "20180519-1701-00664-8038f40111",
+        "20180519-1634-00636-d2ec43a7f8",
+        "20180519-1651-00651-2e9add6ac1",
+        "20180519-1709-00670-4d47eae233",
+        "20180519-1640-00640-621d63bf96"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-basque-country-bilbao-light-2026-06-16",
@@ -1504,9 +2075,19 @@
         "https://download.photos-by-elie.com/media/expo/20180523-1232-00922-a14269681d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220509-210128-03604-d9c7d7c228_900.jpg"
       ],
+      "photoIds": [
+        "20220509-205254-03573-fd98e07ecc",
+        "20180523-1201-00911-eafaa28f50",
+        "20220511-100959-04337-e5e7737c00",
+        "20180523-1842-00934-ac0d4c2359",
+        "20180523-1505-00933-be91168496",
+        "20180523-1227-00921-6e41710e47",
+        "20180523-1232-00922-a14269681d",
+        "20220509-210128-03604-d9c7d7c228"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-paris-invalides-church-wall-art-2026-06-16",
@@ -1524,9 +2105,16 @@
         "https://download.photos-by-elie.com/media/expo/20220506-145942-03357-6183b42671_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
       ],
+      "photoIds": [
+        "20220506-060627-03224-86e5202fb1",
+        "20220506-141127-03238-6a809a3d2d",
+        "20220506-145942-03357-6183b42671",
+        "20220506-045942-03172-b368612e02",
+        "20220506-060627-03223-2c5e854c02"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-lisbon-ajuda-palace-rooms-wall-art-2026-06-16",
@@ -1548,9 +2136,19 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1709-00670-4d47eae233_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1640-00640-621d63bf96_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1651-00652-7df7aaac7d",
+        "20180519-1641-00641-2ec3697723",
+        "20180519-1718-00680-87e901dfa6",
+        "20180519-1701-00664-8038f40111",
+        "20180519-1634-00636-d2ec43a7f8",
+        "20180519-1651-00651-2e9add6ac1",
+        "20180519-1709-00670-4d47eae233",
+        "20180519-1640-00640-621d63bf96"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101646
+      "mtimeMs": 1788639423752
     },
     {
       "id": "etsy-basque-country-bilbao-wall-art-2026-06-16",
@@ -1572,9 +2170,19 @@
         "https://download.photos-by-elie.com/media/expo/20180523-1232-00922-a14269681d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220509-210128-03604-d9c7d7c228_900.jpg"
       ],
+      "photoIds": [
+        "20220509-205254-03573-fd98e07ecc",
+        "20180523-1201-00911-eafaa28f50",
+        "20220511-100959-04337-e5e7737c00",
+        "20180523-1842-00934-ac0d4c2359",
+        "20180523-1505-00933-be91168496",
+        "20180523-1227-00921-6e41710e47",
+        "20180523-1232-00922-a14269681d",
+        "20220509-210128-03604-d9c7d7c228"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423750
     },
     {
       "id": "pinterest-la-jolla-heights-sunset-2026-06-15",
@@ -1593,9 +2201,16 @@
         "https://download.photos-by-elie.com/media/expo/20180306-1738-00124-e901cb1d49_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180306-1740-00126-5f3bf3a4cb_900.jpg"
       ],
+      "photoIds": [
+        "20180306-1717-00120-2022b5c88c",
+        "20180306-1718-00121-1-1729e61aaa",
+        "20180306-1737-00122-07302849d0",
+        "20180306-1738-00124-e901cb1d49",
+        "20180306-1740-00126-5f3bf3a4cb"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101667
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-setenil-rock-streets-2026-06-15",
@@ -1617,9 +2232,19 @@
         "https://download.photos-by-elie.com/media/expo/20230806-153503-00170-3441608fe6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230806-153505-00171-2cc9e07bc6_900.jpg"
       ],
+      "photoIds": [
+        "20230806-153055-00157-ca94c00662",
+        "20230806-153217-00158-4ae53ae586",
+        "20230806-153218-00159-c3db4d8be2",
+        "20230806-153446-00163-ebb8c976af",
+        "20230806-153451-00164-ebd7e5284e",
+        "20230806-153456-00166-ba1a5b2c69",
+        "20230806-153503-00170-3441608fe6",
+        "20230806-153505-00171-2cc9e07bc6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423765
     },
     {
       "id": "facebook-malaga-city-evening-light-2026-06-15",
@@ -1641,9 +2266,19 @@
         "https://download.photos-by-elie.com/media/expo/img-4258-6a34c5ffc7_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-4259-6d1ec01ebd_900.jpg"
       ],
+      "photoIds": [
+        "img-4250-35acad1039",
+        "img-4251-79ddcc352f",
+        "img-4253-41482bcaef",
+        "img-4254-9439a52ecb",
+        "img-4255-a01df9c3b4",
+        "img-4257-0689207b14",
+        "img-4258-6a34c5ffc7",
+        "img-4259-6d1ec01ebd"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-setenil-rock-streets-wall-art-2026-06-15",
@@ -1665,9 +2300,19 @@
         "https://download.photos-by-elie.com/media/expo/20230806-153503-00170-3441608fe6_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230806-153505-00171-2cc9e07bc6_900.jpg"
       ],
+      "photoIds": [
+        "20230806-153055-00157-ca94c00662",
+        "20230806-153217-00158-4ae53ae586",
+        "20230806-153218-00159-c3db4d8be2",
+        "20230806-153446-00163-ebb8c976af",
+        "20230806-153451-00164-ebd7e5284e",
+        "20230806-153456-00166-ba1a5b2c69",
+        "20230806-153503-00170-3441608fe6",
+        "20230806-153505-00171-2cc9e07bc6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101650
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-malaga-city-wall-art-2026-06-15",
@@ -1689,9 +2334,19 @@
         "https://download.photos-by-elie.com/media/expo/img-4258-6a34c5ffc7_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-4259-6d1ec01ebd_900.jpg"
       ],
+      "photoIds": [
+        "img-4250-35acad1039",
+        "img-4251-79ddcc352f",
+        "img-4253-41482bcaef",
+        "img-4254-9439a52ecb",
+        "img-4255-a01df9c3b4",
+        "img-4257-0689207b14",
+        "img-4258-6a34c5ffc7",
+        "img-4259-6d1ec01ebd"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-la-jolla-heights-sunset-wall-art-2026-06-15",
@@ -1710,9 +2365,16 @@
         "https://download.photos-by-elie.com/media/expo/20180306-1738-00124-e901cb1d49_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180306-1740-00126-5f3bf3a4cb_900.jpg"
       ],
+      "photoIds": [
+        "20180306-1717-00120-2022b5c88c",
+        "20180306-1718-00121-1-1729e61aaa",
+        "20180306-1737-00122-07302849d0",
+        "20180306-1738-00124-e901cb1d49",
+        "20180306-1740-00126-5f3bf3a4cb"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423752
     },
     {
       "id": "pinterest-lisbon-ancient-art-museum-light-2026-06-14",
@@ -1731,9 +2393,16 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1617-00730-5ef53e0579_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1615-00727-dddf36cc6a_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1605-00724-c27b7d6b75",
+        "20180520-1559-00722-c5fc561a78",
+        "20180520-1627-00732-0df4ba1830",
+        "20180520-1617-00730-5ef53e0579",
+        "20180520-1615-00727-dddf36cc6a"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101667
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-porto-countryside-green-light-2026-06-14",
@@ -1753,9 +2422,17 @@
         "https://download.photos-by-elie.com/media/expo/20180516-1204-00458-38aa91047d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180516-1200-00455-4c4be1568e_900.jpg"
       ],
+      "photoIds": [
+        "20180516-1750-00466-4c85ba0f03",
+        "20180516-1213-00460-50ceda44ef",
+        "20180516-1159-00454-f6c81b2b52",
+        "20180516-1213-00461-5ca874c74d",
+        "20180516-1204-00458-38aa91047d",
+        "20180516-1200-00455-4c4be1568e"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423764
     },
     {
       "id": "facebook-paris-bateau-mouche-seine-light-2026-06-14",
@@ -1774,9 +2451,19 @@
         "https://download.photos-by-elie.com/media/expo/20180511-1120-00360-2725b746ee_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180511-1122-00363-f7c7bc7936_900.jpg"
       ],
+      "photoIds": [
+        "20180511-0222-00308-4d93b1ab5b",
+        "20180511-0222-00328-cd368139de",
+        "20180511-1109-00347-4121def4a0",
+        "20180511-0222-00332-c7e2c09dd1",
+        "20180511-1120-00360-2725b746ee",
+        "20180511-0222-00313-bac27b3bff",
+        "20180511-1122-00363-f7c7bc7936",
+        "20180511-0222-00302-b10cba3d0d"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "etsy-porto-countryside-wall-art-2026-06-14",
@@ -1796,9 +2483,17 @@
         "https://download.photos-by-elie.com/media/expo/20180516-1204-00458-38aa91047d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180516-1200-00455-4c4be1568e_900.jpg"
       ],
+      "photoIds": [
+        "20180516-1750-00466-4c85ba0f03",
+        "20180516-1213-00460-50ceda44ef",
+        "20180516-1159-00454-f6c81b2b52",
+        "20180516-1213-00461-5ca874c74d",
+        "20180516-1204-00458-38aa91047d",
+        "20180516-1200-00455-4c4be1568e"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-paris-bateau-mouche-wall-art-2026-06-14",
@@ -1817,9 +2512,19 @@
         "https://download.photos-by-elie.com/media/expo/20180511-1120-00360-2725b746ee_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180511-1122-00363-f7c7bc7936_900.jpg"
       ],
+      "photoIds": [
+        "20180511-0222-00308-4d93b1ab5b",
+        "20180511-0222-00328-cd368139de",
+        "20180511-1109-00347-4121def4a0",
+        "20180511-0222-00332-c7e2c09dd1",
+        "20180511-1120-00360-2725b746ee",
+        "20180511-0222-00313-bac27b3bff",
+        "20180511-1122-00363-f7c7bc7936",
+        "20180511-0222-00302-b10cba3d0d"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-lisbon-ancient-art-wall-art-2026-06-14",
@@ -1838,9 +2543,16 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1617-00730-5ef53e0579_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1615-00727-dddf36cc6a_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1605-00724-c27b7d6b75",
+        "20180520-1559-00722-c5fc561a78",
+        "20180520-1627-00732-0df4ba1830",
+        "20180520-1617-00730-5ef53e0579",
+        "20180520-1615-00727-dddf36cc6a"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101646
+      "mtimeMs": 1788639423752
     },
     {
       "id": "pinterest-valencia-aquarium-blue-light-2026-06-13",
@@ -1858,9 +2570,16 @@
         "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
       ],
+      "photoIds": [
+        "img-1558-54e7de1c27",
+        "img-1571-ef0911c97b",
+        "img-1561-1ddef65695",
+        "img-1570-10897d2d40",
+        "img-1559-4cca552aaf"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423774
     },
     {
       "id": "instagram-cabo-da-roca-atlantic-edge-2026-06-13",
@@ -1882,9 +2601,19 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1202-00690-fb31060c05_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1212-00708-72230b82e6_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1211-00705-56157d137d",
+        "20180520-1204-00694-937eb7fb9b",
+        "20180520-1157-00685-4bc7f88fad",
+        "20180520-1216-00713-83bd0a4ab5",
+        "20180520-1204-00695-29e2ec16cb",
+        "20180520-1212-00707-29c0f3f07b",
+        "20180520-1202-00690-fb31060c05",
+        "20180520-1212-00708-72230b82e6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-malaga-auto-museum-chrome-color-2026-06-13",
@@ -1906,9 +2635,19 @@
         "https://download.photos-by-elie.com/media/expo/img-4359-653c923b02_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-4370-d8d884400b_900.jpg"
       ],
+      "photoIds": [
+        "20230812-173051-00172-c03622220a",
+        "20230812-165456-00162-3e8581f179",
+        "20230812-162617-00007-8f328f6537",
+        "20230812-163654-00061-50f5bb9a1a",
+        "20230812-164739-00127-6394d5a0fc",
+        "img-4346-d1035de2c9",
+        "img-4359-653c923b02",
+        "img-4370-d8d884400b"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-valencia-aquarium-wall-art-2026-06-13",
@@ -1926,9 +2665,16 @@
         "https://download.photos-by-elie.com/media/expo/img-1561-1ddef65695_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1570-10897d2d40_900.jpg"
       ],
+      "photoIds": [
+        "img-1558-54e7de1c27",
+        "img-1571-ef0911c97b",
+        "img-1561-1ddef65695",
+        "img-1570-10897d2d40",
+        "img-1559-4cca552aaf"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-malaga-auto-museum-wall-art-2026-06-13",
@@ -1950,9 +2696,19 @@
         "https://download.photos-by-elie.com/media/expo/img-4359-653c923b02_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-4370-d8d884400b_900.jpg"
       ],
+      "photoIds": [
+        "20230812-173051-00172-c03622220a",
+        "20230812-165456-00162-3e8581f179",
+        "20230812-162617-00007-8f328f6537",
+        "20230812-163654-00061-50f5bb9a1a",
+        "20230812-164739-00127-6394d5a0fc",
+        "img-4346-d1035de2c9",
+        "img-4359-653c923b02",
+        "img-4370-d8d884400b"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-cabo-da-roca-atlantic-wall-art-2026-06-13",
@@ -1974,9 +2730,19 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1202-00690-fb31060c05_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1212-00708-72230b82e6_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1211-00705-56157d137d",
+        "20180520-1204-00694-937eb7fb9b",
+        "20180520-1157-00685-4bc7f88fad",
+        "20180520-1216-00713-83bd0a4ab5",
+        "20180520-1204-00695-29e2ec16cb",
+        "20180520-1212-00707-29c0f3f07b",
+        "20180520-1202-00690-fb31060c05",
+        "20180520-1212-00708-72230b82e6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "pinterest-castelo-dos-mouros-stone-paths-2026-06-12",
@@ -1995,9 +2761,16 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1340-00504-13096677a9",
+        "20180518-1342-00506-7a25cd91e6",
+        "20180518-1343-00508-fe5541c766",
+        "20180518-1343-00509-788722bc52",
+        "20180518-1359-00513-759c490e7d"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-fuengirola-moon-mediterranean-2026-06-12",
@@ -2018,9 +2791,18 @@
         "https://download.photos-by-elie.com/media/expo/img-2444-0853059960_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-2445-86fcda40d1_900.jpg"
       ],
+      "photoIds": [
+        "img-2436-914f008c28",
+        "img-2437-230b62851d",
+        "img-2438-769d2c55da",
+        "img-2439-acda9a345e",
+        "img-2443-ad375ec1e2",
+        "img-2444-0853059960",
+        "img-2445-86fcda40d1"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-alhaurin-sunset-hills-2026-06-12",
@@ -2042,30 +2824,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1987-d233a4814d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1989-2a77a202cb_900.jpg"
       ],
+      "photoIds": [
+        "img-1981-eeff6a8f2a",
+        "img-1982-f8478730f4",
+        "img-1983-29681bde15",
+        "img-1984-6af71ecaa1",
+        "img-1985-ae65a693ca",
+        "img-1986-93cc12b8bc",
+        "img-1987-d233a4814d",
+        "img-1989-2a77a202cb"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101651
-    },
-    {
-      "id": "etsy-castelo-mouros-wall-art-2026-06-12",
-      "source": "Etsy",
-      "title": "Castelo dos Mouros Wall Art",
-      "description": "A clean Etsy companion edit from Castelo dos Mouros, selected for stone, green hills, and Portugal travel wall-art download potential.",
-      "date": "2026-06-12",
-      "href": "./campaign.html?c=etsy-castelo-mouros-wall-art-2026-06-12",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-castelo-mouros-wall-art-2026-06-12",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
-      "imageAlt": "Castelo Dos Mouros, Lisbon",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1343-00508-fe5541c766_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-fuengirola-moon-wall-art-2026-06-12",
@@ -2086,9 +2857,46 @@
         "https://download.photos-by-elie.com/media/expo/img-2444-0853059960_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-2445-86fcda40d1_900.jpg"
       ],
+      "photoIds": [
+        "img-2436-914f008c28",
+        "img-2437-230b62851d",
+        "img-2438-769d2c55da",
+        "img-2439-acda9a345e",
+        "img-2443-ad375ec1e2",
+        "img-2444-0853059960",
+        "img-2445-86fcda40d1"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423752
+    },
+    {
+      "id": "etsy-castelo-mouros-wall-art-2026-06-12",
+      "source": "Etsy",
+      "title": "Castelo dos Mouros Wall Art",
+      "description": "A clean Etsy companion edit from Castelo dos Mouros, selected for stone, green hills, and Portugal travel wall-art download potential.",
+      "date": "2026-06-12",
+      "href": "./campaign.html?c=etsy-castelo-mouros-wall-art-2026-06-12",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-castelo-mouros-wall-art-2026-06-12",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
+      "imageAlt": "Castelo Dos Mouros, Lisbon",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180518-1340-00504-13096677a9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1342-00506-7a25cd91e6_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1343-00508-fe5541c766_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1343-00509-788722bc52_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180518-1359-00513-759c490e7d_900.jpg"
+      ],
+      "photoIds": [
+        "20180518-1340-00504-13096677a9",
+        "20180518-1342-00506-7a25cd91e6",
+        "20180518-1343-00508-fe5541c766",
+        "20180518-1343-00509-788722bc52",
+        "20180518-1359-00513-759c490e7d"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1788639423751
     },
     {
       "id": "etsy-alhaurin-sunset-wall-art-2026-06-12",
@@ -2110,9 +2918,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1987-d233a4814d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1989-2a77a202cb_900.jpg"
       ],
+      "photoIds": [
+        "img-1981-eeff6a8f2a",
+        "img-1982-f8478730f4",
+        "img-1983-29681bde15",
+        "img-1984-6af71ecaa1",
+        "img-1985-ae65a693ca",
+        "img-1986-93cc12b8bc",
+        "img-1987-d233a4814d",
+        "img-1989-2a77a202cb"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101644
+      "mtimeMs": 1788639423750
     },
     {
       "id": "pinterest-paris-carnavalet-museum-rooms-2026-06-11",
@@ -2131,9 +2949,16 @@
         "https://download.photos-by-elie.com/media/expo/20221219-165421-03464-f8085c9ad2_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20221219-165426-03465-52b31d0632_900.jpg"
       ],
+      "photoIds": [
+        "20221219-165333-03460-a83d1b36e7",
+        "20221219-165335-03461-5b742c49be",
+        "20221219-165356-03462-304e23d1ae",
+        "20221219-165421-03464-f8085c9ad2",
+        "20221219-165426-03465-52b31d0632"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101669
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-madrid-royal-palace-interiors-2026-06-11",
@@ -2155,9 +2980,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1811-56a049eb64_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1815-ade5e9ee43_900.jpg"
       ],
+      "photoIds": [
+        "img-1796-5ac56ba47d",
+        "img-1799-18f71d3d8a",
+        "img-1800-c626e67a38",
+        "img-1801-df3e767b3e",
+        "img-1803-1dab4c359f",
+        "img-1804-1a434e64c3",
+        "img-1811-56a049eb64",
+        "img-1815-ade5e9ee43"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101660
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-ronda-gorge-white-town-light-2026-06-11",
@@ -2179,9 +3014,19 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2686-bdb11cc741_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2697-1209ca7c26_900.jpg"
       ],
+      "photoIds": [
+        "d5h-2676-0da4f3c9cf",
+        "d5h-2677-dd0fd081ce",
+        "d5h-2678-a311c0177c",
+        "d5h-2680-b9d3890d28",
+        "d5h-2682-82e086f325",
+        "d5h-2683-67d01abd63",
+        "d5h-2686-bdb11cc741",
+        "d5h-2697-1209ca7c26"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "etsy-ronda-gorge-white-town-wall-art-2026-06-11",
@@ -2203,9 +3048,19 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2686-bdb11cc741_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2697-1209ca7c26_900.jpg"
       ],
+      "photoIds": [
+        "d5h-2676-0da4f3c9cf",
+        "d5h-2677-dd0fd081ce",
+        "d5h-2678-a311c0177c",
+        "d5h-2680-b9d3890d28",
+        "d5h-2682-82e086f325",
+        "d5h-2683-67d01abd63",
+        "d5h-2686-bdb11cc741",
+        "d5h-2697-1209ca7c26"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-paris-carnavalet-rooms-wall-art-2026-06-11",
@@ -2224,9 +3079,16 @@
         "https://download.photos-by-elie.com/media/expo/20221219-165421-03464-f8085c9ad2_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20221219-165426-03465-52b31d0632_900.jpg"
       ],
+      "photoIds": [
+        "20221219-165333-03460-a83d1b36e7",
+        "20221219-165335-03461-5b742c49be",
+        "20221219-165356-03462-304e23d1ae",
+        "20221219-165421-03464-f8085c9ad2",
+        "20221219-165426-03465-52b31d0632"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-madrid-royal-palace-wall-art-2026-06-11",
@@ -2248,9 +3110,19 @@
         "https://download.photos-by-elie.com/media/expo/img-1811-56a049eb64_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1815-ade5e9ee43_900.jpg"
       ],
+      "photoIds": [
+        "img-1796-5ac56ba47d",
+        "img-1799-18f71d3d8a",
+        "img-1800-c626e67a38",
+        "img-1801-df3e767b3e",
+        "img-1803-1dab4c359f",
+        "img-1804-1a434e64c3",
+        "img-1811-56a049eb64",
+        "img-1815-ade5e9ee43"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423753
     },
     {
       "id": "pinterest-gibraltar-rock-and-bay-light-2026-06-10",
@@ -2269,9 +3141,16 @@
         "https://download.photos-by-elie.com/media/expo/img-5703-d54eafb44c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5690-7733fd1086_900.jpg"
       ],
+      "photoIds": [
+        "img-5705-d13a56dbb8",
+        "img-5668-7d7e86442a",
+        "img-5688-774fc51bff",
+        "img-5703-d54eafb44c",
+        "img-5690-7733fd1086"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101666
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-paris-montmartre-street-light-2026-06-10",
@@ -2293,9 +3172,19 @@
         "https://download.photos-by-elie.com/media/expo/20180510-1510-00292-1757d7ee70_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180510-1513-00295-e0037dbfe1_900.jpg"
       ],
+      "photoIds": [
+        "20180510-1443-00277-536a6ae39b",
+        "20180510-1434-00271-e2c5e5c2fd",
+        "20180510-1502-00287-cdb42e6e17",
+        "20180510-1519-00298-793ef096f2",
+        "20180510-1450-00283-0c7c1fb449",
+        "20180510-1447-00280-64b8687bb0",
+        "20180510-1510-00292-1757d7ee70",
+        "20180510-1513-00295-e0037dbfe1"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423764
     },
     {
       "id": "facebook-seville-plaza-espana-tiles-and-arches-2026-06-10",
@@ -2316,30 +3205,19 @@
         "https://download.photos-by-elie.com/media/expo/20220705-164412-00127-pano-13a8791aa3_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1306-db5384a1f4_900.jpg"
       ],
+      "photoIds": [
+        "img-1291-8ca48ed8d2",
+        "img-1305-2d00c82f12",
+        "img-1299-258452f505",
+        "img-1307-5123942639",
+        "img-1294-f5caafc307",
+        "20220705-163205-00060-pano-8068d8fe3f",
+        "20220705-164412-00127-pano-13a8791aa3",
+        "img-1306-db5384a1f4"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101655
-    },
-    {
-      "id": "etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "source": "Etsy",
-      "title": "Seville Plaza de Espana Wall Art",
-      "description": "A digital-download Photos By Elie edit from Plaza de Espana in Seville, selected for ceramic detail, arches, color, and Andalusian wall-art presence.",
-      "date": "2026-06-10",
-      "href": "./campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
-      "imageAlt": "Plaza de España in Seville",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-1307-5123942639_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20220705-163205-00060-pano-8068d8fe3f_900.jpg"
-      ],
-      "primaryPhotoCount": 6,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101650
+      "mtimeMs": 1788639423760
     },
     {
       "id": "etsy-paris-montmartre-wall-art-2026-06-10",
@@ -2359,9 +3237,46 @@
         "https://download.photos-by-elie.com/media/expo/20180510-1450-00283-0c7c1fb449_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180510-1447-00280-64b8687bb0_900.jpg"
       ],
+      "photoIds": [
+        "20180510-1443-00277-536a6ae39b",
+        "20180510-1434-00271-e2c5e5c2fd",
+        "20180510-1502-00287-cdb42e6e17",
+        "20180510-1519-00298-793ef096f2",
+        "20180510-1450-00283-0c7c1fb449",
+        "20180510-1447-00280-64b8687bb0"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423755
+    },
+    {
+      "id": "etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "source": "Etsy",
+      "title": "Seville Plaza de Espana Wall Art",
+      "description": "A digital-download Photos By Elie edit from Plaza de Espana in Seville, selected for ceramic detail, arches, color, and Andalusian wall-art presence.",
+      "date": "2026-06-10",
+      "href": "./campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-seville-plaza-espana-wall-art-2026-06-10",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
+      "imageAlt": "Plaza de España in Seville",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-1291-8ca48ed8d2_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1305-2d00c82f12_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1299-258452f505_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-1307-5123942639_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20220705-163205-00060-pano-8068d8fe3f_900.jpg"
+      ],
+      "photoIds": [
+        "img-1291-8ca48ed8d2",
+        "img-1305-2d00c82f12",
+        "img-1299-258452f505",
+        "img-1307-5123942639",
+        "img-1294-f5caafc307",
+        "20220705-163205-00060-pano-8068d8fe3f"
+      ],
+      "primaryPhotoCount": 6,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-gibraltar-rock-bay-wall-art-2026-06-10",
@@ -2380,9 +3295,16 @@
         "https://download.photos-by-elie.com/media/expo/img-5703-d54eafb44c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5690-7733fd1086_900.jpg"
       ],
+      "photoIds": [
+        "img-5705-d13a56dbb8",
+        "img-5668-7d7e86442a",
+        "img-5688-774fc51bff",
+        "img-5703-d54eafb44c",
+        "img-5690-7733fd1086"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423752
     },
     {
       "id": "pinterest-san-gimignano-towers-light-2026-06-09",
@@ -2401,9 +3323,16 @@
         "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg"
       ],
+      "photoIds": [
+        "img-1177-ed6ca580f8",
+        "img-1179-73dc1ce59c",
+        "img-1180-fe3d9faa8d",
+        "img-1181-a12bca4639",
+        "img-1182-5aa2cfd683"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423772
     },
     {
       "id": "instagram-nerja-caves-stone-light-2026-06-09",
@@ -2424,9 +3353,18 @@
         "https://download.photos-by-elie.com/media/expo/img-3492-3de5a405fa_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-3493-a95a5303d4_900.jpg"
       ],
+      "photoIds": [
+        "img-3487-8368b14a77",
+        "img-3488-5bbe2e3810",
+        "img-3489-565f1f5291",
+        "img-3490-b4ddb84f72",
+        "img-3491-fc9a4c3019",
+        "img-3492-3de5a405fa",
+        "img-3493-a95a5303d4"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101662
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-malaga-cathedral-la-manquita-2026-06-09",
@@ -2448,9 +3386,19 @@
         "https://download.photos-by-elie.com/media/expo/20230114-174144-00228-f89d9b4282_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230114-174245-00326-37b2e4b71b_900.jpg"
       ],
+      "photoIds": [
+        "20230114-173939-00201-426652086d",
+        "20230114-173949-00324-1014a5d98e",
+        "20230114-174030-00325-5874bfd433",
+        "20230114-174044-00223-dc55d55ea9",
+        "20230114-174127-00226-4e7f85cce0",
+        "20230114-174143-00227-9e19ded0ed",
+        "20230114-174144-00228-f89d9b4282",
+        "20230114-174245-00326-37b2e4b71b"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-san-gimignano-wall-art-2026-06-09",
@@ -2469,9 +3417,48 @@
         "https://download.photos-by-elie.com/media/expo/img-1181-a12bca4639_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg"
       ],
+      "photoIds": [
+        "img-1177-ed6ca580f8",
+        "img-1179-73dc1ce59c",
+        "img-1180-fe3d9faa8d",
+        "img-1181-a12bca4639",
+        "img-1182-5aa2cfd683"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101650
+      "mtimeMs": 1788639423755
+    },
+    {
+      "id": "etsy-nerja-caves-wall-art-2026-06-09",
+      "source": "Etsy",
+      "title": "Nerja Caves Wall Art",
+      "description": "A focused Photos By Elie set from the Nerja Caves, selected for mineral texture, shadow, quiet scale, and refined Spain wall-art atmosphere.",
+      "date": "2026-06-09",
+      "href": "./campaign.html?c=etsy-nerja-caves-wall-art-2026-06-09",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-nerja-caves-wall-art-2026-06-09",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-3487-8368b14a77_900.jpg",
+      "imageAlt": "Nerja, The Caves",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-3487-8368b14a77_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3488-5bbe2e3810_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3489-565f1f5291_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3490-b4ddb84f72_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3491-fc9a4c3019_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3492-3de5a405fa_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-3493-a95a5303d4_900.jpg"
+      ],
+      "photoIds": [
+        "img-3487-8368b14a77",
+        "img-3488-5bbe2e3810",
+        "img-3489-565f1f5291",
+        "img-3490-b4ddb84f72",
+        "img-3491-fc9a4c3019",
+        "img-3492-3de5a405fa",
+        "img-3493-a95a5303d4"
+      ],
+      "primaryPhotoCount": 7,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-malaga-cathedral-wall-art-2026-06-09",
@@ -2493,32 +3480,19 @@
         "https://download.photos-by-elie.com/media/expo/20230114-174144-00228-f89d9b4282_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20230114-174245-00326-37b2e4b71b_900.jpg"
       ],
+      "photoIds": [
+        "20230114-173939-00201-426652086d",
+        "20230114-173949-00324-1014a5d98e",
+        "20230114-174030-00325-5874bfd433",
+        "20230114-174044-00223-dc55d55ea9",
+        "20230114-174127-00226-4e7f85cce0",
+        "20230114-174143-00227-9e19ded0ed",
+        "20230114-174144-00228-f89d9b4282",
+        "20230114-174245-00326-37b2e4b71b"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
-    },
-    {
-      "id": "etsy-nerja-caves-wall-art-2026-06-09",
-      "source": "Etsy",
-      "title": "Nerja Caves Wall Art",
-      "description": "A focused Photos By Elie set from the Nerja Caves, selected for mineral texture, shadow, quiet scale, and refined Spain wall-art atmosphere.",
-      "date": "2026-06-09",
-      "href": "./campaign.html?c=etsy-nerja-caves-wall-art-2026-06-09",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-nerja-caves-wall-art-2026-06-09",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-3487-8368b14a77_900.jpg",
-      "imageAlt": "Nerja, The Caves",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-3487-8368b14a77_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3488-5bbe2e3810_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3489-565f1f5291_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3490-b4ddb84f72_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3491-fc9a4c3019_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3492-3de5a405fa_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-3493-a95a5303d4_900.jpg"
-      ],
-      "primaryPhotoCount": 7,
-      "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423753
     },
     {
       "id": "pinterest-cadiz-fish-market-color-2026-06-07",
@@ -2537,9 +3511,22 @@
         "https://download.photos-by-elie.com/media/expo/img-1342-3f7927b90a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1347-e423d14782_900.jpg"
       ],
+      "photoIds": [
+        "img-1331-b83b21c186",
+        "img-1332-395c477361",
+        "img-1337-aca47b8150",
+        "img-1342-3f7927b90a",
+        "img-1347-e423d14782",
+        "img-1338-47c6049a0a",
+        "img-1339-0e9b2645fb",
+        "img-1340-bf2de094f7",
+        "img-1341-24e729f63e",
+        "img-1343-d5655a13dd",
+        "img-1344-1f6c3e80ec"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-malaga-museo-ruso-color-form-2026-06-07",
@@ -2555,9 +3542,24 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2904-e0d9300c72_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2909-b8eed5920d_900.jpg"
       ],
+      "photoIds": [
+        "d5h-2903-4d39c0652d",
+        "d5h-2904-e0d9300c72",
+        "d5h-2905-d58855992a",
+        "d5h-2906-c2c1af6c22",
+        "d5h-2907-fb9bf81957",
+        "d5h-2908-b30840b1cb",
+        "d5h-2909-b8eed5920d",
+        "d5h-2910-df1827c235",
+        "d5h-2911-260e7f559e",
+        "d5h-2912-b706c88607",
+        "d5h-2913-a27b0c4843",
+        "d5h-2914-e9104a0966",
+        "d5h-2915-e8ae08ef29"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101662
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-sintra-castle-walls-and-hills-2026-06-07",
@@ -2579,9 +3581,25 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1408-00521-560ec85707_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1340-00504-13096677a9",
+        "20180518-1342-00506-7a25cd91e6",
+        "20180518-1343-00508-fe5541c766",
+        "20180518-1343-00509-788722bc52",
+        "20180518-1359-00513-759c490e7d",
+        "20180518-1402-00514-7b4f60aad8",
+        "20180518-1405-00520-cc9e8a8faf",
+        "20180518-1408-00521-560ec85707",
+        "20180518-1408-00522-d4b425a4cc",
+        "20180518-1408-00523-ccdae512ee",
+        "20180518-1409-00525-036de41c3c",
+        "20180518-1411-00526-027a2bdee4",
+        "20180518-1423-00530-8a9b5e980a",
+        "20180518-1423-00531-54ae327384"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101656
+      "mtimeMs": 1788639423760
     },
     {
       "id": "etsy-sintra-castle-wall-art-2026-06-07",
@@ -2603,9 +3621,25 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1405-00520-cc9e8a8faf_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1408-00521-560ec85707_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1340-00504-13096677a9",
+        "20180518-1342-00506-7a25cd91e6",
+        "20180518-1343-00508-fe5541c766",
+        "20180518-1343-00509-788722bc52",
+        "20180518-1359-00513-759c490e7d",
+        "20180518-1402-00514-7b4f60aad8",
+        "20180518-1405-00520-cc9e8a8faf",
+        "20180518-1408-00521-560ec85707",
+        "20180518-1408-00522-d4b425a4cc",
+        "20180518-1408-00523-ccdae512ee",
+        "20180518-1409-00525-036de41c3c",
+        "20180518-1411-00526-027a2bdee4",
+        "20180518-1423-00530-8a9b5e980a",
+        "20180518-1423-00531-54ae327384"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101650
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-malaga-museo-ruso-wall-art-2026-06-07",
@@ -2621,9 +3655,24 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2904-e0d9300c72_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2909-b8eed5920d_900.jpg"
       ],
+      "photoIds": [
+        "d5h-2903-4d39c0652d",
+        "d5h-2904-e0d9300c72",
+        "d5h-2905-d58855992a",
+        "d5h-2906-c2c1af6c22",
+        "d5h-2907-fb9bf81957",
+        "d5h-2908-b30840b1cb",
+        "d5h-2909-b8eed5920d",
+        "d5h-2910-df1827c235",
+        "d5h-2911-260e7f559e",
+        "d5h-2912-b706c88607",
+        "d5h-2913-a27b0c4843",
+        "d5h-2914-e9104a0966",
+        "d5h-2915-e8ae08ef29"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101647
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-cadiz-fish-market-wall-art-2026-06-07",
@@ -2642,9 +3691,22 @@
         "https://download.photos-by-elie.com/media/expo/img-1342-3f7927b90a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1347-e423d14782_900.jpg"
       ],
+      "photoIds": [
+        "img-1331-b83b21c186",
+        "img-1332-395c477361",
+        "img-1337-aca47b8150",
+        "img-1342-3f7927b90a",
+        "img-1347-e423d14782",
+        "img-1338-47c6049a0a",
+        "img-1339-0e9b2645fb",
+        "img-1340-bf2de094f7",
+        "img-1341-24e729f63e",
+        "img-1343-d5655a13dd",
+        "img-1344-1f6c3e80ec"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "pinterest-paris-opera-galeries-light-2026-06-06",
@@ -2663,9 +3725,21 @@
         "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
       ],
+      "photoIds": [
+        "20220505-153639-03083-3ded4343e5",
+        "20220505-135707-03028-e58f913a2d",
+        "20220505-135231-03007-a5d4711305",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135009-02982-38775df02a",
+        "20220506-154558-03388-a887904b4b",
+        "20220506-145942-03357-6183b42671",
+        "20220505-0400-00135-pano-f4e52ebf11",
+        "img-6174-8674aea1e3",
+        "img-6168-c1725c6ef2"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101669
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-madrid-mercado-san-miguel-light-2026-06-06",
@@ -2686,9 +3760,23 @@
         "https://download.photos-by-elie.com/media/expo/20180522-1151-00837-3b90404c2a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180522-1151-00835-e83ea8125d_900.jpg"
       ],
+      "photoIds": [
+        "20180522-1156-00849-97eb65fcd7",
+        "20180522-1153-00845-dfbb904491",
+        "20180522-1153-00844-55c8d57db1",
+        "20180522-1152-00841-1290b7ad30",
+        "20180522-1152-00839-0fd2439a9a",
+        "20180522-1151-00837-3b90404c2a",
+        "20180522-1151-00835-e83ea8125d",
+        "20180522-1024-00791-28404e48e1",
+        "20180522-1014-00789-9901434b9a",
+        "20180521-1548-00754-b563d15503",
+        "20180522-1257-00875-b88ee8a0bc",
+        "20180522-1325-00892-5b9c7eef8a"
+      ],
       "primaryPhotoCount": 7,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101660
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-lisbon-ajuda-palace-interiors-2026-06-06",
@@ -2710,9 +3798,25 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1657-00656-87b3a02152_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1655-00653-4947ca5855_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1708-00668-b9f04a225b",
+        "20180519-1706-00667-23eeddd82e",
+        "20180519-1703-00666-f1710ab5ce",
+        "20180519-1702-00665-f1962d80b9",
+        "20180519-1701-00664-8038f40111",
+        "20180519-1700-00661-bca21946c2",
+        "20180519-1657-00656-87b3a02152",
+        "20180519-1655-00653-4947ca5855",
+        "20180519-1718-00680-87e901dfa6",
+        "20180519-1713-00675-d22d0fadd7",
+        "20180519-1712-00673-5690537ff6",
+        "20180519-1711-00672-081d18e53d",
+        "20180519-1709-00671-245cc1d586",
+        "20180519-1709-00670-4d47eae233"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423758
     },
     {
       "id": "etsy-paris-opera-galeries-wall-art-2026-06-06",
@@ -2731,9 +3835,58 @@
         "https://download.photos-by-elie.com/media/expo/20220505-135205-02993-c098de9740_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220505-135009-02982-38775df02a_900.jpg"
       ],
+      "photoIds": [
+        "20220505-153639-03083-3ded4343e5",
+        "20220505-135707-03028-e58f913a2d",
+        "20220505-135231-03007-a5d4711305",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135009-02982-38775df02a",
+        "20220506-154558-03388-a887904b4b",
+        "20220506-145942-03357-6183b42671",
+        "20220505-0400-00135-pano-f4e52ebf11",
+        "img-6174-8674aea1e3",
+        "img-6168-c1725c6ef2"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423755
+    },
+    {
+      "id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "source": "Etsy",
+      "title": "Madrid Mercado San Miguel Wall Art",
+      "description": "Seven Photos By Elie Mercado San Miguel photographs selected for Madrid market light, architectural lines, color, and travel wall-art confidence.",
+      "date": "2026-06-06",
+      "href": "./campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180522-1153-00844-55c8d57db1_900.jpg",
+      "imageAlt": "Inside Mercado San Miguel, Madrid",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/20180522-1153-00844-55c8d57db1_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1156-00849-97eb65fcd7_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1153-00845-dfbb904491_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1152-00841-1290b7ad30_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1152-00839-0fd2439a9a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1151-00837-3b90404c2a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/20180522-1151-00835-e83ea8125d_900.jpg"
+      ],
+      "photoIds": [
+        "20180522-1156-00849-97eb65fcd7",
+        "20180522-1153-00845-dfbb904491",
+        "20180522-1153-00844-55c8d57db1",
+        "20180522-1152-00841-1290b7ad30",
+        "20180522-1152-00839-0fd2439a9a",
+        "20180522-1151-00837-3b90404c2a",
+        "20180522-1151-00835-e83ea8125d",
+        "20180522-1024-00791-28404e48e1",
+        "20180522-1014-00789-9901434b9a",
+        "20180521-1548-00754-b563d15503",
+        "20180522-1257-00875-b88ee8a0bc",
+        "20180522-1325-00892-5b9c7eef8a"
+      ],
+      "primaryPhotoCount": 7,
+      "relatedPhotoCount": 5,
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-lisbon-ajuda-palace-wall-art-2026-06-06",
@@ -2755,32 +3908,25 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1657-00656-87b3a02152_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1655-00653-4947ca5855_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1708-00668-b9f04a225b",
+        "20180519-1706-00667-23eeddd82e",
+        "20180519-1703-00666-f1710ab5ce",
+        "20180519-1702-00665-f1962d80b9",
+        "20180519-1701-00664-8038f40111",
+        "20180519-1700-00661-bca21946c2",
+        "20180519-1657-00656-87b3a02152",
+        "20180519-1655-00653-4947ca5855",
+        "20180519-1718-00680-87e901dfa6",
+        "20180519-1713-00675-d22d0fadd7",
+        "20180519-1712-00673-5690537ff6",
+        "20180519-1711-00672-081d18e53d",
+        "20180519-1709-00671-245cc1d586",
+        "20180519-1709-00670-4d47eae233"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101646
-    },
-    {
-      "id": "etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "source": "Etsy",
-      "title": "Madrid Mercado San Miguel Wall Art",
-      "description": "Seven Photos By Elie Mercado San Miguel photographs selected for Madrid market light, architectural lines, color, and travel wall-art confidence.",
-      "date": "2026-06-06",
-      "href": "./campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=etsy-madrid-mercado-san-miguel-wall-art-2026-06-06",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/20180522-1153-00844-55c8d57db1_900.jpg",
-      "imageAlt": "Inside Mercado San Miguel, Madrid",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/20180522-1153-00844-55c8d57db1_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1156-00849-97eb65fcd7_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1153-00845-dfbb904491_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1152-00841-1290b7ad30_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1152-00839-0fd2439a9a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1151-00837-3b90404c2a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/20180522-1151-00835-e83ea8125d_900.jpg"
-      ],
-      "primaryPhotoCount": 7,
-      "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101646
+      "mtimeMs": 1788639423752
     },
     {
       "id": "pinterest-valencia-cathedral-stone-detail-2026-06-05",
@@ -2799,9 +3945,21 @@
         "https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_900.jpg"
       ],
+      "photoIds": [
+        "img-1545-fbf260c171",
+        "img-1546-7416feac97",
+        "img-1547-d92a870c4f",
+        "img-1548-bb4fc6c71a",
+        "img-1549-471a28324d",
+        "img-1544-b2984776c6",
+        "img-1550-1d976e97d6",
+        "20240307-144107-00199-5a9fcbe82c",
+        "img-1415-a0898b65fc",
+        "img-1322-79081c04e0"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423774
     },
     {
       "id": "instagram-florence-evening-walk-2026-06-05",
@@ -2816,9 +3974,22 @@
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/img-1141-e7e66ca045_900.jpg"
       ],
+      "photoIds": [
+        "img-1140-5f0e42d7e3",
+        "img-1141-e7e66ca045",
+        "img-1149-ae6b096d6f",
+        "img-1150-3541f17aa7",
+        "img-1151-9cde6756a2",
+        "img-1123-807c7c6a80",
+        "img-1177-ed6ca580f8",
+        "img-1180-fe3d9faa8d",
+        "img-1184-adad54985d",
+        "img-1138-f97cd2a6f9",
+        "img-1139-0e6358c5d7"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-puerto-vallarta-marina-light-2026-06-05",
@@ -2840,9 +4011,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5015-cead8c1e62_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5016-82aec97506_900.jpg"
       ],
+      "photoIds": [
+        "img-5009-c1c087846c",
+        "img-5011-3219c0b170",
+        "img-5012-10e27fc3fc",
+        "img-5013-562010adc7",
+        "img-5014-b554105ec8",
+        "img-5015-cead8c1e62",
+        "img-5016-82aec97506",
+        "img-5024-759afbb20c",
+        "img-5038-94eafad832",
+        "img-5044-0cda8368ed",
+        "img-5045-4a6704c7ac",
+        "img-5046-b889d9fa27",
+        "img-5050-a34e50dafe",
+        "img-5051-19832d159f"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "etsy-valencia-cathedral-wall-art-2026-06-05",
@@ -2861,9 +4048,21 @@
         "https://download.photos-by-elie.com/media/expo/img-1547-d92a870c4f_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1548-bb4fc6c71a_900.jpg"
       ],
+      "photoIds": [
+        "img-1545-fbf260c171",
+        "img-1546-7416feac97",
+        "img-1547-d92a870c4f",
+        "img-1548-bb4fc6c71a",
+        "img-1549-471a28324d",
+        "img-1544-b2984776c6",
+        "img-1550-1d976e97d6",
+        "20240307-144107-00199-5a9fcbe82c",
+        "img-1415-a0898b65fc",
+        "img-1322-79081c04e0"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-puerto-vallarta-marina-wall-art-2026-06-05",
@@ -2885,9 +4084,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5015-cead8c1e62_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5016-82aec97506_900.jpg"
       ],
+      "photoIds": [
+        "img-5009-c1c087846c",
+        "img-5011-3219c0b170",
+        "img-5012-10e27fc3fc",
+        "img-5013-562010adc7",
+        "img-5014-b554105ec8",
+        "img-5015-cead8c1e62",
+        "img-5016-82aec97506",
+        "img-5024-759afbb20c",
+        "img-5038-94eafad832",
+        "img-5044-0cda8368ed",
+        "img-5045-4a6704c7ac",
+        "img-5046-b889d9fa27",
+        "img-5050-a34e50dafe",
+        "img-5051-19832d159f"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101649
+      "mtimeMs": 1788639423755
     },
     {
       "id": "etsy-florence-evening-wall-art-2026-06-05",
@@ -2902,9 +4117,22 @@
       "previewImageUrls": [
         "https://download.photos-by-elie.com/media/expo/img-1141-e7e66ca045_900.jpg"
       ],
+      "photoIds": [
+        "img-1140-5f0e42d7e3",
+        "img-1141-e7e66ca045",
+        "img-1149-ae6b096d6f",
+        "img-1150-3541f17aa7",
+        "img-1151-9cde6756a2",
+        "img-1123-807c7c6a80",
+        "img-1177-ed6ca580f8",
+        "img-1180-fe3d9faa8d",
+        "img-1184-adad54985d",
+        "img-1138-f97cd2a6f9",
+        "img-1139-0e6358c5d7"
+      ],
       "primaryPhotoCount": 6,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423752
     },
     {
       "id": "pinterest-paris-arts-metiers-machines-2026-06-04",
@@ -2923,9 +4151,22 @@
         "https://download.photos-by-elie.com/media/expo/img-6141-eec90cefcc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6139-e2745c4578_900.jpg"
       ],
+      "photoIds": [
+        "img-6174-8674aea1e3",
+        "img-6159-41a8c3df55",
+        "img-6141-eec90cefcc",
+        "img-6139-e2745c4578",
+        "img-6138-a220ea6366",
+        "img-6167-a7c648c835",
+        "img-6166-5a9df33eea",
+        "img-6165-d78c3ee7a2",
+        "img-6164-877cec7c49",
+        "img-6163-a7aeb4afcc",
+        "img-6162-31a5afd462"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101669
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-lisbon-carmo-ruins-light-2026-06-04",
@@ -2944,9 +4185,21 @@
         "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_900.jpg"
       ],
+      "photoIds": [
+        "20220519-150855-04494-23ca28ef26",
+        "20220519-150002-04473-673b0d617b",
+        "20220519-145733-04458-46544e9a62",
+        "20220519-145011-04398-926891f8aa",
+        "20220519-144910-04396-092ac31b87",
+        "20180520-1552-00720-23215109c7",
+        "20180520-1535-00715-795e204a97",
+        "20180518-1522-00564-8ed80527e5",
+        "20180518-1505-00544-1b1ab30c30",
+        "20180517-2134-00489-a3c2036451"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-cordoba-mezquita-detail-light-2026-06-04",
@@ -2968,9 +4221,24 @@
         "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_900.jpg"
       ],
+      "photoIds": [
+        "img-1416-ce14e9f776",
+        "img-1415-a0898b65fc",
+        "img-1414-a8d42b2515",
+        "img-1413-96ea2c869f",
+        "img-1412-dde0e52bcb",
+        "img-1408-94456ca4fc",
+        "img-1404-b704ed7a17",
+        "img-1402-4c2c98e288",
+        "img-1549-471a28324d",
+        "img-1322-79081c04e0",
+        "img-1311-33e0bd87ce",
+        "img-1847-49826cc8ea",
+        "20240307-144107-00199-5a9fcbe82c"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423757
     },
     {
       "id": "etsy-paris-arts-metiers-wall-art-2026-06-04",
@@ -2989,9 +4257,22 @@
         "https://download.photos-by-elie.com/media/expo/img-6141-eec90cefcc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6139-e2745c4578_900.jpg"
       ],
+      "photoIds": [
+        "img-6174-8674aea1e3",
+        "img-6159-41a8c3df55",
+        "img-6141-eec90cefcc",
+        "img-6139-e2745c4578",
+        "img-6138-a220ea6366",
+        "img-6167-a7c648c835",
+        "img-6166-5a9df33eea",
+        "img-6165-d78c3ee7a2",
+        "img-6164-877cec7c49",
+        "img-6163-a7aeb4afcc",
+        "img-6162-31a5afd462"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-lisbon-carmo-wall-art-2026-06-04",
@@ -3010,9 +4291,21 @@
         "https://download.photos-by-elie.com/media/expo/20220519-145733-04458-46544e9a62_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220519-145011-04398-926891f8aa_900.jpg"
       ],
+      "photoIds": [
+        "20220519-150855-04494-23ca28ef26",
+        "20220519-150002-04473-673b0d617b",
+        "20220519-145733-04458-46544e9a62",
+        "20220519-145011-04398-926891f8aa",
+        "20220519-144910-04396-092ac31b87",
+        "20180520-1552-00720-23215109c7",
+        "20180520-1535-00715-795e204a97",
+        "20180518-1522-00564-8ed80527e5",
+        "20180518-1505-00544-1b1ab30c30",
+        "20180517-2134-00489-a3c2036451"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101646
+      "mtimeMs": 1788639423753
     },
     {
       "id": "etsy-cordoba-mezquita-wall-art-2026-06-04",
@@ -3034,9 +4327,24 @@
         "https://download.photos-by-elie.com/media/expo/img-1404-b704ed7a17_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1402-4c2c98e288_900.jpg"
       ],
+      "photoIds": [
+        "img-1416-ce14e9f776",
+        "img-1415-a0898b65fc",
+        "img-1414-a8d42b2515",
+        "img-1413-96ea2c869f",
+        "img-1412-dde0e52bcb",
+        "img-1408-94456ca4fc",
+        "img-1404-b704ed7a17",
+        "img-1402-4c2c98e288",
+        "img-1549-471a28324d",
+        "img-1322-79081c04e0",
+        "img-1311-33e0bd87ce",
+        "img-1847-49826cc8ea",
+        "20240307-144107-00199-5a9fcbe82c"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101645
+      "mtimeMs": 1788639423751
     },
     {
       "id": "pinterest-paris-eiffel-night-light-2026-06-03",
@@ -3055,9 +4363,22 @@
         "https://download.photos-by-elie.com/media/expo/20180509-2319-00263-ada5a380a3_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180509-2326-00266-3402cc9833_900.jpg"
       ],
+      "photoIds": [
+        "20180509-2311-00255-7474968431",
+        "20180509-2316-00256-fe59b63a1a",
+        "20180509-2318-00262-6868c80bf7",
+        "20180509-2319-00263-ada5a380a3",
+        "20180509-2326-00266-3402cc9833",
+        "20180510-0001-00268-c479c726cf",
+        "20180511-1109-00348-29e52a789c",
+        "20180511-1120-00361-edit-e178f03aa6",
+        "20180511-1140-00367-8ba499e834",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135231-03007-a5d4711305"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101669
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-tuscany-arno-and-hill-light-2026-06-03",
@@ -3077,9 +4398,25 @@
         "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
       ],
+      "photoIds": [
+        "img-1123-807c7c6a80",
+        "img-1124-a67a48ee91",
+        "img-1177-ed6ca580f8",
+        "img-1179-73dc1ce59c",
+        "img-1180-fe3d9faa8d",
+        "img-1181-a12bca4639",
+        "img-1182-5aa2cfd683",
+        "img-1184-adad54985d",
+        "img-1197-0132d88761",
+        "img-1199-0ebd1a5044",
+        "img-1205-4ca5e788f0",
+        "img-1208-d059e156dc",
+        "img-1213-7276413ecc",
+        "img-1218-fe487846d6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423766
     },
     {
       "id": "facebook-albi-tarn-river-brick-light-2026-06-03",
@@ -3100,9 +4437,25 @@
         "https://download.photos-by-elie.com/media/expo/20180525-1441-00952-0be82ccc8d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180525-1442-00953-93073461ca_900.jpg"
       ],
+      "photoIds": [
+        "20180525-1419-00943-554228f741",
+        "20180525-1439-00945-c37d4fa644",
+        "20180525-1439-00946-d866163437",
+        "20180525-1440-00949-4323df4391",
+        "20180525-1440-00951-9d8859c6b7",
+        "20180525-1441-00952-0be82ccc8d",
+        "20180525-1442-00953-93073461ca",
+        "20180525-1443-00956-a9e61b8dde",
+        "20180524-1746-00940-636b34659d",
+        "20180524-1746-00941-72deedae61",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135231-03007-a5d4711305",
+        "20180509-2316-00256-fe59b63a1a",
+        "20180509-2318-00262-6868c80bf7"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-solana-beach-sunset-wall-art-2026-06-03",
@@ -3120,9 +4473,22 @@
         "https://download.photos-by-elie.com/media/expo/20180304-1741-00115-48e59a7d7a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180304-1745-00116-f769538cfb_900.jpg"
       ],
+      "photoIds": [
+        "20180304-1733-00110-843be79aa4",
+        "20180304-1733-00111-33314469b1",
+        "20180304-1736-00113-a4774c8167",
+        "20180304-1741-00115-48e59a7d7a",
+        "20180304-1745-00116-f769538cfb",
+        "20180304-1745-00117-1ceb19d795",
+        "20180304-1745-00118-5621838a2f",
+        "20180304-174646-00094-50b6d1979c",
+        "20180130-1829-00079-c928a918e4",
+        "20180505-1814-00238-2ad3a506a8",
+        "20180405-1909-00199-2cb05463d8"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-tuscany-arno-hill-wall-art-2026-06-03",
@@ -3142,9 +4508,25 @@
         "https://download.photos-by-elie.com/media/expo/img-1182-5aa2cfd683_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1184-adad54985d_900.jpg"
       ],
+      "photoIds": [
+        "img-1123-807c7c6a80",
+        "img-1124-a67a48ee91",
+        "img-1177-ed6ca580f8",
+        "img-1179-73dc1ce59c",
+        "img-1180-fe3d9faa8d",
+        "img-1181-a12bca4639",
+        "img-1182-5aa2cfd683",
+        "img-1184-adad54985d",
+        "img-1197-0132d88761",
+        "img-1199-0ebd1a5044",
+        "img-1205-4ca5e788f0",
+        "img-1208-d059e156dc",
+        "img-1213-7276413ecc",
+        "img-1218-fe487846d6"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "etsy-nerja-mediterranean-wall-art-2026-06-03",
@@ -3166,9 +4548,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5212-687a525613_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5217-19271b7eda_900.jpg"
       ],
+      "photoIds": [
+        "img-5199-00bef996a6",
+        "img-5200-6fa844f776",
+        "img-5202-df07481782",
+        "img-5204-6e1253b249",
+        "img-5205-cda501d922",
+        "img-5207-5a7d14316a",
+        "img-5212-687a525613",
+        "img-5217-19271b7eda",
+        "img-5208-367d605cff",
+        "img-5209-48de164fad",
+        "img-5210-54540650ca",
+        "img-5211-6c268b385d",
+        "img-5218-e45d2b2a66",
+        "img-5219-0b093a97da"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-paris-eiffel-night-wall-art-2026-06-03",
@@ -3187,9 +4585,22 @@
         "https://download.photos-by-elie.com/media/expo/20180509-2319-00263-ada5a380a3_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180509-2326-00266-3402cc9833_900.jpg"
       ],
+      "photoIds": [
+        "20180509-2311-00255-7474968431",
+        "20180509-2316-00256-fe59b63a1a",
+        "20180509-2318-00262-6868c80bf7",
+        "20180509-2319-00263-ada5a380a3",
+        "20180509-2326-00266-3402cc9833",
+        "20180510-0001-00268-c479c726cf",
+        "20180511-1109-00348-29e52a789c",
+        "20180511-1120-00361-edit-e178f03aa6",
+        "20180511-1140-00367-8ba499e834",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135231-03007-a5d4711305"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101648
+      "mtimeMs": 1788639423754
     },
     {
       "id": "etsy-albi-tarn-wall-art-2026-06-03",
@@ -3210,9 +4621,25 @@
         "https://download.photos-by-elie.com/media/expo/20180525-1441-00952-0be82ccc8d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180525-1442-00953-93073461ca_900.jpg"
       ],
+      "photoIds": [
+        "20180525-1419-00943-554228f741",
+        "20180525-1439-00945-c37d4fa644",
+        "20180525-1439-00946-d866163437",
+        "20180525-1440-00949-4323df4391",
+        "20180525-1440-00951-9d8859c6b7",
+        "20180525-1441-00952-0be82ccc8d",
+        "20180525-1442-00953-93073461ca",
+        "20180525-1443-00956-a9e61b8dde",
+        "20180524-1746-00940-636b34659d",
+        "20180524-1746-00941-72deedae61",
+        "20220505-135205-02993-c098de9740",
+        "20220505-135231-03007-a5d4711305",
+        "20180509-2316-00256-fe59b63a1a",
+        "20180509-2318-00262-6868c80bf7"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101644
+      "mtimeMs": 1788639423750
     },
     {
       "id": "pinterest-solana-beach-sunset-layers-2026-06-02",
@@ -3230,9 +4657,22 @@
         "https://download.photos-by-elie.com/media/expo/20180304-1741-00115-48e59a7d7a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180304-1745-00116-f769538cfb_900.jpg"
       ],
+      "photoIds": [
+        "20180304-1733-00110-843be79aa4",
+        "20180304-1733-00111-33314469b1",
+        "20180304-1736-00113-a4774c8167",
+        "20180304-1741-00115-48e59a7d7a",
+        "20180304-1745-00116-f769538cfb",
+        "20180304-1745-00117-1ceb19d795",
+        "20180304-1745-00118-5621838a2f",
+        "20180304-174646-00094-50b6d1979c",
+        "20180130-1829-00079-c928a918e4",
+        "20180505-1814-00238-2ad3a506a8",
+        "20180405-1909-00199-2cb05463d8"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423774
     },
     {
       "id": "instagram-nerja-mediterranean-terraces-2026-06-02",
@@ -3254,9 +4694,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5212-687a525613_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5217-19271b7eda_900.jpg"
       ],
+      "photoIds": [
+        "img-5199-00bef996a6",
+        "img-5200-6fa844f776",
+        "img-5202-df07481782",
+        "img-5204-6e1253b249",
+        "img-5205-cda501d922",
+        "img-5207-5a7d14316a",
+        "img-5212-687a525613",
+        "img-5217-19271b7eda",
+        "img-5208-367d605cff",
+        "img-5209-48de164fad",
+        "img-5210-54540650ca",
+        "img-5211-6c268b385d",
+        "img-5218-e45d2b2a66",
+        "img-5219-0b093a97da"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101662
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-evening-in-sevilla-street-light-2026-06-02",
@@ -3276,9 +4732,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5333-7a4e3e9954_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5342-fcbde6047f_900.jpg"
       ],
+      "photoIds": [
+        "img-5327-d0205aa8c7",
+        "img-5328-f741903c89",
+        "img-5330-e00571a87d",
+        "img-5331-5ba685f86b",
+        "img-5332-d278e7abcc",
+        "img-5333-7a4e3e9954",
+        "img-5341-14ca369425",
+        "img-5342-fcbde6047f",
+        "20220705-163053-00041-pano-ffda1926ab",
+        "20220705-163205-00060-pano-8068d8fe3f",
+        "20240307-142557-00187-f75cb6312d",
+        "20240307-144322-00211-14311780f7",
+        "20240517-131314-00215-3d4173da54",
+        "d5h-2761-c86320d0bf"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101652
+      "mtimeMs": 1788639423757
     },
     {
       "id": "etsy-sevilla-after-dusk-wall-art-2026-06-02",
@@ -3298,9 +4770,25 @@
         "https://download.photos-by-elie.com/media/expo/img-5333-7a4e3e9954_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-5342-fcbde6047f_900.jpg"
       ],
+      "photoIds": [
+        "img-5327-d0205aa8c7",
+        "img-5328-f741903c89",
+        "img-5330-e00571a87d",
+        "img-5331-5ba685f86b",
+        "img-5332-d278e7abcc",
+        "img-5333-7a4e3e9954",
+        "img-5341-14ca369425",
+        "img-5342-fcbde6047f",
+        "20220705-163053-00041-pano-ffda1926ab",
+        "20220705-163205-00060-pano-8068d8fe3f",
+        "20240307-142557-00187-f75cb6312d",
+        "20240307-144322-00211-14311780f7",
+        "20240517-131314-00215-3d4173da54",
+        "d5h-2761-c86320d0bf"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101650
+      "mtimeMs": 1788639423755
     },
     {
       "id": "pinterest-belem-river-stone-details-2026-06-01",
@@ -3319,9 +4807,22 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1545-00719-e98749030b_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1552-00720-23215109c7_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1535-00715-795e204a97",
+        "20180520-1536-00716-eebddf7bbb",
+        "20180520-1536-00717-f1d52929b5",
+        "20180520-1545-00719-e98749030b",
+        "20180520-1552-00720-23215109c7",
+        "20180520-1605-00724-c27b7d6b75",
+        "20180520-1607-00725-b30b83b198",
+        "20180520-1609-00726-631d1d03cb",
+        "20180520-1615-00727-dddf36cc6a",
+        "20180520-1617-00730-5ef53e0579",
+        "20180520-1627-00732-0df4ba1830"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101664
+      "mtimeMs": 1788639423768
     },
     {
       "id": "instagram-madrid-royal-palace-stone-courtyards-2026-06-01",
@@ -3342,9 +4843,25 @@
         "https://download.photos-by-elie.com/media/expo/20180522-1309-00886-84c424a432_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180522-1304-00881-db5009c014_900.jpg"
       ],
+      "photoIds": [
+        "20180522-1333-00896-18f955bb6f",
+        "20180522-1326-00894-70f247c8bf",
+        "20180522-1326-00893-75d36d95eb",
+        "20180522-1325-00892-5b9c7eef8a",
+        "20180522-1322-00889-84c3a77b96",
+        "20180522-1322-00888-08ac194d19",
+        "20180522-1309-00886-84c424a432",
+        "20180522-1304-00881-db5009c014",
+        "20180522-1259-00877-3bb003eb2d",
+        "20180522-1257-00876-8e04a7ee3e",
+        "20180522-1257-00875-b88ee8a0bc",
+        "20180522-1252-00873-1e21d9efaa",
+        "20180522-1252-00872-edb2ed6f",
+        "20180522-1251-00868-7319a58ddf"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101660
+      "mtimeMs": 1788639423763
     },
     {
       "id": "facebook-toulouse-cloisters-brick-light-2026-06-01",
@@ -3366,9 +4883,25 @@
         "https://download.photos-by-elie.com/media/expo/20180524-1746-00940-636b34659d_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180524-1746-00941-72deedae61_900.jpg"
       ],
+      "photoIds": [
+        "20111102-1226-07867-136188a2c1",
+        "20111102-1227-05325-ab56a019a3",
+        "20111106-0808-27995-c4cfb5f5c1",
+        "20111106-0808-28027-8a497c25e6",
+        "20160707-1531-17313-pano-59addf66f9",
+        "20160709-1822-24599-pano-f6bb14796e",
+        "20180524-1746-00940-636b34659d",
+        "20180524-1746-00941-72deedae61",
+        "20180525-1439-00945-c37d4fa644",
+        "20180525-1440-00948-f9444792d1",
+        "20180525-1441-00952-0be82ccc8d",
+        "20180525-1442-00953-93073461ca",
+        "20220506-044820-03115-d18397db96",
+        "20220506-054409-03193-8303575241"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101656
+      "mtimeMs": 1788639423760
     },
     {
       "id": "pinterest-oceanside-pier-golden-hour-2026-05-31",
@@ -3387,9 +4920,22 @@
         "https://download.photos-by-elie.com/media/expo/20180505-1815-00240-4cb65b1f8c_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180505-1822-00244-d9950f99e1_900.jpg"
       ],
+      "photoIds": [
+        "20180505-1807-18428-ec308418ff",
+        "20180505-1814-00238-2ad3a506a8",
+        "20180505-1814-00239-54fc56737b",
+        "20180505-1815-00240-4cb65b1f8c",
+        "20180505-1822-00244-d9950f99e1",
+        "20180224-144444-00093-20d2b53f3c",
+        "20180224-1446-00097-f9e2a1929a",
+        "20180224-1451-00100-07b4f7fb87",
+        "20180224-1452-00102-bb5778e678",
+        "20180302-1936-00107-40a8e4a3f3",
+        "20180302-1937-14820-f0022883b8"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101668
+      "mtimeMs": 1788639423770
     },
     {
       "id": "instagram-colares-atlantic-cliffs-2026-05-31",
@@ -3411,9 +4957,25 @@
         "https://download.photos-by-elie.com/media/expo/20180520-1204-00694-937eb7fb9b_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180520-1204-00696-41785153f3_900.jpg"
       ],
+      "photoIds": [
+        "20180520-1154-00684-fc9320d34c",
+        "20180520-1157-00685-4bc7f88fad",
+        "20180520-1200-00686-c6eba24915",
+        "20180520-1211-00705-56157d137d",
+        "20180520-1202-00689-4e89cc4a74",
+        "20180520-1202-00690-fb31060c05",
+        "20180520-1204-00694-937eb7fb9b",
+        "20180520-1204-00696-41785153f3",
+        "20180520-1202-00687-0f4d497aef",
+        "20180520-1202-00688-2caa303ad5",
+        "20180520-1203-00692-cab5a7599a",
+        "20180520-1203-00693-1ce13d0ff0",
+        "20180520-1204-00695-29e2ec16cb",
+        "20180520-1207-00697-f7040c5fef"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-paris-seine-notre-dame-light-2026-05-31",
@@ -3434,9 +4996,25 @@
         "https://download.photos-by-elie.com/media/expo/20180511-1205-00368-3481c74f91_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180511-1409-00373-957584364a_900.jpg"
       ],
+      "photoIds": [
+        "20180511-1109-00348-29e52a789c",
+        "20180511-1120-00361-edit-e178f03aa6",
+        "20180511-1120-00362-26e0c5732b",
+        "20180511-1129-00366-7adb449fbf",
+        "20180511-1140-00367-8ba499e834",
+        "20180511-1205-00368-3481c74f91",
+        "20180511-1408-00371-a6f83947e2",
+        "20180511-1409-00373-957584364a",
+        "20111102-1226-07867-136188a2c1",
+        "20111102-1227-05325-ab56a019a3",
+        "20111106-0808-28027-8a497c25e6",
+        "20111106-0808-27995-c4cfb5f5c1",
+        "20120829-0319-20179-6dd023c02f",
+        "20160702-1255-20199-pano-32dd35fe45"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "pinterest-pisa-marble-and-leaning-tower-2026-05-30",
@@ -3455,9 +5033,22 @@
         "https://download.photos-by-elie.com/media/expo/img-1208-d059e156dc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-1213-7276413ecc_900.jpg"
       ],
+      "photoIds": [
+        "img-1197-0132d88761",
+        "img-1199-0ebd1a5044",
+        "img-1205-4ca5e788f0",
+        "img-1208-d059e156dc",
+        "img-1213-7276413ecc",
+        "img-1198-bb563d6235",
+        "img-1203-d7219d5193",
+        "img-1204-1d710fba81",
+        "img-1207-5079ff3336",
+        "img-1212-96505e7356",
+        "img-1218-fe487846d6"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101670
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-lisbon-monastery-stone-and-light-2026-05-30",
@@ -3479,9 +5070,25 @@
         "https://download.photos-by-elie.com/media/expo/20180519-1346-00618-d2b7edc2d4_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180519-1346-00619-fc41df1f05_900.jpg"
       ],
+      "photoIds": [
+        "20180519-1317-00594-407fa2a7b2",
+        "20180519-1323-00609-8acf5ae002",
+        "20180519-1326-00611-4b92cde21c",
+        "20180519-1328-00612-3bbc44d831",
+        "20180519-1329-00614-04486d9b61",
+        "20180519-1337-00615-a2dda38e79",
+        "20180519-1346-00618-d2b7edc2d4",
+        "20180519-1346-00619-fc41df1f05",
+        "20180519-1320-00604-d88c8483c4",
+        "20180519-1321-00605-2ea1eba277",
+        "20180519-1321-00606-529856e2f5",
+        "20180519-1321-00607-fa749ebd28",
+        "20180519-1322-00608-18764ce389",
+        "20180519-1341-00616-43a986dc00"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-madrid-printing-presses-and-pattern-2026-05-30",
@@ -3503,9 +5110,25 @@
         "https://download.photos-by-elie.com/media/expo/20180522-1040-00812-426f67b68e_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180522-1040-00814-8742b3330d_900.jpg"
       ],
+      "photoIds": [
+        "20180522-1033-00797-a563e73274",
+        "20180522-1033-00799-03b029177d",
+        "20180522-1035-00802-7491e004e7",
+        "20180522-1035-00803-ae8db6aa18",
+        "20180522-1036-00806-7408b3d491",
+        "20180522-1036-00807-8bd9eaf4d8",
+        "20180522-1040-00812-426f67b68e",
+        "20180522-1040-00814-8742b3330d",
+        "20180522-1042-00816-596de76b2b",
+        "20180522-1042-00817-442053ee3d",
+        "20180522-1043-00818-26094a4b97",
+        "20180522-1044-00819-c52a428a92",
+        "20180522-1047-00822-a87196398e",
+        "20180522-1052-00827-35836a2a52"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101653
+      "mtimeMs": 1788639423758
     },
     {
       "id": "pinterest-san-diego-aquarium-blue-reef-2026-05-29",
@@ -3524,9 +5147,22 @@
         "https://download.photos-by-elie.com/media/expo/20180421-1302-13327-ede937ff43_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180421-1303-12279-a30f818e53_900.jpg"
       ],
+      "photoIds": [
+        "20180421-1301-13471-a2bc5324f5",
+        "20180421-1301-13630-2e7556e274",
+        "20180421-1302-13484-de314daaef",
+        "20180421-1302-13327-ede937ff43",
+        "20180421-1303-12279-a30f818e53",
+        "20180421-1301-11781-9af05e8a71",
+        "20180421-1307-11535-f8010916d2",
+        "20180421-1317-11952-9b706e99b8",
+        "20180421-1319-13379-458588499c",
+        "20180421-1324-12174-267523668a",
+        "20180421-1313-12169-c895ce5df7"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423771
     },
     {
       "id": "instagram-cascais-atlantic-evening-2026-05-29",
@@ -3548,9 +5184,25 @@
         "https://download.photos-by-elie.com/media/expo/20180517-2138-00495-cd8355432a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180517-2236-00501-42b08a2940_900.jpg"
       ],
+      "photoIds": [
+        "20180517-2126-00483-f23ed1e1e2",
+        "20180517-2132-00488-18ec1fa871",
+        "20180517-2134-00489-a3c2036451",
+        "20180517-2134-00490-dc7a915651",
+        "20180517-2135-00491-f90f6d821a",
+        "20180517-2135-00492-564b88a104",
+        "20180517-2138-00495-cd8355432a",
+        "20180517-2236-00501-42b08a2940",
+        "20180517-2125-00482-76683490dc",
+        "20180517-2127-00484-cec825a469",
+        "20180517-2132-00487-1ca9df6419",
+        "20180517-2140-00499-bdffe517ce",
+        "20180517-2208-00500-d164887094",
+        "20180518-1900-00580-35bb6f1333"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423761
     },
     {
       "id": "facebook-bilbao-guggenheim-titanium-river-2026-05-29",
@@ -3572,9 +5224,25 @@
         "https://download.photos-by-elie.com/media/expo/20180515-1521-00405-5ff5a830df_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180515-1554-00418-1666851aba_900.jpg"
       ],
+      "photoIds": [
+        "20180515-1509-00394-1c47ab8c12",
+        "20180515-1510-00397-3fdd5ba3db",
+        "20180515-1510-00399-b36b36b527",
+        "20180515-1511-00400-2d2b644db6",
+        "20180515-1511-00401-b01a5f2047",
+        "20180515-1512-00403-ca2da18685",
+        "20180515-1521-00405-5ff5a830df",
+        "20180515-1554-00418-1666851aba",
+        "20180515-1508-00393-06cf65e0d9",
+        "20180515-1509-00395-990efe55c7",
+        "20180515-1511-00402-2d9fb935fd",
+        "20180515-1522-00407-f9ad6d1c21",
+        "20180515-1523-00408-60baa8eb58",
+        "20180515-1630-00436-1b277ba8a9"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "pinterest-la-jolla-coastal-reserve-2026-05-28",
@@ -3593,9 +5261,16 @@
         "https://download.photos-by-elie.com/media/expo/20180421-1314-12194-9720f6f4fc_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180421-1315-12105-b5fb72a520_900.jpg"
       ],
+      "photoIds": [
+        "20180405-1909-00199-2cb05463d8",
+        "20180405-1909-00200-06da187409",
+        "20180421-1313-12169-c895ce5df7",
+        "20180421-1314-12194-9720f6f4fc",
+        "20180421-1315-12105-b5fb72a520"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1783998101667
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-seville-cathedral-stone-and-light-2026-05-28",
@@ -3608,9 +5283,25 @@
       "imageUrl": "",
       "imageAlt": "Seville Cathedral Stone and Light",
       "previewImageUrls": [],
+      "photoIds": [
+        "20240307-143445-00194-7c53cb988c",
+        "20240307-144056-00196-2bb992f935",
+        "20240307-144104-00198-33e6b76326",
+        "20240307-144107-00199-5a9fcbe82c",
+        "20240307-144110-00200-c72445afa9",
+        "20240307-144113-00201-1470369a47",
+        "20240307-144116-00202-458ddfb0f9",
+        "20240307-144118-00203-3e8a805cc4",
+        "20240307-143445-00194-d6829bc80b",
+        "20240307-144056-00196-670431d6ce",
+        "20240307-144104-00198-dbb862f77e",
+        "20240307-144107-00199-e69b78bbd8",
+        "20240307-144110-00200-f674412e86",
+        "20240307-144113-00201-d57c8cc050"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423766
     },
     {
       "id": "facebook-granada-alhambra-courtyards-2026-05-28",
@@ -3631,30 +5322,25 @@
         "https://download.photos-by-elie.com/media/expo/20240517-132618-00248-b27aae37ff_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240517-140442-00257-f6a38f120c_900.jpg"
       ],
+      "photoIds": [
+        "20240517-125943-00129-1c75000b82",
+        "20240517-130520-00148-d77e807b02",
+        "20240517-131045-00186-bd665fc547",
+        "20240517-131314-00215-3d4173da54",
+        "20240517-132315-00237-5f02a48498",
+        "20240517-132324-00243-ef4e254e6b",
+        "20240517-132618-00248-b27aae37ff",
+        "20240517-140442-00257-f6a38f120c",
+        "20240517-125336-00114-f0f35bdab2",
+        "20240517-125525-00120-d173fdb179",
+        "20240517-125930-00125-137437c51a",
+        "20240517-125945-00132-184f74fe7f",
+        "20240517-130223-00140-b3550901cd",
+        "20240517-130337-00144-46f2fb932c"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101652
-    },
-    {
-      "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "source": "Pinterest",
-      "title": "Gibraltar Rock and Bay Views",
-      "description": "A five-photo Gibraltar springboard with bright rock views, Mediterranean coastal structure, and travel atmosphere from the public Photos By Elie catalog.",
-      "date": "2026-05-27",
-      "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
-      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
-      "imageAlt": "Gibraltar",
-      "previewImageUrls": [
-        "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5669-31d9551dd4_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5687-46f0da658f_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5688-774fc51bff_900.jpg",
-        "https://download.photos-by-elie.com/media/expo/img-5689-7b0f2b33e9_900.jpg"
-      ],
-      "primaryPhotoCount": 5,
-      "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101666
+      "mtimeMs": 1788639423757
     },
     {
       "id": "pinterest-del-mar-sunset-tide-colors-2026-05-27",
@@ -3673,9 +5359,56 @@
         "https://download.photos-by-elie.com/media/expo/20180130-1826-00076-d2dfbc75f1_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180130-1824-00075-43302f0e18_900.jpg"
       ],
+      "photoIds": [
+        "20180130-1830-10861-hdr-f722e85795",
+        "20180130-1829-00079-c928a918e4",
+        "20180130-1829-00078-c8a1e6c9ca",
+        "20180130-1826-00076-d2dfbc75f1",
+        "20180130-1824-00075-43302f0e18",
+        "20180130-1823-00074-3e7329c914",
+        "20180130-1822-00073-359af05134",
+        "20180130-1821-00072-7590c2ade8",
+        "20180130-1820-00071-0696115df0",
+        "20180130-1819-00070-3de2c7629b",
+        "20180130-1818-00069-07270272ad"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101665
+      "mtimeMs": 1788639423769
+    },
+    {
+      "id": "pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "source": "Pinterest",
+      "title": "Gibraltar Rock and Bay Views",
+      "description": "A five-photo Gibraltar springboard with bright rock views, Mediterranean coastal structure, and travel atmosphere from the public Photos By Elie catalog.",
+      "date": "2026-05-27",
+      "href": "./campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=pinterest-gibraltar-rock-and-bay-views-2026-05-27",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
+      "imageAlt": "Gibraltar",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/img-5668-7d7e86442a_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5669-31d9551dd4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5687-46f0da658f_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5688-774fc51bff_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/img-5689-7b0f2b33e9_900.jpg"
+      ],
+      "photoIds": [
+        "img-5668-7d7e86442a",
+        "img-5669-31d9551dd4",
+        "img-5687-46f0da658f",
+        "img-5688-774fc51bff",
+        "img-5689-7b0f2b33e9",
+        "img-5690-7733fd1086",
+        "img-5691-86fa18391c",
+        "img-5695-eb987f9f53",
+        "img-5696-045ddcc483",
+        "img-5698-87c60eb06c",
+        "img-5699-95c8ce8344"
+      ],
+      "primaryPhotoCount": 5,
+      "relatedPhotoCount": 6,
+      "mtimeMs": 1788639423769
     },
     {
       "id": "instagram-ronda-gorge-white-town-views-2026-05-27",
@@ -3694,9 +5427,26 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2749-2f1d7f391b_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2747-5e7d6bc190_900.jpg"
       ],
+      "photoIds": [
+        "d5h-2761-c86320d0bf",
+        "d5h-2760-8ccdd9684c",
+        "d5h-2759-f702088e4c",
+        "d5h-2758-0c1491e3c3",
+        "d5h-2749-2f1d7f391b",
+        "20240519-161823-00074-83cd217baf",
+        "d5h-2748-855aefd854",
+        "d5h-2747-5e7d6bc190",
+        "20240519-161730-00073-484057c528",
+        "d5h-2755-e3846b9f48",
+        "20240519-161840-00080-1b8c042bf1",
+        "d5h-2754-ac42e6d320",
+        "20240519-161839-00079-3959792ae3",
+        "d5h-2753-9619e716ed",
+        "20240519-161837-00078-3af7f99fbb"
+      ],
       "primaryPhotoCount": 9,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423765
     },
     {
       "id": "instagram-setenil-rock-streets-2026-05-27",
@@ -3715,9 +5465,27 @@
         "https://download.photos-by-elie.com/media/expo/d5h-2753-9619e716ed_900.jpg",
         "https://download.photos-by-elie.com/media/expo/d5h-2754-ac42e6d320_900.jpg"
       ],
+      "photoIds": [
+        "20240519-161832-00075-a3c45a1909",
+        "d5h-2750-21cef8efff",
+        "20240519-161834-00076-6d24bc00ed",
+        "d5h-2751-dbf9291443",
+        "20240519-161836-00077-902556bbc5",
+        "d5h-2752-b5f48d4ac7",
+        "20240519-161837-00078-3af7f99fbb",
+        "d5h-2753-9619e716ed",
+        "20240519-161839-00079-3959792ae3",
+        "d5h-2754-ac42e6d320",
+        "20240519-161840-00080-1b8c042bf1",
+        "d5h-2755-e3846b9f48",
+        "20240519-161832-00075-pano-fa10fbc997",
+        "20240519-162205-00084-8a49767a4f",
+        "20240519-162206-00085-98507eca33",
+        "20240519-162207-00086-feb29e6575"
+      ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101663
+      "mtimeMs": 1788639423765
     },
     {
       "id": "facebook-paris-arts-metiers-mechanical-details-2026-05-27",
@@ -3739,9 +5507,25 @@
         "https://download.photos-by-elie.com/media/expo/img-6140-83d210a31b_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6142-e69ca026c7_900.jpg"
       ],
+      "photoIds": [
+        "img-6128-00560b1c58",
+        "img-6131-f86603f21c",
+        "img-6132-fa5e3e6296",
+        "img-6134-aeb1b0b248",
+        "img-6135-a8190af791",
+        "img-6138-a220ea6366",
+        "img-6140-83d210a31b",
+        "img-6142-e69ca026c7",
+        "img-6124-efcc2f493a",
+        "img-6129-fd1f9cc55f",
+        "img-6159-41a8c3df55",
+        "img-6160-6ac795aa36",
+        "img-6163-a7aeb4afcc",
+        "img-6164-877cec7c49"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423759
     },
     {
       "id": "facebook-albert-kahn-garden-paths-2026-05-27",
@@ -3763,9 +5547,25 @@
         "https://download.photos-by-elie.com/media/expo/img-6023-2ecc6286fb_900.jpg",
         "https://download.photos-by-elie.com/media/expo/img-6021-9b14501285_900.jpg"
       ],
+      "photoIds": [
+        "img-6035-3a015ed040",
+        "img-6034-db96c3ab96",
+        "img-6029-8cb0e351ce",
+        "img-6028-6c5fd69eea",
+        "img-6026-86a28095e9",
+        "img-6025-e3389f0f7c",
+        "img-6023-2ecc6286fb",
+        "img-6021-9b14501285",
+        "img-6038-8baf672836",
+        "img-6037-9e6ec35907",
+        "img-6027-a138a5f9e2",
+        "img-6022-1b3731e9c0",
+        "img-6020-f69140f78a",
+        "img-6019-ae12e141a4"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101651
+      "mtimeMs": 1788639423756
     },
     {
       "id": "pinterest-sintra-palaces-green-hills-2026-05-26",
@@ -3784,9 +5584,22 @@
         "https://download.photos-by-elie.com/media/expo/20180518-1519-00556-5a996cd928_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20180518-1518-00555-2fda7a62dd_900.jpg"
       ],
+      "photoIds": [
+        "20180518-1522-00564-8ed80527e5",
+        "20180518-1522-00563-6e60338108",
+        "20180518-1520-00559-72f1bcdf6b",
+        "20180518-1519-00556-5a996cd928",
+        "20180518-1518-00555-2fda7a62dd",
+        "20180518-1513-00550-bf71b5719d",
+        "20180518-1513-00549-8b042c1963",
+        "20180518-1511-00548-7e601dc5e5",
+        "20180518-1510-00547-fb38f6323b",
+        "20180518-1505-00544-1b1ab30c30",
+        "20180518-1504-00543-385794ba82"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423772
     },
     {
       "id": "instagram-estepa-chocolate-museum-2026-05-26",
@@ -3808,9 +5621,27 @@
         "https://download.photos-by-elie.com/media/expo/20240308-130023-00235-e62f4b5abe_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20240308-130010-00233-39a6397693_900.jpg"
       ],
+      "photoIds": [
+        "20240308-130209-00248-7a9d4241bb",
+        "20240308-130107-00246-354e9eabab",
+        "20240308-130054-00243-2795114325",
+        "20240308-130042-00241-6a52e8cd68",
+        "20240308-130032-00239-255ee56ac2",
+        "20240308-130027-00237-cc2130b489",
+        "20240308-130023-00235-e62f4b5abe",
+        "20240308-130010-00233-39a6397693",
+        "20240308-130010-00232-cfcf89fc5d",
+        "20240308-125949-00231-88ea6ffc2c",
+        "20240308-125937-00229-179e49e125",
+        "20240308-125931-00227-697e5c0278",
+        "20240308-125922-00225-e6e7d02463",
+        "20240308-125916-00223-b4400dc4f0",
+        "20240308-125856-00221-3a82920870",
+        "20240308-125735-00219-e46fc0ee45"
+      ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101659
+      "mtimeMs": 1788639423762
     },
     {
       "id": "facebook-rueil-malmaison-2026-05-26",
@@ -3823,9 +5654,25 @@
       "imageUrl": "",
       "imageAlt": "Rueil-Malmaison Museum Rooms",
       "previewImageUrls": [],
+      "photoIds": [
+        "img-6236-5c34056e1e",
+        "img-6235-b7ffbc497f",
+        "img-6234-07e82ae534",
+        "img-6233-04aa884861",
+        "img-6232-938119802e",
+        "img-6230-1c5d28735e",
+        "img-6229-38dd061aae",
+        "img-6227-1934002918",
+        "img-6222-d88a2f15a0",
+        "img-6219-b54f61da21",
+        "img-6218-eb5dd73220",
+        "img-6217-707cf6bf58",
+        "img-6216-e7faf68b88",
+        "img-6215-fd473cacf8"
+      ],
       "primaryPhotoCount": 8,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101654
+      "mtimeMs": 1788639423760
     },
     {
       "id": "pinterest-valencia-aquarium-2026-05-16",
@@ -3838,9 +5685,21 @@
       "imageUrl": "",
       "imageAlt": "Valencia Aquarium Architecture",
       "previewImageUrls": [],
+      "photoIds": [
+        "img-1567-8286aafbcb",
+        "img-1566-117503577f",
+        "img-1564-1f9e3891b9",
+        "img-1562-8b45fdf05c",
+        "img-1558-97860683e7",
+        "img-1565-9ff9ebf5a6",
+        "img-1563-cab9e5df6b",
+        "img-1561-5dac4a00ba",
+        "img-1560-fb522733d7",
+        "img-1559-007635fa9e"
+      ],
       "primaryPhotoCount": 5,
       "relatedPhotoCount": 5,
-      "mtimeMs": 1783998101671
+      "mtimeMs": 1788639423774
     },
     {
       "id": "pinterest-invalides-2026-05-14",
@@ -3862,9 +5721,27 @@
         "https://download.photos-by-elie.com/media/expo/20220506-051024-03188-26c219176a_900.jpg",
         "https://download.photos-by-elie.com/media/expo/20220506-045942-03172-b368612e02_900.jpg"
       ],
+      "photoIds": [
+        "20220506-154558-03388-a887904b4b",
+        "20220506-160631-03403-51426edaac",
+        "20220506-145248-03337-8deb7b57a5",
+        "20220506-145149-03333-e92838da6f",
+        "20220506-145037-03329-9100ee8314",
+        "20220506-054409-03193-8303575241",
+        "20220506-051024-03188-26c219176a",
+        "20220506-045942-03172-b368612e02",
+        "20220506-044820-03115-d18397db96",
+        "20220506-041124-03096-fad0dd9f78",
+        "20220505-153639-03083-3ded4343e5",
+        "20220505-135231-03007-a5d4711305",
+        "20191114-1254-15649-pano-05f6c65b28",
+        "20180511-1443-00382-346dfde4a7",
+        "20180511-1205-00368-3481c74f91",
+        "20180510-1519-00298-793ef096f2"
+      ],
       "primaryPhotoCount": 10,
       "relatedPhotoCount": 6,
-      "mtimeMs": 1783998101666
+      "mtimeMs": 1788639423769
     }
   ]
 }

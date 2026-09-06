@@ -551,3 +551,5 @@ node --test worker/checkout-worker.test.mjs
 ```
 
 See `worker/README.md` for route examples and Stripe/mock configuration.
+
+All campaigns: `campaign.html` is the permanent public campaign directory (PBE-198). Large composite cards use at most two columns and link to complete public campaign membership. `npm run campaigns:index` is already part of social package finalization; membership is filtered against the live lifecycle-authorized catalog in the browser.

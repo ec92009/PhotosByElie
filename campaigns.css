@@ -1,0 +1,23 @@
+.campaign-directory-intro { padding: 2rem 0; max-width: 48rem; }
+.campaign-directory-intro h1 { font-size: clamp(2.4rem, 5vw, 4rem); margin: .5rem 0; }
+.campaign-directory { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; padding-bottom: 3rem; }
+.campaign-directory-card { display: block; min-width: 0; color: inherit; text-decoration: none; border: 1px solid #987b5d55; border-radius: 1.2rem; overflow: hidden; }
+.campaign-directory-card:focus-visible { outline: 3px solid #a56e32; outline-offset: 5px; }
+.campaign-directory-card:hover h2 { text-decoration: underline; }
+.campaign-composite { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); aspect-ratio: 4 / 3; gap: 3px; background: #29251f; color: white; }
+.campaign-composite img { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.campaign-composite[data-frames="1"] { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.campaign-composite[data-frames="2"] { grid-template-rows: 1fr; }
+.campaign-composite[data-frames="3"] img:first-child { grid-row: span 2; }
+.campaign-directory-caption { padding: 1.25rem; }
+.campaign-directory-caption h2 { font-size: clamp(1.25rem, 2vw, 1.7rem); margin: 0 0 .6rem; }
+.campaign-directory-caption p { margin: 0; }
+[data-campaign-detail][hidden], [data-all-campaigns][hidden] { display: none !important; }
+@media (max-width: 700px) { .campaign-directory { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
+body.all-campaigns { background: #f5f1e9; }
+body.all-campaigns::before, body.all-campaigns::after { display: none; }
+body.all-campaigns main.shell { width: min(1480px, calc(100% - 48px)); }
+body.all-campaigns .campaign-directory-card { background: #fffdf8; }
+html[data-theme="dark"] body.all-campaigns { background: #191a19; }
+html[data-theme="dark"] .all-campaigns .campaign-directory-card { background: #252624; }
+@media (max-width: 700px) { body.all-campaigns main.shell { width: calc(100% - 32px); } }

@@ -5518,6 +5518,27 @@ body[data-fixed-header] .header-utility-controls{
     margin-left:0;
   }
 }
+/* Keep directory navigation as a quiet route trail instead of a competing pill. */
+body[data-gallery] .version-switch,
+body[data-fixed-header] .version-switch{
+  min-height:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding:0;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+body[data-gallery] .version-switch a,
+body[data-fixed-header] .version-switch a{
+  font-size:.82rem;
+  letter-spacing:.01em;
+}
+body[data-gallery] .version-switch span,
+body[data-fixed-header] .version-switch span{
+  color:color-mix(in srgb,var(--muted) 58%,transparent);
+}
 body[data-gallery] .header-controls > .gallery-view-controls.is-header-mounted,
 body[data-fixed-header] .header-controls > .gallery-view-controls.is-header-mounted{
   order:1;

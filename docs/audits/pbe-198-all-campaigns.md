@@ -53,3 +53,7 @@ The usage guide now runs full width like the country-photo grid, with a delibera
 ## Hero navigation receipt — 6 September 2026, 23:10 CEST
 
 The homepage now treats “Social campaigns” as one more destination in the expandable country picker. It uses the same compact country-pill treatment and sits with the geographic destinations, so the hero has one clear action instead of a separate full-width social control. The menu remains content-sized and responsive, with the public cache-bust advanced to v249.12.
+
+## Campaign navigation receipt — 6 September 2026, 23:28 CEST
+
+The campaign header no longer presents the social view as a nested archive trail. Social campaigns now keeps only `Photos | Social campaigns`; the all-campaigns directory keeps `Photos | All campaigns`. Both route trails use unboxed inline links with no oversized breadcrumb pill, while the footer remains the complete cross-directory navigation. The public cache-bust is v249.13.

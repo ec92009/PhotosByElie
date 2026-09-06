@@ -17,3 +17,9 @@ The cover index now carries an explicit `compositePhotoIds` sample for the user-
 Campaign detail cards now expose the same visitor controls as country collections: a `+` selection toggle at upper left and a heart like toggle at upper right, with pressed state, accessible labels, visual selection state, and cross-card like synchronization. v249.4 local browser verification on the Fuengirola detail route found eight cards, eight selection buttons, and eight like buttons; clicking one of each updated the pressed state and liked storage, then the test state was cleared. The same route opens Quick Look by double-click (including directly on an image link), Space, or the existing media context menu; Quick Look ArrowRight moved to item 2 of 8, ArrowDown with three columns moved to item 5 of 8, and the S/L commands updated selection and likes while the modal was open. Escape closed the modal and restored focus. The permanent directory still renders 170 eligible cards from the 173 indexed source manifests; three source manifests have no public-preview-backed entries and remain omitted.
 
 Country-gallery Quick Look now receives the active grid density, so ArrowUp and ArrowDown move by one visible row there as well; a Spain gallery browser check with three columns moved down by one row and closed cleanly with Escape.
+
+Campaign detail also handles Space at the page level: when focus is on the page it opens the nearest visible campaign card in Quick Look and prevents the browser's normal scroll action; focused links, selected cards, and native form controls retain their expected behavior.
+
+## Space shortcut receipt — 6 September 2026, 18:18 CEST
+
+The campaign detail keyboard path is cache-busted as v249.5. With page-body focus on the Albert Kahn detail route, Space stayed at the current scroll position and opened the first visible card in Quick Look; native card controls remain available to their own Space activation.

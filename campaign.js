@@ -56,6 +56,7 @@
   const entriesForIds = (ids) => rules.entries(ids, photoIndex);
   const likedStore = window.photosByElieLiked;
   const selectedPhotoIds = new Set();
+  let lastCampaignPhotoId = "";
   const t = (key, fallback) => {
     const translated = window.photosByElieI18n?.t?.(key);
     return translated && translated !== key ? translated : fallback;
@@ -143,6 +144,9 @@
       const entry = entries?.[index];
       if (!entry?.photo?.id) return;
       let clickNavigationTimer = 0;
+      const rememberCard = () => { lastCampaignPhotoId = entry.photo.id; };
+      card.addEventListener("pointerenter", rememberCard, { passive: true });
+      card.addEventListener("focusin", rememberCard);
       const openPreview = (event) => {
         if (event?.target?.closest?.("button")) return;
         window.clearTimeout(clickNavigationTimer);
@@ -172,7 +176,7 @@
       card.addEventListener("dblclick", openPreview);
       card.querySelectorAll("[data-photo-link], [data-photo-caption]").forEach((link) => {
         link.addEventListener("keydown", (event) => {
-          if (event.key !== " ") return;
+          if (![" ", "Spacebar", "Space"].includes(event.key)) return;
           openPreview(event);
         });
       });
@@ -285,6 +289,64 @@
     });
     return true;
   };
+
+  const campaignPreviewContext = (card) => {
+    if (!card?.isConnected) return null;
+    const container = card.closest("[data-campaign-primary], [data-campaign-related], [data-campaign-search-results]");
+    if (!container || container.hidden) return null;
+    const entries = container === els.primary
+      ? primaryEntries
+      : container === els.searchResults ? searchEntries : relatedEntries;
+    const index = Number(card.dataset.photoIndex || 0);
+    if (!entries?.[index]?.photo?.id) return null;
+    return {
+      container,
+      entries,
+      index,
+      focusTarget: card.querySelector("[data-photo-link], [data-photo-caption]"),
+    };
+  };
+
+  const campaignPreviewTarget = () => {
+    const activeCard = document.activeElement?.closest?.("[data-photo-index][data-photo-id]");
+    const activeContext = campaignPreviewContext(activeCard);
+    if (activeContext) return activeContext;
+
+    const selectedId = [...selectedPhotoIds].at(-1);
+    if (selectedId) {
+      const selectedCard = [...document.querySelectorAll("[data-photo-index][data-photo-id]")]
+        .find((card) => card.dataset.photoId === selectedId);
+      const selectedContext = campaignPreviewContext(selectedCard);
+      if (selectedContext) return selectedContext;
+    }
+
+    if (lastCampaignPhotoId) {
+      const lastCard = [...document.querySelectorAll("[data-photo-index][data-photo-id]")]
+        .find((card) => card.dataset.photoId === lastCampaignPhotoId);
+      const lastContext = campaignPreviewContext(lastCard);
+      if (lastContext) return lastContext;
+    }
+
+    const viewportCenter = (window.innerHeight || 0) / 2;
+    const visibleCards = [...document.querySelectorAll("[data-photo-index][data-photo-id]")]
+      .map((card) => ({ card, rect: card.getBoundingClientRect() }))
+      .filter(({ card, rect }) => campaignPreviewContext(card) && rect.bottom > 0 && rect.top < (window.innerHeight || 0))
+      .sort((left, right) => Math.abs((left.rect.top + left.rect.height / 2) - viewportCenter)
+        - Math.abs((right.rect.top + right.rect.height / 2) - viewportCenter));
+    return campaignPreviewContext(visibleCards[0]?.card)
+      || campaignPreviewContext(els.primary?.querySelector("[data-photo-index][data-photo-id]"));
+  };
+
+  window.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || ![" ", "Spacebar", "Space"].includes(event.key)) return;
+    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("button, input, textarea, select, [contenteditable=\"true\"]")) return;
+    const context = campaignPreviewTarget();
+    if (!context) return;
+    event.preventDefault();
+    openCampaignQuickLook(context.container, context.entries, context.index, context.focusTarget);
+  });
 
   const applyCampaignDensity = () => {
     layoutControllers.forEach((controller, index) => {

@@ -35,8 +35,6 @@
   let relatedEntries = [];
   let searchEntries = [];
   let viewControls = null;
-  let densityInput = null;
-  let densityValue = null;
   let fitModeButtons = [];
   const layoutControllers = [];
 
@@ -348,12 +346,6 @@
     openCampaignQuickLook(context.container, context.entries, context.index, context.focusTarget);
   });
 
-  const applyCampaignDensity = () => {
-    layoutControllers.forEach((controller, index) => {
-      controller.applyDensityControls(index === 0 ? { input: densityInput, value: densityValue } : {});
-    });
-  };
-
   const applyCampaignFitMode = () => {
     layoutControllers.forEach((controller, index) => {
       controller.applyFitMode(index === 0 ? fitModeButtons : []);
@@ -367,15 +359,9 @@
   };
 
   const applyCampaignLayout = () => {
-    applyCampaignDensity();
     applyCampaignFitMode();
     applyCampaignPreviewLayout();
     window.photosByEliePositionGalleryViewControls?.(viewControls);
-  };
-
-  const setCampaignDensityColumns = (columns) => {
-    layoutControllers.forEach((controller) => controller.setDensityColumns(columns));
-    applyCampaignLayout();
   };
 
   const setCampaignFitMode = (mode) => {
@@ -387,14 +373,7 @@
     if (viewControls || !primaryLayout) return;
     viewControls = document.createElement("div");
     viewControls.className = "gallery-view-controls is-header-mounted";
-    viewControls.setAttribute("aria-label", "Gallery view controls");
-    const densityControl = document.createElement("label");
-    densityControl.className = "gallery-density-control";
-    densityControl.innerHTML = `
-      <span>Grid</span>
-      <input type="range" min="1" max="${primaryLayout.maxDensityColumns()}" step="1" value="${primaryLayout.preferredDensityColumns()}" data-gallery-density/>
-      <b data-gallery-density-value>${primaryLayout.preferredDensityColumns()}</b>
-    `;
+    viewControls.setAttribute("aria-label", "Image fit controls");
     const fitControl = document.createElement("div");
     fitControl.className = "gallery-fit-control";
     fitControl.setAttribute("role", "group");
@@ -409,19 +388,16 @@
     topButton.dataset.galleryBackToTop = "";
     topButton.setAttribute("aria-label", "Back to top");
     topButton.innerHTML = `<span aria-hidden="true">↑</span>`;
-    viewControls.append(densityControl, fitControl);
+    viewControls.append(fitControl);
     const headerControls = document.querySelector(".header-controls");
     if (headerControls) headerControls.prepend(viewControls);
     else document.body.append(viewControls);
     document.body.append(topButton);
-    densityInput = densityControl.querySelector("[data-gallery-density]");
-    densityValue = densityControl.querySelector("[data-gallery-density-value]");
     fitModeButtons = [...fitControl.querySelectorAll("[data-gallery-fit-mode]")];
     topButton.addEventListener("click", () => {
       const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
     });
-    densityInput.addEventListener("input", () => setCampaignDensityColumns(densityInput.value));
     fitControl.addEventListener("click", (event) => {
       const button = event.target.closest("[data-gallery-fit-mode]");
       if (button) setCampaignFitMode(button.dataset.galleryFitMode);

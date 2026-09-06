@@ -292,15 +292,15 @@ test("the production landing presents the six substantial country collections", 
 test("the production landing restores the latest social shelf in the open grid slot", () => {
   assert.match(productionHtml, /class="social-shelf"/);
   assert.equal((productionHtml.match(/class="social-shelf-item"/g) || []).length, 3);
-  for (const campaign of [
+  const socialShelf = (productionHtml.match(/<aside class="social-shelf"[\s\S]*?<\/aside>/) || [""])[0];
+  const socialRoutes = [...socialShelf.matchAll(/campaign\.html\?c=([^&"]+)/g)].map(([, campaign]) => campaign);
+  const expectedSocialRoutes = [
     "facebook-del-mar-dog-beach-sunset-2026-07-14",
     "instagram-fuengirola-moon-mediterranean-2026-07-14",
     "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",
-  ]) {
-    assert.match(productionHtml, new RegExp(`campaign\\.html\\?c=${campaign}`));
-  }
+  ];
+  assert.deepEqual(socialRoutes, expectedSocialRoutes);
   assert.match(productionHtml, /data-i18n="latestSocial"/);
-  const socialShelf = (productionHtml.match(/<aside class="social-shelf"[\s\S]*?<\/aside>/) || [""])[0];
   assert.doesNotMatch(socialShelf, /<img|latestSocialTitle/);
   assert.match(js, /latestSocial: "Latest social"/);
   assert.match(css, /\.social-shelf \{[\s\S]*?grid-column: span 5/);

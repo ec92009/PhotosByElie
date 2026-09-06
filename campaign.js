@@ -142,11 +142,33 @@
       const index = Number(card.dataset.photoIndex || 0);
       const entry = entries?.[index];
       if (!entry?.photo?.id) return;
+      let clickNavigationTimer = 0;
       const openPreview = (event) => {
         if (event?.target?.closest?.("button")) return;
+        window.clearTimeout(clickNavigationTimer);
+        clickNavigationTimer = 0;
         event?.preventDefault?.();
         openCampaignQuickLook(container, entries, index, card.querySelector("[data-photo-link], [data-photo-caption]"));
       };
+      // Give a second pointer click a chance to become the Quick Look gesture
+      // before following the card's normal detail link.
+      card.addEventListener("click", (event) => {
+        if (event.target?.closest?.("button")) return;
+        const link = event.target?.closest?.("[data-photo-link], [data-photo-caption]");
+        if (!link) return;
+        if (event.detail === 1) {
+          event.preventDefault();
+          window.clearTimeout(clickNavigationTimer);
+          clickNavigationTimer = window.setTimeout(() => {
+            clickNavigationTimer = 0;
+            window.location.assign(card.dataset.photoHref || photoHref(entry.photo.id));
+          }, 260);
+        } else if (event.detail === 2) {
+          event.preventDefault();
+          window.clearTimeout(clickNavigationTimer);
+          clickNavigationTimer = 0;
+        }
+      }, { capture: true });
       card.addEventListener("dblclick", openPreview);
       card.querySelectorAll("[data-photo-link], [data-photo-caption]").forEach((link) => {
         link.addEventListener("keydown", (event) => {

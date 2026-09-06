@@ -540,9 +540,14 @@ input { font: inherit; }
 .story-card::after {
   content: "";
   position: absolute;
-  inset: 45% 0 0;
+  inset: 28% 0 0;
   z-index: 1;
-  background: linear-gradient(transparent, rgba(4, 5, 4, 0.76));
+  background: linear-gradient(
+    to bottom,
+    rgba(4, 5, 4, 0.04) 0%,
+    rgba(4, 5, 4, 0.62) 52%,
+    rgba(4, 5, 4, 0.88) 100%
+  );
 }
 
 .story-card:hover img,
@@ -561,18 +566,21 @@ input { font: inherit; }
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 760;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.58);
 }
 
 .story-card strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 4rem);
   font-weight: 500;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.68);
 }
 
 .story-card em {
   color: rgba(255, 255, 255, 0.72);
   font-style: normal;
   font-size: 0.9rem;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.58);
 }
 
 .story-card-fan {
@@ -710,20 +718,29 @@ input { font: inherit; }
 
 .site-footer {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(11rem, 1fr) minmax(11rem, 1fr) minmax(0, 2fr);
   align-items: center;
   gap: 2rem;
-  min-height: 160px;
+  min-height: 0;
   padding: 2rem clamp(1.2rem, 6vw, 7rem);
   background: #11110f;
 }
 
-.site-footer p { color: var(--muted); }
+.site-footer p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .footer-links {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  grid-column: 1 / -1;
+  width: 100%;
+  justify-content: flex-start;
   gap: 0.65rem 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 .footer-links a { text-underline-offset: 0.3rem; }
 

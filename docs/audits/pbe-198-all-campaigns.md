@@ -27,3 +27,11 @@ The campaign detail keyboard path is cache-busted as v249.5. With page-body focu
 ## Related section receipt — 6 September 2026, 21:31 CEST
 
 Campaign details keep the primary photographs in “All photographs” and render each manifest's related public previews in the “You might also like” section. The section is hidden only when a campaign has no related public previews, preventing an empty panel while preserving the related gallery for campaigns that provide it. The public site cache-bust is v249.6.
+
+## Landing footer layout receipt — 6 September 2026, 21:44 CEST
+
+The landing footer now assigns the brand, tagline, privacy notice, and legal navigation to intentional grid areas. Legal links span a full-width row with a divider, while the narrow layout collapses cleanly to one column. The public site cache-bust is v249.7.
+
+## Campaign controls and landing contrast receipt — 6 September 2026, 21:58 CEST
+
+Campaign detail headers no longer render the inactive Grid density slider. Fit and Fill remain available, while the internal default density continues to support row-wise Quick Look navigation. The landing story-card scrim and text shadows now provide readable contrast over light, detailed images such as Spain. The homepage social shelf remains limited to three routed campaign entries—Facebook Del Mar, Instagram / Threads Fuengirola, and Pinterest San Diego Zoo—with no additional social campaign routes exposed from the front page. The public site cache-bust is v249.8.

@@ -43,3 +43,9 @@ The landing usage guide now uses an asymmetrical composition: one large square w
 ## Usage guide copy receipt — 6 September 2026, 22:28 CEST
 
 The usage-guide captions now frame the three paths as “Enjoy it,” “Work with it,” and “Remember it.” The supporting sentence is “Find the image that fits by place, time, keywords, or the photographer’s own note.” French and Spanish translations carry the same concise tone without em dashes. The public cache-bust is v249.10.
+
+## Usage guide and social directory receipt — 6 September 2026, 22:51 CEST
+
+The usage guide now runs full width like the country-photo grid, with a deliberate three-pixel seam between the large wall-art feature and the two stacked supporting visuals. Its left-to-right scrim reaches full transparency at 50% of each image, keeping captions readable while letting the photography carry the right side. The hero now places a same-width “Social campaigns” pill beneath “Explore the collection,” and the latest-social shelf repeats that route for visitors who continue down the page.
+
+`social.html` is a dedicated, campaign-backed directory filtered to Facebook, Instagram, Threads, and Pinterest sources. It renders only lifecycle-authorized catalog previews, reports the filtered count, and excludes Etsy campaigns. Local browser verification at v249.11 found 119 social collections, two desktop columns, no Etsy entries, aligned hero pills, and a full-bleed usage grid. The sitemap and active cache-busters use v249.11. Full npm tests passed (303 Node tests, 489 Python tests); publish validation passed against the reviewed Owner.sqlite snapshot.

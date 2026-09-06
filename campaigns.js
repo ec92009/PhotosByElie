@@ -4,7 +4,18 @@
   document.querySelectorAll('[data-campaign-detail]').forEach((el) => { el.hidden = true; });
   root.hidden = false;
   document.body.classList.add('all-campaigns');
-  document.title = 'All campaigns | Photos By Elie';
+  const sourceFilter = new Set(String(root.dataset.campaignSources || '')
+    .split(',')
+    .map((source) => source.trim().toLowerCase())
+    .filter(Boolean));
+  const directoryTitle = String(root.dataset.directoryTitle || 'All campaigns').trim() || 'All campaigns';
+  const directoryDescription = String(root.dataset.directoryDescription || '').trim();
+  const directoryNoun = String(root.dataset.directoryNoun || 'collections').trim() || 'collections';
+  document.title = `${directoryTitle} | Photos By Elie`;
+  const title = root.querySelector('[data-directory-title]');
+  if (title) title.textContent = directoryTitle;
+  const description = root.querySelector('[data-directory-description]');
+  if (description && directoryDescription) description.textContent = directoryDescription;
   const status = root.querySelector('[role="status"]');
   const grid = root.querySelector('[data-campaign-directory]');
   const rules = window.photosByElieCampaignCollection;
@@ -37,9 +48,12 @@
     caption.className = 'campaign-directory-caption';
     const title = document.createElement('h2');
     title.textContent = campaign.title;
+    const meta = document.createElement('p');
+    meta.className = 'campaign-directory-meta';
+    meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
     const count = document.createElement('p');
     count.textContent = `${entries.length} photo${entries.length === 1 ? '' : 's'} · View collection →`;
-    caption.append(title, count);
+    caption.append(title, meta, count);
     card.append(composite, caption);
     return card;
   };
@@ -54,11 +68,14 @@
       (collection.photos || []).map((photo) => [photo.id, { photo }])));
     for (const campaign of payload.campaigns) {
       if (!rules.publicCampaign(campaign)) continue;
+      if (sourceFilter.size && !sourceFilter.has(String(campaign.source || '').trim().toLowerCase())) continue;
       const entries = rules.entries(campaign.photoIds, index);
       const compositeEntries = rules.entries(campaign.compositePhotoIds || campaign.photoIds, index);
       if (entries.length) grid.append(cardFor(campaign, entries, compositeEntries.length ? compositeEntries : entries));
     }
-    status.textContent = grid.children.length ? `${grid.children.length} collections to explore` : 'No public campaigns are available yet.';
+    status.textContent = grid.children.length
+      ? `${grid.children.length} ${directoryNoun} to explore`
+      : `No public ${directoryNoun} are available yet.`;
   };
   // Observe catalog rejection immediately, even while the campaign index is loading.
   window.photosByElieCatalogReady.catch(() => {});

@@ -137,6 +137,7 @@ enum CullingThumbnailFailure: Equatable, Sendable {
 
 enum GallerySavedView: String, CaseIterable, Identifiable {
     case allAssets = "All fixture assets"
+    case uploadedWithoutApproval = "Uploaded without approval"
     case culling = "Culling — Undecided"
     case reviewQueue = "Review queue"
     case approved = "Approved"
@@ -2627,15 +2628,7 @@ final class BackstageViewModel: ObservableObject {
         CullingQuery(
             search: cullingSearch,
             media: [.photos],
-            pick: Set(cullingViews.map {
-                switch $0 {
-                case .undecided: .undecided
-                case .picked: .picked
-                case .hidden: .rejected
-                case .uploaded: .uploaded
-                case .allActive: .undecided
-                }
-            }),
+            pick: galleryWorkflow.pickFilters(for: cullingViews),
             ratings: cullingRatingFilters,
             colors: cullingColorFilters,
             dateFrom: galleryDateFrom,
@@ -2681,7 +2674,7 @@ final class BackstageViewModel: ObservableObject {
     }
 
     func toggleCullingViewFilter(_ view: FixtureCullingView) {
-        toggle(view, in: &cullingViews)
+        cullingViews = galleryWorkflow.toggledStatusView(view, current: cullingViews)
     }
 
     var cullingHiddenMatchViews: [FixtureCullingView] {
@@ -2701,6 +2694,7 @@ final class BackstageViewModel: ObservableObject {
         case .picked: cullingWorkspace.summary.picked
         case .hidden: cullingWorkspace.summary.rejected
         case .uploaded: fixtureCullingWindow?.summary.uploaded ?? cullingAssets.filter { $0.deliveryState == "live" }.count
+        case .uploadedWithoutApproval: cullingWorkspace.summary.filtered
         case .allActive: cullingWorkspace.summary.total
         }
     }
@@ -2921,6 +2915,12 @@ final class BackstageViewModel: ObservableObject {
             // the authoritative write is in flight; a failure restores the
             // prior state and therefore restores the card.
             return cullingAssets.filter { asset in
+                if cullingViews.contains(.uploadedWithoutApproval) {
+                    return galleryWorkflow.includesInUploadedAudit(
+                        asset,
+                        state: cullingStates[asset.id]
+                    )
+                }
                 if cullingViews.contains(.uploaded), asset.deliveryState == "live" { return true }
                 let placement = FixturePlacementState(
                     rawValue: cullingStates[asset.id]?.pickState

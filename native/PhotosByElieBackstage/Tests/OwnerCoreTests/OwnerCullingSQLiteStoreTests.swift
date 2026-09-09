@@ -5,6 +5,60 @@ import Testing
 
 @Suite("Owner Culling SQLite parity")
 struct OwnerCullingSQLiteStoreTests {
+    @Test("Uploaded without approval requires a current R2 receipt and excludes Picked plus Approved")
+    func uploadedWithoutApprovalAuditView() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("culling-upload-audit-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let databaseURL = root.appendingPathComponent("Owner.sqlite")
+        try makeCopiedFixtureDatabase(at: databaseURL)
+        try execute(
+            databaseURL,
+            """
+            INSERT INTO asset_source_versions(version_id, asset_id, created_at) VALUES
+              ('version-1', 'asset-1', '2026-01-01T00:00:00Z'),
+              ('version-2', 'asset-2', '2026-01-01T00:00:00Z');
+            INSERT INTO asset_editorial_state(asset_id, editorial_state) VALUES
+              ('asset-1', 'approved'),
+              ('asset-2', 'approved');
+            INSERT INTO asset_delivery_state(asset_id, delivery_state, source_version_hash) VALUES
+              ('asset-1', 'live', 'version-1'),
+              ('asset-2', 'live', 'version-2');
+            """
+        )
+        let before = try Data(contentsOf: databaseURL)
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+
+        let window = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .uploadedWithoutApproval,
+            sourceFilters: GallerySourceFilter.allCases
+        )
+        #expect(window.items.map(\.id) == ["asset-2"])
+        #expect(window.items.first?.placementState == .hidden)
+        #expect(window.items.first?.deliveryState == "live")
+        #expect(window.summary.filtered == 1)
+        #expect(!window.hasNext)
+        #expect(try Data(contentsOf: databaseURL) == before)
+
+        try execute(
+            databaseURL,
+            "UPDATE asset_delivery_state SET source_version_hash = 'stale-version' WHERE asset_id = 'asset-2'"
+        )
+        let stale = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .uploadedWithoutApproval,
+            sourceFilters: GallerySourceFilter.allCases
+        )
+        #expect(stale.items.isEmpty)
+        let child = try store.cullingWindow(
+            fixtureID: "fixture-child",
+            view: .uploadedWithoutApproval,
+            sourceFilters: GallerySourceFilter.allCases
+        )
+        #expect(child.items.isEmpty)
+    }
+
     @Test("Uploaded Gallery status is inclusive, paged, read only, and fixture scoped")
     func uploadedGalleryStatus() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("culling-uploaded-\(UUID())")
@@ -36,6 +90,22 @@ struct OwnerCullingSQLiteStoreTests {
         let other = CullingCandidate(id: "other", filename: "other.jpg", mediaType: "photo")
         let local = CullingWorkspace.evaluate([liveCandidate, other], query: CullingQuery(pick: [.uploaded]))
         #expect(local.items.map(\.id) == ["live"])
+        var approvedLive = CullingCandidate(
+            id: "approved-live",
+            filename: "approved.jpg",
+            mediaType: "photo",
+            decision: SidecarDecisionState(
+                assetId: "approved-live",
+                pickState: "picked",
+                metadataState: "approved"
+            )
+        )
+        approvedLive.isUploaded = true
+        let localAudit = CullingWorkspace.evaluate(
+            [liveCandidate, approvedLive, other],
+            query: CullingQuery(pick: [.uploadedWithoutApproval])
+        )
+        #expect(localAudit.items.map(\.id) == ["live"])
     }
 
     @Test("Bounded Culling pages preserve complete summaries and never modify SQLite")
@@ -726,6 +796,31 @@ struct OwnerCullingSQLiteStoreTests {
         print("Live Gallery acceptance: IMG_5014 resolved to one available Photos identity")
     }
 
+    @Test("Live Expo Uploaded without approval audit is exact and read only")
+    func liveUploadedWithoutApprovalAudit() throws {
+        guard let path = ProcessInfo.processInfo.environment["PBE_OWNER_ACCEPTANCE_DB"],
+              !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+
+        let databaseURL = URL(fileURLWithPath: path)
+        let before = try Data(contentsOf: databaseURL)
+        let store = OwnerCullingSQLiteStore(databaseURL: databaseURL)
+        let window = try store.cullingWindow(
+            fixtureID: "fixture-expo",
+            view: .uploadedWithoutApproval,
+            limit: 500,
+            sourceFilters: GallerySourceFilter.allCases
+        )
+
+        #expect(window.summary.filtered == window.items.count)
+        #expect(window.items.allSatisfy {
+            $0.deliveryState == "live"
+                && !($0.placementState == .picked && $0.editorialState == "approved")
+        })
+        #expect(try Data(contentsOf: databaseURL) == before)
+        print("Live Gallery acceptance: \(window.summary.filtered) current R2 uploads lack Picked + Approved")
+    }
+
     @Test("Fixture workflow uses native Culling reads without an Owner action")
     func cullingWorkflowUsesNativeRead() async throws {
         let root = FileManager.default.temporaryDirectory
@@ -868,7 +963,8 @@ private func makeCopiedFixtureDatabase(at url: URL) throws {
     );
     CREATE TABLE asset_delivery_state (
       asset_id TEXT PRIMARY KEY,
-      delivery_state TEXT NOT NULL DEFAULT 'not-ready'
+      delivery_state TEXT NOT NULL DEFAULT 'not-ready',
+      source_version_hash TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE asset_ai_proposals (
       proposal_id TEXT PRIMARY KEY,

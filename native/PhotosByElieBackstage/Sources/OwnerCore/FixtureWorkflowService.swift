@@ -528,26 +528,6 @@ public enum FixtureCullingSemantics {
     }
 }
 
-public enum FixtureCullingView: String, Codable, Sendable, CaseIterable {
-    case undecided
-    case hidden
-    case picked
-    case uploaded
-    case allActive = "all-active"
-
-    public var label: String {
-        switch self {
-        case .undecided: "Undecided"
-        case .hidden: "Hidden"
-        case .picked: "Picked"
-        case .uploaded: "Uploaded"
-        case .allActive: "All Active"
-        }
-    }
-
-    public static var selectableCases: [Self] { [.undecided, .picked, .hidden, .uploaded] }
-}
-
 public enum GalleryEditorialFilter: String, Codable, Sendable, CaseIterable, Identifiable {
     case needsReview = "needs-review"
     case aiRequested = "ai-requested"

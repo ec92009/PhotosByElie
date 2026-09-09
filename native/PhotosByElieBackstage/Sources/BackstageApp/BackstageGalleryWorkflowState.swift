@@ -105,6 +105,8 @@ struct BackstageGalleryWorkflowState {
         return switch savedView {
         case .allAssets:
             (allViews, [], [], allSources)
+        case .uploadedWithoutApproval:
+            ([.uploadedWithoutApproval], [], [], allSources)
         case .culling:
             ([.undecided], [], [], [.available])
         case .reviewQueue:
@@ -120,6 +122,44 @@ struct BackstageGalleryWorkflowState {
         case .unavailable:
             (allViews, [], [], [.unavailable])
         }
+    }
+
+    func pickFilters(for views: Set<FixtureCullingView>) -> Set<CullingPickFilter> {
+        Set(views.map {
+            switch $0 {
+            case .undecided, .allActive: .undecided
+            case .picked: .picked
+            case .hidden: .rejected
+            case .uploaded: .uploaded
+            case .uploadedWithoutApproval: .uploadedWithoutApproval
+            }
+        })
+    }
+
+    func toggledStatusView(
+        _ view: FixtureCullingView,
+        current: Set<FixtureCullingView>
+    ) -> Set<FixtureCullingView> {
+        if current.contains(.uploadedWithoutApproval) { return [view] }
+        var result = current
+        if result.contains(view) {
+            if result.count > 1 { result.remove(view) }
+        } else {
+            result.insert(view)
+        }
+        return result
+    }
+
+    func includesInUploadedAudit(
+        _ asset: FixtureAsset,
+        state: SidecarDecisionState?
+    ) -> Bool {
+        let placement = FixturePlacementState(
+            rawValue: state?.pickState ?? asset.placementState.rawValue
+        ) ?? asset.placementState
+        let editorial = state?.metadataState ?? asset.editorialState
+        return asset.deliveryState == "live"
+            && !(placement == .picked && editorial == "approved")
     }
 
     static func adjustSummary(

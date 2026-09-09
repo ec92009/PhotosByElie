@@ -1202,6 +1202,14 @@ struct BackstageFixtureSelectionTests {
         #expect(model.gallerySourceFilters == Set(GallerySourceFilter.allCases))
         #expect(model.gallerySavedViewLabel == "All fixture assets")
 
+        model.applyGallerySavedView(.uploadedWithoutApproval)
+        #expect(model.cullingViews == [.uploadedWithoutApproval])
+        #expect(model.gallerySourceFilters == Set(GallerySourceFilter.allCases))
+        #expect(model.gallerySavedViewLabel == "Uploaded without approval")
+        model.toggleCullingViewFilter(.undecided)
+        #expect(model.cullingViews == [.undecided])
+        #expect(model.gallerySavedViewLabel == "Custom")
+
         model.showCullingSavedView()
         #expect(model.cullingViews == [.undecided])
         #expect(model.gallerySourceFilters == [.available])
@@ -1268,6 +1276,17 @@ struct BackstageFixtureSelectionTests {
         #expect(model.visibleCullingAssets.map(\.id) == ["live"])
         #expect(model.cullingMatchCount(for: .uploaded) == 1)
         #expect(model.cullingWorkspace.items.first?.isUploaded == true)
+
+        let hiddenUpload = FixtureAsset(
+            id: "hidden-live",
+            title: "Hidden upload",
+            filename: "hidden.jpg",
+            mediaType: "photo",
+            placementState: .hidden,
+            editorialState: "approved",
+            deliveryState: "live"
+        )
+        #expect(hiddenUpload.galleryStateBadges == ["Hidden", "R2 Uploaded"])
     }
 
     @Test("Native Gallery renders the authoritative server window without a second filter")

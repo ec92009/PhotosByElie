@@ -1418,6 +1418,86 @@ class FixturePipelineTest(unittest.TestCase):
             self.assertEqual(connection.execute("SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'").fetchone()[0], "live")
             self.assertEqual(connection.execute("SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'child' AND asset_id = 'asset-1'").fetchone()[0], "undecided")
 
+    def test_uploaded_without_approval_requires_current_version_and_is_read_only(self):
+        root = create_fixture(self.root, "Root", fixture_id="root-upload-audit")
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-1", "asset-3"],
+            "picked",
+        )
+        set_fixture_asset_state(
+            self.root,
+            root["fixtureId"],
+            ["asset-2"],
+            "hidden",
+        )
+        apply_fixture_review_action(
+            self.root,
+            root["fixtureId"],
+            ["asset-1"],
+            "approve",
+        )
+        with connect(self.root) as connection:
+            connection.execute(
+                "UPDATE asset_editorial_state SET editorial_state = 'approved' WHERE asset_id = 'asset-2'"
+            )
+            connection.executemany(
+                """
+                INSERT INTO asset_source_versions(version_id, asset_id, created_at)
+                VALUES (?, ?, '2026-01-01T00:00:00Z')
+                """,
+                [(f"version-{asset_id}", asset_id) for asset_id in ("asset-1", "asset-2", "asset-3")],
+            )
+            connection.executemany(
+                """
+                UPDATE asset_delivery_state
+                SET delivery_state = 'live', source_version_hash = ?
+                WHERE asset_id = ?
+                """,
+                [(f"version-{asset_id}", asset_id) for asset_id in ("asset-1", "asset-2", "asset-3")],
+            )
+            connection.commit()
+        database_path = self.root / "assets" / "owner-actions" / "Owner.sqlite"
+        before = database_path.read_bytes()
+
+        audit = fixture_culling_window(
+            self.root,
+            root["fixtureId"],
+            view="uploaded-without-approval",
+            limit=1,
+        )
+        self.assertEqual(audit["summary"]["filtered"], 2)
+        self.assertEqual(audit["count"], 1)
+        self.assertTrue(audit["hasNext"])
+        second = fixture_culling_window(
+            self.root,
+            root["fixtureId"],
+            view="uploaded-without-approval",
+            offset=1,
+            limit=1,
+        )
+        self.assertEqual(
+            {audit["items"][0]["assetId"], second["items"][0]["assetId"]},
+            {"asset-2", "asset-3"},
+        )
+        self.assertEqual(database_path.read_bytes(), before)
+
+        with connect(self.root) as connection:
+            connection.execute(
+                "UPDATE asset_delivery_state SET source_version_hash = 'stale' WHERE asset_id = 'asset-2'"
+            )
+            connection.execute(
+                "UPDATE sidecar_decisions SET pick_state = 'hidden' WHERE asset_id = 'asset-3'"
+            )
+            connection.commit()
+        empty = fixture_culling_window(
+            self.root,
+            root["fixtureId"],
+            view="uploaded-without-approval",
+        )
+        self.assertEqual(empty["items"], [])
+
     def test_review_state_filters_are_independent_and_server_backed(self):
         root = create_fixture(self.root, "Root", fixture_id="root")
         set_fixture_asset_state(

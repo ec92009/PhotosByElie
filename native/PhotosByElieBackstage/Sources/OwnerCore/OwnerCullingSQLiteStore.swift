@@ -154,10 +154,7 @@ public struct OwnerCullingSQLiteStore: Sendable {
             sourceFilteredRows,
             sourceFilters: selectedSources
         )
-        let viewRows = filteredRows.filter {
-            effectiveViews.contains($0["placement_state"]?.stringValue ?? "undecided")
-                || (effectiveViews.contains("uploaded") && $0["delivery_state"]?.stringValue == "live")
-        }
+        let viewRows = filteredRows.filter { cullingViewMatches($0, views: effectiveViews) }
         let pageStart = min(safeOffset, viewRows.count)
         let pageEnd = min(viewRows.count, pageStart + safeLimit)
         let page = Array(viewRows[pageStart..<pageEnd])
@@ -540,6 +537,32 @@ private func cullingEditorialMatches(
         case .approved: state == "approved"
         }
     }
+}
+
+private func cullingHasCurrentR2Upload(_ row: [String: JSONValue]) -> Bool {
+    let receiptVersion = row["delivery_source_version_hash"]?.stringValue ?? ""
+    let currentVersion = row["current_source_version_id"]?.stringValue ?? ""
+    return row["delivery_state"]?.stringValue == "live"
+        && !receiptVersion.isEmpty
+        && receiptVersion == currentVersion
+}
+
+private func cullingViewMatches(
+    _ row: [String: JSONValue],
+    views: Set<String>
+) -> Bool {
+    views.contains(row["placement_state"]?.stringValue ?? "undecided")
+        || (views.contains("uploaded") && row["delivery_state"]?.stringValue == "live")
+        || (
+            views.contains("uploaded-without-approval")
+                && cullingHasCurrentR2Upload(row)
+                && !cullingIsPickedAndApproved(row)
+        )
+}
+
+private func cullingIsPickedAndApproved(_ row: [String: JSONValue]) -> Bool {
+    (row["placement_state"]?.stringValue ?? "undecided") == FixturePlacementState.picked.rawValue
+        && (row["editorial_state"]?.stringValue ?? "unreviewed") == "approved"
 }
 
 private func cullingMediaType(_ value: String) -> String? {

@@ -102,6 +102,7 @@ public enum CullingPickFilter: String, CaseIterable, Sendable {
     case picked
     case rejected
     case uploaded
+    case uploadedWithoutApproval = "uploaded-without-approval"
 
     public var label: String {
         switch self {
@@ -110,6 +111,7 @@ public enum CullingPickFilter: String, CaseIterable, Sendable {
         case .picked: "Picked"
         case .rejected: "Rejected"
         case .uploaded: "Uploaded"
+        case .uploadedWithoutApproval: "Uploaded without approval"
         }
     }
 
@@ -426,14 +428,27 @@ public enum CullingWorkspace {
         let mediaFilter: CullingMediaFilter = media == "video" ? .videos : .photos
         guard query.media.contains(mediaFilter) else { return false }
         let pickFilter = normalizedPick(candidate.decision.pickState)
-        guard query.pick.contains(pickFilter)
-            || (query.pick.contains(.uploaded) && candidate.isUploaded) else { return false }
+        guard matchesPick(candidate, query: query, pick: pickFilter) else { return false }
         guard query.ratings.contains(candidate.decision.rating) else { return false }
         let colorFilter = CullingColorFilter(
             rawValue: candidate.decision.color.isEmpty ? "none" : candidate.decision.color
         ) ?? .none
         guard query.colors.contains(colorFilter) else { return false }
         return true
+    }
+
+    private static func matchesPick(
+        _ candidate: CullingCandidate,
+        query: CullingQuery,
+        pick: CullingPickFilter
+    ) -> Bool {
+        query.pick.contains(pick)
+            || (query.pick.contains(.uploaded) && candidate.isUploaded)
+            || (
+                query.pick.contains(.uploadedWithoutApproval)
+                    && candidate.isUploaded
+                    && !(pick == .picked && candidate.decision.metadataState == "approved")
+            )
     }
 
     static func normalizedDateBoundary(_ value: String, endOfRange: Bool) -> String? {

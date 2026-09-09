@@ -155,7 +155,8 @@ struct PBEOwnerNativeGalleryTests {
             );
             CREATE TABLE asset_delivery_state (
               asset_id TEXT PRIMARY KEY,
-              delivery_state TEXT NOT NULL DEFAULT 'not-ready'
+              delivery_state TEXT NOT NULL DEFAULT 'not-ready',
+              source_version_hash TEXT NOT NULL DEFAULT ''
             );
             CREATE TABLE asset_ai_proposals (
               proposal_id TEXT PRIMARY KEY, asset_id TEXT,

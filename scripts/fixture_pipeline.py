@@ -35,7 +35,14 @@ DESTINATIONS = {"r2", "apple_photos", "archive"}
 FIXTURE_PLACEMENT_STATES = {"undecided", "picked", "hidden"}
 FIXTURE_ELIGIBILITY_STATES = {"active", "dormant"}
 FIXTURE_STATE_MIGRATION_ID = "fixture-state-v1"
-CULLING_VIEWS = {"undecided", "picked", "hidden", "uploaded", "all-active"}
+CULLING_VIEWS = {
+    "undecided",
+    "picked",
+    "hidden",
+    "uploaded",
+    "uploaded-without-approval",
+    "all-active",
+}
 EDITORIAL_STATES = {"unreviewed", "requesting-ai", "proposed", "approved"}
 DELIVERY_STATES = {"not-ready", "needs-upload", "uploading", "live", "failed"}
 REVIEW_MODES = {"backfill", "full"}
@@ -1563,11 +1570,15 @@ def fixture_culling_window(
     """Query one fixture's complete effective universe without materializing ID lists."""
     clean_view = str(view or "undecided").strip().casefold()
     if clean_view not in CULLING_VIEWS:
-        raise ValueError("culling view must be undecided, picked, hidden, uploaded, or all-active")
+        raise ValueError(
+            "culling view must be undecided, picked, hidden, uploaded, "
+            "uploaded-without-approval, or all-active"
+        )
     clean_views = {
         str(value or "").strip().casefold()
         for value in (views or [])
-        if str(value or "").strip().casefold() in {"undecided", "picked", "hidden", "uploaded"}
+        if str(value or "").strip().casefold()
+        in {"undecided", "picked", "hidden", "uploaded", "uploaded-without-approval"}
     }
     if not clean_views:
         clean_views = (
@@ -1719,6 +1730,16 @@ def fixture_culling_window(
               ON global_decision.asset_id = a.asset_id
             LEFT JOIN asset_delivery_state AS delivery
               ON delivery.asset_id = a.asset_id
+            LEFT JOIN asset_editorial_state AS editorial
+              ON editorial.asset_id = a.asset_id
+            LEFT JOIN asset_source_versions AS latest_source
+              ON latest_source.version_id = (
+                SELECT source_version.version_id
+                FROM asset_source_versions AS source_version
+                WHERE source_version.asset_id = a.asset_id
+                ORDER BY source_version.created_at DESC, source_version.version_id DESC
+                LIMIT 1
+              )
         """
         universe_media = conn.execute(
             f"""
@@ -1748,7 +1769,9 @@ def fixture_culling_window(
         view_predicates = list(predicates)
         view_params = list(params)
         if not {"undecided", "picked", "hidden"}.issubset(clean_views):
-            placements = sorted(clean_views - {"uploaded"})
+            placements = sorted(
+                clean_views - {"uploaded", "uploaded-without-approval"}
+            )
             status_predicates = []
             if placements:
                 placeholders = ",".join("?" for _ in placements)
@@ -1758,6 +1781,24 @@ def fixture_culling_window(
                 view_params.extend(placements)
             if "uploaded" in clean_views:
                 status_predicates.append("delivery.delivery_state = 'live'")
+            if "uploaded-without-approval" in clean_views:
+                status_predicates.append(
+                    """
+                    (
+                      delivery.delivery_state = 'live'
+                      AND trim(COALESCE(delivery.source_version_hash, '')) <> ''
+                      AND delivery.source_version_hash = latest_source.version_id
+                      AND NOT (
+                        COALESCE(current_decision.placement_state, 'undecided') = 'picked'
+                        AND COALESCE(
+                          editorial.editorial_state,
+                          global_decision.metadata_state,
+                          'unreviewed'
+                        ) = 'approved'
+                      )
+                    )
+                    """
+                )
             view_predicates.append("(" + " OR ".join(status_predicates) + ")")
         view_where_sql = " AND ".join(view_predicates)
         filtered_total = conn.execute(

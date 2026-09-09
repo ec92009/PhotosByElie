@@ -670,6 +670,9 @@ struct CullingView: View {
             Text("• \(summary.undecided.formatted()) undecided")
             Text("• \(summary.picked.formatted()) picked")
             Text("• \(summary.rejected.formatted()) hidden")
+            if model.cullingViews.contains(.uploadedWithoutApproval) {
+                Text("• current R2 receipt • missing Picked + Approved")
+            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -1340,12 +1343,6 @@ struct CullingView: View {
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
         return panel.runModal() == .OK ? panel.url : nil
-    }
-}
-
-extension FixtureAsset {
-    var galleryStateBadges: [String] {
-        [workflowStage.label] + (sourceAvailable ? [] : ["Source Unavailable"])
     }
 }
 

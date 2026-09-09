@@ -61,12 +61,14 @@ struct CullingWindowQuery {
             """
         if hasCurrentEquipment {
             fromSQL += """
+
                 LEFT JOIN asset_current_equipment AS current_equipment
                   ON current_equipment.asset_id = asset.asset_id
                 """
         }
         if needsUnavailableIdentityFallback {
             fromSQL += """
+
                 LEFT JOIN exact_identity_cloud_fallbacks AS exact_identity
                   ON COALESCE(asset.missing_at, '') <> ''
                  AND exact_identity.local_identifier = json_extract(asset.raw_json, '$.localIdentifier')
@@ -171,7 +173,7 @@ struct CullingWindowQuery {
                      WHERE proposal.asset_id = asset.asset_id
                        AND proposal.status IN ('ready', 'loaded')
                    ) THEN 1 ELSE 0 END AS proposal_available,
-                   COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state,
+                   \(deliveryProjectionSQL),
                    CASE
                      WHEN COALESCE(asset.missing_at, '') <> '' THEN 0
                      WHEN COALESCE(latest_source.source_exists, 1) = 0 THEN 0
@@ -201,6 +203,14 @@ struct CullingWindowQuery {
                      0
                    ) AS INTEGER)) AS original_byte_count
             """
+    }
+
+    private var deliveryProjectionSQL: String {
+        """
+        COALESCE(delivery.delivery_state, 'not-ready') AS delivery_state,
+        COALESCE(delivery.source_version_hash, '') AS delivery_source_version_hash,
+        COALESCE(latest_source.version_id, '') AS current_source_version_id
+        """
     }
 
 }

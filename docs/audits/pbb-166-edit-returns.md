@@ -30,4 +30,13 @@ Replace original is disabled for a multi-source composite because there is no si
 
 ## Installed-app evidence
 
-Pending build and installed-app verification for Backstage v252.1, build 331.
+Backstage v252.1, build 331 was built from clean pushed source commit `479498c7bce5383ea69f5d9ac47691fcef38ff47`, signed with the established PhotosByElie development identity, and installed through `BackstageUpdateInstaller`. The installer retained v252.0/build 330 in the private rollback directory.
+
+Post-install checks confirmed:
+
+- the canonical `/Applications/PhotosByElie Backstage.app` is v252.1/build 331 and satisfies its designated requirement;
+- `release verify` reports the installed identity, Owner authentication, connector identity, and Photos authorization as healthy;
+- the installed accessibility smoke traverses all 13 workspaces, including Edit Returns between Gallery and Review, and passes selection, disabled, busy, failure, and keyboard checks;
+- the live installed Expo workspace opens Edit Returns and truthfully shows the durable empty state because no real return is currently pending.
+
+The unpublished local archive and manifest are retained at `/tmp/pbb331-install`. No Cloudflare or R2 release object was changed.

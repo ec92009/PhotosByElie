@@ -86,8 +86,10 @@ on run arguments
         if rowIndex is less than or equal to 9 then
             keystroke (rowIndex as text) using command down
         else if rowIndex is 10 then
-            keystroke "1" using {command down, option down}
+            keystroke "4" using {command down, option down}
         else if rowIndex is 11 then
+            keystroke "1" using {command down, option down}
+        else if rowIndex is 12 then
             keystroke "2" using {command down, option down}
         else
             keystroke "3" using {command down, option down}
@@ -120,6 +122,7 @@ surface_names=(
   'Fixtures'
   'People & Access'
   'Gallery'
+  'Edit Returns'
   'Review'
   'Metadata'
   'Waste Basket'
@@ -134,6 +137,7 @@ surface_receipts=(
   'Read-only workspace: Fixtures'
   'Read-only workspace: People & Access'
   'Read-only workspace: Gallery'
+  'Read-only workspace: Edit Returns'
   'Read-only workspace: Review'
   'Read-only workspace: Metadata'
   'Read-only workspace: Waste Basket'
@@ -164,7 +168,7 @@ if ! wait_for_text 'Keyboard Select All reached the guarded Gallery handler' 30;
 fi
 print 'PASS keyboard: Command-A reached guarded Gallery Select All'
 
-selected="$(select_sidebar_row 9)"
+selected="$(select_sidebar_row 10)"
 if [[ "$selected" != 'true' ]] || ! wait_for_text 'Read-only workspace: Uploads' 50; then
   print -u2 'FAIL installed accessibility smoke: Uploads could not be reopened for state checks.'
   exit 1
@@ -196,7 +200,7 @@ if [[ "$upload_selection_state" != "$expected_upload_selection_state" ]]; then
   exit 1
 fi
 
-selected="$(select_sidebar_row 12)"
+selected="$(select_sidebar_row 13)"
 if [[ "$selected" != 'true' ]] || ! wait_for_text 'Read-only workspace: Updates' 50; then
   print -u2 'FAIL installed accessibility smoke: Updates could not be reopened for state checks.'
   exit 1

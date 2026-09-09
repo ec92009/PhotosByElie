@@ -94,6 +94,46 @@ public struct ExternalEditReturnReceipt: Codable, Identifiable, Sendable, Equata
     public var derivedAsset: Bool
 }
 
+public enum ExternalEditReturnDecision: String, Codable, Sendable, CaseIterable {
+    case keepOriginal = "keep-original"
+    case replaceOriginal = "replace-original"
+    case keepBoth = "keep-both"
+
+    public var label: String {
+        switch self {
+        case .keepOriginal: "Keep original"
+        case .replaceOriginal: "Replace original"
+        case .keepBoth: "Keep both"
+        }
+    }
+}
+
+public struct ExternalEditReturnCandidate: Identifiable, Sendable, Equatable {
+    public var id: String
+    public var jobID: String
+    public var fixtureID: String
+    public var kind: ExternalEditKind
+    public var editor: ExternalEditorProfile
+    public var sources: [ExternalEditSource]
+    public var originalFileURLs: [URL]
+    public var returnedFileURL: URL
+    public var checksumSHA256: String
+    public var byteCount: Int64
+    public var createdAt: Date
+    public var errorMessage: String
+
+    public var canReplaceOriginal: Bool { kind == .edit && sources.count == 1 }
+}
+
+public struct ExternalEditReturnResolution: Sendable, Equatable {
+    public var returnID: String
+    public var decision: ExternalEditReturnDecision
+    public var destinationAssetID: String
+    public var sourceVersionID: String
+    public var fileURL: URL
+    public var derivedAsset: Bool
+}
+
 /// The exact accepted external-edit file backing an asset's current source
 /// version. UI and export callers use this instead of silently falling back to
 /// the older Apple Photos rendition.
@@ -152,7 +192,13 @@ public protocol ExternalEditJobStoring: Sendable {
     ) throws -> ExternalEditJob
     func recordPrepared(jobID: String, receipts: [PhotoExportReceipt], now: Date) throws -> ExternalEditJob
     func recordLaunched(jobID: String, now: Date) throws -> ExternalEditJob
-    func acceptReturnedFile(jobID: String, sourceURL: URL, now: Date) throws -> ExternalEditReturnReceipt
+    func acceptReturnedFile(jobID: String, sourceURL: URL, now: Date) throws -> ExternalEditReturnCandidate
+    func pendingReturns(fixtureID: String) throws -> [ExternalEditReturnCandidate]
+    func resolveReturn(
+        returnID: String,
+        decision: ExternalEditReturnDecision,
+        now: Date
+    ) throws -> ExternalEditReturnResolution
     func currentReturnedSource(assetID: String) throws -> ExternalEditReturnedSource?
     func cancel(jobID: String, now: Date) throws
     func fail(jobID: String, message: String, now: Date) throws
@@ -343,18 +389,7 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         jobID: String,
         sourceURL: URL,
         now: Date = Date()
-    ) throws -> ExternalEditReturnReceipt {
-        let sourceURL = sourceURL.standardizedFileURL
-        let allowedExtensions = Set(["jpg", "jpeg", "tif", "tiff", "png", "heic"])
-        let values = try? sourceURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-        guard values?.isRegularFile == true,
-              values?.isSymbolicLink != true,
-              allowedExtensions.contains(sourceURL.pathExtension.lowercased()),
-              let byteCount = values?.fileSize,
-              byteCount > 0 else {
-            throw ExternalEditJobError.invalidReturnedFile
-        }
-
+    ) throws -> ExternalEditReturnCandidate {
         let database = try openWritable()
         defer { sqlite3_close_v2(database) }
         try ensureSchema(database)
@@ -362,170 +397,32 @@ public struct ExternalEditJobSQLiteStore: ExternalEditJobStoring, Sendable {
         guard job.state == .editing || job.state == .preparing else {
             throw ExternalEditJobError.invalidState
         }
-        let checksum = try Self.sha256(sourceURL)
-        let returnID = "return-\(UUID().uuidString.lowercased())"
-        let acceptedDirectory = job.returnDirectory.appendingPathComponent("Accepted", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: acceptedDirectory,
-            withIntermediateDirectories: true,
-            attributes: [.posixPermissions: 0o700]
+        let candidate = try returnQueueStore.stage(
+            job: job,
+            sourceURL: sourceURL,
+            now: now
         )
-        let target = acceptedDirectory
-            .appendingPathComponent(returnID)
-            .appendingPathExtension(sourceURL.pathExtension.lowercased())
-        try FileManager.default.copyItem(at: sourceURL, to: target)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+        try writeManifest(try requireJob(database, id: jobID))
+        return candidate
+    }
 
-        let timestamp = Self.timestamp(now)
-        let destinationAssetID: String
-        let derived: Bool
-        if job.kind == .edit {
-            guard let source = job.sources.first else { throw ExternalEditJobError.invalidSources }
-            destinationAssetID = source.assetID
-            derived = false
-        } else {
-            destinationAssetID = "derived-\(UUID().uuidString.lowercased())"
-            derived = true
-        }
-        let sourceVersionID = Self.sourceVersionID(assetID: destinationAssetID, checksum: checksum)
-        do {
-            try transaction(database) {
-                if derived {
-                    try insertDerivedAsset(
-                        database,
-                        assetID: destinationAssetID,
-                        fixtureID: job.fixtureID,
-                        filename: sourceURL.lastPathComponent,
-                        sourceCount: job.sources.count,
-                        timestamp: timestamp
-                    )
-                }
-                try execute(
-                    database,
-                    """
-                    INSERT INTO fixture_asset_decisions(
-                      fixture_id, asset_id, placement_state, eligibility_state,
-                      source, last_action, created_at, updated_at
-                    ) VALUES (?, ?, 'picked', 'active', 'native', 'external-edit-return', ?, ?)
-                    ON CONFLICT(fixture_id, asset_id) DO UPDATE SET
-                      placement_state = 'picked', eligibility_state = 'active',
-                      source = excluded.source, last_action = excluded.last_action,
-                      updated_at = excluded.updated_at
-                    """,
-                    [job.fixtureID, destinationAssetID, timestamp, timestamp]
-                )
-                try execute(
-                    database,
-                    "UPDATE asset_source_versions SET state = 'superseded', superseded_at = ? WHERE asset_id = ? AND state = 'candidate'",
-                    [timestamp, destinationAssetID]
-                )
-                try execute(
-                    database,
-                    """
-                    INSERT INTO asset_source_versions(
-                      version_id, asset_id, metadata_fingerprint, rendered_fingerprint,
-                      source_exists, state, created_at
-                    ) VALUES (?, ?, '', ?, 1, 'candidate', ?)
-                    """,
-                    [sourceVersionID, destinationAssetID, checksum, timestamp]
-                )
-                try execute(
-                    database,
-                    """
-                    INSERT INTO external_edit_returns(
-                      return_id, job_id, destination_asset_id, source_version_id,
-                      file_path, checksum_sha256, byte_count, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [
-                        returnID, jobID, destinationAssetID, sourceVersionID,
-                        target.path, checksum, String(byteCount), timestamp,
-                    ]
-                )
-                try execute(
-                    database,
-                    """
-                    UPDATE asset_editorial_state
-                    SET editorial_state = 'unreviewed', ai_reasons_json = '[]', ai_note = '',
-                        requested_at = NULL, approved_at = NULL, updated_at = ?
-                    WHERE asset_id = ?
-                    """,
-                    [timestamp, destinationAssetID]
-                )
-                try execute(
-                    database,
-                    """
-                    UPDATE sidecar_decisions
-                    SET metadata_state = 'unreviewed', last_action = 'external-edit-return', updated_at = ?
-                    WHERE asset_id = ?
-                    """,
-                    [timestamp, destinationAssetID]
-                )
-                try execute(
-                    database,
-                    """
-                    INSERT INTO asset_delivery_state(asset_id, delivery_state, source_version_hash, last_error, created_at, updated_at)
-                    VALUES (?, 'not-ready', ?, '', ?, ?)
-                    ON CONFLICT(asset_id) DO UPDATE SET
-                      delivery_state = CASE
-                        WHEN asset_delivery_state.delivery_state = 'live' THEN 'live'
-                        ELSE 'not-ready'
-                      END,
-                      source_version_hash = CASE
-                        WHEN asset_delivery_state.delivery_state = 'live'
-                          THEN asset_delivery_state.source_version_hash
-                        ELSE excluded.source_version_hash
-                      END,
-                      last_error = '', updated_at = excluded.updated_at
-                    """,
-                    [destinationAssetID, sourceVersionID, timestamp, timestamp]
-                )
-                for source in job.sources {
-                    try execute(
-                        database,
-                        """
-                        INSERT INTO external_edit_lineage(
-                          child_source_version_id, parent_position, parent_asset_id,
-                          parent_source_version_id, job_id, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        [
-                            sourceVersionID, String(source.position), source.assetID,
-                            source.sourceVersionID, jobID, timestamp,
-                        ]
-                    )
-                }
-                try execute(
-                    database,
-                    """
-                    UPDATE external_edit_jobs
-                    SET state = 'returned', destination_asset_id = ?, returned_file_path = ?,
-                        returned_source_version_id = ?, error_text = '', updated_at = ?
-                    WHERE job_id = ? AND state IN ('preparing', 'editing')
-                    """,
-                    [destinationAssetID, target.path, sourceVersionID, timestamp, jobID]
-                )
-                try execute(
-                    database,
-                    "DELETE FROM external_edit_asset_locks WHERE job_id = ?",
-                    [jobID]
-                )
-            }
-        } catch {
-            try? FileManager.default.removeItem(at: target)
-            throw error
-        }
-        let updated = try requireJob(database, id: jobID)
-        try writeManifest(updated)
-        return ExternalEditReturnReceipt(
-            id: returnID,
-            jobID: jobID,
-            destinationAssetID: destinationAssetID,
-            sourceVersionID: sourceVersionID,
-            fileURL: target,
-            checksumSHA256: checksum,
-            byteCount: Int64(byteCount),
-            derivedAsset: derived
+    public func pendingReturns(fixtureID: String) throws -> [ExternalEditReturnCandidate] {
+        try returnQueueStore.pending(fixtureID: fixtureID)
+    }
+
+    public func resolveReturn(
+        returnID: String,
+        decision: ExternalEditReturnDecision,
+        now: Date = Date()
+    ) throws -> ExternalEditReturnResolution {
+        try returnQueueStore.resolve(returnID: returnID, decision: decision, now: now)
+    }
+
+    private var returnQueueStore: ExternalEditReturnQueueSQLiteStore {
+        ExternalEditReturnQueueSQLiteStore(
+            databaseURL: databaseURL,
+            jobsRoot: jobsRoot,
+            busyTimeoutMilliseconds: busyTimeoutMilliseconds
         )
     }
 

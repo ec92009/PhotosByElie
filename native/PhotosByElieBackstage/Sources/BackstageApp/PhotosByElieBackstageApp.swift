@@ -217,6 +217,8 @@ public struct BackstageApplication: App {
             AccessControlView(model: model)
         case .culling:
             CullingView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
+        case .editReturns:
+            EditReturnsView(model: model)
         case .review:
             ReviewView(model: model, isPreviewMode: model.isReadOnlyAccessibilitySmoke)
         case .metadata:
@@ -241,6 +243,7 @@ public struct BackstageApplication: App {
         case .fixtures: "folder.badge.gearshape"
         case .access: "person.2"
         case .culling: "photo.stack"
+        case .editReturns: "photo.on.rectangle.angled"
         case .review: "checkmark.bubble"
         case .metadata: "tag"
         case .wasteBasket: "trash"
@@ -290,11 +293,12 @@ private struct BackstageNavigationCommands: Commands {
             navigationButton("Fixtures", section: .fixtures, key: "3")
             navigationButton("People & Access", section: .access, key: "4")
             navigationButton("Gallery", section: .culling, key: "5")
-            navigationButton("Review", section: .review, key: "6")
-            navigationButton("Metadata", section: .metadata, key: "7")
-            navigationButton("Waste Basket", section: .wasteBasket, key: "8")
-            navigationButton("Uploads", section: .uploads, key: "9")
+            navigationButton("Edit Returns", section: .editReturns, key: "6")
+            navigationButton("Review", section: .review, key: "7")
+            navigationButton("Metadata", section: .metadata, key: "8")
+            navigationButton("Waste Basket", section: .wasteBasket, key: "9")
             Divider()
+            navigationButton("Uploads", section: .uploads, key: "4", modifiers: [.command, .option])
             navigationButton("Client Delivery", section: .delivery, key: "1", modifiers: [.command, .option])
             navigationButton("Storage Maintenance", section: .publication, key: "2", modifiers: [.command, .option])
             navigationButton("Updates", section: .updates, key: "3", modifiers: [.command, .option])

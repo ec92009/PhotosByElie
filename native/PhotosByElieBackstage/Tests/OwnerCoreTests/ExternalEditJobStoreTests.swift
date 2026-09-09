@@ -5,7 +5,7 @@ import Testing
 
 @Suite("External editor round trips")
 struct ExternalEditJobStoreTests {
-    @Test("One selected source returns as a candidate version of the same asset")
+    @Test("One selected source stages before replacing the same asset")
     func singleSourceRoundTrip() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
@@ -38,15 +38,27 @@ struct ExternalEditJobStoreTests {
 
         let returned = fixture.root.appendingPathComponent("finished.tif")
         try Data("developed-one".utf8).write(to: returned)
-        let receipt = try store.acceptReturnedFile(
+        try fixture.execute("UPDATE asset_editorial_state SET editorial_state = 'approved' WHERE asset_id = 'asset-1'")
+        let candidate = try store.acceptReturnedFile(
             jobID: job.id,
             sourceURL: returned,
             now: fixture.date
         )
 
+        #expect(candidate.sources.map(\.assetID) == ["asset-1"])
+        #expect(try store.activeJob() == nil)
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM asset_source_versions WHERE asset_id = 'asset-1'") == "1")
+        #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try store.currentReturnedSource(assetID: "asset-1") == nil)
+        #expect(try store.pendingReturns(fixtureID: "fixture-expo").map(\.id) == [candidate.id])
+
+        let receipt = try store.resolveReturn(
+            returnID: candidate.id,
+            decision: .replaceOriginal,
+            now: fixture.date
+        )
         #expect(receipt.destinationAssetID == "asset-1")
         #expect(!receipt.derivedAsset)
-        #expect(try store.activeJob() == nil)
         #expect(try fixture.scalar("SELECT state FROM asset_source_versions WHERE version_id = '\(receipt.sourceVersionID)'") == "candidate")
         #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "unreviewed")
         #expect(try fixture.scalar("SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = 'asset-1'") == "picked")
@@ -58,7 +70,7 @@ struct ExternalEditJobStoreTests {
         let current = try store.currentReturnedSource(assetID: "asset-1")
         #expect(current?.sourceVersionID == receipt.sourceVersionID)
         #expect(current?.fileURL == receipt.fileURL)
-        #expect(current?.byteCount == receipt.byteCount)
+        #expect(current?.byteCount == candidate.byteCount)
     }
 
     @Test("A returned file is ignored once a newer source version exists")
@@ -76,7 +88,8 @@ struct ExternalEditJobStoreTests {
         _ = try store.recordLaunched(jobID: job.id, now: fixture.date)
         let returned = fixture.root.appendingPathComponent("finished.jpg")
         try Data("developed-one".utf8).write(to: returned)
-        _ = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let candidate = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        _ = try store.resolveReturn(returnID: candidate.id, decision: .replaceOriginal, now: fixture.date)
         try fixture.execute(
             "INSERT INTO asset_source_versions(version_id, asset_id, state, created_at) "
                 + "VALUES ('newer-photos-version', 'asset-1', 'candidate', '2030-01-01T00:00:00Z')"
@@ -115,7 +128,8 @@ struct ExternalEditJobStoreTests {
         let returned = fixture.root.appendingPathComponent("finished.jpg")
         try Data("developed-one".utf8).write(to: returned)
 
-        let receipt = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let candidate = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let receipt = try store.resolveReturn(returnID: candidate.id, decision: .replaceOriginal, now: fixture.date)
 
         #expect(try fixture.scalar("SELECT COUNT(*) FROM pragma_table_info('external_edit_lineage') WHERE name = 'child_source_version_id'") == "1")
         #expect(try fixture.scalar("SELECT COUNT(*) FROM pragma_table_info('external_edit_lineage') WHERE name = 'destination_asset_id'") == "0")
@@ -167,7 +181,8 @@ struct ExternalEditJobStoreTests {
         _ = try store.recordLaunched(jobID: job.id, now: fixture.date)
         let returned = fixture.root.appendingPathComponent("panorama.jpg")
         try Data("wide-panorama".utf8).write(to: returned)
-        let receipt = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let candidate = try store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        let receipt = try store.resolveReturn(returnID: candidate.id, decision: .keepBoth, now: fixture.date)
 
         #expect(receipt.derivedAsset)
         #expect(receipt.destinationAssetID.hasPrefix("derived-"))
@@ -175,6 +190,149 @@ struct ExternalEditJobStoreTests {
         #expect(try fixture.scalar("SELECT group_concat(parent_asset_id, ',') FROM external_edit_lineage WHERE child_source_version_id = '\(receipt.sourceVersionID)' ORDER BY parent_position") == "asset-1,asset-2")
         #expect(try fixture.scalar("SELECT placement_state FROM fixture_asset_decisions WHERE fixture_id = 'fixture-expo' AND asset_id = '\(receipt.destinationAssetID)'") == "picked")
         #expect(try fixture.scalar("SELECT metadata_state FROM sidecar_decisions WHERE asset_id = '\(receipt.destinationAssetID)'") == "unreviewed")
+    }
+
+    @Test("Keep original is durable and idempotent without changing workflow state")
+    func keepOriginalDoesNotMutateAsset() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.execute("UPDATE asset_editorial_state SET editorial_state = 'approved' WHERE asset_id = 'asset-1'")
+        try fixture.execute("UPDATE asset_delivery_state SET delivery_state = 'live', source_version_hash = 'source-asset-1' WHERE asset_id = 'asset-1'")
+        let job = try fixture.store.createJob(
+            fixtureID: "fixture-expo",
+            kind: .edit,
+            editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")],
+            now: fixture.date
+        )
+        _ = try fixture.store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("same-name.jpg")
+        try Data("returned".utf8).write(to: returned)
+        let candidate = try fixture.store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+
+        let first = try fixture.store.resolveReturn(
+            returnID: candidate.id,
+            decision: .keepOriginal,
+            now: fixture.date
+        )
+        let repeated = try fixture.store.resolveReturn(
+            returnID: candidate.id,
+            decision: .keepOriginal,
+            now: fixture.date
+        )
+
+        #expect(first == repeated)
+        #expect(first.destinationAssetID.isEmpty)
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM asset_source_versions WHERE asset_id = 'asset-1'") == "1")
+        #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try fixture.scalar("SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "live")
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_returns") == "0")
+        #expect(try fixture.scalar("SELECT COUNT(*) FROM external_edit_return_events") == "1")
+        #expect(throws: ExternalEditJobError.self) {
+            try fixture.store.resolveReturn(
+                returnID: candidate.id,
+                decision: .replaceOriginal,
+                now: fixture.date
+            )
+        }
+    }
+
+    @Test("Keep both creates a linked review asset while preserving the live original")
+    func keepBothPreservesOriginal() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.execute("UPDATE asset_editorial_state SET editorial_state = 'approved' WHERE asset_id = 'asset-1'")
+        try fixture.execute("UPDATE asset_delivery_state SET delivery_state = 'live', source_version_hash = 'source-asset-1' WHERE asset_id = 'asset-1'")
+        let job = try fixture.store.createJob(
+            fixtureID: "fixture-expo",
+            kind: .edit,
+            editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")],
+            now: fixture.date
+        )
+        _ = try fixture.store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("developed".utf8).write(to: returned)
+        let candidate = try fixture.store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+
+        let receipt = try fixture.store.resolveReturn(
+            returnID: candidate.id,
+            decision: .keepBoth,
+            now: fixture.date
+        )
+
+        #expect(receipt.derivedAsset)
+        #expect(receipt.destinationAssetID.hasPrefix("derived-"))
+        #expect(try fixture.scalar("SELECT state FROM asset_source_versions WHERE version_id = 'source-asset-1'") == "candidate")
+        #expect(try fixture.scalar("SELECT delivery_state FROM asset_delivery_state WHERE asset_id = 'asset-1'") == "live")
+        #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = 'asset-1'") == "approved")
+        #expect(try fixture.scalar("SELECT editorial_state FROM asset_editorial_state WHERE asset_id = '\(receipt.destinationAssetID)'") == "unreviewed")
+        #expect(try fixture.scalar("SELECT parent_asset_id FROM external_edit_lineage WHERE child_source_version_id = '\(receipt.sourceVersionID)'") == "asset-1")
+    }
+
+    @Test("A failed decision stays visible and succeeds after the staged file is restored")
+    func failedDecisionRemainsRetryable() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let job = try fixture.store.createJob(
+            fixtureID: "fixture-expo",
+            kind: .edit,
+            editor: fixture.editor,
+            sources: [fixture.source(position: 0, assetID: "asset-1")],
+            now: fixture.date
+        )
+        _ = try fixture.store.recordLaunched(jobID: job.id, now: fixture.date)
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("developed".utf8).write(to: returned)
+        let candidate = try fixture.store.acceptReturnedFile(jobID: job.id, sourceURL: returned, now: fixture.date)
+        try Data("tampered!".utf8).write(to: candidate.returnedFileURL)
+
+        #expect(throws: ExternalEditJobError.self) {
+            try fixture.store.resolveReturn(
+                returnID: candidate.id,
+                decision: .replaceOriginal,
+                now: fixture.date
+            )
+        }
+        #expect(try fixture.store.pendingReturns(fixtureID: "fixture-expo").first?.errorMessage.isEmpty == false)
+        try Data("developed".utf8).write(to: candidate.returnedFileURL)
+        let retried = try fixture.store.resolveReturn(
+            returnID: candidate.id,
+            decision: .replaceOriginal,
+            now: fixture.date
+        )
+        #expect(retried.destinationAssetID == "asset-1")
+        #expect(try fixture.store.pendingReturns(fixtureID: "fixture-expo").isEmpty)
+    }
+
+    @Test("Duplicate returned filenames remain separate durable comparisons")
+    func duplicateFilenamesRemainDistinct() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let returned = fixture.root.appendingPathComponent("finished.jpg")
+        try Data("developed".utf8).write(to: returned)
+        var ids: [String] = []
+        for assetID in ["asset-1", "asset-2"] {
+            let job = try fixture.store.createJob(
+                fixtureID: "fixture-expo",
+                kind: .edit,
+                editor: fixture.editor,
+                sources: [fixture.source(position: 0, assetID: assetID)],
+                now: fixture.date
+            )
+            _ = try fixture.store.recordLaunched(jobID: job.id, now: fixture.date)
+            ids.append(try fixture.store.acceptReturnedFile(
+                jobID: job.id,
+                sourceURL: returned,
+                now: fixture.date
+            ).id)
+        }
+        let restored = try ExternalEditJobSQLiteStore(
+            databaseURL: fixture.databaseURL,
+            jobsRoot: fixture.jobsRoot
+        ).pendingReturns(fixtureID: "fixture-expo")
+        #expect(Set(restored.map(\.id)) == Set(ids))
+        #expect(Set(restored.map(\.returnedFileURL)).count == 2)
     }
 
     @Test("Only one active job exists and interrupted preparation recovers explicitly")

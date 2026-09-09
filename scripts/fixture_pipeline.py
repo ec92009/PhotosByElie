@@ -407,6 +407,37 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY(source_version_id) REFERENCES asset_source_versions(version_id)
         );
 
+        CREATE TABLE IF NOT EXISTS external_edit_return_queue (
+          return_id TEXT PRIMARY KEY,
+          job_id TEXT NOT NULL UNIQUE,
+          fixture_id TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK(kind IN ('edit', 'create')),
+          file_path TEXT NOT NULL,
+          checksum_sha256 TEXT NOT NULL,
+          byte_count INTEGER NOT NULL CHECK(byte_count > 0),
+          state TEXT NOT NULL CHECK(state IN ('pending', 'resolved')),
+          decision TEXT NOT NULL DEFAULT '' CHECK(decision IN ('', 'keep-original', 'replace-original', 'keep-both')),
+          destination_asset_id TEXT NOT NULL DEFAULT '',
+          source_version_id TEXT NOT NULL DEFAULT '',
+          error_text TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          decided_at TEXT,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY(job_id) REFERENCES external_edit_jobs(job_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_external_edit_return_queue_fixture
+          ON external_edit_return_queue(fixture_id, state, created_at, return_id);
+
+        CREATE TABLE IF NOT EXISTS external_edit_return_events (
+          event_id TEXT PRIMARY KEY,
+          return_id TEXT NOT NULL,
+          action TEXT NOT NULL CHECK(action IN ('keep-original', 'replace-original', 'keep-both')),
+          destination_asset_id TEXT NOT NULL DEFAULT '',
+          source_version_id TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY(return_id) REFERENCES external_edit_return_queue(return_id)
+        );
+
         CREATE TABLE IF NOT EXISTS external_edit_lineage (
           child_source_version_id TEXT NOT NULL,
           parent_position INTEGER NOT NULL,

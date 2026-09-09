@@ -171,6 +171,42 @@ class NativeCullingParityTest(unittest.TestCase):
 
         # All saved-view filter combinations execute in the Swift integration suite.
         self.assertIn("galleryWorkflow.savedViewPreset(savedView)", model)
+
+    def test_edit_returns_is_a_dedicated_guarded_decision_queue(self):
+        model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"
+        ).read_text(encoding="utf-8")
+        edit_returns_model = (
+            NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel+EditReturns.swift"
+        ).read_text(encoding="utf-8")
+        app = (
+            NATIVE / "Sources" / "BackstageApp" / "PhotosByElieBackstageApp.swift"
+        ).read_text(encoding="utf-8")
+        surface = (
+            NATIVE / "Sources" / "BackstageApp" / "EditReturnsView.swift"
+        ).read_text(encoding="utf-8")
+
+        self.assertLess(model.index('case culling = "Culling"'), model.index('case editReturns = "Edit Returns"'))
+        self.assertLess(model.index('case editReturns = "Edit Returns"'), model.index('case review = "Review"'))
+        self.assertIn("case .editReturns:", app)
+        self.assertIn("EditReturnsView(model: model)", app)
+        self.assertIn("selection = .editReturns", edit_returns_model)
+        self.assertIn("externalEditJobStore.pendingReturns(", edit_returns_model)
+        self.assertIn("fixtureID: selectedFixtureID", edit_returns_model)
+        self.assertIn("resolveReturn(", edit_returns_model)
+        for marker in (
+            'Text("Edit Returns")',
+            '"No edits waiting"',
+            'decisionButton(.keepOriginal',
+            'decisionButton(.replaceOriginal',
+            'decisionButton(.keepBoth',
+            'candidate.originalFileURLs',
+            'candidate.returnedFileURL',
+            'presentQuickLook(',
+            'accessibilityIdentifier("backstage.edit-returns.',
+        ):
+            self.assertIn(marker, surface)
+
     def test_culling_thumbnails_resolve_identifier_fallbacks_and_report_failures(self):
         model = (
             NATIVE / "Sources" / "BackstageApp" / "BackstageViewModel.swift"

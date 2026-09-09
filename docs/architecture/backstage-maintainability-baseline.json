@@ -22,7 +22,8 @@
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/PhotosByElieBackstageApp.swift",
-      "nloc": 2419
+      "nloc": 2423,
+      "reviewNote": "PBB-166: four navigation statements expose the dedicated Edit Returns section between Gallery and Review."
     },
     {
       "key": "native/PhotosByElieBackstage/Sources/BackstageApp/ReviewView.swift",
@@ -2346,6 +2347,42 @@
       "parameters": 1,
       "nesting": 5,
       "reviewNote": "PBB-176: parser ns5 counts sequential guard/do/while/catch structures; actual control nesting is at most two. Keep bounded start/monitor/error coordination together. Other metric ceilings remain unchanged."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift::copyReturnedFile job : ExternalEditJob , sourceURL : URL",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift",
+      "name": "copyReturnedFile",
+      "start": 51,
+      "end": 70,
+      "nloc": 20,
+      "ccn": 1,
+      "parameters": 2,
+      "nesting": 5,
+      "reviewNote": "PBB-166: parser ns5 counts nested Swift call delimiters; this helper is linear validation, copy, permissions, and checksum work with no control nesting."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift::persistPendingReturn job : ExternalEditJob , staged : StagedFile , timestamp : String",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift",
+      "name": "persistPendingReturn",
+      "start": 72,
+      "end": 86,
+      "nloc": 15,
+      "ccn": 2,
+      "parameters": 3,
+      "nesting": 5,
+      "reviewNote": "PBB-166: parser ns5 counts the transaction closure and Swift call delimiters; actual control nesting is one transaction plus one guard."
+    },
+    {
+      "key": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift::acceptStagedReturn _ database : OpaquePointer , row : QueueRow , sources : [ ExternalEditSource ] , destinationAssetID : String , sourceVersionID : String , timestamp : String",
+      "file": "native/PhotosByElieBackstage/Sources/OwnerCore/ExternalEditReturnQueueStore.swift",
+      "name": "acceptStagedReturn",
+      "start": 322,
+      "end": 370,
+      "nloc": 49,
+      "ccn": 1,
+      "parameters": 6,
+      "nesting": 6,
+      "reviewNote": "PBB-166: parser ns5 counts nested Swift call delimiters; this coordinator has no branches and delegates receipt, review reset, delivery guard, and lineage writes."
     }
   ],
   "excluded": [

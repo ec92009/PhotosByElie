@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import Testing
 @testable import BackstageUI
@@ -23,21 +22,34 @@ struct BackstageExternalEditWorkflowStateTests {
         #expect(state.isOperationInProgress)
     }
 
-    @Test("Labels and comparison cleanup preserve the existing UI contract")
-    func labelsAndComparisonCleanup() {
+    @Test("Labels preserve the existing UI contract")
+    func labels() {
         let job = makeJob()
         var state = BackstageExternalEditWorkflowState(activeJob: job)
-        state.sourceImages = [NSImage(size: NSSize(width: 10, height: 10))]
-        state.returnedImage = NSImage(size: NSSize(width: 20, height: 20))
         state.announce("Returning finished image…")
 
         #expect(state.activeLabel == "Pixelmator Pro · 2 source photos")
         #expect(state.status == "Returning finished image…")
+    }
 
-        state.clearComparison()
-        #expect(state.sourceImages.isEmpty)
-        #expect(state.returnedImage == nil)
-        #expect(state.returnReceipt == nil)
+    @Test("Return decisions latch per comparison")
+    func returnDecisionLatchesAreIndependent() {
+        var state = BackstageExternalEditWorkflowState()
+
+        let first = state.beginDecision("return-1", decision: .replaceOriginal)
+        let duplicate = state.beginDecision("return-1", decision: .keepOriginal)
+        #expect(first)
+        #expect(!duplicate)
+        #expect(state.isDeciding("return-1"))
+        let unrelated = state.beginDecision("return-2", decision: .keepBoth)
+        #expect(unrelated)
+        #expect(state.isDeciding("return-2"))
+
+        state.finishDecision("return-1")
+        #expect(!state.isDeciding("return-1"))
+        #expect(state.isDeciding("return-2"))
+        let retry = state.beginDecision("return-1", decision: .keepOriginal)
+        #expect(retry)
     }
 
     private func makeJob() -> ExternalEditJob {

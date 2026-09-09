@@ -1,4 +1,3 @@
-import AppKit
 import OwnerCore
 
 /// Cohesive UI state for the external-editor round trip.
@@ -11,15 +10,28 @@ struct BackstageExternalEditWorkflowState {
     static let idleStatus = "Select Review photos to edit or combine in another app."
 
     var activeJob: ExternalEditJob?
-    var returnReceipt: ExternalEditReturnReceipt?
-    var sourceImages: [NSImage] = []
-    var returnedImage: NSImage?
+    var pendingReturns: [ExternalEditReturnCandidate] = []
+    var decisionInFlightIDs: Set<String> = []
     var isPreparing = false
     var isImporting = false
     var status = idleStatus
 
     var isOperationInProgress: Bool {
         isPreparing || isImporting
+    }
+
+    func isDeciding(_ returnID: String) -> Bool {
+        decisionInFlightIDs.contains(returnID)
+    }
+
+    mutating func beginDecision(_ returnID: String, decision: ExternalEditReturnDecision) -> Bool {
+        guard decisionInFlightIDs.insert(returnID).inserted else { return false }
+        status = "\(decision.label)…"
+        return true
+    }
+
+    mutating func finishDecision(_ returnID: String) {
+        decisionInFlightIDs.remove(returnID)
     }
 
     var activeLabel: String? {
@@ -35,12 +47,6 @@ struct BackstageExternalEditWorkflowState {
 
     mutating func announce(_ message: String) {
         status = message
-    }
-
-    mutating func clearComparison() {
-        returnReceipt = nil
-        sourceImages = []
-        returnedImage = nil
     }
 
     static func label(editorName: String, sources: [ExternalEditSource]) -> String {

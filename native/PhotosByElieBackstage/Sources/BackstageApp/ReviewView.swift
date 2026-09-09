@@ -617,20 +617,6 @@ struct ReviewView: View {
                 )
             }
         }
-        .sheet(
-            item: Binding(
-                get: { model.externalEdit.returnReceipt },
-                set: { value in
-                    if value == nil { model.clearExternalEditComparison() }
-                }
-            )
-        ) { receipt in
-            ExternalEditReturnComparisonView(
-                receipt: receipt,
-                sourceImages: model.externalEdit.sourceImages,
-                returnedImage: model.externalEdit.returnedImage
-            )
-        }
         .task {
             guard !isPreviewMode else { return }
             if model.fixtures.isEmpty {
@@ -698,84 +684,6 @@ struct ReviewView: View {
             .disabled(model.isRunningReview)
             .backstageHelp("Show only Review photos whose Apple Photos asset includes a RAW original.")
         }
-    }
-}
-
-private struct ExternalEditReturnComparisonView: View {
-    @Environment(\.dismiss) private var dismiss
-    let receipt: ExternalEditReturnReceipt
-    let sourceImages: [NSImage]
-    let returnedImage: NSImage?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(receipt.derivedAsset ? "Review derived photo" : "Review newer rendition")
-                .font(.title.bold())
-            Text("The returned file is now a candidate in Review. Nothing was approved or uploaded.")
-                .foregroundStyle(.secondary)
-            HStack(alignment: .top, spacing: 16) {
-                comparisonColumn(title: sourceImages.count > 1 ? "Ordered sources" : "Source") {
-                    if sourceImages.isEmpty {
-                        ContentUnavailableView("Source preview unavailable", systemImage: "photo")
-                    } else {
-                        ScrollView(.horizontal) {
-                            HStack(spacing: 8) {
-                                ForEach(Array(sourceImages.enumerated()), id: \.offset) { index, image in
-                                    VStack {
-                                        Image(nsImage: image)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(maxWidth: 320, maxHeight: 420)
-                                        if sourceImages.count > 1 {
-                                            Text("Source \(index + 1)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                comparisonColumn(title: "Returned") {
-                    if let returnedImage {
-                        Image(nsImage: returnedImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 520, maxHeight: 520)
-                    } else {
-                        ContentUnavailableView("Returned preview unavailable", systemImage: "photo.badge.exclamationmark")
-                    }
-                }
-            }
-            Divider()
-            HStack {
-                Text(receipt.derivedAsset
-                    ? "Created one new asset with ordered parent lineage."
-                    : "Kept the original asset identity and added a newer source version.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Keep in Review") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(20)
-        .frame(minWidth: 900, minHeight: 620)
-    }
-
-    private func comparisonColumn<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.headline)
-            content()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.quaternary.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

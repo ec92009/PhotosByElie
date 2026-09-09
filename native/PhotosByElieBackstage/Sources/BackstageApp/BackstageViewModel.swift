@@ -157,6 +157,7 @@ final class BackstageViewModel: ObservableObject {
         case fixtures = "Fixtures"
         case access = "People & Access"
         case culling = "Culling"
+        case editReturns = "Edit Returns"
         case review = "Review"
         case metadata = "Metadata"
         case wasteBasket = "Waste Basket"
@@ -386,7 +387,7 @@ final class BackstageViewModel: ObservableObject {
     @Published var reviewStatus = "Choose a fixture to load its unresolved picked photos."
     @Published private(set) var reviewLastTiming: [String: JSONValue] = [:]
     @Published var isRunningReview = false
-    @Published private(set) var externalEdit = BackstageExternalEditWorkflowState()
+    @Published var externalEdit = BackstageExternalEditWorkflowState()
     @Published private(set) var reviewWasteBasketQueueing = false
     @Published private(set) var reviewWasteBasketPendingActionIDs: Set<String> = []
     @Published private(set) var reviewWasteBasketPendingActionID: String?
@@ -510,7 +511,7 @@ final class BackstageViewModel: ObservableObject {
     private let currentEquipmentCache: (any OwnerCurrentEquipmentCaching)?
     private let equipmentBackfillStore: OwnerEquipmentBackfillSQLiteStore?
     private let customerPhotoLinks: (any CustomerPhotoLinkResolving)?
-    private let externalEditJobStore: (any ExternalEditJobStoring)?
+    let externalEditJobStore: (any ExternalEditJobStoring)?
     private let openExternalURL: (URL) -> Bool
     private var pbeOwnerSessionToken = ""
     private var authenticationTask: Task<OwnerAuthenticationSnapshot, Never>?
@@ -1339,6 +1340,7 @@ final class BackstageViewModel: ObservableObject {
         reviewStatus = selectedFixtureID.isEmpty
             ? "Fixture-scoped Review is unavailable."
             : "Loading \(selectedFixtureBreadcrumb) for Review…"
+        externalEdit.pendingReturns = []
 
         fixtureAssets = []
         selectedFixtureAssetIDs = []
@@ -1362,6 +1364,8 @@ final class BackstageViewModel: ObservableObject {
         switch selection ?? .overview {
         case .culling:
             await loadFixtureCullingWindow()
+        case .editReturns:
+            loadExternalEditReturns()
         case .review:
             await loadFixtureReviewWindow()
             await restoreLoadedAIProposalDrafts()
@@ -5934,7 +5938,7 @@ final class BackstageViewModel: ObservableObject {
         requestExternalEdit(with: editor, assetIDs: selectedReviewAssetIDs)
     }
 
-    private func announceExternalEdit(_ message: String) {
+    func announceExternalEdit(_ message: String) {
         externalEdit.announce(message)
         cullingStatus = message
         reviewStatus = message
@@ -6118,37 +6122,6 @@ final class BackstageViewModel: ObservableObject {
         }
     }
 
-    private func performExternalEditReturn(job: ExternalEditJob, sourceURL: URL) async {
-        defer { externalEdit.isImporting = false }
-        guard let externalEditJobStore else {
-            announceExternalEdit("Owner.sqlite is unavailable for external editing.")
-            return
-        }
-        do {
-            let store = externalEditJobStore
-            let jobID = job.id
-            let returnDate = Date()
-            let receipt = try await Task.detached(priority: .userInitiated) {
-                try store.acceptReturnedFile(
-                    jobID: jobID,
-                    sourceURL: sourceURL,
-                    now: returnDate
-                )
-            }.value
-            externalEdit.returnReceipt = receipt
-            externalEdit.sourceImages = job.sources.compactMap { reviewThumbnails[$0.assetID] }
-            externalEdit.returnedImage = NSImage(contentsOf: receipt.fileURL)
-            invalidateCurrentRenditionCaches(for: receipt.destinationAssetID)
-            externalEdit.activeJob = nil
-            announceExternalEdit(receipt.derivedAsset
-                ? "Returned one new derived photo with \(job.sources.count.formatted()) ordered parents. It is awaiting final Review."
-                : "Returned a newer rendition of the same photo. It is awaiting final Review.")
-            await loadFixtureReviewWindow(preferredAssetID: receipt.destinationAssetID)
-        } catch {
-            announceExternalEdit("Return failed: \(userFacingMessage(for: error))")
-        }
-    }
-
     func requestCancelExternalEdit() {
         guard let job = externalEdit.activeJob,
               !isExternalEditOperationInProgress else { return }
@@ -6172,10 +6145,6 @@ final class BackstageViewModel: ObservableObject {
               let directory = externalEditReturnDirectory else { return }
         announceExternalEdit("Opened \(directory.lastPathComponent), the return folder for \(job.editor.name).")
         _ = openExternalURL(directory)
-    }
-
-    func clearExternalEditComparison() {
-        externalEdit.clearComparison()
     }
 
     private func openInExternalEditor(
@@ -9110,7 +9079,7 @@ final class BackstageViewModel: ObservableObject {
             && cocoaError.code == NSURLErrorCancelled
     }
 
-    private func userFacingMessage(for error: Error) -> String {
+    func userFacingMessage(for error: Error) -> String {
         if let envelope = error as? APIErrorEnvelope {
             if envelope.error.code == "google_login_required" {
                 if authentication.phase == .needsEnrollment {
@@ -9245,7 +9214,7 @@ final class BackstageViewModel: ObservableObject {
         }.value
     }
 
-    private func invalidateCurrentRenditionCaches(for assetID: String) {
+    func invalidateCurrentRenditionCaches(for assetID: String) {
         reviewWorkflow.thumbnailTasks[assetID]?.cancel()
         reviewWorkflow.thumbnailTasks[assetID] = nil
         reviewThumbnails.removeValue(forKey: assetID)

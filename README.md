@@ -33,7 +33,7 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v252.0`
+- Current visible version: `v252.1`
 - `v252.0` adds optional public YouTube video metadata to first-party campaign
   pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
   and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.

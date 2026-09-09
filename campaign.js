@@ -450,7 +450,7 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json${scriptVersion ? `?v=${encodeURIComponent(scriptVersion)}` : ""}`);
+    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json${scriptVersion ? `?v=${encodeURIComponent(scriptVersion)}` : ""}`, { cache: "no-store" });
     if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
     const campaign = await response.json();
     if (!rules.publicCampaign(campaign)) throw new Error("This collection is unavailable.");

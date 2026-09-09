@@ -33,7 +33,10 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v249.13`
+- Current visible version: `v252.0`
+- `v252.0` adds optional public YouTube video metadata to first-party campaign
+  pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
+  and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.
 - Owner guide:
   [`Getting started with PhotosByElie Backstage`](docs/BACKSTAGE_GETTING_STARTED.md)
 - Versioning follows the canonical SOP at `/Users/ecohen/Dev/.SOPs/VERSIONING_SOP.md`.
@@ -350,7 +353,7 @@ Backstage guide and the relevant source/release receipt.
 - The homepage loads `home-data.js` first so the hero/collections render from a tiny manifest, then `home-catalog-loader.js` fetches the full catalog bootstrap in the background for basket/liked context.
 - The homepage includes a Latest social shelf. It filters the generated campaign index to Facebook, Instagram, Pinterest, and Threads targets, shows the newest social springboards first, and keeps static fallback cards for the 2026-06-15 themes plus the 2026-05-27 acceptance-criteria package themes.
 - `robots.txt` points crawlers at `sitemap.xml` and keeps owner, basket, order, real-estate, experiments, and raw social working pages out of search results.
-- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent.
+- Campaign pages reuse the same shared gallery masonry controller as regular collections, so Grid density plus Fit/Fill behavior stay consistent. Campaign JSON may also include an optional explicit-public `video` object (`provider`, widescreen `videoId`, optional `shortId`, `title`, `durationSeconds`, and `visibility`); PBE derives YouTube URLs from validated IDs and refuses invalid or non-public video metadata.
 - The full public catalog loads plain `assets/catalog/photosbyelie.sqlite` directly. Normal catalog rebuilds no longer generate or prefer Brotli-compressed SQLite; the retained `.sqlite.br` artifact is legacy-only. The SQLite catalog uses compact integer lookup ids for controlled vocabulary fields. Catalog totals and R2 coverage are volatile operational facts: read them from the latest verified Owner projection/deployment receipt and Backstage health surfaces rather than this README, which must not become a competing source of truth.
 - The homepage hides the decorative hero photo stack on narrow or short viewports so the collection carousel stays visible instead of competing for vertical space.
 - The homepage now has shared global discovery controls before Collections, including search, collection, media type, date from/to, orientation, adaptive size/duration, color mood, subject, and sort. Filtered results render 24 at a time with a full-match count and gallery-style hearts, keyboard selection, detail navigation, and localhost Owner shortcuts.

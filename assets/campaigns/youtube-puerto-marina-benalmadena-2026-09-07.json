@@ -1,0 +1,32 @@
+{
+  "id": "youtube-puerto-marina-benalmadena-2026-09-07",
+  "source": "YouTube",
+  "public": true,
+  "title": "Puerto Marina in Twelve Views",
+  "eyebrow": "Benalmádena · Video and photographs",
+  "description": "Puerto Marina opens onto bright water, white apartment buildings and a forest of masts along Spain's Costa del Sol. Watch the short film, then explore the twelve photographs behind it.",
+  "heroPhotoId": "001-0cd1b0212f",
+  "primaryPhotoIds": [
+    "001-0cd1b0212f",
+    "001-1a14c16051",
+    "001-f917ca47a2",
+    "001-1f79f3ef38",
+    "001-378ec96d03",
+    "001-f1d274c0e1",
+    "001-b55b7af03a",
+    "001-6acc4fb83c",
+    "001-325f19d356",
+    "001-6d905ec70b",
+    "001-2198597b2b",
+    "001-cc315fe0b8"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "IPytnIHHHLA",
+    "shortId": "RFYBylXiZUg",
+    "title": "Puerto Marina in Twelve Views | Benalmádena · Photos By Elie",
+    "durationSeconds": 40,
+    "visibility": "public"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "youtube-ronda-above-the-gorge-2026-09-08",
+  "source": "YouTube",
+  "public": true,
+  "title": "Ronda Above the Gorge",
+  "eyebrow": "Ronda · Video and photographs",
+  "description": "Ronda rises above a dramatic Andalusian gorge, where white walls, cliffside terraces and the river valley open into fields and distant mountains. Watch the short film, then explore its twelve photographs.",
+  "heroPhotoId": "d5h-2676-0da4f3c9cf",
+  "primaryPhotoIds": [
+    "d5h-2676-0da4f3c9cf",
+    "001-123c10b8c5",
+    "001-4d1e5bf915",
+    "001-2ff569de62",
+    "001-0e497ffefd",
+    "001-1cedf3c3f4",
+    "001-10e7b8948c",
+    "001-3b67dbb294",
+    "001-457aa1b806",
+    "001-231efc1e5d",
+    "d5h-2686-bdb11cc741",
+    "img-1041-ebc7a0b91d"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "6ZMZFqYY7ac",
+    "shortId": "5fNC_x8bsR8",
+    "title": "Ronda Above the Gorge | Photos By Elie",
+    "durationSeconds": 40,
+    "visibility": "public"
+  }
+}

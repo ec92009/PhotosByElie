@@ -12,6 +12,7 @@ const OUTPUT_PATH = path.join(CAMPAIGN_DIR, "index.json");
 const SITE_BASE_URL = "https://photos-by-elie.com/";
 const { loadCatalogWindow } = catalogTsv;
 import campaignRules from "../campaign-collection.js";
+import campaignVideo from "../campaign-video.js";
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -62,6 +63,7 @@ function campaignItem(campaign, stat, photoIndex, mediaConfig) {
       .map((photo) => publicPreviewUrl(photo, mediaConfig))
       .filter(Boolean)
   )).slice(0, 8);
+  const video = campaignVideo.validate(campaign.video, campaign.id || "campaign");
   return {
     id: campaign.id,
     source: campaign.source || "Photos By Elie",
@@ -73,6 +75,7 @@ function campaignItem(campaign, stat, photoIndex, mediaConfig) {
     imageUrl: publicPreviewUrl(heroEntry?.photo, mediaConfig) || previewImageUrls[0] || "",
     imageAlt: heroEntry?.photo?.title || campaign.title || campaign.id,
     previewImageUrls,
+    ...(video ? { video } : {}),
     photoIds,
     compositePhotoIds: campaignRules.compositePhotoIds(campaign),
     primaryPhotoCount: Array.isArray(campaign.primaryPhotoIds) ? campaign.primaryPhotoIds.length : 0,
@@ -81,14 +84,28 @@ function campaignItem(campaign, stat, photoIndex, mediaConfig) {
   };
 }
 
+function semanticallyEqual(left, right) {
+  if (!left || !right) return false;
+  const { mtimeMs: leftMtime, ...leftContent } = left;
+  const { mtimeMs: rightMtime, ...rightContent } = right;
+  return JSON.stringify(leftContent) === JSON.stringify(rightContent);
+}
+
 const mediaConfig = loadMediaConfig();
 const photoIndex = loadPhotoIndex();
+const previousCampaigns = fs.existsSync(OUTPUT_PATH)
+  ? new Map((readJson(OUTPUT_PATH).campaigns || []).map((item) => [item.id, item]))
+  : new Map();
 const campaigns = fs.readdirSync(CAMPAIGN_DIR)
   .filter((file) => file.endsWith(".json") && file !== "index.json")
   .map((file) => {
     const filePath = path.join(CAMPAIGN_DIR, file);
     const campaign = readJson(filePath);
-    return campaignRules.publicCampaign(campaign) ? campaignItem(campaign, fs.statSync(filePath), photoIndex, mediaConfig) : null;
+    if (!campaignRules.publicCampaign(campaign)) return null;
+    const item = campaignItem(campaign, fs.statSync(filePath), photoIndex, mediaConfig);
+    const previous = previousCampaigns.get(item.id);
+    if (semanticallyEqual(previous, item)) item.mtimeMs = previous.mtimeMs;
+    return item;
   })
   .filter((item) => item?.id)
   .sort((a, b) => b.date.localeCompare(a.date) || b.mtimeMs - a.mtimeMs || a.title.localeCompare(b.title));

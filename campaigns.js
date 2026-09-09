@@ -52,7 +52,7 @@
     meta.className = 'campaign-directory-meta';
     meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
     const count = document.createElement('p');
-    count.textContent = `${entries.length} photo${entries.length === 1 ? '' : 's'} · View collection →`;
+    count.textContent = `${entries.length} photo${entries.length === 1 ? '' : 's'}${campaign.video ? ' · Video' : ''} · View collection →`;
     caption.append(title, meta, count);
     card.append(composite, caption);
     return card;

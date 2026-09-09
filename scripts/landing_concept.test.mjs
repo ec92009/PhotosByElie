@@ -320,7 +320,7 @@ test("the production landing restores the latest social shelf in the open grid s
 test("the social campaigns page filters the shared campaign directory", () => {
   assert.match(socialHtml, /<title>Social campaigns \| Photos By Elie<\/title>/);
   assert.match(socialHtml, /rel="canonical" href="https:\/\/photos-by-elie\.com\/social\.html"/);
-  assert.match(socialHtml, /data-campaign-sources="facebook,instagram,threads,pinterest"/);
+  assert.match(socialHtml, /data-campaign-sources="facebook,instagram,threads,pinterest,youtube"/);
   assert.match(socialHtml, /data-directory-title="Social campaigns"/);
   assert.match(socialHtml, /data-directory-noun="social collections"/);
   assert.match(socialHtml, new RegExp(`campaigns\.js\\?v=${productionVersion}`));

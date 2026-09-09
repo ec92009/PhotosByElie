@@ -18,6 +18,7 @@
     description: $("[data-campaign-description]"),
     nav: $("[data-campaign-nav]"),
     heroMedia: $("[data-campaign-hero-media]"),
+    videoSection: $("[data-campaign-video-section]"),
     primary: $("[data-campaign-primary]"),
     related: $("[data-campaign-related]"),
     relatedTitle: $("[data-campaign-related-title]"),
@@ -483,6 +484,7 @@
       }),
     });
     renderHero(heroEntry);
+    window.photosByElieCampaignVideo?.render(els.videoSection, campaign.video);
     renderEntries(els.primary, primaryEntries);
     renderEntries(els.related, relatedEntries);
     ensureCampaignViewControls();

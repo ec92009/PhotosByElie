@@ -1,0 +1,32 @@
+{
+  "id": "youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
+  "source": "YouTube",
+  "public": true,
+  "title": "Alhambra: Patterns and Quiet Courtyards",
+  "eyebrow": "Granada · Video and photographs",
+  "description": "The Alhambra reveals its beauty slowly: water crossing a courtyard, carved plaster catching the light and gardens softening the geometry of palace walls. Watch the short film, then explore its twelve photographs.",
+  "heroPhotoId": "6222e02b-112a-4a99-8ba9-9cda9128e9de-001-aseb9yx1crhzj0op101kqga3hydu-c576d5aa87",
+  "primaryPhotoIds": [
+    "6222e02b-112a-4a99-8ba9-9cda9128e9de-001-aseb9yx1crhzj0op101kqga3hydu-c576d5aa87",
+    "2d59f3fa-bfce-4093-8532-08f8e8be55be-001-ay2vzukmlt8vabbbr8qshfzgnuqu-e4d3c77a9c",
+    "20240517-125943-00129-1c75000b82",
+    "20240517-130955-00175-b625512444",
+    "20240517-131226-00205-75b5c79943",
+    "20240517-131410-00220-b5135fe946",
+    "001-7f28134131",
+    "001-e941e5f1bb",
+    "001-982aeec357",
+    "001-6bc0f6435b",
+    "001-62e0dd1238",
+    "001-86da4347f0"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "hTGvkze8_ms",
+    "shortId": "zjzcmjEuemU",
+    "title": "Alhambra: Patterns and Quiet Courtyards | Photos By Elie",
+    "durationSeconds": 40,
+    "visibility": "public"
+  }
+}

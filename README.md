@@ -33,11 +33,12 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v254.1`
-- `v254.1` publishes the approved Cascais portrait film directly in its campaign
-  and social listing. Film playback does not wait for the photo catalog; stills
-  remain subject to existing lifecycle authorization. Missing stills are shown
-  as unavailable, never served through an alternate unguarded path.
+- Current visible version: `v254.2`
+- `v254.2` repairs the All campaigns directory: public YouTube Shorts appear
+  as vertical embedded cards with direct YouTube fallbacks, while still-only
+  subjects require exactly four lifecycle-authorized public photos for their
+  collage. Film playback does not wait for the photo catalog; no collage may
+  draw from an alternate, unguarded, or cross-subject source.
 - `v252.0` adds optional public YouTube video metadata to first-party campaign
   pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
   and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.

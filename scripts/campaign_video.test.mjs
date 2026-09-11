@@ -32,6 +32,7 @@ test("normalizes explicit public YouTube metadata without accepting arbitrary UR
     title: "Alhambra",
     durationSeconds: 40,
     embedUrl: "https://www.youtube-nocookie.com/embed/hTGvkze8_ms?rel=0",
+    portraitEmbedUrl: "https://www.youtube-nocookie.com/embed/zjzcmjEuemU?rel=0",
     watchUrl: "https://www.youtube.com/watch?v=hTGvkze8_ms",
     shortUrl: "https://youtube.com/shorts/zjzcmjEuemU",
     visibility: "public",
@@ -72,9 +73,9 @@ test("published films render before catalog readiness while still-photo access s
   const detail = fs.readFileSync(path.join(repoRoot, "campaign.js"), "utf8");
   const directory = fs.readFileSync(path.join(repoRoot, "campaigns.js"), "utf8");
   assert.ok(detail.indexOf("photosByElieCampaignVideo?.render") < detail.indexOf("await window.photosByElieCatalogReady"));
-  assert.match(directory, /normalize\(campaign.video\)\?\.portraitMp4/);
-  assert.match(directory, /if \(entries.length \|\| publicFilm\)/);
-  assert.match(directory, /Still photographs currently unavailable/);
+  assert.match(directory, /publicFilm\?\.portraitEmbedUrl/);
+  assert.ok(directory.indexOf('videoCampaigns.forEach') < directory.indexOf('await window.photosByElieCatalogReady'));
+  assert.match(directory, /if \(card\) grid.append\(card\);/);
   assert.match(directory, /rules.publicCampaign\(campaign\)/);
 });
 

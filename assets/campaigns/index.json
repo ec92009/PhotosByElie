@@ -1,7 +1,7 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-11T20:21:36.309Z",
+  "generated_at": "2026-09-11T21:46:13.038Z",
   "campaign_count": 177,
   "campaigns": [
     {
@@ -31,6 +31,7 @@
         "title": "Cascais: Life Beside the Atlantic | Photos By Elie",
         "durationSeconds": 40,
         "embedUrl": "https://www.youtube-nocookie.com/embed/nH0HWGyJPg4?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/MVldzjl-aYE?rel=0",
         "watchUrl": "https://www.youtube.com/watch?v=nH0HWGyJPg4",
         "shortUrl": "https://youtube.com/shorts/MVldzjl-aYE",
         "visibility": "public",
@@ -59,7 +60,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789158095825
+      "mtimeMs": 1789162784132
     },
     {
       "id": "youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
@@ -88,6 +89,7 @@
         "title": "Alhambra: Patterns and Quiet Courtyards | Photos By Elie",
         "durationSeconds": 40,
         "embedUrl": "https://www.youtube-nocookie.com/embed/hTGvkze8_ms?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/zjzcmjEuemU?rel=0",
         "watchUrl": "https://www.youtube.com/watch?v=hTGvkze8_ms",
         "shortUrl": "https://youtube.com/shorts/zjzcmjEuemU",
         "visibility": "public"
@@ -114,7 +116,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1788966294146
+      "mtimeMs": 1789162784132
     },
     {
       "id": "youtube-ronda-above-the-gorge-2026-09-08",
@@ -143,6 +145,7 @@
         "title": "Ronda Above the Gorge | Photos By Elie",
         "durationSeconds": 40,
         "embedUrl": "https://www.youtube-nocookie.com/embed/6ZMZFqYY7ac?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/5fNC_x8bsR8?rel=0",
         "watchUrl": "https://www.youtube.com/watch?v=6ZMZFqYY7ac",
         "shortUrl": "https://youtube.com/shorts/5fNC_x8bsR8",
         "visibility": "public"
@@ -169,7 +172,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1788966294147
+      "mtimeMs": 1789162784132
     },
     {
       "id": "youtube-puerto-marina-benalmadena-2026-09-07",
@@ -198,6 +201,7 @@
         "title": "Puerto Marina in Twelve Views | Benalmádena · Photos By Elie",
         "durationSeconds": 40,
         "embedUrl": "https://www.youtube-nocookie.com/embed/IPytnIHHHLA?rel=0",
+        "portraitEmbedUrl": "https://www.youtube-nocookie.com/embed/RFYBylXiZUg?rel=0",
         "watchUrl": "https://www.youtube.com/watch?v=IPytnIHHHLA",
         "shortUrl": "https://youtube.com/shorts/RFYBylXiZUg",
         "visibility": "public"
@@ -224,7 +228,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1788966294146
+      "mtimeMs": 1789162784132
     },
     {
       "id": "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",

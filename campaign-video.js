@@ -19,6 +19,7 @@
       title: String(value.title || "Photos By Elie on YouTube").trim(),
       durationSeconds: Number.isFinite(durationSeconds) && durationSeconds > 0 ? durationSeconds : null,
       embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`,
+      portraitEmbedUrl: shortId ? `https://www.youtube-nocookie.com/embed/${shortId}?rel=0` : "",
       watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
       shortUrl: shortId ? `https://youtube.com/shorts/${shortId}` : "",
       visibility: "public",

@@ -21,43 +21,90 @@
   const rules = window.photosByElieCampaignCollection;
   const version = new URL(document.currentScript.src).searchParams.get('v');
 
-  /** Build a linked composite from lifecycle-authorized, public watermarked previews. */
+  const campaignHref = (campaign) => `./campaign.html?c=${encodeURIComponent(campaign.id)}`;
+
+  const captionFor = (campaign, entries, { video = null } = {}) => {
+    const caption = document.createElement('div');
+    caption.className = 'campaign-directory-caption';
+    const title = document.createElement('h2');
+    const titleLink = document.createElement('a');
+    titleLink.href = campaignHref(campaign);
+    titleLink.textContent = campaign.title;
+    title.append(titleLink);
+    const meta = document.createElement('p');
+    meta.className = 'campaign-directory-meta';
+    meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
+    const count = document.createElement('p');
+    count.textContent = video
+      ? 'Vertical YouTube Short · View collection →'
+      : `${entries.length} photos · View collection →`;
+    caption.append(title, meta, count);
+    return caption;
+  };
+
+  const fourFrames = (preferredEntries, entries) => {
+    const seen = new Set();
+    const frames = [];
+    for (const entry of [...preferredEntries, ...entries]) {
+      const id = entry?.photo?.id;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      frames.push(entry);
+      if (frames.length === 4) return frames;
+    }
+    return [];
+  };
+
+  /** Build a linked four-photo composite from lifecycle-authorized public previews. */
   const cardFor = (campaign, entries, compositeEntries = entries) => {
+    const frames = fourFrames(compositeEntries, entries);
+    if (frames.length !== 4) return null;
     const card = document.createElement('a');
     card.className = 'campaign-directory-card';
-    card.href = `./campaign.html?c=${encodeURIComponent(campaign.id)}`;
+    card.dataset.campaignRepresentation = 'four-photo-collage';
+    card.href = campaignHref(campaign);
     const composite = document.createElement('div');
-    composite.className = 'campaign-composite';
+    composite.className = 'campaign-composite campaign-composite--four';
     composite.setAttribute('role', 'img');
-    composite.setAttribute('aria-label', `Photographic composite: ${campaign.title}`);
-    const frames = compositeEntries.slice(0, 4);
+    composite.setAttribute('aria-label', `Four-photo composite: ${campaign.title}`);
     composite.dataset.frames = frames.length;
-    if (!frames.length) composite.textContent = 'Watch the film ▶';
     for (const { photo } of frames) {
       const img = document.createElement('img');
       img.src = window.photosByElieMediaUrl(photo, 'gallery');
       img.alt = '';
       img.loading = 'lazy';
       img.addEventListener('error', () => {
-        img.remove();
-        composite.dataset.frames = composite.children.length;
-        if (!composite.children.length) composite.textContent = 'Preview unavailable';
+        card.remove();
       }, { once: true });
       composite.append(img);
     }
-    const caption = document.createElement('div');
-    caption.className = 'campaign-directory-caption';
-    const title = document.createElement('h2');
-    title.textContent = campaign.title;
-    const meta = document.createElement('p');
-    meta.className = 'campaign-directory-meta';
-    meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
-    const count = document.createElement('p');
-    count.textContent = entries.length
-      ? `${entries.length} photo${entries.length === 1 ? '' : 's'}${campaign.video ? ' · Video' : ''} · View collection →`
-      : 'Video · Still photographs currently unavailable · Watch film →';
-    caption.append(title, meta, count);
-    card.append(composite, caption);
+    card.append(composite, captionFor(campaign, entries));
+    return card;
+  };
+
+  /** A public Short is the directory representation for a video-backed campaign. */
+  const videoCardFor = (campaign, video) => {
+    const card = document.createElement('article');
+    card.className = 'campaign-directory-card campaign-directory-card--video';
+    card.dataset.campaignRepresentation = 'vertical-youtube-video';
+    const frame = document.createElement('div');
+    frame.className = 'campaign-directory-video';
+    const player = document.createElement('iframe');
+    player.src = video.portraitEmbedUrl;
+    player.title = `${campaign.title} on YouTube`;
+    player.loading = 'lazy';
+    player.referrerPolicy = 'strict-origin-when-cross-origin';
+    player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    player.allowFullscreen = true;
+    frame.append(player);
+    card.append(frame, captionFor(campaign, [], { video }));
+    const watch = document.createElement('a');
+    watch.className = 'campaign-directory-watch';
+    watch.href = video.shortUrl || video.watchUrl;
+    watch.target = '_blank';
+    watch.rel = 'noopener noreferrer';
+    watch.textContent = 'Watch on YouTube';
+    card.querySelector('.campaign-directory-caption').append(watch);
     return card;
   };
 
@@ -68,21 +115,22 @@
     if (!Array.isArray(payload.campaigns)) throw new Error('Invalid campaign index');
     const campaigns = payload.campaigns.filter((campaign) => rules.publicCampaign(campaign)
       && (!sourceFilter.size || sourceFilter.has(String(campaign.source || '').trim().toLowerCase())));
-    // Only independently published films can appear before still authorization.
-    for (const campaign of campaigns) {
-      if (window.photosByElieCampaignVideo?.normalize(campaign.video)?.portraitMp4) grid.append(cardFor(campaign, []));
-    }
-    if (grid.children.length) status.textContent = 'Published films ready. Checking photo availability…';
+    const videoCampaigns = campaigns
+      .map((campaign) => ({ campaign, video: window.photosByElieCampaignVideo?.normalize(campaign.video) }))
+      .filter(({ video }) => Boolean(video?.portraitEmbedUrl));
+    videoCampaigns.forEach(({ campaign, video }) => grid.append(videoCardFor(campaign, video)));
+    if (grid.children.length) status.textContent = 'Published films are ready while public photo previews load.';
     let catalogAvailable = true;
     try { await window.photosByElieCatalogReady; } catch { catalogAvailable = false; }
     const index = new Map(Object.values(catalogAvailable ? window.photosByElieData : {}).flatMap((collection) =>
       (collection.photos || []).map((photo) => [photo.id, { photo }])));
-    grid.replaceChildren();
     for (const campaign of campaigns) {
       const entries = rules.entries(campaign.photoIds, index);
       const compositeEntries = rules.entries(campaign.compositePhotoIds || campaign.photoIds, index);
-      const publicFilm = window.photosByElieCampaignVideo?.normalize(campaign.video)?.portraitMp4;
-      if (entries.length || publicFilm) grid.append(cardFor(campaign, entries, compositeEntries.length ? compositeEntries : entries));
+      const publicFilm = window.photosByElieCampaignVideo?.normalize(campaign.video);
+      if (publicFilm?.portraitEmbedUrl) continue;
+      const card = cardFor(campaign, entries, compositeEntries);
+      if (card) grid.append(card);
     }
     status.textContent = grid.children.length
       ? `${grid.children.length} ${directoryNoun} to explore`

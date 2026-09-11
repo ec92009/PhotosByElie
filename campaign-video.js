@@ -1,4 +1,4 @@
-/* Optional public YouTube media for first-party campaign pages. */
+/* Public campaign films: approved portrait MP4s with YouTube fallbacks. */
 (() => {
   const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
@@ -8,6 +8,9 @@
     const shortId = String(value.shortId || "").trim();
     if (!YOUTUBE_ID.test(videoId) || (shortId && !YOUTUBE_ID.test(shortId))) return null;
     if (String(value.visibility || "").toLowerCase() !== "public") return null;
+    const portraitMp4 = String(value.portraitMp4 || "").trim();
+    // Only deployed promotional derivatives, never arbitrary URLs or private media.
+    if (portraitMp4 && !/^\.\/assets\/campaign-media\/[a-z0-9-]+\.mp4$/.test(portraitMp4)) return null;
     const durationSeconds = Number(value.durationSeconds);
     return {
       provider: "youtube",
@@ -19,6 +22,7 @@
       watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
       shortUrl: shortId ? `https://youtube.com/shorts/${shortId}` : "",
       visibility: "public",
+      ...(portraitMp4 ? { portraitMp4, musicCredit: String(value.musicCredit || "").trim() } : {}),
     };
   };
 
@@ -39,16 +43,38 @@
     const frame = section.querySelector("[data-campaign-video-frame]");
     const watch = section.querySelector("[data-campaign-video-watch]");
     const short = section.querySelector("[data-campaign-video-short]");
+    const status = section.querySelector("[data-campaign-video-status]");
+    if (status) status.textContent = "";
     if (title) title.textContent = video.title;
     if (frame) {
-      const iframe = document.createElement("iframe");
-      iframe.src = video.embedUrl;
-      iframe.title = video.title;
-      iframe.loading = "lazy";
-      iframe.referrerPolicy = "strict-origin-when-cross-origin";
-      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-      iframe.allowFullscreen = true;
-      frame.replaceChildren(iframe);
+      frame.classList.toggle("campaign-video-frame--portrait", Boolean(video.portraitMp4));
+      if (video.portraitMp4) {
+        const player = document.createElement("video");
+        player.src = video.portraitMp4;
+        player.controls = true;
+        player.playsInline = true;
+        player.preload = "metadata";
+        player.setAttribute("aria-label", video.title);
+        player.textContent = "Video playback is unavailable here. Use the YouTube links below.";
+        player.addEventListener("error", () => {
+          if (status) status.textContent = "The film could not load. You can still watch it on YouTube below.";
+        });
+        frame.replaceChildren(player);
+      } else {
+        const iframe = document.createElement("iframe");
+        iframe.src = video.embedUrl;
+        iframe.title = video.title;
+        iframe.loading = "lazy";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        iframe.allowFullscreen = true;
+        frame.replaceChildren(iframe);
+      }
+    }
+    const credit = section.querySelector("[data-campaign-video-credit]");
+    if (credit) {
+      credit.textContent = video.musicCredit || "";
+      credit.hidden = !video.musicCredit;
     }
     if (watch) watch.href = video.watchUrl;
     if (short) {

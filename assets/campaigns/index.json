@@ -1,9 +1,66 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-09T15:05:02.731Z",
-  "campaign_count": 176,
+  "generated_at": "2026-09-11T20:21:36.309Z",
+  "campaign_count": 177,
   "campaigns": [
+    {
+      "id": "youtube-cascais-life-beside-the-atlantic-2026-09-11",
+      "source": "YouTube",
+      "title": "Cascais: Life Beside the Atlantic",
+      "description": "A little Atlantic escape: waterfront light, old-town lanes, sheltered coves and sailboats in Cascais. Watch the 30-second portrait film, then explore the public photographs behind the story. The film is here to enjoy; individual photographs are available through the gallery.",
+      "date": "2026-09-11",
+      "href": "./campaign.html?c=youtube-cascais-life-beside-the-atlantic-2026-09-11",
+      "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-cascais-life-beside-the-atlantic-2026-09-11",
+      "imageUrl": "https://download.photos-by-elie.com/media/expo/maywjslbbo-e8ac2e1c18_900.jpg",
+      "imageAlt": "Cascais waterfront fort and statue, Portugal",
+      "previewImageUrls": [
+        "https://download.photos-by-elie.com/media/expo/maywjslbbo-e8ac2e1c18_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/309b913a-63df-437d-8d37-49135c126663-001-af7p4avt5kunzdfacpvmmbmi6sqm-e9d0f1a0f9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/uaer-61b55a4e8e_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/3da87978-5aa2-4899-898c-a652f5b6fade-001-aweep8czysk94si2ig9exnhdrver-8cdc4e8eb4_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/d0f21c07-d314-4134-ab84-35d98c7033b4-001-adfecabcfpfz6xb8qo6vfe6aspky-76516b9526_900.jpg",
+        "https://download.photos-by-elie.com/media/expo/8c605e10-c9b4-4b76-a935-5233803b241e-001-as-9u4et-bo62oztddqbxynjj3p1-6741d32d24_900.jpg"
+      ],
+      "video": {
+        "provider": "youtube",
+        "videoId": "nH0HWGyJPg4",
+        "shortId": "MVldzjl-aYE",
+        "title": "Cascais: Life Beside the Atlantic | Photos By Elie",
+        "durationSeconds": 40,
+        "embedUrl": "https://www.youtube-nocookie.com/embed/nH0HWGyJPg4?rel=0",
+        "watchUrl": "https://www.youtube.com/watch?v=nH0HWGyJPg4",
+        "shortUrl": "https://youtube.com/shorts/MVldzjl-aYE",
+        "visibility": "public",
+        "portraitMp4": "./assets/campaign-media/cascais-2026-09-11-a852bcb9.mp4",
+        "musicCredit": "Music: Relaxing Guitar Adventure by AbsoluteSound via Pixabay (Pixabay Content License)."
+      },
+      "photoIds": [
+        "maywjslbbo-e8ac2e1c18",
+        "309b913a-63df-437d-8d37-49135c126663-001-af7p4avt5kunzdfacpvmmbmi6sqm-e9d0f1a0f9",
+        "6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e",
+        "6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9",
+        "uaer-61b55a4e8e",
+        "3da87978-5aa2-4899-898c-a652f5b6fade-001-aweep8czysk94si2ig9exnhdrver-8cdc4e8eb4",
+        "d0f21c07-d314-4134-ab84-35d98c7033b4-001-adfecabcfpfz6xb8qo6vfe6aspky-76516b9526",
+        "8c605e10-c9b4-4b76-a935-5233803b241e-001-as-9u4et-bo62oztddqbxynjj3p1-6741d32d24",
+        "zfrww5vtuda4-544e862c71",
+        "0d91c74d-42cb-48c5-a8bc-43fd0069b95c-001-axshztd-zb8qpmx6cana4yr0jdpn-4ac56a10f4",
+        "d320366a-19bc-4c95-b73e-ddd822a3d51a-001-axodl1cfhsmegnptlqjshp3po0ay-d94620d66f",
+        "196efbd6-c8d0-4197-9d7f-e88ddcd3f596-001-auw-zrk9gfmsfqthwec5bpj-cggd-cc18bfb379"
+      ],
+      "compositePhotoIds": [
+        "maywjslbbo-e8ac2e1c18",
+        "309b913a-63df-437d-8d37-49135c126663-001-af7p4avt5kunzdfacpvmmbmi6sqm-e9d0f1a0f9",
+        "6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e",
+        "6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9"
+      ],
+      "primaryPhotoCount": 12,
+      "relatedPhotoCount": 0,
+      "mtimeMs": 1789158095825
+    },
     {
       "id": "youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
       "source": "YouTube",

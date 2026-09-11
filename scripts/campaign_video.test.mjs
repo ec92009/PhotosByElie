@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -13,6 +14,7 @@ const campaignIds = [
   "youtube-puerto-marina-benalmadena-2026-09-07",
   "youtube-ronda-above-the-gorge-2026-09-08",
   "youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
+  "youtube-cascais-life-beside-the-atlantic-2026-09-11",
 ];
 
 test("normalizes explicit public YouTube metadata without accepting arbitrary URLs", () => {
@@ -38,7 +40,7 @@ test("normalizes explicit public YouTube metadata without accepting arbitrary UR
   assert.equal(videoRules.normalize({ provider: "youtube", videoId: "hTGvkze8_ms", visibility: "private" }), null);
 });
 
-test("the three September campaigns use public YouTube pairs and public catalog photos", () => {
+test("the four September campaigns use public YouTube pairs and public catalog photos", () => {
   const collections = catalogTsv.loadCatalogWindow(repoRoot).photosByElieData || {};
   const publicPhotoIds = new Set(Object.values(collections).flatMap((collection) =>
     (collection.photos || []).map((photo) => photo.id)));
@@ -63,4 +65,29 @@ test("campaign detail exposes an accessible privacy-enhanced video surface", () 
   assert.match(script, /photosByElieCampaignVideo\?\.render\(els\.videoSection, campaign\.video\)/);
   assert.match(styles, /\.campaign-video-frame\{[\s\S]*?aspect-ratio:16 \/ 9/);
   assert.match(social, /data-campaign-sources="[^"]*youtube/);
+});
+
+test("Cascais embeds the exact approved portrait derivative without exposing masters", () => {
+  const campaign = JSON.parse(fs.readFileSync(path.join(repoRoot, "assets/campaigns", `${campaignIds[3]}.json`)));
+  const video = videoRules.validate(campaign.video);
+  assert.equal(video.videoId, "nH0HWGyJPg4");
+  assert.equal(video.shortId, "MVldzjl-aYE");
+  assert.match(video.musicCredit, /AbsoluteSound.*Pixabay/);
+  const bytes = fs.readFileSync(path.join(repoRoot, video.portraitMp4));
+  assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),
+    "a852bcb9cec50e56b8a299cf4e2f78f7d58bcc6030883e4eaec5d594e79987e3");
+  for (const unsafe of ["https://example.com/private.mp4", "//example.com/video.mp4", "../private.mp4",
+    "./assets/campaign-media/../masters/file.mp4", "./assets/campaign-media/%2e%2e/file.mp4", "./assets/campaign-media/file.mp4?token=secret"]) {
+    assert.equal(videoRules.normalize({ ...campaign.video, portraitMp4: unsafe }), null);
+  }
+});
+
+test("portrait player keeps native controls, inline mobile playback, and visible failure fallback", () => {
+  const script = fs.readFileSync(path.join(repoRoot, "campaign-video.js"), "utf8");
+  const styles = fs.readFileSync(path.join(repoRoot, "photos.css"), "utf8");
+  assert.match(script, /player.controls = true/);
+  assert.match(script, /player.playsInline = true/);
+  assert.match(script, /player.preload = "metadata"/);
+  assert.match(script, /addEventListener\("error"/);
+  assert.match(styles, /\.campaign-video-frame--portrait\{[\s\S]*?aspect-ratio:9 \/ 16/);
 });

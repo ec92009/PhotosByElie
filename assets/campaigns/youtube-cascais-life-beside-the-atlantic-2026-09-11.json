@@ -1,0 +1,34 @@
+{
+  "id": "youtube-cascais-life-beside-the-atlantic-2026-09-11",
+  "source": "YouTube",
+  "public": true,
+  "title": "Cascais: Life Beside the Atlantic",
+  "eyebrow": "Portugal · Video and photographs",
+  "description": "A little Atlantic escape: waterfront light, old-town lanes, sheltered coves and sailboats in Cascais. Watch the 30-second portrait film, then explore the public photographs behind the story. The film is here to enjoy; individual photographs are available through the gallery.",
+  "heroPhotoId": "maywjslbbo-e8ac2e1c18",
+  "primaryPhotoIds": [
+    "maywjslbbo-e8ac2e1c18",
+    "309b913a-63df-437d-8d37-49135c126663-001-af7p4avt5kunzdfacpvmmbmi6sqm-e9d0f1a0f9",
+    "6a133650-9015-41e8-9b09-5c802ced66fc-001-aaeq19eyoqoc9uwisxgn5szdfvvd-868e81100e",
+    "6b3da87c-da1f-4f6c-a246-9e3650dd990a-001-azmgt8vhcgzss0naluqoi0r9h1ql-d0ea92f4e9",
+    "uaer-61b55a4e8e",
+    "3da87978-5aa2-4899-898c-a652f5b6fade-001-aweep8czysk94si2ig9exnhdrver-8cdc4e8eb4",
+    "d0f21c07-d314-4134-ab84-35d98c7033b4-001-adfecabcfpfz6xb8qo6vfe6aspky-76516b9526",
+    "8c605e10-c9b4-4b76-a935-5233803b241e-001-as-9u4et-bo62oztddqbxynjj3p1-6741d32d24",
+    "zfrww5vtuda4-544e862c71",
+    "0d91c74d-42cb-48c5-a8bc-43fd0069b95c-001-axshztd-zb8qpmx6cana4yr0jdpn-4ac56a10f4",
+    "d320366a-19bc-4c95-b73e-ddd822a3d51a-001-axodl1cfhsmegnptlqjshp3po0ay-d94620d66f",
+    "196efbd6-c8d0-4197-9d7f-e88ddcd3f596-001-auw-zrk9gfmsfqthwec5bpj-cggd-cc18bfb379"
+  ],
+  "relatedPhotoIds": [],
+  "video": {
+    "provider": "youtube",
+    "videoId": "nH0HWGyJPg4",
+    "shortId": "MVldzjl-aYE",
+    "title": "Cascais: Life Beside the Atlantic | Photos By Elie",
+    "durationSeconds": 40,
+    "visibility": "public",
+    "portraitMp4": "./assets/campaign-media/cascais-2026-09-11-a852bcb9.mp4",
+    "musicCredit": "Music: Relaxing Guitar Adventure by AbsoluteSound via Pixabay (Pixabay Content License)."
+  }
+}

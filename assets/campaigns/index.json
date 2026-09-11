@@ -1,14 +1,14 @@
 {
   "format": "photosbyelie-campaign-index",
   "schema_version": 1,
-  "generated_at": "2026-09-11T21:46:13.038Z",
+  "generated_at": "2026-09-11T21:58:31.877Z",
   "campaign_count": 177,
   "campaigns": [
     {
       "id": "youtube-cascais-life-beside-the-atlantic-2026-09-11",
       "source": "YouTube",
       "title": "Cascais: Life Beside the Atlantic",
-      "description": "A little Atlantic escape: waterfront light, old-town lanes, sheltered coves and sailboats in Cascais. Watch the 30-second portrait film, then explore the public photographs behind the story. The film is here to enjoy; individual photographs are available through the gallery.",
+      "description": "A little Atlantic escape: waterfront light, old-town lanes, sheltered coves and sailboats in Cascais. Explore the public photographs behind the story.",
       "date": "2026-09-11",
       "href": "./campaign.html?c=youtube-cascais-life-beside-the-atlantic-2026-09-11",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-cascais-life-beside-the-atlantic-2026-09-11",
@@ -60,13 +60,13 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789162784132
+      "mtimeMs": 1789163869214
     },
     {
       "id": "youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
       "source": "YouTube",
       "title": "Alhambra: Patterns and Quiet Courtyards",
-      "description": "The Alhambra reveals its beauty slowly: water crossing a courtyard, carved plaster catching the light and gardens softening the geometry of palace walls. Watch the short film, then explore the public photographs behind it.",
+      "description": "The Alhambra reveals its beauty slowly: water crossing a courtyard, carved plaster catching the light and gardens softening the geometry of palace walls. Explore the public photographs behind it.",
       "date": "2026-09-09",
       "href": "./campaign.html?c=youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-alhambra-patterns-quiet-courtyards-2026-09-09",
@@ -116,13 +116,13 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789162784132
+      "mtimeMs": 1789163869335
     },
     {
       "id": "youtube-ronda-above-the-gorge-2026-09-08",
       "source": "YouTube",
       "title": "Ronda Above the Gorge",
-      "description": "Ronda rises above a dramatic Andalusian gorge, where white walls, cliffside terraces and the river valley open into fields and distant mountains. Watch the short film, then explore the public photographs behind it.",
+      "description": "Ronda rises above a dramatic Andalusian gorge, where white walls, cliffside terraces and the river valley open into fields and distant mountains. Explore the public photographs behind it.",
       "date": "2026-09-08",
       "href": "./campaign.html?c=youtube-ronda-above-the-gorge-2026-09-08",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-ronda-above-the-gorge-2026-09-08",
@@ -172,13 +172,13 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789162784132
+      "mtimeMs": 1789163869572
     },
     {
       "id": "youtube-puerto-marina-benalmadena-2026-09-07",
       "source": "YouTube",
       "title": "Puerto Marina in Twelve Views",
-      "description": "Puerto Marina opens onto bright water, white apartment buildings and a forest of masts along Spain's Costa del Sol. Watch the short film, then explore the public photographs behind it.",
+      "description": "Puerto Marina opens onto bright water, white apartment buildings and a forest of masts along Spain's Costa del Sol. Explore the public photographs behind it.",
       "date": "2026-09-07",
       "href": "./campaign.html?c=youtube-puerto-marina-benalmadena-2026-09-07",
       "publicUrl": "https://photos-by-elie.com/campaign.html?c=youtube-puerto-marina-benalmadena-2026-09-07",
@@ -228,7 +228,7 @@
       ],
       "primaryPhotoCount": 12,
       "relatedPhotoCount": 0,
-      "mtimeMs": 1789162784132
+      "mtimeMs": 1789163869453
     },
     {
       "id": "pinterest-san-diego-zoo-wildlife-portraits-2026-07-14",

@@ -33,12 +33,11 @@ not require an application version bump or a separate runtime release.
 
 ## Version
 
-- Current visible version: `v254.2`
-- `v254.2` repairs the All campaigns directory: public YouTube Shorts appear
-  as vertical embedded cards with direct YouTube fallbacks, while still-only
-  subjects require exactly four lifecycle-authorized public photos for their
-  collage. Film playback does not wait for the photo catalog; no collage may
-  draw from an alternate, unguarded, or cross-subject source.
+- Current visible version: `v254.3`
+- `v254.3` keeps public YouTube Shorts on the All campaigns directory only.
+  Their campaign detail links now open the public photo collection, with no
+  embedded player; still-only subjects continue to require exactly four
+  lifecycle-authorized public photos for each collage.
 - `v252.0` adds optional public YouTube video metadata to first-party campaign
   pages, renders privacy-enhanced responsive embeds with direct watch fallbacks,
   and publishes the Benalmádena, Ronda, and Alhambra video/photo collections.

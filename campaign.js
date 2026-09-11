@@ -1,6 +1,5 @@
 (async () => {
   if (!new URLSearchParams(location.search).has("c")) return;
-  // A separately published promotional film must not wait for the photo catalog.
   const safeId = new URLSearchParams(location.search).get("c").replace(/[^a-z0-9-]/gi, "");
   let campaign;
   try {
@@ -12,7 +11,6 @@
     document.querySelector('[data-campaign-title]').textContent = campaign.title || "Photos By Elie";
     document.querySelector('[data-campaign-eyebrow]').textContent = campaign.eyebrow || "Photos By Elie";
     document.querySelector('[data-campaign-description]').textContent = campaign.description || "";
-    window.photosByElieCampaignVideo?.render(document.querySelector('[data-campaign-video-section]'), campaign.video);
   } catch (error) {
     document.querySelector('[data-campaign-description]').textContent = error.message || "This collection is unavailable.";
     return;
@@ -34,7 +32,6 @@
     description: $("[data-campaign-description]"),
     nav: $("[data-campaign-nav]"),
     heroMedia: $("[data-campaign-hero-media]"),
-    videoSection: $("[data-campaign-video-section]"),
     primary: $("[data-campaign-primary]"),
     related: $("[data-campaign-related]"),
     relatedTitle: $("[data-campaign-related-title]"),

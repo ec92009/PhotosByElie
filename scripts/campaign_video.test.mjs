@@ -56,23 +56,19 @@ test("the four September campaigns use public YouTube pairs and public catalog p
   }
 });
 
-test("campaign detail exposes an accessible privacy-enhanced video surface", () => {
+test("campaign detail stays a still-photo collection while the directory owns YouTube playback", () => {
   const html = fs.readFileSync(path.join(repoRoot, "campaign.html"), "utf8");
   const social = fs.readFileSync(path.join(repoRoot, "social.html"), "utf8");
   const script = fs.readFileSync(path.join(repoRoot, "campaign.js"), "utf8");
-  const styles = fs.readFileSync(path.join(repoRoot, "photos.css"), "utf8");
-  assert.match(html, /data-campaign-video-section[^>]+aria-labelledby="campaign-video-title"[^>]+hidden/);
   assert.match(html, /campaign-video\.js/);
-  assert.match(script, /photosByElieCampaignVideo\?\.render\(document\.querySelector\('\[data-campaign-video-section\]'\), campaign\.video\)/);
-  assert.match(styles, /\.campaign-video-frame\{[\s\S]*?aspect-ratio:16 \/ 9/);
+  assert.doesNotMatch(html, /data-campaign-video-section/);
+  assert.doesNotMatch(script, /photosByElieCampaignVideo\?\.render/);
   assert.match(social, /data-campaign-sources="[^"]*youtube/);
   assert.match(social, /campaign-video\.js/);
 });
 
-test("published films render before catalog readiness while still-photo access stays guarded", () => {
-  const detail = fs.readFileSync(path.join(repoRoot, "campaign.js"), "utf8");
+test("published films render in the directory before catalog readiness while detail stills stay guarded", () => {
   const directory = fs.readFileSync(path.join(repoRoot, "campaigns.js"), "utf8");
-  assert.ok(detail.indexOf("photosByElieCampaignVideo?.render") < detail.indexOf("await window.photosByElieCatalogReady"));
   assert.match(directory, /publicFilm\?\.portraitEmbedUrl/);
   assert.ok(directory.indexOf('videoCampaigns.forEach') < directory.indexOf('await window.photosByElieCatalogReady'));
   assert.match(directory, /if \(card\) grid.append\(card\);/);

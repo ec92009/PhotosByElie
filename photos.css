@@ -284,6 +284,8 @@
   max-width:420px;
   margin-inline:auto;
 }
+.campaign-hero-media:empty{display:none}
+.campaign-hero:has(.campaign-hero-media:empty){grid-template-columns:1fr}
 .campaign-video-frame video{
   display:block;
   width:100%;

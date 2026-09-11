@@ -32,6 +32,7 @@
     composite.setAttribute('aria-label', `Photographic composite: ${campaign.title}`);
     const frames = compositeEntries.slice(0, 4);
     composite.dataset.frames = frames.length;
+    if (!frames.length) composite.textContent = 'Watch the film ▶';
     for (const { photo } of frames) {
       const img = document.createElement('img');
       img.src = window.photosByElieMediaUrl(photo, 'gallery');
@@ -52,7 +53,9 @@
     meta.className = 'campaign-directory-meta';
     meta.textContent = [campaign.source, campaign.date].map((value) => String(value || '').trim()).filter(Boolean).join(' · ');
     const count = document.createElement('p');
-    count.textContent = `${entries.length} photo${entries.length === 1 ? '' : 's'}${campaign.video ? ' · Video' : ''} · View collection →`;
+    count.textContent = entries.length
+      ? `${entries.length} photo${entries.length === 1 ? '' : 's'}${campaign.video ? ' · Video' : ''} · View collection →`
+      : 'Video · Still photographs currently unavailable · Watch film →';
     caption.append(title, meta, count);
     card.append(composite, caption);
     return card;
@@ -63,15 +66,23 @@
     if (!response.ok) throw new Error('Campaign index unavailable');
     const payload = await response.json();
     if (!Array.isArray(payload.campaigns)) throw new Error('Invalid campaign index');
-    await window.photosByElieCatalogReady;
-    const index = new Map(Object.values(window.photosByElieData).flatMap((collection) =>
+    const campaigns = payload.campaigns.filter((campaign) => rules.publicCampaign(campaign)
+      && (!sourceFilter.size || sourceFilter.has(String(campaign.source || '').trim().toLowerCase())));
+    // Only independently published films can appear before still authorization.
+    for (const campaign of campaigns) {
+      if (window.photosByElieCampaignVideo?.normalize(campaign.video)?.portraitMp4) grid.append(cardFor(campaign, []));
+    }
+    if (grid.children.length) status.textContent = 'Published films ready. Checking photo availability…';
+    let catalogAvailable = true;
+    try { await window.photosByElieCatalogReady; } catch { catalogAvailable = false; }
+    const index = new Map(Object.values(catalogAvailable ? window.photosByElieData : {}).flatMap((collection) =>
       (collection.photos || []).map((photo) => [photo.id, { photo }])));
-    for (const campaign of payload.campaigns) {
-      if (!rules.publicCampaign(campaign)) continue;
-      if (sourceFilter.size && !sourceFilter.has(String(campaign.source || '').trim().toLowerCase())) continue;
+    grid.replaceChildren();
+    for (const campaign of campaigns) {
       const entries = rules.entries(campaign.photoIds, index);
       const compositeEntries = rules.entries(campaign.compositePhotoIds || campaign.photoIds, index);
-      if (entries.length) grid.append(cardFor(campaign, entries, compositeEntries.length ? compositeEntries : entries));
+      const publicFilm = window.photosByElieCampaignVideo?.normalize(campaign.video)?.portraitMp4;
+      if (entries.length || publicFilm) grid.append(cardFor(campaign, entries, compositeEntries.length ? compositeEntries : entries));
     }
     status.textContent = grid.children.length
       ? `${grid.children.length} ${directoryNoun} to explore`

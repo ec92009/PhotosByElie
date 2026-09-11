@@ -62,9 +62,20 @@ test("campaign detail exposes an accessible privacy-enhanced video surface", () 
   const styles = fs.readFileSync(path.join(repoRoot, "photos.css"), "utf8");
   assert.match(html, /data-campaign-video-section[^>]+aria-labelledby="campaign-video-title"[^>]+hidden/);
   assert.match(html, /campaign-video\.js/);
-  assert.match(script, /photosByElieCampaignVideo\?\.render\(els\.videoSection, campaign\.video\)/);
+  assert.match(script, /photosByElieCampaignVideo\?\.render\(document\.querySelector\('\[data-campaign-video-section\]'\), campaign\.video\)/);
   assert.match(styles, /\.campaign-video-frame\{[\s\S]*?aspect-ratio:16 \/ 9/);
   assert.match(social, /data-campaign-sources="[^"]*youtube/);
+  assert.match(social, /campaign-video\.js/);
+});
+
+test("published films render before catalog readiness while still-photo access stays guarded", () => {
+  const detail = fs.readFileSync(path.join(repoRoot, "campaign.js"), "utf8");
+  const directory = fs.readFileSync(path.join(repoRoot, "campaigns.js"), "utf8");
+  assert.ok(detail.indexOf("photosByElieCampaignVideo?.render") < detail.indexOf("await window.photosByElieCatalogReady"));
+  assert.match(directory, /normalize\(campaign.video\)\?\.portraitMp4/);
+  assert.match(directory, /if \(entries.length \|\| publicFilm\)/);
+  assert.match(directory, /Still photographs currently unavailable/);
+  assert.match(directory, /rules.publicCampaign\(campaign\)/);
 });
 
 test("Cascais embeds the exact approved portrait derivative without exposing masters", () => {

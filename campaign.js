@@ -1,12 +1,28 @@
 (async () => {
   if (!new URLSearchParams(location.search).has("c")) return;
-  try { await window.photosByElieCatalogReady; } catch {
-    document.querySelector('[data-campaign-description]').textContent = 'This collection is unavailable. Please reload to try again.';
+  // A separately published promotional film must not wait for the photo catalog.
+  const safeId = new URLSearchParams(location.search).get("c").replace(/[^a-z0-9-]/gi, "");
+  let campaign;
+  try {
+    const response = await fetch(`./assets/campaigns/${safeId}.json`, { cache: "no-store" });
+    if (!response.ok) throw new Error("This collection is unavailable.");
+    campaign = await response.json();
+    if (!window.photosByElieCampaignCollection.publicCampaign(campaign)) throw new Error("This collection is unavailable.");
+    document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;
+    document.querySelector('[data-campaign-title]').textContent = campaign.title || "Photos By Elie";
+    document.querySelector('[data-campaign-eyebrow]').textContent = campaign.eyebrow || "Photos By Elie";
+    document.querySelector('[data-campaign-description]').textContent = campaign.description || "";
+    window.photosByElieCampaignVideo?.render(document.querySelector('[data-campaign-video-section]'), campaign.video);
+  } catch (error) {
+    document.querySelector('[data-campaign-description]').textContent = error.message || "This collection is unavailable.";
     return;
   }
+  // Catalog failures stay fail-closed for all still-photo access.
+  let catalogAvailable = true;
+  try { await window.photosByElieCatalogReady; } catch { catalogAvailable = false; }
   const $ = (selector) => document.querySelector(selector);
   const escapeHtml = (value) => window.photosByElieGalleryCard?.escapeHtml?.(value) || String(value || "");
-  const collections = window.photosByElieData || {};
+  const collections = (catalogAvailable && window.photosByElieData) || {};
   const campaignId = new URLSearchParams(window.location.search).get("c") || "pinterest-invalides-2026-05-14";
   const safeCampaignId = campaignId.replace(/[^a-z0-9-]/gi, "");
   const scriptVersion = new URL(document.currentScript?.src || window.location.href, window.location.href).searchParams.get("v") || "";
@@ -450,9 +466,6 @@
 
   const loadCampaign = async () => {
     syncEmbeddedBrowserWarning();
-    const response = await fetch(`./assets/campaigns/${safeCampaignId}.json${scriptVersion ? `?v=${encodeURIComponent(scriptVersion)}` : ""}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`Could not load campaign ${safeCampaignId}`);
-    const campaign = await response.json();
     if (!rules.publicCampaign(campaign)) throw new Error("This collection is unavailable.");
     document.title = `${campaign.title || "Photos By Elie"} | Photos By Elie`;
     if (els.title) els.title.textContent = campaign.title || "Photos By Elie";
@@ -465,7 +478,9 @@
     relatedEntries = entriesForIds(campaign.relatedPhotoIds || []);
     const relatedSection = els.related?.closest("section");
     if (relatedSection) relatedSection.hidden = relatedEntries.length === 0;
-    if (!primaryEntries.length) els.description.textContent = "No public photographs are currently available in this collection.";
+    if (!primaryEntries.length) els.primary.textContent = campaign.video
+      ? "The still photographs are currently unavailable. The published film above remains available."
+      : "No public photographs are currently available in this collection.";
     const heroEntry = photoIndex.get(campaign.heroPhotoId || campaign.primaryPhotoIds?.[0]);
     const heroImage = campaign.imageUrl || (heroEntry && (window.photosByElieMediaUrl?.(heroEntry.photo, "detail") || window.photosByElieMediaUrl?.(heroEntry.photo, "gallery"))) || window.photosByElieSeo?.defaultImage;
     const campaignUrl = window.photosByElieSeo?.pageUrl?.("/campaign.html", { c: safeCampaignId });
@@ -484,7 +499,6 @@
       }),
     });
     renderHero(heroEntry);
-    window.photosByElieCampaignVideo?.render(els.videoSection, campaign.video);
     renderEntries(els.primary, primaryEntries);
     renderEntries(els.related, relatedEntries);
     ensureCampaignViewControls();
